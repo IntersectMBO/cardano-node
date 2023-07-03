@@ -17,6 +17,8 @@ index-state:
   , cardano-haskell-packages 2023-07-08T04:00:00Z
 
 packages:
+  -- cardano-api
+  -- cardano-cli
   cardano-client-demo
   cardano-git-rev
   cardano-node

@@ -150,7 +150,7 @@ library
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-prelude
-                      , cardano-protocol-tpraos >= 1.0.2
+                      , cardano-protocol-tpraos >= 1.0.3.1
                       , cardano-slotting >= 0.1.1
                       , cborg ^>= 0.2.4
                       , containers

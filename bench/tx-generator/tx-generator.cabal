@@ -195,6 +195,7 @@ test-suite tx-generator-apitest
                       , optparse-applicative-fork
                       , cardano-api ^>= 8.8
                       , cardano-cli ^>= 8.3
+                      , cardano-ledger-shelley
                       , cardano-node
                       , plutus-tx
                       , transformers
