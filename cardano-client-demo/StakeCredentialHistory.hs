@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -342,20 +343,25 @@ main = do
       TxCertificates _ cs _ -> mapM_ msg $ mapMaybe (targetedCert t epochNo slotNo) cs
 
     targetedCert :: StakeCredential -> EpochNo -> SlotNo -> Certificate -> Maybe (Event c)
-    targetedCert t epochNo slotNo (StakeAddressRegistrationCertificate cred)   =
-      if t == cred then Just (StakeRegistrationEvent epochNo slotNo) else Nothing
-    targetedCert t epochNo slotNo (StakeAddressDeregistrationCertificate cred) =
-      if t == cred then Just (StakeDeRegistrationEvent epochNo slotNo) else Nothing
-    targetedCert t _epochNo slotNo (StakeAddressPoolDelegationCertificate cred pool) =
-      if t == cred then Just (DelegationEvent slotNo pool) else Nothing
-    targetedCert t _epochNo slotNo (StakePoolRegistrationCertificate pool)      =
-      inPoolCert t slotNo pool
-    targetedCert _ _ _ (StakePoolRetirementCertificate _ _)              = Nothing
-    targetedCert _ _ _ GenesisKeyDelegationCertificate {}                = Nothing
-    targetedCert t epochNo slotNo (MIRCertificate pot (StakeAddressesMIR mir)) =
-      inMir t epochNo slotNo mir pot
-    targetedCert _ _ _ (MIRCertificate _ (SendToReservesMIR _))          = Nothing
-    targetedCert _ _ _ (MIRCertificate _ (SendToTreasuryMIR _))          = Nothing
+    targetedCert t epochNo slotNo = \case
+      StakeAddressRegistrationCertificate cred ->
+        if t == cred then Just (StakeRegistrationEvent epochNo slotNo) else Nothing
+      StakeAddressDeregistrationCertificate cred ->
+        if t == cred then Just (StakeDeRegistrationEvent epochNo slotNo) else Nothing
+      StakeAddressPoolDelegationCertificate cred pool ->
+        if t == cred then Just (DelegationEvent slotNo pool) else Nothing
+      StakePoolRegistrationCertificate pool ->
+        inPoolCert t slotNo pool
+      StakePoolRetirementCertificate _ _ -> Nothing
+      GenesisKeyDelegationCertificate {} -> Nothing
+      MIRCertificate pot (StakeAddressesMIR mir) ->
+        inMir t epochNo slotNo mir pot
+      MIRCertificate _ (SendToReservesMIR _) -> Nothing
+      MIRCertificate _ (SendToTreasuryMIR _) -> Nothing
+
+      -- TODO CIP-1694 These are also delegation events.  Should there be new events for these?
+      CommitteeDelegationCertificate _ _ -> Nothing
+      CommitteeHotKeyDeregistrationCertificate _ -> Nothing
 
     stakeCredentialFromStakeAddress (StakeAddress _ cred) = fromShelleyStakeCredential cred
 

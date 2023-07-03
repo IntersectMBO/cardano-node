@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2023-05-10T10:34:57Z
-  , cardano-haskell-packages 2023-06-15T12:05:43Z
+  , cardano-haskell-packages 2023-07-02T00:00:00Z
 
 packages:
   cardano-client-demo
@@ -32,9 +32,6 @@ packages:
   trace-dispatcher
   trace-resources
   trace-forward
-
-extra-packages:
-  cardano-cli
 
 package cardano-api
   ghc-options: -Werror
@@ -112,35 +109,16 @@ package snap-server
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-cli
-  tag: 3fbf9e18a5c44043982b9382d357502d8fe5a78d
+  tag: b2938135e7839449b3e4ddd594fa235ff47a19fc
   --sha256: sha256-Q1pXMt4P2QOTUjQIj3Y7sVHoLvxItklnhN9rhNRYyTc=
   subdir:
     cardano-cli
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: d639fbdacaf9abd47db28250964d5168743b3520
-  --sha256: sha256-Um0QL6LGpTqyb5iW/VFRpQk+YgMVjcEHI2UQ+nqqbIo=
-  subdir:
-    ouroboros-consensus
-    ouroboros-consensus-diffusion
-    ouroboros-consensus-cardano
-    ouroboros-consensus-protocol
-
-source-repository-package
-  type: git
   location: https://github.com/input-output-hk/cardano-api
-  tag: a5aff8c19063f8679b757cdc15b44239065d5815
+  tag: 1ff60d1c343d703f90a5ec789d2d2524c30397f8
   --sha256: sha256-GWrck5RLD3uP68uesrVh6bszyCJI2z+a09sTsbFzaUE=
   subdir:
     cardano-api
 
--- Needed because consensus uses it
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/io-sim
-  tag: ec202298c420378ef90b3fc0126c39e0f52290a3
-  --sha256: 1p6pn83kwp66x2m0cw9a27blfcpmw0lrra72qd0pi5bj3v1bcrl9
-  subdir:
-    strict-mvar
