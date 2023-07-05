@@ -248,11 +248,11 @@ instance ( ShelleyBasedEra era
          , ToJSON (Core.AuxiliaryDataHash (Ledger.EraCrypto era))
          , LogFormatting (PredicateFailure (ShelleyUTXO era))
          , LogFormatting (PredicateFailure (ShelleyUTXOW era))
-         , LogFormatting (PredicateFailure (Core.EraRule "DELEGS" era))
+      --   , LogFormatting (PredicateFailure (Core.EraRule "DELEGS" era))
          , LogFormatting (PredicateFailure (Core.EraRule "UTXOW" era))
          ) => LogFormatting (ShelleyLedgerPredFailure era) where
   forMachine dtal (UtxowFailure f)  = forMachine dtal f
-  forMachine dtal (DelegsFailure f) = forMachine dtal f
+  forMachine _dtal (DelegsFailure _f) = error "TODO" -- forMachine dtal f
 
 instance ( ShelleyBasedEra era
          , Ledger.EraCrypto era ~ StandardCrypto
@@ -1003,7 +1003,7 @@ instance ( Ledger.Era era
 --------------------------------------------------------------------------------
 
 instance ( ShelleyBasedEra era
-         , LogFormatting (PredicateFailure (Core.EraRule "DELEGS" era))
+      --   , LogFormatting (PredicateFailure (Core.EraRule "DELEGS" era))
          , LogFormatting (PredicateFailure (Core.EraRule "UTXOW" era))
          , LogFormatting (PredicateFailure (Core.EraRule "TALLY" era))
          , LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" era))

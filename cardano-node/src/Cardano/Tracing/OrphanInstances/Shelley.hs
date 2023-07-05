@@ -239,14 +239,14 @@ instance ( ShelleyBasedEra era
 instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (ShelleyUTXO era))
          , ToObject (PredicateFailure (ShelleyUTXOW era))
-         , ToObject (PredicateFailure (Core.EraRule "DELEGS" era))
+     --    , ToObject (PredicateFailure (Core.EraRule "DELEGS" era))
          , ToObject (PredicateFailure (Core.EraRule "UTXOW" era))
          ) => ToObject (ShelleyLedgerPredFailure era) where
   toObject verb (UtxowFailure f) = toObject verb f
   toObject verb (DelegsFailure f) = toObject verb f
 
 instance ( ShelleyBasedEra era
-         , ToObject (PredicateFailure (Core.EraRule "DELEGS" era))
+        -- , ToObject (PredicateFailure (Core.EraRule "DELEGS" era))
          , ToObject (PredicateFailure (Core.EraRule "UTXOW" era))
          , ToObject (PredicateFailure (Core.EraRule "TALLY" era))
          , ToObject (PredicateFailure (Ledger.EraRule "CERTS" era))
@@ -791,8 +791,6 @@ instance Core.Crypto crypto => ToObject (OverlayPredicateFailure crypto) where
              , "actual" .= actual
              , "expected" .= expected ]
   toObject verb (OcertFailure f) = toObject verb f
-
---instance ToObject (PredicateFailure (Core.EraRule "DELEGS" (Ledger.ConwayEra Ledger.StandardCrypto))) where
 
 
 instance ToObject (OcertPredicateFailure crypto) where
