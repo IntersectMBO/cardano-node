@@ -243,16 +243,16 @@ instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (Core.EraRule "UTXOW" era))
          ) => ToObject (ShelleyLedgerPredFailure era) where
   toObject verb (UtxowFailure f) = toObject verb f
-  toObject verb (DelegsFailure f) = toObject verb f
+  toObject _verb (DelegsFailure _f) = error "TODO: Conway era" --toObject verb f
 
 instance ( ShelleyBasedEra era
         -- , ToObject (PredicateFailure (Core.EraRule "DELEGS" era))
          , ToObject (PredicateFailure (Core.EraRule "UTXOW" era))
          , ToObject (PredicateFailure (Core.EraRule "TALLY" era))
-         , ToObject (PredicateFailure (Ledger.EraRule "CERTS" era))
+       --  , ToObject (PredicateFailure (Ledger.EraRule "CERTS" era))
          ) => ToObject (Conway.ConwayLedgerPredFailure era) where
   toObject verb (Conway.ConwayUtxowFailure f) = toObject verb f
-  toObject verb (Conway.ConwayCertsFailure f) = toObject verb f
+  toObject _verb (Conway.ConwayCertsFailure _f) = error "TODO: Conway era" -- toObject verb f
   toObject verb (Conway.ConwayTallyFailure f) = toObject verb f
 
 instance ( ShelleyBasedEra era

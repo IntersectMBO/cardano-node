@@ -1006,10 +1006,10 @@ instance ( ShelleyBasedEra era
       --   , LogFormatting (PredicateFailure (Core.EraRule "DELEGS" era))
          , LogFormatting (PredicateFailure (Core.EraRule "UTXOW" era))
          , LogFormatting (PredicateFailure (Core.EraRule "TALLY" era))
-         , LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" era))
+        -- , LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" era))
          ) => LogFormatting (Conway.ConwayLedgerPredFailure era) where
   forMachine v (Conway.ConwayUtxowFailure f) = forMachine v f
-  forMachine v (Conway.ConwayCertsFailure f) = forMachine v f
+  forMachine _v (Conway.ConwayCertsFailure _f) = error "TODO: Conway era" --forMachine v f
   forMachine v (Conway.ConwayTallyFailure f) = forMachine v f
 
 instance ( ShelleyBasedEra era
