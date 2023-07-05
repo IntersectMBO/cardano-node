@@ -143,6 +143,7 @@ library
                       , cardano-git-rev
                       , cardano-ledger-alonzo
                       , cardano-ledger-allegra
+                      , cardano-ledger-api
                       , cardano-ledger-babbage
                       , cardano-ledger-byron
                       , cardano-ledger-conway

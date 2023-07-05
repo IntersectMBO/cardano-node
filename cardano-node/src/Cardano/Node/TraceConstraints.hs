@@ -19,12 +19,10 @@ import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent, LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, HasTxId, HasTxs (..))
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion
+                   (HasNetworkProtocolVersion (BlockNodeToClientVersion, BlockNodeToNodeVersion))
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
-import           Ouroboros.Consensus.Node.NetworkProtocolVersion (
-                   HasNetworkProtocolVersion(BlockNodeToClientVersion, BlockNodeToNodeVersion))
-
-
 
 -- | Tracing-related constraints for monitoring purposes.
 type TraceConstraints blk =

@@ -261,9 +261,9 @@ instance ( ShelleyBasedEra era
          ) => LogFormatting (AlonzoUtxowPredFailure era) where
   forMachine dtal (ShelleyInAlonzoUtxowPredFailure utxoPredFail) =
     forMachine dtal utxoPredFail
-  forMachine _ (MissingRedeemers scripts) =
+  forMachine _ (MissingRedeemers _scripts) =
     mconcat [ "kind" .= String "MissingRedeemers"
-             , "scripts" .= renderMissingRedeemers scripts
+             , "scripts" .= String "TODO: Conway era" -- TODO: Conway era - need to parameterize renderMissingRedeemers over the era
              ]
   forMachine _ (MissingRequiredDatums required received) =
     mconcat [ "kind" .= String "MissingRequiredDatums"
@@ -303,25 +303,25 @@ renderScriptIntegrityHash (Just witPPDataHash) =
   Aeson.String . Crypto.hashToTextAsHex $ SafeHash.extractHash witPPDataHash
 renderScriptIntegrityHash Nothing = Aeson.Null
 
-renderScriptHash :: ScriptHash StandardCrypto -> Text
-renderScriptHash = Api.serialiseToRawBytesHexText . Api.fromShelleyScriptHash
+_renderScriptHash :: ScriptHash StandardCrypto -> Text
+_renderScriptHash = Api.serialiseToRawBytesHexText . Api.fromShelleyScriptHash
 
-renderMissingRedeemers :: [(Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto)] -> Aeson.Value
-renderMissingRedeemers scripts = Aeson.object $ map renderTuple  scripts
+_renderMissingRedeemers :: [(Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto)] -> Aeson.Value
+_renderMissingRedeemers scripts = Aeson.object $ map renderTuple  scripts
  where
   renderTuple :: (Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto) -> Aeson.Pair
   renderTuple (scriptPurpose, sHash) =
-    Aeson.fromText (renderScriptHash sHash) .= renderScriptPurpose scriptPurpose
+    Aeson.fromText (_renderScriptHash sHash) .= _renderScriptPurpose scriptPurpose
 
-renderScriptPurpose :: Alonzo.ScriptPurpose StandardCrypto -> Aeson.Value
-renderScriptPurpose (Alonzo.Minting pid) =
-  Aeson.object [ "minting" .= toJSON pid]
-renderScriptPurpose (Alonzo.Spending txin) =
-  Aeson.object [ "spending" .= Api.fromShelleyTxIn txin]
-renderScriptPurpose (Alonzo.Rewarding rwdAcct) =
-  Aeson.object [ "rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
-renderScriptPurpose (Alonzo.Certifying cert) =
-  Aeson.object [ "certifying" .= toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate cert)]
+_renderScriptPurpose :: Alonzo.ScriptPurpose StandardCrypto -> Aeson.Value
+_renderScriptPurpose (Alonzo.Minting _pid) =
+  Aeson.object [ "minting" .= String "TODO: Conway era" ] -- toJSON pid
+_renderScriptPurpose (Alonzo.Spending _txin) =
+  Aeson.object [ "spending" .= String "TODO: Conway era" ] -- Api.fromShelleyTxIn txin
+_renderScriptPurpose (Alonzo.Rewarding _rwdAcct) =
+  Aeson.object [ "rewarding" .= String "TODO: Conway era"] -- Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)
+_renderScriptPurpose (Alonzo.Certifying _cert) =
+  Aeson.object [ "certifying" .= String "TODO: Conway era" ] -- toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate cert)
 
 
 instance ( ShelleyBasedEra era
@@ -527,7 +527,7 @@ instance ( ShelleyBasedEra era
              , "targetPool" .= targetPool
              ]
   forMachine _dtal (WithdrawalsNotInRewardsDELEGS incorrectWithdrawals) =
-    mconcat [ "kind" .= String "WithdrawalsNotInRewardsDELEGS"
+    mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
              , "incorrectWithdrawals" .= incorrectWithdrawals
              ]
   forMachine dtal (DelplFailure f) = forMachine dtal f
@@ -644,23 +644,6 @@ instance LogFormatting (ShelleyPoolPredFailure era) where
              , "poolID" .= String (textShow hashSize)
              , "error" .= String "The stake pool metadata hash is too large"
              ]
-
--- Apparently this should never happen according to the Shelley exec spec
-  forMachine _dtal (WrongCertificateTypePOOL index) =
-    case index of
-      0 -> mconcat [ "kind" .= String "WrongCertificateTypePOOL"
-                    , "error" .= String "Wrong certificate type: Delegation certificate"
-                    ]
-      1 -> mconcat [ "kind" .= String "WrongCertificateTypePOOL"
-                    , "error" .= String "Wrong certificate type: MIR certificate"
-                    ]
-      2 -> mconcat [ "kind" .= String "WrongCertificateTypePOOL"
-                    , "error" .= String "Wrong certificate type: Genesis certificate"
-                    ]
-      k -> mconcat [ "kind" .= String "WrongCertificateTypePOOL"
-                    , "certificateType" .= k
-                    , "error" .= String "Wrong certificate type: Unknown certificate type"
-                    ]
 
   forMachine _dtal (WrongNetworkPOOL networkId listedNetworkId poolId) =
     mconcat [ "kind" .= String "WrongNetworkPOOL"
@@ -955,9 +938,9 @@ instance ( ToJSON (Alonzo.CollectError (Ledger.EraCrypto era))
              , "isvalidating" .= isValidating
              , "reason" .= reason
              ]
-  forMachine _ (Alonzo.CollectErrors errors) =
+  forMachine _ (Alonzo.CollectErrors _errors) =
     mconcat [ "kind" .= String "CollectErrors"
-             , "errors" .= errors
+             , "errors" .= String "TODO: Conway era" --errors
              ]
   forMachine dtal (Alonzo.UpdateFailure pFailure) =
     forMachine dtal pFailure
@@ -1023,9 +1006,10 @@ instance ( ShelleyBasedEra era
          , LogFormatting (PredicateFailure (Core.EraRule "DELEGS" era))
          , LogFormatting (PredicateFailure (Core.EraRule "UTXOW" era))
          , LogFormatting (PredicateFailure (Core.EraRule "TALLY" era))
+         , LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" era))
          ) => LogFormatting (Conway.ConwayLedgerPredFailure era) where
   forMachine v (Conway.ConwayUtxowFailure f) = forMachine v f
-  forMachine v (Conway.ConwayDelegsFailure f) = forMachine v f
+  forMachine v (Conway.ConwayCertsFailure f) = forMachine v f
   forMachine v (Conway.ConwayTallyFailure f) = forMachine v f
 
 instance ( ShelleyBasedEra era
@@ -1042,13 +1026,13 @@ instance ( ShelleyBasedEra era
 
 instance ( ShelleyBasedEra era
          , LogFormatting (PredicateFailure (Ledger.EraRule "CERT" era))
-         ) => LogFormatting (Conway.ConwayDelegsPredFailure era) where
+         ) => LogFormatting (Conway.ConwayCertsPredFailure era) where
   forMachine _ (Conway.DelegateeNotRegisteredDELEG poolID) =
     mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG"
             , "poolID" .= String (textShow poolID)
             ]
-  forMachine _ (Conway.WithdrawalsNotInRewardsDELEGS rs) =
-    mconcat [ "kind" .= String "WithdrawalsNotInRewardsDELEGS"
+  forMachine _ (Conway.WithdrawalsNotInRewardsCERTS rs) =
+    mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
              , "rewardAccounts" .= rs
             ]
   forMachine dtal (Conway.CertFailure certFailure) =

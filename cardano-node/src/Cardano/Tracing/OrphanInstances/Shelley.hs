@@ -55,6 +55,7 @@ import qualified Cardano.Ledger.Allegra.Scripts as Allegra
 import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
+import qualified Cardano.Ledger.Api as Ledger
 import           Cardano.Ledger.BaseTypes (activeSlotLog, strictMaybeToMaybe)
 import           Cardano.Ledger.Chain
 import qualified Cardano.Ledger.Core as Core
@@ -248,9 +249,10 @@ instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (Core.EraRule "DELEGS" era))
          , ToObject (PredicateFailure (Core.EraRule "UTXOW" era))
          , ToObject (PredicateFailure (Core.EraRule "TALLY" era))
+         , ToObject (PredicateFailure (Ledger.EraRule "CERTS" era))
          ) => ToObject (Conway.ConwayLedgerPredFailure era) where
   toObject verb (Conway.ConwayUtxowFailure f) = toObject verb f
-  toObject verb (Conway.ConwayDelegsFailure f) = toObject verb f
+  toObject verb (Conway.ConwayCertsFailure f) = toObject verb f
   toObject verb (Conway.ConwayTallyFailure f) = toObject verb f
 
 instance ( ShelleyBasedEra era
@@ -267,13 +269,13 @@ instance ( ShelleyBasedEra era
 
 instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (Ledger.EraRule "CERT" era))
-         ) => ToObject (Conway.ConwayDelegsPredFailure era) where
+         ) => ToObject (Conway.ConwayCertsPredFailure era) where
   toObject _ (Conway.DelegateeNotRegisteredDELEG poolID) =
     mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG"
              , "poolID" .= String (textShow poolID)
             ]
-  toObject _ (Conway.WithdrawalsNotInRewardsDELEGS rs) =
-    mconcat [ "kind" .= String "WithdrawalsNotInRewardsDELEGS"
+  toObject _ (Conway.WithdrawalsNotInRewardsCERTS rs) =
+    mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
              , "rewardAccounts" .= rs
             ]
   toObject v (Conway.CertFailure certFailure) =
@@ -286,9 +288,9 @@ instance ( ShelleyBasedEra era
          ) => ToObject (AlonzoUtxowPredFailure era) where
   toObject v (ShelleyInAlonzoUtxowPredFailure utxoPredFail) =
     toObject v utxoPredFail
-  toObject _ (MissingRedeemers scripts) =
+  toObject _ (MissingRedeemers _scripts) =
     mconcat [ "kind" .= String "MissingRedeemers"
-             , "scripts" .= renderMissingRedeemers scripts
+             , "scripts" .= String "TODO: Conway era" --renderMissingRedeemers scripts
              ]
   toObject _ (MissingRequiredDatums required received) =
     mconcat [ "kind" .= String "MissingRequiredDatums"
@@ -326,25 +328,25 @@ renderScriptIntegrityHash (Just witPPDataHash) =
   Aeson.String . Crypto.hashToTextAsHex $ SafeHash.extractHash witPPDataHash
 renderScriptIntegrityHash Nothing = Aeson.Null
 
-renderScriptHash :: ScriptHash StandardCrypto -> Text
-renderScriptHash = Api.serialiseToRawBytesHexText . Api.fromShelleyScriptHash
+_renderScriptHash :: ScriptHash StandardCrypto -> Text
+_renderScriptHash = Api.serialiseToRawBytesHexText . Api.fromShelleyScriptHash
 
-renderMissingRedeemers :: [(Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto)] -> Aeson.Value
-renderMissingRedeemers scripts = Aeson.object $ map renderTuple  scripts
+_renderMissingRedeemers :: [(Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto)] -> Aeson.Value
+_renderMissingRedeemers scripts = Aeson.object $ map renderTuple  scripts
  where
   renderTuple :: (Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto) -> Aeson.Pair
   renderTuple (scriptPurpose, sHash) =
-    Aeson.fromText (renderScriptHash sHash) .= renderScriptPurpose scriptPurpose
+    Aeson.fromText (_renderScriptHash sHash) .= _renderScriptPurpose scriptPurpose
 
-renderScriptPurpose :: Alonzo.ScriptPurpose StandardCrypto -> Aeson.Value
-renderScriptPurpose (Alonzo.Minting pid) =
-  Aeson.object [ "minting" .= toJSON pid]
-renderScriptPurpose (Alonzo.Spending txin) =
-  Aeson.object [ "spending" .= Api.fromShelleyTxIn txin]
-renderScriptPurpose (Alonzo.Rewarding rwdAcct) =
-  Aeson.object [ "rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
-renderScriptPurpose (Alonzo.Certifying cert) =
-  Aeson.object [ "certifying" .= toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate cert)]
+_renderScriptPurpose :: Alonzo.ScriptPurpose StandardCrypto -> Aeson.Value
+_renderScriptPurpose (Alonzo.Minting _pid) =
+  Aeson.object [ "minting" .= String "TODO: Conway era" ] -- toJSON pid
+_renderScriptPurpose (Alonzo.Spending _txin) =
+  Aeson.object [ "spending" .= String "TODO: Conway era" ] -- Api.fromShelleyTxIn txin
+_renderScriptPurpose (Alonzo.Rewarding _rwdAcct) =
+  Aeson.object [ "rewarding" .= String "TODO: Conway era" ] -- Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)
+_renderScriptPurpose (Alonzo.Certifying _cert) =
+  Aeson.object [ "certifying" .= String "TODO: Conway era" ] -- toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate cert)
 
 instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (ShelleyUTXO era))
@@ -556,7 +558,7 @@ instance ( ShelleyBasedEra era
              , "targetPool" .= targetPool
              ]
   toObject _verb (WithdrawalsNotInRewardsDELEGS incorrectWithdrawals) =
-    mconcat [ "kind" .= String "WithdrawalsNotInRewardsDELEGS"
+    mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
              , "incorrectWithdrawals" .= incorrectWithdrawals
              ]
   toObject verb (DelplFailure f) = toObject verb f
@@ -672,23 +674,6 @@ instance ToObject (ShelleyPoolPredFailure era) where
              , "hashSize" .= String (textShow hashSize)
              , "error" .= String "The stake pool metadata hash is too large"
              ]
-
--- Apparently this should never happen according to the Shelley exec spec
-  toObject _verb (WrongCertificateTypePOOL index) =
-    case index of
-      0 -> mconcat [ "kind" .= String "WrongCertificateTypePOOL"
-                    , "error" .= String "Wrong certificate type: Delegation certificate"
-                    ]
-      1 -> mconcat [ "kind" .= String "WrongCertificateTypePOOL"
-                    , "error" .= String "Wrong certificate type: MIR certificate"
-                    ]
-      2 -> mconcat [ "kind" .= String "WrongCertificateTypePOOL"
-                    , "error" .= String "Wrong certificate type: Genesis certificate"
-                    ]
-      k -> mconcat [ "kind" .= String "WrongCertificateTypePOOL"
-                    , "certificateType" .= k
-                    , "error" .= String "Wrong certificate type: Unknown certificate type"
-                    ]
 
   toObject _verb (WrongNetworkPOOL networkId listedNetworkId poolId) =
     mconcat [ "kind" .= String "WrongNetworkPOOL"
@@ -806,6 +791,8 @@ instance Core.Crypto crypto => ToObject (OverlayPredicateFailure crypto) where
              , "actual" .= actual
              , "expected" .= expected ]
   toObject verb (OcertFailure f) = toObject verb f
+
+--instance ToObject (PredicateFailure (Core.EraRule "DELEGS" (Ledger.ConwayEra Ledger.StandardCrypto))) where
 
 
 instance ToObject (OcertPredicateFailure crypto) where
@@ -1003,15 +990,15 @@ instance ( Ledger.Era era
 
 instance ( ToJSON (Alonzo.CollectError (Ledger.EraCrypto era))
          , ToObject (PPUPPredFailure era)
-         ) =>ToObject (AlonzoUtxosPredFailure era) where
+         ) => ToObject (AlonzoUtxosPredFailure era) where
   toObject _ (Alonzo.ValidationTagMismatch isValidating reason) =
     mconcat [ "kind" .= String "ValidationTagMismatch"
              , "isvalidating" .= isValidating
              , "reason" .= reason
              ]
-  toObject _ (Alonzo.CollectErrors errors) =
+  toObject _ (Alonzo.CollectErrors _errors) =
     mconcat [ "kind" .= String "CollectErrors"
-             , "errors" .= errors
+             , "errors" .= String "TODO: Conway era" -- errors
              ]
   toObject verb (Alonzo.UpdateFailure pFailure) =
     toObject verb pFailure
@@ -1025,13 +1012,13 @@ instance ToJSON (Alonzo.CollectError StandardCrypto) where
         object
           [ "kind" .= String "CollectError"
           , "error" .= String "NoRedeemer"
-          , "scriptpurpose" .= renderScriptPurpose sPurpose
+          , "scriptpurpose" .= _renderScriptPurpose sPurpose
           ]
-      Alonzo.NoWitness sHash ->
+      Alonzo.NoWitness _sHash ->
         object
           [ "kind" .= String "CollectError"
           , "error" .= String "NoWitness"
-          , "scripthash" .= toJSON sHash
+          , "scripthash" .= String "TODO: Conway era" -- toJSON sHash
           ]
       Alonzo.NoCostModel lang ->
         object
