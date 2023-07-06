@@ -48,6 +48,59 @@ let
 
         withHoogle = true;
       };
+
+
+      # Additional configuration for the project package set
+      # ----------------------------------------------------
+      #
+      # The following configuration influeces how the project package set
+      # is built by nix. The configuration uses the same modular system as
+      # NixOS.
+      #
+      # For additional background information see
+      #
+      # https://nixos.org/manual/nixos/stable/index.html#sec-writing-modules
+      #
+      # For a list of all configuration options supported by Haskell.nix see
+      #
+      # https://input-output-hk.github.io/haskell.nix/reference/modules.html
+      #
+      # Tips:
+      #
+      # 1. Nix is a lazy language and the resulting `project` is already
+      # in scope. Avoid referring to any of `project` attributes from
+      # within a configuration module. You can instead refer to the final
+      # package set configuration in `config`. If you run into infinite
+      # resursion issues, troubleshooting the latter will be much easier
+      # than troubleshooting the former.
+      #
+      # 2. The same configuration option can be set to different values
+      # from separate modules. How these values will be merged together
+      # dependes on the type of the option. The type of each option is
+      # listed in the haskell.nix modules reference pages.
+      #
+      # 3. The option `packages` is an attrset of submodules, i.e. each
+      # package has its own modular configuration. Similarly, `.components`
+      # is an attrset of submodules inside each package.
+      #
+      # 4. You can specify a configuration for every package by adding a
+      # module to the definition of `packages` itself, i.e:
+      #
+      # {
+      #   options.packages = lib.mkOption {
+      #     type = lib.types.attrsOf (lib.types.submodule (
+      #       { config, name, ... }:
+      #       #         ^-- package name passed as a extra argument
+      #       # ^-- this is now the final package configuration
+      #       {
+      #         # e.g.
+      #         configureFlags = [ "--ghc-option=-Werror"];
+      #       }
+      #     ));
+      # }
+      #
+      # The same applies to every component inside a package.
+      #
       modules =
         [
           ({ lib, pkgs, ... }: {
@@ -211,7 +264,7 @@ let
           ({ lib, ... }: {
             options.packages = lib.mkOption {
               type = lib.types.attrsOf (lib.types.submodule (
-                { config, lib, ...}:
+                { config, lib, ... }:
                 lib.mkIf config.package.isLocal
                 {
                   configureFlags = [ "--ghc-option=-Werror"];
