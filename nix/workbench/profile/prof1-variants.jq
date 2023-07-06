@@ -45,10 +45,6 @@ def all_profile_variants:
       { utxo:                              (0.5 * $M)
       , delegators:                        (0.1 * $M)
       }
-    , generator:
-      { tps:                               1
-      , tx_count:                          10
-      }
     } as $dataset_miniature
   |
     { genesis:
