@@ -16,15 +16,15 @@ import           Control.Monad.Trans.Except
 import           Data.Kind
 import           Data.Proxy
 import qualified Data.SOP as SOP
+import           Data.SOP.Functors
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time
 import           Data.Word (Word32)
 import qualified GHC.TypeLits as GHC
+import           Ouroboros.Consensus.Ledger.Tables (EmptyMK)
 import           System.Environment (getArgs)
 import           System.FilePath ((</>))
-import Data.SOP.Functors
-import Ouroboros.Consensus.Ledger.Tables (EmptyMK)
 
 -- | Connects to a local cardano node, requests the blocks and prints out some
 -- information from each ledger state. To run this, you must first start a local
