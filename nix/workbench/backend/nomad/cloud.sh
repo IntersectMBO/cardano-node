@@ -150,14 +150,16 @@ backend_nomadcloud() {
       then
         msg $(yellow "WARNING: Amazon S3 \"AWS_ACCESS_KEY_ID\" or \"AWS_SECRET_ACCESS_KEY\" envar is not set")
         msg $(blue "INFO: Fetching \"AWS_ACCESS_KEY_ID\" and \"AWS_SECRET_ACCESS_KEY\" from SRE provided Vault for \"Performance and Tracing\"")
-        local aws_credentials="$(wb_nomad vault world aws-s3-credentials)"
+        local aws_credentials
+        aws_credentials="$(wb_nomad vault world aws-s3-credentials)"
         export AWS_ACCESS_KEY_ID=$(echo "${aws_credentials}" | jq -r .data.access_key)
         export AWS_SECRET_ACCESS_KEY=$(echo "${aws_credentials}" | jq -r .data.secret_key)
       fi
       # The Nomad job spec will contain links ("nix_installables" stanza) to
       # the Nix Flake outputs it needs inside the container, these are
       # refereced with a GitHub commit ID inside the "container-specs" file.
-      local gitrev=$(jq -r .gitrev "${profile_container_specs_file}")
+      local gitrev
+      gitrev=$(jq -r .gitrev "${profile_container_specs_file}")
       msg $(blue "INFO: Found GitHub commit with ID \"$gitrev\"")
       # Check if the Nix package was created from a dirty git tree
       if test "$gitrev" = "0000000000000000000000000000000000000000"
@@ -172,21 +174,23 @@ backend_nomadcloud() {
         then
           # Check HTTP status code for existance
           # https://docs.github.com/en/rest/commits/commits?apiVersion=2022-11-28#get-a-commit
-          local headers=$(echo "${curl_response}" | jq -s .[1])
+          local headers
+          headers=$(echo "${curl_response}" | jq -s .[1])
           if test "$(echo "${headers}" | jq .http_code)" != 200
           then
             fatal "GitHub commit \"$gitrev\" is not available online!"
           fi
           # Show returned commit info in `git log` fashion
-          local body=$(echo "${curl_response}" | jq -s .[0])
+          local body author_name author_email author_date message
+          body=$(echo "${curl_response}" | jq -s .[0])
+          author_name=$(echo $body  | jq -r .commit.author.name)
+          author_email=$(echo $body | jq -r .commit.author.email)
+          author_date=$(echo $body  | jq -r .commit.author.date)
+          message=$(echo $body      | jq -r .commit.message)
           msg $(green "commit ${gitrev}")
-          local author_name=$(echo $body | jq -r .commit.author.name)
-          local author_email=$(echo $body | jq -r .commit.author.email)
           msg $(green "Author: ${author_name} <${author_email}>")
-          local author_date=$(echo $body | jq -r .commit.author.date)
           msg $(green "Date: ${author_date}")
           msg $(green "\n")
-          local message=$(echo $body | jq -r .commit.message)
           msg $(green "\t${message}\n")
           msg $(green "\n")
         else
@@ -220,13 +224,29 @@ backend_nomadcloud() {
       backend_nomad allocate-run-nomad-job-patch-nix               "${dir}"
 
       # Set the placement info and resources accordingly
-      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-      if test -z "${WB_SHELL_PROFILE}"
+      local nomad_job_name
+      nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
+      if test -z "${WB_SHELL_PROFILE:-}"
       then
         fatal "Envar \"WB_SHELL_PROFILE\" is empty!"
       else
-        # Placement:
-        ############
+        ########################################################################
+        # Fix for region mismatches ############################################
+        ########################################################################
+        # We use "us-east-2" and they use "us-east-1"
+          jq \
+            ".[\"job\"][\"${nomad_job_name}\"][\"datacenters\"] |= [\"eu-central-1\", \"us-east-1\", \"ap-southeast-2\"]" \
+            "${dir}"/nomad/nomad-job.json \
+        | \
+            sponge "${dir}"/nomad/nomad-job.json
+          jq \
+            ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries( if (.value.affinity.value == \"us-east-2\") then (.value.affinity.value |= \"us-east-1\") else (.) end )" \
+            "${dir}"/nomad/nomad-job.json \
+        | \
+            sponge "${dir}"/nomad/nomad-job.json
+        ########################################################################
+        # Unique placement: ####################################################
+        ########################################################################
         ## "distinct_hosts": Instructs the scheduler to not co-locate any groups
         ## on the same machine. When specified as a job constraint, it applies
         ## to all groups in the job. When specified as a group constraint, the
@@ -243,19 +263,21 @@ backend_nomadcloud() {
             }
           ]
         '
+        # Adds it as a job level contraint.
           jq \
             --argjson job_constraints_array "${job_constraints_array}" \
             ".[\"job\"][\"${nomad_job_name}\"].constraint |= \$job_constraints_array" \
             "${dir}"/nomad/nomad-job.json \
         | \
           sponge "${dir}"/nomad/nomad-job.json
-        # Resources:
-        ############
+        ########################################################################
+        # Node class: ##########################################################
+        ########################################################################
         local group_constraints_array
         # "perf" profiles run on the "perf" class
         if test "${WB_SHELL_PROFILE:0:7}" = 'cw-perf'
         then
-          # Right now only "live" is using "perf" class distinct nodes!
+          # Using Performance & Tracing exclusive "perf" class distinct nodes!
           group_constraints_array='
             [
               {
@@ -265,7 +287,33 @@ backend_nomadcloud() {
               }
             ]
           '
-          # Set the resources, only for perf!
+        else
+          # Using "qa" class distinct nodes. Only "short" test allowed here.
+          group_constraints_array='
+            [
+              {
+                "operator":  "="
+              , "attribute": "${node.class}"
+              , "value":     "qa"
+              }
+            ]
+          '
+        fi
+        # Adds it as a group level contraint.
+          jq \
+            --argjson group_constraints_array "${group_constraints_array}" \
+            ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries(.value.constraint = \$group_constraints_array)" \
+            "${dir}"/nomad/nomad-job.json \
+        | \
+          sponge "${dir}"/nomad/nomad-job.json
+        ########################################################################
+        # Memory/resources: ####################################################
+        ########################################################################
+        # Set the resources, only for perf!
+        # When not "perf", when "cw-qa", only "short" tests are allowed.
+        if test "${WB_SHELL_PROFILE:0:7}" = 'cw-perf'
+        then
+          # Producer nodes use this specs, make sure they are available!
           # AWS:
           ## c5.2xlarge: 8 vCPU and 16 Memory (GiB)
           ## https://aws.amazon.com/ec2/instance-types/c5/
@@ -279,18 +327,36 @@ backend_nomadcloud() {
           ## - memory.totalbytes    = 16300142592
           ## Pesimistic: 1,798 MiB / 15,545 MiB Total
           ## Optimistic: 1,396 MiB / 15,545 MiB Total
-          local resources='{
+          local producer_resources='{
               "cores":      8
             , "memory":     13000
             , "memory_max": 15000
           }'
+          # Set this for every non-explorer node
             jq \
-              --argjson resources "${resources}" \
-              ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries(.value.task |= with_entries( .value.resources = \$resources ) )" \
+              --argjson producer_resources "${producer_resources}" \
+              " \
+                  .[\"job\"][\"${nomad_job_name}\"][\"group\"] \
+                |= \
+                  with_entries( \
+                    if ( .key != \"explorer\" ) \
+                    then ( \
+                        .value.task \
+                      |= \
+                        with_entries( .value.resources = \$producer_resources ) \
+                    ) else ( \
+                      . \
+                    ) end \
+                  ) \
+              " \
               "${dir}"/nomad/nomad-job.json \
           | \
             sponge "${dir}"/nomad/nomad-job.json
-          # The explorer node: Using an "m5.4xlarge" instance type
+          # The explorer node uses this specs, make sure they are available!
+          # AWS
+          ## m5.4xlarge: 8 vCPU and 16 Memory (GiB)
+          ## https://aws.amazon.com/ec2/instance-types/m5/
+          # Nomad:
           ## - cpu.arch             = amd64
           ## - cpu.frequency        = 3100
           ## - cpu.modelname        = Intel(R) Xeon(R) Platinum 8175M CPU @ 2.50GHz
@@ -311,38 +377,157 @@ backend_nomadcloud() {
               "${dir}"/nomad/nomad-job.json \
           | \
             sponge "${dir}"/nomad/nomad-job.json
-          # Fix for region mismatches
-          ###########################
-          # We use "us-east-2" and they use "us-east-1"
-            jq \
-              ".[\"job\"][\"${nomad_job_name}\"][\"datacenters\"] |= [\"eu-central-1\", \"us-east-1\", \"ap-southeast-2\"]" \
-              "${dir}"/nomad/nomad-job.json \
-            | \
-              sponge "${dir}"/nomad/nomad-job.json
-            jq \
-              ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries( if (.value.affinity.value == \"us-east-2\") then (.value.affinity.value |= \"us-east-1\") else (.) end )" \
-              "${dir}"/nomad/nomad-job.json \
-            | \
-              sponge "${dir}"/nomad/nomad-job.json
-        # Non "perf" profiles run on the "qa" class
-        else
-          # Right now only testing, using "qa" class distinct nodes!
-          group_constraints_array='
-            [
-              {
-                "operator":  "="
-              , "attribute": "${node.class}"
-              , "value":     "qa"
-              }
-            ]
-          '
         fi
-          jq \
-            --argjson group_constraints_array "${group_constraints_array}" \
-            ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries(.value.constraint = \$group_constraints_array)" \
-            "${dir}"/nomad/nomad-job.json \
-        | \
-          sponge "${dir}"/nomad/nomad-job.json
+        ########################################################################
+        # Reproducibility: #####################################################
+        ########################################################################
+        # If value profile on "perf", using always the same placement!
+        # This means node-N always runs on the same Nomad Client/AWS EC2 machine
+        if test "${WB_SHELL_PROFILE:0:13}" = 'cw-perf-value'
+        then
+          # A file with all the available Nomad Clients is needed!
+          # This files is a list of Nomad Clients with a minimun of ".id",
+          # ".datacenter", ".attributes.platform.aws["instance-type"]",
+          # ".attributes.platform.aws.placement["availability-zone"]",
+          # ".attributes.unique.platform.aws["instance-id"]",
+          # ".attributes.unique.platform.aws.["public-ipv4"]" and
+          # ".attributes.unique.platform.aws.mac".
+          if test -z "${NOMAD_CLIENTS_FILE:-}" || ! test -f "${NOMAD_CLIENTS_FILE}"
+          then
+            fatal "No \"\$NOMAD_CLIENTS_FILE\". For reproducible builds provide this file that ensures cluster nodes are always placed on the same machines, or create a new one with 'wb nomad nodes' if Nomad Clients have suffered changes and runs fail with \"placement errors\""
+          fi
+          # For each (instance-type, datacener/region) we look incrementally for
+          # the unique AWS EC2 "instance-id" only after ordering the Nomad
+          # Clients by its unique Nomad provided "id".
+          local count_ap=0 count_eu=0 count_us=0
+          # For each Nomad Job Group
+          local groups_array
+          # Keys MUST be sorted to always get the same order for the same profile!
+          groups_array=$(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"] | keys | sort | join (\" \")" "${dir}"/nomad/nomad-job.json)
+          for group_name in ${groups_array[*]}
+          do
+            # Obtain the datacenter as Nomad sees it, not as an AWS attributes.
+            # For example "eu-central-1" instead of "eu-central-1a".
+            local datacenter
+            datacenter=$(jq \
+              -r \
+              ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"].affinity.value" \
+              "${dir}"/nomad/nomad-job.json \
+            )
+            # For each Nomad Job Group Task
+            local tasks_array
+            # Keys MUST be sorted to always get the same order for the same profile!
+            tasks_array=$(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"task\"] | keys | sort | join (\" \")" "${dir}"/nomad/nomad-job.json)
+            for task_name in ${tasks_array[*]}
+            do
+              local count instance_type
+              if test "${task_name}" = "explorer"
+              then
+                # There is only one of this instance!
+                instance_type="m5.4xlarge"
+                count=0
+              else
+                # There are many of these instances and we need to always fetch
+                # them in the same order for reproducibility.
+                instance_type="c5.2xlarge"
+                if test "${datacenter}" = "ap-southeast-2"
+                then
+                  count="${count_ap}"
+                  count_ap=$(( count_ap + 1 ))
+                elif test "${datacenter}" = "eu-central-1"
+                then
+                  count="${count_eu}"
+                  count_eu=$(( count_eu + 1 ))
+                elif test "${datacenter}" = "us-east-1"
+                then
+                  count="${count_us}"
+                  count_us=$(( count_us + 1 ))
+                fi
+              fi
+              # Get the actual client for this datacenter and instance type.
+              local actual_client
+              actual_client=$(jq \
+                "   . \
+                  | \
+                    sort_by(.id) \
+                  | \
+                    map(select(.datacenter == \"${datacenter}\")) \
+                  | \
+                    map(select(.attributes.platform.aws[\"instance-type\"] == \"${instance_type}\")) \
+                  | \
+                    .[${count}] \
+                " \
+                "${NOMAD_CLIENTS_FILE}" \
+              )
+              local instance_id availability_zone public_ipv4 mac_address
+              instance_id="$( \
+                 echo "${actual_client}" \
+                | \
+                  jq -r \
+                    '.attributes.unique.platform.aws["instance-id"]' \
+              )"
+              availability_zone="$( \
+                 echo "${actual_client}" \
+                | \
+                  jq -r \
+                    '.attributes.platform.aws.placement["availability-zone"]' \
+              )"
+              public_ipv4="$( \
+                 echo "${actual_client}" \
+                | \
+                  jq -r \
+                    '.attributes.unique.platform.aws["public-ipv4"]' \
+              )"
+              mac_address="$( \
+                 echo "${actual_client}" \
+                | \
+                  jq -r \
+                    '.attributes.unique.platform.aws.mac' \
+              )"
+              # Pin the actual node to an specific Nomad Client / AWS instance
+              # by appending below constraints to the already there group
+              # constraints.
+              # We pin it to a couple of AWS specifics attributes so if SRE
+              # changes something related to Nomad Clients or AWS instances we
+              # may hopefully notice it when the job fails to start (placement
+              # errors).
+              local group_constraints_array_plus="
+                [ \
+                    { \
+                      \"attribute\": \"\${attr.platform.aws.instance-type}\" \
+                    , \"value\":     \"${instance_type}\" \
+                    } \
+                  ,
+                    { \
+                      \"attribute\": \"\${attr.platform.aws.placement.availability-zone}\" \
+                    , \"value\":     \"${availability_zone}\" \
+                    } \
+                  ,
+                    { \
+                      \"attribute\": \"\${attr.unique.platform.aws.instance-id}\" \
+                    , \"value\":     \"${instance_id}\" \
+                    } \
+                  ,
+                    { \
+                      \"attribute\": \"\${attr.unique.platform.aws.public-ipv4}\" \
+                    , \"value\":     \"${public_ipv4}\" \
+                    } \
+                  ,
+                    { \
+                      \"attribute\": \"\${attr.unique.platform.aws.mac}\" \
+                    , \"value\":     \"${mac_address}\" \
+                    } \
+                ] \
+              "
+                jq \
+                  --argjson group_constraints_array_plus "${group_constraints_array_plus}" \
+                  ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"constraint\"] |= ( . + \$group_constraints_array_plus)" \
+                  "${dir}"/nomad/nomad-job.json \
+              | \
+                sponge "${dir}"/nomad/nomad-job.json
+            done
+          done
+        fi
       fi
 
       # Store a summary of the job.
@@ -360,7 +545,8 @@ backend_nomadcloud() {
                     , "tasks":      (
                         .task | with_entries(
                           .value |= {
-                              "resources":          .resources
+                              "constraint":         .constraint
+                            , "resources":          .resources
                             , "nix_installables":   .config.nix_installables
                             , "templates":        ( .template | map(.destination) )
                           }
