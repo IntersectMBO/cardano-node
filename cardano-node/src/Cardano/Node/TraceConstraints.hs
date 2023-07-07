@@ -2,17 +2,19 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
 module Cardano.Node.TraceConstraints (TraceConstraints) where
 
 
-import           Data.Aeson
-
 import           Cardano.BM.Tracing (ToObject)
+import           Cardano.Ledger.Credential
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Keys
 import           Cardano.Logging (LogFormatting)
 import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..), HasKESInfo (..),
                    HasKESMetricsData (..), LedgerQueries)
 import           Cardano.Tracing.HasIssuer (HasIssuer)
-
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateUpdateError,
                    Header)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
@@ -23,6 +25,9 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
                    (HasNetworkProtocolVersion (BlockNodeToClientVersion, BlockNodeToNodeVersion))
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
+
+import           Data.Aeson
+import           Data.Set
 
 -- | Tracing-related constraints for monitoring purposes.
 type TraceConstraints blk =
@@ -60,5 +65,5 @@ type TraceConstraints blk =
     , LogFormatting (ValidationErr (BlockProtocol blk))
     , LogFormatting (CannotForge blk)
     , LogFormatting (ForgeStateUpdateError blk)
-
+    , LogFormatting (Set (Credential 'Staking StandardCrypto))
     )
