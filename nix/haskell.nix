@@ -24,6 +24,10 @@ let
       # extra-compilers
       flake.variants = lib.genAttrs ["ghc927"] (x: {compiler-nix-name = x;});
       cabalProjectLocal = ''
+        repository cardano-haskell-packages-local
+          url: file:${CHaP}
+          secure: True
+        active-repositories: hackage.haskell.org, cardano-haskell-packages-local
         allow-newer: terminfo:base
       '' + lib.optionalString pkgs.stdenv.hostPlatform.isWindows ''
         -- When cross compiling we don't have a `ghc` package
