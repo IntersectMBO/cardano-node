@@ -177,7 +177,7 @@ library
                       , optparse-applicative-fork
                       , ouroboros-consensus >= 0.6
                       , ouroboros-consensus-cardano >= 0.5
-                      , ouroboros-consensus-diffusion >= 0.5.1
+                      , ouroboros-consensus-diffusion >= 0.7
                       , ouroboros-consensus-protocol >= 0.5
                       , ouroboros-network-api
                       , ouroboros-network ^>= 0.8.1.1
@@ -191,7 +191,7 @@ library
                       , si-timers
                       , stm
                       , strict-stm
-                      , text
+                      , text >= 2.0
                       , time
                       , trace-dispatcher ^>= 2.0
                       , trace-forward ^>= 2.0
@@ -222,7 +222,7 @@ executable cardano-node
                       , cardano-git-rev
                       , cardano-node
                       , optparse-applicative-fork
-                      , text
+                      , text >= 2.0
 
 test-suite cardano-node-test
   import:               project-config
@@ -248,10 +248,10 @@ test-suite cardano-node-test
                       , mtl
                       , ouroboros-consensus
                       , ouroboros-consensus-cardano
-                      , ouroboros-consensus-diffusion
+                      , ouroboros-consensus-diffusion >= 0.7
                       , ouroboros-network ^>= 0.8.1.0
                       , ouroboros-network-api
-                      , text
+                      , text >= 2.0
                       , time
                       , transformers
                       , vector
