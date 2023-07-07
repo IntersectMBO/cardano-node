@@ -13,14 +13,15 @@ module Cardano.Node.Protocol.Types
 
 import qualified Cardano.Api as Api
 
-import           Control.DeepSeq (NFData)
-import           Data.Aeson
-import           GHC.Generics (Generic)
-import           NoThunks.Class (NoThunks)
-
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Queries (HasKESInfo, HasKESMetricsData)
 import           Cardano.Node.TraceConstraints (TraceConstraints)
+
+import           Control.DeepSeq (NFData)
+import           Data.Aeson
+import           GHC.Generics (Generic)
+
+import           NoThunks.Class (NoThunks)
 
 
 data Protocol = ByronProtocol

@@ -122,3 +122,4 @@ source-repository-package
   subdir:
     cardano-api
 
+allow-newer: text
