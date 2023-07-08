@@ -108,24 +108,6 @@ package snap-server
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/cardano-ledger
-  tag: 7ccedcc09654a55bb7b146fc6176e6fd2a624653
-  --sha256: 1a4m7m7ry7mvlvrd45lp8aila9y3yz3x6m15j16h3m43mz6mnfzr
-  subdir:
-    eras/conway/impl
-    eras/conway/test-suite
-    libs/cardano-ledger-pretty
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: 7a6356763a62ba8b7cc1b3f9b27449657ae6a36f
-  --sha256: 0py2fxc3d960hvkb8whn5rmywbbbcgkgc4sl7pl80zyk1l54l6sz
-  subdir:
-    ouroboros-consensus-cardano
-
-source-repository-package
-  type: git
   location: https://github.com/input-output-hk/cardano-cli
   tag: 5c55df77f83d98ac32e6022bc186aae5d219ebfd
   --sha256: 08hnj3s5nxmmkysal2vw1lnsn5f8myyh36lczdk09bbpymkpczl2
