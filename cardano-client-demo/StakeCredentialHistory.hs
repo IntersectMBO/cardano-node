@@ -257,7 +257,7 @@ main = do
              _era)
            state -> do
              let getGoSnapshot = L.unStake . L.ssStake . L.ssStakeGo . L.esSnapshots . L.nesEs
-                 getBalances = UM.rewView
+                 getBalances = UM.rewardMap
                              . L.dsUnified
                              . L.certDState
                              . L.lsCertState
@@ -342,7 +342,7 @@ main = do
       TxCertificatesNone    -> return ()
       TxCertificates _ cs _ -> mapM_ msg $ mapMaybe (targetedCert t epochNo slotNo) cs
 
-    targetedCert :: StakeCredential -> EpochNo -> SlotNo -> Certificate -> Maybe (Event c)
+    targetedCert :: StakeCredential -> EpochNo -> SlotNo -> Certificate era -> Maybe (Event c)
     targetedCert t epochNo slotNo = \case
       StakeAddressRegistrationCertificate cred ->
         if t == cred then Just (StakeRegistrationEvent epochNo slotNo) else Nothing
