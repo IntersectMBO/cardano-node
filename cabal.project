@@ -109,8 +109,8 @@ package snap-server
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-cli
-  tag: c8f07d82a65015e2a67c9e1a3019c629e584fab0
-  --sha256: 1zbmh3d45dsxfcb6hpdqrivi4y75yfc9arnlpakfypfjc073jh6n
+  tag: 2765510abe155a6931526f49d8b62bdf90d81b40
+  --sha256: 00x0xpz2c79q7rifhmdhvcgzdfryzh5xk08c5bgikdkb2462sqfx
   subdir:
     cardano-cli
 
