@@ -15,7 +15,6 @@ import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldBlocks
 import qualified Cardano.Testnet.Test.Node.Shutdown
-import qualified Cardano.Testnet.Test.ShutdownOnSlotSynced
 import qualified System.Environment as E
 import qualified Test.Tasty as T
 import qualified Test.Tasty.Ingredients as T
@@ -28,7 +27,8 @@ tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
     [ H.ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
-    , H.ignoreOnWindows "ShutdownOnSlotSynced" Cardano.Testnet.Test.ShutdownOnSlotSynced.hprop_shutdownOnSlotSynced
+    , H.ignoreOnWindows "ShutdownOnSigint" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSigint
+    , H.ignoreOnWindows "ShutdownOnSlotSynced" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSlotSynced
     -- TODO: This is failing. Disabling until we can figure out why
     -- , T.testGroup "Alonzo"
     --   [ H.ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.Alonzo.LeadershipSchedule.hprop_leadershipSchedule
