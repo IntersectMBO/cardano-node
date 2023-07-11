@@ -319,7 +319,7 @@ in
 project.appendOverlays (with haskellLib.projectOverlays; [
   projectComponents
   (final: prev:
-    let inherit (final.pkgs) lib gitrev; in {
+    let inherit (final.pkgs) lib; in {
       profiled = final.appendModule {
         modules = [{
           enableLibraryProfiling = true;
@@ -361,19 +361,7 @@ project.appendOverlays (with haskellLib.projectOverlays; [
         (path: value:
           if (lib.isAttrs value) then
             lib.recursiveUpdate
-              (if lib.elemAt path 2 == "exes" && lib.elem (lib.elemAt path 3) [ "cardano-node" "cardano-cli" ] then
-              # Stamp executables with version info.
-              # Done outside the haskell.nix derivation to avoid compilation and tests depending on rev.
-                final.pkgs.buildPackages.runCommand value.name
-                  {
-                    inherit (value) exeName exePath meta passthru;
-                  } ''
-                  mkdir -p $out
-                  cp --no-preserve=timestamps --recursive ${value}/* $out/
-                  chmod -R +w $out/bin
-                  ${final.pkgs.pkgsBuildBuild.haskellBuildUtils}/bin/set-git-rev "${gitrev}" $out/bin/*
-                ''
-              else value)
+              value
               {
                 # Also add convenient passthru to some alternative compilation configurations:
                 passthru = {
@@ -381,7 +369,8 @@ project.appendOverlays (with haskellLib.projectOverlays; [
                   asserted = lib.getAttrFromPath path final.asserted.hsPkgs;
                   eventlogged = lib.getAttrFromPath path final.eventlogged.hsPkgs;
                 };
-              } else value)
+              }
+          else value)
         prev.hsPkgs;
     })
 ])
