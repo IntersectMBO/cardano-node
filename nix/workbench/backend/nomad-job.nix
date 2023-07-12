@@ -269,10 +269,11 @@ let
         constraint = {
           attribute = "\${node.class}";
           operator = "=";
-          # For testing we avoid using "infra" node class as HA jobs runs there
-          # For benchmarking dedicated static machines in the "perf"
-          # class are used and this value should be updated accordingly.
-          value = "qa";
+          # For cloud benchmarking dedicated static machines in the "perf"
+          # class are used. We replicate that for local/test runs.
+          # Class "qa" nodes are also available but must be limited to short
+          # test and avoid using "infra" node class as HA jobs runs there.
+          value = "perf";
         };
 
         # The network stanza specifies the networking requirements for the task

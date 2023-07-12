@@ -226,6 +226,15 @@ backend_nomadcloud() {
       # Set the placement info and resources accordingly
       local nomad_job_name
       nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
+      ##########################################################################
+      # Profile name dependent changes #########################################
+      ##########################################################################
+      # "cw-perf-*" profiles are profiles that only run on Cardano World's Nomad
+      # Nodes of class "perf".
+      # Other cloud profiles are for example "ci-test-cw-qa", "ci-test-cw-perf",
+      # "ci-test-cw-qa", "ci-test-cw-perf". "qa" means that they run on Nomad
+      # nodes that belong to the "qa" class, runs on these should be limited to
+      # short tests and must never use the "infra" class where HA jobs runs.
       if test -z "${WB_SHELL_PROFILE:-}"
       then
         fatal "Envar \"WB_SHELL_PROFILE\" is empty!"
@@ -274,20 +283,15 @@ backend_nomadcloud() {
         # Node class: ##########################################################
         ########################################################################
         local group_constraints_array
-        # "perf" profiles run on the "perf" class
-        if test "${WB_SHELL_PROFILE:0:7}" = 'cw-perf'
+        # "perf" class nodes are the default unless the profile name contains
+        # "cw-qa", we try to limit the usage of Nomad nodes that are not
+        # dedicated Perf team nodes.
+        # But also, we have to be careful that "perf" runs do not overlap. We
+        # are making "perf" class nodes runs can't clash because service names
+        # and resources definitions currently won't allow that to happen but
+        # still a new "perf" run may mess up a previously running cluster.
+        if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-qa"
         then
-          # Using Performance & Tracing exclusive "perf" class distinct nodes!
-          group_constraints_array='
-            [
-              {
-                "operator":  "="
-              , "attribute": "${node.class}"
-              , "value":     "perf"
-              }
-            ]
-          '
-        else
           # Using "qa" class distinct nodes. Only "short" test allowed here.
           group_constraints_array='
             [
@@ -295,6 +299,17 @@ backend_nomadcloud() {
                 "operator":  "="
               , "attribute": "${node.class}"
               , "value":     "qa"
+              }
+            ]
+          '
+        else
+          # Using Performance & Tracing exclusive "perf" class distinct nodes!
+          group_constraints_array='
+            [
+              {
+                "operator":  "="
+              , "attribute": "${node.class}"
+              , "value":     "perf"
               }
             ]
           '
@@ -310,8 +325,9 @@ backend_nomadcloud() {
         # Memory/resources: ####################################################
         ########################################################################
         # Set the resources, only for perf!
-        # When not "perf", when "cw-qa", only "short" tests are allowed.
-        if test "${WB_SHELL_PROFILE:0:7}" = 'cw-perf'
+        # When not "perf", when "cw-qa", only "short" tests are allowed on
+        # whatever resources we are given.
+        if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"
         then
           # Producer nodes use this specs, make sure they are available!
           # AWS:
