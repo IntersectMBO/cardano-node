@@ -35,20 +35,19 @@ changeaddr=addr_test1qpmxr8d8jcl25kyz2tz9a9sxv7jxglhddyf475045y8j3zxjcg9vquzkljy
 targetaddr=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
 
 $CARDANO_CLI transaction build \
-  --babbage-era \
+  --conway-era \
   --cardano-mode \
-  --cli-format \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$changeaddr" \
   --tx-in $txin \
   --tx-out "$targetaddr+10000000" \
   --out-file $WORK/build.body
 
-$CARDANO_CLI transaction witness \
+$CARDANO_CLI transaction sign \
   --tx-body-file $WORK/build.body \
   --testnet-magic "$TESTNET_MAGIC" \
   --signing-key-file $UTXO_SKEY \
-  --out-file $WORK/witness.tx
+  --out-file $WORK/build.tx
 
 # SUBMIT
 $CARDANO_CLI transaction submit --tx-file $WORK/build.tx --testnet-magic "$TESTNET_MAGIC"

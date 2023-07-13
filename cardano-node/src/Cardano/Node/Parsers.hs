@@ -62,6 +62,7 @@ nodeRunParser = do
   shelleyVRFFile  <- optional parseVrfKeyFilePath
   shelleyCertFile <- optional parseOperationalCertFilePath
   shelleyBulkCredsFile <- optional parseBulkCredsFilePath
+  startAsNonProducingNode <- lastOption parseStartAsNonProducingNode
 
   -- Node Address
   nIPv4Address <- lastOption parseHostIPv4Addr
@@ -102,6 +103,7 @@ nodeRunParser = do
            , pncValidateDB = validate
            , pncShutdownConfig =
                Last . Just $ ShutdownConfig (getLast shutdownIPC) (getLast shutdownOnLimit)
+           , pncStartAsNonProducingNode = startAsNonProducingNode
            , pncProtocolConfig = mempty
            , pncMaxConcurrencyBulkSync = mempty
            , pncMaxConcurrencyDeadline = mempty
@@ -312,6 +314,16 @@ parseVrfKeyFilePath =
         <> help "Path to the VRF signing key."
         <> completer (bashCompleter "file")
     )
+
+parseStartAsNonProducingNode :: Parser Bool
+parseStartAsNonProducingNode =
+  switch $ mconcat
+    [ long "non-producing-node"
+    , help $ mconcat
+        [ "Start the node as a non block producing node even if "
+        , "credentials are specified."
+        ]
+    ]
 
 -- TODO revisit because it sucks
 parseSnapshotInterval :: Parser SnapshotInterval

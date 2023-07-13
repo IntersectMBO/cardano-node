@@ -152,6 +152,7 @@ data ForgeTracers = ForgeTracers
   , ftTraceBlockFromFuture :: Trace IO Text
   , ftTraceSlotIsImmutable :: Trace IO Text
   , ftTraceNodeIsLeader :: Trace IO Text
+  , ftTraceAdoptionThreadDied :: Trace IO Text
   }
 
 nullTracersP2P :: Tracers peer localPeer blk 'Diffusion.P2P
@@ -763,6 +764,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
        <*> counting (liftCounting staticMeta name "block-from-future" tr)
        <*> counting (liftCounting staticMeta name "slot-is-immutable" tr)
        <*> counting (liftCounting staticMeta name "node-is-leader" tr)
+       <*> counting (liftCounting staticMeta name "adoption-thread-died" tr)
 
    traceServedCount :: Maybe EKGDirect -> TraceChainSyncServerEvent blk -> IO ()
    traceServedCount Nothing _ = pure ()
@@ -1027,6 +1029,7 @@ teeForge ft tverb tr = Tracer $
       Consensus.TraceDidntAdoptBlock{} -> teeForge' (ftDidntAdoptBlock ft)
       Consensus.TraceForgedInvalidBlock{} -> teeForge' (ftForgedInvalid ft)
       Consensus.TraceAdoptedBlock{} -> teeForge' (ftAdopted ft)
+      Consensus.TraceAdoptionThreadDied{} -> teeForge' (ftTraceAdoptionThreadDied ft)
   case event of
     Consensus.TraceStartLeadershipCheck _slot -> pure ()
     _ -> traceWith (toLogObject' tverb tr) ev
@@ -1075,6 +1078,8 @@ teeForge' tr =
           LogValue "forgedInvalidSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceAdoptedBlock slot _ _ ->
           LogValue "adoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceAdoptionThreadDied slot _ ->
+          LogValue "adoptionThreadDied" $ PureI $ fromIntegral $ unSlotNo slot
 
 forgeTracer
   :: forall blk.

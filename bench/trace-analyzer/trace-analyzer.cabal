@@ -40,7 +40,7 @@ executable trace-analyzer
   main-is:              trace-analyzer.hs
 
   build-depends:        aeson
-                      , optparse-applicative
+                      , optparse-applicative >= 0.16.0 && < 0.16.1
                       , text
                       , containers
                       , attoparsec

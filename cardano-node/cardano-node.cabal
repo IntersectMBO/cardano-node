@@ -137,12 +137,13 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.2
+                      , cardano-api ^>= 8.8
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev
                       , cardano-ledger-alonzo
                       , cardano-ledger-allegra
+                      , cardano-ledger-api
                       , cardano-ledger-babbage
                       , cardano-ledger-byron
                       , cardano-ledger-conway
@@ -173,10 +174,10 @@ library
                       , network
                       , network-mux >= 0.4
                       , nothunks
-                      , optparse-applicative-fork
-                      , ouroboros-consensus >= 0.6
-                      , ouroboros-consensus-cardano >= 0.5
-                      , ouroboros-consensus-diffusion >= 0.5.1
+                      , optparse-applicative-fork ^>= 0.16.1
+                      , ouroboros-consensus >= 0.9
+                      , ouroboros-consensus-cardano >= 0.7
+                      , ouroboros-consensus-diffusion >= 0.7
                       , ouroboros-consensus-protocol >= 0.5
                       , ouroboros-network-api
                       , ouroboros-network ^>= 0.8.1.1
@@ -190,7 +191,7 @@ library
                       , si-timers
                       , stm
                       , strict-stm
-                      , text
+                      , text >= 2.0
                       , time
                       , trace-dispatcher ^>= 2.0
                       , trace-forward ^>= 2.0
@@ -220,8 +221,8 @@ executable cardano-node
                       , cardano-crypto-class
                       , cardano-git-rev
                       , cardano-node
-                      , optparse-applicative-fork
-                      , text
+                      , optparse-applicative-fork ^>= 0.16.1
+                      , text >= 2.0
 
 test-suite cardano-node-test
   import:               project-config
@@ -234,7 +235,7 @@ test-suite cardano-node-test
                       , aeson >= 1.5.6.0
                       , bytestring
                       , cardano-crypto-class
-                      , cardano-api ^>= 8.2
+                      , cardano-api ^>= 8.8
                       , cardano-ledger-core
                       , cardano-node
                       , cardano-slotting >= 0.1
@@ -245,12 +246,12 @@ test-suite cardano-node-test
                       , hedgehog-extras
                       , iproute
                       , mtl
-                      , ouroboros-consensus
+                      , ouroboros-consensus >= 0.9
                       , ouroboros-consensus-cardano
-                      , ouroboros-consensus-diffusion
-                      , ouroboros-network ^>= 0.8.1.0
+                      , ouroboros-consensus-diffusion >= 0.7
+                      , ouroboros-network ^>= 0.8.1.1
                       , ouroboros-network-api
-                      , text
+                      , text >= 2.0
                       , time
                       , transformers
                       , vector

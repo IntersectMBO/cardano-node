@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Node.Startup where
@@ -47,6 +48,7 @@ import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
 import           Cardano.Logging
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Configuration.Socket
+import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 
 import           Cardano.Git.Rev (gitRev)
@@ -75,6 +77,17 @@ data StartupTrace blk =
   | StartupSocketConfigError SocketConfigError
 
   | StartupDBValidation
+
+  -- | Log that the block forging is being updated
+  | BlockForgingUpdate EnabledBlockForging
+
+  -- | Protocol instantiation error when updating block forging
+  | BlockForgingUpdateError ProtocolInstantiationError
+
+  -- | Mismatched block type
+  | BlockForgingBlockTypeMismatch
+       Api.SomeBlockType -- ^ expected
+       Api.SomeBlockType -- ^ provided
 
   -- | Log that the network configuration is being updated.
   --
@@ -120,7 +133,9 @@ data StartupTrace blk =
   | BIByron BasicInfoByron
   | BINetwork BasicInfoNetwork
 
-
+data EnabledBlockForging = EnabledBlockForging
+                         | DisabledBlockForging
+                         deriving (Eq, Show)
 
 data BasicInfoCommon = BasicInfoCommon {
     biConfigPath    :: FilePath
@@ -199,7 +214,7 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
     , niSystemStartTime = systemStartTime
     }
  where
-  cfg = pInfoConfig $ Api.protocolInfo pForInfo
+  cfg = pInfoConfig $ fst $ Api.protocolInfo @IO pForInfo
 
   systemStartTime :: UTCTime
   systemStartTime =

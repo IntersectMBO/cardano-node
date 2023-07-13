@@ -27,7 +27,8 @@ import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..), Node
                    NodeIPv4Address, NodeIPv6Address)
 import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..),
                    LocalRootPeersGroups (..), NetworkTopology (..), NodeSetup (..),
-                   PeerAdvertise (..), PublicRootPeers (..), RootConfig (..), UseLedger (..))
+                   PeerAdvertise (..), PublicRootPeers (..), RootConfig (..))
+import           Cardano.Node.Types (UseLedger (..))
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (DomainAccessPoint (..),

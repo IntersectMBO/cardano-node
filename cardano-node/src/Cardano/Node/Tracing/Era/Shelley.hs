@@ -4,6 +4,7 @@
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -15,73 +16,61 @@
 
 module Cardano.Node.Tracing.Era.Shelley () where
 
-import           Data.Aeson (ToJSON (..), Value (..), (.=))
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Key as Aeson
-import qualified Data.Aeson.Types as Aeson
-import           Data.Set (Set)
-import qualified Data.Set as Set
-import           Data.Text (Text)
-
 import           Cardano.Api (textShow)
-import qualified Cardano.Api as Api
 import qualified Cardano.Api.Shelley as Api
+
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import qualified Cardano.Ledger.Allegra.Rules as Allegra
+import qualified Cardano.Ledger.Allegra.Scripts as Allegra
+import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
+import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure, AlonzoUtxoPredFailure,
+                   AlonzoUtxosPredFailure, AlonzoUtxowPredFailure (..))
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
+import qualified Cardano.Ledger.AuxiliaryData as Ledger
+import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
+import qualified Cardano.Ledger.Babbage.Rules as Babbage
+import           Cardano.Ledger.BaseTypes (activeSlotLog)
+import           Cardano.Ledger.Chain
+import           Cardano.Ledger.Conway.Governance (govActionIdToText)
+import qualified Cardano.Ledger.Conway.Rules as Conway
+import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Crypto as Ledger
+import qualified Cardano.Ledger.SafeHash as SafeHash
+import           Cardano.Ledger.Shelley.API
+import           Cardano.Ledger.Shelley.Rules
 import           Cardano.Logging
+import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
+import           Cardano.Protocol.TPraos.BHeader (LastAppliedBlock, labBlockNo)
+import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
+import           Cardano.Protocol.TPraos.Rules.OCert
+import           Cardano.Protocol.TPraos.Rules.Overlay
+import           Cardano.Protocol.TPraos.Rules.Prtcl
+                   (PrtclPredicateFailure (OverlayFailure, UpdnFailure),
+                   PrtlSeqFailure (WrongBlockNoPrtclSeq, WrongBlockSequencePrtclSeq, WrongSlotIntervalPrtclSeq))
+import           Cardano.Protocol.TPraos.Rules.Tickn (TicknPredicateFailure)
+import           Cardano.Protocol.TPraos.Rules.Updn (UpdnPredicateFailure)
 import           Cardano.Slotting.Block (BlockNo (..))
-
-import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
-import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
-
+import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Praos as Praos
 import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
+import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Consensus.Shelley.Ledger.Inspect
 import qualified Ouroboros.Consensus.Shelley.Protocol.Praos as Praos
 import           Ouroboros.Consensus.Util.Condense (condense)
+import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
+import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
-
-import           Cardano.Protocol.TPraos.BHeader (LastAppliedBlock, labBlockNo)
-import           Cardano.Protocol.TPraos.Rules.OCert
-import           Cardano.Protocol.TPraos.Rules.Overlay
-import           Cardano.Protocol.TPraos.Rules.Updn (UpdnPredicateFailure)
-
-
-import qualified Cardano.Ledger.Allegra.Scripts as Allegra
-import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import qualified Cardano.Ledger.AuxiliaryData as Core
-import           Cardano.Ledger.BaseTypes (activeSlotLog, strictMaybeToMaybe)
-import           Cardano.Ledger.Chain
-import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Core as Ledger
-import qualified Cardano.Ledger.Crypto as Core
-import qualified Cardano.Ledger.SafeHash as SafeHash
-
--- TODO: this should be exposed via Cardano.Api
-import           Cardano.Ledger.Shelley.API
-
-import           Cardano.Ledger.Shelley.Rules
-
-import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
-import qualified Cardano.Ledger.Allegra.Rules as Allegra
-import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure, AlonzoUtxoPredFailure,
-                   AlonzoUtxosPredFailure, AlonzoUtxowPredFailure (..))
-import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
-import qualified Cardano.Ledger.Babbage.Rules as Babbage
-import           Cardano.Ledger.Conway.Governance (govActionIdToText)
-import qualified Cardano.Ledger.Conway.Rules as Conway
-import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
-import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
-import           Cardano.Protocol.TPraos.Rules.Prtcl
-                   (PrtclPredicateFailure (OverlayFailure, UpdnFailure),
-                   PrtlSeqFailure (WrongBlockNoPrtclSeq, WrongBlockSequencePrtclSeq, WrongSlotIntervalPrtclSeq))
-import           Cardano.Protocol.TPraos.Rules.Tickn (TicknPredicateFailure)
-import           Cardano.Tracing.OrphanInstances.Shelley ()
+import           Data.Aeson (ToJSON (..), Value (..), (.=))
+import qualified Data.Aeson as Aeson
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import           Data.Text (Text)
 
 {- HLINT ignore "Use :" -}
 
@@ -90,15 +79,32 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 --
 -- NOTE: this list is sorted in roughly topological order.
 
-instance (  ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock protocol era)))
-         ,  ShelleyBasedEra era)
-         => LogFormatting (GenTx (ShelleyBlock protocol era)) where
+instance
+  ( ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock protocol era)))
+  , ShelleyBasedEra era
+  ) => LogFormatting (GenTx (ShelleyBlock protocol era)) where
   forMachine dtal tx =
     mconcat $
         ( "txid" .= txId tx )
       : [ "tx"   .= condense tx | dtal == DDetailed ]
 
-instance ShelleyCompatible protocol era => LogFormatting (Header (ShelleyBlock protocol era)) where
+instance LogFormatting (Set (Credential 'Staking StandardCrypto)) where
+  forMachine _dtal creds = mconcat
+        [ "stake credentials" .= Set.map show creds ] -- TODO: Conway era - render this in a nicer way
+
+instance
+  ( Show (PredicateFailure (Ledger.EraRule "DELEG" era))
+  , Show (PredicateFailure (Ledger.EraRule "POOL" era))
+  , Show (PredicateFailure (Ledger.EraRule "VDEL" era))
+  ) => LogFormatting (Conway.ConwayCertPredFailure era) where
+  forMachine _dtal cfail =
+    mconcat [ "kind" .= String "ConwayCertPredFailure"
+            , "failure" .= show cfail -- TODO: Conway era - render in a nicer way
+            ]
+
+instance
+  ( ShelleyCompatible protocol era
+  ) => LogFormatting (Header (ShelleyBlock protocol era)) where
   forMachine _dtal b = mconcat
         [ "kind" .= String "ShelleyBlock"
         , "hash" .= condense (blockHash b)
@@ -107,15 +113,18 @@ instance ShelleyCompatible protocol era => LogFormatting (Header (ShelleyBlock p
 --      , "delegate" .= condense (headerSignerVk h)
         ]
 
-instance ( ShelleyBasedEra era
-         , LogFormatting (PredicateFailure (ShelleyUTXO era))
-         , LogFormatting (PredicateFailure (ShelleyUTXOW era))
-         , LogFormatting (PredicateFailure (Core.EraRule "LEDGER" era))
-         ) => LogFormatting (ApplyTxError era) where
+instance
+  ( Consensus.ShelleyBasedEra era
+  , LogFormatting (PredicateFailure (ShelleyUTXO era))
+  , LogFormatting (PredicateFailure (ShelleyUTXOW era))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGER" era))
+  ) => LogFormatting (ApplyTxError era) where
   forMachine dtal (ApplyTxError predicateFailures) =
     mconcat $ map (forMachine dtal) predicateFailures
 
-instance Core.Crypto era => LogFormatting (TPraosCannotForge era) where
+instance
+  ( Ledger.Crypto era
+  ) => LogFormatting (TPraosCannotForge era) where
   forMachine _dtal (TPraosCannotForgeKeyNotUsableYet wallClockPeriod keyStartPeriod) =
     mconcat
       [ "kind" .= String "TPraosCannotForgeKeyNotUsableYet"
@@ -130,46 +139,55 @@ instance Core.Crypto era => LogFormatting (TPraosCannotForge era) where
       ]
 
 
-instance ( ShelleyBasedEra era
-         , LogFormatting (PredicateFailure (ShelleyUTXO era))
-         , LogFormatting (PredicateFailure (ShelleyUTXOW era))
-         , LogFormatting (PredicateFailure (Core.EraRule "BBODY" era))
-         ) => LogFormatting (ShelleyLedgerError era) where
+instance
+  ( Consensus.ShelleyBasedEra era
+  , LogFormatting (PredicateFailure (ShelleyUTXO era))
+  , LogFormatting (PredicateFailure (ShelleyUTXOW era))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "BBODY" era))
+  ) => LogFormatting (ShelleyLedgerError era) where
   forMachine dtal (BBodyError (BlockTransitionError fs)) =
     mconcat [ "kind" .= String "BBodyError"
              , "failures" .= map (forMachine dtal) fs
              ]
 
-instance ( ShelleyBasedEra era
-         , ToJSON (Core.PParamsUpdate era)
-         ) => LogFormatting (ShelleyLedgerUpdate era) where
+instance
+  ( Consensus.ShelleyBasedEra era
+  , ToJSON (Ledger.PParamsUpdate era)
+  ) => LogFormatting (ShelleyLedgerUpdate era) where
   forMachine dtal (ShelleyUpdatedProtocolUpdates updates) =
     mconcat [ "kind" .= String "ShelleyUpdatedProtocolUpdates"
              , "updates" .= map (forMachine dtal) updates
              ]
 
-instance (Ledger.Era era, ToJSON (Core.PParamsUpdate era))
-         => LogFormatting (ProtocolUpdate era) where
+instance
+  ( Ledger.Era era
+  , ToJSON (Ledger.PParamsUpdate era)
+  ) => LogFormatting (ProtocolUpdate era) where
   forMachine dtal ProtocolUpdate{protocolUpdateProposal, protocolUpdateState} =
     mconcat [ "proposal" .= forMachine dtal protocolUpdateProposal
              , "state"    .= forMachine dtal protocolUpdateState
              ]
 
-instance ToJSON (Core.PParamsUpdate era)
-         => LogFormatting (UpdateProposal era) where
+instance
+  ( ToJSON (Ledger.PParamsUpdate era)
+  ) => LogFormatting (UpdateProposal era) where
   forMachine _dtal UpdateProposal{proposalParams, proposalVersion, proposalEpoch} =
     mconcat [ "params"  .= proposalParams
              , "version" .= proposalVersion
              , "epoch"   .= proposalEpoch
              ]
 
-instance Core.Crypto crypto => LogFormatting (UpdateState crypto) where
+instance
+  ( Ledger.Crypto crypto
+  ) => LogFormatting (UpdateState crypto) where
   forMachine _dtal UpdateState{proposalVotes, proposalReachedQuorum} =
     mconcat [ "proposal"      .= proposalVotes
              , "reachedQuorum" .= proposalReachedQuorum
              ]
 
-instance Core.Crypto crypto => LogFormatting (ChainTransitionError crypto) where
+instance
+  ( Ledger.Crypto crypto
+  ) => LogFormatting (ChainTransitionError crypto) where
   forMachine dtal (ChainTransitionError fs) =
     mconcat [ "kind" .= String "ChainTransitionError"
              , "failures" .= map (forMachine dtal) fs
@@ -217,12 +235,13 @@ instance LogFormatting (PrtlSeqFailure crypto) where
              , "currentBlockHash" .= String (textShow currentHash)
              ]
 
-instance ( ShelleyBasedEra era
-         , LogFormatting (PredicateFailure (ShelleyUTXO era))
-         , LogFormatting (PredicateFailure (ShelleyUTXOW era))
-         , LogFormatting (PredicateFailure (Core.EraRule "LEDGER" era))
-         , LogFormatting (PredicateFailure (Core.EraRule "LEDGERS" era))
-         ) => LogFormatting (ShelleyBbodyPredFailure era) where
+instance
+  ( Consensus.ShelleyBasedEra era
+  , LogFormatting (PredicateFailure (ShelleyUTXO era))
+  , LogFormatting (PredicateFailure (ShelleyUTXOW era))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGER" era))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGERS" era))
+  ) => LogFormatting (ShelleyBbodyPredFailure era) where
   forMachine _dtal (WrongBlockBodySizeBBODY actualBodySz claimedBodySz) =
     mconcat [ "kind" .= String "WrongBlockBodySizeBBODY"
              , "actualBlockBodySize" .= actualBodySz
@@ -236,34 +255,37 @@ instance ( ShelleyBasedEra era
   forMachine dtal (LedgersFailure f) = forMachine dtal f
 
 
-instance ( ShelleyBasedEra era
-         , LogFormatting (PredicateFailure (ShelleyUTXO era))
-         , LogFormatting (PredicateFailure (ShelleyUTXOW era))
-         , LogFormatting (PredicateFailure (Core.EraRule "LEDGER" era))
-         ) => LogFormatting (ShelleyLedgersPredFailure era) where
+instance
+  ( Consensus.ShelleyBasedEra era
+  , LogFormatting (PredicateFailure (ShelleyUTXO era))
+  , LogFormatting (PredicateFailure (ShelleyUTXOW era))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGER" era))
+  ) => LogFormatting (ShelleyLedgersPredFailure era) where
   forMachine dtal (LedgerFailure f) = forMachine dtal f
 
 
-instance ( ShelleyBasedEra era
-         , ToJSON (Core.AuxiliaryDataHash (Ledger.EraCrypto era))
-         , LogFormatting (PredicateFailure (ShelleyUTXO era))
-         , LogFormatting (PredicateFailure (ShelleyUTXOW era))
-         , LogFormatting (PredicateFailure (Core.EraRule "DELEGS" era))
-         , LogFormatting (PredicateFailure (Core.EraRule "UTXOW" era))
-         ) => LogFormatting (ShelleyLedgerPredFailure era) where
-  forMachine dtal (UtxowFailure f)  = forMachine dtal f
-  forMachine dtal (DelegsFailure f) = forMachine dtal f
+instance
+  ( Consensus.ShelleyBasedEra era
+  , ToJSON (Ledger.AuxiliaryDataHash (Ledger.EraCrypto era))
+  , LogFormatting (PredicateFailure (ShelleyUTXO era))
+  , LogFormatting (PredicateFailure (ShelleyUTXOW era))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "DELEGS" era))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOW" era))
+  ) => LogFormatting (ShelleyLedgerPredFailure era) where
+  forMachine dtal = \case
+    UtxowFailure f -> forMachine dtal f
+    DelegsFailure f -> forMachine dtal f
 
-instance ( ShelleyBasedEra era
-         , Ledger.EraCrypto era ~ StandardCrypto
-         , LogFormatting (PPUPPredFailure era)
-         , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" era))
-         ) => LogFormatting (AlonzoUtxowPredFailure era) where
+instance
+  ( Consensus.ShelleyBasedEra era
+  , LogFormatting (PPUPPredFailure era)
+  , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" era))
+  ) => LogFormatting (AlonzoUtxowPredFailure era) where
   forMachine dtal (ShelleyInAlonzoUtxowPredFailure utxoPredFail) =
     forMachine dtal utxoPredFail
-  forMachine _ (MissingRedeemers scripts) =
+  forMachine _ (MissingRedeemers _scripts) =
     mconcat [ "kind" .= String "MissingRedeemers"
-             , "scripts" .= renderMissingRedeemers scripts
+             , "scripts" .= String "TODO: Conway era" -- TODO: Conway era - need to parameterize renderMissingRedeemers over the era
              ]
   forMachine _ (MissingRequiredDatums required received) =
     mconcat [ "kind" .= String "MissingRequiredDatums"
@@ -272,12 +294,10 @@ instance ( ShelleyBasedEra era
              , "received" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
                                  (Set.toList received)
              ]
-  forMachine _ (PPViewHashesDontMatch ppHashInTxBody ppHashFromPParams) =
+  forMachine _ (PPViewHashesDontMatch _ppHashInTxBody _ppHashFromPParams) =
     mconcat [ "kind" .= String "PPViewHashesDontMatch"
-             , "fromTxBody" .= renderScriptIntegrityHash
-                                  (strictMaybeToMaybe ppHashInTxBody)
-             , "fromPParams" .= renderScriptIntegrityHash
-                                  (strictMaybeToMaybe ppHashFromPParams)
+             , "fromTxBody" .= String "TODO: Conway error" -- renderScriptIntegrityHash (strictMaybeToMaybe ppHashInTxBody)
+             , "fromPParams" .= String "TODO: Conway error" --renderScriptIntegrityHash (strictMaybeToMaybe ppHashFromPParams)
              ]
   forMachine _ (MissingRequiredSigners missingKeyWitnesses) =
     mconcat [ "kind" .= String "MissingRequiredSigners"
@@ -298,38 +318,17 @@ instance ( ShelleyBasedEra era
              ]
 
 
-renderScriptIntegrityHash :: Maybe (Alonzo.ScriptIntegrityHash StandardCrypto) -> Aeson.Value
-renderScriptIntegrityHash (Just witPPDataHash) =
+_renderScriptIntegrityHash :: Maybe (Alonzo.ScriptIntegrityHash StandardCrypto) -> Aeson.Value
+_renderScriptIntegrityHash (Just witPPDataHash) =
   Aeson.String . Crypto.hashToTextAsHex $ SafeHash.extractHash witPPDataHash
-renderScriptIntegrityHash Nothing = Aeson.Null
+_renderScriptIntegrityHash Nothing = Aeson.Null
 
-renderScriptHash :: ScriptHash StandardCrypto -> Text
-renderScriptHash = Api.serialiseToRawBytesHexText . Api.fromShelleyScriptHash
-
-renderMissingRedeemers :: [(Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto)] -> Aeson.Value
-renderMissingRedeemers scripts = Aeson.object $ map renderTuple  scripts
- where
-  renderTuple :: (Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto) -> Aeson.Pair
-  renderTuple (scriptPurpose, sHash) =
-    Aeson.fromText (renderScriptHash sHash) .= renderScriptPurpose scriptPurpose
-
-renderScriptPurpose :: Alonzo.ScriptPurpose StandardCrypto -> Aeson.Value
-renderScriptPurpose (Alonzo.Minting pid) =
-  Aeson.object [ "minting" .= toJSON pid]
-renderScriptPurpose (Alonzo.Spending txin) =
-  Aeson.object [ "spending" .= Api.fromShelleyTxIn txin]
-renderScriptPurpose (Alonzo.Rewarding rwdAcct) =
-  Aeson.object [ "rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
-renderScriptPurpose (Alonzo.Certifying cert) =
-  Aeson.object [ "certifying" .= toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate cert)]
-
-
-instance ( ShelleyBasedEra era
-         , Ledger.EraCrypto era ~ StandardCrypto
-         , ToJSON (Core.AuxiliaryDataHash (Ledger.EraCrypto era))
-         , LogFormatting (PredicateFailure (ShelleyUTXO era))
-         , LogFormatting (PredicateFailure (Core.EraRule "UTXO" era))
-         ) => LogFormatting (ShelleyUtxowPredFailure era) where
+instance
+  ( Consensus.ShelleyBasedEra era
+  , ToJSON (Ledger.AuxiliaryDataHash (Ledger.EraCrypto era))
+  , LogFormatting (PredicateFailure (ShelleyUTXO era))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" era))
+  ) => LogFormatting (ShelleyUtxowPredFailure era) where
   forMachine _dtal (InvalidWitnessesUTXOW wits') =
     mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
              , "invalidWitnesses" .= map textShow wits'
@@ -367,15 +366,15 @@ instance ( ShelleyBasedEra era
   forMachine _dtal InvalidMetadata =
     mconcat [ "kind" .= String "InvalidMetadata"
              ]
-  forMachine _dtal (ExtraneousScriptWitnessesUTXOW shashes) =
+  forMachine _dtal (ExtraneousScriptWitnessesUTXOW _shashes) =
     mconcat [ "kind" .= String "ExtraneousScriptWitnessesUTXOW"
-             , "scriptHashes" .= Set.map Api.fromShelleyScriptHash shashes
+             , "scriptHashes" .= String "TODO: Conway era" -- Set.map Api.fromShelleyScriptHash shashes
              ]
 
-instance ( ShelleyBasedEra era
-         , LogFormatting (PPUPPredFailure era)
-         )
-      => LogFormatting (ShelleyUtxoPredFailure era) where
+instance
+  ( Consensus.ShelleyBasedEra era
+  , LogFormatting (PPUPPredFailure era)
+  ) => LogFormatting (ShelleyUtxoPredFailure era) where
   forMachine _dtal (BadInputsUTxO badInputs) =
     mconcat [ "kind" .= String "BadInputsUTxO"
              , "badInputs" .= badInputs
@@ -430,10 +429,11 @@ instance ( ShelleyBasedEra era
              , "addrs"   .= addrs
              ]
 
-instance ( ShelleyBasedEra era
-         , ToJSON Allegra.ValidityInterval
-         , LogFormatting (PPUPPredFailure era)
-         ) => LogFormatting (AllegraUtxoPredFailure era) where
+instance
+  ( Consensus.ShelleyBasedEra era
+  , ToJSON Allegra.ValidityInterval
+  , LogFormatting (PPUPPredFailure era)
+  ) => LogFormatting (AllegraUtxoPredFailure era) where
   forMachine _dtal (Allegra.BadInputsUTxO badInputs) =
     mconcat [ "kind" .= String "BadInputsUTxO"
              , "badInputs" .= badInputs
@@ -503,7 +503,9 @@ renderValueNotConservedErr :: Show val => val -> val -> Value
 renderValueNotConservedErr consumed produced = String $
     "This transaction consumed " <> textShow consumed <> " but produced " <> textShow produced
 
-instance Core.Crypto (Ledger.EraCrypto era) => LogFormatting (ShelleyPpupPredFailure era) where
+instance
+  ( Ledger.Crypto (Ledger.EraCrypto era)
+  ) => LogFormatting (ShelleyPpupPredFailure era) where
   forMachine _dtal (NonGenesisUpdatePPUP proposalKeys genesisKeys) =
     mconcat [ "kind" .= String "NonGenesisUpdatePPUP"
              , "keys" .= proposalKeys Set.\\ genesisKeys ]
@@ -519,29 +521,32 @@ instance Core.Crypto (Ledger.EraCrypto era) => LogFormatting (ShelleyPpupPredFai
              ]
 
 
-instance ( ShelleyBasedEra era
-         , LogFormatting (PredicateFailure (Core.EraRule "DELPL" era))
-         ) => LogFormatting (ShelleyDelegsPredFailure era) where
+instance
+  ( Consensus.ShelleyBasedEra era
+  , LogFormatting (PredicateFailure (Ledger.EraRule "DELPL" era))
+  ) => LogFormatting (ShelleyDelegsPredFailure era) where
   forMachine _dtal (DelegateeNotRegisteredDELEG targetPool) =
     mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG"
              , "targetPool" .= targetPool
              ]
   forMachine _dtal (WithdrawalsNotInRewardsDELEGS incorrectWithdrawals) =
-    mconcat [ "kind" .= String "WithdrawalsNotInRewardsDELEGS"
+    mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
              , "incorrectWithdrawals" .= incorrectWithdrawals
              ]
   forMachine dtal (DelplFailure f) = forMachine dtal f
 
 
-instance ( LogFormatting (PredicateFailure (Core.EraRule "POOL" era))
-         , LogFormatting (PredicateFailure (Core.EraRule "DELEG" era))
-         , Crypto.HashAlgorithm (Core.HASH (Ledger.EraCrypto era))
-         ) => LogFormatting (ShelleyDelplPredFailure era) where
+instance
+  ( LogFormatting (PredicateFailure (Ledger.EraRule "POOL" era))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "DELEG" era))
+  , Crypto.HashAlgorithm (Ledger.HASH (Ledger.EraCrypto era))
+  ) => LogFormatting (ShelleyDelplPredFailure era) where
   forMachine dtal (PoolFailure f)  = forMachine dtal f
   forMachine dtal (DelegFailure f) = forMachine dtal f
 
-instance     Crypto.HashAlgorithm (Core.HASH (Ledger.EraCrypto era))
-          => LogFormatting (ShelleyDelegPredFailure era) where
+instance
+  ( Crypto.HashAlgorithm (Ledger.HASH (Ledger.EraCrypto era))
+  ) => LogFormatting (ShelleyDelegPredFailure era) where
   forMachine _dtal (StakeKeyAlreadyRegisteredDELEG alreadyRegistered) =
     mconcat [ "kind" .= String "StakeKeyAlreadyRegisteredDELEG"
              , "credential" .= String (textShow alreadyRegistered)
@@ -645,23 +650,6 @@ instance LogFormatting (ShelleyPoolPredFailure era) where
              , "error" .= String "The stake pool metadata hash is too large"
              ]
 
--- Apparently this should never happen according to the Shelley exec spec
-  forMachine _dtal (WrongCertificateTypePOOL index) =
-    case index of
-      0 -> mconcat [ "kind" .= String "WrongCertificateTypePOOL"
-                    , "error" .= String "Wrong certificate type: Delegation certificate"
-                    ]
-      1 -> mconcat [ "kind" .= String "WrongCertificateTypePOOL"
-                    , "error" .= String "Wrong certificate type: MIR certificate"
-                    ]
-      2 -> mconcat [ "kind" .= String "WrongCertificateTypePOOL"
-                    , "error" .= String "Wrong certificate type: Genesis certificate"
-                    ]
-      k -> mconcat [ "kind" .= String "WrongCertificateTypePOOL"
-                    , "certificateType" .= k
-                    , "error" .= String "Wrong certificate type: Unknown certificate type"
-                    ]
-
   forMachine _dtal (WrongNetworkPOOL networkId listedNetworkId poolId) =
     mconcat [ "kind" .= String "WrongNetworkPOOL"
              , "networkId" .= String (textShow networkId)
@@ -671,18 +659,20 @@ instance LogFormatting (ShelleyPoolPredFailure era) where
              ]
 
 
-instance ( LogFormatting (PredicateFailure (Core.EraRule "NEWEPOCH" era))
-         , LogFormatting (PredicateFailure (Core.EraRule "RUPD" era))
-         ) => LogFormatting (ShelleyTickPredFailure era) where
+instance
+  ( LogFormatting (PredicateFailure (Ledger.EraRule "NEWEPOCH" era))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "RUPD" era))
+  ) => LogFormatting (ShelleyTickPredFailure era) where
   forMachine dtal (NewEpochFailure f) = forMachine dtal f
   forMachine dtal (RupdFailure f)     = forMachine dtal f
 
 instance LogFormatting TicknPredicateFailure where
   forMachine _dtal x = case x of {} -- no constructors
 
-instance ( LogFormatting (PredicateFailure (Core.EraRule "EPOCH" era))
-         , LogFormatting (PredicateFailure (Core.EraRule "MIR" era))
-         ) => LogFormatting (ShelleyNewEpochPredFailure era) where
+instance
+  ( LogFormatting (PredicateFailure (Ledger.EraRule "EPOCH" era))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "MIR" era))
+  ) => LogFormatting (ShelleyNewEpochPredFailure era) where
   forMachine dtal (EpochFailure f) = forMachine dtal f
   forMachine dtal (MirFailure f) = forMachine dtal f
   forMachine _dtal (CorruptRewardUpdate update) =
@@ -690,10 +680,11 @@ instance ( LogFormatting (PredicateFailure (Core.EraRule "EPOCH" era))
              , "update" .= String (textShow update) ]
 
 
-instance ( LogFormatting (PredicateFailure (Core.EraRule "POOLREAP" era))
-         , LogFormatting (PredicateFailure (Core.EraRule "SNAP" era))
-         , LogFormatting (UpecPredFailure era)
-         ) => LogFormatting (ShelleyEpochPredFailure era) where
+instance
+  ( LogFormatting (PredicateFailure (Ledger.EraRule "POOLREAP" era))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "SNAP" era))
+  , LogFormatting (UpecPredFailure era)
+  ) => LogFormatting (ShelleyEpochPredFailure era) where
   forMachine dtal (PoolReapFailure f) = forMachine dtal f
   forMachine dtal (SnapFailure f)     = forMachine dtal f
   forMachine dtal (UpecFailure f)     = forMachine dtal f
@@ -723,12 +714,16 @@ instance LogFormatting (ShelleyRupdPredFailure era) where
   forMachine _dtal x = case x of {} -- no constructors
 
 
-instance Core.Crypto crypto => LogFormatting (PrtclPredicateFailure crypto) where
+instance
+  ( Ledger.Crypto crypto
+  ) => LogFormatting (PrtclPredicateFailure crypto) where
   forMachine  dtal (OverlayFailure f) = forMachine dtal f
   forMachine  dtal (UpdnFailure f)    = forMachine dtal f
 
 
-instance Core.Crypto crypto => LogFormatting (OverlayPredicateFailure crypto) where
+instance
+  ( Ledger.Crypto crypto
+  ) => LogFormatting (OverlayPredicateFailure crypto) where
   forMachine _dtal (UnknownGenesisKeyOVERLAY (KeyHash genKeyHash)) =
     mconcat [ "kind" .= String "UnknownGenesisKeyOVERLAY"
              , "unknownKeyHash" .= String (textShow genKeyHash)
@@ -847,9 +842,10 @@ instance LogFormatting (ShelleyUpecPredFailure era) where
 --------------------------------------------------------------------------------
 -- Alonzo related
 --------------------------------------------------------------------------------
-instance ( ShelleyBasedEra era
-         , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOS" era))
-         ) => LogFormatting (AlonzoUtxoPredFailure era) where
+instance
+  ( Consensus.ShelleyBasedEra era
+  , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOS" era))
+  ) => LogFormatting (AlonzoUtxoPredFailure era) where
   forMachine _dtal (Alonzo.BadInputsUTxO badInputs) =
     mconcat [ "kind" .= String "BadInputsUTxO"
              , "badInputs" .= badInputs
@@ -947,24 +943,26 @@ instance ( ShelleyBasedEra era
   forMachine _dtal Alonzo.NoCollateralInputs =
     mconcat [ "kind" .= String "NoCollateralInputs" ]
 
-instance ( ToJSON (Alonzo.CollectError (Ledger.EraCrypto era))
-         , LogFormatting (PPUPPredFailure era)
-         ) => LogFormatting (AlonzoUtxosPredFailure era) where
+instance
+  ( ToJSON (Alonzo.CollectError ledgerera)
+  , LogFormatting (PPUPPredFailure ledgerera)
+  ) => LogFormatting (AlonzoUtxosPredFailure ledgerera) where
   forMachine _ (Alonzo.ValidationTagMismatch isValidating reason) =
     mconcat [ "kind" .= String "ValidationTagMismatch"
              , "isvalidating" .= isValidating
              , "reason" .= reason
              ]
-  forMachine _ (Alonzo.CollectErrors errors) =
+  forMachine _ (Alonzo.CollectErrors _errors) =
     mconcat [ "kind" .= String "CollectErrors"
-             , "errors" .= errors
+             , "errors" .= String "TODO: Conway era" --errors
              ]
   forMachine dtal (Alonzo.UpdateFailure pFailure) =
     forMachine dtal pFailure
 
-instance ( Ledger.Era era
-         , Show (PredicateFailure (Ledger.EraRule "LEDGERS" era))
-         ) => LogFormatting (AlonzoBbodyPredFailure era) where
+instance
+  ( Ledger.Era era
+  , Show (PredicateFailure (Ledger.EraRule "LEDGERS" era))
+  ) => LogFormatting (AlonzoBbodyPredFailure era) where
   forMachine _ err = mconcat [ "kind" .= String "AlonzoBbodyPredFail"
                             , "error" .= String (textShow err)
                             ]
@@ -973,10 +971,11 @@ instance ( Ledger.Era era
 --------------------------------------------------------------------------------
 
 
-instance ( Ledger.Era era
-         , LogFormatting (AlonzoUtxoPredFailure era)
-         , ToJSON (Ledger.TxOut era)
-         ) => LogFormatting (BabbageUtxoPredFailure era) where
+instance
+  ( Ledger.Era era
+  , LogFormatting (AlonzoUtxoPredFailure era)
+  , ToJSON (Ledger.TxOut era)
+  ) => LogFormatting (BabbageUtxoPredFailure era) where
   forMachine v err =
     case err of
       Babbage.AlonzoInBabbageUtxoPredFailure alonzoFail ->
@@ -993,13 +992,13 @@ instance ( Ledger.Era era
                 , "outputs" .= outputs
                 ]
 
-instance ( Ledger.Era era
-         , ShelleyBasedEra era
-         , Ledger.EraCrypto era ~ StandardCrypto
-         , LogFormatting (PPUPPredFailure era)
-         , LogFormatting (ShelleyUtxowPredFailure era)
-         , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" era))
-         ) => LogFormatting (BabbageUtxowPredFailure era) where
+instance
+  ( Ledger.Era era
+  , ShelleyBasedEra era
+  , LogFormatting (PPUPPredFailure era)
+  , LogFormatting (ShelleyUtxowPredFailure era)
+  , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" era))
+  ) => LogFormatting (BabbageUtxowPredFailure era) where
   forMachine v err =
     case err of
       Babbage.AlonzoInBabbageUtxowPredFailure alonzoFail ->
@@ -1019,43 +1018,45 @@ instance ( Ledger.Era era
 -- Conway related
 --------------------------------------------------------------------------------
 
-instance ( ShelleyBasedEra era
-         , LogFormatting (PredicateFailure (Core.EraRule "DELEGS" era))
-         , LogFormatting (PredicateFailure (Core.EraRule "UTXOW" era))
-         , LogFormatting (PredicateFailure (Core.EraRule "TALLY" era))
-         ) => LogFormatting (Conway.ConwayLedgerPredFailure era) where
+instance
+  ( Consensus.ShelleyBasedEra era
+  , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOW" era))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "TALLY" era))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" era))
+  , LogFormatting (Set (Credential 'Staking (Ledger.EraCrypto era)))
+  ) => LogFormatting (Conway.ConwayLedgerPredFailure era) where
   forMachine v (Conway.ConwayUtxowFailure f) = forMachine v f
-  forMachine v (Conway.ConwayDelegsFailure f) = forMachine v f
+  forMachine v (Conway.ConwayCertsFailure f) = forMachine v f
   forMachine v (Conway.ConwayTallyFailure f) = forMachine v f
+  forMachine verb (Conway.ConwayWdrlNotDelegatedToDRep f) = forMachine verb f
 
-instance ( ShelleyBasedEra era
-         ) => LogFormatting (Conway.ConwayTallyPredFailure era) where
-  forMachine _ (Conway.VoterDoesNotHaveRole credential voteRole) =
-    mconcat [ "kind" .= String "VoterDoesNotHaveRole"
-            , "credential" .= textShow credential
-            , "voteRole" .= textShow voteRole
-            ]
+instance
+  ( Consensus.ShelleyBasedEra era
+  ) => LogFormatting (Conway.ConwayTallyPredFailure era) where
   forMachine _ (Conway.GovernanceActionDoesNotExist govActionId) =
     mconcat [ "kind" .= String "GovernanceActionDoesNotExist"
             , "govActionId" .= govActionIdToText govActionId
             ]
 
-instance ( ShelleyBasedEra era
-         , LogFormatting (PredicateFailure (Ledger.EraRule "CERT" era))
-         ) => LogFormatting (Conway.ConwayDelegsPredFailure era) where
+instance
+  ( Consensus.ShelleyBasedEra era
+  , LogFormatting (PredicateFailure (Ledger.EraRule "CERT" era))
+  ) => LogFormatting (Conway.ConwayCertsPredFailure era) where
   forMachine _ (Conway.DelegateeNotRegisteredDELEG poolID) =
     mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG"
             , "poolID" .= String (textShow poolID)
             ]
-  forMachine _ (Conway.WithdrawalsNotInRewardsDELEGS rs) =
-    mconcat [ "kind" .= String "WithdrawalsNotInRewardsDELEGS"
+  forMachine _ (Conway.WithdrawalsNotInRewardsCERTS rs) =
+    mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
              , "rewardAccounts" .= rs
             ]
   forMachine dtal (Conway.CertFailure certFailure) =
     forMachine dtal certFailure
 
 
-instance Core.Crypto crypto => LogFormatting (Praos.PraosValidationErr crypto) where
+instance
+  ( Ledger.Crypto crypto
+  ) => LogFormatting (Praos.PraosValidationErr crypto) where
   forMachine _ err' =
     case err' of
       Praos.VRFKeyUnknown unknownKeyHash ->

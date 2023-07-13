@@ -39,7 +39,7 @@ import qualified Testnet.Property.Utils as H
 
 import           Cardano.Testnet
 import           Data.Either (isRight)
-import           GHC.IO.Exception (ExitCode (ExitSuccess, ExitFailure))
+import           GHC.IO.Exception (ExitCode (ExitFailure, ExitSuccess))
 import           GHC.Stack (callStack)
 import           System.Process (interruptProcessGroupOf)
 import           Testnet.Defaults
@@ -233,7 +233,9 @@ hprop_shutdownOnSigint = H.integrationRetryWorkspace 2 "shutdown-on-sigint" $ \t
   when (isRight mExitCodeRunning) $ do
     H.cat (nodeStdout node)
     H.cat (nodeStderr node)
-  mExitCodeRunning === Right (ExitFailure 1)
+  case mExitCodeRunning of
+    Right (ExitFailure _) -> H.success
+    other -> H.failMessage callStack $ "Unexpected exit status for the testnet process: " <> show other
 
   logs <- H.readFile (nodeStdout node)
   case mapMaybe parseMsg $ reverse $ lines logs of

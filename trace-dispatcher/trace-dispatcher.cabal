@@ -55,7 +55,7 @@ library
                       , ekg-forward >= 0.3.0
                       , hostname
                       , network
-                      , optparse-applicative-fork
+                      , optparse-applicative-fork ^>= 0.16.1
                       , ouroboros-network ^>= 0.8.1.0
                       , ouroboros-network-api
                       , ouroboros-network-framework
@@ -146,7 +146,7 @@ test-suite trace-dispatcher-test
                       , ekg-core
                       , generic-data
                       , hostname
-                      , optparse-applicative
+                      , optparse-applicative >= 0.16.0 && < 0.16.1
                       , ouroboros-network ^>= 0.8.1.0
                       , text
                       , stm

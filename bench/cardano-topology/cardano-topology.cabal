@@ -37,6 +37,6 @@ executable cardano-topology
                       , bytestring
                       , containers
                       , graphviz
-                      , optparse-applicative-fork
+                      , optparse-applicative-fork ^>= 0.16.1
                       , split
                       , text

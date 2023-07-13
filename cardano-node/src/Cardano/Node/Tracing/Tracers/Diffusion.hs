@@ -15,7 +15,7 @@ import           Data.Text (pack)
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
 
-import           Cardano.Node.Configuration.TopologyP2P (UseLedger (..))
+import           Cardano.Node.Types (UseLedger (..))
 
 import qualified Data.List as List
 import qualified Ouroboros.Network.Diffusion as ND

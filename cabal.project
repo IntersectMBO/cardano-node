@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2023-06-20T00:00:00Z
-  , cardano-haskell-packages 2023-06-15T12:05:43Z
+  , hackage.haskell.org 2023-07-10T14:55:34Z
+  , cardano-haskell-packages 2023-07-10T13:18:25Z
 
 packages:
   cardano-client-demo
@@ -32,9 +32,6 @@ packages:
   trace-dispatcher
   trace-resources
   trace-forward
-
-extra-packages:
-  cardano-cli
 
 package cardano-api
   ghc-options: -Werror
@@ -104,6 +101,11 @@ write-ghc-environment-files: always
 
 package snap-server
   flags: +openssl
+
+allow-newer: text
+
+constraints:
+  optparse-applicative >= 0.16.0 && < 0.16.1
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly

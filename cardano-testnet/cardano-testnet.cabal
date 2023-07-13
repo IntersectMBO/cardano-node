@@ -34,8 +34,8 @@ library
   build-depends:        aeson
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 8.2
-                      , cardano-cli ^>= 8.2
+                      , cardano-api ^>= 8.8
+                      , cardano-cli ^>= 8.3
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger-alonzo
@@ -51,9 +51,9 @@ library
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4.6.0
+                      , hedgehog-extras ^>= 0.4.7.0
                       , mtl
-                      , optparse-applicative-fork
+                      , optparse-applicative-fork ^>= 0.16.1
                       , ouroboros-network ^>= 0.8.1.0
                       , ouroboros-network-api
                       , process
@@ -112,7 +112,7 @@ executable cardano-testnet
 
   build-depends:        cardano-testnet
                       , cardano-crypto-class
-                      , optparse-applicative-fork
+                      , optparse-applicative-fork ^>= 0.16.1
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
@@ -138,7 +138,7 @@ test-suite cardano-testnet-golden
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4.6.0
+                      , hedgehog-extras ^>= 0.4.7.0
                       , process
                       , regex-compat
                       , tasty
@@ -149,7 +149,7 @@ test-suite cardano-testnet-golden
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
   build-tool-depends:   cardano-node:cardano-node
-                      , cardano-cli:cardano-cli ^>= 8.2
+                      , cardano-cli:cardano-cli ^>= 8.3
                       , cardano-submit-api:cardano-submit-api
                       , cardano-testnet:cardano-testnet
 
@@ -175,15 +175,15 @@ test-suite cardano-testnet-test
   build-depends:        aeson
                       , async
                       , bytestring
-                      , cardano-api ^>= 8.2
-                      , cardano-cli ^>= 8.2
+                      , cardano-api ^>= 8.8
+                      , cardano-cli ^>= 8.3
                       , cardano-crypto-class
                       , cardano-testnet
                       , containers
                       , directory
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4.6.0
+                      , hedgehog-extras ^>= 0.4.7.0
                       , process
                       , tasty
                       , text
@@ -193,6 +193,6 @@ test-suite cardano-testnet-test
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
   build-tool-depends:   cardano-node:cardano-node
-                      , cardano-cli:cardano-cli ^>= 8.2
+                      , cardano-cli:cardano-cli ^>= 8.3
                       , cardano-submit-api:cardano-submit-api
                       , cardano-testnet:cardano-testnet

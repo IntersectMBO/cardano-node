@@ -1,6 +1,7 @@
 {- HLINT ignore "Eta reduce" -}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Benchmarking.OuroborosImports
   (
@@ -44,8 +45,8 @@ import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
 
 type CardanoBlock = Consensus.CardanoBlock StandardCrypto
 
-toProtocolInfo :: SomeConsensusProtocol -> ProtocolInfo IO CardanoBlock
-toProtocolInfo (SomeConsensusProtocol CardanoBlockType info) = protocolInfo info
+toProtocolInfo :: SomeConsensusProtocol -> ProtocolInfo CardanoBlock
+toProtocolInfo (SomeConsensusProtocol CardanoBlockType info) = fst $ protocolInfo @IO info
 toProtocolInfo _ = error "toProtocolInfo unknown protocol"
 
 protocolToTopLevelConfig :: SomeConsensusProtocol -> TopLevelConfig CardanoBlock
