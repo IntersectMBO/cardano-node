@@ -45,6 +45,8 @@ import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import           Ouroboros.Consensus.Storage.LedgerDB.DbChangelog.Update (UpdateLedgerDbTraceEvent (..))
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.Impl as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.BackingStore.LMDB as LMDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.BackingStore.InMemory as InMemory
 import qualified Ouroboros.Consensus.Storage.LedgerDB.DbChangelog.Update as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.Util.Condense (condense)
@@ -1440,7 +1442,9 @@ instance ( StandardHash blk
       "Deleted old snapshot " <> showT snap
   forHuman (LedgerDB.LedgerDBSnapshotEvent (LedgerDB.InvalidSnapshot snap failure)) =
       "Invalid snapshot " <> showT snap <> showT failure
-  forHuman (LedgerDB.BackingStoreEvent {}) = "Unimplemented :D"
+  forHuman (LedgerDB.BackingStoreEvent ev') = case ev' of
+    LedgerDB.LMDBTrace ev'' -> LMDB.showTrace ev''
+    LedgerDB.InMemoryTrace ev'' -> InMemory.showTrace ev''
   forHuman (LedgerDB.BackingStoreInitEvent ev') = case ev' of
     LedgerDB.BackingStoreInitialisedInMemory -> "Initialising in-memory backing store"
     LedgerDB.BackingStoreInitialisedLMDB limits -> "Initialising LMDB backing store: " <> showT limits
@@ -1475,6 +1479,8 @@ instance MetaTrace (LedgerDB.TraceLedgerDBEvent blk) where
     severityFor  (Namespace _ ["TookSnapshot"]) _ = Just Info
     severityFor  (Namespace _ ["DeletedSnapshot"]) _ = Just Debug
     severityFor  (Namespace _ ["InvalidSnapshot"]) _ = Just Error
+    severityFor  (Namespace _ ["BackingStore"]) _ = Just Debug
+    severityFor  (Namespace _ ["BackingStoreInit"]) _ = Just Info
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["TookSnapshot"]) = Just
@@ -1483,12 +1489,18 @@ instance MetaTrace (LedgerDB.TraceLedgerDBEvent blk) where
           "A snapshot was written to disk."
     documentFor (Namespace _ ["InvalidSnapshot"]) = Just
           "An on disk snapshot was skipped because it was invalid."
+    documentFor  (Namespace _ ["BackingStore"]) = Just
+          "A backing store event."
+    documentFor  (Namespace _ ["BackingStoreInit"]) = Just
+          "Initialization of the backing store."
     documentFor _ = Nothing
 
     allNamespaces =
       [ Namespace [] ["TookSnapshot"]
       , Namespace [] ["DeletedSnapshot"]
       , Namespace [] ["InvalidSnapshot"]
+      , Namespace [] ["BakingStore"]
+      , Namespace [] ["BakingStoreInit"]
       ]
 
 
