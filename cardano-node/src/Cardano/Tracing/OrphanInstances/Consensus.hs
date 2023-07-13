@@ -71,6 +71,8 @@ import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkN
 import           Ouroboros.Consensus.Storage.LedgerDB.DbChangelog.Update (PushGoal (..), Pushing (..), PushStart (..), UpdateLedgerDbTraceEvent(..))
 import qualified Ouroboros.Consensus.Storage.LedgerDB.Impl as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.BackingStore.LMDB as LMDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.BackingStore.InMemory as InMemory
 import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 
@@ -127,7 +129,6 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.IgnoreInvalidBlock {} -> Info
     ChainDB.AddedBlockToQueue {} -> Debug
     ChainDB.PoppedBlockFromQueue {} -> Debug
-    ChainDB.BlockInTheFuture {} -> Info
     ChainDB.AddedBlockToVolatileDB {} -> Debug
     ChainDB.TryAddToCurrentChain {} -> Debug
     ChainDB.TrySwitchToAFork {} -> Info
@@ -253,7 +254,16 @@ instance HasSeverityAnnotation (TraceChainSyncServerEvent blk) where
 
 instance HasPrivacyAnnotation (TraceEventMempool blk)
 instance HasSeverityAnnotation (TraceEventMempool blk) where
-  getSeverityAnnotation _ = Info
+  getSeverityAnnotation TraceMempoolAddedTx{} = Info
+  getSeverityAnnotation TraceMempoolRejectedTx{} = Warning
+  getSeverityAnnotation TraceMempoolRemoveTxs{} = Debug
+  getSeverityAnnotation TraceMempoolManuallyRemovedTxs{} = Warning
+  getSeverityAnnotation TraceMempoolAttemptingSync = Debug
+  getSeverityAnnotation TraceMempoolSyncNotNeeded{} = Debug
+  getSeverityAnnotation TraceMempoolSyncDone = Debug
+  getSeverityAnnotation TraceMempoolAttemptingAdd{} = Debug
+  getSeverityAnnotation TraceMempoolLedgerFound{} = Debug
+  getSeverityAnnotation TraceMempoolLedgerNotFound{} = Debug
 
 instance HasPrivacyAnnotation ()
 instance HasSeverityAnnotation () where
@@ -331,7 +341,8 @@ instance (StandardHash blk, Show peer)
 
 
 instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
-           ToJSON (GenTxId blk), LedgerSupportsMempool blk)
+           ToJSON (GenTxId blk), LedgerSupportsMempool blk,
+           ConvertRawHash blk)
       => Transformable Text IO (TraceEventMempool blk) where
   trTransformer = trStructured
 
@@ -495,8 +506,6 @@ instance ( ConvertRawHash blk
               "Popping block from queue"
             FallingEdgeWith pt ->
               "Popped block from queue: " <> renderRealPointAsPhrase pt
-        ChainDB.BlockInTheFuture pt slot ->
-          "Ignoring block from future: " <> renderRealPointAsPhrase pt <> ", slot " <> condenseT slot
         ChainDB.StoreButDontChange pt ->
           "Ignoring block: " <> renderRealPointAsPhrase pt
         ChainDB.TryAddToCurrentChain pt ->
@@ -574,12 +583,14 @@ instance ( ConvertRawHash blk
             " at " <> renderRealPointAsPhrase pt
           LedgerDB.DeletedSnapshot snap ->
             "Deleted old snapshot " <> showT snap
-        LedgerDB.BackingStoreEvent {} -> "BackingStoreEvent tracer not implemented :D"
+        LedgerDB.BackingStoreEvent ev' -> case ev' of
+          LedgerDB.LMDBTrace ev'' -> LMDB.showTrace ev''
+          LedgerDB.InMemoryTrace ev'' -> InMemory.showTrace ev''
         LedgerDB.BackingStoreInitEvent ev' -> case ev' of
           LedgerDB.BackingStoreInitialisedInMemory ->
-            "Initialising In-Memory backing store"
+            "Using In-Memory backing store"
           LedgerDB.BackingStoreInitialisedLMDB limits ->
-            "Initialising LMDB backing store " <> showT limits
+            "Using LMDB backing store " <> showT limits
       ChainDB.TraceCopyToImmutableDBEvent ev -> case ev of
         ChainDB.CopiedBlockToImmutableDB pt ->
           "Copied block " <> renderPointAsPhrase pt <> " to the ImmutableDB"
@@ -891,10 +902,6 @@ instance ( ConvertRawHash blk
                , case edgePt of
                    RisingEdge         -> "risingEdge" .= True
                    FallingEdgeWith pt -> "block" .= toObject verb pt ]
-    ChainDB.BlockInTheFuture pt slot ->
-      mconcat [ "kind" .= String "TraceAddBlockEvent.BlockInTheFuture"
-               , "block" .= toObject verb pt
-               , "slot" .= toObject verb slot ]
     ChainDB.StoreButDontChange pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.StoreButDontChange"
                , "block" .= toObject verb pt ]
@@ -1322,7 +1329,8 @@ instance ConvertRawHash blk
         <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
 
 instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
-           ToJSON (GenTxId blk), LedgerSupportsMempool blk
+           ToJSON (GenTxId blk), LedgerSupportsMempool blk,
+           ConvertRawHash blk
          ) => ToObject (TraceEventMempool blk) where
   toObject verb (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
     mconcat
@@ -1350,12 +1358,58 @@ instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
       , "txsInvalidated" .= map (toObject verb . txForgetValidated) txs1
       , "mempoolSize" .= toObject verb mpSz
       ]
-  toObject _ TraceMempoolAttemptingSync = undefined
-  toObject _ (TraceMempoolSyncNotNeeded _ _) = undefined
-  toObject _ TraceMempoolSyncDone = undefined
-  toObject _ (TraceMempoolAttemptingAdd _) = undefined
-  toObject _ (TraceMempoolLedgerFound _) = undefined
-  toObject _ (TraceMempoolLedgerNotFound _) = undefined
+  toObject _ TraceMempoolAttemptingSync =
+    mconcat
+      [ "kind" .= String "TraceMempoolAttemptingSync"
+      ]
+  toObject verb (TraceMempoolSyncNotNeeded t _) =
+    mconcat
+      [ "kind" .= String "TraceMempoolSyncNotNeeded"
+      , "tip" .= toObject verb t
+      ]
+  toObject _ TraceMempoolSyncDone =
+    mconcat
+      [ "kind" .= String "TraceMempoolSyncDone"
+      ]
+  toObject verb (TraceMempoolAttemptingAdd tx) =
+    mconcat
+      [ "kind" .= String "TraceMempoolAttemptingAdd"
+      , "tx" .= toObject verb tx
+      ]
+  toObject verb (TraceMempoolLedgerFound p) =
+    mconcat
+      [ "kind" .= String "TraceMempoolLedgerFound"
+      , "tip" .= toObject verb p
+      ]
+  toObject verb (TraceMempoolLedgerNotFound p) =
+    mconcat
+      [ "kind" .= String "TraceMempoolLedgerNotFound"
+      , "tip" .= toObject verb p
+      ]
+
+instance (LedgerSupportsMempool blk, HasTxId (GenTx blk))
+      => HasTextFormatter (TraceEventMempool blk) where
+  formatText tev _obj = case tev of
+    TraceMempoolAddedTx tx _sz1 sz2 ->
+      "Added transaction " <> showT (txId $ txForgetValidated tx) <> ". Current size: " <> showT sz2
+    TraceMempoolRejectedTx tx err sz ->
+      "Rejected transaction " <> showT (txId tx) <> ". Error: " <> showT err <> ". Current size: " <> showT sz
+    TraceMempoolRemoveTxs txs sz ->
+      "Removed transactions " <> showT (map (txId . txForgetValidated) txs) <> ". Current size: " <> showT sz
+    TraceMempoolManuallyRemovedTxs txs txs2 sz ->
+      "Manually removed transactions " <> showT txs <> " which removed " <> showT (map (txId . txForgetValidated) txs2) <>". Current size: " <> showT sz
+    TraceMempoolAttemptingSync ->
+      "Mempool is checking if a sync with the LedgerDB is needed"
+    TraceMempoolSyncNotNeeded p1 _p2 ->
+      "Mempool sync is not needed becase both the mempool and the LedgerDB are at " <> showT p1
+    TraceMempoolSyncDone ->
+      "Mempool sync done"
+    TraceMempoolAttemptingAdd tx ->
+      "Attempting to add transaction " <> showT (txId tx)
+    TraceMempoolLedgerFound pt ->
+      "Ledger state at " <> showT pt <> " (requested by the mempool) is in the LedgerDB"
+    TraceMempoolLedgerNotFound pt ->
+      "Ledger state at " <> showT pt <> " (requested by the mempool) is not in the LedgerDB"
 
 instance ToObject MempoolSize where
   toObject _verb MempoolSize{msNumTxs, msNumBytes} =

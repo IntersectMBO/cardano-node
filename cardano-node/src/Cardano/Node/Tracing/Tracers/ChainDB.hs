@@ -397,8 +397,6 @@ instance ( LogFormatting (Header blk)
           "Popping block from queue"
         FallingEdgeWith pt ->
           "Popped block from queue: " <> renderRealPointAsPhrase pt
-  forHuman (ChainDB.BlockInTheFuture pt slot) =
-      "Ignoring block from future: " <> renderRealPointAsPhrase pt <> ", slot " <> condenseT slot
   forHuman (ChainDB.StoreButDontChange pt) =
       "Ignoring block: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.TryAddToCurrentChain pt) =
@@ -442,10 +440,6 @@ instance ( LogFormatting (Header blk)
                , case edgePt of
                    RisingEdge         -> "risingEdge" .= True
                    FallingEdgeWith pt -> "block" .= forMachine dtal pt ]
-  forMachine dtal (ChainDB.BlockInTheFuture pt slot) =
-      mconcat [ "kind" .= String "BlockInTheFuture"
-               , "block" .= forMachine dtal pt
-               , "slot" .= forMachine dtal slot ]
   forMachine dtal (ChainDB.StoreButDontChange pt) =
       mconcat [ "kind" .= String "StoreButDontChange"
                , "block" .= forMachine dtal pt ]
@@ -521,8 +515,6 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     Namespace [] ["AddedBlockToQueue"]
   namespaceFor ChainDB.PoppedBlockFromQueue {} =
     Namespace [] ["PoppedBlockFromQueue"]
-  namespaceFor ChainDB.BlockInTheFuture {} =
-    Namespace [] ["BlockInTheFuture"]
   namespaceFor ChainDB.AddedBlockToVolatileDB {} =
     Namespace [] ["AddedBlockToVolatileDB"]
   namespaceFor ChainDB.TryAddToCurrentChain {} =
