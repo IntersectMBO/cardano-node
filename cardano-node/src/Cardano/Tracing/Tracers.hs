@@ -238,7 +238,6 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceGCEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.IgnoreBlockOlderThanK _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.IgnoreInvalidBlock _ _))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.BlockInTheFuture _ _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.StoreButDontChange _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.TrySwitchToAFork _ _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.SwitchedToAFork{}))) = False
@@ -1204,6 +1203,7 @@ mempoolTracer
      , ToObject (ApplyTxErr blk)
      , ToObject (GenTx blk)
      , LedgerSupportsMempool blk
+     , ConvertRawHash blk
      )
   => TraceSelection
   -> Trace IO Text
@@ -1218,6 +1218,7 @@ mempoolTracer tc tracer fStats = Tracer $ \ev -> do
 mpTracer :: ( ToJSON (GenTxId blk)
             , ToObject (ApplyTxErr blk)
             , ToObject (GenTx blk)
+            , ConvertRawHash blk
             , LedgerSupportsMempool blk
             )
          => TraceSelection -> Trace IO Text -> Tracer IO (TraceEventMempool blk)
