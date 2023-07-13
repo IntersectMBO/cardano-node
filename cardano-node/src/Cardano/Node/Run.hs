@@ -234,7 +234,7 @@ handleNodeWithTracers cmdPc nc p networkMagic runP = do
             nc
             p
 
-          loggingLayer <- case eLoggingLayer of
+          (severity, loggingLayer) <- case eLoggingLayer of
             Left err  -> Text.putStrLn (Text.pack $ show err) >> exitFailure
             Right res -> return res
           !trace <- setupTrace loggingLayer
@@ -256,6 +256,7 @@ handleNodeWithTracers cmdPc nc p networkMagic runP = do
               nodeKernelData
               (llEKGDirect loggingLayer)
               p2pMode
+              severity
 
           getStartupInfo nc p fp
             >>= mapM_ (traceWith $ startupTracer tracers)
@@ -266,9 +267,8 @@ handleNodeWithTracers cmdPc nc p networkMagic runP = do
             (\nk -> do
                 setNodeKernel nodeKernelData nk
                 traceWith (nodeStateTracer tracers) NodeKernelOnline)
-            `finally` do
-              forM_ eLoggingLayer
-                shutdownLoggingLayer
+            `finally`
+              shutdownLoggingLayer loggingLayer
 
 -- | Currently, we trace only 'ShelleyBased'-info which will be asked
 --   by 'cardano-tracer' service as a datapoint. It can be extended in the future.
