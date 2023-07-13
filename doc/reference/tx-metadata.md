@@ -43,7 +43,7 @@ transaction_metadata =
 
 ## How to create a transaction with metadata using the cardano-cli
 
-To create a transaction with metadata, first ensure that you have installed the [cardano-node](https://github.com/input-output-hk/cardano-node#cardano-node-overview) and follow instructions on how to launch [cardano-CLI](https://github.com/input-output-hk/cardano-node/tree/master/cardano-cli#cardano-cli).
+To create a transaction with metadata, first ensure that you have installed the [cardano-node](https://github.com/input-output-hk/cardano-node#cardano-node-overview) and follow instructions on how to launch [cardano-CLI](https://github.com/input-output-hk/cardano-cli/tree/master/cardano-cli#cardano-cli).
 
 To create a transaction with specified metadata, run this command:
 
