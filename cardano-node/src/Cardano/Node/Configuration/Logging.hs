@@ -55,7 +55,7 @@ import           Cardano.BM.Backend.Monitoring (plugin)
 import           Cardano.BM.Backend.Switchboard (Switchboard)
 import qualified Cardano.BM.Backend.Switchboard as Switchboard
 import           Cardano.BM.Backend.TraceForwarder (plugin)
-import           Cardano.BM.Configuration (Configuration)
+import           Cardano.BM.Configuration (Configuration, minSeverity)
 import qualified Cardano.BM.Configuration as Config
 import qualified Cardano.BM.Configuration.Model as Config
 import           Cardano.BM.Data.Aggregated (Measurable (..))
@@ -162,7 +162,7 @@ createLoggingLayer
   :: Text
   -> NodeConfiguration
   -> SomeConsensusProtocol
-  -> ExceptT ConfigError IO LoggingLayer
+  -> ExceptT ConfigError IO (Severity, LoggingLayer)
 createLoggingLayer ver nodeConfig' p = do
   logConfig <- loggingCLIConfiguration $
     if ncLoggingSwitch nodeConfig'
@@ -201,8 +201,8 @@ createLoggingLayer ver nodeConfig' p = do
                       , ekgLabels   = refLabel
                       , ekgCounters = refCounter
                       }
-
-  pure $ mkLogLayer logConfig switchBoard mbEkgDirect trace
+  sev <- liftIO $ minSeverity logConfig
+  pure (sev, mkLogLayer logConfig switchBoard mbEkgDirect trace)
  where
    loggingPreInit
      :: NodeConfiguration
