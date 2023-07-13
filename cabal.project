@@ -89,11 +89,20 @@ source-repository-package
   subdir:
     strict-mvar
 
--- 0.5.0.3 with -fno-full-laziness
+-- ouroboros-network-protocols 0.5.0.3 with -fno-full-laziness
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 2df42a32aa1544d2ed2170c3a4b1abc40f75e492
-  --sha256: 08b5f668j3qz5c2nypf6pk4x8pr1hhrxkkchnq8rpaihh6ljv3x8
+  tag: 371b5e5940aec64e6237bb4ef1d04aded178c09b
+  --sha256: 1gjj92vkcfq5ny2ixcvj4s0sgazk0y3w13w3w3ppk871zybrs2v1
   subdir:
     ouroboros-network-protocols
+
+-- ouroboros-network 0.8.1.1 with stricter peer-metrics
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: f4191b306fe9e0f5827aa2dfcdd2974bbbb2d6d5
+  --sha256: 0rmchpy6i1whfwr9mdbvj3mfiwpa6d38k8s316r3adfi7yqbd5sw
+  subdir:
+    ouroboros-network
