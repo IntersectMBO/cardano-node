@@ -45,6 +45,7 @@ import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPo
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Cardano.Node.Types (UseLedger (..))
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Aeson as J
@@ -180,7 +181,7 @@ mkTopologyConfig numNodes allPorts port True = J.encode topologyP2P
       P2P.RealNodeTopology
         localRootPeerGroups
         []
-        (P2P.UseLedger DontUseLedger)
+        (UseLedger DontUseLedger)
 
 cardanoTestnet :: CardanoTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
@@ -516,6 +517,7 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
     -- Stake addresses registration certs
     execCli_
       [ "stake-address", "registration-certificate"
+      , "--babbage-era"
       , "--stake-verification-key-file", tempAbsPath' </> "addresses/" <> addr <> "-stake.vkey"
       , "--out-file", tempAbsPath' </> "addresses/" <> addr <> "-stake.reg.cert"
       ]
@@ -535,6 +537,7 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
     -- Stake address delegation certs
     execCli_
       [ "stake-address", "delegation-certificate"
+      , "--babbage-era"
       , "--stake-verification-key-file", tempAbsPath' </> "addresses/user" <> show @Int n <> "-stake.vkey"
       , "--cold-verification-key-file", tempAbsPath' </> "node-pool" <> show @Int n </> "shelley/operator.vkey"
       , "--out-file", tempAbsPath' </> "addresses/user" <> show @Int n <> "-stake.deleg.cert"
@@ -551,6 +554,7 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
   forM_ poolNodeNames $ \node -> do
     H.execCli
       [ "stake-pool", "registration-certificate"
+      , "--babbage-era"
       , "--testnet-magic", show @Int testnetMagic
       , "--pool-pledge", "0", "--pool-cost", "0", "--pool-margin", "0"
       , "--cold-verification-key-file", tempAbsPath' </> node </> "shelley/operator.vkey"

@@ -6,6 +6,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Node.Tracing.Tracers.Startup
 
@@ -56,9 +57,9 @@ import           Cardano.Git.Rev (gitRev)
 
 import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
 import           Cardano.Node.Configuration.Socket
-import           Cardano.Node.Configuration.TopologyP2P
 import           Cardano.Node.Protocol (SomeConsensusProtocol (..))
 import           Cardano.Node.Startup
+import           Cardano.Node.Types (UseLedger (..))
 
 
 getStartupInfo
@@ -68,7 +69,7 @@ getStartupInfo
   -> IO [StartupTrace blk]
 getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
   nodeStartTime <- getCurrentTime
-  let cfg = pInfoConfig $ Api.protocolInfo pForInfo
+  let cfg = pInfoConfig $ fst $ Api.protocolInfo @IO pForInfo
       basicInfoCommon = BICommon $ BasicInfoCommon {
                 biProtocol = pack . show $ ncProtocol nc
               , biVersion  = pack . showVersion $ version
@@ -201,6 +202,19 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal StartupDBValidation =
       mconcat [ "kind" .= String "StartupDBValidation"
                , "message" .= String "start db validation" ]
+  forMachine _dtal (BlockForgingUpdate b) =
+      mconcat [ "kind" .= String "BlockForgingUpdate"
+              , "enabled" .= String (showT b)
+              ]
+  forMachine _dtal (BlockForgingUpdateError err) =
+      mconcat [ "kind" .= String "BlockForgingUpdateError"
+              , "error" .= String (showT err)
+              ]
+  forMachine _dtal (BlockForgingBlockTypeMismatch expected provided) =
+      mconcat [ "kind" .= String "BlockForgingBlockTypeMismatch"
+              , "expected" .= String (showT expected)
+              , "provided" .= String (showT provided)
+              ]
   forMachine _dtal NetworkConfigUpdate =
       mconcat [ "kind" .= String "NetworkConfigUpdate"
                , "message" .= String "network configuration update" ]
@@ -280,6 +294,12 @@ instance MetaTrace  (StartupTrace blk) where
      Namespace [] ["SocketConfigError"]
   namespaceFor StartupDBValidation {}  =
     Namespace [] ["DBValidation"]
+  namespaceFor BlockForgingUpdate {} =
+    Namespace [] ["BlockForgingUpdate"]
+  namespaceFor BlockForgingUpdateError {} =
+    Namespace [] ["BlockForgingUpdateError"]
+  namespaceFor BlockForgingBlockTypeMismatch {} =
+    Namespace [] ["BlockForgingBlockTypeMismatch"]
   namespaceFor NetworkConfigUpdate {}  =
     Namespace [] ["NetworkConfigUpdate"]
   namespaceFor NetworkConfigUpdateUnsupported {}  =
@@ -314,6 +334,8 @@ instance MetaTrace  (StartupTrace blk) where
   severityFor (Namespace _ ["P2PWarning"]) _ = Just Warning
   severityFor (Namespace _ ["WarningDevelopmentNodeToNodeVersions"]) _ = Just Warning
   severityFor (Namespace _ ["WarningDevelopmentNodeToClientVersions"]) _ = Just Warning
+  severityFor (Namespace _ ["BlockForgingUpdateError"]) _ = Just Error
+  severityFor (Namespace _ ["BlockForgingBlockTypeMismatch"]) _ = Just Error
   severityFor _ _ = Just Info
 
   documentFor (Namespace [] ["Info"]) = Just
@@ -327,6 +349,12 @@ instance MetaTrace  (StartupTrace blk) where
   documentFor (Namespace [] ["SocketConfigError"]) = Just
     ""
   documentFor (Namespace [] ["DBValidation"]) = Just
+    ""
+  documentFor (Namespace [] ["BlockForgingUpdate"]) = Just
+    ""
+  documentFor (Namespace [] ["BlockForgingUpdateError"]) = Just
+    ""
+  documentFor (Namespace [] ["BlockForgingBlockTypeMismatch"]) = Just
     ""
   documentFor (Namespace [] ["NetworkConfigUpdate"]) = Just
     ""
@@ -382,6 +410,8 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["NetworkMagic"]
     , Namespace [] ["SocketConfigError"]
     , Namespace [] ["DBValidation"]
+    , Namespace [] ["BlockForgingUpdate"]
+    , Namespace [] ["BlockForgingBlockTypeMismatch"]
     , Namespace [] ["NetworkConfigUpdate"]
     , Namespace [] ["NetworkConfigUpdateUnsupported"]
     , Namespace [] ["NetworkConfigUpdateError"]
@@ -451,6 +481,28 @@ ppStartupInfoTrace (StartupSocketConfigError err) =
   pack $ renderSocketConfigError err
 
 ppStartupInfoTrace StartupDBValidation = "Performing DB validation"
+
+ppStartupInfoTrace (BlockForgingUpdate b) =
+  "Performing block forging reconfiguration: "
+    <> case b of
+        EnabledBlockForging  ->
+            "Enabling block forging. To disable it please move/rename/remove "
+          <> "the credentials files and then trigger reconfiguration via SIGHUP "
+          <> "signal."
+        DisabledBlockForging ->
+            "Disabling block forging, to enable it please make the credentials "
+          <> "files available again and then re-trigger reconfiguration via SIGHUP "
+          <> "signal."
+
+ppStartupInfoTrace (BlockForgingUpdateError err) =
+  "Block forging reconfiguration error: "
+    <> showT err <> "\n"
+    <> "Block forging is not reconfigured."
+ppStartupInfoTrace (BlockForgingBlockTypeMismatch expected provided) =
+  "Block forging reconfiguration block type mismatch: expected "
+    <> showT expected
+    <> " provided "
+    <> showT provided
 
 ppStartupInfoTrace NetworkConfigUpdate = "Performing topology configuration update"
 ppStartupInfoTrace NetworkConfigUpdateUnsupported =

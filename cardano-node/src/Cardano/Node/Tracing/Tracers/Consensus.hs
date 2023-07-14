@@ -1180,6 +1180,16 @@ instance ( tx ~ GenTx blk
           (blockHash blk)
       , "blockSize" .= toJSON (getSizeInBytes $ estimateBlockSize (getHeader blk))
       ]
+  forMachine dtal (TraceAdoptionThreadDied slotNo blk) =
+    mconcat
+      [ "kind" .= String "TraceAdoptionThreadDied"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "blockHash" .= renderHeaderHashForDetails
+          (Proxy @blk)
+          dtal
+          (blockHash blk)
+      , "blockSize" .= toJSON (getSizeInBytes $ estimateBlockSize (getHeader blk))
+      ]
 
   forHuman (TraceStartLeadershipCheck slotNo) =
       "Checking for leadership in slot " <> showT (unSlotNo slotNo)
@@ -1251,6 +1261,10 @@ instance ( tx ~ GenTx blk
       "Adopted block forged in slot "
         <> showT (unSlotNo slotNo)
         <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
+  forHuman (TraceAdoptionThreadDied slotNo blk) =
+      "Adoption thread died in slot "
+        <> showT (unSlotNo slotNo)
+        <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
 
   asMetrics (TraceForgeStateUpdateError slot reason) =
     IntM "Forge.StateUpdateError" (fromIntegral $ unSlotNo slot) :
@@ -1304,6 +1318,8 @@ instance ( tx ~ GenTx blk
     [IntM "Forge.ForgedInvalidSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceAdoptedBlock slot _ _) =
     [IntM "Forge.AdoptedOwnBlockSlotLast" (fromIntegral $ unSlotNo slot)]
+  asMetrics (TraceAdoptionThreadDied slot _) =
+    [IntM "Forge.AdoptionThreadDied" (fromIntegral $ unSlotNo slot)]
 
 instance MetaTrace (TraceForgeEvent blk) where
   namespaceFor TraceStartLeadershipCheck {} =
@@ -1342,6 +1358,8 @@ instance MetaTrace (TraceForgeEvent blk) where
     Namespace [] ["ForgedInvalidBlock"]
   namespaceFor TraceAdoptedBlock {} =
     Namespace [] ["AdoptedBlock"]
+  namespaceFor TraceAdoptionThreadDied {} =
+    Namespace [] ["AdoptionThreadDied"]
 
   severityFor (Namespace _ ["StartLeadershipCheck"]) _ = Just Info
   severityFor (Namespace _ ["SlotIsImmutable"]) _ = Just Error
@@ -1361,6 +1379,7 @@ instance MetaTrace (TraceForgeEvent blk) where
   severityFor (Namespace _ ["DidntAdoptBlock"]) _ = Just Error
   severityFor (Namespace _ ["ForgedInvalidBlock"]) _ = Just Error
   severityFor (Namespace _ ["AdoptedBlock"]) _ = Just Info
+  severityFor (Namespace _ ["AdoptionThreadDied"]) _ = Just Error
   severityFor _ _ = Nothing
 
   metricsDocFor (Namespace _ ["StartLeadershipCheck"]) =
@@ -1401,6 +1420,8 @@ instance MetaTrace (TraceForgeEvent blk) where
     [("Forge.ForgedInvalidSlotLast", "")]
   metricsDocFor (Namespace _ ["AdoptedBlock"]) =
     [("Forge.AdoptedOwnBlockSlotLast", "")]
+  metricsDocFor (Namespace _ ["AdoptionThreadDied"]) =
+    [("Forge.AdoptionThreadDied", "")]
   metricsDocFor _ = []
 
   documentFor (Namespace _ ["StartLeadershipCheck"]) = Just
@@ -1539,6 +1560,8 @@ instance MetaTrace (TraceForgeEvent blk) where
     [ "We adopted the block we produced, we also trace the transactions"
     , "  that were adopted."
     ]
+  documentFor (Namespace _ ["AdoptionThreadDied"]) = Just $ mconcat
+    [ "Block adoption thread died" ]
   documentFor _ = Nothing
 
   allNamespaces =
@@ -1560,6 +1583,7 @@ instance MetaTrace (TraceForgeEvent blk) where
     , Namespace [] ["DidntAdoptBlock"]
     , Namespace [] ["ForgedInvalidBlock"]
     , Namespace [] ["AdoptedBlock"]
+    , Namespace [] ["AdoptionThreadDied"]
     ]
 
 --------------------------------------------------------------------------------

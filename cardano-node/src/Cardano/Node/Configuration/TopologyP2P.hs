@@ -16,7 +16,6 @@ module Cardano.Node.Configuration.TopologyP2P
   , NodeHostIPv6Address(..)
   , NodeSetup(..)
   , PeerAdvertise(..)
-  , UseLedger(..)
   , nodeAddressToSockAddr
   , readTopologyFile
   , readTopologyFileOrError
@@ -27,7 +26,6 @@ where
 import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
 import           Control.Exception.Base (Exception (..))
-import           Control.Monad (MonadPlus (..))
 import           Data.Aeson
 import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString as BS
@@ -39,7 +37,6 @@ import           Data.Word (Word64)
 import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
-import           Cardano.Slotting.Slot (SlotNo (..))
 
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.Topology (TopologyError (..))
@@ -49,26 +46,6 @@ import           Cardano.Node.Types
 import           Ouroboros.Network.NodeToNode (PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
-
-
-
--- | A newtype wrapper around 'UseLedgerAfter' which provides 'FromJSON' and
--- 'ToJSON' instances.
---
--- 'UseLedgerAfter' is used to configure from which slot a p2p node can use on
--- chain root peers.
---
-newtype UseLedger = UseLedger UseLedgerAfter deriving (Eq, Show)
-
-instance FromJSON UseLedger where
-  parseJSON (Data.Aeson.Number n) =
-    if n >= 0 then return $ UseLedger $ UseLedgerAfter $ SlotNo $ floor n
-              else return $ UseLedger   DontUseLedger
-  parseJSON _ = mzero
-
-instance ToJSON UseLedger where
-  toJSON (UseLedger (UseLedgerAfter (SlotNo n))) = Number $ fromIntegral n
-  toJSON (UseLedger DontUseLedger)               = Number (-1)
 
 data NodeSetup = NodeSetup
   { nodeId          :: !Word64

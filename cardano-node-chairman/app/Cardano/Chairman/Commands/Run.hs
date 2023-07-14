@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chairman.Commands.Run
   ( cmdRun
@@ -120,7 +121,7 @@ run RunOpts
 
   let (k , nId) = case p of
             SomeConsensusProtocol _ runP ->
-              let ProtocolInfo { pInfoConfig } = Api.protocolInfo runP
+              let ProtocolInfo { pInfoConfig } = fst $ Api.protocolInfo @IO runP
               in ( Consensus.configSecurityParam pInfoConfig
                  , fromNetworkMagic . getNetworkMagic $ Consensus.configBlock pInfoConfig
                  )

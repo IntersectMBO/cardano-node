@@ -38,6 +38,7 @@ import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPo
 import           Cardano.Api hiding (Value)
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Cardano.Node.Types (UseLedger (..))
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
@@ -152,7 +153,7 @@ mkTopologyConfig numPraosNodes allPorts port True = J.encode topologyP2P
       P2P.RealNodeTopology
         localRootPeerGroups
         []
-        (P2P.UseLedger DontUseLedger)
+        (UseLedger DontUseLedger)
 
 shelleyTestnet :: ShelleyTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 shelleyTestnet testnetOptions H.Conf {H.tempAbsPath} = do
@@ -294,6 +295,7 @@ shelleyTestnet testnetOptions H.Conf {H.tempAbsPath} = do
     -- Stake addresses registration certs
     execCli_
       [ "stake-address", "registration-certificate"
+      , "--babbage-era"
       , "--stake-verification-key-file", tempAbsPath' </> "addresses/" <> addr <> "-stake.vkey"
       , "--out-file", tempAbsPath' </> "addresses/" <> addr <> "-stake.reg.cert"
       ]
@@ -302,6 +304,7 @@ shelleyTestnet testnetOptions H.Conf {H.tempAbsPath} = do
     -- Stake address delegation certs
     execCli_
       [ "stake-address", "delegation-certificate"
+      , "--babbage-era"
       , "--stake-verification-key-file", tempAbsPath' </> "addresses/user" <> n <> "-stake.vkey"
       , "--cold-verification-key-file", tempAbsPath' </> "node-pool" <> n </> "operator.vkey"
       , "--out-file", tempAbsPath' </> "addresses/user" <> n <> "-stake.deleg.cert"
@@ -318,6 +321,7 @@ shelleyTestnet testnetOptions H.Conf {H.tempAbsPath} = do
   forM_ poolNodes $ \node -> do
     execCli_
       [ "stake-pool", "registration-certificate"
+      , "--babbage-era"
       , "--testnet-magic", show @Int testnetMagic
       , "--pool-pledge", "0"
       , "--pool-cost", "0"

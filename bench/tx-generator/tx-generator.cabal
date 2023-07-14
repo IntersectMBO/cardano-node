@@ -97,9 +97,9 @@ library
                       , attoparsec
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.2
+                      , cardano-api ^>= 8.8
                       , cardano-binary
-                      , cardano-cli ^>= 8.2
+                      , cardano-cli ^>= 8.3
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data
@@ -122,10 +122,10 @@ library
                       , mtl
                       , network
                       , network-mux
-                      , optparse-applicative-fork
+                      , optparse-applicative-fork ^>= 0.16.1
                       , ouroboros-consensus >= 0.6
                       , ouroboros-consensus-cardano >= 0.5
-                      , ouroboros-consensus-diffusion >= 0.5.1
+                      , ouroboros-consensus-diffusion >= 0.7.0
                       , ouroboros-network ^>= 0.8.1.0
                       , ouroboros-network-api
                       , ouroboros-network-framework
@@ -192,9 +192,9 @@ test-suite tx-generator-apitest
                       , aeson
                       , bytestring
                       , filepath
-                      , optparse-applicative-fork
-                      , cardano-api ^>= 8.2
-                      , cardano-cli ^>= 8.2
+                      , optparse-applicative-fork ^>= 0.16.1
+                      , cardano-api ^>= 8.8
+                      , cardano-cli ^>= 8.3
                       , cardano-node
                       , plutus-tx
                       , transformers
@@ -208,9 +208,9 @@ test-suite tx-generator-apitest
                      , aeson
                      , bytestring
                      , filepath
-                     , optparse-applicative-fork
-                     , cardano-api ^>= 8.2
-                     , cardano-cli ^>= 8.2
+                     , optparse-applicative-fork ^>= 0.16.1
+                     , cardano-api ^>= 8.8
+                     , cardano-cli ^>= 8.3
                      , cardano-node
                      , transformers
                      , transformers-except

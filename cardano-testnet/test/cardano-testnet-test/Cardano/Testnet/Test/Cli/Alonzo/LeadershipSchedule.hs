@@ -146,6 +146,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
   -- Create pledger registration certificate
   void $ execCli
     [ "stake-address", "registration-certificate"
+    , "--babbage-era"
     , "--stake-verification-key-file", poolownerstakekey
     , "--out-file", work </> "pledger.regcert"
     ]
@@ -222,6 +223,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
 
   void $ execCli
     [ "stake-address", "registration-certificate"
+    , "--babbage-era"
     , "--stake-verification-key-file", utxoStakingVkey2
     , "--out-file", work </> "stakekey.regcert"
     ]
@@ -293,6 +295,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
 
   void $ execCli
     [ "stake-address", "delegation-certificate"
+    , "--babbage-era"
     , "--stake-verification-key-file", poolownerstakekey
     , "--cold-verification-key-file", poolcoldVkey
     , "--out-file", work </> "pledger.delegcert"

@@ -129,10 +129,11 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
 
   -- Create pledger registration certificate
   void $ execCli
-            [ "stake-address", "registration-certificate"
-            , "--stake-verification-key-file", poolownerstakekey
-            , "--out-file", work </> "pledger.regcert"
-            ]
+    [ "stake-address", "registration-certificate"
+    , "--babbage-era"
+    , "--stake-verification-key-file", poolownerstakekey
+    , "--out-file", work </> "pledger.regcert"
+    ]
 
   void $ execCli' execConfig
     [ "transaction", "build"
@@ -201,10 +202,12 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   UTxO utxoWithStaking1 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) utxoWithStaking1Json
   txinForStakeReg <- H.noteShow =<< H.headM (Map.keys utxoWithStaking1)
 
-  void $ execCli [ "stake-address", "registration-certificate"
-                   , "--stake-verification-key-file", utxoStakingVkey2
-                   , "--out-file", work </> "stakekey.regcert"
-                   ]
+  void $ execCli
+    [ "stake-address", "registration-certificate"
+    , "--babbage-era"
+    , "--stake-verification-key-file", utxoStakingVkey2
+    , "--out-file", work </> "stakekey.regcert"
+    ]
 
   void $ execCli' execConfig
     [ "transaction", "build"
@@ -273,6 +276,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
 
   void $ execCli
     [ "stake-address", "delegation-certificate"
+    , "--babbage-era"
     , "--stake-verification-key-file", poolownerstakekey
     , "--cold-verification-key-file", poolcoldVkey
     , "--out-file", work </> "pledger.delegcert"

@@ -116,7 +116,7 @@ library
                       , ghc
                       , gnuplot
                       , iohk-monitoring
-                      , optparse-applicative-fork
+                      , optparse-applicative-fork ^>= 0.16.1
                       , optparse-generic
                       , ouroboros-consensus
                       -- for Data.SOP.Strict:
@@ -155,7 +155,7 @@ executable locli
   build-depends:        aeson
                       , cardano-prelude
                       , locli
-                      , optparse-applicative-fork
+                      , optparse-applicative-fork ^>= 0.16.1
                       , text
                       , text-short
                       , transformers
@@ -172,7 +172,7 @@ test-suite test-locli
   build-depends:        cardano-prelude
                       , containers
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4
+                      , hedgehog-extras ^>= 0.4.7.0
                       , locli
                       , text
 

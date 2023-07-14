@@ -82,7 +82,7 @@ import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
-import           Ouroboros.Network.NodeToNode (RemoteConnectionId, RemoteAddress)
+import           Ouroboros.Network.NodeToNode (RemoteAddress, RemoteConnectionId)
 
 --
 -- * TxId -> ByteString projection
@@ -249,7 +249,7 @@ instance LedgerQueries (Shelley.ShelleyBlock protocol era) where
     . Shelley.shelleyLedgerState
   ledgerDelegMapSize =
       UM.size
-    . UM.Delegations
+    . UM.SPoolUView
     . Shelley.dsUnified
     . Shelley.certDState
     . Shelley.lsCertState

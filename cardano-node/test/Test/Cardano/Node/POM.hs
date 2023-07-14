@@ -55,6 +55,7 @@ testPartialYamlConfig =
                             (GenesisFile "dummmy-genesis-file") Nothing
     , pncSocketConfig = Last . Just $ SocketConfig (Last Nothing) mempty mempty mempty
     , pncShutdownConfig = Last Nothing
+    , pncStartAsNonProducingNode = Last $ Just False
     , pncDiffusionMode = Last Nothing
     , pncSnapshotInterval = mempty
     , pncExperimentalProtocolsEnabled = Last Nothing
@@ -88,6 +89,7 @@ testPartialCliConfig =
   PartialNodeConfiguration
     { pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
     , pncShutdownConfig = Last . Just $ ShutdownConfig Nothing (Just . ASlot $ SlotNo 42)
+    , pncStartAsNonProducingNode = Last $ Just $ False
     , pncConfigFile   = mempty
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
@@ -123,6 +125,7 @@ eExpectedConfig = do
   return $ NodeConfiguration
     { ncSocketConfig = SocketConfig mempty mempty mempty mempty
     , ncShutdownConfig = ShutdownConfig Nothing (Just . ASlot $ SlotNo 42)
+    , ncStartAsNonProducingNode = False
     , ncConfigFile = ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
     , ncTopologyFile = TopologyFile "configuration/cardano/mainnet-topology.json"
     , ncDatabaseFile = DbFile "mainnet/db/"

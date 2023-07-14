@@ -5,6 +5,7 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Node.Configuration.Logging
   ( LoggingLayer (..)
@@ -329,7 +330,7 @@ nodeBasicInfo :: NodeConfiguration
               -> IO [LogObject Text]
 nodeBasicInfo nc (SomeConsensusProtocol whichP pForInfo) nodeStartTime' = do
   meta <- mkLOMeta Notice Public
-  let cfg = pInfoConfig $ Api.protocolInfo pForInfo
+  let cfg = pInfoConfig $ fst $ Api.protocolInfo @IO pForInfo
       protocolDependentItems =
         case whichP of
           Api.ByronBlockType ->
