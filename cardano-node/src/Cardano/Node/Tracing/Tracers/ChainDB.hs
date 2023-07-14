@@ -15,7 +15,7 @@ module Cardano.Node.Tracing.Tracers.ChainDB
 
 import           Cardano.Prelude (maximumDef)
 
-import           Data.Aeson (Value (String), toJSON, (.=))
+import           Data.Aeson (Object, Value (String), toJSON, (.=))
 import           Data.Int (Int64)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -1458,10 +1458,90 @@ instance ( StandardHash blk
              , "snapshot" .= forMachine dtals snap ]
   forMachine dtals (LedgerDB.LedgerDBSnapshotEvent (LedgerDB.InvalidSnapshot snap failure)) =
     mconcat [ "kind" .= String "InvalidSnapshot"
-             , "snapshot" .= forMachine dtals snap
-             , "failure" .= show failure ]
-  forMachine _dtals (LedgerDB.BackingStoreEvent {}) =
-    mconcat [ "kind" .= String "BackingStoreEvent" ]
+            , "snapshot" .= forMachine dtals snap
+            , "failure" .= show failure
+            ]
+  forMachine _dtals (LedgerDB.BackingStoreEvent ev') = case ev' of
+      LedgerDB.LMDBTrace ev'' ->
+        mconcat [ "kind" .= String "BackingStore.LMDBTrace"
+                , "event" .= case ev'' of
+                    LMDB.TDBOpening -> mconcat [ "kind" .= String "Open" ]  :: Object
+                    LMDB.TDBOpened p -> mconcat [ "kind" .= String "Opened"
+                                                , "path" .= show p
+                                                ]
+                    LMDB.TDBClosing p -> mconcat [ "kind" .= String "Closing"
+                                                 , "path" .= show p
+                                                 ]
+                    LMDB.TDBClosed p -> mconcat [ "kind" .= String "Closed"
+                                                , "path" .= show p
+                                                ]
+                    LMDB.TDBCopying p1 p2 -> mconcat [ "kind" .= String "Copying"
+                                                     , "from" .= show p1
+                                                     , "to" .= show p2
+                                                     ]
+                    LMDB.TDBCopied p1 p2 -> mconcat [ "kind" .= String "Copied"
+                                                    , "from" .= show p1
+                                                    , "to" .= show p2
+                                                    ]
+                    LMDB.TDBWrite s1 s2 -> mconcat [ "kind" .= String "Wrote"
+                                                   , "from" .= show s1
+                                                   , "to" .= show s2
+                                                   ]
+                    LMDB.TDBValueHandle i tvh -> mconcat [ "kind" .= String "ValueHandle"
+                                                         , "index" .= i
+                                                         , "event" .= String (case tvh of
+                                                              LMDB.TVHOpening          -> "Open"
+                                                              LMDB.TVHOpened           -> "Opened"
+                                                              LMDB.TVHClosing          -> "Closing"
+                                                              LMDB.TVHClosed           -> "Closed"
+                                                              LMDB.TVHReadStarted      -> "ReadStarted"
+                                                              LMDB.TVHReadEnded        -> "ReadEnded"
+                                                              LMDB.TVHRangeReadStarted -> "RangeReadStarted"
+                                                              LMDB.TVHRangeReadEnded   -> "RangeReadEnded"
+                                                              LMDB.TVHStatStarted      -> "StatStarted"
+                                                              LMDB.TVHStatEnded        -> "StatEnded")
+                                                         ]
+                    LMDB.TDBInitialisingFromLMDB p -> mconcat [ "kind" .= String "InitialisingFromLMDB"
+                                                              , "path" .= show p
+                                                              ]
+                    LMDB.TDBInitialisedFromLMDB p -> mconcat [ "kind" .= String "InitialisedFromLMDB"
+                                                             , "path" .= show p
+                                                             ]
+                    LMDB.TDBInitialisingFromValues p -> mconcat [ "kind" .= String "InitialisingFromValues"
+                                                                , "slot" .= show p
+                                                                ]
+                    LMDB.TDBInitialisedFromValues p -> mconcat [ "kind" .= String "InitialisedFromValues"
+                                                               , "slot" .= show p
+                                                               ]
+                ]
+      LedgerDB.InMemoryTrace ev'' ->
+        mconcat [ "kind" .= String "BackingStore.InMemoryTrace"
+                , "event" .= case ev'' of
+                    InMemory.TVarTraceOpening -> mconcat [ "kind" .= String "Opening" ] :: Object
+                    InMemory.TVarTraceOpened -> mconcat [ "kind" .= String "Opened" ]
+                    InMemory.TVarTraceClosing -> mconcat [ "kind" .= String "Closing" ]
+                    InMemory.TVarTraceClosed -> mconcat [ "kind" .= String "Closed" ]
+                    InMemory.TVarTraceCopying p -> mconcat [ "kind" .= String "Copying"
+                                                           , "path" .= show p
+                                                           ]
+                    InMemory.TVarTraceCopied p -> mconcat [ "kind" .= String "Copied"
+                                                          , "path" .= show p
+                                                          ]
+                    InMemory.TVarTraceInitialisingFromSnapshot p -> mconcat [ "kind" .= String "InitialisingFromSnapshot"
+                                                                            , "path" .= show p
+                                                                            ]
+                    InMemory.TVarTraceInitialisedFromSnapshot p -> mconcat [ "kind" .= String "InitialisedFromSnapshot"
+                                                                           , "path" .= show p
+                                                                           ]
+                    InMemory.TVarTraceInitialisingFromValues s -> mconcat [ "kind" .= String "InitialisingFromValues"
+                                                                          , "slot" .= show s
+                                                                          ]
+                    InMemory.TVarTraceWrite s1 s2 -> mconcat [ "kind" .= String "Write"
+                                                             , "from" .= show s1
+                                                             , "to" .= show s2
+                                                             ]
+
+                ]
   forMachine _dtals (LedgerDB.BackingStoreInitEvent ev') = case ev' of
     LedgerDB.BackingStoreInitialisedInMemory ->
       mconcat [ "kind" .= String "InMemoryBackingStoreInit" ]
@@ -1473,8 +1553,8 @@ instance MetaTrace (LedgerDB.TraceLedgerDBEvent blk) where
     namespaceFor (LedgerDB.LedgerDBSnapshotEvent LedgerDB.TookSnapshot {}) = Namespace [] ["TookSnapshot"]
     namespaceFor (LedgerDB.LedgerDBSnapshotEvent LedgerDB.DeletedSnapshot {}) = Namespace [] ["DeletedSnapshot"]
     namespaceFor (LedgerDB.LedgerDBSnapshotEvent LedgerDB.InvalidSnapshot {}) = Namespace [] ["InvalidSnapshot"]
-    namespaceFor (LedgerDB.BackingStoreEvent {}) = Namespace [] ["BackingStore"]
-    namespaceFor (LedgerDB.BackingStoreInitEvent {}) = Namespace [] ["BackingStoreInit"]
+    namespaceFor LedgerDB.BackingStoreEvent{} = Namespace [] ["BackingStore"]
+    namespaceFor LedgerDB.BackingStoreInitEvent{} = Namespace [] ["BackingStoreInit"]
 
     severityFor  (Namespace _ ["TookSnapshot"]) _ = Just Info
     severityFor  (Namespace _ ["DeletedSnapshot"]) _ = Just Debug
