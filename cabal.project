@@ -105,7 +105,8 @@ package snap-server
 allow-newer: text
 
 constraints:
-  optparse-applicative >= 0.16.0 && < 0.16.1
+  optparse-applicative >= 0.16.0 && < 0.16.1,
+  cardano-api < 8.8.1
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
