@@ -53,8 +53,8 @@ golden_shelleyStakeKeys = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> d
 golden_shelleyStakeKeys_te :: Property
 golden_shelleyStakeKeys_te = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference keys
-  referenceVerKey <- noteInputFile "test/data/golden/shelley/keys/stake_keys/verification_key"
-  referenceSignKey <- noteInputFile "test/data/golden/shelley/keys/stake_keys/signing_key"
+  referenceVerKey <- noteInputFile "test/cardano-cli-golden/files/golden/shelley/keys/stake_keys/verification_key"
+  referenceSignKey <- noteInputFile "test/cardano-cli-golden/files/golden/shelley/keys/stake_keys/signing_key"
 
   -- Key filepaths
   verKey <- noteTempFile tempDir "stake-verification-key-file"

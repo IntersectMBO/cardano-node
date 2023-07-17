@@ -55,8 +55,8 @@ golden_shelleyExtendedPaymentKeys = propertyOnce . H.moduleWorkspace "tmp" $ \te
 golden_shelleyExtendedPaymentKeys_te :: Property
 golden_shelleyExtendedPaymentKeys_te = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
   -- Reference keys
-  referenceVerKey <- noteInputFile "test/data/golden/shelley/keys/extended_payment_keys/verification_key"
-  referenceSignKey <- noteInputFile "test/data/golden/shelley/keys/extended_payment_keys/signing_key"
+  referenceVerKey <- noteInputFile "test/cardano-cli-golden/files/golden/shelley/keys/extended_payment_keys/verification_key"
+  referenceSignKey <- noteInputFile "test/cardano-cli-golden/files/golden/shelley/keys/extended_payment_keys/signing_key"
 
   -- Key filepaths
   verKey <- noteTempFile tempDir "extended-payment-verification-key-file"
