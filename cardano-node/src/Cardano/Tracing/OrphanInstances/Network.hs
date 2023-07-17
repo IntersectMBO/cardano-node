@@ -178,19 +178,19 @@ instance HasSeverityAnnotation [TraceLabelPeer peer (FetchDecision [Point header
       fetchDecisionSeverity :: FetchDecision a -> Severity
       fetchDecisionSeverity fd =
         case fd of
-          Left FetchDeclineChainNotPlausible        -> Debug
+          Left FetchDeclineChainNotPlausible     -> Debug
           Left FetchDeclineChainIntersectionTooDeep -> Notice
-          Left FetchDeclineAlreadyFetched           -> Debug
-          Left FetchDeclineInFlightThisPeer         -> Debug
-          Left FetchDeclineInFlightOtherPeer        -> Debug
-          Left FetchDeclinePeerShutdown             -> Info
-          Left FetchDeclinePeerStarting             -> Info
-          Left FetchDeclinePeerSlow                 -> Info
-          Left FetchDeclineReqsInFlightLimit {}     -> Info
-          Left FetchDeclineBytesInFlightLimit {}    -> Info
-          Left FetchDeclinePeerBusy {}              -> Info
-          Left FetchDeclineConcurrencyLimit {}      -> Info
-          Right _                                   -> Info
+          Left FetchDeclineAlreadyFetched        -> Debug
+          Left FetchDeclineInFlightThisPeer      -> Debug
+          Left FetchDeclineInFlightOtherPeer     -> Debug
+          Left FetchDeclinePeerShutdown          -> Info
+          Left FetchDeclinePeerStarting          -> Info
+          Left FetchDeclinePeerSlow              -> Info
+          Left FetchDeclineReqsInFlightLimit {}  -> Info
+          Left FetchDeclineBytesInFlightLimit {} -> Info
+          Left FetchDeclinePeerBusy {}           -> Info
+          Left FetchDeclineConcurrencyLimit {}   -> Info
+          Right _                                -> Info
 
 
 instance HasPrivacyAnnotation (TraceTxSubmissionInbound txid tx)
