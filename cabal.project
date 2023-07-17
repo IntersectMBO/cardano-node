@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2023-05-10T10:34:57Z
-  , cardano-haskell-packages 2023-06-06T08:18:38Z
+  , cardano-haskell-packages 2023-07-14T17:38:40Z
 
 packages:
     cardano-cli
@@ -61,11 +61,12 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: 5a9fb991d0eb79c57911a3a5f1759f560312327b
-  -- sha256: 106pakxkhgpa84as7zh5r7nxa43bprgb9f6dmr6h12b64rlc33sr
+  tag: 3b23e7c72f8f579af8c0e807347d80760d5f6d05
+  --sha256: 1cab7f97dysgg68nvf63r40lk4pr53kg8dyxa52lm2nf39ki441z
   subdir:
    ouroboros-consensus
    ouroboros-consensus-protocol
+   ouroboros-consensus-cardano-legacy-block
    ouroboros-consensus-diffusion
    ouroboros-consensus-cardano
 
@@ -73,8 +74,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-api
-  tag: 324e6e7a8c268e1780b74200bc0cfcc62f5b0b6d
-  --sha256: 0f34j79wbmmqmn8x23zagh11skmxqr3yg3vswfwrv7pcrfwqfld1
+  tag: ccc77ddf28f2bca345075fb05bcd7d82a39ffc90
+  --sha256: 0nwfvrn56rihrja8l23kmz0bff0chbknj58mffpq7rvdvi7wk85p
   subdir:
     cardano-api
 
