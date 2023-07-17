@@ -61,7 +61,7 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: 3b23e7c72f8f579af8c0e807347d80760d5f6d05
+  tag: 0f2dc418524c785d0402cfdb17873c2d99827da5
   --sha256: 1cab7f97dysgg68nvf63r40lk4pr53kg8dyxa52lm2nf39ki441z
   subdir:
    ouroboros-consensus
@@ -75,8 +75,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-api
-  tag: ccc77ddf28f2bca345075fb05bcd7d82a39ffc90
-  --sha256: 0nwfvrn56rihrja8l23kmz0bff0chbknj58mffpq7rvdvi7wk85p
+  tag: 04a0f6e6b980cf3773755cb182bc280536275592
+  --sha256: 1ayxrh1y9msnmzzsxf6j166dpdvw1g1rpzc6f1q1qn3js5cfw8gz
   subdir:
     cardano-api
 
