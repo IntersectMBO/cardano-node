@@ -1,4 +1,6 @@
-Usage: cardano-testnet babbage [--num-spo-nodes COUNT]
+Usage: cardano-testnet babbage [--protocol-version INT]
+                                 [--epoch-length COUNT]
+                                 [--num-spo-nodes COUNT]
                                  [--slot-duration MILLISECONDS]
                                  [--security-param INT]
                                  --testnet-magic INT
@@ -8,6 +10,8 @@ Usage: cardano-testnet babbage [--num-spo-nodes COUNT]
   Start a babbage testnet
 
 Available options:
+  --protocol-version INT   Protocol version (default: 8)
+  --epoch-length COUNT     Length of epoch in slots (default: 600)
   --num-spo-nodes COUNT    Number of SPO nodes (default: 3)
   --slot-duration MILLISECONDS
                            Slot duration (default: 200)

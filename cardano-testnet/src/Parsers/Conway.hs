@@ -21,6 +21,20 @@ newtype ConwayOptions = ConwayOptions
 optsTestnet :: Parser ConwayTestnetOptions
 optsTestnet = ConwayTestnetOptions
   <$> OA.option auto
+      (   OA.long "protocol-version"
+      <>  OA.help "Protocol version"
+      <>  OA.metavar "INT"
+      <>  OA.showDefault
+      <>  OA.value (conwayProtocolVersion conwayDefaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "epoch-length"
+      <>  OA.help "Length of epoch in slots"
+      <>  OA.metavar "COUNT"
+      <>  OA.showDefault
+      <>  OA.value (conwayEpochLength conwayDefaultTestnetOptions)
+      )
+  <*> OA.option auto
       (   OA.long "num-spo-nodes"
       <>  OA.help "Number of SPO nodes"
       <>  OA.metavar "COUNT"

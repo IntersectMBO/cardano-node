@@ -17,14 +17,19 @@ module Testnet.Start.Conway
 
 import           Prelude
 
+import           Control.Concurrent (threadDelay)
+import qualified Control.Exception as IO
 import           Control.Monad
+import           Control.Monad.IO.Class (MonadIO (liftIO))
 import           Data.Aeson (Value (..), encode, object, toJSON, (.=))
 import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Functor (($>))
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
+import qualified Network.Socket as IO
 import           System.FilePath.Posix ((</>))
 import qualified System.Info as OS
 
@@ -42,7 +47,9 @@ import           Testnet.Runtime (Delegator (..), NodeLoggingFormat (..), Paymen
                    TestnetRuntime (..), poolSprockets, startNode)
 import qualified Testnet.Start.Byron as Byron
 
+import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
+import           Hedgehog.Extras.Stock (allocateRandomPorts)
 import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Test.Base as H
@@ -55,8 +62,40 @@ import qualified Hedgehog.Extras.Test.File as H
 startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
+-- | Check if a TCP port is open
+isPortOpen :: Int -> IO Bool
+isPortOpen port = do
+  socketAddressInfos <- IO.getAddrInfo Nothing (Just "127.0.0.1") (Just (show port))
+  case socketAddressInfos of
+    socketAddressInfo:_ -> canConnect (IO.addrAddress socketAddressInfo) $> True
+    []                  -> return False
+
+-- | Check if it is possible to connect to a socket address
+-- TODO: upstream fix to Hedgehog Extras
+canConnect :: IO.SockAddr -> IO Bool
+canConnect sockAddr = IO.bracket (IO.socket IO.AF_INET IO.Stream 6) IO.close' $ \sock -> do
+  res <- IO.try $ IO.connect sock sockAddr
+  case res of
+    Left (_ :: IO.IOException) -> return False
+    Right _                    -> return True
+
+-- | Get random list of open ports. Timeout after 60seconds if unsuccessful.
+getOpenPorts :: (MonadTest m, MonadIO m) => Int -> Int -> m [Int]
+getOpenPorts n numberOfPorts = do
+  when (n == 0) $ do
+   error "getOpenPorts timeout"
+  ports <- liftIO $ allocateRandomPorts numberOfPorts
+  allOpen <- liftIO $ mapM isPortOpen ports
+  unless (and allOpen) $ do
+    H.annotate "Some ports are not open, trying again..."
+    liftIO $ threadDelay 1000000 -- wait 1 sec
+    void $ getOpenPorts (pred n) numberOfPorts
+  pure ports
+
 data ConwayTestnetOptions = ConwayTestnetOptions
-  { conwayNumSpoNodes :: Int
+  { conwayProtocolVersion :: Int
+  , conwayEpochLength :: Int
+  , conwayNumSpoNodes :: Int
   , conwaySlotDuration :: Int
   , conwaySecurityParam :: Int
   , conwayTestnetMagic :: Int
@@ -66,7 +105,9 @@ data ConwayTestnetOptions = ConwayTestnetOptions
 
 conwayDefaultTestnetOptions :: ConwayTestnetOptions
 conwayDefaultTestnetOptions = ConwayTestnetOptions
-  { conwayNumSpoNodes = 3
+  { conwayProtocolVersion = 9
+  , conwayEpochLength = 600 -- Should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"conwayNumSpoNodes = 3
+  , conwayNumSpoNodes = 3
   , conwaySlotDuration = 200
   , conwaySecurityParam = 10
   , conwayTestnetMagic = 42
@@ -199,8 +240,8 @@ conwayTestnet testnetOptions (H.Conf tempAbsPath) = do
   H.rewriteJsonFile (genesisShelleyDir </> "genesis.json") $ J.rewriteObject
     ( HM.insert "slotLength"             (toJSON @Double 0.1)
     . HM.insert "activeSlotsCoeff"       (toJSON @Double 0.1)
-    . HM.insert "securityParam"          (toJSON @Int 6)    -- TODO: USE config parameter
-    . HM.insert "epochLength"            (toJSON @Int 600)  -- Should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"
+    . HM.insert "securityParam"          (toJSON @Int $ conwaySecurityParam testnetOptions)
+    . HM.insert "epochLength"            (toJSON @Int $ conwayEpochLength testnetOptions)
     . HM.insert "maxLovelaceSupply"      (toJSON @Int 1000000000000)
     . HM.insert "minFeeA"                (toJSON @Int 44)
     . HM.insert "minFeeB"                (toJSON @Int 155381)
@@ -209,7 +250,7 @@ conwayTestnet testnetOptions (H.Conf tempAbsPath) = do
     . flip HM.adjust "protocolParams"
       ( J.rewriteObject
         ( flip HM.adjust "protocolVersion"
-          ( J.rewriteObject ( HM.insert "major" (toJSON @Int 8)))
+          ( J.rewriteObject ( HM.insert "major" (toJSON @Int $ conwayProtocolVersion testnetOptions)))
         )
       )
     . HM.insert "rho"                    (toJSON @Double 0.1)
@@ -262,9 +303,11 @@ conwayTestnet testnetOptions (H.Conf tempAbsPath) = do
   H.renameFile (tempAbsPath' </> "byron-gen-command/delegation-cert.001.json") (tempAbsPath' </> "node-spo2/byron-delegation.cert")
   H.renameFile (tempAbsPath' </> "byron-gen-command/delegation-cert.002.json") (tempAbsPath' </> "node-spo3/byron-delegation.cert")
 
-  H.writeFile (tempAbsPath' </> "node-spo1/port") "3001"
-  H.writeFile (tempAbsPath' </> "node-spo2/port") "3002"
-  H.writeFile (tempAbsPath' </> "node-spo3/port") "3003"
+  [port1, port2, port3] <- getOpenPorts 60 $ conwayNumSpoNodes testnetOptions
+
+  H.writeFile (tempAbsPath' </> "node-spo1/port") (show port1)
+  H.writeFile (tempAbsPath' </> "node-spo2/port") (show port2)
+  H.writeFile (tempAbsPath' </> "node-spo3/port") (show port3)
 
 
   -- Make topology files
@@ -275,12 +318,12 @@ conwayTestnet testnetOptions (H.Conf tempAbsPath) = do
     [ "Producers" .= toJSON
       [ object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3002
+        , "port"    .= toJSON @Int port2
         , "valency" .= toJSON @Int 1
         ]
       , object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3003
+        , "port"    .= toJSON @Int port3
         , "valency" .= toJSON @Int 1
         ]
       ]
@@ -291,12 +334,12 @@ conwayTestnet testnetOptions (H.Conf tempAbsPath) = do
     [ "Producers" .= toJSON
       [ object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3001
+        , "port"    .= toJSON @Int port1
         , "valency" .= toJSON @Int 1
         ]
       , object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3003
+        , "port"    .= toJSON @Int port3
         , "valency" .= toJSON @Int 1
         ]
       ]
@@ -307,12 +350,12 @@ conwayTestnet testnetOptions (H.Conf tempAbsPath) = do
     [ "Producers" .= toJSON
       [ object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3001
+        , "port"    .= toJSON @Int port1
         , "valency" .= toJSON @Int 1
         ]
       , object
         [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3002
+        , "port"    .= toJSON @Int port2
         , "valency" .= toJSON @Int 1
         ]
       ]

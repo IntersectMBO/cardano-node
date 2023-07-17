@@ -21,6 +21,20 @@ newtype BabbageOptions = BabbageOptions
 optsTestnet :: Parser BabbageTestnetOptions
 optsTestnet = BabbageTestnetOptions
   <$> OA.option auto
+      (   OA.long "protocol-version"
+      <>  OA.help "Protocol version"
+      <>  OA.metavar "INT"
+      <>  OA.showDefault
+      <>  OA.value (babbageProtocolVersion babbageDefaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "epoch-length"
+      <>  OA.help "Length of epoch in slots"
+      <>  OA.metavar "COUNT"
+      <>  OA.showDefault
+      <>  OA.value (babbageEpochLength babbageDefaultTestnetOptions)
+      )
+  <*> OA.option auto
       (   OA.long "num-spo-nodes"
       <>  OA.help "Number of SPO nodes"
       <>  OA.metavar "COUNT"
