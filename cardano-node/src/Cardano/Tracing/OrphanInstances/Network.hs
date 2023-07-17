@@ -178,7 +178,7 @@ instance HasSeverityAnnotation [TraceLabelPeer peer (FetchDecision [Point header
       fetchDecisionSeverity fd =
         case fd of
           Left FetchDeclineChainNotPlausible     -> Debug
-          Left FetchDeclineChainNoIntersection   -> Notice
+          Left FetchDeclineChainIntersectionTooDeep -> Notice
           Left FetchDeclineAlreadyFetched        -> Debug
           Left FetchDeclineInFlightThisPeer      -> Debug
           Left FetchDeclineInFlightOtherPeer     -> Debug
