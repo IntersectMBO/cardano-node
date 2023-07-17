@@ -71,8 +71,7 @@ import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkN
 import           Ouroboros.Consensus.Storage.LedgerDB.DbChangelog.Update (PushGoal (..), Pushing (..), PushStart (..), UpdateLedgerDbTraceEvent(..))
 import qualified Ouroboros.Consensus.Storage.LedgerDB.Impl as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB.BackingStore.LMDB as LMDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB.BackingStore.InMemory as InMemory
+import qualified Ouroboros.Consensus.Storage.LedgerDB.BackingStore as BS
 import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 
@@ -584,8 +583,8 @@ instance ( ConvertRawHash blk
           LedgerDB.DeletedSnapshot snap ->
             "Deleted old snapshot " <> showT snap
         LedgerDB.BackingStoreEvent ev' -> case ev' of
-          LedgerDB.LMDBTrace ev'' -> LMDB.showTrace ev''
-          LedgerDB.InMemoryTrace ev'' -> InMemory.showTrace ev''
+          LedgerDB.LMDBTrace ev'' -> "LMDB: " <> showT ev''
+          LedgerDB.InMemoryTrace ev'' -> "InMemory: " <> showT ev''
         LedgerDB.BackingStoreInitEvent ev' -> case ev' of
           LedgerDB.BackingStoreInitialisedInMemory ->
             "Using In-Memory backing store"
@@ -1558,86 +1557,59 @@ instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
   toObject _verb _ =
     mconcat [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
 
-
-instance ToObject LedgerDB.BackingStoreTrace where
-  toObject _verb ev = case ev of
-    LedgerDB.LMDBTrace ev' ->
-      mconcat [ "kind" .= String "TraceLedgerDBEvent.BackingStoreEvent.LMDBTrace"
-              , "event" .= case ev' of
-                  LMDB.TDBOpening -> mconcat [ "kind" .= String "Open" ] :: Aeson.Object
-                  LMDB.TDBOpened p -> mconcat [ "kind" .= String "Opened"
-                                              , "path" .= show p
-                                              ]
-                  LMDB.TDBClosing p -> mconcat [ "kind" .= String "Closing"
-                                               , "path" .= show p
-                                               ]
-                  LMDB.TDBClosed p -> mconcat [ "kind" .= String "Closed"
-                                              , "path" .= show p
-                                              ]
-                  LMDB.TDBCopying p1 p2 -> mconcat [ "kind" .= String "Copying"
-                                                   , "from" .= show p1
-                                                   , "to" .= show p2
-                                                   ]
-                  LMDB.TDBCopied p1 p2 -> mconcat [ "kind" .= String "Copied"
-                                                  , "from" .= show p1
-                                                  , "to" .= show p2
-                                                  ]
-                  LMDB.TDBWrite s1 s2 -> mconcat [ "kind" .= String "Wrote"
-                                                 , "from" .= show s1
-                                                 , "to" .= show s2
-                                                 ]
-                  LMDB.TDBValueHandle i tvh -> mconcat [ "kind" .= String "ValueHandle"
-                                                       , "index" .= i
-                                                       , "event" .= String (case tvh of
-                                                              LMDB.TVHOpening          -> "Open"
-                                                              LMDB.TVHOpened           -> "Opened"
-                                                              LMDB.TVHClosing          -> "Closing"
-                                                              LMDB.TVHClosed           -> "Closed"
-                                                              LMDB.TVHReadStarted      -> "ReadStarted"
-                                                              LMDB.TVHReadEnded        -> "ReadEnded"
-                                                              LMDB.TVHRangeReadStarted -> "RangeReadStarted"
-                                                              LMDB.TVHRangeReadEnded   -> "RangeReadEnded"
-                                                              LMDB.TVHStatStarted      -> "StatStarted"
-                                                              LMDB.TVHStatEnded        -> "StatEnded")
-                                                         ]
-                  LMDB.TDBInitialisingFromLMDB p -> mconcat [ "kind" .= String "InitialisingFromLMDB"
-                                                            , "path" .= show p
-                                                            ]
-                  LMDB.TDBInitialisedFromLMDB p -> mconcat [ "kind" .= String "InitialisedFromLMDB"
-                                                           , "path" .= show p
-                                                           ]
-                  LMDB.TDBInitialisingFromValues p -> mconcat [ "kind" .= String "InitialisingFromValues"
-                                                              , "slot" .= show p
-                                                              ]
-                  LMDB.TDBInitialisedFromValues p -> mconcat [ "kind" .= String "InitialisedFromValues"
-                                                             , "slot" .= show p
-                                                             ]
-              ]
-    LedgerDB.InMemoryTrace ev' ->
-      mconcat [ "kind" .= String "TraceLedgerDBEvent.BackingStoreEvent.InMemoryTrace"
-              , "event" .= case ev' of
-                  InMemory.TVarTraceOpening -> mconcat [ "kind" .= String "Opening" ] :: Aeson.Object
-                  InMemory.TVarTraceOpened -> mconcat [ "kind" .= String "Opened" ]
-                  InMemory.TVarTraceClosing -> mconcat [ "kind" .= String "Closing" ]
-                  InMemory.TVarTraceClosed -> mconcat [ "kind" .= String "Closed" ]
-                  InMemory.TVarTraceCopying p -> mconcat [ "kind" .= String "Copying"
+instance ToObject BS.BackingStoreTrace where
+  toObject _verb BS.BSOpening = mconcat [ "kind" .= String "BSOpening" ]
+  toObject _verb (BS.BSOpened p) = mconcat ([ "kind" .= String "BSOpened" ] ++ maybe [] (\p' -> ["path" .= show p']) p)
+  toObject _verb (BS.BSInitialisingFromCopy p) = mconcat [ "kind" .= String "BSInitialisingFromCopy"
                                                          , "path" .= show p
                                                          ]
-                  InMemory.TVarTraceCopied p -> mconcat [ "kind" .= String "Copied"
+  toObject _verb (BS.BSInitialisedFromCopy p) = mconcat [ "kind" .= String "BSInitialisedFromCopy"
                                                         , "path" .= show p
                                                         ]
-                  InMemory.TVarTraceInitialisingFromSnapshot p -> mconcat [ "kind" .= String "InitialisingFromSnapshot"
-                                                                          , "path" .= show p
-                                                                          ]
-                  InMemory.TVarTraceInitialisedFromSnapshot p -> mconcat [ "kind" .= String "InitialisedFromSnapshot"
-                                                                         , "path" .= show p
-                                                                         ]
-                  InMemory.TVarTraceInitialisingFromValues s -> mconcat [ "kind" .= String "InitialisingFromValues"
-                                                                        , "slot" .= show s
-                                                                        ]
-                  InMemory.TVarTraceWrite s1 s2 -> mconcat [ "kind" .= String "Write"
-                                                           , "from" .= show s1
-                                                           , "to" .= show s2
+  toObject _verb (BS.BSInitialisingFromValues s) = mconcat [ "kind" .= String "BSInitialisingFromValues"
+                                                           , "slot" .= show s
                                                            ]
+  toObject _verb (BS.BSInitialisedFromValues s) = mconcat [ "kind" .= String "BSInitialisedFromValues"
+                                                          , "slot" .= show s
+                                                          ]
+  toObject _verb BS.BSClosing = mconcat [ "kind" .= String "BSClosing" ]
+  toObject _verb BS.BSAlreadyClosed = mconcat [ "kind" .= String "BSAlreadyClosed" ]
+  toObject _verb BS.BSClosed = mconcat [ "kind" .= String "BSClosed" ]
+  toObject _verb (BS.BSCopying p) = mconcat [ "kind" .= String "BSCopying"
+                                            , "path" .= show p
+                                            ]
+  toObject _verb (BS.BSCopied p) = mconcat [ "kind" .= String "BSCopied"
+                                           , "path" .= show p
+                                           ]
+  toObject _verb BS.BSCreatingValueHandle = mconcat [ "kind" .= String "BSCreatingValueHandle" ]
+  toObject  verb (BS.BSValueHandleTrace i p) = mconcat ([ "kind" .= String "BSCopied"
+                                                       , "event" .= toObject verb p
+                                                       ] ++ maybe [] (\i' -> [ "index" .= show i' ]) i)
+  toObject _verb BS.BSCreatedValueHandle = mconcat [ "kind" .= String "BSCreatedValueHandle" ]
+  toObject _verb (BS.BSWriting s) = mconcat [ "kind" .= String "BSWriting"
+                                            , "slot" .= show s
+                                            ]
+  toObject _verb (BS.BSWritten s1 s2) = mconcat [ "kind" .= String "BSWritten"
+                                                , "from" .= show s1
+                                                , "to" .= show s2
+                                                ]
 
-              ]
+instance ToObject BS.BackingStoreValueHandleTrace where
+  toObject _verb BS.BSVHClosing       = mconcat [ "kind" .= String "BSVHClosing " ]
+  toObject _verb BS.BSVHAlreadyClosed = mconcat [ "kind" .= String "BSVHAlreadyClosed" ]
+  toObject _verb BS.BSVHClosed        = mconcat [ "kind" .= String "BSVHClosed" ]
+  toObject _verb BS.BSVHRangeReading  = mconcat [ "kind" .= String "BSVHRangeReading" ]
+  toObject _verb BS.BSVHRangeRead     = mconcat [ "kind" .= String "BSVHRangeRead" ]
+  toObject _verb BS.BSVHReading       = mconcat [ "kind" .= String "BSVHReading" ]
+  toObject _verb BS.BSVHRead          = mconcat [ "kind" .= String "BSVHRead" ]
+  toObject _verb BS.BSVHStatting      = mconcat [ "kind" .= String "BSVHStatting" ]
+  toObject _verb BS.BSVHStatted       = mconcat [ "kind" .= String "BSVHStatted" ]
+
+instance ToObject LedgerDB.BackingStoreTrace where
+  toObject verb ev = case ev of
+    LedgerDB.LMDBTrace ev' -> mconcat [ "backend" .= String "LMDB"
+                                      , "event" .= toObject verb ev'
+                                      ]
+    LedgerDB.InMemoryTrace ev' -> mconcat [ "backend" .= String "InMemory"
+                                          , "event" .= toObject verb ev'
+                                          ]
