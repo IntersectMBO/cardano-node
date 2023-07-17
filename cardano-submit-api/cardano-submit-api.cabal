@@ -49,7 +49,7 @@ library
                       , iohk-monitoring
                       , mtl
                       , network
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork ^>= 0.18.1
                       , ouroboros-consensus-cardano
                       , ouroboros-network ^>= 0.8.1.0
                       , ouroboros-network-protocols
@@ -85,7 +85,7 @@ executable cardano-submit-api
   hs-source-dirs:       app
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-T -I0"
   build-depends:        base >= 4.14 && < 4.17
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork ^>= 0.18.1
                       , cardano-cli ^>= 8.3
                       , cardano-crypto-class ^>= 2.1
                       , cardano-submit-api

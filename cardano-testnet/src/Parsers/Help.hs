@@ -30,10 +30,9 @@ helpAll pprefs progn rnames parserInfo = do
     go p = case p of
       NilP _ -> return ()
       OptP optP -> case optMain optP of
-        CmdReader _ cs f -> do
-          forM_ cs $ \c ->
-            forM_ (f c) $ \subParserInfo ->
-              helpAll pprefs progn (c:rnames) subParserInfo
+        CmdReader _ cs ->
+          forM_ cs $ \(c, subParserInfo) ->
+            helpAll pprefs progn (c:rnames) subParserInfo
         _ -> return ()
       AltP pa pb -> go pa >> go pb
       MultP pf px -> go pf >> go px
