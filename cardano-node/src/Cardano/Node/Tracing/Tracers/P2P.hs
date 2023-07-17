@@ -379,6 +379,10 @@ instance LogFormatting (TracePeerSelection SockAddr) where
   forMachine _dtal (TraceChurnMode c) =
     mconcat [ "kind" .= String "ChurnMode"
              , "event" .= show c ]
+  forMachine _dtal (TraceKnownInboundConnection addr sharing) =
+    mconcat [ "kind" .= String "KnownInboundConnection"
+            , "peer" .= toJSON addr
+            , "peerSharing" .= String (pack . show $ sharing) ]
   forHuman = pack . show
 
 instance MetaTrace (TracePeerSelection SockAddr) where
@@ -442,6 +446,8 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["ChurnWait"]
     namespaceFor TraceChurnMode {}             =
       Namespace [] ["ChurnMode"]
+    namespaceFor TraceKnownInboundConnection {} =
+      Namespace [] ["KnownInboundConnection"]
 
     severityFor (Namespace [] ["LocalRootPeersChanged"]) _ = Just Notice
     severityFor (Namespace [] ["TargetsChanged"]) _ = Just Notice
@@ -472,6 +478,7 @@ instance MetaTrace (TracePeerSelection SockAddr) where
     severityFor (Namespace [] ["GovernorWakeup"]) _ = Just Info
     severityFor (Namespace [] ["ChurnWait"]) _ = Just Info
     severityFor (Namespace [] ["ChurnMode"]) _ = Just Info
+    severityFor (Namespace [] ["KnownInboundConnection"]) _ = Just Info
     severityFor _ _ = Nothing
 
     documentFor (Namespace [] ["LocalRootPeersChanged"]) = Just  ""
@@ -524,6 +531,8 @@ instance MetaTrace (TracePeerSelection SockAddr) where
     documentFor (Namespace [] ["GovernorWakeup"]) = Just  ""
     documentFor (Namespace [] ["ChurnWait"]) = Just  ""
     documentFor (Namespace [] ["ChurnMode"]) = Just  ""
+    documentFor (Namespace [] ["KnownInboundConnection"]) = Just
+      "An inbound connection was added to known set of outbound governor"
     documentFor _ = Nothing
 
     allNamespaces = [
@@ -556,6 +565,7 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       , Namespace [] ["GovernorWakeup"]
       , Namespace [] ["ChurnWait"]
       , Namespace [] ["ChurnMode"]
+      , Namespace [] ["KnownInboundConnection"]
       ]
 
 --------------------------------------------------------------------------------
