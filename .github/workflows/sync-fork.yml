@@ -11,7 +11,7 @@ jobs:
       - name: GitHub Sync to Upstream Repository
         uses: dabreadman/sync-upstream-repo@v1.3.0
         with: 
-          upstream_repo: https://github.com/input-output-hk/cardano-db-sync
+          upstream_repo: https://github.com/input-output-hk/cardano-node
           upstream_branch: master
           downstream_branch: master
           token: ${{ secrets.WORKFLOW_TOKEN }}
