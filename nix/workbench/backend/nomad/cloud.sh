@@ -676,6 +676,10 @@ allocate-run-nomadcloud() {
     }' \
     "${dir}"/nomad/nomad-job.json \
   > "${dir}"/nomad/nomad-job.summary.json
+
+  # Show the summary before starting the job, a precaution!
+  jq . "${dir}"/nomad/nomad-job.summary.json
+  read -p "Hit enter to continue ..."
 }
 
 deploy-genesis-nomadcloud() {
