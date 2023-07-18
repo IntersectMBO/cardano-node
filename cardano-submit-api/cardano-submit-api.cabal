@@ -85,7 +85,7 @@ executable cardano-submit-api
   hs-source-dirs:       app
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-T -I0"
   build-depends:        base
-                      , optparse-applicative-fork
+                      , optparse-applicative-fork ^>= 0.16.1
                       , cardano-cli ^>= 8.3
                       , cardano-crypto-class ^>= 2.1
                       , cardano-submit-api

@@ -105,17 +105,14 @@ write-ghc-environment-files: always
 package snap-server
   flags: +openssl
 
-<<<<<<< HEAD
-=======
 allow-newer:
   text,
   ekg-forward
 
 constraints:
-  optparse-applicative >= 0.16.0 && < 0.16.1,
+  -- optparse-applicative >= 0.16.0 && < 0.16.1,
   cardano-api < 8.8.1
 
->>>>>>> dd71250ab (Bump network packages version)
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
