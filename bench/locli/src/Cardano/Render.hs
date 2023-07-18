@@ -1,5 +1,5 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeInType #-}
 
 {- HLINT ignore "Use concatMap" -}
 {- HLINT ignore "Use fromMaybe" -}

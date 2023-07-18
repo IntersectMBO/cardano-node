@@ -1,7 +1,7 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeInType #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.Report
   ( module Cardano.Report

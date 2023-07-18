@@ -33,11 +33,16 @@ import Cardano.Prelude
 #if __GLASGOW_HASKELL__ < 902
 -- This is a GHC module ...
 import Util
-#else
+#elif __GLASGOW_HASKELL__ < 906
 -- that moved for the ghc-9.2 release.
 import GHC.Utils.Misc                   as Util
-#endif
                                  hiding (fst3, snd3, third3, uncurry3, firstM, secondM)
+#else
+-- that moved again for the ghc-9.6 release.
+-- Taking an internal module of GHC and re-exporting it is an incredibly dumb idea.
+import GHC.Utils.Misc                   as Util
+                                 hiding (fst3, snd3, third3, uncurry3)
+#endif
 
 import Data.Aeson                       (FromJSON (..), ToJSON (..), Object, Value (..), (.:), (.:?), withObject, object)
 import Data.Aeson                       qualified as AE

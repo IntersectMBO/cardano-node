@@ -6,9 +6,8 @@ module Cardano.Node.Tracing.Tracers.Resources
 
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async)
-import           Control.Monad (forM_)
+import           Control.Monad (forever, forM_)
 import           Control.Monad.Class.MonadAsync (link)
-import           Control.Monad.Cont (forever)
 
 import           "contra-tracer" Control.Tracer
 
