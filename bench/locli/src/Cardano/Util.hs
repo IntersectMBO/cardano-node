@@ -31,7 +31,7 @@ import Cardano.Prelude
 
 #if __GLASGOW_HASKELL__ < 902
 -- This is a GHC module ...
-import Util                      hiding (fst3, snd3)
+import Util
 #elif __GLASGOW_HASKELL__ < 906
 -- that moved for the ghc-9.2 release.
 import GHC.Utils.Misc                   as Util
