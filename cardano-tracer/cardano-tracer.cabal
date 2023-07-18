@@ -145,13 +145,8 @@ library
                       , extra
                       , filepath
                       , mime-mail
-<<<<<<< HEAD
-                      , optparse-applicative
-                      , ouroboros-network ^>= 0.8.1.0
-=======
-                      , optparse-applicative >= 0.16.0 && < 0.16.1
+                      , optparse-applicative >= 0.16.0
                       , ouroboros-network ^>= 0.8.2.0
->>>>>>> dd71250ab (Bump network packages version)
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal
