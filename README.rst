@@ -93,6 +93,7 @@ The general synopsis is as follows:
                            [--shelley-kes-key FILEPATH]
                            [--shelley-vrf-key FILEPATH]
                            [--shelley-operational-certificate FILEPATH]
+                           [--start-as-non-producing-node]
                            [--host-addr IPV4-ADDRESS]
                            [--host-ipv6-addr IPV6-ADDRESS]
                            [--port PORT]
@@ -114,6 +115,10 @@ The general synopsis is as follows:
 * ``--shelley-vrf-key`` - Optional path to the Shelley VRF signing key.
 
 * ``--shelley-operational-certificate`` - Optional path to the Shelley operational certificate.
+
+* ``--start-as-non-producing-node`` -  Optional flag to disable block production on node
+  start. If credentials flags are passed the node will start block producing, however with
+  this flag the node will only start block producing on SIGHUP (see `here <doc/reference/dynamic-block-forging.md>` for more details)
 
 * ``--socket-path`` - Path to the socket file.
 
