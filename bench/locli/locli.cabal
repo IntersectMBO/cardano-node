@@ -116,7 +116,7 @@ library
                       , ghc
                       , gnuplot
                       , iohk-monitoring
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , optparse-generic
                       , ouroboros-consensus
                       -- for Data.SOP.Strict:
@@ -155,7 +155,7 @@ executable locli
   build-depends:        aeson
                       , cardano-prelude
                       , locli
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , text
                       , text-short
                       , transformers

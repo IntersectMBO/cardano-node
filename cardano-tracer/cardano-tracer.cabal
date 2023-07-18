@@ -145,7 +145,7 @@ library
                       , extra
                       , filepath
                       , mime-mail
-                      , optparse-applicative >= 0.16.0 && < 0.16.1
+                      , optparse-applicative
                       , ouroboros-network ^>= 0.8.1.0
                       , ouroboros-network-api
                       , ouroboros-network-framework
@@ -184,7 +184,7 @@ executable cardano-tracer
   autogen-modules:      Paths_cardano_tracer
 
   build-depends:        cardano-tracer
-                      , optparse-applicative >= 0.16.0 && < 0.16.1
+                      , optparse-applicative
 
   ghc-options:          -threaded
                         -rtsopts
@@ -212,7 +212,7 @@ library demo-forwarder-lib
                       , extra
                       , filepath
                       , generic-data
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , tasty-quickcheck
@@ -252,7 +252,7 @@ library demo-acceptor-lib
                       , extra
                       , filepath
                       , generic-data
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , ouroboros-network-api
                       , stm
                       , text
@@ -303,7 +303,7 @@ test-suite cardano-tracer-test
                       , extra
                       , filepath
                       , generic-data
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , stm
@@ -357,7 +357,7 @@ test-suite cardano-tracer-test-ext
                       , filepath
                       , generic-data
                       , Glob
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , ouroboros-network ^>= 0.8.1.0
                       , ouroboros-network-api
                       , ouroboros-network-framework
