@@ -10,6 +10,8 @@ RUN apt-get -y install libsodium23 libsodium-dev
 ENV LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" \
     PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
 RUN echo "Building tags/$VERSION..." 
+RUN touch cabal.project.local
+RUN ls
 RUN cabal update \
     && cabal configure --with-compiler=ghc-8.10.7 \
     && echo "package cardano-crypto-praos" >>  cabal.project.local \
