@@ -317,12 +317,11 @@ mkTracers
   -> NodeKernelData blk
   -> Maybe EKGDirect
   -> NetworkP2PMode p2p
-  -> Severity
   -> IO (Tracers (ConnectionId RemoteAddress) (ConnectionId LocalAddress) blk p2p)
-mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enableP2P severity = do
+mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enableP2P = do
   fStats <- mkForgingStats
   consensusTracers <- mkConsensusTracers ekgDirect trSel verb tr nodeKern fStats
-  elidedChainDB <- newstate -- for eliding messages in ChainDB tracer
+  elidedChainDB <- newstate  -- for eliding messages in ChainDB tracer
   tForks <- STM.newTVarIO 0
 
   pure Tracers
@@ -335,7 +334,6 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
                              tForks
                              (appendName "ChainDB" tr)
                              (appendName "metrics" tr)
-                             severity
     , consensusTracers = consensusTracers
     , nodeToClientTracers = nodeToClientTracers' trSel verb tr
     , nodeToNodeTracers = nodeToNodeTracers' trSel verb tr
@@ -450,7 +448,7 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
      tracerOnOff (traceDiffusionInitialization trSel) verb
        "DiffusionInitializationTracer" tr
 
-mkTracers _ _ _ _ _ enableP2P _ =
+mkTracers _ _ _ _ _ enableP2P =
   pure Tracers
     { chainDBTracer = nullTracer
     , consensusTracers = Consensus.Tracers
@@ -517,13 +515,12 @@ teeTraceChainTip
   -> STM.TVar Word64
   -> Trace IO Text
   -> Trace IO Text
-  -> Severity
   -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
-teeTraceChainTip _ _ TracingOff _ _ _ _ _ _ = nullTracer
-teeTraceChainTip _ _ TraceDispatcher{} _ _ _ _ _ _ = nullTracer
-teeTraceChainTip blockConfig fStats (TracingOnLegacy trSel) elided ekgDirect tFork trTrc trMet severity =
+teeTraceChainTip _ _ TracingOff _ _ _ _ _ = nullTracer
+teeTraceChainTip _ _ TraceDispatcher{} _ _ _ _ _ = nullTracer
+teeTraceChainTip blockConfig fStats (TracingOnLegacy trSel) elided ekgDirect tFork trTrc trMet =
   Tracer $ \ev -> do
-    traceWith (teeTraceChainTipElide severity (traceVerbosity trSel) elided trTrc) ev
+    traceWith (teeTraceChainTipElide (traceVerbosity trSel) elided trTrc) ev
     traceWith (ignoringSeverity (traceChainMetrics ekgDirect tFork blockConfig fStats trMet)) ev
 
 teeTraceChainTipElide
@@ -533,12 +530,11 @@ teeTraceChainTipElide
      , ToObject (Header blk)
      , ToObject (LedgerEvent blk)
      )
-  => Severity
-  -> TracingVerbosity
+  => TracingVerbosity
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
   -> Trace IO Text
   -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
-teeTraceChainTipElide = elideToLogObjectWithMinSeverity
+teeTraceChainTipElide = elideToLogObject
 {-# INLINE teeTraceChainTipElide #-}
 
 ignoringSeverity :: Tracer IO a -> Tracer IO (WithSeverity a)

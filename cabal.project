@@ -106,11 +106,3 @@ source-repository-package
   --sha256: 0rmchpy6i1whfwr9mdbvj3mfiwpa6d38k8s316r3adfi7yqbd5sw
   subdir:
     ouroboros-network
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: 99ddb3d7f6fa2c62cbee2d5db838334384eed43e
-  --sha256: 0p6pb6f43sy7vsb3qjaqbq6awg6hvqla2aqgynd264n2y997n8mi
-  subdir:
-    iohk-monitoring
