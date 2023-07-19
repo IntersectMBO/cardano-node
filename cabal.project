@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2023-07-10T22:41:49Z
-  , cardano-haskell-packages 2023-07-17T07:47:06Z
+  , cardano-haskell-packages 2023-07-18T22:51:27Z
 
 packages:
   cardano-client-demo
@@ -102,12 +102,9 @@ write-ghc-environment-files: always
 package snap-server
   flags: +openssl
 
-allow-newer: text
-
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
-
 
 if impl(ghc >= 9.6)
   allow-newer:
