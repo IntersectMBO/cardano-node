@@ -105,10 +105,6 @@ write-ghc-environment-files: always
 package snap-server
   flags: +openssl
 
-allow-newer:
-  text,
-  ekg-forward
-
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
@@ -124,6 +120,8 @@ allow-newer:
   , ouroboros-network-protocols:vector
   , ekg-core:*
   , prometheus:*
+  , text
+  , ekg-forward
 
-    -- https://github.com/HeinrichApfelmus/threepenny-gui/pull/275
-    , threepenny-gui:template-haskell
+  -- https://github.com/HeinrichApfelmus/threepenny-gui/pull/275
+  , threepenny-gui:template-haskell
