@@ -12,8 +12,7 @@ ENV LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" \
 RUN echo "Building tags/$VERSION..." 
 RUN touch cabal.project.local
 RUN ls
-RUN cabal update \
-    && cabal configure --with-compiler=ghc-8.10.7 \
+RUN  cabal configure --with-compiler=ghc-8.10.7 \
     && echo "package cardano-crypto-praos" >>  cabal.project.local \
     && echo "  flags: -external-libsodium-vrf" >>  cabal.project.local \
     && cabal build all \
