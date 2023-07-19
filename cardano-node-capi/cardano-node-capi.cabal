@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node-capi
-version:                0.1.0.0
+version:                0.1.0.1
 synopsis:               FFI C library for Cardano
 description:            ffi c library around the full node.
 category:               Cardano,

@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2023-07-21T10:12:20Z
-  , cardano-haskell-packages 2023-07-21T12:48:43Z
+  , hackage.haskell.org 2023-07-27T01:34:31Z
+  , cardano-haskell-packages 2023-07-27T07:20:05Z
 
 packages:
   cardano-client-demo
@@ -38,6 +38,8 @@ package cardano-api
 
 package cardano-cli
   ghc-options: -Werror
+  -- TODO delete the following when the warning is fixed
+  ghc-options: -Wno-redundant-constraints
 
 package cardano-client-demo
   ghc-options: -Werror
@@ -105,10 +107,6 @@ package snap-server
 allow-newer:
   text,
   ekg-forward
-
-constraints:
-  optparse-applicative >= 0.16.0 && < 0.16.1,
-  cardano-api < 8.8.1
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
