@@ -53,6 +53,33 @@ case "$op" in
 
         mkdir -p               "$dir"/supervisor
         cp -f $supervisor_conf "$dir"/supervisor/supervisord.conf
+
+        local svcs=$dir/profile/node-services.json
+        local gtor=$dir/profile/generator-service.json
+        local trac=$dir/profile/tracer-service.json
+        local hche=$dir/profile/healthcheck-service.json
+
+        for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
+        do local node_dir="$dir"/$node
+           mkdir -p                                          "$node_dir"
+           cp $(jq '."'"$node"'"."start"'          -r $svcs) "$node_dir"/start.sh
+           cp $(jq '."'"$node"'"."config"'         -r $svcs) "$node_dir"/config.json
+           cp $(jq '."'"$node"'"."topology"'       -r $svcs) "$node_dir"/topology.json
+        done
+
+        local gen_dir="$dir"/generator
+        mkdir -p                                              "$gen_dir"
+        cp $(jq '."start"'                         -r $gtor)  "$gen_dir"/start.sh
+        cp $(jq '."config"'                        -r $gtor)  "$gen_dir"/run-script.json
+
+        local trac_dir="$dir"/tracer
+        mkdir -p                                    "$trac_dir"
+        cp $(jq '."start"'                        -r $trac) "$trac_dir"/start.sh
+        cp $(jq '."config"'                        -r $trac) "$trac_dir"/config.json
+
+        local hche_dir="$dir"/healthcheck
+        mkdir -p                                    "$hche_dir"
+        cp $(jq '."start"'                        -r $hche) "$hche_dir"/start.sh
         ;;
 
     deploy-genesis )
@@ -143,7 +170,7 @@ EOF
         backend_supervisor save-pid-maps   "$dir"
         ;;
 
-    start )
+    start-cluster )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
@@ -157,7 +184,11 @@ EOF
              cat "$dir"/supervisor/supervisord.log
              echo "$(white -------------------------------------------------)" >&2
              fatal "could not start $(white supervisord)"
-        fi
+        fi;;
+
+    start-tracers )
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
 
         if jqtest ".node.tracer" "$dir"/profile.json
         then if ! supervisorctl start tracer
@@ -278,11 +309,21 @@ EOF
         fi
         ;;
 
-    stop-cluster )
+    stop-all )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
         supervisorctl stop all || true
+        ;;
+
+    fetch-logs )
+        # Unlike Nomad local or cloud, nothing to do here, logs are already in
+        # the run directory.
+        ;;
+
+    stop-cluster )
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
 
         if test -f ${dir}/supervisor/supervisord.pid -a \
                 -f ${dir}/supervisor/child.pids

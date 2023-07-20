@@ -27,16 +27,24 @@ backend_nomadcloud() {
       backend_nomad is-running           "$@"
     ;;
 
-    start )
-      backend_nomad start                "$@"
+    start-cluster )
+      backend_nomad start-cluster        "$@"
     ;;
 
-    cleanup-cluster )
-      backend_nomad cleanup-cluster      "$@"
+    start-tracers )
+      backend_nomad start-tracers        "$@"
     ;;
 
     start-nodes )
       backend_nomad start-nodes          "$@"
+    ;;
+
+    start-generator )
+      backend_nomad start-generator      "$@"
+    ;;
+
+    start-healthchecks )
+      backend_nomad start-healthchecks   "$@"
     ;;
 
     start-node )
@@ -45,14 +53,6 @@ backend_nomadcloud() {
 
     stop-node )
       backend_nomad stop-node            "$@"
-    ;;
-
-    start-healthchecks )
-      backend_nomad start-healthchecks   "$@"
-    ;;
-
-    start-generator )
-      backend_nomad start-generator      "$@"
     ;;
 
     get-node-socket-path )
@@ -69,6 +69,14 @@ backend_nomadcloud() {
 
     wait-pools-stopped )
       backend_nomad wait-pools-stopped   "$@"
+    ;;
+
+    stop-all )
+      backend_nomad stop-all             "$@"
+    ;;
+
+    fetch-logs )
+      backend_nomad fetch-logs           "$@"
     ;;
 
     stop-cluster )
@@ -220,8 +228,8 @@ backend_nomadcloud() {
         "${dir}"/container-specs.json              \
       > "${dir}"/nomad/nomad-job.json
       # The job file is "slightly" modified (jq) to suit the running environment.
-      backend_nomad allocate-run-nomad-job-patch-namespace         "${dir}" "${NOMAD_NAMESPACE}"
-      backend_nomad allocate-run-nomad-job-patch-nix               "${dir}"
+      backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" "${NOMAD_NAMESPACE}"
+      backend_nomad allocate-run-nomad-job-patch-nix       "${dir}"
 
       # Set the placement info and resources accordingly
       local nomad_job_name

@@ -27,16 +27,24 @@ backend_nomadexec() {
       backend_nomad is-running           "$@"
     ;;
 
-    start )
-      backend_nomad start                "$@"
+    start-cluster )
+      backend_nomad start-cluster        "$@"
     ;;
 
-    cleanup-cluster )
-      backend_nomad cleanup-cluster      "$@"
+    start-tracers )
+      backend_nomad start-tracers        "$@"
     ;;
 
     start-nodes )
       backend_nomad start-nodes          "$@"
+    ;;
+
+    start-generator )
+      backend_nomad start-generator      "$@"
+    ;;
+
+    start-healthchecks )
+      backend_nomad start-healthchecks   "$@"
     ;;
 
     start-node )
@@ -45,14 +53,6 @@ backend_nomadexec() {
 
     stop-node )
       backend_nomad stop-node            "$@"
-    ;;
-
-    start-healthchecks )
-      backend_nomad start-healthchecks   "$@"
-    ;;
-
-    start-generator )
-      backend_nomad start-generator      "$@"
     ;;
 
     get-node-socket-path )
@@ -69,6 +69,14 @@ backend_nomadexec() {
 
     wait-pools-stopped )
       backend_nomad wait-pools-stopped   "$@"
+    ;;
+
+    stop-all )
+      backend_nomad stop-all             "$@"
+    ;;
+
+    fetch-logs )
+      backend_nomad fetch-logs           "$@"
     ;;
 
     stop-cluster )
