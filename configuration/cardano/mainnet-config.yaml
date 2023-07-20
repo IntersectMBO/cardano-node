@@ -180,7 +180,7 @@ TraceLocalErrorPolicy: True
 TraceForge: True
 
 # Trace Handshake protocol messages.
-TraceHandshake: False
+TraceHandshake: True
 
 # Trace IP Subscription messages.
 TraceIpSubscription: True
@@ -203,8 +203,11 @@ TraceServer: True
 # Trace local ChainSync protocol messages.
 TraceLocalChainSyncProtocol: False
 
+# Trace local connection manager messages.
+TraceLocalConnectionManager: True
+
 # Trace local Handshake protocol messages.
-TraceLocalHandshake: False
+TraceLocalHandshake: True
 
 # Trace local TxSubmission protocol messages.
 TraceLocalTxSubmissionProtocol: False
