@@ -65,7 +65,7 @@ assertByDeadlineIOCustom str deadline f = GHC.withFrozenCallStack $ do
         H.annotateShow currentTime
         H.failMessage GHC.callStack $ "Condition not met by deadline: " <> str
 
-assertChainExtended :: (H.MonadTest m, MonadIO m)
+assertChainExtended :: (HasCallStack, H.MonadTest m, MonadIO m)
   => DTC.UTCTime
   -> NodeLoggingFormat
   -> FilePath

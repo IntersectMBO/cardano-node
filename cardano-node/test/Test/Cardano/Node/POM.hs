@@ -89,7 +89,7 @@ testPartialCliConfig =
   PartialNodeConfiguration
     { pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
     , pncShutdownConfig = Last . Just $ ShutdownConfig Nothing (Just . ASlot $ SlotNo 42)
-    , pncStartAsNonProducingNode = Last $ Just $ False
+    , pncStartAsNonProducingNode = Last $ Just False
     , pncConfigFile   = mempty
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
