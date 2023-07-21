@@ -103,6 +103,21 @@ write-ghc-environment-files: always
 package snap-server
   flags: +openssl
 
+-- added to force minimal changes to 8.1.2
+constraints:
+  any.byron-spec-chain ==1.0.0.0,
+  any.byron-spec-ledger ==1.0.0.0,
+  any.cardano-api-gen ==8.1.0.2,
+  any.cardano-ledger-byron ==1.0.0.0,
+  any.cardano-protocol-tpraos ==1.0.3.0,
+  any.optparse-applicative-fork ==0.16.2.0,
+  any.ouroboros-network-protocols ==0.5.0.3,
+  any.plutus-ledger-api ==1.5.0.1,
+  any.set-algebra ==1.1.0.0,
+  any.transformers-compat ==0.6.6
+
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+--- 811-freeze	1969-12-31 19:00:01.000000000 -0500
+-index-state: cardano-haskell-packages 2023-06-06T08:18:38Z, hackage.haskell.org 2023-05-10T10:34:57Z
