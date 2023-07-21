@@ -52,11 +52,11 @@ library
                       , contra-tracer
                       , ekg
                       , ekg-core
-                      , ekg-forward >= 0.3.0
+                      , ekg-forward >= 0.3.0.4
                       , hostname
                       , network
-                      , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.8.1.0
+                      , optparse-applicative-fork ^>= 0.16.1
+                      , ouroboros-network ^>= 0.8.2.0
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , serialise
@@ -146,8 +146,13 @@ test-suite trace-dispatcher-test
                       , ekg-core
                       , generic-data
                       , hostname
+<<<<<<< HEAD
                       , optparse-applicative
                       , ouroboros-network ^>= 0.8.1.0
+=======
+                      , optparse-applicative >= 0.16.0 && < 0.16.1
+                      , ouroboros-network ^>= 0.8.2.0
+>>>>>>> dd71250ab (Bump network packages version)
                       , text
                       , stm
                       , tasty
