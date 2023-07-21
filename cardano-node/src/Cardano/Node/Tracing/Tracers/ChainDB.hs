@@ -148,7 +148,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
   namespaceFor (ChainDB.TraceIteratorEvent ev) =
     nsPrependInner "IteratorEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceLedgerDBEvent ev) =
-    nsPrependInner "LedgerDBEvent" (namespaceFor ev)
+    nsPrependInner "LedgerEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceLedgerReplayEvent ev) =
      nsPrependInner "LedgerReplay" (namespaceFor ev)
   namespaceFor (ChainDB.TraceImmutableDBEvent ev) =
@@ -184,7 +184,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("IteratorEvent" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (ChainDB.TraceIteratorEvent blk)) Nothing
-  severityFor (Namespace out ("LedgerDBEvent" : tl)) (Just (ChainDB.TraceLedgerDBEvent ev')) =
+  severityFor (Namespace out ("LedgerEvent" : tl)) (Just (ChainDB.TraceLedgerDBEvent ev')) =
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("LedgerEvent" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (LedgerDB.TraceLedgerDBEvent blk)) Nothing
@@ -230,7 +230,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("IteratorEvent" : tl)) Nothing =
     privacyFor (Namespace out tl :: Namespace (ChainDB.TraceIteratorEvent blk)) Nothing
-  privacyFor (Namespace out ("LedgerDBEvent" : tl)) (Just (ChainDB.TraceLedgerDBEvent ev')) =
+  privacyFor (Namespace out ("LedgerEvent" : tl)) (Just (ChainDB.TraceLedgerDBEvent ev')) =
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("LedgerEvent" : tl)) Nothing =
     privacyFor (Namespace out tl :: Namespace (LedgerDB.TraceLedgerDBEvent blk)) Nothing
@@ -276,7 +276,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("IteratorEvent" : tl)) Nothing =
     detailsFor (Namespace out tl :: Namespace (ChainDB.TraceIteratorEvent blk)) Nothing
-  detailsFor (Namespace out ("LedgerDBEvent" : tl)) (Just (ChainDB.TraceLedgerDBEvent ev')) =
+  detailsFor (Namespace out ("LedgerEvent" : tl)) (Just (ChainDB.TraceLedgerDBEvent ev')) =
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("LedgerEvent" : tl)) Nothing =
     detailsFor (Namespace out tl :: Namespace (LedgerDB.TraceReplayEvent blk)) Nothing
@@ -1459,7 +1459,7 @@ instance MetaTrace (LedgerDB.TraceLedgerDBEvent blk) where
   namespaceFor (LedgerDB.BackingStoreEvent ev) =
     nsPrependInner "BackingStore" (namespaceFor ev)
   namespaceFor (LedgerDB.BackingStoreInitEvent ev) =
-    nsPrependInner "Snapshot" (namespaceFor ev)
+    nsPrependInner "BackingStoreInit" (namespaceFor ev)
 
   severityFor (Namespace out ("Snapshot" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (LedgerDB.TraceSnapshotEvent blk)) Nothing
@@ -1551,23 +1551,23 @@ instance LogFormatting LedgerDB.TraceBackingStoreInitEvent where
 instance MetaTrace LedgerDB.TraceBackingStoreInitEvent where
 
   namespaceFor LedgerDB.BackingStoreInitialisedLMDB {} =
-    Namespace [] ["BackingStoreInitialisedLMDB"]
+    Namespace [] ["LMDB"]
   namespaceFor LedgerDB.BackingStoreInitialisedInMemory {} =
-    Namespace [] ["BackingStoreInitialisedInMemory"]
+    Namespace [] ["InMemory"]
 
-  severityFor (Namespace _ ["BackingStoreInitialisedInMemory"]) _ = Just Info
-  severityFor (Namespace _ ["BackingStoreInitialisedLMDB"]) _ = Just Info
+  severityFor (Namespace _ ["InMemory"]) _ = Just Info
+  severityFor (Namespace _ ["LMDB"]) _ = Just Info
   severityFor _ _ = Nothing
 
-  documentFor (Namespace _ ["BackingStoreInitialisedInMemory"]) = Just
+  documentFor (Namespace _ ["InMemory"]) = Just
     "Initialization of the InMemory backing store."
-  documentFor (Namespace _ ["BackingStoreInitialisedLMDB"]) = Just
+  documentFor (Namespace _ ["LMDB"]) = Just
     "Initialization of the LMDB backing store."
   documentFor _ = Nothing
 
   allNamespaces =
-    [ Namespace [] ["BackingStoreInitialisedInMemory"]
-    , Namespace [] ["BackingStoreInitialisedLMDB"]
+    [ Namespace [] ["InMemory"]
+    , Namespace [] ["LMDB"]
     ]
 
 instance LogFormatting LedgerDB.BackingStoreTrace where
