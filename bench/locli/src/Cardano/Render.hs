@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators #-}
 
 {- HLINT ignore "Use concatMap" -}
 {- HLINT ignore "Use fromMaybe" -}
@@ -14,6 +15,7 @@ import Data.List                        (dropWhileEnd)
 import Data.Map.Strict                  qualified as Map
 import Data.Text                        qualified as T
 import Data.Text.Lazy                   qualified as LT
+import Data.Type.Equality
 import Options.Applicative              qualified as Opt
 
 import Data.CDF

@@ -62,6 +62,7 @@ import Prelude ((!!), show)
 import Cardano.Prelude hiding (head, show)
 
 import Data.SOP.Strict
+import Data.Tuple.Extra (both)
 import Data.Vector qualified as Vec
 import Statistics.Sample qualified as Stat
 

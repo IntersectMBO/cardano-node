@@ -106,16 +106,14 @@ package snap-server
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
-if impl(ghc >= 9.6)
-  allow-newer:
-    -- Only really needed because `cardano-ledger-byron-test` has not yet been released to CHaP
-    -- and its not possible to specify `cardano-ledger-byron-test:base` because the dependencies
-    -- of `cardano-ledger-byron-test` also do not permit the version of `base` that `ghc-9.6`
-    -- provides.
-    , *:base
-    , ouroboros-network-protocols:vector
-    , ekg-core:*
-    , prometheus:*
-
-    -- https://github.com/HeinrichApfelmus/threepenny-gui/pull/275
-    , threepenny-gui:template-haskell
+allow-newer:
+  -- Only really needed because `cardano-ledger-byron-test` has not yet been released to CHaP
+  -- and its not possible to specify `cardano-ledger-byron-test:base` because the dependencies
+  -- of `cardano-ledger-byron-test` also do not permit the version of `base` that `ghc-9.6`
+  -- provides.
+  , *:base
+  , *:text
+  , *:template-haskell
+  , ouroboros-network-protocols:vector
+  , ekg-core:*
+  , prometheus:*

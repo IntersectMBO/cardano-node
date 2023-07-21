@@ -14,7 +14,6 @@ module Cardano.Util
   , module Data.List.Split
   , module Data.Time.Clock
   , module Data.Time.Clock.POSIX
-  , module Data.Tuple.Extra
   , module Cardano.Ledger.BaseTypes
   , module Control.Arrow
   , module Control.Applicative
@@ -32,7 +31,7 @@ import Cardano.Prelude
 
 #if __GLASGOW_HASKELL__ < 902
 -- This is a GHC module ...
-import Util
+import Util                      hiding (fst3, snd3)
 #elif __GLASGOW_HASKELL__ < 906
 -- that moved for the ghc-9.2 release.
 import GHC.Utils.Misc                   as Util
@@ -46,7 +45,6 @@ import GHC.Utils.Misc                   as Util
 
 import Data.Aeson                       (FromJSON (..), ToJSON (..), Object, Value (..), (.:), (.:?), withObject, object)
 import Data.Aeson                       qualified as AE
-import Data.Tuple.Extra          hiding ((&&&), (***))
 import Control.Arrow                    ((&&&), (***))
 import Control.Applicative              ((<|>))
 import Control.Concurrent.Async         (forConcurrently, forConcurrently_, mapConcurrently, mapConcurrently_)

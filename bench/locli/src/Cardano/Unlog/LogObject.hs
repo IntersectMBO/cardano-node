@@ -41,6 +41,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as LText
 import           Data.Text.Short (ShortText, fromText, toText)
 import qualified Data.Text.Short as Text
+import           Data.Tuple.Extra (fst3, snd3, thd3)
 import           Data.Vector (Vector)
 import qualified Data.Vector as V
 
@@ -352,9 +353,9 @@ logObjectStreamInterpreterKeysLegacy, logObjectStreamInterpreterKeys :: [Text]
 logObjectStreamInterpreterKeysLegacy =
   logObjectStreamInterpreterKeysLegacy1 <> logObjectStreamInterpreterKeysLegacy2
  where
-   logObjectStreamInterpreterKeysLegacy1 = Map.keys (interpreters & fst3)
-   logObjectStreamInterpreterKeysLegacy2 = Map.keys (interpreters & snd3)
-logObjectStreamInterpreterKeys       = Map.keys (interpreters & thd3)
+   logObjectStreamInterpreterKeysLegacy1 = Map.keys (fst3 interpreters)
+   logObjectStreamInterpreterKeysLegacy2 = Map.keys (snd3 interpreters)
+logObjectStreamInterpreterKeys       = Map.keys (thd3 interpreters)
 
 data LOBody
   -- Every second:
