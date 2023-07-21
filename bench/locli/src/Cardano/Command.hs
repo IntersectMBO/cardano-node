@@ -15,6 +15,7 @@ import Data.Text                        qualified as T
 import Data.Text.Lazy                   qualified as LT
 import Data.Text.Short                  (toText)
 import Data.Time.Clock
+import Data.Tuple.Extra                 (both)
 import Options.Applicative
 import Options.Applicative              qualified as Opt
 

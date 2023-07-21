@@ -67,7 +67,7 @@ package cardano-tracer
   ghc-options: -Werror
 
 package locli
-  ghc-options: -Werror
+  ghc-options: -Werror -fno-enable-rewrite-rules
 
 package plutus-scripts-bench
   ghc-options: -Werror

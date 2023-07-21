@@ -52,6 +52,7 @@ data TraceStartLeadershipCheckPlus =
 forgeTracerTransform ::
   (  IsLedger (LedgerState blk)
   ,  LedgerQueries blk
+  ,  AF.HasHeader blk
   ,  AF.HasHeader (Header blk))
   => NodeKernelData blk
   -> Trace IO (ForgeTracerType blk)
@@ -89,7 +90,7 @@ nkQueryLedger f NodeKernel{getChainDB} =
   f <$> atomically (ChainDB.getCurrentLedger getChainDB)
 
 fragmentChainDensity ::
-  AF.HasHeader (Header blk)
+  (AF.HasHeader blk, AF.HasHeader (Header blk))
   => AF.AnchoredFragment (Header blk) -> Rational
 fragmentChainDensity frag = calcDensity blockD slotD
   where
