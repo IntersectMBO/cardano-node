@@ -32,7 +32,7 @@ module Cardano.Tracer.Utils
   , showT
   ) where
 
-import           Control.Applicative (liftA2, liftA3)
+import           Control.Applicative (liftA3)
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
 import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM (atomically)

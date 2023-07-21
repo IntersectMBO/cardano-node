@@ -30,8 +30,8 @@ import           Cardano.TxSubmit.Types (EnvSocketError (..), RawCborDecodeError
 import           Cardano.TxSubmit.Util (logException)
 import           Control.Applicative (Applicative (pure), (<$>))
 import           Control.Monad (Functor (fmap), Monad (return), (=<<))
-import           Control.Monad.Except (ExceptT, MonadError (throwError), MonadIO (liftIO),
-                   runExceptT)
+import           Control.Monad.Except (ExceptT, MonadError (throwError), runExceptT)
+import           Control.Monad.IO.Class (MonadIO(liftIO))
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
                    hoistMaybe, left, newExceptT)
