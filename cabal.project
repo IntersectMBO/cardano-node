@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2023-07-10T14:55:34Z
-  , cardano-haskell-packages 2023-07-16T00:00:00Z
+  , hackage.haskell.org 2023-07-21T10:12:20Z
+  , cardano-haskell-packages 2023-07-21T12:48:43Z
 
 packages:
   cardano-client-demo
@@ -102,7 +102,9 @@ write-ghc-environment-files: always
 package snap-server
   flags: +openssl
 
-allow-newer: text
+allow-newer:
+  text,
+  ekg-forward
 
 constraints:
   optparse-applicative >= 0.16.0 && < 0.16.1,

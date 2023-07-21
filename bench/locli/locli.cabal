@@ -120,7 +120,7 @@ library
                       , optparse-generic
                       , ouroboros-consensus
                       -- for Data.SOP.Strict:
-                      , ouroboros-network ^>= 0.8.1.0
+                      , ouroboros-network ^>= 0.8.2.0
                       , ouroboros-network-api
                       , process
                       , quiet

@@ -64,7 +64,7 @@ library
                       , extra
                       , io-classes
                       , ouroboros-network-api >= 0.3
-                      , ouroboros-network-framework >= 0.6
+                      , ouroboros-network-framework >= 0.7
                       , serialise
                       , stm
                       , text
