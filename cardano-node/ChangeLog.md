@@ -8,6 +8,10 @@
   `TraceLocalHandshake`, `TraceLocalInboundGovernor`, `TraceLocalServer` and
   `TraceServer`.
 
+- Added `hotValency` optional to P2P Topology files, keeping the backwards compatible
+  `valency` flag.
+- Added `warmValency` optional to P2P Topology files.
+
 ## 8.1.0
 
 -
