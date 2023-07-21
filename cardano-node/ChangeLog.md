@@ -1,8 +1,17 @@
 # Changelog for cardano-node
 
-## 8.1.0
+## 8.1.2 -- July 2023
 
--
+- Update plutus interpreter
+
+## 8.1.1 -- June 2023
+
+- Address P2P Topology bug with non-DNS names in networking
+
+## 8.1.0 -- June 2023
+
+- Support Conway Era when ExperimentalHardForks enabled
+- `TickF` changes to improve epoch boundary
 
 ## 8.0.0 -- May 2023
 
