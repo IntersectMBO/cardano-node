@@ -11,6 +11,7 @@
 , execTaskDriver
 , generatorTaskName
 , oneTracerPerNode ? false
+, withSsh ? false
 }:
 
 let
@@ -593,6 +594,7 @@ let
                     withGenerator = taskName == generatorTaskName;
                     # Only for the tracer task or also nodes if oneTracerPerNode
                     withTracer = oneTracerPerNode || taskName == "tracer";
+                    inherit withSsh;
                     # ''{{ env "NOMAD_TASK_DIR" }}/supervisor.sock''
                     inherit unixHttpServerPort;
                   };
@@ -729,6 +731,43 @@ let
               perms = "744"; # Only for every "start.sh" script. Default: "644"
             }
           ]
+          ++
+          # ssh
+          (lib.optionals withSsh (
+            let
+              ssh-service = import
+                  ../service/ssh.nix
+                  {
+                    inherit pkgs;
+                    bashInteractive = containerSpecs.containerPkgs.bashInteractive.nix-store-path;
+                    coreutils = containerSpecs.containerPkgs.coreutils.nix-store-path;
+                    openssh_hacks = containerSpecs.containerPkgs.openssh_hacks.nix-store-path;
+                  }
+              ;
+            in [
+              ## ssh start.sh script.
+              {
+                env = false;
+                destination = "${task_statedir}/ssh/start.sh";
+                data = escapeTemplate ssh-service.start.value;
+                change_mode = "noop";
+                error_on_missing_key = true;
+                perms = "744"; # Only for every "start.sh" script. Default: "644"
+              }
+              ## ssh config file.
+              {
+                env = false;
+                destination = "${task_statedir}/ssh/sshd_config";
+                data = escapeTemplate ssh-service.config.value;
+                change_mode = "noop";
+                error_on_missing_key = true;
+                perms = "744"; # Only for every "start.sh" script. Default: "644"
+              }
+              # The deployer script must add the templates for the private keys:
+              # - ${task_statedir}/ssh/sshd.id_ed25519
+              # - ${task_statedir}/ssh/nobody.id_ed25519.pub
+            ]
+          ))
           ;
 
           # Specifies logging configuration for the stdout and stderr of the

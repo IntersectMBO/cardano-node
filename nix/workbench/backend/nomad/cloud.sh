@@ -52,6 +52,17 @@ backend_nomadcloud() {
       deploy-genesis-nomadcloud          "$@"
     ;;
 
+    fetch-logs )
+      # Only if running on "perf" exclusive nodes we use SSH, if not
+      # `nomad exec`, because we need to have an exclusive port open for us.
+      if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"
+      then
+        fetch-logs-nomadcloud            "$@"
+      else
+        backend_nomad fetch-logs         "$@"
+      fi
+    ;;
+
     # Generic backend sub-commands, shared code between Nomad sub-backends.
 
     describe-run )
@@ -65,15 +76,27 @@ backend_nomadcloud() {
     start-cluster )
       backend_nomad start-cluster        "$@"
       # start-ssh
-      local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
-      for node in ${nodes[*]}
-      do
-        # TODO: Do it in parallel ?
-        if ! backend_nomad task-program-start "${dir}" "${node}" ssh
+      # Only if running on "perf" exclusive nodes we use SSH, if not
+      # `nomad exec`, because we need to have an exclusive port open for us.
+      if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"
+      then
+        local jobs_array=()
+        local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+        for node in ${nodes[*]}
+        do
+          # TODO: Do it in parallel ?
+          backend_nomad task-program-start "${dir}" "${node}" ssh &
+          jobs_array+=("$!")
+        done
+        # Wait and check!
+        if test -n "${jobs_array}"
         then
-          fatal "Failed to start ssh server: ${node}"
+          if ! wait_fail_any "${jobs_array[@]}"
+          then
+            fatal "Failed to start ssh server(s)"
+          fi
         fi
-      done
+      fi
     ;;
 
     start-tracers )
@@ -118,10 +141,6 @@ backend_nomadcloud() {
 
     stop-all )
       backend_nomad stop-all             "$@"
-    ;;
-
-    fetch-logs )
-      backend_nomad fetch-logs           "$@"
     ;;
 
     stop-cluster )
@@ -252,9 +271,18 @@ allocate-run-nomadcloud() {
   mkdir -p "${dir}"/nomad
   # Select which version of the Nomad job spec file we are running and
   # create a nicely sorted and indented copy it "nomad/nomad-job.json".
-  jq -r ".nomadJob.exec.oneTracerPerNode"      \
-    "${dir}"/container-specs.json              \
-  > "${dir}"/nomad/nomad-job.json
+  # Only if running on "perf" exclusive nodes we use SSH, if not `nomad exec`,
+  # because we need to have an exclusive port open for us.
+  if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"
+  then
+    jq -r ".nomadJob.cloud.ssh"                  \
+      "${dir}"/container-specs.json              \
+    > "${dir}"/nomad/nomad-job.json
+  else
+    jq -r ".nomadJob.cloud.nomadExec"            \
+      "${dir}"/container-specs.json              \
+    > "${dir}"/nomad/nomad-job.json
+  fi
   # The job file is "slightly" modified (jq) to suit the running environment.
   backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" "${NOMAD_NAMESPACE}"
   backend_nomad allocate-run-nomad-job-patch-nix       "${dir}"
@@ -429,6 +457,44 @@ allocate-run-nomadcloud() {
           "${dir}"/nomad/nomad-job.json \
       | \
         sponge "${dir}"/nomad/nomad-job.json
+    fi
+    ############################################################################
+    # SSH Server: ##############################################################
+    ############################################################################
+    if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"
+    then
+      local template_json_srv template_json_usr
+      template_json_srv="$( \
+        ssh-key-template \
+          "\"sshd.id_ed25519\""                                           \
+          "\"$(cat "$(wb nomad ssh key server)" | sed -z 's/\n/\\n/g')\"" \
+          "\"600\""                                                       \
+      )"
+      template_json_usr="$( \
+        ssh-key-template \
+          "\"nobody.id_ed25519.pub\""                 \
+          "\"$(cat "$(wb nomad ssh key user)".pub)\"" \
+          "\"644\""                                   \
+      )"
+      # For each Nomad Job Group
+      local groups_array
+      groups_array=$(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"] | keys | join (\" \")" "${dir}"/nomad/nomad-job.json)
+      for group_name in ${groups_array[*]}
+      do
+        # For each Nomad Job Group Task
+        local tasks_array
+        tasks_array=$(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"task\"] | keys | join (\" \")" "${dir}"/nomad/nomad-job.json)
+        for task_name in ${tasks_array[*]}
+        do
+            jq \
+              --argjson template_json_srv "${template_json_srv}" \
+              --argjson template_json_usr "${template_json_usr}" \
+              ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"task\"][\"${task_name}\"][\"template\"] |= ( . + [\$template_json_srv, \$template_json_usr])" \
+              "${dir}"/nomad/nomad-job.json \
+          | \
+            sponge "${dir}"/nomad/nomad-job.json
+        done
+      done
     fi
     ########################################################################
     # Reproducibility: #####################################################
@@ -683,4 +749,140 @@ deploy-genesis-nomadcloud() {
       s3://"${s3_bucket_name}"/ \
       --region "${s3_region}"
   fi
+}
+
+fetch-logs-nomadcloud() {
+  local usage="USAGE: wb backend $op RUN-DIR"
+  local dir=${1:?$usage}; shift
+
+  msg "Fetch logs ..."
+  local jobs_array=()
+  for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
+  do
+    if ! test -f "${dir}"/nomad/"${node}"/download_ok
+    then
+      fetch-logs-nomadcloud-node "${dir}" "${node}" &
+      jobs_array+=("$!")
+    else
+      msg "Skipping \"${node}\": check file \"${dir}/nomad/${node}/download_ok\""
+    fi
+  done
+  if test -n "${jobs_array:-}" # If = () "unbound variable" error
+  then
+    # Wait until all jobs finish, don't use `wait_fail_any` that kills
+    # Returns the exit code of the last job, ignore it!
+    if ! wait "${jobs_array[@]}"
+    then
+      msg "$(red "Failed to fetch some logs")"
+      msg "Check files \"${dir}/nomad/NODE/download_ok\" and \"${dir}/nomad/NODE/download_failed\""
+      read -p "Hit enter to retry ..."
+      fetch-logs-nomadcloud "${dir}"
+    else
+      msg "$(green "Finished fetching logs")"
+    fi
+  else
+    msg "Nothing to do: check files in \"${dir}/nomad/NODE/download_ok\""
+  fi
+}
+
+fetch-logs-nomadcloud-node() {
+  local dir=${1}
+  local node=${2}
+
+  local node_id public_ipv4
+  node_id="$( \
+    jq -r .NodeID "${dir}"/nomad/nomad-job.json.run/task."${node}".final.json \
+  )"
+  public_ipv4="$(                                            \
+      nomad node status -json "${node_id}"                   \
+    |                                                        \
+      jq -r .Attributes[\"unique.platform.aws.public-ipv4\"] \
+  )"
+  local ssh_command="ssh -F $(wb nomad ssh config) -p 32000 -l nobody"
+  local node_ok="true"
+  # Download healthcheck(s) logs. ############################################
+  ############################################################################
+  msg "$(blue "Fetching") $(yellow "program \"healthcheck\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+  if ! rsync -au -e "${ssh_command}"                      \
+         -f'- start.sh'                                   \
+         "${public_ipv4}":/local/run/current/healthcheck/ \
+         "${dir}"/healthcheck/"${node}"/
+  then
+    node_ok="false"
+    touch "${dir}"/nomad/"${node}"/download_failed
+    msg "$(red Error fetching) $(yellow "program \"healthcheck\"") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+  fi
+  # Download generator logs. #################################################
+  ############################################################################
+  if test "${node}" = "explorer"
+  then
+    msg "$(blue Fetching) $(yellow "program \"generator\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+    if ! rsync -au -e "${ssh_command}"                    \
+           -f'- start.sh' -f'- run-script.json'           \
+           "${public_ipv4}":/local/run/current/generator/ \
+           "${dir}"/generator/
+    then
+      node_ok="false"
+      touch "${dir}"/nomad/"${node}"/download_failed
+      msg "$(red Error fetching) $(yellow "program \"generator\"") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+    fi
+  fi
+  # Download node(s) logs. ###################################################
+  ############################################################################
+  msg "$(blue Fetching) $(yellow "program \"node\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+  if ! rsync -au -e "${ssh_command}"                          \
+         -f'- start.sh' -f'- config.json' -f'- topology.json' \
+         -f'- node.socket' -f'- db/'                          \
+         "${public_ipv4}":/local/run/current/"${node}"/       \
+         "${dir}"/"${node}"/
+  then
+    node_ok="false"
+    touch "${dir}"/nomad/"${node}"/download_failed
+    msg "$(red Error fetching) $(yellow "program \"node\"") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+  fi
+  # Download tracer(s) logs. ###############################################
+  ##########################################################################
+  msg "$(blue Fetching) $(yellow "program \"tracer\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+  if ! rsync -au -e "${ssh_command}"                 \
+         -f'- start.sh' -f'- config.json'            \
+         -f'- tracer.socket' -f'- logRoot/'          \
+         "${public_ipv4}":/local/run/current/tracer/ \
+         "${dir}"/tracer/"${node}"/
+  then
+    node_ok="false"
+    touch "${dir}"/nomad/"${node}"/download_failed
+    msg "$(red Error fetching) $(yellow "program \"tracer\"") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+  fi
+  # Allow the user to do something if a download fails
+  if ! test "${node_ok}" = "true"
+  then
+    msg "$(red "Failed fetching logs from") $(yellow "\"${node}\" (\"${public_ipv4}\")")"
+    false
+  else
+    touch "${dir}"/nomad/"${node}"/download_ok
+    msg "$(green "Finished fetching logs from") $(yellow "\"${node}\" (\"${public_ipv4}\")")"
+    true
+  fi
+}
+
+ssh-key-template() {
+  local key_name=${1}
+  local key_data=${2}
+  local key_perm=${3}
+  # TODO: Use {{ env \"NOMAD_META_TASK_STATEDIR\" }} instead of "/local/run/current"
+  jq \
+    --null-input                     \
+    --argjson key_name "${key_name}" \
+    --argjson key_data "${key_data}" \
+    --argjson key_perm "${key_perm}" \
+    '
+      {
+        "env":  false
+      , "destination":          ("/local/run/current/ssh/" + $key_name)
+      , "data":                 $key_data
+      , "change_mode":          "noop"
+      , "error_on_missing_key": true
+      , "perms":                $key_perm
+      }
+    '
 }

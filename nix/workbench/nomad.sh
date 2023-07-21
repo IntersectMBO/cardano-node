@@ -134,6 +134,11 @@ wb_nomad() {
           mkdir -p "${webfs_dir}"
           echo "${webfs_dir}"
         ;;
+        ssh )
+          local ssh_dir="${nomad_cache_dir}"/ssh
+          mkdir -p "${ssh_dir}"
+          echo "${ssh_dir}"
+        ;;
         * )
           usage_nomad
         ;;
@@ -316,7 +321,83 @@ wb_nomad() {
       esac
     ;;
 ################################################################################
-### nodes ) ###################################################################
+### ssh ) ######################################################################
+################################################################################
+    ssh )
+      local usage="USAGE: wb nomad ${op} key"
+      local ssh_dir="$(wb_nomad dir-path ssh)"
+      local subop=${1:?$usage}; shift
+      case "${subop}" in
+####### ssh -> key )############################################################
+        key )
+          local key=${1:?$usage}; shift
+          case "${key}" in
+####### ssh -> key -> server )##################################################
+            server )
+              local key_path="${ssh_dir}"/server.id_ed25519
+              if ! test -f "${key_path}"
+              then
+                ssh-keygen -t ed25519 -f "${key_path}" -C "" -N ""
+              fi
+              echo "${key_path}"
+            ;;
+####### ssh -> key -> user )####################################################
+            user )
+              local key_path="${ssh_dir}"/user.id_ed25519
+              if ! test -f "${key_path}"
+              then
+                ssh-keygen -t ed25519 -f "${key_path}" -C "" -N ""
+              fi
+              echo "${key_path}"
+            ;;
+####### ssh -> key -> * )#######################################################
+            * )
+              usage_nomad
+            ;;
+          esac
+        ;;
+####### ssh -> config )####################################################
+        config )
+          local file_path="${ssh_dir}"/config
+          if ! test -f "${file_path}"
+          then
+cat > "${file_path}" << EOL
+StrictHostKeyChecking    accept-new
+GlobalKnownHostsFile     $(wb nomad ssh known_hosts)
+UserKnownHostsFile       $(wb nomad ssh known_hosts)
+PasswordAuthentication   no
+PubKeyAuthentication     yes
+PreferredAuthentications publickey
+IdentitiesOnly           yes
+IdentityFile             $(wb nomad ssh key user)
+Compression              yes
+TCPKeepAlive             no
+ServerAliveInterval      15
+ServerAliveCountMax      4
+ControlMaster            auto
+ControlPath              ${ssh_dir}/%h-%p-%r
+ControlPersist           15
+EOL
+          fi
+          echo "${file_path}"
+        ;;
+####### ssh -> known_hosts )####################################################
+        known_hosts )
+          local file_path="${ssh_dir}"/known_hosts
+          if ! test -f "${file_path}"
+          then
+            touch "${file_path}"
+          fi
+          echo "${file_path}"
+        ;;
+####### ssh -> * )##############################################################
+        * )
+          usage_nomad
+        ;;
+      esac
+    ;;
+################################################################################
+### nodes ) ####################################################################
 ################################################################################
     nodes )
       local usage="USAGE: wb nomad ${op}"
