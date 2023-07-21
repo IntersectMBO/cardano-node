@@ -1,7 +1,7 @@
 cabal-version: 3.4
 
 name:                   cardano-cli
-version:                8.1.1
+version:                8.1.2
 synopsis:               The Cardano command-line interface
 description:            The Cardano command-line interface.
 copyright:              2020-2023 Input Output Global Inc (IOG).
