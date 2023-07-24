@@ -81,9 +81,20 @@ A minimal version of this file looks like this:
     DNS domain `y.y.y.y` (assuming they are), and try to maintain a connection with at least `1` of the
     resolved IPs.
 
-* `valency` tells the node how many connections your node should try to pick
-  from the given group. If a DNS address is given, valency governs to how many
+* `valency` (or `hotValency`) tells the node how many connections your node should try to
+  pick from the given group. If a DNS address is given, valency governs to how many
   resolved ip addresses should we maintain active (hot) connection.
+
+- `warmValency` is an optional field similar to `valency`/`hotValency` that tells the node
+  how many peers the node should maintain as established (warm). As said, this field is
+  optional and defaults to the value set in the `valency`/`hotValency` field. The
+  `warmValency` value set should be greater than or equal to the one specified in
+  `valency`/`hotValency` otherwise `valency`/`hotValency` will be truncated to this value.
+  We recommend users to set `warmValency` value to `hotValency` + 1 in order to keep at
+  least 1 backup peer to be promoted to hot in case something happens.
+
+  Check [here](https://github.com/input-output-hk/ouroboros-network/issues/4565) for more
+  context on this `WarmValency` addition.
 
 * Local roots groups shall be non-overlapping.
 
