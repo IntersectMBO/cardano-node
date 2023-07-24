@@ -84,7 +84,7 @@ in with final;
 
   haskellBuildUtils = prev.haskellBuildUtils.override {
     inherit compiler-nix-name;
-    index-state = "2023-07-24T14:10:17Z";
+    index-state = "2023-07-10T00:00:00Z";
   };
 
   cardanolib-py = callPackage ./cardanolib-py { };
