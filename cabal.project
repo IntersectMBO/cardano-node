@@ -19,6 +19,8 @@ index-state:
 
 with-compiler: ghc-9.6.2
 
+with-compiler: ghc-9.6.2
+
 packages:
   cardano-client-demo
   cardano-git-rev
