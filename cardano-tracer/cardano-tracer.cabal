@@ -141,12 +141,12 @@ library
                       , directory
                       , ekg
                       , ekg-core
-                      , ekg-forward ^>= 0.3
+                      , ekg-forward ^>= 0.3.0.4
                       , extra
                       , filepath
                       , mime-mail
                       , optparse-applicative >= 0.16.0 && < 0.16.1
-                      , ouroboros-network ^>= 0.8.1.0
+                      , ouroboros-network ^>= 0.8.2.0
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal
@@ -208,7 +208,7 @@ library demo-forwarder-lib
                       , contra-tracer
                       , directory
                       , ekg-core
-                      , ekg-forward ^>= 0.3
+                      , ekg-forward ^>= 0.3.0.4
                       , extra
                       , filepath
                       , generic-data
@@ -299,7 +299,7 @@ test-suite cardano-tracer-test
                       , contra-tracer
                       , directory
                       , ekg-core
-                      , ekg-forward ^>= 0.3
+                      , ekg-forward ^>= 0.3.0.4
                       , extra
                       , filepath
                       , generic-data
@@ -352,13 +352,13 @@ test-suite cardano-tracer-test-ext
                       , contra-tracer
                       , directory
                       , ekg-core
-                      , ekg-forward ^>= 0.3
+                      , ekg-forward ^>= 0.3.0.4
                       , extra
                       , filepath
                       , generic-data
                       , Glob
                       , optparse-applicative-fork ^>= 0.16.1
-                      , ouroboros-network ^>= 0.8.1.0
+                      , ouroboros-network ^>= 0.8.2.0
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , process

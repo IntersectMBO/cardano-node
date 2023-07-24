@@ -52,6 +52,7 @@ import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 
 import           Cardano.Git.Rev (gitRev)
+import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency, WarmValency)
 import           Paths_cardano_node (version)
 
 data StartupTrace blk =
@@ -108,7 +109,7 @@ data StartupTrace blk =
   -- | Log peer-to-peer network configuration, either on startup or when its
   -- updated.
   --
-  | NetworkConfig [(Int, Map RelayAccessPoint PeerAdvertise)]
+  | NetworkConfig [(HotValency, WarmValency, Map RelayAccessPoint PeerAdvertise)]
                   (Map RelayAccessPoint PeerAdvertise)
                   UseLedgerAfter
 

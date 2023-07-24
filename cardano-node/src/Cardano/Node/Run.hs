@@ -120,6 +120,7 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Tracing.Tracers
+import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency, WarmValency)
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
 {- HLINT ignore "Fuse concatMap/map" -}
@@ -434,7 +435,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 $ NetworkConfig localRoots
                                 publicRoots
                                 (useLedgerAfterSlot nt)
-        (localRootsVar :: StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)])  <- newTVarIO localRoots
+        localRootsVar <- newTVarIO localRoots
         publicRootsVar <- newTVarIO publicRoots
         useLedgerVar   <- newTVarIO (useLedgerAfterSlot nt)
         void $
@@ -557,7 +558,7 @@ installP2PSigHUPHandler :: Tracer IO (StartupTrace blk)
                         -> Api.BlockType blk
                         -> NodeConfiguration
                         -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
-                        -> StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)]
+                        -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint PeerAdvertise)]
                         -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
                         -> StrictTVar IO UseLedgerAfter
                         -> IO ()
@@ -646,7 +647,7 @@ updateBlockForging startupTracer blockType nodeKernel nc = do
 
 updateTopologyConfiguration :: Tracer IO (StartupTrace blk)
                             -> NodeConfiguration
-                            -> StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)]
+                            -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint PeerAdvertise)]
                             -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
                             -> StrictTVar IO UseLedgerAfter
                             -> IO ()
@@ -719,7 +720,7 @@ checkVRFFilePermissions (File vrfPrivKey) = do
 
 mkP2PArguments
   :: NodeConfiguration
-  -> STM IO [(Int, Map RelayAccessPoint PeerAdvertise)]
+  -> STM IO [(HotValency, WarmValency, Map RelayAccessPoint PeerAdvertise)]
      -- ^ non-overlapping local root peers groups; the 'Int' denotes the
      -- valency of its group.
   -> STM IO (Map RelayAccessPoint PeerAdvertise)
@@ -786,11 +787,12 @@ producerAddressesNonP2P nt =
 
 producerAddresses
   :: NetworkTopology
-  -> ([(Int, Map RelayAccessPoint PeerAdvertise)], Map RelayAccessPoint PeerAdvertise)
+  -> ([(HotValency, WarmValency, Map RelayAccessPoint PeerAdvertise)], Map RelayAccessPoint PeerAdvertise)
 producerAddresses nt =
   case nt of
     RealNodeTopology lrpg prp _ ->
-      ( map (\lrp -> ( valency lrp
+      ( map (\lrp -> ( hotValency lrp
+                     , warmValency lrp
                      , Map.fromList $ rootConfigToRelayAccessPoint
                                     $ localRoots lrp
                      )

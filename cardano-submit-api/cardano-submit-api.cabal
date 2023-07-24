@@ -51,7 +51,7 @@ library
                       , network
                       , optparse-applicative-fork ^>= 0.16.1
                       , ouroboros-consensus-cardano
-                      , ouroboros-network ^>= 0.8.1.0
+                      , ouroboros-network ^>= 0.8.2.0
                       , ouroboros-network-protocols
                       , prometheus
                       , servant

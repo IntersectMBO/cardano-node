@@ -512,7 +512,7 @@ ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerAfter) =
     pack
   $ intercalate "\n"
   [ "\nLocal Root Groups:"
-  , "  " ++ intercalate "\n  " (map (\(x,y) -> show (x, Map.assocs y))
+  , "  " ++ intercalate "\n  " (map (\(x,y,z) -> show (x, y, Map.assocs z))
                                     localRoots)
   , "Public Roots:"
   , "  " ++ intercalate "\n  " (map show $ Map.assocs publicRoots)

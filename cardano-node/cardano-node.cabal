@@ -180,8 +180,8 @@ library
                       , ouroboros-consensus-diffusion >= 0.7
                       , ouroboros-consensus-protocol >= 0.5
                       , ouroboros-network-api
-                      , ouroboros-network ^>= 0.8.1.1
-                      , ouroboros-network-framework >= 0.6
+                      , ouroboros-network ^>= 0.8.2.0
+                      , ouroboros-network-framework >= 0.7
                       , ouroboros-network-protocols
                       , prettyprinter
                       , prettyprinter-ansi-terminal
@@ -249,7 +249,7 @@ test-suite cardano-node-test
                       , ouroboros-consensus >= 0.9
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-diffusion >= 0.7
-                      , ouroboros-network ^>= 0.8.1.1
+                      , ouroboros-network ^>= 0.8.2.0
                       , ouroboros-network-api
                       , text >= 2.0
                       , time
