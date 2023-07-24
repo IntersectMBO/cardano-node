@@ -20,9 +20,9 @@ let
     {
       src = ../.;
       name = "cardano-node";
-      compiler-nix-name = lib.mkDefault "ghc8107";
+      compiler-nix-name = lib.mkDefault "ghc961";
       # extra-compilers
-      flake.variants = lib.genAttrs ["ghc927"] (x: {compiler-nix-name = x;});
+      flake.variants = lib.genAttrs ["ghc961"] (x: {compiler-nix-name = x;});
       cabalProjectLocal = ''
         repository cardano-haskell-packages-local
           url: file:${CHaP}
