@@ -4,12 +4,16 @@
 #
 # To set this script as your pre-commit hook, use the following command:
 #
-# ln -s $(git-root)/scripts/githooks/haskell-style-lint $(git-root)/.git/hooks/pre-commit
+# ln -s $(git-root)/scripts/githooks/haskell-style-lint $(git rev-parse --git-dir)/hooks/pre-commit
 #
 
 for x in $(git diff --staged --name-only --diff-filter=ACM | tr '\n' ' '); do
   if [ "${x##*.}" = "hs" ]; then
-    stylish-haskell -i "$x"
+    if grep -qE '^#' "$x"; then
+      echo "$x contains CPP.  Skipping."
+    else
+      stylish-haskell -i "$x"
+    fi
     # fail on linting issues
     hlint "$x"
   fi

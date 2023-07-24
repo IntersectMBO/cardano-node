@@ -65,7 +65,11 @@ jobs:
 
         for x in $(git ls-tree --full-tree --name-only -r HEAD ${{ env.STYLISH_HASKELL_PATHS }}); do
           if [ "${x##*.}" == "hs" ]; then
-            stylish-haskell -i $x
+            if grep -qE '^#' $x; then
+              echo "$x contains CPP.  Skipping."
+            else
+              stylish-haskell -i $x
+            fi
           fi
         done
 
@@ -78,7 +82,11 @@ jobs:
         git fetch origin ${{ github.base_ref }} --unshallow
         for x in $(git diff --name-only origin/${{ github.base_ref }}..HEAD ${{ env.STYLISH_HASKELL_PATHS }}); do
           if [ "${x##*.}" == "hs" ]; then
-            stylish-haskell -i $x
+            if grep -qE '^#' $x; then
+              echo "$x contains CPP.  Skipping."
+            else
+              stylish-haskell -i $x
+            fi
           fi
         done
 
