@@ -16,6 +16,8 @@ index-state:
   , hackage.haskell.org 2023-07-10T22:41:49Z
   , cardano-haskell-packages 2023-07-18T22:51:27Z
 
+with-compiler: ghc-9.6.2
+
 packages:
   cardano-client-demo
   cardano-git-rev
@@ -37,7 +39,7 @@ package cardano-api
   ghc-options: -Werror
 
 package cardano-cli
-  ghc-options: -Werror
+  ghc-options: -Wunused-packages
 
 package cardano-client-demo
   ghc-options: -Werror

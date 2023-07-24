@@ -68,12 +68,12 @@ in with final;
 
   hlint = haskell-nix.tool compiler-nix-name "hlint" {
     version = {ghc8107 = "3.4.1";}.${compiler-nix-name} or "3.6.1";
-    index-state = "2023-01-20T05:50:56Z";
+    index-state = "2023-07-24T14:10:17Z";
   };
 
   ghcid = haskell-nix.tool compiler-nix-name "ghcid" {
     version = "0.8.7";
-    index-state = "2023-01-20T05:50:56Z";
+    index-state = "2023-07-24T14:10:17Z";
   };
 
   haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" rec {
@@ -84,7 +84,7 @@ in with final;
 
   haskellBuildUtils = prev.haskellBuildUtils.override {
     inherit compiler-nix-name;
-    index-state = "2023-01-20T05:50:56Z";
+    index-state = "2023-07-24T14:10:17Z";
   };
 
   cardanolib-py = callPackage ./cardanolib-py { };
