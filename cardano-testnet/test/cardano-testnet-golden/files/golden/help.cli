@@ -50,7 +50,9 @@ Usage: cardano-testnet shelley [--num-praos-nodes COUNT]
 
   Start a Shelley testnet
 
-Usage: cardano-testnet babbage [--num-spo-nodes COUNT]
+Usage: cardano-testnet babbage [--protocol-version INT]
+                                 [--epoch-length COUNT]
+                                 [--num-spo-nodes COUNT]
                                  [--slot-duration MILLISECONDS]
                                  [--security-param INT]
                                  --testnet-magic INT
@@ -59,7 +61,9 @@ Usage: cardano-testnet babbage [--num-spo-nodes COUNT]
 
   Start a babbage testnet
 
-Usage: cardano-testnet conway [--num-spo-nodes COUNT]
+Usage: cardano-testnet conway [--protocol-version INT]
+                                [--epoch-length COUNT]
+                                [--num-spo-nodes COUNT]
                                 [--slot-duration MILLISECONDS]
                                 [--security-param INT]
                                 --testnet-magic INT
