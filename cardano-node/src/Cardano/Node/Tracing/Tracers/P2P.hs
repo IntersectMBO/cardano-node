@@ -268,10 +268,9 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              , "actualEstablished" .= actualKnown
              , "selectedPeers" .= toJSONList (toList sp)
              ]
-  forMachine _dtal (TracePromoteColdLocalPeers tLocalEst aLocalEst sp) =
+  forMachine _dtal (TracePromoteColdLocalPeers tLocalEst sp) =
     mconcat [ "kind" .= String "PromoteColdLocalPeers"
              , "targetLocalEstablished" .= tLocalEst
-             , "actualLocalEstablished" .= aLocalEst
              , "selectedPeers" .= toJSONList (toList sp)
              ]
   forMachine _dtal (TracePromoteColdFailed tEst aEst p d err) =

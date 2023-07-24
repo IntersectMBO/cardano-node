@@ -66,6 +66,8 @@ import           Testnet.Process.Run
 import           Testnet.Property.Assert
 import           Testnet.Runtime hiding (allNodes)
 
+import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency (..), WarmValency (..))
+
 
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
@@ -145,7 +147,8 @@ mkTopologyConfig numPraosNodes allPorts port True = J.encode topologyP2P
     localRootPeerGroups =
       P2P.LocalRootPeersGroups
         [ P2P.LocalRootPeersGroup rootConfig
-                                  (numPraosNodes - 1)
+                                  (HotValency (numPraosNodes - 1))
+                                  (WarmValency (numPraosNodes - 1))
         ]
 
     topologyP2P :: P2P.NetworkTopology

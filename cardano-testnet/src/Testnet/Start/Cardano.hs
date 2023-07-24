@@ -70,6 +70,8 @@ import           Testnet.Runtime as TR
 import           Testnet.Start.Byron hiding (TestnetOptions (..))
 import           Testnet.Start.Shelley
 
+import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency (..), WarmValency (..))
+
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Redundant id" -}
 {- HLINT ignore "Use let" -}
@@ -173,7 +175,8 @@ mkTopologyConfig numNodes allPorts port True = J.encode topologyP2P
     localRootPeerGroups =
       P2P.LocalRootPeersGroups
         [ P2P.LocalRootPeersGroup rootConfig
-                                  (numNodes - 1)
+                                  (HotValency (numNodes - 1))
+                                  (WarmValency (numNodes - 1))
         ]
 
     topologyP2P :: P2P.NetworkTopology
