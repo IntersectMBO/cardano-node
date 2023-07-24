@@ -43,8 +43,11 @@ import           Cardano.Node.Configuration.Topology (TopologyError (..))
 import           Cardano.Node.Startup (StartupTrace (..))
 import           Cardano.Node.Types
 
+import           Cardano.Tracing.OrphanInstances.Network ()
+import           Control.Applicative (Alternative (..))
 import           Ouroboros.Network.NodeToNode (PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency (..), WarmValency (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 data NodeSetup = NodeSetup
@@ -112,28 +115,35 @@ rootConfigToRelayAccessPoint RootConfig { rootAccessPoints, rootAdvertise } =
 
 -- | A local root peers group.  Local roots are treated by the outbound
 -- governor in a special way.  The node will make sure that a node has the
--- requested number ('valency') of connections to the local root peer group.
+-- requested number ('valency'/'hotValency') of connections to the local root peer group.
+-- 'warmValency' value is the value of warm/established connections that the node
+-- will attempt to maintain. By default this value will be equal to 'hotValency'.
 --
 data LocalRootPeersGroup = LocalRootPeersGroup
   { localRoots :: RootConfig
-  , valency    :: Int
+  , hotValency :: HotValency
+  , warmValency :: WarmValency
   } deriving (Eq, Show)
 
 -- | Does not use the 'FromJSON' instance of 'RootConfig', so that
--- 'accessPoints', 'advertise' and 'valency' fields are attached to the same
--- object.
+-- 'accessPoints', 'advertise', 'valency' and 'warmValency' fields are attached to the
+-- same object.
 instance FromJSON LocalRootPeersGroup where
-  parseJSON = withObject "LocalRootPeersGroup" $ \o ->
+  parseJSON = withObject "LocalRootPeersGroup" $ \o -> do
+                hv@(HotValency v) <- o .: "valency"
+                                 <|> o .: "hotValency"
                 LocalRootPeersGroup
                   <$> parseJSON (Object o)
-                  <*> o .: "valency"
+                  <*> pure hv
+                  <*> o .:? "warmValency" .!= WarmValency v
 
 instance ToJSON LocalRootPeersGroup where
   toJSON lrpg =
     object
       [ "accessPoints" .= rootAccessPoints (localRoots lrpg)
       , "advertise" .= rootAdvertise (localRoots lrpg)
-      , "valency" .= valency lrpg
+      , "hotValency" .= hotValency lrpg
+      , "warmValency" .= warmValency lrpg
       ]
 
 newtype LocalRootPeersGroups = LocalRootPeersGroups
@@ -185,10 +195,12 @@ instance FromJSON (Legacy a) => FromJSON (Legacy [a]) where
   parseJSON = fmap (Legacy . map getLegacy) . parseJSONList
 
 instance FromJSON (Legacy LocalRootPeersGroup) where
-  parseJSON = withObject "LocalRootPeersGroup" $ \o ->
+  parseJSON = withObject "LocalRootPeersGroup" $ \o -> do
+                hv@(HotValency v) <- o .: "hotValency"
                 fmap Legacy $ LocalRootPeersGroup
                   <$> o .: "localRoots"
-                  <*> o .: "valency"
+                  <*> pure hv
+                  <*> pure (WarmValency v)
 
 instance FromJSON (Legacy LocalRootPeersGroups) where
   parseJSON = withObject "LocalRootPeersGroups" $ \o ->

@@ -59,6 +59,7 @@ import           Testnet.Process.Run
 import           Testnet.Property.Assert
 import           Testnet.Property.Utils
 
+import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency (..), WarmValency (..))
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
@@ -181,7 +182,8 @@ mkTopologyConfig i numBftNodes' allPorts True = J.encode topologyP2P
     localRootPeerGroups =
       P2P.LocalRootPeersGroups
         [ P2P.LocalRootPeersGroup rootConfig
-                                  (numBftNodes' - 1)
+                                  (HotValency (numBftNodes' - 1))
+                                  (WarmValency (numBftNodes' - 1))
         ]
 
     topologyP2P :: P2P.NetworkTopology
