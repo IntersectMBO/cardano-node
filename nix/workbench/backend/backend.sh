@@ -38,20 +38,29 @@ backend() {
 local op=${1:-$(usage_backend)} # No need to shift -- backends will use the op.
 
 case "${op}" in
-    is-running )                 backend_$WB_BACKEND "$@";;
+    # Prepare functions
     setenv-defaults )            backend_$WB_BACKEND "$@";;
     allocate-run )               backend_$WB_BACKEND "$@";;
     describe-run )               backend_$WB_BACKEND "$@";;
+    # Start functions
+    is-running )                 backend_$WB_BACKEND "$@";;
+    start-cluster )              backend_$WB_BACKEND "$@";;
     deploy-genesis )             backend_$WB_BACKEND "$@";;
-    start )                      backend_$WB_BACKEND "$@";;
+    # Sceneario functions
+    start-tracers )              backend_$WB_BACKEND "$@";;
     start-nodes )                backend_$WB_BACKEND "$@";;
+    start-generator )            backend_$WB_BACKEND "$@";;
+    start-healthchecks )         backend_$WB_BACKEND "$@";;
+    # Fine grained
     start-node )                 backend_$WB_BACKEND "$@";;
     stop-node )                  backend_$WB_BACKEND "$@";;
     wait-node )                  backend_$WB_BACKEND "$@";;
     wait-node-stopped )          backend_$WB_BACKEND "$@";;
     get-node-socket-path )       backend_$WB_BACKEND "$@";;
-    start-generator )            backend_$WB_BACKEND "$@";;
     wait-pools-stopped )         backend_$WB_BACKEND "$@";;
+    # Stop functions
+    stop-all )                   backend_$WB_BACKEND "$@";;
+    fetch-logs )                 backend_$WB_BACKEND "$@";;
     stop-cluster )               backend_$WB_BACKEND "$@";;
     cleanup-cluster )            backend_$WB_BACKEND "$@";;
 

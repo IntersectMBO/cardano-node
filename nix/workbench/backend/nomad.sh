@@ -26,22 +26,25 @@ backend_nomad() {
   case "$op" in
 
     ############################################################################
-    # Configure cluster functions:
+    # Functions to configure cluster:
     # - setenv-defaults                        BACKEND-DIR
-    # - setenv-nomad                           CONTAINER-SPECS-FILE (Nomad only)
     # - allocate-run                           RUN-DIR
     # - allocate-run-directory-nomad           RUN-DIR              (Nomad only)
     # - allocate-run-directory-supervisor      RUN-DIR              (Nomad only)
+    # - allocate-run-directory-tracers         RUN-DIR              (Nomad only)
     # - allocate-run-directory-nodes           RUN-DIR              (Nomad only)
     # - allocate-run-directory-generator       RUN-DIR              (Nomad only)
-    # - allocate-run-directory-tracers         RUN-DIR              (Nomad only)
+    # - allocate-run-directory-healthchecks    RUN-DIR              (Nomad only)
     # - allocate-run-nomad-job-patch-name      RUN-DIR NAME         (Nomad only)
     # - allocate-run-nomad-job-patch-namespace RUN-DIR NAME         (Nomad only)
     # - allocate-run-nomad-job-patch-nix       RUN-DIR              (Nomad only)
-    # - deploy-genesis                         RUN-DIR
     # - describe-run                           RUN-DIR
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
+
+    setenv-defaults )
+      fatal "Function \"setenv-defaults\" is Nomad backend specific"
+    ;;
 
     # After `allocate-run` the Nomad is running waiting for the genesis to be
     # deployed and tracer/cardano-nodes/generator to be started.
@@ -69,11 +72,12 @@ backend_nomad() {
           * ) break;; esac; shift; done
 
       # Create the dispatcher's local directories hierarchy.
-      backend_nomad allocate-run-directory-nomad      "${dir}"
-      backend_nomad allocate-run-directory-supervisor "${dir}"
-      backend_nomad allocate-run-directory-nodes      "${dir}"
-      backend_nomad allocate-run-directory-generator  "${dir}"
-      backend_nomad allocate-run-directory-tracers    "${dir}"
+      backend_nomad allocate-run-directory-nomad        "${dir}"
+      backend_nomad allocate-run-directory-supervisor   "${dir}"
+      backend_nomad allocate-run-directory-tracers      "${dir}"
+      backend_nomad allocate-run-directory-nodes        "${dir}"
+      backend_nomad allocate-run-directory-generator    "${dir}"
+      backend_nomad allocate-run-directory-healthchecks "${dir}"
 
       # These ones are decided at "setenv-defaults" of each sub-backend.
       local nomad_environment=$(envjqr 'nomad_environment')
@@ -87,8 +91,6 @@ backend_nomad() {
       ### as namespace.: "invalid name "2023-02-10-06.34.f178b.ci-test-bage.nom"".
       local nomad_job_name=$(basename "${dir}")
       backend_nomad allocate-run-nomad-job-patch-name "${dir}" "${nomad_job_name}"
-
-      backend_nomad start-nomad-job "${dir}"
     ;;
 
     allocate-run-directory-nomad )
@@ -138,28 +140,6 @@ backend_nomad() {
       fi
     ;;
 
-    allocate-run-directory-nodes )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      # For every node ...
-      local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
-      for node in ${nodes[*]}
-      do
-        # Files "start.sh" and "topology.sh" that usually go in here are copied
-        # from the Task/container once it's started because the contents are
-        # created or patched using Nomad's "template" stanza in the job spec
-        # and we want to hold a copy of what was actually run.
-        mkdir "${dir}"/"${node}"
-      done
-    ;;
-
-    allocate-run-directory-generator )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      # Generator always runs inside Task/container "node-0". Not much to do!
-      mkdir -p "${dir}"/generator
-    ;;
-
     allocate-run-directory-tracers )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
@@ -184,13 +164,50 @@ backend_nomad() {
           done
         elif test "${nomad_task_driver}" = "podman"
         then
-          # FIXME: Looks like I'm not using these ones!!!
-         #cp $(jq '."tracer-config"'  -r ${dir}/profile/tracer-service.json) "${dir}"/tracer/tracer-config.json
-         #cp $(jq '."service-config"' -r ${dir}/profile/tracer-service.json) "${dir}"/tracer/service-config.json
-          cp $(jq '."config"'         -r ${dir}/profile/tracer-service.json) "${dir}"/tracer/config.json
-          cp $(jq '."start"'          -r ${dir}/profile/tracer-service.json) "${dir}"/tracer/start.sh
+          cp $(jq '."config"' -r ${dir}/profile/tracer-service.json) "${dir}"/tracer/config.json
+          cp $(jq '."start"'  -r ${dir}/profile/tracer-service.json) "${dir}"/tracer/start.sh
         fi
       fi
+    ;;
+
+    allocate-run-directory-nodes )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      # For every node ...
+      local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+      for node in ${nodes[*]}
+      do
+        # Files "start.sh" and "topology.sh" that usually go in here are copied
+        # from the Task/container once it's started because the contents are
+        # created or patched using Nomad's "template" stanza in the job spec
+        # and we want to hold a copy of what was actually run.
+        mkdir "${dir}"/"${node}"
+      done
+    ;;
+
+    allocate-run-directory-generator )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      # Not much to do!
+      # Generator always runs inside Task/container "node-0" for local runs
+      # and "explorer" for cloud runs.
+      mkdir -p "${dir}"/generator
+    ;;
+
+    allocate-run-directory-healthchecks )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      mkdir "${dir}"/healthcheck
+      # For every node ...
+      local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+      for node in ${nodes[*]}
+      do
+        # Files "start.sh" and "topology.sh" that usually go in here are copied
+        # from the Task/container once it's started because the contents are
+        # created or patched using Nomad's "template" stanza in the job spec
+        # and we want to hold a copy of what was actually run.
+        mkdir "${dir}"/healthcheck/"${node}"
+      done
     ;;
 
     # Change the Nomad job name to the current run tag. This allows to run
@@ -236,6 +253,125 @@ backend_nomad() {
           jq ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"task\"][\"${task_name}\"][\"config\"][\"nix_installables\"] = \$installables_array" --argjson installables_array "${installables_array}" "${dir}"/nomad/nomad-job.json | sponge "${dir}"/nomad/nomad-job.json
         done
       done
+    ;;
+
+    describe-run )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}
+
+      echo "  - Nomad job: $(realpath ${dir})/nomad/nomad-job.json"
+    ;;
+
+    ############################################################################
+    # Functions to start the cluster:
+    # - is-running            RUN-DIR
+    # - start-cluster         RUN-DIR
+    # - start-config-download RUN-DIR                               (Nomad only)
+    # - deploy-genesis-wget   RUN-DIR                               (Nomad only)
+    ############################################################################
+    # * Functions in the backend "interface" must use `fatal` when errors!
+
+    is-running )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+
+      ## Our contract is to print all running component names.
+      ##
+      if test -f "${dir}"/nomad/nomad-job.json
+      then
+        local nomad_job_name=$(jq -r ". [\"job\"]? | keys[0]?" "${dir}"/nomad/nomad-job.json)
+        if test -z "${nomad_job_name}" && test "${nomad_job_name}" != "null"
+        then
+          if nomad job status >/dev/null 2>&1
+          then
+            for allocation_file in "${dir}"/"${nomad_job_name}".run/allocation.*.final; do
+              local allocation_id=$(jq .ID "${allocation_file}")
+              local alloc_response=$(nomad alloc status -json "${allocation_id}")
+              # With only one allocation running we return true (zero return code)
+              if test $(echo "${alloc_status}" | jq .State) = "running"
+              then echo "nomad-allocation-${allocation_id}"
+              fi
+            done
+          else
+            msg "Can't access the Nomad server, assuming not running"
+            msg "(Remember: assumption is the mother/father of all f*** ups!)"
+          fi
+          # Use the hack for the local, non-cloud, cluster?
+          # Hack: Look for node-0's default port!
+          # test "$(sleep 0.5s; netstat -pltn 2>/dev/null | grep ':30000 ' | wc -l)" != "0"
+        fi
+      fi
+    ;;
+
+    # All or clean up everything!
+    # Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
+    start-cluster )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      touch "${dir}"/starting
+      if                                                                  \
+           ! backend_nomad start-nomad-job           "${dir}"             \
+        ||                                                                \
+           # TODO: Send the download everything job to the background ???
+           ! backend_nomad start-config-download  "${dir}"
+      then
+        backend_nomad stop-nomad-job "${dir}"
+        fatal "Backend start failed!"
+      fi
+      rm "${dir}"/starting; touch "${dir}"/started
+    ;;
+
+    # Downloads all Nomad job deployed files, the "template" stanzas.
+    start-config-download )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
+
+      msg "Fetch Nomad generated files ..."
+      local jobs_array=()
+      # Only used for debugging!
+      backend_nomad download-config-generator "${dir}" &
+      jobs_array+=("$!")
+      # For every node ...
+      local nodes=($(jq_tolist keys "$dir"/node-specs.json))
+      for node in ${nodes[*]}
+      do
+        # Only used for debugging!
+        backend_nomad download-config-node "${dir}" "${node}" &
+        jobs_array+=("$!")
+      done
+      # This same script looks for the socket path inside the tracer config
+      if test "${one_tracer_per_node}" = "true"
+      then
+        local nodes=($(jq_tolist keys "$dir"/node-specs.json))
+        for node in ${nodes[*]}
+        do
+          backend_nomad download-config-tracer "${dir}" "${node}" &
+          jobs_array+=("$!")
+        done
+      else
+        backend_nomad download-config-tracer   "${dir}" "tracer" &
+        jobs_array+=("$!")
+      fi
+      # For every node ...
+      local nodes=($(jq_tolist keys "$dir"/node-specs.json))
+      for node in ${nodes[*]}
+      do
+        # Only used for debugging!
+        backend_nomad download-config-healthcheck "${dir}" "${node}" &
+        jobs_array+=("$!")
+      done
+      # Wait and check!
+      if test -n "${jobs_array}"
+      then
+        if ! wait_fail_any "${jobs_array[@]}"
+        then
+          backend_nomad stop-nomad-job "${dir}"
+          fatal "Downloads failed!"
+        else
+          msg "Finished fetching Nomad generated files"
+        fi
+      fi
     ;;
 
     # Called by the sub-backends, don't use `fatal` and let them do the cleaning
@@ -302,19 +438,11 @@ backend_nomad() {
       fi
     ;;
 
-    describe-run )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}
-
-      echo "  - Nomad job: $(realpath ${dir})/nomad/nomad-job.json"
-    ;;
-
     ############################################################################
-    # Start/stop Nomad job functions:
+    # Functions to start/stop the Nomad Job part of the Cardano cluster:
     # - start-nomad-job RUN-DIR                                     (Nomad only)
     # - stop-nomad-job  RUN-DIR                                     (Nomad only)
     ############################################################################
-    # * Functions in the backend "interface" must use `fatal` when errors!
 
     start-nomad-job )
       local usage="USAGE: wb backend $op RUN-DIR"
@@ -410,54 +538,21 @@ backend_nomad() {
             "${dir}"/supervisor/tracer/supervisord.log
         fi
       fi
-
-      # TODO: Send the download everything job to the background!
-      backend_nomad start-download "$dir"
     ;;
 
-    # Download all Nomad dynamically generated files, the "template" stanzas.
-    start-download )
-      local usage="USAGE: wb backend $op RUN-DIR"
+    stop-nomad-job )
       local dir=${1:?$usage}; shift
-      local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
-
-      msg "Fetch Nomad generated files ..."
-      local jobs_array=()
-      # Only used for debugging!
-      backend_nomad download-config-generator "${dir}" &
-      jobs_array+=("$!")
-      # For every node ...
-      local nodes=($(jq_tolist keys "$dir"/node-specs.json))
-      for node in ${nodes[*]}
-      do
-        # Only used for debugging!
-        backend_nomad download-config-node "${dir}" "${node}" &
-        jobs_array+=("$!")
-      done
-      # This same script looks for the socket path inside the tracer config
-      if test "${one_tracer_per_node}" = "true"
+      local nomad_task_driver=$(envjqr                 'nomad_task_driver')
+      local server_name=$(envjqr                       'nomad_server_name')
+      local client_name=$(envjqr                       'nomad_client_name')
+      local nomad_agents_were_already_running=$(envjqr 'nomad_agents_were_already_running')
+      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
+      touch "${dir}"/nomad/stopped
+      wb_nomad job stop "${dir}/nomad/nomad-job.json" "${nomad_job_name}" > "${dir}/nomad/job.stop.stdout" 2> "$dir/nomad/job.stop.stderr" || true
+      if test "${nomad_agents_were_already_running}" = "false"
       then
-        local nodes=($(jq_tolist keys "$dir"/node-specs.json))
-        for node in ${nodes[*]}
-        do
-          backend_nomad download-config-tracer "${dir}" "${node}" &
-          jobs_array+=("$!")
-        done
-      else
-        backend_nomad download-config-tracer   "${dir}" "tracer" &
-        jobs_array+=("$!")
-      fi
-
-      # Wait and check!
-      if test -n "${jobs_array}"
-      then
-        if ! wait_fail_any "${jobs_array[@]}"
-        then
-          backend_nomad stop-nomad-job "${dir}"
-          fatal "Downloads failed!"
-        else
-          msg "Finished fetching Nomad generated files"
-        fi
+        wb_nomad agents stop \
+          "${server_name}" "${client_name}" "${nomad_task_driver}"
       fi
     ;;
 
@@ -540,111 +635,50 @@ backend_nomad() {
          }"
     ;;
 
-    stop-nomad-job )
-      local dir=${1:?$usage}; shift
-      local nomad_task_driver=$(envjqr                 'nomad_task_driver')
-      local server_name=$(envjqr                       'nomad_server_name')
-      local client_name=$(envjqr                       'nomad_client_name')
-      local nomad_agents_were_already_running=$(envjqr 'nomad_agents_were_already_running')
-      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-      touch "${dir}"/nomad/stopped
-      wb_nomad job stop "${dir}/nomad/nomad-job.json" "${nomad_job_name}" > "${dir}/nomad/job.stop.stdout" 2> "$dir/nomad/job.stop.stderr" || true
-      if test "${nomad_agents_were_already_running}" = "false"
-      then
-        wb_nomad agents stop \
-          "${server_name}" "${client_name}" "${nomad_task_driver}"
-      fi
-    ;;
-
     ############################################################################
-    # Start/stop Cardano cluster functions:
-    # - is-running      RUN-DIR
-    # - start           RUN-DIR
-    # - stop-cluster    RUN-DIR
-    # - cleanup-cluster RUN-DIR
+    # Functions to stop the cluster:
+    # - stop-all              RUN-DIR
+    # - stop-all-healthchecks RUN-DIR                               (Nomad only)
+    # - stop-all-generator    RUN-DIR                               (Nomad only)
+    # - stop-all-nodes        RUN-DIR                               (Nomad only)
+    # - stop-all-tracers      RUN-DIR                               (Nomad only)
+    # - fetch-logs            RUN-DIR
+    # - stop-cluster          RUN-DIR
+    # - cleanup-cluster       RUN-DIR
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
 
-    is-running )
+    stop-all )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
+      local generator_task=$(envjqr 'generator_task_name')
 
-      ## Our contract is to print all running component names.
-      ##
-      if test -f "${dir}"/nomad/nomad-job.json
+      # Stop healthcheck(s).
+      #####################
+      local jobs_healthchecks_array=()
+      for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
+      do
+        backend_nomad stop-all-healthchecks "${dir}" "${node}" &
+        jobs_healthchecks_array+=("$!")
+      done
+      if ! wait_fail_any "${jobs_healthchecks_array[@]}"
       then
-        local nomad_job_name=$(jq -r ". [\"job\"]? | keys[0]?" "${dir}"/nomad/nomad-job.json)
-        if test -z "${nomad_job_name}" && test "${nomad_job_name}" != "null"
-        then
-          if nomad job status >/dev/null 2>&1
-          then
-            for allocation_file in "${dir}"/"${nomad_job_name}".run/allocation.*.final; do
-              local allocation_id=$(jq .ID "${allocation_file}")
-              local alloc_response=$(nomad alloc status -json "${allocation_id}")
-              # With only one allocation running we return true (zero return code)
-              if test $(echo "${alloc_status}" | jq .State) = "running"
-              then echo "nomad-allocation-$allocation_id"
-              fi
-            done
-          else
-            msg "Can't access the Nomad server, assuming not running"
-            msg "(Remember: assumption is the mother/father of all f*** ups!)"
-          fi
-          # Use the hack for the local, non-cloud, cluster?
-          # Hack: Look for node-0's default port!
-          # test "$(sleep 0.5s; netstat -pltn 2>/dev/null | grep ':30000 ' | wc -l)" != "0"
-        fi
+        msg "$(red "Failed to stop healthcheck(s)")"
       fi
-    ;;
-
-    # All or clean up everything!
-    # Called by `scenario.sh` without exit trap (`scenario_setup_exit_trap`)!
-    start )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      touch "${dir}"/starting
-      # Start tracer(s).
-      if jqtest ".node.tracer" "${dir}"/profile.json
-      then
-        if ! backend_nomad start-tracers "${dir}"
-        then
-          backend_nomad stop-nomad-job "${dir}"
-          fatal "Backend start failed!"
-        fi
-      fi
-      rm "${dir}"/starting; touch "${dir}"/started
-    ;;
-
-    # All or clean up everything!
-    # Called by `scenario.sh` without exit trap (`scenario_setup_exit_trap`)!
-    stop-cluster )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      local nomad_environment=$(envjqr 'nomad_environment')
-      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-
-      # Concurrent thread may fail and trigger a `stop-cluster` simultaneously
-      if ! test -f "${dir}"/started || test -f "${dir}"/stopping || test -f "${dir}"/stopped
-      then
-        return 0
-      else
-        touch "${dir}"/stopping
-      fi
-
       # Stop generator.
       #################
-      backend_nomad stop-cluster-generator "${dir}" "node-0"
+      backend_nomad stop-all-generator "${dir}" "${generator_task}"
       # Stop node(s).
       ###############
       local jobs_nodes_array=()
       for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
       do
-        backend_nomad stop-cluster-node "${dir}" "${node}" &
+        backend_nomad stop-all-nodes "${dir}" "${node}" &
         jobs_nodes_array+=("$!")
       done
       if ! wait_fail_any "${jobs_nodes_array[@]}"
       then
-        fatal "Failed to stop node(s)"
+        msg "$(red "Failed to stop node(s)")"
       fi
       # Stop tracer(s).
       #################
@@ -655,47 +689,64 @@ backend_nomad() {
         local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
         for node in ${nodes[*]}
         do
-          backend_nomad stop-cluster-tracer "${dir}" "${node}" &
+          backend_nomad stop-all-tracers "${dir}" "${node}" &
           jobs_tracers_array+=("$!")
         done
         if ! wait_fail_any "${jobs_tracers_array[@]}"
         then
-          fatal "Failed to stop tracer(s)"
+          msg "$(red "Failed to stop tracer(s)")"
         fi
       else
-        backend_nomad stop-cluster-node "${dir}" "tracer"
+        if ! backend_nomad stop-all-tracers "${dir}" "tracer"
+        then
+          msg "$(red "Failed to stop tracer")"
+        fi
       fi
-
-      # Download logs!
-      backend_nomad stop-cluster-download "${dir}"
-
-      msg "$(blue Stopping) Nomad $(yellow "Job \"${nomad_job_name}\"")..."
-      # TODO: Show output or do something if it fails?
-      wb_nomad job stop "${dir}/nomad/nomad-job.json" "${nomad_job_name}" > "$dir/nomad/job.stop.stdout" 2> "$dir/nomad/job.stop.stderr" || true
-
-      local nomad_agents_were_already_running=$(envjqr 'nomad_agents_were_already_running')
-      if test "$nomad_agents_were_already_running" = "false"
-      then
-        local nomad_server_name=$(envjqr 'nomad_server_name')
-        local nomad_client_name=$(envjqr 'nomad_client_name')
-        local nomad_task_driver=$(envjqr 'nomad_task_driver')
-        wb_nomad agents stop \
-          "${nomad_server_name}" "${nomad_client_name}" "${nomad_task_driver}"
-      fi
-
-      # TODO: Always stop it? It's not always started!
-      #wb_nomad webfs stop || true
-
-      local oci_image_was_already_available=$(envjqr 'oci_image_was_already_available')
-      #TODO: Remove it?
-
-      rm "${dir}"/stopping; touch "${dir}"/stopped
     ;;
 
-    stop-cluster-generator )
+    stop-all-healthchecks )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
       local task=${1:?$usage}; shift
+      local task_dir="${dir}"/healthcheck/"${task}"
+      if test -f "${task_dir}"/started && !(test -f "${task_dir}"/stopped || test -f "${task_dir}"/quit)
+      then
+        if backend_nomad is-task-program-running "${dir}" "${task}" healthcheck
+        then
+          if ! backend_nomad task-program-stop "${dir}" "${task}" healthcheck
+          then
+            msg "$(yellow "WARNING: Program \"healthcheck\" inside Task \"${task}\" failed to stop")"
+          else
+            touch "${task_dir}"/stopped
+            msg "$(green "supervisord program \"healthcheck\" inside Nomad Task \"${task}\" down!")"
+          fi
+        else
+          touch "${task_dir}"/quit
+          if backend_nomad is-task-program-failed "${dir}" "${task}" healthcheck
+          then
+            local generator_task=$(envjqr 'generator_task_name')
+            # If the node quits (due to `--shutdown_on_slot_synced X` or
+            # `--shutdown_on_block_synced X`) the generator quits with an error.
+            local generator_can_fail=$(jq ".\"${task}\".shutdown_on_slot_synced or .\"${task}\".shutdown_on_block_synced" "${dir}"/node-specs.json)
+            if test "${generator_task}" != "${task}" || test "${generator_can_fail}" = "false" || backend_nomad is-task-program-running "${dir}" "${task}" "${task}"
+            then
+              # Do not fail here, because nobody will be able to stop the cluster!
+              msg "$(red "FATAL: \"healthcheck\" inside Task \"${task}\" quit unexpectedly")"
+            else
+              msg "$(yellow "INFO: Program \"healthcheck\" inside Task \"${task}\" failed, but expected when \"${task}\" automatically exits first and makes \"generator\" fail")"
+            fi
+          else
+            msg "$(yellow "WARNING: Program \"healthcheck\" inside Task \"${task}\" was not running, should it?")"
+          fi
+        fi
+      fi
+    ;;
+
+    stop-all-generator )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
+      # Only if it was started
       if test -f "${dir}"/generator/started && !(test -f "${dir}"/"${node}"/stopped || test -f "${dir}"/"${node}"/quit)
       then
         if backend_nomad is-task-program-running "${dir}" "${task}" generator
@@ -730,10 +781,11 @@ backend_nomad() {
       fi
     ;;
 
-    stop-cluster-node )
+    stop-all-nodes )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
       local node=${1:?$usage}; shift
+      # Only if it was started
       if test -f "${dir}"/"${node}"/started && !(test -f "${dir}"/"${node}"/stopped || test -f "${dir}"/"${node}"/quit)
       then
         if backend_nomad is-task-program-running "${dir}" "${node}" "${node}"
@@ -763,7 +815,7 @@ backend_nomad() {
       fi
     ;;
 
-    stop-cluster-tracer )
+    stop-all-tracers )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
       local task=${1:?$usage}; shift
@@ -774,6 +826,7 @@ backend_nomad() {
       else
         task_dir="${dir}"/tracer/"${task}"
       fi
+      # Only if it was started
       if test -f "${task_dir}"/started && !(test -f "${task_dir}"/stopped || test -f "${task_dir}"/quit)
       then
         # Tracers that receive connections should never quit by itself.
@@ -793,32 +846,109 @@ backend_nomad() {
       fi
     ;;
 
-    stop-cluster-download )
+    # All or clean up everything!
+    # Called by `scenario.sh` without exit trap (`scenario_setup_exit_trap`)!
+    stop-cluster )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
+
+      # Concurrent thread may fail and trigger a `stop-cluster` simultaneously
+      if ! test -f "${dir}"/started || test -f "${dir}"/stopping || test -f "${dir}"/stopped
+      then
+        return 0
+      else
+        touch "${dir}"/stopping
+      fi
+
+      msg "$(blue Stopping) Nomad $(yellow "Job \"${nomad_job_name}\"")..."
+      # TODO: Show output or do something if it fails?
+      wb_nomad job stop "${dir}/nomad/nomad-job.json" "${nomad_job_name}" > "$dir/nomad/job.stop.stdout" 2> "$dir/nomad/job.stop.stderr" || true
+
+      local nomad_agents_were_already_running=$(envjqr 'nomad_agents_were_already_running')
+      if test "$nomad_agents_were_already_running" = "false"
+      then
+        local nomad_server_name=$(envjqr 'nomad_server_name')
+        local nomad_client_name=$(envjqr 'nomad_client_name')
+        local nomad_task_driver=$(envjqr 'nomad_task_driver')
+        wb_nomad agents stop \
+          "${nomad_server_name}" "${nomad_client_name}" "${nomad_task_driver}"
+      fi
+
+      # TODO: Always stop it? It's not always started!
+      #wb_nomad webfs stop || true
+
+      local oci_image_was_already_available=$(envjqr 'oci_image_was_already_available')
+      #TODO: Remove it?
+
+      rm "${dir}"/stopping; touch "${dir}"/stopped
+    ;;
+
+    # Called by `scenario.sh` without exit trap (`scenario_setup_exit_trap`)!
+    fetch-logs )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
       local nomad_environment=$(envjqr 'nomad_environment')
       local nomad_task_driver=$(envjqr   'nomad_task_driver')
       local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
+      local generator_task=$(envjqr 'generator_task_name')
 
-      # TODO: Make it in parallel ?
       msg "Fetch logs ..."
 
-      # Download generator logs.
-      ##########################
+      # Download healthcheck(s) logs. ##########################################
+      ##########################################################################
+      # Remove "live" symlinks before downloading the "originals"
+      if test "${nomad_environment}" != "cloud"
+      then
+        for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
+        do
+          rm -f "${dir}"/healthcheck/"${node}"/{stdout,stderr,exit_code}
+          rm -f "${dir}"/supervisor/"${node}"/supervisord.log
+        done
+      fi
+      # Download retry "infinite" loop.
+      local healthchecks_array
+      healthchecks_array="$(jq_tolist 'keys' "$dir"/node-specs.json)"
+      while test -n "${healthchecks_array:-}"
+      do
+        local Healthchecks_jobs_array=()
+        for node in ${healthchecks_array[*]}
+        do
+          backend_nomad download-logs-healthcheck "${dir}" "${node}" &
+          Healthchecks_jobs_array+=("$!")
+        done
+        if test -n "${Healthchecks_jobs_array:-}" # If = () "unbound variable" error
+        then
+          # Wait until all jobs finish, don't use `wait_fail_any` that kills
+          # Returns the exit code of the last job, ignore it!
+          wait "${Healthchecks_jobs_array[@]}" || true
+        fi
+        # Fetch the nodes that don't have all the log files in its directory
+        healthchecks_array="$(backend_nomad fetch-logs-healthchecks "${dir}")"
+        if test -n "${healthchecks_array:-}"
+        then
+          msg "Retrying Healthcheck(s) [${healthchecks_array[@]}] logs download"
+          read -p "Hit enter to continue ..."
+        fi
+      done
+      msg "$(green "Finished downloading Healthcheck(s) logs")"
+      # Download generator logs. ###############################################
+      ##########################################################################
       # Remove "live" symlinks before downloading the "originals"
       if test "${nomad_environment}" != "cloud"
       then
         rm -f "${dir}"/generator/{stdout,stderr,exit_code}
-        rm -f "${dir}"/supervisor/node-0/supervisord.log
+        rm -f "${dir}"/supervisor/"${generator_task}"/supervisord.log
       fi
       # Download retry "infinite" loop.
-      while ! backend_nomad download-logs-generator "${dir}" "node-0"
+      while ! backend_nomad download-logs-generator "${dir}" "${generator_task}"
       do
         msg "Retrying \"generator\" logs download"
+        read -p "Hit enter to continue ..."
       done
       msg "$(green "Finished downloading \"generator\" logs")"
-      # Download node(s) logs.
-      ########################
+      # Download node(s) logs. #################################################
+      ##########################################################################
       # Remove "live" symlinks before downloading the "originals"
       if test "${nomad_environment}" != "cloud"
       then
@@ -847,15 +977,16 @@ backend_nomad() {
           wait "${nodes_jobs_array[@]}"  || true
         fi
         # Fetch the nodes that don't have all the log files in its directory
-        nodes_array="$(backend_nomad stop-cluster-download-nodes "${dir}")"
+        nodes_array="$(backend_nomad fetch-logs-nodes "${dir}")"
         if test -n "${nodes_array:-}"
         then
           msg "Retrying node(s) [${nodes_array[@]}] logs download"
+          read -p "Hit enter to continue ..."
         fi
       done
       msg "$(green "Finished downloading node(s) logs")"
-      # Download tracer(s) logs.
-      ##########################
+      # Download tracer(s) logs. ###############################################
+      ##########################################################################
       if jqtest ".node.tracer" "${dir}"/profile.json
       then
         # Remove "live" symlinks before downloading the "originals"
@@ -896,10 +1027,11 @@ backend_nomad() {
               wait "${tracers_jobs_array[@]}" || true
             fi
             # Fetch the nodes that don't have all the log files in its directory
-            tracers_array="$(backend_nomad stop-cluster-download-nodes "${dir}")"
+            tracers_array="$(backend_nomad fetch-logs-tracers "${dir}")"
             if test -n "${tracers_array:-}"
             then
               msg "Retrying tracer(s) [${tracers_array[@]}] logs download"
+              read -p "Hit enter to continue ..."
             fi
           done
           msg "$(green "Finished downloading tracer(s) logs")"
@@ -918,6 +1050,7 @@ backend_nomad() {
           while ! backend_nomad download-logs-tracer "${dir}" "tracer"
           do
             msg "Retrying \"tracer\" logs download from \"tracer\""
+            read -p "Hit enter to continue ..."
           done
           msg "$(green "Finished downloading \"tracer\" logs from \"tracer\"")"
           # TODO: These files are needed at all?
@@ -932,16 +1065,17 @@ backend_nomad() {
       fi
 
       # TODO: Check downloads
-      # ls run/current/nomad/{node-{0..51},explorer}/{stdout,stderr}            || msg ""
-      # ls run/current/{node-{0..51},explorer}/{exit_code,stdout,stderr}        || msg ""
-      # ls run/current/{node-{0..51},explorer}/{exit_code,stdout,stderr}        || msg ""
-      # ls run/current/tracer/{node-{0..51},explorer}/{exit_code,stdout,stderr} || msg ""
+      # ls run/current/nomad/{node-{0..51},explorer}/{stdout,stderr}                 || msg ""
+      # ls run/current/tracer/{node-{0..51},explorer}/{exit_code,stdout,stderr}      || msg ""
+      # ls run/current/{node-{0..51},explorer}/{exit_code,stdout,stderr}             || msg ""
+      # ls run/current/generator/{exit_code,stdout,stderr}                           || msg ""
+      # ls run/current/healthcheck/{node-{0..51},explorer}/{exit_code,stdout,stderr} || msg ""
 
       msg "$(green "Finished fetching logs")"
     ;;
 
     # Array of nodes that don't have all the log files in its directory
-    stop-cluster-download-nodes )
+    fetch-logs-nodes )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
       local nodes_array=()
@@ -994,7 +1128,7 @@ backend_nomad() {
 
     # Only to be called with one_tracer_per_node = true
     # Array of tracers' nodes that don't have all the log files in its directory
-    stop-cluster-download-tracers )
+    fetch-logs-tracers )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
       local tracers_array=()
@@ -1033,6 +1167,58 @@ backend_nomad() {
       echo "${tracers_array[@]}"
     ;;
 
+    # Array of nodes that don't have all the log files in its directory
+    fetch-logs-healthchecks )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local healthchecks_array=()
+      for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
+      do
+        local healthcheck_ok="true"
+        # Check the existance of all the wanted files:
+        if ! test -f "${dir}"/healthcheck/"${node}"/exit_code
+        then
+          healthcheck_ok="false"
+        fi
+        if ! test -f "${dir}"/healthcheck/"${node}"/stdout
+        then
+          healthcheck_ok="false"
+        fi
+        if ! test -f "${dir}"/healthcheck/"${node}"/stderr
+        then
+          healthcheck_ok="false"
+        fi
+        if ! test -f "${dir}"/nomad/"${node}"/stdout
+        then
+          healthcheck_ok="false"
+        fi
+        if ! test -f "${dir}"/nomad/"${node}"/stderr
+        then
+          healthcheck_ok="false"
+        fi
+        if ! test -f "${dir}"/supervisor/"${node}"/supervisord.log
+        then
+          healthcheck_ok="false"
+        fi
+        # Below like errors can end in truncated files, a proper flag is used!
+        # failed to exec into task: read tcp 10.0.0.115:33840->3.72.231.105:443: read: connection reset by peer
+        # tar: Unexpected EOF in archive
+        # tar: Unexpected EOF in archive
+        # tar: Error is not recoverable: exiting now
+        if test -f "${dir}"/healthcheck/"${node}"/download_failed
+        then
+          healthcheck_ok="false"
+        fi
+        # If any error add this healthcheck to the array
+        if test "${healthcheck_ok}" = "false"
+        then
+          healthchecks_array+=("${node}")
+        fi
+      done
+      # Return array
+      echo "${healthchecks_array[@]}"
+    ;;
+
     cleanup-cluster )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
@@ -1049,163 +1235,175 @@ backend_nomad() {
     ;;
 
     ############################################################################
-    # Start/stop individual cluster "programs" functions:
-    # - start-node      RUN-DIR NODE-NAME
-    # - start-generator RUN-DIR
-    # - start-tracer    RUN-DIR              (Nomad backend specific subcommand)
-    # - wait-node       RUN-DIR NODE_NAME    (Nomad backend specific subcommand)
-    # - wait-tracer     RUN-DIR TASK-NAME    (Nomad backend specific subcommand)
-    # - stop-node       RUN-DIR NODE-NAME
-    # - start-nodes     RUN-DIR
-    # - start-tracers   RUN-DIR              (Nomad backend specific subcommand)
-    #
-    # TODO:
-    # - stop-generator  RUN-DIR              (Nomad backend specific subcommand)
-    # - stop-tracer     RUN-DIR              (Nomad backend specific subcommand)
+    # Functions to start/stop groups of cluster "programs":
+    # - start-tracers      RUN-DIR
+    # - start-nodes        RUN-DIR
+    # - start-healthchecks RUN-DIR
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
 
-    # Called by `scenario.sh` with the exit trap (`scenario_setup_exit_trap`) set!
-    start-node )
-      local usage="USAGE: wb backend $op RUN-DIR NODE-NAME"
-      local dir=${1:?$usage};  shift
-      local node=${1:?$usage}; shift
-
-      if ! backend_nomad task-program-start "${dir}" "${node}" "${node}"
-      then
-        msg "$(red "FATAL: Program \"${node}\" (always inside \"${node}\") startup failed")"
-        # TODO: Let the download fail when everything fails?
-        backend_nomad download-logs-node "${dir}" "${node}" || true
-        # Should show the output/log of `supervisord` (runs as "entrypoint").
-        msg "$(yellow "${dir}/nomad/${node}/stdout:")"
-        cat                                                             \
-          <(echo "-------------------- log start --------------------") \
-          "${dir}"/nomad/"${node}"/stdout                               \
-          <(echo "-------------------- log end   --------------------")
-        msg "$(yellow "${dir}/nomad/${node}/stderr:")"
-        cat                                                             \
-          <(echo "-------------------- log start --------------------") \
-          "${dir}"/nomad/"${node}"/stderr                               \
-          <(echo "-------------------- log end   --------------------")
-        # Depending on when the start command failed, logs may not be available!
-        if test -f "${dir}"/"${node}"/stdout
-        then
-          msg "$(yellow "${dir}/${node}/stdout:")"
-          cat                                                             \
-            <(echo "-------------------- log start --------------------") \
-            "$dir"/"$node"/stdout                                         \
-            <(echo "-------------------- log end   --------------------")
-        fi
-        # Depending on when the start command failed, logs may not be available!
-        if test -f "${dir}"/"${node}"/stderr
-        then
-          msg "$(yellow "${dir}/${node}/stderr:")"
-          cat                                                             \
-            <(echo "-------------------- log start --------------------") \
-            "${dir}"/"${node}"/stderr                                     \
-            <(echo "-------------------- log end   --------------------")
-        fi
-        fatal "Failed to start program \"${node}\""
-      else
-        # Link to "live" logs only available when running "exec" and local.
-        local nomad_environment=$(envjqr 'nomad_environment')
-        if test "${nomad_environment}" != "cloud"
-        then
-          # A link to the alloc must be already created inside the RUN-DIR
-          ln -s                                                            \
-            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stdout    \
-            "${dir}"/"${node}"/stdout
-          ln -s                                                            \
-            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stderr    \
-            "${dir}"/"${node}"/stderr
-          ln -s                                                            \
-            ../nomad/alloc/"${node}"/local/run/current/"${node}"/exit_code \
-            "${dir}"/"${node}"/exit_code
-        fi
-        # Always wait for the node to be ready.
-        if backend_nomad wait-node "${dir}" "${node}"
-        then
-          # It was "intentionally started and should not automagically stop" flag!
-          touch "${dir}"/"${node}"/started
-        else
-          # Failed to start, mostly timeout before listening socket was found.
-          backend_nomad stop-cluster "${dir}"
-          fatal "Node \"${node}\" startup did not succeed"
-        fi
-      fi
-    ;;
-
-    # Called by `scenario.sh` with the exit trap (`scenario_setup_exit_trap`) set!
-    start-generator )
+    # All or clean up everything!
+    # Called by `scenario.sh` without exit trap (`scenario_setup_exit_trap`)!
+    start-tracers )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
 
-      while test $# -gt 0
-      do case "$1" in
-        --* ) msg "FATAL:  unknown flag '$1'"; usage_nomadbackend;;
-          * ) break;; esac; shift; done
-
-      if ! backend_nomad task-program-start "${dir}" node-0 generator
+      # A "tracer"(s) is optional.
+      if jqtest ".node.tracer" "${dir}"/profile.json
       then
-        msg "$(red "FATAL: Program \"generator\" (always inside \"node-0\") startup failed")"
-        # TODO: Let the download fail when everything fails?
-        backend_nomad download-logs-generator "${dir}" "node-0" || true
-        # Should show the output/log of `supervisord` (runs as "entrypoint").
-        msg "$(yellow "${dir}/nomad/node-0/stdout:")"
-        cat                                                             \
-          <(echo "-------------------- log start --------------------") \
-          "${dir}"/nomad/node-0/stdout                                  \
-          <(echo "-------------------- log end   --------------------")
-        msg "$(yellow "${dir}/nomad/node-0/stderr:")"
-        cat                                                             \
-          <(echo "-------------------- log start --------------------") \
-          "${dir}"/nomad/node-0/stderr                                  \
-          <(echo "-------------------- log end   --------------------")
-        # Depending on when the start command failed, logs may not be available!
-        if test -f "${dir}"/generator/stdout
-        then
-          msg "$(yellow "${dir}/generator/stdout:")"
-          cat                                                           \
-          <(echo "-------------------- log start --------------------") \
-          "$dir"/generator/stdout                                       \
-          <(echo "-------------------- log end   --------------------")
-        fi
-        # Depending on when the start command failed, logs may not be available!
-        if test -f "${dir}"/generator/stderr
-        then
-          msg "$(yellow "${dir}/generator/stderr:")"
-          cat                                                             \
-            <(echo "-------------------- log start --------------------") \
-            "${dir}"/generator/stderr                                     \
-            <(echo "-------------------- log end   --------------------")
-        fi
-        fatal "Failed to start program \"generator\""
+        true
+      fi
+
+      local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
+      if ! test "${one_tracer_per_node}" = "true"
+      then
+        backend_nomad start-tracer "${dir}" "tracer"
       else
-        # Link to "live" logs only available when running local.
-        local nomad_environment=$(envjqr 'nomad_environment')
-        if test "${nomad_environment}" != "cloud"
+        local jobs_array=()
+        local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+        for node in ${nodes[*]}
+        do
+          backend_nomad start-tracer "${dir}" "${node}" &
+          jobs_array+=("$!")
+        done
+        # Wait and check!
+        if test -n "${jobs_array}"
         then
-          ln -s                                                         \
-            ../nomad/alloc/node-0/local/run/current/generator/stdout    \
-            "${dir}"/generator/stdout
-          ln -s                                                         \
-            ../nomad/alloc/node-0/local/run/current/generator/stderr    \
-            "${dir}"/generator/stderr
-          ln -s                                                         \
-            ../nomad/alloc/node-0/local/run/current/generator/exit_code \
-            "${dir}"/generator/exit_code
+          if ! wait_fail_any "${jobs_array[@]}"
+          then
+            # Don't use fatal here, let `start` decide!
+            msg "$(red "Failed to start tracer(s)")"
+            return 1
+          else
+            for node in ${nodes[*]}
+            do
+              if ! test -f "${dir}"/tracer/"${node}"/started
+              then
+                # Don't use fatal here, let `start` decide!
+                msg "$(red "Tracer for \"${node}\" failed to start!")"
+                return 1
+              fi
+            done
+          fi
         fi
-        # It was "intentionally started and should not automagically stop" flag!
-        touch "${dir}"/generator/started
+        return 0
       fi
     ;;
 
-    # Called by "start" that has no exit trap, don't use fatal here!
+    # Called by `scenario.sh` with the exit trap (`scenario_setup_exit_trap`) set!
+    start-nodes )
+      local usage="USAGE: wb backend $op RUN-DIR [HONOR_AUTOSTART=]"
+      local dir=${1:?$usage}; shift
+      local honor_autostart=${1:-}
+
+      # Start all "autostart" nodes in parallel!
+      local jobs_array=()
+      local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+      for node in ${nodes[*]}
+      do
+        if test -n "${honor_autostart}"
+        then
+          if jqtest ".\"${node}\".autostart" "${dir}"/node-specs.json
+          then
+            backend_nomad start-node "${dir}" "${node}" &
+            jobs_array+=("$!")
+          fi
+        else
+          backend_nomad start-node "${dir}" "${node}" &
+          jobs_array+=("$!")
+        fi
+      done
+      # Wait and check!
+      if test -n "${jobs_array}"
+      then
+        if ! wait_fail_any "${jobs_array[@]}"
+        then
+          fatal "Failed to start node(s)"
+        else
+          for node in ${nodes[*]}
+          do
+            if test -n "${honor_autostart}"
+            then
+              if jqtest ".\"${node}\".autostart" "${dir}"/node-specs.json
+              then
+                if ! test -f "${dir}"/"${node}"/started
+                then
+                  fatal "Node \"${node}\" failed to start!"
+                fi
+              fi
+            else
+              if ! test -f "${dir}"/"${node}"/started
+              then
+                fatal "Node \"${node}\" failed to start!"
+              fi
+            fi
+          done
+        fi
+      fi
+
+      if test ! -v CARDANO_NODE_SOCKET_PATH
+      then
+        export CARDANO_NODE_SOCKET_PATH=$(backend_nomad get-node-socket-path "${dir}" 'node-0')
+      fi
+    ;;
+
+    # Called by `scenario.sh` with the exit trap (`scenario_setup_exit_trap`) set!
+    start-healthchecks )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+
+      local jobs_array=()
+      local nodes=($(jq_tolist keys "$dir"/node-specs.json))
+      for node in ${nodes[*]}
+      do
+        backend_nomad start-healthcheck "${dir}" "${node}" &
+        jobs_array+=("$!")
+      done
+      # Wait and check!
+      if test -n "${jobs_array}"
+      then
+        if ! wait_fail_any "${jobs_array[@]}"
+        then
+          fatal "Failed to start healthcheck(s)"
+          return 1
+        else
+          for node in ${nodes[*]}
+          do
+            if ! test -f "${dir}"/healthcheck/"${node}"/started
+            then
+              fatal "Healthcheck for \"${node}\" failed to start!"
+            fi
+          done
+        fi
+      fi
+      return 0
+    ;;
+
+    ############################################################################
+    # Functions to start/stop individual cluster "programs":
+    # - start-tracer       RUN-DIR           (Nomad backend specific subcommand)
+    # - start-node         RUN-DIR NODE-NAME
+    # - start-generator    RUN-DIR
+    # - start-healthcheck  RUN-DIR TASK-NAME (Nomad backend specific subcommand)
+    # - wait-tracer        RUN-DIR TASK-NAME (Nomad backend specific subcommand)
+    # - wait-node          RUN-DIR NODE_NAME (Nomad backend specific subcommand)
+    # - stop-node          RUN-DIR NODE-NAME
+    #
+    # TODO: They are up here as "stop-cluster-*"
+    # - stop-generator     RUN-DIR TASK-NAME (Nomad backend specific subcommand)
+    # - stop-tracer        RUN-DIR TASK-NAME (Nomad backend specific subcommand)
+    # - stop-healthcheck   RUN-DIR TASK-NAME (Nomad backend specific subcommand)
+    ############################################################################
+    # * Functions in the backend "interface" must use `fatal` when errors!
+
+    # Called by "start-tracers" that has no exit trap, don't use fatal here!
     start-tracer ) # Nomad backend specific subcommands
       local usage="USAGE: wb backend $op RUN-DIR TASK"
       local dir=${1:?$usage};  shift
       local task=${1:?$usage}; shift
       local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
+
+      # WARNING: A "tracer"(s) is optional, "start-tracers" checks it.
 
       if ! backend_nomad task-program-start "${dir}" "${task}" tracer
       then
@@ -1329,40 +1527,202 @@ backend_nomad() {
       fi
     ;;
 
-    # Called by "start-node" that has no exit trap, don't use fatal here!
-    wait-node )
-      local usage="USAGE: wb backend $op RUN-DIR [NODE-NAME]"
-      local dir=${1:?$usage}; shift
-      local node=${1:-$(dirname $CARDANO_NODE_SOCKET_PATH | xargs basename)}; shift
+    # Called by `scenario.sh` with the exit trap (`scenario_setup_exit_trap`) set!
+    start-node )
+      local usage="USAGE: wb backend $op RUN-DIR NODE-NAME"
+      local dir=${1:?$usage};  shift
+      local node=${1:?$usage}; shift
 
-      local socket=$(backend_nomad get-node-socket-path "${dir}" ${node})
-      local socket_path_absolute=/"${node}"/local/run/current/"${node}"/node.socket
-      local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' ${dir}/profile.json)
-      msg "$(blue Waiting) ${patience}s for socket of supervisord $(yellow "program \"${node}\"") inside Nomad $(yellow "Task \"${node}\"") ..."
-      local i=0
-      local node_alloc_id
-      node_alloc_id=$(wb_nomad job task-name-allocation-id \
-        "$dir/nomad/nomad-job.json"                        \
-        "${node}")
-      # Always keep checking that the supervisord program is still running!
-      while \
-            backend_nomad is-task-program-running "${dir}" "${node}" "${node}"                                                         \
-        &&                                                                                                                             \
-          ! nomad alloc fs -stat -H "${node_alloc_id}" "${socket_path_absolute}" 2>/dev/null | grep --quiet "application/octet-stream"
-      # TODO: Add the "timer" `printf "%3d" $i;` but for concurrent processes!
-      do
-        sleep 1
-        i=$((i+1))
-        if test "${i}" -ge "${patience}"
+      if ! backend_nomad task-program-start "${dir}" "${node}" "${node}"
+      then
+        msg "$(red "FATAL: Program \"${node}\" (always inside \"${node}\") startup failed")"
+        # TODO: Let the download fail when everything fails?
+        backend_nomad download-logs-node "${dir}" "${node}" || true
+        # Should show the output/log of `supervisord` (runs as "entrypoint").
+        msg "$(yellow "${dir}/nomad/${node}/stdout:")"
+        cat                                                             \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/nomad/"${node}"/stdout                               \
+          <(echo "-------------------- log end   --------------------")
+        msg "$(yellow "${dir}/nomad/${node}/stderr:")"
+        cat                                                             \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/nomad/"${node}"/stderr                               \
+          <(echo "-------------------- log end   --------------------")
+        # Depending on when the start command failed, logs may not be available!
+        if test -f "${dir}"/"${node}"/stdout
         then
-          msg "$(red "Patience ran out for \"${node}\" after ${patience}s")"
-          msg "$(yellow "check logs in ${dir}/${node}/[stdout & stderr]")"
-          # Don't use fatal here, let `start-node` or `start-nodes` decide!
-          return 1
+          msg "$(yellow "${dir}/${node}/stdout:")"
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "$dir"/"$node"/stdout                                         \
+            <(echo "-------------------- log end   --------------------")
         fi
-      done
-      msg "$(green "supervisord program \"${node}\" inside Nomad Task \"${node}\" up (${i}s)!")"
-      return 0
+        # Depending on when the start command failed, logs may not be available!
+        if test -f "${dir}"/"${node}"/stderr
+        then
+          msg "$(yellow "${dir}/${node}/stderr:")"
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "${dir}"/"${node}"/stderr                                     \
+            <(echo "-------------------- log end   --------------------")
+        fi
+        fatal "Failed to start program \"${node}\""
+      else
+        # Link to "live" logs only available when running "exec" and local.
+        local nomad_environment=$(envjqr 'nomad_environment')
+        if test "${nomad_environment}" != "cloud"
+        then
+          # A link to the alloc must be already created inside the RUN-DIR
+          ln -s                                                            \
+            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stdout    \
+            "${dir}"/"${node}"/stdout
+          ln -s                                                            \
+            ../nomad/alloc/"${node}"/local/run/current/"${node}"/stderr    \
+            "${dir}"/"${node}"/stderr
+          ln -s                                                            \
+            ../nomad/alloc/"${node}"/local/run/current/"${node}"/exit_code \
+            "${dir}"/"${node}"/exit_code
+        fi
+        # Always wait for the node to be ready.
+        if backend_nomad wait-node "${dir}" "${node}"
+        then
+          # It was "intentionally started and should not automagically stop" flag!
+          touch "${dir}"/"${node}"/started
+        else
+          # Failed to start, mostly timeout before listening socket was found.
+          backend_nomad stop-cluster "${dir}"
+          fatal "Node \"${node}\" startup did not succeed"
+        fi
+      fi
+    ;;
+
+    # Called by `scenario.sh` with the exit trap (`scenario_setup_exit_trap`) set!
+    start-generator )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local generator_task=$(envjqr 'generator_task_name')
+
+      while test $# -gt 0
+      do case "$1" in
+        --* ) msg "FATAL:  unknown flag '$1'"; usage_nomadbackend;;
+          * ) break;; esac; shift; done
+
+      if ! backend_nomad task-program-start "${dir}" "${generator_task}" generator
+      then
+        msg "$(red "FATAL: Program \"generator\" (inside \"${generator_task}\") startup failed")"
+        # TODO: Let the download fail when everything fails?
+        backend_nomad download-logs-generator "${dir}" "${generator_task}" || true
+        # Should show the output/log of `supervisord` (runs as "entrypoint").
+        msg "$(yellow "${dir}/nomad/${generator_task}/stdout:")"
+        cat                                                             \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/nomad/"${generator_task}"/stdout                     \
+          <(echo "-------------------- log end   --------------------")
+        msg "$(yellow "${dir}/nomad/${generator_task}/stderr:")"
+        cat                                                             \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/nomad/"${generator_task}"/stderr                     \
+          <(echo "-------------------- log end   --------------------")
+        # Depending on when the start command failed, logs may not be available!
+        if test -f "${dir}"/generator/stdout
+        then
+          msg "$(yellow "${dir}/generator/stdout:")"
+          cat                                                           \
+          <(echo "-------------------- log start --------------------") \
+          "$dir"/generator/stdout                                       \
+          <(echo "-------------------- log end   --------------------")
+        fi
+        # Depending on when the start command failed, logs may not be available!
+        if test -f "${dir}"/generator/stderr
+        then
+          msg "$(yellow "${dir}/generator/stderr:")"
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "${dir}"/generator/stderr                                     \
+            <(echo "-------------------- log end   --------------------")
+        fi
+        fatal "Failed to start program \"generator\""
+      else
+        # Link to "live" logs only available when running local.
+        local nomad_environment=$(envjqr 'nomad_environment')
+        if test "${nomad_environment}" != "cloud"
+        then
+          ln -s                                                                      \
+            ../nomad/alloc/"${generator_task}"/local/run/current/generator/stdout    \
+            "${dir}"/generator/stdout
+          ln -s                                                                      \
+            ../nomad/alloc/"${generator_task}"/local/run/current/generator/stderr    \
+            "${dir}"/generator/stderr
+          ln -s                                                                      \
+            ../nomad/alloc/"${generator_task}"/local/run/current/generator/exit_code \
+            "${dir}"/generator/exit_code
+        fi
+        # It was "intentionally started and should not automagically stop" flag!
+        touch "${dir}"/generator/started
+      fi
+    ;;
+
+    # Called by "start-healthchecks" that has no exit trap, don't use fatal here!
+    start-healthcheck ) # Nomad backend specific subcommands
+      local usage="USAGE: wb backend $op RUN-DIR TASK"
+      local dir=${1:?$usage};  shift
+      local task=${1:?$usage}; shift
+
+      if ! backend_nomad task-program-start "${dir}" "${task}" healthcheck
+      then
+        msg "$(red "FATAL: Program \"healthcheck\" inside Nomad Task \"${task}\" startup failed")"
+        # TODO: Let the download fail when everything fails?
+        backend_nomad download-logs-healthcheck "${dir}" "${task}" || true
+        # Should show the output/log of `supervisord` (runs as "entrypoint").
+        msg "$(yellow "${dir}/nomad/${task}/stdout:")"
+        cat                                                             \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/nomad/"${task}"/stdout                               \
+          <(echo "-------------------- log end   --------------------")
+        msg "$(yellow "${dir}/nomad/${task}/stderr:")"
+        cat                                                             \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/nomad/"${task}"/stderr                               \
+          <(echo "-------------------- log end   --------------------")
+        # Depending on when the start command failed, logs may not be available!
+        if test -f "${dir}"/healthcheck/"${task}"/stdout
+        then
+          msg "$(yellow "${dir}/healthcheck/${task}/stdout:")"
+          cat                                                           \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/healthcheck/"${task}"/stdout                         \
+          <(echo "-------------------- log end   --------------------")
+        fi
+        # Depending on when the start command failed, logs may not be available!
+        if test -f "${dir}"/healthcheck/"${task}"/stderr
+        then
+          msg "$(yellow "${dir}/healthcheck/${task}/stderr:")"
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "${dir}"/healthcheck/"${task}"/stderr                         \
+            <(echo "-------------------- log end   --------------------")
+        fi
+        # Let "start" parse the response code and handle the cleanup!
+        msg "$(red "Failed to start program \"healthcheck\" inside Nomad Task \"${task}\"")"
+        return 1
+      else
+        local nomad_environment=$(envjqr 'nomad_environment')
+        if test "${nomad_environment}" != "cloud"
+        then
+          ln -s                                                                 \
+            ../../nomad/alloc/"${task}"/local/run/current/healthcheck/stdout    \
+            "${dir}"/healthcheck/"${task}"/stdout
+          ln -s                                                                 \
+            ../../nomad/alloc/"${task}"/local/run/current/healthcheck/stderr    \
+            "${dir}"/healthcheck/"${task}"/stderr
+          ln -s                                                                 \
+            ../../nomad/alloc/"${task}"/local/run/current/healthcheck/exit_code \
+            "${dir}"/healthcheck/"${task}"/exit_code
+        fi
+        # It was "intentionally started and should not automagically stop" flag!
+        touch "${dir}"/healthcheck/"${task}"/started
+      fi
     ;;
 
     # Called by "start-tracer" that has no exit trap, don't use fatal here!
@@ -1443,110 +1803,55 @@ backend_nomad() {
       return 0
     ;;
 
+    # TODO: scenario.sh is not using it, but should call stop-cluster-node
+    # and/or stop-cluster-healthcheck and set the "stopped" flags
     stop-node )
       local usage="USAGE: wb backend $op RUN-DIR NODE-NAME"
       local dir=${1:?$usage};  shift
       local node=${1:?$usage}; shift
 
-      backend_nomad task-program-stop "${dir}" "${node}" "${node}"
-      touch "${dir}"/"${node}"/stopped
+      if ! backend_nomad task-program-stop "${dir}" "${node}" "${node}"
+      then
+        msg "$(yellow "WARNING: Program \"healthcheck\" inside Task \"${task}\" failed to stop")"
+      else
+        touch "${dir}"/"${node}"/stopped
+      fi
     ;;
 
-    # Called by `scenario.sh` with the exit trap (`scenario_setup_exit_trap`) set!
-    start-nodes )
-      local usage="USAGE: wb backend $op RUN-DIR [HONOR_AUTOSTART=]"
+    # Called by "start-node" that has no exit trap, don't use fatal here!
+    wait-node )
+      local usage="USAGE: wb backend $op RUN-DIR [NODE-NAME]"
       local dir=${1:?$usage}; shift
-      local honor_autostart=${1:-}
+      local node=${1:-$(dirname $CARDANO_NODE_SOCKET_PATH | xargs basename)}; shift
 
-      # Start all "autostart" nodes in parallel!
-      local jobs_array=()
-      local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
-      for node in ${nodes[*]}
+      local socket=$(backend_nomad get-node-socket-path "${dir}" ${node})
+      local socket_path_absolute=/"${node}"/local/run/current/"${node}"/node.socket
+      local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' ${dir}/profile.json)
+      msg "$(blue Waiting) ${patience}s for socket of supervisord $(yellow "program \"${node}\"") inside Nomad $(yellow "Task \"${node}\"") ..."
+      local i=0
+      local node_alloc_id
+      node_alloc_id=$(wb_nomad job task-name-allocation-id \
+        "$dir/nomad/nomad-job.json"                        \
+        "${node}")
+      # Always keep checking that the supervisord program is still running!
+      while \
+            backend_nomad is-task-program-running "${dir}" "${node}" "${node}"                                                         \
+        &&                                                                                                                             \
+          ! nomad alloc fs -stat -H "${node_alloc_id}" "${socket_path_absolute}" 2>/dev/null | grep --quiet "application/octet-stream"
+      # TODO: Add the "timer" `printf "%3d" $i;` but for concurrent processes!
       do
-        if test -n "${honor_autostart}"
+        sleep 1
+        i=$((i+1))
+        if test "${i}" -ge "${patience}"
         then
-          if jqtest ".\"${node}\".autostart" "${dir}"/node-specs.json
-          then
-            backend_nomad start-node "${dir}" "${node}" &
-            jobs_array+=("$!")
-          fi
-        else
-          backend_nomad start-node "${dir}" "${node}" &
-          jobs_array+=("$!")
+          msg "$(red "Patience ran out for \"${node}\" after ${patience}s")"
+          msg "$(yellow "check logs in ${dir}/${node}/[stdout & stderr]")"
+          # Don't use fatal here, let `start-node` or `start-nodes` decide!
+          return 1
         fi
       done
-      # Wait and check!
-      if test -n "${jobs_array}"
-      then
-        if ! wait_fail_any "${jobs_array[@]}"
-        then
-          fatal "Failed to start node(s)"
-        else
-          for node in ${nodes[*]}
-          do
-            if test -n "${honor_autostart}"
-            then
-              if jqtest ".\"${node}\".autostart" "${dir}"/node-specs.json
-              then
-                if ! test -f "${dir}"/"${node}"/started
-                then
-                  fatal "Node \"${node}\" failed to start!"
-                fi
-              fi
-            else
-              if ! test -f "${dir}"/"${node}"/started
-              then
-                fatal "Node \"${node}\" failed to start!"
-              fi
-            fi
-          done
-        fi
-      fi
-
-      if test ! -v CARDANO_NODE_SOCKET_PATH
-      then
-        export CARDANO_NODE_SOCKET_PATH=$(backend_nomad get-node-socket-path "${dir}" 'node-0')
-      fi
-    ;;
-
-    start-tracers )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-
-      local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
-      if ! test "${one_tracer_per_node}" = "true"
-      then
-        backend_nomad start-tracer "${dir}" "tracer"
-      else
-        local jobs_array=()
-        local nodes=($(jq_tolist keys "$dir"/node-specs.json))
-        for node in ${nodes[*]}
-        do
-          backend_nomad start-tracer "${dir}" "${node}" &
-          jobs_array+=("$!")
-        done
-        # Wait and check!
-        if test -n "${jobs_array}"
-        then
-          if ! wait_fail_any "${jobs_array[@]}"
-          then
-            # Don't use fatal here, let `start` decide!
-            msg "$(red "Failed to start tracer(s)")"
-            return 1
-          else
-            for node in ${nodes[*]}
-            do
-              if ! test -f "${dir}"/tracer/"${node}"/started
-              then
-                # Don't use fatal here, let `start` decide!
-                msg "$(red "Tracer for \"${node}\" failed to start!")"
-                return 1
-              fi
-            done
-          fi
-        fi
-        return 0
-      fi
+      msg "$(green "supervisord program \"${node}\" inside Nomad Task \"${node}\" up (${i}s)!")"
+      return 0
     ;;
 
     ############################################################################
@@ -1592,6 +1897,7 @@ backend_nomad() {
     wait-pools-stopped )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
+      local generator_task=$(envjqr 'generator_task_name')
 
       local start_time=$(date +%s)
       local pools=$(jq .composition.n_pool_hosts "${dir}"/profile.json)
@@ -1601,7 +1907,7 @@ backend_nomad() {
         while \
             ! test -f "${dir}"/flag/cluster-stopping \
           && \
-            backend_nomad is-task-program-running "${dir}" "node-${pool_ix}" "node-${pool_ix}" > /dev/null
+            backend_nomad is-task-program-running "${dir}" "node-${pool_ix}" "node-${pool_ix}" 3 > /dev/null
         do
           # Always check that a started generator has not FAILED!
           if \
@@ -1609,14 +1915,14 @@ backend_nomad() {
             &&                                                                  \
               ! test -f "${dir}"/generator/quit                                 \
             &&                                                                  \
-              ! backend_nomad is-task-program-running "${dir}" node-0 generator
+              ! backend_nomad is-task-program-running "${dir}" "${generator_task}" generator 3
           then
-            if backend_nomad is-task-program-failed   "${dir}" node-0 generator
+            if backend_nomad is-task-program-failed   "${dir}" "${generator_task}" generator 3
             then
-              # If node-0 quits generators fails with:
+              # If the node in "${generator_task}" quits generators fails with:
               # tx-generator: MuxError MuxBearerClosed "<socket: 12> closed when reading data, waiting on next header True"
               # Service binary 'tx-generator' returned status: 1
-              if backend_nomad is-task-program-running "${dir}" node-0 node-0
+              if backend_nomad is-task-program-running "${dir}" "${generator_task}" "${generator_task}" 3
               then
                 # This was not expected!
                 # But check it wasn't a race condition of a stopping cluster!
@@ -1630,14 +1936,14 @@ backend_nomad() {
                 touch "${dir}"/generator/quit
                 # Show the warning and continue with the counter
                 echo -ne "\n"
-                msg "$(yellow "WARNING: supervisord program \"generator\" (always inside Nomad Task \"node-0\" quit with an error exit code")"
+                msg "$(yellow "WARNING: supervisord program \"generator\" (inside Nomad Task \"${generator_task}\" quit with an error exit code")"
                 msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
               fi
             else
               touch "${dir}"/generator/quit
               # Show the warning and continue with the counter
               echo -ne "\n"
-              msg "$(yellow "WARNING: supervisord program \"generator\" (always inside Nomad Task \"node-0\" quit with a non-error exit code")"
+              msg "$(yellow "WARNING: supervisord program \"generator\" (inside Nomad Task \"${generator_task}\" quit with a non-error exit code")"
               msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
             fi
           fi # Finish generator checks.
@@ -1652,6 +1958,9 @@ backend_nomad() {
           msg "$(yellow "supervisord program \"node-${pool_ix}\" stopped")"
           msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
         fi
+        local elapsed="$(($(date +%s) - start_time))"
+        echo -ne "\b\b\b\b\b\b"
+        printf "%6d" "${elapsed}"
       done >&2 # For
       echo -ne "\b\b\b\b\b\b"
 
@@ -1670,11 +1979,12 @@ backend_nomad() {
     cluster-exited-programs )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
+      local generator_task=$(envjqr 'generator_task_name')
       local array=()
       # Generator
       if ! test -f "${dir}"/generator/started
       then
-        backend_nomad is-task-program-running "${dir}" node-0 generator || array+=("generator")
+        backend_nomad is-task-program-running "${dir}" "${generator_task}" generator || array+=("generator")
       fi
       # Nodes
       local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
@@ -1706,6 +2016,50 @@ backend_nomad() {
         fi
       fi
       echo "${array[@]}"
+    ;;
+
+    # For debugging when something fails, downloads and prints details!
+    download-logs-healthcheck )
+      local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
+      local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
+      local download_ok="true"
+      # Should show the output/log of `supervisord` (runs as "entrypoint").
+      msg "$(blue Fetching) $(yellow "entrypoint's stdout and stderr") of Nomad $(yellow "Task \"${task}\"") ..."
+      backend_nomad task-entrypoint-stdout "${dir}" "${task}" \
+      > "${dir}"/nomad/"${task}"/stdout                       \
+      || download_ok="false"
+      backend_nomad task-entrypoint-stderr "${dir}" "${task}" \
+      > "${dir}"/nomad/"${task}"/stderr                       \
+      || download_ok="false"
+      # If the entrypoint was ran till the end, this file should be available!
+      msg "$(blue Fetching) $(yellow supervisord.log) of Nomad $(yellow "Task \"${task}\"") ..."
+      backend_nomad task-file-contents "${dir}" "${task}"    \
+        /local/run/current/supervisor/supervisord.log        \
+      > "${dir}"/supervisor/"${task}"/supervisord.log        \
+      || download_ok="false"
+      # Downloads "exit_code", "stdout", "stderr" and GHC files.
+      # Depending on when the start command failed, logs may not be available!
+      backend_nomad download-zstd-healthcheck "${dir}" "${task}" \
+      || download_ok="false"
+      # Return
+      if test "${download_ok}" = "false"
+      then
+        msg "$(red "Failed to download \"healthcheck\" run files from \"${task}\"")"
+        # Below like errors can end in truncated files, a proper flag is needed!
+        # failed to exec into task: read tcp 10.0.0.115:33840->3.72.231.105:443: read: connection reset by peer
+        # tar: Unexpected EOF in archive
+        # tar: Unexpected EOF in archive
+        # tar: Error is not recoverable: exiting now
+        touch "${dir}"/healthcheck/"${task}"/download_failed
+        return 1
+      else
+        if test -f "${dir}"/healthcheck/"${task}"/download_failed
+        then
+          rm "${dir}"/healthcheck/"${task}"/download_failed
+        fi
+        return 0
+      fi
     ;;
 
     # For debugging when something fails, downloads and prints details!
@@ -1861,6 +2215,20 @@ backend_nomad() {
       fi
     ;;
 
+    download-zstd-healthcheck )
+      local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
+      local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
+
+      msg "$(blue Fetching) $(yellow "\"healthcheck\"") run files from Nomad $(yellow "Task \"${task}\"") ..."
+      # TODO: Add compression, either "--zstd" or "--xz"
+        backend_nomad task-exec-program-run-files-tar-zstd        \
+          "${dir}" "${task}" "healthcheck"                        \
+      | tar --extract                                             \
+          --directory="${dir}"/healthcheck/"${task}"/ --file=-    \
+          --no-same-owner --no-same-permissions
+    ;;
+
     download-zstd-generator )
       local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
       local dir=${1:?$usage}; shift
@@ -1964,13 +2332,14 @@ backend_nomad() {
     download-config-generator )
       local usage="USAGE: wb backend pass $op RUN-DIR"
       local dir=${1:?$usage}; shift
-      # Generator runs inside task/supervisord "node-0"
+      local generator_task=$(envjqr 'generator_task_name')
+      # Generator runs inside task/supervisord "${generator_task}"
       # Node files that may suffer interpolation/sed replace.
-      backend_nomad task-file-contents "${dir}" "node-0" \
-        /local/run/current/generator/start.sh            \
+      backend_nomad task-file-contents "${dir}" "${generator_task}" \
+        /local/run/current/generator/start.sh                       \
       > "${dir}"/generator/start.sh
-      backend_nomad task-file-contents "${dir}" "node-0" \
-        /local/run/current/generator/run-script.json     \
+      backend_nomad task-file-contents "${dir}" "${generator_task}" \
+        /local/run/current/generator/run-script.json                \
       > "${dir}"/generator/run-script.json
     ;;
 
@@ -2056,6 +2425,15 @@ backend_nomad() {
       fi
     ;;
 
+    download-config-healthcheck )
+      local usage="USAGE: wb backend pass $op RUN-DIR NODE-NAME"
+      local dir=${1:?$usage}; shift
+      local node=${1:?$usage}; shift
+      backend_nomad task-file-contents "${dir}" "${node}" \
+        /local/run/current/healthcheck/start.sh           \
+      > "${dir}"/healthcheck/"${node}"/start.sh
+    ;;
+
     ## Nomad job tasks supervisord queries
     ######################################
 
@@ -2079,11 +2457,13 @@ backend_nomad() {
       backend_nomad task-supervisorctl "${dir}" "${task}" stop "${program}" > /dev/null
     ;;
 
+    # Don't use fatal with no strikes, the exit trap uses it to stop everything!
     is-task-program-running )
       local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME SUPERVISOR-PROGRAM"
       local dir=${1:?$usage}; shift
       local task=${1:?$usage}; shift
       local program=${1:?$usage}; shift
+      local strikes=${1:-""}
       # NOTICE: Only returns zero when RUNNING!
       #> supervisorctl status
       # generator                        RUNNING   pid 83, uptime 0:00:23
@@ -2105,24 +2485,108 @@ backend_nomad() {
       # 3
       #> supervisorctl status node-0 >/dev/null; echo $?
       # 3
-      backend_nomad task-supervisorctl "$dir" "$task" status "$program" > /dev/null
+      local stderr_file="${dir}"/flag/is-task-program-running-"${task}"-"${program}"
+      :> "${stderr_file}"
+      if ! backend_nomad task-supervisorctl "${dir}" "${task}" status "${program}" > /dev/null 2> "${stderr_file}"
+      then
+        # Command returned "false"
+        if test -s "${stderr_file}"
+        then
+          # Command returned "false" with a non-empty stderr output
+          if test -n "${strikes}"
+          then
+            # A strike parameter was given
+            msg "$(yellow "Function \"is-task-program-running\" failed: $(cat ${stderr_file})")"
+            strikes=$(( strikes - 1 ))
+            msg "$(yellow "Strikes for \"is-task-program-running\" left: ${strikes}")"
+            if test "${strikes}" -gt 0
+            then
+              # Strikes still available, sleep/retry!
+              if test "${strikes}" = 1
+              then
+                # Before the last retry, wait one minute!
+                sleep 60
+              else
+                sleep 10
+              fi
+              # Retry with one less strike available
+              backend_nomad is-task-program-running "${dir}" "${task}" "${program}" "${strikes}"
+            else
+              # Fails everything only if using strikes!
+              fatal "Function \"is-task-program-running\" failed: $(cat ${stderr_file})"
+            fi
+          else
+            # No strike parameter was given, don't use "fatal"!
+            msg "$(red "Function \"is-task-program-running\" failed: $(cat ${stderr_file})")"
+            false
+          fi
+        else
+          # Command returned "false" with an empty stderr output
+          false # Program is not running!
+        fi
+      else
+        # Command returned "true"
+        if test -s "${stderr_file}"
+        then
+          # Don't supress possible error messages!
+          msg "$(yellow "WARNING: \"is-task-program-running\" is returning a non-empty stderr: $(cat "${stderr_file}")")"
+        fi
+        true # Program is running!
+      fi
     ;;
 
+    # Don't use fatal with no strikes, the exit trap uses it to stop everything!
     is-task-program-failed )
       local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME SUPERVISOR-PROGRAM"
       local dir=${1:?$usage}; shift
       local task=${1:?$usage}; shift
       local program=${1:?$usage}; shift
+      local strikes=${1:-""}
       # As we are not using any "autorestart" supervisord programs are run as:
       # command=sh -c "./start.sh; echo "$?" > ./exit_code"
       # because we can't obtain the exit codes using `supervisrctl`
+      local stderr_file="${dir}"/flag/is-task-program-failed-"${task}"-"${program}"
+      :> "${stderr_file}"
       local exit_code
-      if exit_code=$(backend_nomad task-file-contents "${dir}" "${task}" \
-        /local/run/current/"${program}"/exit_code 2>/dev/null)
+      if ! exit_code=$(backend_nomad task-file-contents "${dir}" "${task}" \
+        /local/run/current/"${program}"/exit_code 2> "${stderr_file}")
       then
-        test "${exit_code}" != "0"
+        # Command returned "false"
+        if test -n "${strikes}"
+        then
+          # A strike parameter was given
+          msg "$(yellow "Function \"is-task-program-failed\" failed: $(cat ${stderr_file})")"
+          strikes=$(( strikes - 1 ))
+          msg "$(yellow "Strikes for \"is-task-program-failed\" left: ${strikes}")"
+          if test "${strikes}" -gt 0
+          then
+            # Strikes still available, sleep/retry!
+            if test "${strikes}" = 1
+            then
+              # Before the last retry, wait one minute!
+              sleep 60
+            else
+              sleep 10
+            fi
+            # Retry with one less strike available
+            backend_nomad is-task-program-failed "${dir}" "${task}" "${program}" $(( strikes - 1 ))
+          else
+            # Fails everything only if using strikes!
+            fatal "Function \"is-task-program-failed\" failed"
+          fi
+        else
+          # No strike parameter was given, don't use "fatal"!
+          msg "$(red "Function \"is-task-program-failed\" failed: $(cat ${stderr_file})")"
+          true # Assuming program failed due to Nomad command error!
+        fi
       else
-        return 0
+        # Command returned "true"
+        if test -s "${stderr_file}"
+        then
+          # Don't supress possible error messages!
+          msg "$(yellow "WARNING: \"is-task-program-failed\" is returning a non-empty stderr: $(cat ${stderr_file})")"
+        fi
+        test "${exit_code}" != "0"
       fi
     ;;
 
@@ -2202,6 +2666,7 @@ backend_nomad() {
               -o -name "*.eventlog"                      \
               -o -name "*.gcstats"                       \
               -o -name "*.log"                           \
+              -o -name "start.sh.debug"                  \
             \)                                           \
             -printf \"%P\\n\"                            \
         |                                                \
@@ -2774,7 +3239,7 @@ client {
 
   # Specifies an arbitrary string used to logically group client nodes by
   # user-defined class. This can be used during job placement as a filter.
-  node_class = "qa" # Using the "world.dev.cardano.org" testing class for "perf".
+  node_class = "perf" # Using the "world.dev.cardano.org" testing class for "perf".
 
   # "artifact" parameters (fail fast!!!)
   ######################################

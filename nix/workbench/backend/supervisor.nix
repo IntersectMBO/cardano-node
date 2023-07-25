@@ -41,6 +41,7 @@ let
         { inherit pkgs lib stateDir;
           # Create a `supervisord.conf`
           nodeSpecs = profileData.node-specs.value;
+          withGenerator = true;
           withTracer = profileData.value.node.tracer;
           inetHttpServerPort = "127.0.0.1:9001";
         };

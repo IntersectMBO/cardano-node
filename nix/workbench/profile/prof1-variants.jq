@@ -45,10 +45,6 @@ def all_profile_variants:
       { utxo:                              (0.5 * $M)
       , delegators:                        (0.1 * $M)
       }
-    , generator:
-      { tps:                               1
-      , tx_count:                          10
-      }
     } as $dataset_miniature
   |
     { genesis:
@@ -388,7 +384,7 @@ def all_profile_variants:
     ({ extra_desc:                     "with legacy iohk-monitoring"
      , suffix:                         "iomf"
      }|
-     .node.tracing_backend           = "iohk-monitoring"
+     .node.tracing_backend            = "iohk-monitoring"
     ) as $old_tracing
   |
     ({ extra_desc:                     "with P2P networking"
@@ -396,6 +392,39 @@ def all_profile_variants:
      }|
      .node.verbatim.EnableP2P         = true
     ) as $p2p
+  |
+  ##
+  ### Definition vocabulary:  RTS config variants
+  ##
+    ({ extra_desc:                     "RTSflags A4m"
+     , suffix:                         "rtsA4m"
+     }|
+     .node.rts_flags_override         = ["-A4m"]
+    ) as $rts_A4m
+  |
+    ({ extra_desc:                     "RTSflags A64m"
+     , suffix:                         "rtsA64m"
+     }|
+     .node.rts_flags_override         = ["-A64m"]
+    ) as $rts_A64m
+  |
+    ({ extra_desc:                     "RTSflags N3"
+     , suffix:                         "rtsN3"
+     }|
+     .node.rts_flags_override         = ["-N3"]
+    ) as $rts_N3
+  |
+    ({ extra_desc:                     "RTSflags A4m N3"
+     , suffix:                         "rtsA4mN3"
+     }|
+     .node.rts_flags_override         = ["-A4m", "-N3"]
+    ) as $rts_A4mN3
+  |
+    ({ extra_desc:                     "RTSflags A64m N3"
+     , suffix:                         "rtsA64mN3"
+     }|
+     .node.rts_flags_override         = ["-A64m", "-N3"]
+    ) as $rts_A64mN3
   |
   ##
   ### Definition vocabulary:  scenario
@@ -567,6 +596,14 @@ def all_profile_variants:
   , { name: "default"
     , desc: "Default, as per nix/workbench/profile/prof0-defaults.jq"
     }
+  , $cardano_world_qa *
+    { name: "default-cw-qa"
+    , desc: "Default, but on Cardano World QA"
+    }
+  , $cardano_world_perf *
+    { name: "default-cw-perf"
+    , desc: "Default, but on Cardano World perf"
+    }
   , $plutus_base * $costmodel_v8_preview * $plutus_loop_counter *
     { name: "plutus"
     , desc: "Default with Plutus workload: CPU/memory limit saturation counter loop"
@@ -590,10 +627,6 @@ def all_profile_variants:
   , $scenario_tracer_only *
     { name: "tracer-only"
     , desc: "Idle scenario:  start only the tracer & detach from tty;  no termination"
-    }
-  , $cardano_world_qa *
-    { name: "cw-qa-default"
-    , desc: "Default, but on Cardano World QA"
     }
 
   ## Fastest profile to pass analysis: just 1 block
@@ -630,8 +663,12 @@ def all_profile_variants:
     { name: "ci-test-rtview"
     }
   , $citest_base * $cardano_world_qa *
-    { name: "cw-qa-ci-test"
+    { name: "ci-test-cw-qa"
     , desc: "ci-test, but on Cardano World QA"
+    }
+  , $citest_base * $cardano_world_perf *
+    { name: "ci-test-cw-perf"
+    , desc: "ci-test, but on Cardano World perf"
     }
 
   ## CI variants: bench duration, 15 blocks
@@ -657,8 +694,12 @@ def all_profile_variants:
     { name: "ci-bench-rtview"
     }
   , $cibench_base * $cardano_world_qa *
-    { name: "cw-qa-ci-bench"
+    { name: "ci-bench-cw-qa"
     , desc: "ci-bench but on Cardano World QA"
+    }
+  , $cibench_base * $cardano_world_perf *
+    { name: "ci-bench-cw-perf"
+    , desc: "ci-bench but on Cardano World perf"
     }
 
   ## CI variants: test duration, 3 blocks, dense10
@@ -715,7 +756,7 @@ def all_profile_variants:
     }
 
 ## Cardano World QA cluster: 52 nodes, 3 regions, value variant
-  , $cw_perf_base * $cardano_world_perf *
+  , $cw_perf_base * $cardano_world_perf * $costmodel_v8_preview *
     { name: "cw-perf-value"
     }
 
@@ -813,6 +854,23 @@ def all_profile_variants:
     }
   , $forge_stress_pre_base * $without_tracer *
     { name: "forge-stress-pre-notracer"
+    }
+
+  ## Large dataset, small cluster (3 nodes), variants for RTS parametrization
+  , $forge_stress_pre_base * $rts_A4m *
+    { name: "forge-stress-pre-rtsA4m"
+    }
+  , $forge_stress_pre_base * $rts_A64m *
+    { name: "forge-stress-pre-rtsA64m"
+    }
+  , $forge_stress_pre_base * $rts_N3 *
+    { name: "forge-stress-pre-rtsN3"
+    }
+  , $forge_stress_pre_base * $rts_A4mN3 *
+    { name: "forge-stress-pre-rtsA4mN3"
+    }
+  , $forge_stress_pre_base * $rts_A64mN3 *
+    { name: "forge-stress-pre-rtsA64mN3"
     }
 
   , $scenario_chainsync * $chaindb_early_byron *

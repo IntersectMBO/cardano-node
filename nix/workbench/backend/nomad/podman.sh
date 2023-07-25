@@ -17,6 +17,41 @@ backend_nomadpodman() {
       echo 'nomadpodman'
     ;;
 
+    # Overrided backend "methods"
+
+    setenv-defaults )
+      local usage="USAGE: wb backend $op BACKEND-DIR"
+      local backend_dir=${1:?$usage}; shift
+      # Repeated code / envars set by all sub-backends
+      setenvjqstr 'nomad_task_driver'    "podman"
+      setenvjqstr 'nomad_environment'    "local"
+      setenvjqstr 'one_tracer_per_node'  "false"
+      # Local runs always run the generator inside Nomad Task "node-0"
+      setenvjqstr 'generator_task_name'           \
+        "$(                                       \
+          jq -r                                   \
+            .nomadJob.generatorTaskName           \
+            "${backend_dir}"/container-specs.json \
+        )"
+      # Store the location of the Nix-built "container-specs" file.
+      # TODO/FIXME: This is the only way to be able to later copy it to "$dir" ?
+      setenvjqstr 'profile_container_specs_file' \
+        "${backend_dir}"/container-specs.json
+      # It "overrides" completely `backend_nomad`'s `setenv-defaults`.
+      setenv-defaults-nomadpodman        "${backend_dir}"
+    ;;
+
+    allocate-run )
+      allocate-run-nomadpodman           "$@"
+      # Does a pre allocation before calling the default/common allocation.
+      backend_nomad allocate-run         "$@"
+    ;;
+
+    deploy-genesis )
+      # It "overrides" completely `backend_nomad`'s `deploy-genesis`.
+      deploy-genesis-nomadpodman         "$@"
+    ;;
+
     # Generic backend sub-commands, shared code between Nomad sub-backends.
 
     describe-run )
@@ -27,16 +62,24 @@ backend_nomadpodman() {
       backend_nomad is-running           "$@"
     ;;
 
-    start )
-      backend_nomad start                "$@"
+    start-cluster )
+      backend_nomad start-cluster        "$@"
     ;;
 
-    cleanup-cluster )
-      backend_nomad cleanup-cluster      "$@"
+    start-tracers )
+      backend_nomad start-tracers        "$@"
     ;;
 
     start-nodes )
       backend_nomad start-nodes          "$@"
+    ;;
+
+    start-generator )
+      backend_nomad start-generator      "$@"
+    ;;
+
+    start-healthchecks )
+      backend_nomad start-healthchecks   "$@"
     ;;
 
     start-node )
@@ -45,10 +88,6 @@ backend_nomadpodman() {
 
     stop-node )
       backend_nomad stop-node            "$@"
-    ;;
-
-    start-generator )
-      backend_nomad start-generator      "$@"
     ;;
 
     get-node-socket-path )
@@ -67,6 +106,14 @@ backend_nomadpodman() {
       backend_nomad wait-pools-stopped   "$@"
     ;;
 
+    stop-all )
+      backend_nomad stop-all             "$@"
+    ;;
+
+    fetch-logs )
+      backend_nomad fetch-logs           "$@"
+    ;;
+
     stop-cluster )
       backend_nomad stop-cluster         "$@"
     ;;
@@ -75,105 +122,93 @@ backend_nomadpodman() {
       backend_nomad cleanup-cluster      "$@"
     ;;
 
-    # Sets jq envars "profile_container_specs_file" ,"nomad_environment",
-    # "nomad_task_driver" and "one_tracer_per_node".
-    # It "overrides" completely `backend_nomad`'s `setenv-defaults`.
-    setenv-defaults )
-      local usage="USAGE: wb backend $op BACKEND-DIR"
-      local backend_dir=${1:?$usage}; shift
-
-      setenvjqstr 'nomad_task_driver'   "podman"
-      setenvjqstr 'nomad_server_name'   "srv1"
-      # As one task driver runs as a normal user and the other as a root, use
-      # different names to allow restarting/reusing without cleaup, this way
-      # data folders already there can be accessed without "permission denied"
-      # errors.
-      setenvjqstr 'nomad_client_name'   "cli1-pod"
-
-      # Store the location of the Nix-built "container-specs" file.
-      # TODO/FIXME: This is the only way to be able to later copy it to "$dir" ?
-      local profile_container_specs_file
-      profile_container_specs_file="${backend_dir}"/container-specs.json
-      setenvjqstr 'profile_container_specs_file' "${profile_container_specs_file}"
-      setenvjqstr 'nomad_environment'   "local"
-      setenvjqstr 'one_tracer_per_node' "false"
-    ;;
-
-    # Sub-backend specific allocs and calls `backend_nomad`'s `allocate-run`.
-    allocate-run )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-
-      # Copy the container specs file (container-specs.json)
-      # This is the output file of the Nix derivation
-      local profile_container_specs_file=$(envjqr 'profile_container_specs_file')
-      # Create a nicely sorted and indented copy
-      jq . "${profile_container_specs_file}" > "${dir}"/container-specs.json
-
-      # Create nomad folder and copy the Nomad job spec file to run.
-      mkdir -p "${dir}"/nomad
-      # Select which version of the Nomad job spec file we are running and
-      # create a nicely sorted and indented copy it "nomad/nomad-job.json".
-      jq -r ".nomadJob.podman.oneTracerPerCluster" \
-        "${dir}"/container-specs.json              \
-      > "${dir}"/nomad/nomad-job.json
-      # The job file is "slightly" modified (jq) to suit the running environment.
-      backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" "default"
-      podman_create_image "${dir}"
-      # Make sure the "genesis-volume" dir is present when the Nomad job is
-      # started because with the podman task driver (always local, not used for
-      # cloud) these directories are going to be mounted by adding them to the
-      # "volume" stanza.
-      mkdir "${dir}"/genesis-volume
-      # It needs to mount the tracer directory if "one_tracer_per_node" is
-      # false and mount the genesis and CARDANO_MAINNET_MIRROR (if needed).
-      nomad_job_file_create_mounts "${dir}"
-
-      backend_nomad allocate-run   "${dir}"
-    ;;
-
-    # It "overrides" completely `backend_nomad`'s `deploy-genesis`.
-    deploy-genesis )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      # The "$dir/genesis-volume" folder is mounted to "run/local/genesis"
-      # inside the container that for security reasons does not follow symlinks,
-      # so everything is copied from the generated/patched genesis in
-      # "$dir/genesis" to "$dir/genesis-volume"
-      mkdir "${dir}"/genesis-volume/byron
-      mkdir "${dir}"/genesis-volume/utxo-keys
-      mkdir "${dir}"/genesis-volume/node-keys
-      cp -a "${dir}"/genesis/genesis.alonzo.json        \
-            "${dir}"/genesis-volume/genesis.alonzo.json
-      cp -a "${dir}"/genesis/genesis.conway.json        \
-            "${dir}"/genesis-volume/genesis.conway.json
-      cp -a "${dir}"/genesis/genesis-shelley.json       \
-            "${dir}"/genesis-volume/genesis-shelley.json
-      cp -a "${dir}"/genesis/byron/genesis.json         \
-            "${dir}"/genesis-volume/byron/genesis.json
-      cp -a                                             \
-            "${dir}"/genesis/utxo-keys/*.skey           \
-            "${dir}"/genesis-volume/utxo-keys/
-      cp -a                                             \
-            "${dir}"/genesis/utxo-keys/*.vkey           \
-            "${dir}"/genesis-volume/utxo-keys/
-      cp -a                                             \
-            "${dir}"/genesis/node-keys/*.skey           \
-            "${dir}"/genesis-volume/node-keys/
-      cp -a                                             \
-            "${dir}"/genesis/node-keys/*.vkey           \
-            "${dir}"/genesis-volume/node-keys/
-      cp -a                                             \
-            "${dir}"/genesis/node-keys/*.opcert         \
-            "${dir}"/genesis-volume/node-keys/
-    ;;
-
     * )
       backend_nomad "${op}" "$@"
     ;;
 
   esac
 
+}
+
+# Sets jq envars "profile_container_specs_file" ,"nomad_environment",
+# "nomad_task_driver" and "one_tracer_per_node".
+# It "overrides" completely `backend_nomad`'s `setenv-defaults`.
+setenv-defaults-nomadpodman() {
+  local backend_dir="${1}"
+
+  setenvjqstr 'nomad_server_name'   "srv1"
+  # As one task driver runs as a normal user and the other as a root, use
+  # different names to allow restarting/reusing without cleaup, this way
+  # data folders already there can be accessed without "permission denied"
+  # errors.
+  setenvjqstr 'nomad_client_name'   "cli1-pod"
+}
+
+# Sub-backend specific allocs and calls `backend_nomad`'s `allocate-run`.
+allocate-run-nomadpodman() {
+  local usage="USAGE: wb backend $op RUN-DIR"
+  local dir=${1:?$usage}; shift
+
+  # Copy the container specs file (container-specs.json)
+  # This is the output file of the Nix derivation
+  local profile_container_specs_file=$(envjqr 'profile_container_specs_file')
+  # Create a nicely sorted and indented copy
+  jq . "${profile_container_specs_file}" > "${dir}"/container-specs.json
+
+  # Create nomad folder and copy the Nomad job spec file to run.
+  mkdir -p "${dir}"/nomad
+  # Select which version of the Nomad job spec file we are running and
+  # create a nicely sorted and indented copy it "nomad/nomad-job.json".
+  jq -r ".nomadJob.podman.oneTracerPerCluster" \
+    "${dir}"/container-specs.json              \
+  > "${dir}"/nomad/nomad-job.json
+  # The job file is "slightly" modified (jq) to suit the running environment.
+  backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" "default"
+  podman_create_image "${dir}"
+  # Make sure the "genesis-volume" dir is present when the Nomad job is
+  # started because with the podman task driver (always local, not used for
+  # cloud) these directories are going to be mounted by adding them to the
+  # "volume" stanza.
+  mkdir "${dir}"/genesis-volume
+  # It needs to mount the tracer directory if "one_tracer_per_node" is
+  # false and mount the genesis and CARDANO_MAINNET_MIRROR (if needed).
+  nomad_job_file_create_mounts "${dir}"
+}
+
+# It "overrides" completely `backend_nomad`'s `deploy-genesis`.
+deploy-genesis-nomadpodman() {
+  local usage="USAGE: wb backend $op RUN-DIR"
+  local dir=${1:?$usage}; shift
+  # The "$dir/genesis-volume" folder is mounted to "run/local/genesis"
+  # inside the container that for security reasons does not follow symlinks,
+  # so everything is copied from the generated/patched genesis in
+  # "$dir/genesis" to "$dir/genesis-volume"
+  mkdir "${dir}"/genesis-volume/byron
+  mkdir "${dir}"/genesis-volume/utxo-keys
+  mkdir "${dir}"/genesis-volume/node-keys
+  cp -a "${dir}"/genesis/genesis.alonzo.json        \
+        "${dir}"/genesis-volume/genesis.alonzo.json
+  cp -a "${dir}"/genesis/genesis.conway.json        \
+        "${dir}"/genesis-volume/genesis.conway.json
+  cp -a "${dir}"/genesis/genesis-shelley.json       \
+        "${dir}"/genesis-volume/genesis-shelley.json
+  cp -a "${dir}"/genesis/byron/genesis.json         \
+        "${dir}"/genesis-volume/byron/genesis.json
+  cp -a                                             \
+        "${dir}"/genesis/utxo-keys/*.skey           \
+        "${dir}"/genesis-volume/utxo-keys/
+  cp -a                                             \
+        "${dir}"/genesis/utxo-keys/*.vkey           \
+        "${dir}"/genesis-volume/utxo-keys/
+  cp -a                                             \
+        "${dir}"/genesis/node-keys/*.skey           \
+        "${dir}"/genesis-volume/node-keys/
+  cp -a                                             \
+        "${dir}"/genesis/node-keys/*.vkey           \
+        "${dir}"/genesis-volume/node-keys/
+  cp -a                                             \
+        "${dir}"/genesis/node-keys/*.opcert         \
+        "${dir}"/genesis-volume/node-keys/
 }
 
 podman_create_image() {

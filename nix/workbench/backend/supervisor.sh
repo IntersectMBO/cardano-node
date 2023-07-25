@@ -143,11 +143,13 @@ EOF
         backend_supervisor save-pid-maps   "$dir"
         ;;
 
-    start )
+    start-cluster )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
-        if ! supervisord --config  "$dir"/supervisor/supervisord.conf $@
+        # Avoid buffer related problems with stdout and stderr disabling buffering
+        # https://docs.python.org/3/using/cmdline.html#envvar-PYTHONUNBUFFERED
+        if ! PYTHONUNBUFFERED=TRUE supervisord --config  "$dir"/supervisor/supervisord.conf $@
         then progress "supervisor" "$(red fatal: failed to start) $(white supervisord)"
              echo "$(red supervisord.conf) --------------------------------" >&2
              cat "$dir"/supervisor/supervisord.conf
@@ -155,13 +157,17 @@ EOF
              cat "$dir"/supervisor/supervisord.log
              echo "$(white -------------------------------------------------)" >&2
              fatal "could not start $(white supervisord)"
-        fi
+        fi;;
+
+    start-tracers )
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
 
         if jqtest ".node.tracer" "$dir"/profile.json
         then if ! supervisorctl start tracer
              then progress "supervisor" "$(red fatal: failed to start) $(white cardano-tracer)"
-                  echo "$(red tracer-config.json) ------------------------------" >&2
-                  cat "$dir"/tracer/tracer-config.json
+                  echo "$(red config.json) -------------------------------------" >&2
+                  cat "$dir"/tracer/config.json
                   echo "$(red tracer stdout) -----------------------------------" >&2
                   cat "$dir"/tracer/stdout
                   echo "$(red tracer stderr) -----------------------------------" >&2
@@ -184,6 +190,27 @@ EOF
         echo -n $state_dir/$node_name/node.socket
         ;;
 
+    start-healthchecks )
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
+
+        while test $# -gt 0
+        do case "$1" in
+               --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
+               * ) break;; esac; shift; done
+
+        ls -l $dir/{tracer/tracer,node-{0,1}/node}.socket || true
+        if ! supervisorctl start healthcheck
+        then progress "supervisor" "$(red fatal: failed to start) $(white healthcheck)"
+             echo "$(red healthcheck stdout) -----------------------------------" >&2
+             cat "$dir"/healthcheck/stdout
+             echo "$(red healthcheck stderr) -----------------------------------" >&2
+             cat "$dir"/healthcheck/stderr
+             echo "$(white -------------------------------------------------)" >&2
+             fatal "could not start $(white supervisord)"
+        fi
+        backend_supervisor save-child-pids "$dir";;
+
     start-generator )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
@@ -196,8 +223,8 @@ EOF
         ls -l $dir/{tracer/tracer,node-{0,1}/node}.socket || true
         if ! supervisorctl start generator
         then progress "supervisor" "$(red fatal: failed to start) $(white generator)"
-             echo "$(red generator.json) ------------------------------" >&2
-             cat "$dir"/generator/service-config.json
+             echo "$(red run-script.json) ------------------------------------" >&2
+             cat "$dir"/generator/run-script.json
              echo "$(red generator stdout) -----------------------------------" >&2
              cat "$dir"/generator/stdout
              echo "$(red generator stderr) -----------------------------------" >&2
@@ -255,11 +282,21 @@ EOF
         fi
         ;;
 
-    stop-cluster )
+    stop-all )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
         supervisorctl stop all || true
+        ;;
+
+    fetch-logs )
+        # Unlike Nomad local or cloud, nothing to do here, logs are already in
+        # the run directory.
+        ;;
+
+    stop-cluster )
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
 
         if test -f ${dir}/supervisor/supervisord.pid -a \
                 -f ${dir}/supervisor/child.pids
@@ -273,7 +310,7 @@ EOF
         local dir=${1:?$usage}; shift
 
         msg "supervisor:  resetting cluster state in:  $dir"
-        rm -f $dir/*/std{out,err} $dir/node-*/*.socket $dir/*/logs/* 2>/dev/null || true
+        rm -f $dir/*/std{out,err} $dir/*/exit_code $dir/node-*/*.socket $dir/*/logs/* 2>/dev/null || true
         rm -fr $dir/node-*/state-cluster/;;
 
     save-child-pids )
