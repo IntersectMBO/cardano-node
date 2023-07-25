@@ -7,7 +7,7 @@ recommonmark==0.6
 ## The following requirements were added by pip freeze:
 alabaster==0.7.12
 Babel==2.9.1
-certifi==2022.12.7
+certifi==2023.7.22
 chardet==3.0.4
 click==7.1.2
 sphinxcontrib-mermaid==0.4.0
