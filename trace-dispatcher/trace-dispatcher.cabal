@@ -55,7 +55,7 @@ library
                       , ekg-forward >= 0.3.0.4
                       , hostname
                       , network
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , ouroboros-network ^>= 0.8.2.0
                       , ouroboros-network-api
                       , ouroboros-network-framework

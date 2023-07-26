@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Parsers.Help
   ( HelpOptions(..)
   , cmdHelp
@@ -30,7 +31,7 @@ helpAll pprefs progn rnames parserInfo = do
     go p = case p of
       NilP _ -> return ()
       OptP optP -> case optMain optP of
-        CmdReader _ cs f -> do
+        CmdReader (Just (cs :: String)) (f :: String -> Maybe (ParserInfo a)) -> do
           forM_ cs $ \c ->
             forM_ (f c) $ \subParserInfo ->
               helpAll pprefs progn (c:rnames) subParserInfo

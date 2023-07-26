@@ -357,7 +357,7 @@ test-suite cardano-tracer-test-ext
                       , filepath
                       , generic-data
                       , Glob
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , ouroboros-network ^>= 0.8.2.0
                       , ouroboros-network-api
                       , ouroboros-network-framework

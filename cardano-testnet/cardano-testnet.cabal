@@ -53,7 +53,7 @@ library
                       , hedgehog
                       , hedgehog-extras ^>= 0.4.7.0
                       , mtl
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , ouroboros-network ^>= 0.8.2.0
                       , ouroboros-network-api
                       , process
