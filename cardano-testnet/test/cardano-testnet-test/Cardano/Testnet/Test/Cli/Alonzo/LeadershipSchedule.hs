@@ -39,8 +39,8 @@ import qualified Testnet.Process.Run as H
 import           Cardano.Api (AlonzoEra, SerialiseAddress (serialiseAddress), UTxO (UTxO))
 import qualified Cardano.Api as Api
 import           Cardano.Api.Shelley (PoolId)
-import           Cardano.CLI.Shelley.Output (QueryTipLocalStateOutput (mEpoch))
-import           Cardano.CLI.Shelley.Run.Query (DelegationsAndRewards, mergeDelegsAndRewards)
+import           Cardano.CLI.Run.Legacy.Query (DelegationsAndRewards, mergeDelegsAndRewards)
+import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (mEpoch))
 
 import           Cardano.Testnet
 import           Testnet.Process.Run

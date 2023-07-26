@@ -174,7 +174,7 @@ library
                       , network
                       , network-mux >= 0.4
                       , nothunks
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , ouroboros-consensus >= 0.9
                       , ouroboros-consensus-cardano >= 0.7
                       , ouroboros-consensus-diffusion >= 0.7
@@ -221,7 +221,7 @@ executable cardano-node
                       , cardano-crypto-class
                       , cardano-git-rev
                       , cardano-node
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , text >= 2.0
 
 test-suite cardano-node-test

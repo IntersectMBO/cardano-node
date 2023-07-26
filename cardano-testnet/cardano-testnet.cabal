@@ -35,7 +35,7 @@ library
                       , ansi-terminal
                       , bytestring
                       , cardano-api ^>= 8.8
-                      , cardano-cli ^>= 8.3
+                      , cardano-cli ^>= 8.4
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger-alonzo
@@ -53,7 +53,7 @@ library
                       , hedgehog
                       , hedgehog-extras ^>= 0.4.7.0
                       , mtl
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , ouroboros-network ^>= 0.8.2.0
                       , ouroboros-network-api
                       , process
@@ -110,9 +110,10 @@ executable cardano-testnet
 
   main-is:              cardano-testnet.hs
 
-  build-depends:        cardano-testnet
-                      , cardano-crypto-class
-                      , optparse-applicative-fork ^>= 0.16.1
+  build-depends:        cardano-crypto-class
+                      , cardano-cli
+                      , cardano-testnet
+                      , optparse-applicative-fork
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
@@ -149,7 +150,7 @@ test-suite cardano-testnet-golden
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
   build-tool-depends:   cardano-node:cardano-node
-                      , cardano-cli:cardano-cli ^>= 8.3
+                      , cardano-cli:cardano-cli ^>= 8.4
                       , cardano-submit-api:cardano-submit-api
                       , cardano-testnet:cardano-testnet
 
@@ -176,7 +177,7 @@ test-suite cardano-testnet-test
                       , async
                       , bytestring
                       , cardano-api ^>= 8.8
-                      , cardano-cli ^>= 8.3
+                      , cardano-cli ^>= 8.4
                       , cardano-crypto-class
                       , cardano-testnet
                       , containers
@@ -193,6 +194,6 @@ test-suite cardano-testnet-test
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
   build-tool-depends:   cardano-node:cardano-node
-                      , cardano-cli:cardano-cli ^>= 8.3
+                      , cardano-cli:cardano-cli ^>= 8.4
                       , cardano-submit-api:cardano-submit-api
                       , cardano-testnet:cardano-testnet

@@ -28,7 +28,7 @@ import           GHC.Stack (callStack)
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
-import           Cardano.CLI.Shelley.Output (QueryTipLocalStateOutput (..))
+import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (..))
 import           Cardano.Testnet
 
 import           Hedgehog (Property, (===))

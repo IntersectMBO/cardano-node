@@ -102,7 +102,7 @@ executable stake-credential-history
                         containers,
                         FailT,
                         microlens,
-                        optparse-applicative >= 0.16.0 && < 0.16.1,
+                        optparse-applicative,
                         ouroboros-consensus-cardano,
                         text,
                         transformers,

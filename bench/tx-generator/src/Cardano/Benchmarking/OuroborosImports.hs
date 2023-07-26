@@ -36,7 +36,7 @@ import           Cardano.Node.Configuration.Logging (LoggingLayer)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 
 import           Cardano.Api.Shelley (CardanoMode)
-import           Cardano.CLI.Types (SigningKeyFile)
+import           Cardano.CLI.Types.Legacy (SigningKeyFile)
 
 import           Cardano.Api (BlockType (..), ConsensusModeParams (..), EpochSlots (..),
                    LocalNodeConnectInfo (..), NetworkId (..), PaymentKey, SigningKey, SocketPath,

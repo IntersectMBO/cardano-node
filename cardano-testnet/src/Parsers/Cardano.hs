@@ -5,11 +5,12 @@ module Parsers.Cardano
 
 import           Prelude
 
+import           Cardano.CLI.Environment
 import qualified Data.List as L
 import           Options.Applicative
 import qualified Options.Applicative as OA
 
-import           Cardano.CLI.Common.Parsers hiding (pNetworkId)
+import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
 
 import           Testnet.Process.Cli
 import           Testnet.Property.Utils
@@ -20,10 +21,10 @@ newtype CardanoOptions = CardanoOptions
   { testnetOptions :: CardanoTestnetOptions
   } deriving (Eq, Show)
 
-optsTestnet :: Parser CardanoTestnetOptions
-optsTestnet = CardanoTestnetOptions
+optsTestnet :: EnvCli -> Parser CardanoTestnetOptions
+optsTestnet envCli = CardanoTestnetOptions
   <$> pNumBftAndSpoNodes
-  <*> pCardanoEra
+  <*> pCardanoEra envCli
   <*> OA.option auto
       (   OA.long "epoch-length"
       <>  OA.help "Epoch length"
@@ -82,8 +83,8 @@ pNumBftAndSpoNodes =
           <>  OA.value (cardanoNodes cardanoDefaultTestnetOptions)
           )
 
-optsCardano :: Parser CardanoOptions
-optsCardano = CardanoOptions <$> optsTestnet
+optsCardano :: EnvCli -> Parser CardanoOptions
+optsCardano envCli = CardanoOptions <$> optsTestnet envCli
 
-cmdCardano :: Mod CommandFields CardanoOptions
-cmdCardano = command' "cardano" "Start a testnet in any era" optsCardano
+cmdCardano :: EnvCli -> Mod CommandFields CardanoOptions
+cmdCardano envCli = command' "cardano" "Start a testnet in any era" (optsCardano envCli)

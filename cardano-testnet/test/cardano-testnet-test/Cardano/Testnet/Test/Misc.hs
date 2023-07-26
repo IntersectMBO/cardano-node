@@ -5,9 +5,9 @@ import           Prelude
 import           Data.List (isInfixOf)
 import qualified GHC.Stack as GHC
 
-import           Cardano.CLI.Shelley.Output
-import           Cardano.CLI.Shelley.Run.Query
-import           Cardano.CLI.Types
+import           Cardano.CLI.Run.Legacy.Query
+import           Cardano.CLI.Types.Legacy
+import           Cardano.CLI.Types.Output
 
 import           Hedgehog (success)
 import qualified Hedgehog as H
