@@ -85,9 +85,8 @@
     }@input:
     let
       inherit (nixpkgs) lib;
-      inherit (lib) head systems mapAttrs recursiveUpdate mkDefault
-        getAttrs optionalAttrs nameValuePair attrNames;
-      inherit (utils.lib) eachSystem mkApp flattenTree;
+      inherit (lib) head mapAttrs recursiveUpdate optionalAttrs;
+      inherit (utils.lib) eachSystem flattenTree;
       inherit (iohkNix.lib) prefixNamesWith;
       removeRecurse = lib.filterAttrsRecursive (n: _: n != "recurseForDerivations");
 
@@ -122,12 +121,16 @@
       ] ++ (import ops-lib.outPath {}).overlays;
 
       collectExes = project:
-        let inherit (project.pkgs.stdenv) hostPlatform;
-        in project.exes // (with project.hsPkgs; {
-          inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer db-truncater;
+        let set-git-rev = import ./nix/set-git-rev.nix { inherit (project) pkgs; };
+        in
+        # take all executables from the project local packages
+        project.exes // (with project.hsPkgs; {
+          # add some executables from other relevant packages
           inherit (bech32.components.exes) bech32;
-          inherit (cardano-cli.components.exes) cardano-cli;
-        } // lib.optionalAttrs hostPlatform.isUnix {
+          inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer db-truncater;
+          # add cardano-node and cardano-cli with their git revision stamp
+          cardano-node = set-git-rev project.exes.cardano-node;
+          cardano-cli = set-git-rev cardano-cli.components.exes.cardano-cli;
         });
 
       mkCardanoNodePackages = project: (collectExes project) // {
@@ -143,7 +146,10 @@
         project = pkgs.cardanoNodeProject;
 
         # This is used by `nix develop .` to open a devShell
-        devShells = let shell = import ./shell.nix { inherit pkgs customConfig cardano-mainnet-mirror; }; in {
+        devShells =
+        let
+          shell = import ./shell.nix { inherit pkgs customConfig cardano-mainnet-mirror; };
+        in {
           inherit (shell) devops workbench-shell;
           default = shell.dev;
           cluster = shell;
@@ -201,12 +207,12 @@
                     backendName = "supervisor";
                     useCabalRun = false;
                     cardano-node-rev =
-                      if __hasAttr "rev" self
+                      if builtins.hasAttr "rev" self
                       then pkgs.gitrev
                       else throw "Cannot get git revision of 'cardano-node', unclean checkout?";
                   }).workbench-profile-run;
           in
-          rec {
+          {
             "dockerImage/node" = pkgs.dockerImage;
             "dockerImage/submit-api" = pkgs.submitApiDockerImage;
 
