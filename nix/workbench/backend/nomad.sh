@@ -1907,7 +1907,7 @@ backend_nomad() {
         while \
             ! test -f "${dir}"/flag/cluster-stopping \
           && \
-            backend_nomad is-task-program-running "${dir}" "node-${pool_ix}" "node-${pool_ix}" > /dev/null
+            backend_nomad is-task-program-running "${dir}" "node-${pool_ix}" "node-${pool_ix}" 5 > /dev/null
         do
           # Always check that a started generator has not FAILED!
           if \
@@ -1915,14 +1915,14 @@ backend_nomad() {
             &&                                                                  \
               ! test -f "${dir}"/generator/quit                                 \
             &&                                                                  \
-              ! backend_nomad is-task-program-running "${dir}" "${generator_task}" generator
+              ! backend_nomad is-task-program-running "${dir}" "${generator_task}" generator 5
           then
-            if backend_nomad is-task-program-failed   "${dir}" "${generator_task}" generator
+            if backend_nomad is-task-program-failed   "${dir}" "${generator_task}" generator 5
             then
               # If the node in "${generator_task}" quits generators fails with:
               # tx-generator: MuxError MuxBearerClosed "<socket: 12> closed when reading data, waiting on next header True"
               # Service binary 'tx-generator' returned status: 1
-              if backend_nomad is-task-program-running "${dir}" "${generator_task}" "${generator_task}"
+              if backend_nomad is-task-program-running "${dir}" "${generator_task}" "${generator_task}" 5
               then
                 # This was not expected!
                 # But check it wasn't a race condition of a stopping cluster!
@@ -2457,11 +2457,13 @@ backend_nomad() {
       backend_nomad task-supervisorctl "${dir}" "${task}" stop "${program}" > /dev/null
     ;;
 
+    # Don't use fatal with no strikes, the exit trap uses it to stop everything!
     is-task-program-running )
       local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME SUPERVISOR-PROGRAM"
       local dir=${1:?$usage}; shift
       local task=${1:?$usage}; shift
       local program=${1:?$usage}; shift
+      local strikes=${1:-""}
       # NOTICE: Only returns zero when RUNNING!
       #> supervisorctl status
       # generator                        RUNNING   pid 83, uptime 0:00:23
@@ -2483,24 +2485,108 @@ backend_nomad() {
       # 3
       #> supervisorctl status node-0 >/dev/null; echo $?
       # 3
-      backend_nomad task-supervisorctl "$dir" "$task" status "$program" > /dev/null
+      local stderr_file="${dir}"/flag/is-task-program-running-"${task}"-"${program}"
+      :> "${stderr_file}"
+      if ! backend_nomad task-supervisorctl "${dir}" "${task}" status "${program}" > /dev/null 2> "${stderr_file}"
+      then
+        # Command returned "false"
+        if test -s "${stderr_file}"
+        then
+          # Command returned "false" with a non-empty stderr output
+          if test -n "${strikes}"
+          then
+            # A strike parameter was given
+            msg "$(yellow "Function \"is-task-program-running\" failed: $(cat ${stderr_file})")"
+            strikes=$(( strikes - 1 ))
+            msg "$(yellow "Strikes for \"is-task-program-running\" left: ${strikes}")"
+            if test "${strikes}" -gt 0
+            then
+              # Strikes still available, sleep/retry!
+              if test "${strikes}" = 1
+              then
+                # Before the last retry, wait five minute!
+                sleep 300 # 5 minutes!
+              else
+                sleep 60  # 1 minute!
+              fi
+              # Retry with one less strike available
+              backend_nomad is-task-program-running "${dir}" "${task}" "${program}" "${strikes}"
+            else
+              # Fails everything only if using strikes!
+              fatal "Function \"is-task-program-running\" failed: $(cat ${stderr_file})"
+            fi
+          else
+            # No strike parameter was given, don't use "fatal"!
+            msg "$(red "Function \"is-task-program-running\" failed: $(cat ${stderr_file})")"
+            false
+          fi
+        else
+          # Command returned "false" with an empty stderr output
+          false # Program is not running!
+        fi
+      else
+        # Command returned "true"
+        if test -s "${stderr_file}"
+        then
+          # Don't supress possible error messages!
+          msg "$(yellow "WARNING: \"is-task-program-running\" is returning a non-empty stderr: $(cat "${stderr_file}")")"
+        fi
+        true # Program is running!
+      fi
     ;;
 
+    # Don't use fatal with no strikes, the exit trap uses it to stop everything!
     is-task-program-failed )
       local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME SUPERVISOR-PROGRAM"
       local dir=${1:?$usage}; shift
       local task=${1:?$usage}; shift
       local program=${1:?$usage}; shift
+      local strikes=${1:-""}
       # As we are not using any "autorestart" supervisord programs are run as:
       # command=sh -c "./start.sh; echo "$?" > ./exit_code"
       # because we can't obtain the exit codes using `supervisrctl`
+      local stderr_file="${dir}"/flag/is-task-program-failed-"${task}"-"${program}"
+      :> "${stderr_file}"
       local exit_code
-      if exit_code=$(backend_nomad task-file-contents "${dir}" "${task}" \
-        /local/run/current/"${program}"/exit_code 2>/dev/null)
+      if ! exit_code=$(backend_nomad task-file-contents "${dir}" "${task}" \
+        /local/run/current/"${program}"/exit_code 2> "${stderr_file}")
       then
-        test "${exit_code}" != "0"
+        # Command returned "false"
+        if test -n "${strikes}"
+        then
+          # A strike parameter was given
+          msg "$(yellow "Function \"is-task-program-failed\" failed: $(cat ${stderr_file})")"
+          strikes=$(( strikes - 1 ))
+          msg "$(yellow "Strikes for \"is-task-program-failed\" left: ${strikes}")"
+          if test "${strikes}" -gt 0
+          then
+            # Strikes still available, sleep/retry!
+            if test "${strikes}" = 1
+            then
+              # Before the last retry, wait five minute!
+              sleep 300 # 5 minutes!
+            else
+              sleep 60  # 1 minute!
+            fi
+            # Retry with one less strike available
+            backend_nomad is-task-program-failed "${dir}" "${task}" "${program}" $(( strikes - 1 ))
+          else
+            # Fails everything only if using strikes!
+            fatal "Function \"is-task-program-failed\" failed"
+          fi
+        else
+          # No strike parameter was given, don't use "fatal"!
+          msg "$(red "Function \"is-task-program-failed\" failed: $(cat ${stderr_file})")"
+          true # Assuming program failed due to Nomad command error!
+        fi
       else
-        return 0
+        # Command returned "true"
+        if test -s "${stderr_file}"
+        then
+          # Don't supress possible error messages!
+          msg "$(yellow "WARNING: \"is-task-program-failed\" is returning a non-empty stderr: $(cat ${stderr_file})")"
+        fi
+        test "${exit_code}" != "0"
       fi
     ;;
 
