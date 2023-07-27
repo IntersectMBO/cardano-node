@@ -59,7 +59,7 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import qualified Ouroboros.Consensus.Node.Run as Consensus
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.Impl as LedgerDB
 
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.ConnectionId (ConnectionId)

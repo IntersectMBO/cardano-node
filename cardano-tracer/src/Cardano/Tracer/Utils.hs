@@ -76,25 +76,25 @@ runInLoop
   -> FilePath        -- ^ Local socket.
   -> Word            -- ^ Current delay, in seconds.
   -> IO ()
-runInLoop action verb localSocket prevDelay =
-  tryJust excludeAsyncExceptions action >>= \case
-    Left e -> do
-      case verb of
-        Just Minimum -> return ()
-        _ -> logTrace $ "cardano-tracer, connection with " <> show localSocket <> " failed: " <> show e
-      sleep $ fromIntegral currentDelay
-      runInLoop action verb localSocket currentDelay
-    Right _ -> return ()
+runInLoop action verb localSocket = run
  where
+  run delay = do
+    tryJust excludeAsyncExceptions action >>= \case
+      Left e -> do
+        case verb of
+          Just Minimum -> return ()
+          _ -> logTrace $ "cardano-tracer, connection with " <> show localSocket <> " failed: " <> show e
+        let currentDelay = if delay < 60
+                              then delay * 2
+                              else 60 -- After we reached 60+ secs delay, repeat an attempt every minute.
+        sleep $ fromIntegral currentDelay
+        run currentDelay
+      Right _ -> return ()
+
   excludeAsyncExceptions e =
     case fromException e of
       Just SomeAsyncException {} -> Nothing
       _ -> Just e
-
-  !currentDelay =
-    if prevDelay < 60
-      then prevDelay * 2
-      else 60 -- After we reached 60+ secs delay, repeat an attempt every minute.
 
 showProblemIfAny
   :: Maybe Verbosity -- ^ Tracer's verbosity.
