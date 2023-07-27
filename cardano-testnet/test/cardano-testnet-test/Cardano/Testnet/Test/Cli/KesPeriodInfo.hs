@@ -17,8 +17,8 @@ import           Hedgehog (Property, (===))
 import           Prelude
 import           System.FilePath ((</>))
 
-import           Cardano.CLI.Shelley.Output
-import           Cardano.CLI.Shelley.Run.Query
+import           Cardano.CLI.Run.Legacy.Query
+import           Cardano.CLI.Types.Output
 
 import qualified Data.Aeson as J
 import qualified Data.Map.Strict as Map

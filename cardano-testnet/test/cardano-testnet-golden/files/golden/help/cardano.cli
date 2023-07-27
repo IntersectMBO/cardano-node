@@ -1,20 +1,20 @@
 Usage: cardano-testnet cardano [--num-bft-nodes COUNT]
-                                 [--num-pool-nodes COUNT]
-                                 [ --byron-era
-                                 | --shelley-era
-                                 | --allegra-era
-                                 | --mary-era
-                                 | --alonzo-era
-                                 | --babbage-era
-                                 | --conway-era
-                                 ]
-                                 [--epoch-length MILLISECONDS]
-                                 [--slot-length SECONDS]
-                                 --testnet-magic INT
-                                 [--active-slots-coeff DOUBLE]
-                                 [--max-lovelace-supply WORD64]
-                                 [--enable-p2p BOOL]
-                                 [--nodeLoggingFormat LOGGING_FORMAT]
+  [--num-pool-nodes COUNT]
+  [ --byron-era
+  | --shelley-era
+  | --allegra-era
+  | --mary-era
+  | --alonzo-era
+  | --babbage-era
+  | --conway-era
+  ]
+  [--epoch-length MILLISECONDS]
+  [--slot-length SECONDS]
+  --testnet-magic INT
+  [--active-slots-coeff DOUBLE]
+  [--max-lovelace-supply WORD64]
+  [--enable-p2p BOOL]
+  [--nodeLoggingFormat LOGGING_FORMAT]
 
   Start a testnet in any era
 

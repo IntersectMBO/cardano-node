@@ -16,7 +16,7 @@ module Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
   ( hprop_leadershipSchedule
   ) where
 
-import           Cardano.CLI.Shelley.Output (QueryTipLocalStateOutput (..))
+import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (..))
 import           Control.Monad (void)
 import           Data.List ((\\))
 import           Data.Text (Text)

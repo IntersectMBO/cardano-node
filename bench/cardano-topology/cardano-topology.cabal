@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-topology
-version:                8.1.0
+version:                8.2.0
 synopsis:               A cardano topology generator
 description:            A cardano topology generator.
 category:               Cardano,
@@ -37,6 +37,6 @@ executable cardano-topology
                       , bytestring
                       , containers
                       , graphviz
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , split
                       , text

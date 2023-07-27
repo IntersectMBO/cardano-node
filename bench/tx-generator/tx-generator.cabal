@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   tx-generator
-version:                2.5
+version:                2.6
 synopsis:               A transaction workload generator for Cardano clusters
 description:            A transaction workload generator for Cardano clusters.
 category:               Cardano,
@@ -99,7 +99,7 @@ library
                       , bytestring
                       , cardano-api ^>= 8.8
                       , cardano-binary
-                      , cardano-cli ^>= 8.3
+                      , cardano-cli ^>= 8.4
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data
@@ -122,7 +122,7 @@ library
                       , mtl
                       , network
                       , network-mux
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , ouroboros-consensus >= 0.6
                       , ouroboros-consensus-cardano >= 0.5
                       , ouroboros-consensus-diffusion >= 0.7.0
@@ -192,9 +192,9 @@ test-suite tx-generator-apitest
                       , aeson
                       , bytestring
                       , filepath
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , cardano-api ^>= 8.8
-                      , cardano-cli ^>= 8.3
+                      , cardano-cli ^>= 8.4
                       , cardano-node
                       , plutus-tx
                       , transformers
@@ -208,9 +208,9 @@ test-suite tx-generator-apitest
                      , aeson
                      , bytestring
                      , filepath
-                     , optparse-applicative-fork ^>= 0.16.1
+                     , optparse-applicative-fork
                      , cardano-api ^>= 8.8
-                     , cardano-cli ^>= 8.3
+                     , cardano-cli ^>= 8.4
                      , cardano-node
                      , transformers
                      , transformers-except

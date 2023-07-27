@@ -12,7 +12,7 @@ import           Paths_cardano_testnet (version)
 import           System.Info (arch, compilerName, compilerVersion, os)
 import qualified System.IO as IO
 
-import           Cardano.CLI.Common.Parsers
+import           Cardano.CLI.EraBased.Options.Common
 
 
 data VersionOptions = VersionOptions
