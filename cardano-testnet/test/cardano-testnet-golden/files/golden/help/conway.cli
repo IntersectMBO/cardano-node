@@ -1,9 +1,9 @@
 Usage: cardano-testnet conway [--num-spo-nodes COUNT]
-                                [--slot-duration MILLISECONDS]
-                                [--security-param INT]
-                                --testnet-magic INT
-                                [--total-balance INT]
-                                [--nodeLoggingFormat LOGGING_FORMAT]
+  [--slot-duration MILLISECONDS]
+  [--security-param INT]
+  --testnet-magic INT
+  [--total-balance INT]
+  [--nodeLoggingFormat LOGGING_FORMAT]
 
   Start a conway testnet
 
