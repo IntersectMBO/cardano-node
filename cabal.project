@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2023-07-27T01:34:31Z
-  , cardano-haskell-packages 2023-07-27T07:20:05Z
+  , hackage.haskell.org 2023-07-26T23:47:54Z
+  , cardano-haskell-packages 2023-08-02T11:20:00Z
 
 packages:
   cardano-client-demo
@@ -33,60 +33,7 @@ packages:
   trace-resources
   trace-forward
 
-package cardano-api
-  ghc-options: -Werror
-
-package cardano-cli
-  ghc-options: -Werror
-  -- TODO delete the following when the warning is fixed
-  ghc-options: -Wno-redundant-constraints
-
-package cardano-client-demo
-  ghc-options: -Werror
-
-package cardano-git-rev
-  ghc-options: -Werror
-
-package cardano-node-capi
-  ghc-options: -Werror
-
-package cardano-node-chairman
-  ghc-options: -Werror
-
-package cardano-node
-  ghc-options: -Werror
-
-package cardano-submit-api
-  ghc-options: -Werror
-
-package cardano-testnet
-  ghc-options: -Werror
-
-package cardano-topology
-  ghc-options: -Werror
-
-package cardano-tracer
-  ghc-options: -Werror
-
-package locli
-  ghc-options: -Werror
-
-package plutus-scripts-bench
-  ghc-options: -Werror
-
-package trace-analyzer
-  ghc-options: -Werror
-
-package trace-dispatcher
-  ghc-options: -Werror
-
-package trace-forward
-  ghc-options: -Werror
-
-package trace-resources
-  ghc-options: -Werror
-
-package tx-generator
+program-options
   ghc-options: -Werror
 
 package cryptonite
@@ -111,3 +58,36 @@ allow-newer:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- utxo-hd
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-consensus
+  tag: 0bde185a6a98a74f2bb5e2685e600c3cb47c21ca
+  --sha256: 0li4c86wr9yl5plrsmxi8ijli35sdlvlvyh3x9p94856vc6290mx
+  subdir:
+   ouroboros-consensus
+   ouroboros-consensus-protocol
+   ouroboros-consensus-cardano-legacy-block
+   ouroboros-consensus-diffusion
+   ouroboros-consensus-cardano-legacy-block
+   ouroboros-consensus-cardano
+
+-- utxo-hd on 8.8.0.0
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-api
+  tag: 3ee4eaf488362bc9b81ec3c15815a48d7066b784
+  --sha256: 1sjll7hnrc39rs8848ismvm1z4az316xjdwyspkl7s3smvp3ncb3
+  subdir:
+    cardano-api
+
+-- ouroboros-network-protocols 0.5.2.0 with -fno-full-laziness
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network
+  tag: 05d81ecb30dc9f89db8bb6d31e0f1fb91f1268b6
+  --sha256: 0yz853ga95sl5bg67r4y4g17m94vbaam4qvzg8d6l54jyfhc0w6p
+  subdir:
+    ouroboros-network-protocols
+
