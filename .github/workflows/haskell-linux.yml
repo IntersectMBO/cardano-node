@@ -31,7 +31,7 @@ jobs:
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2023-07-11"
+      CABAL_CACHE_VERSION: "2023-07-13"
 
       # Modify this value to "invalidate" the secp cache.
       SECP_CACHE_VERSION: "2022-12-30"
@@ -83,6 +83,7 @@ jobs:
         sudo apt-get update
         sudo apt-get -y install libsodium23 libsodium-dev
         sudo apt-get -y install libsystemd0 libsystemd-dev
+        sudo apt-get -y install liblmdb-dev
         sudo apt-get -y remove --purge software-properties-common
         sudo apt-get -y autoremove
 
