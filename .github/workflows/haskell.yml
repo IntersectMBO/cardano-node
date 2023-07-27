@@ -68,6 +68,17 @@ jobs:
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
+        pacman-packages: >
+          mingw-w64-x86_64-pkg-config
+          mingw-w64-x86_64-libsodium
+          mingw-w64-x86_64-openssl
+          mingw-w64-x86_64-lmdb
+          base-devel
+          autoconf-wrapper
+          autoconf
+          automake
+          libtool
+          make
 
     - name: Install system dependencies
       uses: input-output-hk/actions/base@latest
