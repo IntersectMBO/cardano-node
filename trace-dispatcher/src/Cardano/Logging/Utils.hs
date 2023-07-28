@@ -1,5 +1,4 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PackageImports #-}
 
 module Cardano.Logging.Utils (
     runInLoop
@@ -9,7 +8,7 @@ module Cardano.Logging.Utils (
 
 import           Control.Concurrent (threadDelay)
 import           Control.Exception (SomeAsyncException (..), fromException, tryJust)
-import           "contra-tracer" Control.Tracer (showTracing, stdoutTracer, traceWith)
+import           Control.Tracer (stdoutTracer, traceWith)
 
 -- | Run monadic action in a loop. If there's an exception, it will re-run
 --   the action again, after pause that grows.
@@ -27,7 +26,7 @@ runInLoop action localSocket prevDelayInSecs =
       Just SomeAsyncException {} -> Nothing
       _ -> Just e
 
-  logTrace = traceWith $ showTracing stdoutTracer
+  logTrace = traceWith stdoutTracer
 
   currentDelayInSecs =
     if prevDelayInSecs < 60

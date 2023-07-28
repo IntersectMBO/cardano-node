@@ -36,5 +36,4 @@ forwardTracer forwardSink =
   output _sink lk (Left c@TCDocument {}) =
     docIt Forwarder (lk, Left c)
   output _sink LoggingContext {} (Right _)  = pure ()
-   -- writeToSink sink lo
   output _sink LoggingContext {} _  = pure ()

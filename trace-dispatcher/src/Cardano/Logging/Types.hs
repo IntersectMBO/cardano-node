@@ -3,7 +3,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-partial-fields  #-}
@@ -12,6 +11,7 @@ module Cardano.Logging.Types (
     Trace(..)
   , LogFormatting(..)
   , Metric(..)
+  , getMetricName
   , emptyObject
   , Documented(..)
   , DocMsg(..)
@@ -58,19 +58,18 @@ import           Codec.Serialise (Serialise (..))
 import qualified Control.Tracer as T
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as AE
-import qualified Data.Aeson.Text as AE
+import qualified Data.HashMap.Strict as HM
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.HashMap.Strict as HM
 
 import           Data.IORef
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Time (UTCTime)
+
 
 
 import           Data.Text (Text, intercalate, pack, singleton, unpack)
-import           Data.Text.Lazy (toStrict)
-import           Data.Time (UTCTime)
 import           GHC.Generics
 import           Network.HostName (HostName)
 
@@ -109,10 +108,10 @@ data Namespace a = Namespace {
 
 instance Show (Namespace a) where
   show (Namespace [] []) = "emptyNS"
-  show (Namespace [] nsInner) =
-    unpack $ intercalate (singleton '.') nsInner
-  show (Namespace nsPrefix nsInner) =
-    unpack $ intercalate (singleton '.') (nsPrefix ++ nsInner)
+  show (Namespace [] nsInner') =
+    unpack $ intercalate (singleton '.') nsInner'
+  show (Namespace nsPrefix' nsInner') =
+    unpack $ intercalate (singleton '.') (nsPrefix' ++ nsInner')
 
 nsReplacePrefix :: Namespace a -> [Text] -> Namespace a
 nsReplacePrefix (Namespace _ i) tl =  Namespace tl i
@@ -148,7 +147,7 @@ class LogFormatting a where
   -- No human representation is represented by the empty text
   -- The default implementation returns no human representation
   forHuman :: a -> Text
-  forHuman v = toStrict (AE.encodeToLazyText (forMachine DNormal v))
+  forHuman _v = ""
 
   -- | Metrics representation.
   -- No metrics by default
@@ -181,6 +180,11 @@ data Metric
     | CounterM Text (Maybe Int)
   deriving (Show, Eq)
 
+
+getMetricName :: Metric -> Text
+getMetricName (IntM name _) = name
+getMetricName (DoubleM name _) = name
+getMetricName (CounterM name _) = name
 
 -- | A helper function for creating an empty |Object|.
 emptyObject :: HM.HashMap Text a
@@ -289,29 +293,23 @@ instance Show SeverityF where
   show (SeverityF (Just s)) = show s
   show (SeverityF Nothing)  = "Silence"
 
--- | Used as interface object for ForwarderTracer
-data TraceObject = TraceObject {
-    toHuman     :: Maybe Text
-  , toMachine   :: Maybe Text
-  , toNamespace :: [Text]
-  , toSeverity  :: SeverityS
-  , toDetails   :: DetailLevel
-  , toTimestamp :: UTCTime
-  , toHostname  :: HostName
-  , toThreadId  :: Text
-} deriving (Eq, Show)
 
 ----------------------------------------------------------------
 -- Configuration
 
 -- |
-data ConfigReflection = ConfigReflection (IORef (Set [Text])) (IORef (Set [Text]))
+data ConfigReflection = ConfigReflection {
+    crSilent          :: IORef (Set [Text])
+  , crNoMetrics       :: IORef (Set [Text])
+  , crAllTracers      :: IORef (Set [Text])
+  }
 
 emptyConfigReflection :: IO ConfigReflection
 emptyConfigReflection  = do
-    silence <- newIORef Set.empty
-    hasMetrics <- newIORef Set.empty
-    pure $ ConfigReflection silence hasMetrics
+    silence     <- newIORef Set.empty
+    hasMetrics  <- newIORef Set.empty
+    allTracers  <- newIORef Set.empty
+    pure $ ConfigReflection silence hasMetrics allTracers
 
 data FormattedMessage =
       FormattedHuman Bool Text
@@ -321,6 +319,29 @@ data FormattedMessage =
     | FormattedForwarder TraceObject
   deriving (Eq, Show)
 
+
+data PreFormatted a = PreFormatted {
+    pfMessage    :: a
+  , pfForHuman   :: Maybe Text
+  , pfForMachine :: AE.Object
+  , pfNamespace  :: [Text]
+  , pfTimestamp  :: Text
+  , pfTime       :: UTCTime
+  , pfHostname   :: HostName
+  , pfThreadId   :: Text
+}
+
+-- | Used as interface object for ForwarderTracer
+data TraceObject = TraceObject {
+    toHuman     :: Maybe Text
+  , toMachine   :: Text
+  , toNamespace :: [Text]
+  , toSeverity  :: SeverityS
+  , toDetails   :: DetailLevel
+  , toTimestamp :: UTCTime
+  , toHostname  :: HostName
+  , toThreadId  :: Text
+} deriving (Eq, Show)
 
 -- |
 data BackendConfig =
@@ -458,11 +479,10 @@ emptyTraceConfig = TraceConfig {
 -- entry points first, and then with Optimize. When reconfiguring it needs to
 -- run Reset followed by Config followed by Optimize
 data TraceControl where
-    Reset     :: TraceControl
-    Config    :: TraceConfig -> TraceControl
-    Optimize  :: IORef (Set [Text]) -> IORef (Set [Text]) -> TraceControl
-    TCDocument  :: Int  -> DocCollector -> TraceControl
-
+    Reset       :: TraceControl
+    Config      :: TraceConfig -> TraceControl
+    Optimize    :: ConfigReflection -> TraceControl
+    TCDocument  :: Int -> DocCollector -> TraceControl
 
 newtype DocCollector = DocCollector (IORef (Map Int LogDoc))
 
@@ -490,20 +510,6 @@ newtype Folding a b = Folding b
 unfold :: Folding a b -> b
 unfold (Folding b) = b
 
-data PreFormatted a = PreFormatted {
-    pfMessage    :: a
-  , pfForHuman   :: Maybe Text
-  , pfForMachine :: Maybe AE.Object
-  }
-
-instance LogFormatting a => LogFormatting (PreFormatted a) where
-  forMachine dtal PreFormatted {..} =  case pfForMachine of
-                                          Nothing -> forMachine dtal pfMessage
-                                          Just obj -> obj
-  forHuman PreFormatted {..}        =  case pfForHuman of
-                                          Nothing  -> forHuman pfMessage
-                                          Just txt -> txt
-  asMetrics PreFormatted {..}       =  asMetrics pfMessage
 
 ---------------------------------------------------------------------------
 -- LogFormatting instances
