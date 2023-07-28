@@ -30,6 +30,7 @@ common project-config
                         -Wpartial-fields
                         -Wredundant-constraints
                         -Wunused-packages
+                        -fprof-auto
 
 library
   import:               project-config
@@ -61,6 +62,7 @@ library
                       , cborg
                       , containers
                       , contra-tracer
+                      , deepseq
                       , extra
                       , io-classes
                       , ouroboros-network-api >= 0.3

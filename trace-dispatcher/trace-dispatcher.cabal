@@ -50,6 +50,7 @@ library
                       , cborg
                       , containers
                       , contra-tracer
+                      , deepseq
                       , ekg
                       , ekg-core
                       , ekg-forward >= 0.3.0.4
@@ -102,6 +103,7 @@ executable trace-dispatcher-examples
                       , aeson                         >= 2.1.0.0
                       , bytestring
                       , containers
+                      , deepseq
                       , ekg
                       , ekg-core
                       , hostname

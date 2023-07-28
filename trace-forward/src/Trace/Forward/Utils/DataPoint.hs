@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
+
 module Trace.Forward.Utils.DataPoint
   ( DataPoint (..)
   , DataPointStore
@@ -14,8 +15,9 @@ module Trace.Forward.Utils.DataPoint
   ) where
 
 import           Control.Concurrent.STM (atomically, check, orElse)
-import           Control.Concurrent.STM.TVar
 import           Control.Concurrent.STM.TMVar
+import           Control.Concurrent.STM.TVar
+import           Control.DeepSeq (NFData, deepseq)
 import           Data.Aeson
 import qualified Data.Map.Strict as M
 
@@ -31,7 +33,7 @@ import           Trace.Forward.Protocol.DataPoint.Type
 --   available for the acceptor application, to decode unstructured JSON.
 --
 data DataPoint where
-  DataPoint :: ToJSON v => v -> DataPoint
+  DataPoint :: (ToJSON v, NFData v) => v -> DataPoint
 
 type DataPointStore = TVar (M.Map DataPointName DataPoint)
 
@@ -44,11 +46,11 @@ writeToStore
   -> DataPointName
   -> DataPoint
   -> IO ()
-writeToStore dpStore dpName dp = atomically $
+writeToStore dpStore dpName (DataPoint obj) = atomically $
   modifyTVar' dpStore $ \store ->
     if dpName `M.member` store
-      then M.adjust (const dp) dpName store
-      else M.insert dpName dp store
+      then M.adjust (const (DataPoint (deepseq obj obj))) dpName store
+      else M.insert dpName (DataPoint (deepseq obj obj)) store
 
 -- | Read 'DataPoint's from the store. Please note that we don't care what's
 --   inside of 'DataPoint', we just know it can be encoded to JSON.

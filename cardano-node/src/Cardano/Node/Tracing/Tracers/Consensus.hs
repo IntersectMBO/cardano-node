@@ -80,12 +80,15 @@ import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Util.Enclose
 
 
-instance Show adr => LogFormatting (ConnectionId adr) where
+instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
   forMachine _dtal (ConnectionId local' remote) =
-    mconcat [ "connectionId" .= String ((Text.pack . show) local'
+    mconcat [ "connectionId" .= String (forHuman local'
                                           <> " "
-                                          <> (Text.pack . show) remote)
+                                          <> forHuman remote)
     ]
+  forHuman (ConnectionId local' remote) =
+    "ConnectionId " <>  forHuman local' <> " " <> forHuman remote
+
 --------------------------------------------------------------------------------
 --   TraceLabelCreds peer a
 --------------------------------------------------------------------------------

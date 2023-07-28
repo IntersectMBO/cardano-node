@@ -31,7 +31,6 @@ where
 import           Cardano.Prelude hiding (Text, show)
 import           Prelude (id, show, unzip3)
 
-import           Control.Monad (fail)
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
@@ -479,7 +478,7 @@ instance FromJSON LogObject where
        case (kind, wrapped, unwrapped) of
          (Nothing, Just _, Just x) -> (,) <$> pure x <*> (fromText <$> x .: "kind")
          (Just kind0, _, _) -> pure (v, kind0)
-         _ -> fail $ "Unexpected LogObject .data: " <> show v
+         _ -> pure (v, "")
 
 parsePartialResourceStates :: Value -> Parser (Resources Word64)
 parsePartialResourceStates =
