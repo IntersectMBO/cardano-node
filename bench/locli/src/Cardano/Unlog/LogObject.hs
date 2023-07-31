@@ -41,6 +41,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as LText
 import           Data.Text.Short (ShortText, fromText, toText)
 import qualified Data.Text.Short as Text
+import           Data.Tuple.Extra (fst3, snd3, thd3)
 import           Data.Vector (Vector)
 import qualified Data.Vector as V
 

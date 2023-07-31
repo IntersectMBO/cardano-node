@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Parsers.Help
   ( HelpOptions(..)
   , cmdHelp

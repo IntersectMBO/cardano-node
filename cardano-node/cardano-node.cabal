@@ -28,7 +28,7 @@ common project-config
   default-language:     Haskell2010
 
   default-extensions:   OverloadedStrings
-  build-depends:        base >= 4.14 && < 4.17
+  build-depends:        base >= 4.14 && < 5
 
   ghc-options:          -Wall
                         -Wcompat
@@ -132,7 +132,7 @@ library
   other-modules:        Paths_cardano_node
   autogen-modules:      Paths_cardano_node
 
-  build-depends:        base >= 4.14 && < 4.17
+  build-depends:        base
                       , aeson >= 1.5.6.0
                       , async
                       , base16-bytestring
@@ -174,7 +174,7 @@ library
                       , network
                       , network-mux >= 0.4
                       , nothunks
-                      , optparse-applicative-fork
+                      , optparse-applicative-fork >= 0.18.1
                       , ouroboros-consensus >= 0.9
                       , ouroboros-consensus-cardano >= 0.7
                       , ouroboros-consensus-diffusion >= 0.7
@@ -217,7 +217,7 @@ executable cardano-node
   other-modules:        Paths_cardano_node
   autogen-modules:      Paths_cardano_node
 
-  build-depends:        base >= 4.14 && < 4.17
+  build-depends:        base
                       , cardano-crypto-class
                       , cardano-git-rev
                       , cardano-node
@@ -231,7 +231,7 @@ test-suite cardano-node-test
   main-is:              cardano-node-test.hs
   type:                 exitcode-stdio-1.0
 
-  build-depends:        base >= 4.14 && < 4.17
+  build-depends:        base
                       , aeson >= 1.5.6.0
                       , bytestring
                       , cardano-crypto-class
