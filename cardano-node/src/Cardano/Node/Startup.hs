@@ -136,6 +136,10 @@ data StartupTrace blk =
 
 data EnabledBlockForging = EnabledBlockForging
                          | DisabledBlockForging
+                         | NotEffective
+                         -- ^ one needs to send `SIGHUP` after consensus
+                         -- initialised itself (especially after replying all
+                         -- blocks).
                          deriving (Eq, Show)
 
 data BasicInfoCommon = BasicInfoCommon {
