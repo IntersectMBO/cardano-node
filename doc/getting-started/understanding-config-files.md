@@ -1,6 +1,6 @@
 # Understanding your configuration files and how to use them
 
-#### The topology.json file
+## The topology.json file
 
 Tells your node to which nodes in the network it should talk to. A minimal version of this file looks like this:
 
@@ -21,23 +21,25 @@ Tells your node to which nodes in the network it should talk to. A minimal versi
 
 Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and the relay nodes should talk to other relay nodes in the network. Go to https://explorer.cardano.org/relays/topology.json to find out IP addresses and ports of peers.  The `topology.json` found at this link is updated once a week.
 
-#### The P2P topology.json file
+## The P2P topology.json file
 
 The P2P topology file specifies how to obtain the _root peers_ (or _bootstrapping
-peers_).  These are root peers for the gossip which is a future enhancement of
-`ouroboros-network`.
+peers_).
 
-* _local roots_:  the node will try, in a best effort way, to have specified
-  number of hot connections towards each local root peer group (by hot we mean
-  connections taking active role in the consensus algorithm).   Local roots
-  should include local relays or local block producer node, all any other peers
-  with which the node shall keep a connection;
+* The term _local roots_ refers to a group of peer nodes with which a node will aim to
+    maintain a specific number of active, or "hot" connections. These hot connections are
+    those that play an active role in the consensus algorithm. Conversely, "warm"
+    connections refer to those not yet actively participating in the consensus algorithm.
+
+    Local roots should comprise local relays or a local block producer node, and any other
+    peers that the node needs to maintain a connection with. These connections are
+    typically kept private.
 * _public roots_: additional bootstrapping nodes.  They are either read from
   the configuration file directly, or from the chain.   The configured ones
   will be used to pass a recent snapshot of peers need before the node caches up
   with the recent enough chain to construct root peers by itself.
 
-The node does not guarantee to have a connection with each public root or,
+The node does not guarantee to have a connection with each public root,
 unlike for local ones, but by being present in the set it gets a chance to have
 an outbound connection towards that peer.
 
@@ -98,12 +100,31 @@ A minimal version of this file looks like this:
 
 * Local roots groups shall be non-overlapping.
 
+* The advertise parameter instructs a node about the acceptability of sharing its address
+  through Peer Sharing (which we'll explain in more detail in a subsequent section). In
+  essence, if a node has activated Peer Sharing, it can receive requests from other nodes
+  seeking peers. However, it will only disclose those peers for which it has both local
+  and remote permissions.
+
+  Local permission corresponds to the value of the advertise parameter. On the other
+  hand, 'remote permission' is tied to the `PeerSharing` value associated with the
+  remote address, which is ascertained after the initial handshake between nodes.
+
+* Local roots should not be greater than the `TargetNumberOfKnownPeers`.
+  If they are they will get clamped to the limit.
+
 Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and the relay node should talk to other relay nodes in the network.
 
-You __can__ tell the node that the topology configuration file changed by sending a SIGHUP
-signal to the `cardano-node` process, e.g. `pkill -HUP cardano-node`. After receiving the
-signal, `cardano-node` will re-read the file and restart all DNS resolution. Please
-**note** that this only applies to the topology configuration file!
+You have the option to notify the node of any changes to the topology configuration file
+by sending a SIGHUP signal to the `cardano-node` process. This can be done, for example,
+with the command `pkill -HUP cardano-node`. Upon receiving the signal, the `cardano-node`
+will re-read the configuration file and restart all DNS resolutions.
+
+Please be aware that this procedure is specific to the topology configuration file, not
+the node configuration file. Additionally, the SIGHUP signal will prompt the system to
+re-read the block forging credentials file paths and attempt to fetch them to initiate
+block forging. If this process fails, block forging will be disabled. To re-enable block
+forging, ensure that the necessary files are present.
 
 One can disable ledger peers by setting the `useLedgerAfterSlot` to a negative
 value.
@@ -119,7 +140,7 @@ node will connect to relays registered on the chain, and churn through them by
 randomly picking new peers (weighted by stake distribution) and forgetting 20%
 least performing ones.
 
-#### The genesis.json file
+## The genesis.json file
 
 The genesis file is generated with the `cardano-cli` by reading a `genesis.spec.json` file, which is out of scope for this document.
 But it is important because it is used to set:
@@ -237,7 +258,7 @@ Here is a brief description of each parameter. You can learn more in the [spec](
 | securityParam | Security parameter k |
 
 
-#### The config.json file
+## The config.json file
 
 The default `config.json` file that we downloaded is shown below.
 
@@ -245,7 +266,7 @@ This file has __4__ sections that allow you to have full control on what your no
 
 __NOTE Due to how the config.json file is generated, fields on the real file are shown in a different (less coherent) order. Here we present them in a more structured way__
 
-#### Basic Node Configuration.
+### Basic Node Configuration.
 
 First section relates the basic node configuration parameters. Make sure you have to `TPraos`as the protocol, the correct path to the `mainnet-shelley-genesis.json` file, `RequiresMagic`for its use in a testnet.
 
@@ -253,7 +274,7 @@ First section relates the basic node configuration parameters. Make sure you hav
 	  "GenesisFile": "mainnet-shelley-genesis.json",
 	  "RequiresNetworkMagic": "RequiresMagic",
 
-#### Update parameters
+### Update parameters
 
 This protocol version number gets used by block producing nodes as part of the system for agreeing on and synchronising protocol updates. You just need to be aware of the latest version supported by the network. You don't need to change anything here.
 
@@ -262,7 +283,7 @@ This protocol version number gets used by block producing nodes as part of the s
 	  "LastKnownBlockVersion-Minor": 0,
 
 
-#### Tracing
+### Tracing
 
 `Tracers` tell your node what information you are interested in when logging. Like switches that you can turn ON or OFF according the type and quantity of information that you are interesetd in. This provides fairly coarse grained control, but it is relatively efficient at filtering out unwanted trace output.
 
@@ -347,7 +368,7 @@ Also enable the EKG backend if you want to use the EKG or Prometheus monitoring 
   },
 ```
 
-#### Fine grained logging control
+### Fine grained logging control
 
 It is also possible to have more fine grained control over filtering of trace output, and to match and route trace output to particular backends. This is less efficient than the coarse trace filters above but provides much more precise control. `options`:
 
@@ -370,3 +391,174 @@ It is also possible to have more fine grained control over filtering of trace ou
 	  }
 	}
 ```
+
+### Peer-to-Peer Parameters & Tracers
+
+To run a node in P2P mode set `EnableP2P` to `true` (_the default is `False`_) in the
+configuration file.  You will also need to specify the topology in a new format which is
+described above.
+
+There are a few new tracers and configuration options which you can set (listed below by
+component):
+
+#### Outbound Governor
+
+The outbound governor is responsible for satisfying targets of root peers, known (_cold_,
+_warm_ and _hot_), established (_warm_ & _hot_) and active peers (synonym for _hot_ peers)
+and local root peers.  The primary way to configure them is by setting the following
+options:
+
+* `TargetNumberOfRootPeers` (_default value: `100`_) - a minimal number of root peers
+  (unlike other targets this one is one sided, e.g. a node might have more root peers
+* `TargetNumberOfKnownPeers` (_default value: `100`_) - a target of known peers (must be
+  larger or equal to `TargetNumberOfRootPeers`)
+* `TargetNumberOfEstablishedPeers` (_default value: `50`_) - a target of all established
+  peers (including local roots, ledger peers)
+* `TargetNumberOfActivePeers` (_default value: `20`_) - a target for _hot_ peers which
+  engage in the consensus protocol
+
+Let us note two more targets.  In the topology file you may include local root peers.
+This is a list of groups of peers, each group comes with its own valency.  The outbound
+governor will maintain a connection with every local root peer, and will enforce that at
+least the specified number of them (the valency) are _hot_.  Thus the
+`TargetNumberOfKnownPeers` , `TargetNumberOfEstablishedPeers` and
+`TargetNumberOfActivePeers` must be large enough to accommodate local root peers.
+
+The following traces can be enabled:
+
+* `TracePeerSelection` (_by default on_) - tracks selection of upstream peers done by the
+  _outbound-governor_.  **Warm peers** are ones with which we have an open connection but
+  don't engage in consensus protocol, **hot peers** are peers which engage in consensus
+  protocol (via `chain-sync`, `block-fetch` and `tx-submission` mini-protocols), **cold
+  peers** are ones which we know about but the node doesn't have an established
+  connection.  Note that the notions of _hot_, _warm_ and _cold_ are only related to usage
+  of initiator sides of mini-protocols in a connection (which can be either inbound or
+  outbound).
+* `TracePeerSelectionCounters` (_by default on_) - traces how many cold / warm / hot  /
+  local root peers the node has, it's also available via ekg.
+* `TracePeerStateActions` (_by default on_) - includes traces from a component which
+  executes peer promotion / demotions between cold / warm & hot states.
+* `TracePublicRootPeers` (_by default off_) - traces information about root / ledger peers
+  (e.g. ip addresses or dns names of ledger peers, dns resolution)
+* `DebugPeerSelectionInitiator` and `DebugPeerSelectionInitiatorResponder` (_by default
+  off_) - a debug tracers which log the information about current state of the _outbound
+  governor_.
+
+At this point [haddock
+documentation](https://input-output-hk.github.io/ouroboros-network/ouroboros-network/Ouroboros-Network-PeerSelection-Governor.html)
+of the outbound governor is available.
+
+#### Peer Sharing
+
+Peer Sharing is a novel feature that provides an additional method for the Outbound
+Governor to reach its targets for known peers. With Peer Sharing, the node can request
+peer information from other nodes with which it has an established connection.
+
+**IMPORTANT:** _Peer Sharing_ is an experimental feature that is turned off by default.
+Please be aware that until the availability of genesis & eclipse evasion, this feature may
+leave a node vulnerable to eclipse attacks.
+
+The main method for configuring Peer Sharing involves setting the following option:
+
+- `PeerSharing` (default value: `NoPeerSharing`) - This option can take 3 possible values:
+    * `NoPeerSharing`: Peer Sharing is disabled, which means the node won't request peer
+      information from any other node, and will not respond to such requests from others
+      (the mini-protocol won't even start);
+    * `PeerSharingPrivate`: Peer Sharing is enabled, meaning the node will query other
+      nodes for peers. However, during the handshake process, it will inform other nodes
+      not to share its address.
+    * `PeerSharingPublic`: Peer Sharing is enabled and the node will notify other nodes
+      that it is permissible to share its address.
+
+The `PeerSharing` flag interacts with `PeerAdvertise` (`advertise` flag in the topology
+file) values as follows:
+
+`AdvertisePeer` (`advertise: true`) is local to the configuration of a specific node. A
+node might be willing to share those peers it has set as `PeerAdvertise`. Conversely,
+`PeerSharing` is about whether the peer (itself) is willing to participate in
+`PeerSharing` or allows others to share its address.
+
+`PeerSharing` takes precedence over `AdvertisePeer`. Consider the following example:
+
+A Block Producer (BP) has the `NoPeerSharing` flag value (which means it won't participate
+in Peer Sharing or run the mini-protocol). A Relay node has the BP set as a local peer
+configured as `AdvertisePeer` (likely a misconfiguration). When the handshake between the
+BP and the Relay occurs, the Relay will see that the BP doesn't want to participate in
+Peer Sharing. As a result, it won't engage in peer sharing with it or share its details
+with others.
+
+The `combinePeerInformation` function determines the sharing interaction semantics between
+the two flags. Please take a look to better understand how the two values combine.
+
+```haskell
+-- Combine a 'PeerSharing' value and a 'PeerAdvertise' value into a
+-- resulting 'PeerSharing' that can be used to decide if we should
+-- share or not the given Peer. According to the following rules:
+--
+-- - If no PeerSharing value is known then there's nothing we can assess
+-- - If a peer is not participating in Peer Sharing ignore all other information
+-- - If a peer said it wasn't okay to share its address, respect that no matter what.
+-- - If a peer was privately configured with DoNotAdvertisePeer respect that no matter
+-- what.
+--
+combinePeerInformation :: PeerSharing -> PeerAdvertise -> PeerSharing
+combinePeerInformation NoPeerSharing      _                  = NoPeerSharing
+combinePeerInformation PeerSharingPrivate _                  = PeerSharingPrivate
+combinePeerInformation PeerSharingPublic  DoNotAdvertisePeer = PeerSharingPrivate
+combinePeerInformation _                         _           = PeerSharingPublic
+```
+
+#### Inbound Governor
+
+The inbound governor is maintaining responder side of all mini-protocols.  Unlike the
+outbound governor it is a purely responsive component which reacts to actions of remote
+peer (its outbound governor).
+
+* `TraceInboundGovernor` (_by default on_) - traces information about inbound connection,
+  e.g. we track if the remote side is using  our node as _warm_ or _hot peer_, traces when
+  we restart a responder.
+* `TraceInboundGovernorCounters` (_by default on_) - traces number of peers which use the
+  node as `cold`, `warm` or `hot` (which we call `remote cold`, `remote warm` or `remote
+  hot`).  Note that we only know if a peer is in the remote cold state if we connected to
+  that peer and it's not using the connection.   This information is also available via
+  ekg.
+* `TraceInboundGovernorTransitions` (_by default on_) - a debug tracer which traces
+  transitions between remote cold, remote warm and remote hot states.
+
+The inbound governor is documented in [The Shelley Networking
+Protocol](https://input-output-hk.github.io/ouroboros-network/pdfs/network-spec) (section
+4.5).
+
+#### Connection Manager
+
+Connection manager tracks the state of all tcp connections, and enforces various timeouts,
+e.g. when the connection is not used by either of the sides.  The following traces are
+available:
+
+* `TraceConnectionManager` (_by default on_) - traces information about new inbound or
+  outbound connection, connection errors.
+* `TraceConnectionManagerCounters` (_by default on_) - traces the number of inbound,
+  outbound, duplex (connections which negotiated P2P mode and can use a connection in full
+  duplex mode), full duplex (connections which run mini-protocols in both directions, e.g.
+  at least _warm_ and _remote warm_ at the same time), unidirectional connections
+  (connections with non p2p nodes, or p2p nodes which configured themselves as initiator
+  only nodes).
+* `TraceConnectionManagerTransitions` (_by default on_) - a low level traces which traces
+  connection state changes in the connection manager state machine.
+
+The connection manager is documented in [The Shelley Networking
+Protocol](https://input-output-hk.github.io/ouroboros-network/pdfs/network-spec) (section
+4).
+
+#### Ledger Peers
+
+Ledger peers are the relays registered on the chain.  Currently we use square of the stake
+distribution to randomly pick new ledger peers.   You can enable `TraceLedgerPeers` (_by
+default off_) to log actions taken by this component.
+
+#### Server
+
+The accept loop.  You can enable `TraceServer` to log its actions or errors it encounters
+(_by default it is off_, however we suggest to turn it on) .
+
+**Please note that this version contains no breaking changes**
