@@ -11,7 +11,6 @@ module  Cardano.TxGenerator.Utils
         (module Cardano.TxGenerator.Utils)
         where
 
-import           Control.Monad.Trans.Except (ExceptT, throwE)
 import           Data.Maybe (fromJust)
 
 import           Cardano.Api as Api
@@ -39,25 +38,13 @@ keyAddress networkId k
       (PaymentCredentialByKey $ verificationKeyHash $ getVerificationKey k)
       NoStakeAddress
 
--- TODO: old TODO comment also said to check minimumValuePerUtxo
--- A different variable may need to be consulted now.
--- | 'inputsToOutputsWithFee' is what actually does the division
--- for 'Cardano.Benchmarking.Script.Env.SplitN', but the result
--- may not be positive if the fee exceeds the total. If so, an
--- exception is thrown, but the normal exception types risk
--- circular imports, so this ended up using a string and expects
--- callers to use 'Control.Monad.Trans.Except.withExceptT' to put
--- the strings inside of tagged data structures.
-inputsToOutputsWithFee :: Monad m => Lovelace -> Int -> [Lovelace] -> ExceptT String m [Lovelace]
-inputsToOutputsWithFee fee count inputs =
-  if total < fee then throwE $ "inputsToOutputs: insufficient funds "
-                               ++ show total ++ " < " ++ show fee
-                 else return . map (quantityToLovelace . Quantity)
-                             $ (out + rest) : replicate (count-1) out
+-- TODO: check sufficient funds and minimumValuePerUtxo
+inputsToOutputsWithFee :: Lovelace -> Int -> [Lovelace] -> [Lovelace]
+inputsToOutputsWithFee fee count inputs = map (quantityToLovelace . Quantity) outputs
   where
-    total = sum inputs
-    Quantity totalAvailable = lovelaceToQuantity $ total - fee
+    (Quantity totalAvailable) = lovelaceToQuantity $ sum inputs - fee
     (out, rest) = divMod totalAvailable (fromIntegral count)
+    outputs = (out + rest) : replicate (count-1) out
 
 -- | 'includeChange' gets use made of it as a value splitter in
 -- 'Cardano.TxGenerator.Tx.sourceToStoreTransactionNew' by
