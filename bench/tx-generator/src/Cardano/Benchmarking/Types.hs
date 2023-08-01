@@ -10,8 +10,8 @@ module Cardano.Benchmarking.Types
   ( module Cardano.Benchmarking.Types
   ) where
 
-import           GHC.Generics (Generic)
 import           Data.Aeson (ToJSON)
+import           GHC.Generics (Generic)
 
 
 -- | Transactions we decided to announce now.
