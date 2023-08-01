@@ -438,6 +438,20 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
         localRootsVar <- newTVarIO localRoots
         publicRootsVar <- newTVarIO publicRoots
         useLedgerVar   <- newTVarIO (useLedgerAfterSlot nt)
+#ifdef UNIX
+        -- initial `SIGHUP` handler, which only rereads the topology file but
+        -- doesn't update block forging.  The latter is only possible once
+        -- consensus initialised (e.g. reapplied all blocks).
+        _ <- Signals.installHandler
+              Signals.sigHUP
+              (Signals.Catch $ do
+                updateTopologyConfiguration
+                  (startupTracer tracers) nc
+                  localRootsVar publicRootsVar useLedgerVar
+                traceWith (startupTracer tracers) (BlockForgingUpdate NotEffective)
+              )
+              Nothing
+#endif
         void $
           let diffusionArgumentsExtra =
                 mkP2PArguments nc
@@ -448,6 +462,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
           Node.run
             nodeArgs {
                 rnNodeKernelHook = \registry nodeKernel -> do
+                  -- reinstall `SIGHUP` handler
                   installP2PSigHUPHandler (startupTracer tracers) blockType nc nodeKernel
                                           localRootsVar publicRootsVar useLedgerVar
                   rnNodeKernelHook nodeArgs registry nodeKernel
@@ -481,10 +496,23 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                            | (NodeAddress (NodeHostIPAddress addr) port) <- ipProducerAddrs
                            ]
                            (length ipProducerAddrs)
+#ifdef UNIX
+        -- initial `SIGHUP` handler; it only warns that neither updating of
+        -- topology is supported nor updating block forging is yet possible.
+        -- It is still useful, without it the node would terminate when
+        -- receiving `SIGHUP`.
+        _ <- Signals.installHandler
+              Signals.sigHUP
+              (Signals.Catch $ do
+                traceWith (startupTracer tracers) NetworkConfigUpdateUnsupported
+                traceWith (startupTracer tracers) (BlockForgingUpdate NotEffective))
+              Nothing
+#endif
         void $
           Node.run
             nodeArgs {
                 rnNodeKernelHook = \registry nodeKernel -> do
+                  -- reinstall `SIGHUP` handler
                   installNonP2PSigHUPHandler (startupTracer tracers) blockType nc nodeKernel
                   rnNodeKernelHook nodeArgs registry nodeKernel
             }

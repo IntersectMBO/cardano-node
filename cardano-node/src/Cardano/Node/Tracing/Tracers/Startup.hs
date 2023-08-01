@@ -493,6 +493,8 @@ ppStartupInfoTrace (BlockForgingUpdate b) =
             "Disabling block forging, to enable it please make the credentials "
           <> "files available again and then re-trigger reconfiguration via SIGHUP "
           <> "signal."
+        NotEffective ->
+             "Changing block forging is not effective until consensus has started. "
 
 ppStartupInfoTrace (BlockForgingUpdateError err) =
   "Block forging reconfiguration error: "
