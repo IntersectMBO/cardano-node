@@ -1,5 +1,12 @@
 # Changelog for cardano-node
 
+# 8.2.1 -- August 2023
+
+- prevent SIGHUP from killing node during ledger replay
+- upgrade cardano-cli to 8.4.1.0
+- upgrade cardano-api to 8.10.2.0
+
+
 # 8.2.0 -- July 2023
 
 ### node changes
