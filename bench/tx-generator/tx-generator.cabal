@@ -59,6 +59,7 @@ library
                         Cardano.Benchmarking.Script.Aeson
                         Cardano.Benchmarking.Script.Core
                         Cardano.Benchmarking.Script.Env
+                        Cardano.Benchmarking.Script.PureAPI
                         Cardano.Benchmarking.Script.Selftest
                         Cardano.Benchmarking.Script.Types
                         Cardano.Benchmarking.TpsThrottle
@@ -120,6 +121,7 @@ library
                       , generic-monoid
                       , ghc-prim
                       , io-classes
+                      , iproute
                       , mtl
                       , network
                       , network-mux
