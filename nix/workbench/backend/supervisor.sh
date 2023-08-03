@@ -25,8 +25,10 @@ case "$op" in
                 grep ':9001 '             |
                 wc -l)" = "0" ||
             echo 'supervisord'
+        # `pgrep` piped to `wc -l` instead "--count" to make it Mac comptible
+        # Also only shorthand options: like `-x` instead of `--exact`
         for exe in 'cardano-node' 'tx-generator' 'cardano-tracer'
-        do test $(pgrep --exact --count $exe)   = 0 || echo $exe
+        do test $(pgrep -x $exe | wc -l)   = 0 || echo $exe
         done
         ;;
 
@@ -176,7 +178,7 @@ EOF
 
         # Avoid buffer related problems with stdout and stderr disabling buffering
         # https://docs.python.org/3/using/cmdline.html#envvar-PYTHONUNBUFFERED
-        if ! PYTHONUNBUFFERED=TRUE supervisord --config  "$dir"/supervisor/supervisord.conf $@
+        if ! PYTHONUNBUFFERED=TRUE supervisord --config "$dir"/supervisor/supervisord.conf $@ >"$dir"/supervisor/stderr 2>"$dir"/supervisor/stderr
         then progress "supervisor" "$(red fatal: failed to start) $(white supervisord)"
              echo "$(red supervisord.conf) --------------------------------" >&2
              cat "$dir"/supervisor/supervisord.conf
@@ -325,6 +327,8 @@ EOF
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
+        # This flag/file makes `scenario_watcher` exit
+        touch ${dir}/flag/cluster-stopping
         if test -f ${dir}/supervisor/supervisord.pid -a \
                 -f ${dir}/supervisor/child.pids
         then kill $(<${dir}/supervisor/supervisord.pid) $(<${dir}/supervisor/child.pids) 2>/dev/null
@@ -385,4 +389,23 @@ EOF
         ;;
 
     * ) usage_supervisor;; esac
+}
+
+###############################################################################
+# Debugging ###################################################################
+###############################################################################
+
+if test -n "${SUPERVISOR_DEBUG:-}"
+then
+  exec 5> "$(dirname "$(readlink -f "$0")")"/supervisor.sh.debug
+  BASH_XTRACEFD="5"
+  PS4='$LINENO: '
+  set -x
+fi
+
+debugMsg() {
+  if test -n "${SUPERVISOR_DEBUG:-}"
+  then
+    >&2 echo -e "\n\n\t\t----------$1\n"
+  fi
 }

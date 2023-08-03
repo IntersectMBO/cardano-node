@@ -729,7 +729,8 @@ deploy-genesis-nomadcloud() {
     then
       wb_nomad agents stop "${server_name}" "${client_name}" "exec"
     fi
-    backend_nomad stop-nomad-job "${dir}"
+    # Already "fatal" -> ignore errors!
+    backend_nomad stop-nomad-job "${dir}" || true
     fatal "Failed to upload genesis"
   fi
 
@@ -738,6 +739,9 @@ deploy-genesis-nomadcloud() {
   if ! backend_nomad deploy-genesis-wget "${dir}" "${uri}"
   then
     # File kept for debugging!
+    msg "$(red "FATAL: deploy-genesis-wget \"${dir}\" \"${uri}\"")"
+    # Already "fatal" -> ignore errors!
+    backend_nomad stop-nomad-job "${dir}" || true
     fatal "Deploy of genesis \"${uri}\" failed"
   else
     msg "$(green "Genesis \"${uri}\" deployed successfully")"
@@ -746,12 +750,13 @@ deploy-genesis-nomadcloud() {
     aws s3 rm                                         \
       s3://"${s3_bucket_name}"/"${genesis_file_name}" \
       --region "${s3_region}"                         \
-    || true
+    || true # Ignore errors when doing clean ups!
     # Reminder to remove old files.
     msg "Still available files at $(yellow "\"s3://${s3_bucket_name}\""):"
     aws s3 ls                   \
       s3://"${s3_bucket_name}"/ \
-      --region "${s3_region}"
+      --region "${s3_region}"   \
+    || true # Ignore errors when doing clean ups!
   fi
 }
 
