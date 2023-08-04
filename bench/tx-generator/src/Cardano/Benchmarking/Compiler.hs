@@ -189,9 +189,6 @@ unfoldSplitSequence fee value outputs
 benchmarkingPhase :: String -> Maybe String -> Compiler String
 benchmarkingPhase wallet collateralWallet = do
   debugMode <- askNixOption _nix_debugMode
-  targetNodes <- askNixOption _nix_targetNodes
-  tps <- askNixOption _nix_tps
-  era <- askNixOption _nix_era
   txCount <- askNixOption _nix_tx_count
   inputs <- askNixOption _nix_inputs_per_tx
   outputs <- askNixOption _nix_outputs_per_tx
@@ -199,14 +196,29 @@ benchmarkingPhase wallet collateralWallet = do
   doneWallet <- newWallet "done_wallet"
   let
     payMode = PayToAddr keyNameBenchmarkDone doneWallet
-    submitMode = if debugMode
-        then LocalSocket
-        else Benchmark targetNodes "tx-submit-benchmark" tps txCount
-    generator = Take txCount $ Cycle $ NtoM wallet payMode inputs outputs (Just $ txParamAddTxSize txParams) collateralWallet
-  emit $ Submit era submitMode txParams generator
+    generator = Take txCount
+              . Cycle
+              . flip (NtoM wallet payMode inputs outputs) collateralWallet
+              . Just
+              $ txParamAddTxSize txParams
+  benchmarkingPhaseCore generator
   unless debugMode $ do
     emit $ WaitBenchmark "tx-submit-benchmark"
   return doneWallet
+
+benchmarkingPhaseCore :: Generator -> Compiler ()
+benchmarkingPhaseCore generator = do
+  debugMode <- askNixOption _nix_debugMode
+  targetNodes <- askNixOption _nix_targetNodes
+  txCount <- askNixOption _nix_tx_count
+  txParams <- askNixOption txGenTxParams
+  tps <- askNixOption _nix_tps
+  era <- askNixOption _nix_era
+  let
+    submitMode = if debugMode
+        then LocalSocket
+        else Benchmark targetNodes "tx-submit-benchmark" tps txCount
+  emit $ Submit era submitMode txParams generator
 
 data Fees = Fees {
     _safeCollateral :: Lovelace
