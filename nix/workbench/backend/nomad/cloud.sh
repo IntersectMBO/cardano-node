@@ -167,36 +167,51 @@ setenv-defaults-nomadcloud() {
   local profile_container_specs_file
   profile_container_specs_file="${backend_dir}"/container-specs.json
 
-  # If the most important `nomad` cli envars is present this is not a local
-  # test, I repeat, this is not a drill =)
-  if test -z "${NOMAD_ADDR:-}"
+  if test -z "${NOMAD_ADDR+set}"
   then
+    # The variable is not set, not set but empty, just not set!
     msg $(yellow "WARNING: Nomad address \"NOMAD_ADDR\" envar is not set")
+    # TODO: New Nomad cluster:export NOMAD_ADDR=http://10.200.0.1:4646
     export NOMAD_ADDR="https://nomad.world.dev.cardano.org"
     msg $(blue "INFO: Setting \"NOMAD_ADDR\" to the SRE provided address for \"Performance and Tracing\" (\"${NOMAD_ADDR}\")")
   else
+    # The variable is set and maybe empty!
+    msg $(blue "INFO: Nomad address \"NOMAD_ADDR\" envar is \"${NOMAD_ADDR}\"")
     if test "${NOMAD_ADDR}" != "https://nomad.world.dev.cardano.org"
     then
       msg $(yellow "WARNING: Nomad address \"NOMAD_ADDR\" envar is not \"https://nomad.world.dev.cardano.org\"")
     fi
   fi
   # The abscence of `NOMAD_NAMESPACE` or `NOMAD_TOKEN` needs confirmation
-  if test -z "${NOMAD_NAMESPACE:-}"
+  if test -z ${NOMAD_NAMESPACE+set}
   then
+    # The variable is not set, not set but empty, just not set!
     msg $(yellow "WARNING: Nomad namespace \"NOMAD_NAMESPACE\" envar is not set")
+    # TODO: New Nomad cluster: export NOMAD_NAMESPACE=""
     export NOMAD_NAMESPACE="perf"
     msg $(blue "INFO: Setting \"NOMAD_NAMESPACE\" to the SRE provided namespace for \"Performance and Tracing\" (\"${NOMAD_NAMESPACE}\")")
   else
+    # The variable is set and maybe empty!
+    msg $(blue "INFO: Nomad namespace \"NOMAD_NAMESPACE\" envar is \"${NOMAD_NAMESPACE}\"")
     if test "${NOMAD_NAMESPACE}" != "perf"
     then
       msg $(yellow "WARNING: Nomad namespace \"NOMAD_NAMESPACE\" envar is not \"perf\"")
     fi
   fi
-  if test -z "${NOMAD_TOKEN:-}"
+  if test -z "${NOMAD_TOKEN+set}"
   then
+    # The variable is not set, not set but empty, just not set!
     msg $(yellow "WARNING: Nomad token \"NOMAD_TOKEN\" envar is not set")
-    msg $(blue "INFO: Fetching a \"NOMAD_TOKEN\" from SRE provided Vault for \"Performance and Tracing\"")
-    export NOMAD_TOKEN="$(wb_nomad vault world nomad-token)"
+    msg $(yellow "If you need to fetch a NOMAD_TOKEN for world.dev.cardano.org provide an empty string")
+  else
+    # The variable is set and maybe empty!
+    if test -z "${NOMAD_TOKEN}"
+    then
+      msg $(blue "INFO: Fetching a \"NOMAD_TOKEN\" from SRE provided Vault for \"Performance and Tracing\"")
+      export NOMAD_TOKEN="$(wb_nomad vault world nomad-token)"
+    else
+      msg $(blue "INFO: Using provided Nomad token \"NOMAD_TOKEN\" envar")
+    fi
   fi
   # Check all the AWS S3 envars needed for the HTTP PUT request
   # Using same names as the AWS CLI
@@ -284,8 +299,16 @@ allocate-run-nomadcloud() {
     > "${dir}"/nomad/nomad-job.json
   fi
   # The job file is "slightly" modified (jq) to suit the running environment.
-  backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" "${NOMAD_NAMESPACE}"
-  backend_nomad allocate-run-nomad-job-patch-nix       "${dir}"
+  if test -n "${NOMAD_NAMESPACE:-}"
+  then
+    # This sets only the global namespace, the job level namespace. Not groups!
+    backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" "${NOMAD_NAMESPACE}"
+  else
+    # Empty the global namespace
+    backend_nomad allocate-run-nomad-job-patch-namespace "${dir}"
+  fi
+  # Will set the flake URIs from ".installable" in container-specs.json
+  backend_nomad allocate-run-nomad-job-patch-nix "${dir}"
 
   # Set the placement info and resources accordingly
   local nomad_job_name
@@ -348,12 +371,12 @@ allocate-run-nomadcloud() {
     ########################################################################
     local group_constraints_array
     # "perf" class nodes are the default unless the profile name contains
-    # "cw-qa", we try to limit the usage of Nomad nodes that are not
-    # dedicated Perf team nodes.
-    # But also, we have to be careful that "perf" runs do not overlap. We
-    # are making "perf" class nodes runs can't clash because service names
-    # and resources definitions currently won't allow that to happen but
-    # still a new "perf" run may mess up a previously running cluster.
+    # "cw-qa", we try to limit the usage of Nomad nodes that are not dedicated
+    # Perf team nodes.
+    # But also, we have to be careful that "perf" runs do not overlap. We are
+    # making sure "perf" class nodes runs can't clash because service names
+    # and resources definitions currently won't allow that to happen but a new
+    # "perf" run may still mess up a previously running cluster.
     if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-qa"
     then
       # Using "qa" class distinct nodes. Only "short" test allowed here.
@@ -366,29 +389,42 @@ allocate-run-nomadcloud() {
           }
         ]
       '
-    else
+    elif test -n "${NOMAD_NAMESPACE:-}"
+    then
       # Using Performance & Tracing exclusive "perf" class distinct nodes!
-      group_constraints_array='
-        [
-          {
-            "operator":  "="
-          , "attribute": "${node.class}"
-          , "value":     "perf"
-          }
-        ]
-      '
+      group_constraints_array="                   \
+        [                                         \
+          {                                       \
+            \"operator\":  \"=\"                  \
+          , \"attribute\": \"\${node.class}\"     \
+          , \"value\":     \"${NOMAD_NAMESPACE}\" \
+          }                                       \
+        ]                                         \
+      "
     fi
-    # Adds it as a group level contraint.
-      jq \
-        --argjson group_constraints_array "${group_constraints_array}" \
-        ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries(.value.constraint = \$group_constraints_array)" \
-        "${dir}"/nomad/nomad-job.json \
-    | \
-      sponge "${dir}"/nomad/nomad-job.json
+    # It there something to change related to group constraints ?
+    # Sets or deletes all groups level constraints.
+    if test -n "${group_constraints_array:-}"
+    then
+      # Adds it as a group level contraint to all groups.
+        jq \
+          --argjson group_constraints_array "${group_constraints_array}" \
+          ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries(.value.constraint = \$group_constraints_array)" \
+          "${dir}"/nomad/nomad-job.json \
+      | \
+        sponge "${dir}"/nomad/nomad-job.json
+    else
+      # Else, empties all group level constraints, like previous namespaces.
+        jq \
+          ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries(.value.constraint = null)" \
+          "${dir}"/nomad/nomad-job.json \
+      | \
+        sponge "${dir}"/nomad/nomad-job.json
+    fi
     ########################################################################
     # Memory/resources: ####################################################
     ########################################################################
-    # Set the resources, only for perf!
+    # Set the resources, only for perf exlusive cloud runs!
     # When not "perf", when "cw-qa", only "short" tests are allowed on
     # whatever resources we are given.
     if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"

@@ -91,9 +91,10 @@ let
       # The SUPERVISORD_CONFIG variable must be set
       [ -z "''${SUPERVISORD_CONFIG:-}" ] && echo "SUPERVISORD_CONFIG env var must be set -- aborting" && exit 1
 
-      # Create symlink to 'supervisor' Nix folder so we can call it from 'ssh'
-      #  or 'nomad exec' without having to know the currently version running.
-      # First check if already exists to be able to restart containers.
+      # Create a symlink to 'supervisor' Nix Store folder so we can call it from
+      # 'ssh' or 'nomad exec' without having it in PATH or knowing the currently
+      # running version. But first check if it already exists to be able to
+      # restart containers without errors.
       if ! test -e "''${SUPERVISOR_NIX}"
       then
         ${coreutils}/bin/ln -s "${supervisor}" "''${SUPERVISOR_NIX}"
@@ -163,7 +164,7 @@ let
     # namespace can be specified either with the flag -namespace or read from
     # the NOMAD_NAMESPACE environment variable."
     # https://developer.hashicorp.com/nomad/tutorials/manage-clusters/namespaces
-    namespace = "perf";
+    namespace = "perf"; # Default to "perf" to avoid errors were possible.
 
     # The region in which to execute the job.
     region = "global"; # SRE: They are actually using global.
@@ -270,10 +271,12 @@ let
         constraint = {
           attribute = "\${node.class}";
           operator = "=";
-          # For cloud benchmarking dedicated static machines in the "perf"
-          # class are used. We replicate that for local/test runs.
-          # Class "qa" nodes are also available but must be limited to short
-          # test and avoid using "infra" node class as HA jobs runs there.
+          # For cloud benchmarking, dedicated static machines in the "perf"
+          # class are used. We mimic that for local/test runs.
+          # This default is just a precaution, like the top level namespace,
+          # because there are also available "qa" Class nodes but usage of these
+          # must be limited to short test and "infra" Class nodes are used for
+          # HA jobs and must be avoided entirely.
           value = "perf";
         };
 
@@ -389,8 +392,22 @@ let
 
           # Specifies environment variables that will be passed to the running
           # process.
-          # `null` because we are using a "template" (see below).
-          env = {};
+          env = {
+            # The "old Nomad" setup somehow included the CA certs inside the
+            # task namespace but apparently not "new Nomad". We are adding the
+            # necessary Nix package ("cacert") and making sure `wget` finds it.
+            #
+            # "All nix-docker images set environment variables which point to
+            # cacert.", see:
+            # - https://github.com/NixOS/nixpkgs/issues/48211#issuecomment-434102565
+            # - https://github.com/LnL7/nix-docker/blob/8dcfb3aff1f87cdafeecb0d27964b27c3fb8b1d2/default.nix#L70-L71
+            #
+            # Error when using `wget` to deploy the genesis tar file was:
+            # ERROR: cannot verify iog-cardano-perf.s3.eu-central-1.amazonaws.com's certificate, issued by 'CN=Amazon RSA 2048 M01,O=Amazon,C=US':
+            # Unable to locally verify the issuer's authority.
+            # To connect to iog-cardano-perf.s3.eu-central-1.amazonaws.com insecurely, use `--no-check-certificate'.
+            SSL_CERT_FILE = "${containerSpecs.containerPkgs.cacert.nix-store-path}/etc/ssl/certs/ca-bundle.crt";
+          };
 
           # Sensible defaults to run cloud version of "default", "ci-test" and
           # "ci-bench" in cardano-world qa class Nomad nodes.
@@ -434,7 +451,7 @@ let
               # When using Cardano World (nomad.world.dev.cardano.org) "perf"
               # class nodes we use public IPs/routing, all the other cloud runs
               # are behind a VPC/firewall. Local runs just use 12.0.0.1.
-              if lib.strings.hasPrefix "cw-perf" profileData.profileName
+              if lib.strings.hasInfix "cw-perf" profileData.profileName
               then "\${attr.unique.platform.aws.public-ipv4}"
               else ""
             ;
@@ -1161,17 +1178,19 @@ let
         # Port string from
         ''--port ${toString nodeSpec.port}''
       ]
-      # On cloud deployments with cardano world, that uses AWS, the hosts at the
-      # Linux level aren't aware of the EIP public address they have, so the
-      # private IP is the only network interface address to bind to.
-      # An alternative is to bind to 0.0.0.0 but I prefer being more specific.
+      # On cloud deployments to SRE-managed Nomad, that uses AWS, the hosts at
+      # Linux level may not be aware of the EIP public address they have so we
+      # can't bind to the public IP (that we can resolve to using templates).
+      # I prefer being more specific but the "all-weather" alternative is to
+      # bind to 0.0.0.0 instead of the private IP, just in case the Nomad Client
+      # was not started with the correct `-network-interface XX` parameter.
       [
         # Address string to
-        ''--host-addr {{ env "NOMAD_HOST_IP_${servicePortName}" }}''
+        ''--host-addr 0.0.0.0''
         # Alternatives (may not work):
+        #''--host-addr {{ env "NOMAD_HOST_IP_${servicePortName}" }}''
         #''--host-addr {{ env "NOMAD_IP_${servicePortName}" }}''
         #''--host-addr {{range nomadService "${servicePortName}"}}{{.Address}}{{end}}''
-        #''--host-addr 0.0.0.0''
 
         # Port string to
         ''--port {{ env "NOMAD_HOST_PORT_${servicePortName}" }}''

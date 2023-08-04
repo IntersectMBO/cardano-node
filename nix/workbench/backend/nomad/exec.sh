@@ -162,8 +162,10 @@ allocate-run-nomadexec() {
     "${dir}"/container-specs.json              \
   > "${dir}"/nomad/nomad-job.json
   # The job file is "slightly" modified (jq) to suit the running environment.
-  backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" "default"
-  backend_nomad allocate-run-nomad-job-patch-nix       "${dir}"
+  ## Empty the global namespace. Local runs ignore "${NOMAD_NAMESPACE:-}"
+  backend_nomad allocate-run-nomad-job-patch-namespace "${dir}"
+  # Will set the /nix/store paths from ".nix-store-path" in container-specs.json
+  backend_nomad allocate-run-nomad-job-patch-nix "${dir}"
 }
 
 deploy-genesis-nomadexec() {

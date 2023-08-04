@@ -223,11 +223,24 @@ backend_nomad() {
 
     allocate-run-nomad-job-patch-namespace )
       local usage="USAGE: wb backend $op RUN-DIR NAMESPACE"
-      local dir=${1:?$usage};       shift
-      local namespace=${1:?$usage}; shift
+      local dir=${1:?$usage}; shift
       local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-      msg "Setting Nomad job namespace to \"${namespace}\""
-      jq ".job[\"${nomad_job_name}\"][\"namespace\"] = \"${namespace}\"" "${dir}"/nomad/nomad-job.json | sponge "${dir}"/nomad/nomad-job.json
+      if test $# -gt 0 && test -n "${1}"
+      then
+        local namespace
+        namespace="${1:?$usage}"; shift
+        msg "Setting Nomad job top level namespace to \"${namespace}\""
+          jq                                                                \
+            ".job[\"${nomad_job_name}\"][\"namespace\"] = \"${namespace}\"" \
+            "${dir}"/nomad/nomad-job.json                                   \
+        | sponge "${dir}"/nomad/nomad-job.json
+      else
+        msg "Setting Nomad job top level namespace to null"
+          jq                                                                \
+            ".job[\"${nomad_job_name}\"][\"namespace\"] = null"             \
+            "${dir}"/nomad/nomad-job.json                                   \
+        | sponge "${dir}"/nomad/nomad-job.json
+      fi
     ;;
 
     allocate-run-nomad-job-patch-nix )

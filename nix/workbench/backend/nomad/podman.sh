@@ -163,7 +163,8 @@ allocate-run-nomadpodman() {
     "${dir}"/container-specs.json              \
   > "${dir}"/nomad/nomad-job.json
   # The job file is "slightly" modified (jq) to suit the running environment.
-  backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" "default"
+  ## Empty the global namespace. Local runs ignore "${NOMAD_NAMESPACE:-}"
+  backend_nomad allocate-run-nomad-job-patch-namespace "${dir}"
   podman_create_image "${dir}"
   # Make sure the "genesis-volume" dir is present when the Nomad job is
   # started because with the podman task driver (always local, not used for
