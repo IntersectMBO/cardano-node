@@ -44,7 +44,7 @@
 `trace-dispatcher` is an attempt to enable design and implementation of simple, efficient __tracing systems__, one that has a reduced footprint in the executed program, has a more pleasant API, and provides self-documenting features.
 
 For a quick start into new tracing see the document
-[New Tracing Quickstart](https://github.com/input-output-hk/cardano-node/blob/master/doc/New%20Tracing%20Quickstart.md)
+[New Tracing Quickstart](https://github.com/input-output-hk/cardano-node-wiki/wiki/New-Tracing-Quickstart)
 
 
 ## Design decisions
@@ -762,7 +762,7 @@ runTraceDocumentationCmd
   -> IO ()
 ```
 
-A periodically generated documentation of the tracers can be found in the cardano-node repository in the path `cardano-node/doc/new-tracing/tracers_doc_generated.md`
+A periodically generated documentation of the tracers can be found in the cardano-node-wiki repository in the path `https://github.com/input-output-hk/cardano-node-wiki/blob/main/docs/new-tracing/tracers_doc_generated.md`
 
 
 # Appendix
@@ -772,11 +772,11 @@ A periodically generated documentation of the tracers can be found in the cardan
 This is a document which is regenerated periodically and documents all trace-messages,  metrics and data-points in cardano-node. It as well displays the handling of these
 messages with the current default configuration:
 
-[Generated Cardano Trace Documentation](https://github.com/input-output-hk/cardano-node/blob/master/doc/new-tracing/tracers_doc_generated.md)
+[Generated Cardano Trace Documentation](https://github.com/input-output-hk/cardano-node-wiki/wiki/tracers_doc_generated)
 
 For a quick start into new tracing see the document:
 
-[New Tracing Quickstart](https://github.com/input-output-hk/cardano-node/blob/master/doc/New%20Tracing%20Quickstart.md)
+[New Tracing Quickstart](https://github.com/input-output-hk/cardano-node-wiki/wiki/New-Tracing-Quickstart)
 
 This document describes a separate service for logging and monitoring Cardano nodes:
 
