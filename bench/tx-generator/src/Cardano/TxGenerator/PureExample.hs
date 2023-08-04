@@ -1,5 +1,4 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
@@ -8,10 +7,8 @@ module  Cardano.TxGenerator.PureExample
         where
 
 import           Control.Monad (foldM)
-import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.State.Strict
 import           Data.Either (fromRight)
-import           Data.Functor.Identity (runIdentity)
 import           Data.List (foldl')
 import           Data.String (fromString)
 import           System.Exit (die)
@@ -95,16 +92,13 @@ type Generator = State FundQueue
 generateTx ::
      TxEnvironment BabbageEra
   -> Generator (Either TxGenError (Tx BabbageEra))
-generateTx TxEnvironment{..} = do
-  funds' <- consumeInputFunds
-  case funds' of
-    Left err -> pure $ Left err
-    Right funds -> runExceptT $ sourceToStoreTransaction
-                                    generator
-                                    funds
-                                    computeOutputValues
-                                    (makeToUTxOList $ repeat computeUTxO)
-                                    addNewOutputFunds
+generateTx TxEnvironment{..}
+  = sourceToStoreTransaction
+        generator
+        consumeInputFunds
+        computeOutputValues
+        (makeToUTxOList $ repeat computeUTxO)
+        addNewOutputFunds
   where
     TxFeeExplicit _ fee = txEnvFee
 
@@ -125,8 +119,8 @@ generateTx TxEnvironment{..} = do
     addNewOutputFunds :: [Fund] -> Generator ()
     addNewOutputFunds = put . foldl' insertFund emptyFundQueue
 
-    computeOutputValues :: Monad m => [Lovelace] -> ExceptT TxGenError m [Lovelace]
-    computeOutputValues = withExceptT TxGenError . inputsToOutputsWithFee fee numOfOutputs
+    computeOutputValues :: [Lovelace] -> [Lovelace]
+    computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
     computeUTxO = mkUTxOVariant txEnvNetworkId signingKey
@@ -148,8 +142,6 @@ generateTxPure ::
   -> Either TxGenError (Tx BabbageEra, FundQueue)
 generateTxPure TxEnvironment{..} inQueue
   = do
-      outValues <- runIdentity . runExceptT . withExcept TxGenError . computeOutputValues $ map getFundLovelace inputs
-      let (outputs, toFunds) = makeToUTxOList (repeat computeUTxO) outValues
       (tx, txId) <- generator inputs outputs
       let outQueue = foldl' insertFund emptyFundQueue (toFunds txId)
       pure (tx, outQueue)
@@ -164,7 +156,10 @@ generateTxPure TxEnvironment{..} inQueue
         collateralFunds :: (TxInsCollateral BabbageEra, [Fund])
         collateralFunds = (TxInsCollateralNone, [])
 
-    computeOutputValues :: Monad m => [Lovelace] -> ExceptT String m [Lovelace]
+    outValues = computeOutputValues $ map getFundLovelace inputs
+    (outputs, toFunds) = makeToUTxOList (repeat computeUTxO) outValues
+
+    computeOutputValues :: [Lovelace] -> [Lovelace]
     computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
