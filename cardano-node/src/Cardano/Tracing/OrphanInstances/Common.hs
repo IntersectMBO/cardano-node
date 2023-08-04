@@ -40,12 +40,9 @@ module Cardano.Tracing.OrphanInstances.Common
   ) where
 
 import           Data.Aeson hiding (Value)
-import qualified Data.ByteString.Base16 as B16
-import qualified Data.ByteString.Short as SBS
 import           Data.Scientific (coefficient)
 import           Data.Text (Text)
 import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
 import           Data.Void (Void)
 import           Network.Socket (PortNumber)
 import           Text.Read (readMaybe)
@@ -59,9 +56,6 @@ import           Cardano.BM.Tracing (HasPrivacyAnnotation (..), HasSeverityAnnot
                    Severity (..), ToObject (..), Tracer (..), TracingVerbosity (..),
                    Transformable (..))
 import           Cardano.Node.Handlers.Shutdown ()
-import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
-import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
-import           Ouroboros.Network.Block (HeaderHash, Tip (..))
 -- | A bit of a weird one, but needed because some of the very general
 -- consensus interfaces are sometimes instantiated to 'Void', when there are
 -- no cases needed.
@@ -87,21 +81,6 @@ instance FromJSON PortNumber where
     Nothing -> fail $ show portNum <> " is not a valid port number."
   parseJSON invalid  = fail $ "Parsing of port number failed due to type mismatch. "
                             <> "Encountered: " <> show invalid
-
-instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
-  toJSON TipGenesis = object [ "genesis" .= True ]
-  toJSON (Tip slotNo headerHash blockNo) =
-    object
-      [ "slotNo"     .= slotNo
-      , "headerHash" .= headerHash
-      , "blockNo"    .= blockNo
-      ]
-
-instance ToJSON (OneEraHash xs) where
-  toJSON (OneEraHash bs) =
-    toJSON . Text.decodeLatin1 . B16.encode . SBS.fromShort $ bs
-
-deriving newtype instance ToJSON ByronHash
 
 instance HasPrivacyAnnotation  ResourceStats
 instance HasSeverityAnnotation ResourceStats where

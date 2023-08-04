@@ -39,9 +39,9 @@ library
                       , aeson
                       , async
                       , bytestring
-                      , cardano-api ^>= 8.10
+                      , cardano-api ^>= 8.12
                       , cardano-binary
-                      , cardano-cli ^>= 8.4
+                      , cardano-cli ^>= 8.5
                       , cardano-crypto-class ^>= 2.1
                       , cardano-ledger-byron ^>= 1.0
                       , formatting
@@ -86,7 +86,7 @@ executable cardano-submit-api
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-T -I0"
   build-depends:        base
                       , optparse-applicative-fork
-                      , cardano-cli ^>= 8.4
+                      , cardano-cli ^>= 8.5
                       , cardano-crypto-class ^>= 2.1
                       , cardano-submit-api
 
