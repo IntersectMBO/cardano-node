@@ -6,8 +6,7 @@
 # NB - The last matching pattern takes precedence
 
 # Technical writers
-# /doc folder and README.* needs to be owned by @docs-access
-doc/                                                          @input-output-hk/docs-access @input-output-hk/core-tech
+# README.* needs to be owned by @docs-access
 README.*                                                      @input-output-hk/docs-access @input-output-hk/core-tech
 CONTRIBUTING.rst                                              @input-output-hk/docs-access @input-output-hk/core-tech
 

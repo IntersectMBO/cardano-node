@@ -96,7 +96,7 @@ None
   (input-output-hk/ouroboros-network#4357).
 
 [#4563]: https://github.com/input-output-hk/cardano-node/issues/4563
-[understanding-config-files]: https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/understanding-config-files.md
+[understanding-config-files]: https://github.com/input-output-hk/cardano-node-wiki/wiki/understanding-config-files
 
 ## 1.35.5 -- November 2022
 
