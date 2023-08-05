@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Tracing.HasIssuer

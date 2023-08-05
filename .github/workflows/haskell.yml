@@ -25,13 +25,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ["9.2.7"]
+        ghc: ["9.2.7", "9.6.2"]
         cabal: ["3.10.1.0"]
         os: [macos-latest, windows-latest]
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2023-07-11"
+      CABAL_CACHE_VERSION: "2023-07-27"
 
       # Modify this value to "invalidate" the secp cache.
       SECP_CACHE_VERSION: "2022-12-30"

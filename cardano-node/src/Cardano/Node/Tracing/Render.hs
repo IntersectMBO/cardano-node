@@ -2,7 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Node.Tracing.Render
   ( renderChunkNo

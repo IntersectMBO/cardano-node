@@ -35,6 +35,7 @@ import Data.Set                 qualified as Set
 import Data.Text                qualified as T
 import Data.Text.Short          (toText)
 import Data.Tuple               (swap)
+import Data.Tuple.Extra         (both, fst3, snd3, thd3)
 import Data.Vector              (Vector)
 import Data.Vector              qualified as Vec
 
