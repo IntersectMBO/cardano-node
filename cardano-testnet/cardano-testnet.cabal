@@ -34,8 +34,8 @@ library
   build-depends:        aeson
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 8.8
-                      , cardano-cli ^>= 8.4
+                      , cardano-api ^>= 8.12
+                      , cardano-cli ^>= 8.5
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger-alonzo
@@ -150,7 +150,7 @@ test-suite cardano-testnet-golden
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
   build-tool-depends:   cardano-node:cardano-node
-                      , cardano-cli:cardano-cli ^>= 8.4
+                      , cardano-cli:cardano-cli ^>= 8.5
                       , cardano-submit-api:cardano-submit-api
                       , cardano-testnet:cardano-testnet
 
@@ -176,8 +176,8 @@ test-suite cardano-testnet-test
   build-depends:        aeson
                       , async
                       , bytestring
-                      , cardano-api ^>= 8.8
-                      , cardano-cli ^>= 8.4
+                      , cardano-api ^>= 8.12
+                      , cardano-cli ^>= 8.5
                       , cardano-crypto-class
                       , cardano-testnet
                       , containers
@@ -194,6 +194,6 @@ test-suite cardano-testnet-test
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
   build-tool-depends:   cardano-node:cardano-node
-                      , cardano-cli:cardano-cli ^>= 8.4
+                      , cardano-cli:cardano-cli ^>= 8.5
                       , cardano-submit-api:cardano-submit-api
                       , cardano-testnet:cardano-testnet

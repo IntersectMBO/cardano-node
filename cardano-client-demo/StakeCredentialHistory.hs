@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -15,11 +16,14 @@ import           Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Core as LC
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley.API as L
+import qualified Cardano.Ledger.Shelley.API as Shelley
 import qualified Cardano.Ledger.Shelley.Rewards as L
 import qualified Cardano.Ledger.Shelley.RewardUpdate as L
 import qualified Cardano.Ledger.UMap as UM
 import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
 
+import qualified Cardano.Api.Ledger as L
+import qualified Cardano.Ledger.Coin as L
 import qualified Codec.Binary.Bech32 as Bech32
 import           Control.Monad.Trans.Except (runExceptT)
 import           Control.Monad.Trans.Fail.String
@@ -254,7 +258,7 @@ main = do
            _
            (BlockInMode
              (Block (BlockHeader slotNo _blockHeaderHash (BlockNo _blockNoI)) transactions)
-             _era)
+             eim)
            state -> do
              let getGoSnapshot = L.unStake . L.ssStake . L.ssStakeGo . L.esSnapshots . L.nesEs
                  getBalances = UM.rewardMap
@@ -286,8 +290,8 @@ main = do
                        ("conway", L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls, getPV ls))
 
              let txBodyComponents = map ( (\(TxBody txbc) -> txbc) . getTxBody ) transactions
-
-             mapM_ (delegationEvents targetCredAsAPI epochNo slotNo) txBodyComponents
+             let sbe'm = shelleyBasedEraFromEraInMode eim
+             mapM_ (delegationEvents sbe'm targetCredAsAPI epochNo slotNo) txBodyComponents
              mapM_ (withdrawalEvents targetCredAsAPI epochNo slotNo) txBodyComponents
 
              lastcheck <- displayCheckpoint slotNo (lastCheckpoint state) (checkpoint args)
@@ -315,7 +319,6 @@ main = do
 
   return ()
   where
-
     -- CheckPoints --
     displayCheckpoint :: SlotNo -> SlotNo -> CheckPoint -> IO SlotNo
     displayCheckpoint _ lastcheck CheckPointOff = return lastcheck
@@ -337,31 +340,64 @@ main = do
         else return pvLast
 
     -- Delegation Events --
-    delegationEvents :: StakeCredential -> EpochNo -> SlotNo -> TxBodyContent ViewTx era -> IO ()
-    delegationEvents t epochNo slotNo txbc = case txCertificates txbc of
-      TxCertificatesNone    -> return ()
-      TxCertificates _ cs _ -> mapM_ msg $ mapMaybe (targetedCert t epochNo slotNo) cs
+    delegationEvents :: Maybe (ShelleyBasedEra era) -> StakeCredential -> EpochNo -> SlotNo -> TxBodyContent ViewTx era -> IO ()
+    delegationEvents sbe'm t epochNo slotNo txbc = do
+      case (txCertificates txbc, sbe'm) of
+        (TxCertificates _ cs _, Just sbe) -> mapM_ msg $ mapMaybe (targetedCert sbe t epochNo slotNo) cs
+        (_, _)    -> return ()
 
-    targetedCert :: StakeCredential -> EpochNo -> SlotNo -> Certificate era -> Maybe (Event c)
-    targetedCert t epochNo slotNo = \case
-      StakeAddressRegistrationCertificate cred ->
-        if t == cred then Just (StakeRegistrationEvent epochNo slotNo) else Nothing
-      StakeAddressDeregistrationCertificate cred ->
-        if t == cred then Just (StakeDeRegistrationEvent epochNo slotNo) else Nothing
-      StakeAddressPoolDelegationCertificate cred pool ->
-        if t == cred then Just (DelegationEvent slotNo pool) else Nothing
-      StakePoolRegistrationCertificate pool ->
-        inPoolCert t slotNo pool
-      StakePoolRetirementCertificate _ _ -> Nothing
-      GenesisKeyDelegationCertificate {} -> Nothing
-      MIRCertificate pot (StakeAddressesMIR mir) ->
-        inMir t epochNo slotNo mir pot
-      MIRCertificate _ (SendToReservesMIR _) -> Nothing
-      MIRCertificate _ (SendToTreasuryMIR _) -> Nothing
+    targetedCert :: ShelleyBasedEra era -> StakeCredential -> EpochNo -> SlotNo -> Certificate era -> Maybe (Event c)
+    targetedCert sbe t epochNo slotNo = shelleyBasedEraConstraints sbe $ \case
+      ShelleyRelatedCertificate _ c ->
+          case c of
+            L.ShelleyTxCertDelegCert (L.ShelleyRegCert cred) ->
+              if t == fromShelleyStakeCredential cred then Just (StakeRegistrationEvent epochNo slotNo) else Nothing
+            L.ShelleyTxCertDelegCert (L.ShelleyUnRegCert cred) ->
+              if t == fromShelleyStakeCredential cred then Just (StakeDeRegistrationEvent epochNo slotNo) else Nothing
+            L.ShelleyTxCertDelegCert (L.ShelleyDelegCert cred poolId) ->
+              if t == fromShelleyStakeCredential cred then Just (DelegationEvent slotNo (StakePoolKeyHash poolId)) else Nothing
+            L.ShelleyTxCertPool (L.RetirePool _poolId _retirementEpoch) ->
+              Nothing
+            L.ShelleyTxCertPool (L.RegPool poolParams) ->
+              inPoolCert t slotNo (fromShelleyPoolParams poolParams)
+            L.ShelleyTxCertGenesisDeleg (L.GenesisDelegCert _genesisKeyHash _delegateKeyHash _vrfKeyHash) ->
+              Nothing
+            L.ShelleyTxCertMir (L.MIRCert pot (L.StakeAddressesMIR mir)) -> do
+              let addrs = flip map (Map.assocs mir) $ \(cred, L.DeltaCoin coin) -> (fromShelleyStakeCredential cred, Lovelace coin)
+              inMir t epochNo slotNo addrs pot
+            L.ShelleyTxCertMir (L.MIRCert _pot (L.SendToOppositePotMIR _coin)) -> do
+              Nothing -- TODO: unsure if Nothing
 
-      -- TODO CIP-1694 These are also delegation events.  Should there be new events for these?
-      CommitteeDelegationCertificate _ _ -> Nothing
-      CommitteeHotKeyDeregistrationCertificate _ -> Nothing
+      -- TODO: Any events for ConwayCertificates?
+      ConwayCertificate w cert ->
+        conwayEraOnwardsConstraints w $
+          case cert of
+            L.RegDRepTxCert _credential _coin ->
+              Nothing
+            L.UnRegDRepTxCert _credential _coin ->
+              Nothing
+            L.AuthCommitteeHotKeyTxCert (Shelley.KeyHash _coldKey) (Shelley.KeyHash _hotKey) ->
+              Nothing
+            L.ResignCommitteeColdTxCert (Shelley.KeyHash _coldKey) ->
+              Nothing
+            L.RegTxCert _stakeCredential ->
+              Nothing
+            L.UnRegTxCert _stakeCredential ->
+              Nothing
+            L.RegDepositTxCert _stakeCredential _deposit ->
+              Nothing
+            L.UnRegDepositTxCert _stakeCredential _refund ->
+              Nothing
+            L.DelegTxCert _stakeCredential _delegatee ->
+              Nothing
+            L.RegDepositDelegTxCert _stakeCredential _delegatee _deposit ->
+              Nothing
+            L.RegPoolTxCert _poolParams ->
+              Nothing
+            L.RetirePoolTxCert (Shelley.KeyHash _kh) _epoch ->
+              Nothing
+            L.DelegStakeTxCert _stakeCredential (Shelley.KeyHash _kh) ->
+              Nothing
 
     stakeCredentialFromStakeAddress (StakeAddress _ cred) = fromShelleyStakeCredential cred
 
@@ -412,3 +448,16 @@ main = do
     -- Reward Calculation End Event --
     rewardEndEvent epochLast epochCurrent slot rs t =
       epochEvent epochLast epochCurrent slot rs t RewardEndEvent
+
+shelleyBasedEraFromEraInMode :: EraInMode era mode -> Maybe (ShelleyBasedEra era)
+shelleyBasedEraFromEraInMode = \case
+  ByronEraInByronMode     -> Nothing
+  ByronEraInCardanoMode   -> Nothing
+  ShelleyEraInCardanoMode -> Just ShelleyBasedEraShelley
+  ShelleyEraInShelleyMode -> Just ShelleyBasedEraShelley
+  AllegraEraInCardanoMode -> Just ShelleyBasedEraAllegra
+  MaryEraInCardanoMode    -> Just ShelleyBasedEraMary
+  AlonzoEraInCardanoMode  -> Just ShelleyBasedEraAlonzo
+  BabbageEraInCardanoMode -> Just ShelleyBasedEraBabbage
+  ConwayEraInCardanoMode  -> Just ShelleyBasedEraConway
+

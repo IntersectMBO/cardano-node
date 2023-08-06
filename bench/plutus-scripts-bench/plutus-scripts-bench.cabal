@@ -72,7 +72,7 @@ library
   -- IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api ^>= 8.8
+    , cardano-api ^>= 8.12
     , plutus-ledger-api       >=1.0.0
     , plutus-tx               >=1.0.0
     , plutus-tx-plugin        >=1.0.0
