@@ -17,7 +17,6 @@ index-state:
   , cardano-haskell-packages 2023-08-06T03:00:00Z
 
 packages:
-  cardano-client-demo
   cardano-git-rev
   cardano-node
   cardano-node-capi
@@ -40,9 +39,6 @@ package cardano-cli
   ghc-options: -Werror
   -- TODO delete the following when the warning is fixed
   ghc-options: -Wno-redundant-constraints
-
-package cardano-client-demo
-  ghc-options: -Werror
 
 package cardano-git-rev
   ghc-options: -Werror

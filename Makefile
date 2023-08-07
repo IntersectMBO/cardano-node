@@ -23,7 +23,7 @@ lint hlint: ## Run the CI version of hlint
 haddock-hoogle haddocks hoogle:
 	if test -z "$$IN_NIX_SHELL"; then nix-shell --run 'cabal update && cabal haddock all --haddock-hoogle'; else cabal update && cabal haddock all --haddock-hoogle; fi
 host-hlint: ## Run the system (not Nix) version of hlint
-	hlint bench cardano-{api,cli,client-demo,node,node-capi,node-chairman,submit-api,testnet,tracer}
+	hlint bench cardano-{api,cli,node,node-capi,node-chairman,submit-api,testnet,tracer}
 
 stylish-haskell: ## Apply stylish-haskell on all *.hs files
 	@find . -type f -name "*.hs" -not -path '.git' -print0 | xargs -0 stylish-haskell -i
