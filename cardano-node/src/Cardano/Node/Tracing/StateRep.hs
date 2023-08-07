@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -22,6 +23,7 @@ import           Cardano.Api (textShow)
 
 import           Cardano.Logging
 
+import           Control.DeepSeq (NFData)
 import           Data.Aeson
 import           Data.Text (Text)
 import           Data.Time.Clock
@@ -41,9 +43,17 @@ import qualified Cardano.Node.Startup as Startup
 import           Cardano.Slotting.Slot (EpochNo, SlotNo (..), WithOrigin)
 import           Cardano.Tracing.OrphanInstances.Network ()
 
-instance FromJSON ChunkNo
+deriving instance FromJSON ChunkNo
 
-instance ToJSON ChunkNo
+deriving instance ToJSON ChunkNo
+
+deriving instance NFData ChunkNo
+
+deriving instance Generic NPV.NodeToNodeVersion
+deriving instance NFData NPV.NodeToNodeVersion
+
+deriving instance Generic NPV.NodeToClientVersion
+deriving instance NFData NPV.NodeToClientVersion
 
 data OpeningDbs
   = StartedOpeningImmutableDB
@@ -54,22 +64,30 @@ data OpeningDbs
   | OpenedLgrDB
   deriving (Generic, FromJSON, ToJSON)
 
+deriving instance (NFData OpeningDbs)
+
 data Replays
   = ReplayFromGenesis  (WithOrigin SlotNo)
   | ReplayFromSnapshot SlotNo (WithOrigin SlotNo) (WithOrigin SlotNo)
   | ReplayedBlock      SlotNo (WithOrigin SlotNo) (WithOrigin SlotNo)
   deriving (Generic, FromJSON, ToJSON)
 
+deriving instance (NFData Replays)
+
 data InitChainSelection
   = InitChainStartedSelection
   | InitChainSelected
   deriving (Generic, FromJSON, ToJSON)
+
+deriving instance (NFData InitChainSelection)
 
 type SyncPercentage = Double
 
 data AddedToCurrentChain
   = AddedToCurrentChain !EpochNo !SlotNo !SyncPercentage
   deriving (Generic, FromJSON, ToJSON)
+
+deriving instance (NFData AddedToCurrentChain)
 
 data StartupState
   = StartupSocketConfigError Text
@@ -80,6 +98,8 @@ data StartupState
   | WarningDevelopmentNodeToNodeVersions [NPV.NodeToNodeVersion]
   | WarningDevelopmentNodeToClientVersions [NPV.NodeToClientVersion]
   deriving (Generic, FromJSON, ToJSON)
+
+deriving instance (NFData StartupState)
 
 -- | The representation of the current state of node.
 --   All node states prior to tracing system going online are effectively invisible.
@@ -94,22 +114,24 @@ data NodeState
   | NodeShutdown ShutdownTrace
   deriving (Generic, FromJSON, ToJSON)
 
+deriving instance (NFData NodeState)
+
 instance LogFormatting NodeState where
   forMachine _ = \case
     NodeOpeningDbs x -> mconcat
-      ["openingDb" .= toJSON x]
+      [ "kind" .= String "NodeOpeningDbs",         "openingDb" .= toJSON x]
     NodeReplays x -> mconcat
-      ["replays"   .= toJSON x]
+      [ "kind" .= String "NodeReplays",            "replays"   .= toJSON x]
     NodeInitChainSelection x -> mconcat
-      ["chainSel"  .= toJSON x]
+      [ "kind" .= String "NodeInitChainSelection", "chainSel"  .= toJSON x]
     NodeKernelOnline -> mconcat
-      []
+      [ "kind" .= String "NodeInitChainSelection"]
     NodeAddBlock x -> mconcat
-      ["addBlock"  .= toJSON x]
+      [ "kind" .= String "NodeAddBlock",           "addBlock"  .= toJSON x]
     NodeStartup x -> mconcat
-      ["startup"   .= toJSON x]
+      [ "kind" .= String "NodeStartup",            "startup"   .= toJSON x]
     NodeShutdown x -> mconcat
-      ["shutdown"  .= toJSON x]
+      [ "kind" .= String "NodeShutdown",           "shutdown"  .= toJSON x]
     _ -> mempty
 
 instance MetaTrace NodeState where

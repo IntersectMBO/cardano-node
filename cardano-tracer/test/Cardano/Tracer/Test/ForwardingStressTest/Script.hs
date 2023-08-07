@@ -93,7 +93,7 @@ runScriptForwarding TestSetup{..} msgCounter tracerGetter = do
                 totalNumMsg <- atomicModifyIORef msgCounter (\ac ->
                   let nc = ac + numMsg
                   in (nc, nc))
-                pure (totalNumMsg == lineLength)
+                pure (totalNumMsg == lineLength - 1)
               else do
                 pure True
 

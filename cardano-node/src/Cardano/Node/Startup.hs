@@ -3,12 +3,14 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Node.Startup where
 
 import qualified Cardano.Api as Api
+import           Control.DeepSeq (NFData)
 import           Prelude
 
 import           Data.Aeson (FromJSON, ToJSON)
@@ -181,6 +183,8 @@ data NodeInfo = NodeInfo
   , niSystemStartTime :: UTCTime
   } deriving (Eq, Generic, ToJSON, FromJSON, Show)
 
+deriving instance (NFData NodeInfo)
+
 instance MetaTrace NodeInfo where
   namespaceFor NodeInfo {}  =
     Namespace [] ["NodeInfo"]
@@ -264,6 +268,8 @@ data NodeStartupInfo = NodeStartupInfo {
   , suiEpochLength       :: Word64
   , suiSlotsPerKESPeriod :: Word64
   } deriving (Eq, Generic, ToJSON, FromJSON, Show)
+
+deriving instance (NFData NodeStartupInfo)
 
 instance MetaTrace NodeStartupInfo where
   namespaceFor NodeStartupInfo {}  =

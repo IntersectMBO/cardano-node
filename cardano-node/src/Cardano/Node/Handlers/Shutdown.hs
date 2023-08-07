@@ -27,6 +27,7 @@ module Cardano.Node.Handlers.Shutdown
 where
 
 import           Control.Concurrent.Async (race_)
+import           Control.DeepSeq (NFData)
 import           Control.Exception (try)
 import           Control.Exception.Base (throwIO)
 import           Control.Monad (void, when)
@@ -59,6 +60,8 @@ data ShutdownOn
 
 deriving instance FromJSON ShutdownOn
 deriving instance ToJSON ShutdownOn
+deriving instance NFData ShutdownOn
+
 
 parseShutdownOn :: Opt.Parser ShutdownOn
 parseShutdownOn = asum
@@ -89,6 +92,8 @@ data ShutdownTrace
   | ShutdownArmedAt ShutdownOn
   -- ^ Will terminate upon reaching a ChainDB sync limit
   deriving (Generic, FromJSON, ToJSON)
+
+deriving instance NFData ShutdownTrace
 
 data AndWithOrigin
   = AndWithOriginBlock (BlockNo, WithOrigin BlockNo)

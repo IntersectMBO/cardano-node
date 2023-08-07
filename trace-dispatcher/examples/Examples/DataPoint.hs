@@ -1,6 +1,8 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -8,6 +10,7 @@ module Examples.DataPoint (
   testDataPoint
 ) where
 
+import           Control.DeepSeq (NFData)
 import qualified Data.Aeson as A
 import           Data.ByteString.Lazy.UTF8
 import qualified Data.Map.Strict as M
@@ -25,6 +28,8 @@ data BaseStats = BaseStats {
     bsCount   :: Int,
     bsSum     :: Double
     } deriving (Eq, Ord, Show, Generic)
+
+deriving instance (NFData BaseStats)
 
 instance MetaTrace BaseStats where
   namespaceFor BaseStats{} = Namespace [] ["BaseStats"]

@@ -38,7 +38,6 @@ common project-config
                         -Wpartial-fields
                         -Wredundant-constraints
                         -Wunused-packages
-
 common maybe-Win32
   if os(windows)
     build-depends:      Win32

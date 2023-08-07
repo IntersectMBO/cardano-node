@@ -1010,7 +1010,7 @@ instance MetaTrace (ChainDB.TraceInitChainSelEvent blk) where
     [ Namespace [] ["InitalChainSelected"]
     , Namespace [] ["StartedInitChainSelection"]
     ]
-    ++ map (nsPrependInner "InitChainSelValidation")
+    ++ map (nsPrependInner "Validation")
           (allNamespaces :: [Namespace (ChainDB.TraceValidationEvent blk)])
 
 

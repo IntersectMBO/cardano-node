@@ -289,7 +289,7 @@ createLoggingLayer ver nodeConfig' p = do
          >>= maybe (pure ())
                    (traceResourceStats
                       (appendName "node" tr))
-       Conc.threadDelay 1000000 -- TODO:  make configurable
+       Conc.threadDelay 1000000 -- microseconds = 1 sec
 
    traceResourceStats :: Trace IO Text -> ResourceStats -> IO ()
    traceResourceStats tr rs = do
