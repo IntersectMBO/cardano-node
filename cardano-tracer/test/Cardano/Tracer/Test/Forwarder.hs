@@ -16,6 +16,7 @@ module Cardano.Tracer.Test.Forwarder
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async
+import           Control.DeepSeq (NFData)
 import           Control.Monad (forever)
 import           "contra-tracer" Control.Tracer (contramap, nullTracer, stdoutTracer)
 import           Data.Aeson (FromJSON, ToJSON)
@@ -39,10 +40,10 @@ import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (.
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
                    codecHandshake, noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
-import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
-                   queryVersion, simpleSingletonVersions)
-import           Ouroboros.Network.Snocket (MakeBearer, Snocket, makeLocalBearer,
-                   localAddressFromPath, localSnocket)
+import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, queryVersion,
+                   simpleSingletonVersions)
+import           Ouroboros.Network.Snocket (MakeBearer, Snocket, localAddressFromPath, localSnocket,
+                   makeLocalBearer)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), HandshakeCallbacks (..),
                    SomeResponderApplication (..), cleanNetworkMutableState, connectToNode,
                    newNetworkMutableState, nullNetworkConnectTracers, nullNetworkServerTracers,
@@ -68,7 +69,7 @@ data TestDataPoint = TestDataPoint
   { tdpName    :: !String
   , tdpCommit  :: !String
   , tdpVersion :: !Int
-  } deriving (Generic, Eq, FromJSON, ToJSON)
+  } deriving (Generic, NFData, Eq, FromJSON, ToJSON)
 
 mkTestDataPoint :: TestDataPoint
 mkTestDataPoint = TestDataPoint
@@ -259,7 +260,7 @@ traceObjectsWriter sink = forever $ do
  where
   mkTraceObject now = TraceObject
     { toHuman     = Just "Human Message for testing if our mechanism works as we expect"
-    , toMachine   = Just "{\"msg\": \"Very big message forMachine because we have to check if it works\"}"
+    , toMachine   = "{\"msg\": \"Very big message forMachine because we have to check if it works\"}"
     , toNamespace = ["demoNamespace"]
     , toSeverity  = Info
     , toDetails   = DNormal

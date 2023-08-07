@@ -66,7 +66,7 @@ data Event = Event
 -- | The queue for events we should notify about.
 type EventsQueue = TBQueue Event
 
-data EventGroup 
+data EventGroup
   -- Common problems
   = EventWarnings
   | EventErrors

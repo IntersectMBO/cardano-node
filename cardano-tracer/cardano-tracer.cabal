@@ -206,6 +206,7 @@ library demo-forwarder-lib
                       , cardano-tracer
                       , cborg
                       , contra-tracer
+                      , deepseq
                       , directory
                       , ekg-core
                       , ekg-forward ^>= 0.3.0.4
@@ -297,6 +298,7 @@ test-suite cardano-tracer-test
                       , cborg
                       , containers
                       , contra-tracer
+                      , deepseq
                       , directory
                       , ekg-core
                       , ekg-forward ^>= 0.3.0.4
@@ -350,6 +352,7 @@ test-suite cardano-tracer-test-ext
                       , cborg
                       , containers
                       , contra-tracer
+                      , deepseq
                       , directory
                       , ekg-core
                       , ekg-forward ^>= 0.3.0.4

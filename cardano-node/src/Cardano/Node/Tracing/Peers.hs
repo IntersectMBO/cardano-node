@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
@@ -6,6 +7,7 @@ module Cardano.Node.Tracing.Peers
   , traceNodePeers
   ) where
 
+import           Control.DeepSeq (NFData)
 import           Data.Aeson (FromJSON, ToJSON)
 import           Data.Text (Text)
 import           GHC.Generics (Generic)
@@ -21,9 +23,11 @@ type PeerInfoPP = Text -- The result of 'ppPeer' function.
 newtype NodePeers = NodePeers [PeerInfoPP]
 
 deriving instance Generic NodePeers
+deriving instance NFData NodePeers
 
 instance ToJSON NodePeers
 instance FromJSON NodePeers
+
 
 instance MetaTrace NodePeers where
   namespaceFor NodePeers {}  =

@@ -6,23 +6,23 @@
 
 module Cardano.Logging.Trace (
     traceWith
+  , withLoggingContext
+
   , filterTrace
   , filterTraceMaybe
   , filterTraceBySeverity
-  , withLoggingContext
+  , filterTraceByPrivacy
+
   , setSeverity
   , withSeverity
-  , withSeverity'
   , privately
   , setPrivacy
   , withPrivacy
-  , withPrivacy'
   , allPublic
   , allConfidential
-  , filterTraceByPrivacy
   , setDetails
   , withDetails
-  , withDetails'
+
   , foldTraceM
   , foldMTraceM
   , foldMCondTraceM
@@ -42,7 +42,6 @@ import           Data.Maybe (isJust)
 import           Data.Text (Text)
 import           UnliftIO.MVar
 
-import           Cardano.Logging.TraceDispatcherMessage
 import           Cardano.Logging.Types
 
 -- | Adds a message object to a trace
@@ -146,11 +145,12 @@ withInnerNames (Trace tr) = Trace $
 
 -- | Sets severity for the messages in this trace
 setSeverity :: Monad m => SeverityS -> Trace m a -> Trace m a
-setSeverity s (Trace tr) = Trace $ T.contramap
-  (\ (lc, cont) -> if isJust (lcSeverity lc)
-                        then (lc, cont)
-                        else (lc {lcSeverity = Just s}, cont))
-  tr
+setSeverity s (Trace tr) = Trace $
+    T.contramap
+      (\ (lc, cont) -> if isJust (lcSeverity lc)
+                            then (lc, cont)
+                            else (lc {lcSeverity = Just s}, cont))
+      tr
 
 -- | Sets severities for the messages in this trace based on the MetaTrace class
 withSeverity :: forall m a. (Monad m, MetaTrace a) => Trace m a -> Trace m a
@@ -173,41 +173,6 @@ withSeverity (Trace tr) = Trace $
         then (lc,cont)
         else (lc {lcSeverity = severityFor (Namespace [] (lcNSInner lc)
                                               :: Namespace a) Nothing}, cont)
-
--- | Sets privacy for the messages in this trace based on the MetaTrace class
--- Handles errors by sending traces to the trace system tracer
-withSeverity' :: forall m a.
-     (Monad m, MetaTrace a)
-  => (TraceDispatcherMessage -> m ())
-  -> Trace m a
-  -> m (Trace m a)
-withSeverity' errHdl (Trace tr) = do
-    pure $ Trace (T.arrow (T.emit
-      (\case
-        (lc, Right e) -> process lc (Right e)
-        (lc, Left c@(Config _)) -> process lc (Left c)
-        (lc, Left d@(TCDocument _ _)) -> process lc (Left d)
-        (lc, Left e) -> T.traceWith tr (lc, Left e))))
-
-  where
-    process :: LoggingContext -> Either TraceControl a -> m ()
-    process lc cont =
-      if isJust (lcSeverity lc)
-        then T.traceWith tr (lc,cont)
-        else
-          case severityFor
-                  (Namespace [] (lcNSInner lc) :: Namespace a)
-                  (case cont of
-                    Right v -> Just v
-                    Left _  -> Nothing) of
-            Just sev -> T.traceWith tr (lc {lcSeverity = Just sev}, cont)
-            Nothing -> do
-              T.traceWith tr (lc, cont)
-              let Namespace _ nsLegal = case allNamespaces :: [Namespace a] of
-                              (hd : _) -> hd
-                              _          -> Namespace []
-                                              ["Can't find legal namemespace"]
-              errHdl (UnknownNamespace (lcNSInner lc) nsLegal UKFSeverity)
 
 --- | Only processes messages further with a privacy greater then the given one
 filterTraceByPrivacy :: (Monad m) =>
@@ -263,42 +228,6 @@ withPrivacy (Trace tr) = Trace $
         else (lc {lcPrivacy = privacyFor (Namespace [] (lcNSInner lc)
                                               :: Namespace a) Nothing}, cont)
 
--- | Sets privacy for the messages in this trace based on the MetaTrace class
--- Handles errors by sending traces to the trace system tracer
-withPrivacy' :: forall m a.
-     (Monad m, MetaTrace a)
-  => (TraceDispatcherMessage -> m ())
-  -> Trace m a
-  -> m (Trace m a)
-withPrivacy' errHndl (Trace tr) = do
-    pure $ Trace (T.arrow (T.emit
-      (\case
-        (lc, Right e) -> process lc (Right e)
-        (lc, Left c@(Config _)) -> process lc (Left c)
-        (lc, Left d@(TCDocument _ _)) -> process lc (Left d)
-        (lc, Left e) -> T.traceWith tr (lc, Left e))))
-
-  where
-    process :: LoggingContext -> Either TraceControl a -> m ()
-    process lc cont =
-      if isJust (lcPrivacy lc)
-        then T.traceWith tr (lc,cont)
-        else
-          case privacyFor
-                  (Namespace [] (lcNSInner lc) :: Namespace a)
-                  (case cont of
-                    Right v -> Just v
-                    Left _  -> Nothing) of
-            Just pri -> T.traceWith tr (lc {lcPrivacy = Just pri}, cont)
-            Nothing -> do
-              T.traceWith tr (lc, cont)
-              let Namespace _ nsLegal = case allNamespaces :: [Namespace a] of
-                              (hd : _) -> hd
-                              _          -> Namespace []
-                                              ["Can't find legal namemespace"]
-              errHndl (UnknownNamespace (lcNSInner lc) nsLegal UKFPrivacy)
-
-
 -- | Sets detail level for the messages in this trace
 setDetails :: Monad m => DetailLevel -> Trace m a -> Trace m a
 setDetails p (Trace tr) = Trace $
@@ -309,7 +238,6 @@ setDetails p (Trace tr) = Trace $
       tr
 
 -- | Sets detail level for the messages in this trace based on the message
--- TODO Yup handle exception
 withDetails :: forall m a. (Monad m, MetaTrace a) => Trace m a -> Trace m a
 withDetails (Trace tr) = Trace $
   T.contramap
@@ -330,41 +258,6 @@ withDetails (Trace tr) = Trace $
         then (lc,cont)
         else (lc {lcDetails = detailsFor (Namespace [] (lcNSInner lc)
                                               :: Namespace a) Nothing}, cont)
-
--- | Sets privacy for the messages in this trace based on the MetaTrace class
--- Handles errors by sending traces to the trace system tracer
-withDetails' :: forall m a.
-     (Monad m, MetaTrace a)
-  => (TraceDispatcherMessage -> m ())
-  -> Trace m a
-  -> m (Trace m a)
-withDetails' errHdl (Trace tr) = do
-    pure $ Trace (T.arrow (T.emit
-      (\case
-        (lc, Right e) -> process lc (Right e)
-        (lc, Left c@(Config _)) -> process lc (Left c)
-        (lc, Left d@(TCDocument _ _)) -> process lc (Left d)
-        (lc, Left e) -> T.traceWith tr (lc, Left e))))
-
-  where
-    process :: LoggingContext -> Either TraceControl a -> m ()
-    process lc cont =
-      if isJust (lcDetails lc)
-        then T.traceWith tr (lc,cont)
-        else
-          case detailsFor
-                  (Namespace [] (lcNSInner lc) :: Namespace a)
-                  (case cont of
-                    Right v -> Just v
-                    Left _  -> Nothing) of
-            Just dtl -> T.traceWith tr (lc {lcDetails = Just dtl}, cont)
-            Nothing -> do
-              T.traceWith tr (lc, cont)
-              let Namespace _ nsLegal = case allNamespaces :: [Namespace a] of
-                              (hd : _) -> hd
-                              _          -> Namespace []
-                                              ["Can't find legal namemespace"]
-              errHdl (UnknownNamespace (lcNSInner lc) nsLegal UKFDetails)
 
 -- | Folds the cata function with acc over a.
 -- Uses an MVar to store the state

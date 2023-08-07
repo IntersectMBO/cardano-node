@@ -5,6 +5,7 @@ module Cardano.Logging.TraceDispatcherMessage
   ) where
 
 import           Data.Aeson hiding (Error)
+import qualified Data.Map as Map
 import           Data.Text
 
 import           Cardano.Logging.Types
@@ -30,9 +31,13 @@ data TraceDispatcherMessage =
     -- and gives the number of messages that has been suppressed
   | UnknownNamespace [Text] [Text] UnknownNamespaceKind
     -- ^ An internal error was detected
-  | TracerInfo [Text] [Text]
+  | TracerInfo [Text] [Text] [Text]
     -- ^  The first array signifies the namespace of silent tracers
     --    The second array signifies the namespace tracers without metrics
+    --    The third array gives the names of all tracers
+  | MetricsInfo (Map.Map Text Int)
+    -- ^  Outputs optional statistics about metrics frequency
+
   deriving Show
 
 instance LogFormatting TraceDispatcherMessage where
@@ -44,10 +49,12 @@ instance LogFormatting TraceDispatcherMessage where
   forHuman (UnknownNamespace nsUnknown nsLegal qk) = "Unknown namespace detected "
     <> intercalate (singleton '.') nsUnknown <> ". Used for querying " <> (pack . show) qk
     <> " a legal namespace would be " <> intercalate (singleton '.') nsLegal <> "."
-  forHuman (TracerInfo silent noMetrics) = "The tracing system has silent the following tracer,"
+  forHuman (TracerInfo silent noMetrics allTracers) = "The tracing system has silent the following tracer,"
     <> " as they will never have any output according to the current config: "
     <> intercalate (singleton ' ') silent <> ". The following tracers will not emit metrics "
-    <> intercalate (singleton ' ') noMetrics <> "."
+    <> intercalate (singleton ' ') noMetrics <> ". Here is a complete list of all tracers: "
+    <> intercalate (singleton ' ') allTracers <> "."
+  forHuman (MetricsInfo mmap) = "Number of metrics delivered, " <> (pack . show) mmap
 
   forMachine _dtl StartLimiting {} = mconcat
         [ "kind" .= String "StartLimiting"
@@ -66,10 +73,15 @@ instance LogFormatting TraceDispatcherMessage where
         , "legalNamespace" .= String (intercalate (singleton '.') nsleg)
         , "querying" .= String ((pack . show) query)
         ]
-  forMachine _dtl (TracerInfo silent noMetrics) = mconcat
+  forMachine _dtl (TracerInfo silent noMetrics allTracers) = mconcat
         [ "kind" .= String "TracerMeta"
         , "silentTracers" .= String (intercalate (singleton ' ') silent)
         , "noMetrics" .= String (intercalate (singleton ' ') noMetrics)
+        , "allTracers" .= String (intercalate (singleton ' ') allTracers)
+        ]
+  forMachine _dtl (MetricsInfo mmap) = mconcat
+        [ "kind" .= String "MetricsInfo"
+        , "metrics count" .= String ((pack . show) mmap)
         ]
 
   asMetrics StartLimiting {} = []
@@ -79,6 +91,7 @@ instance LogFormatting TraceDispatcherMessage where
   asMetrics RememberLimiting {} = []
   asMetrics UnknownNamespace {} = []
   asMetrics TracerInfo {}       = []
+  asMetrics MetricsInfo {}       = []
 
 instance MetaTrace TraceDispatcherMessage where
     namespaceFor StartLimiting {}    = Namespace [] ["StartLimiting"]
@@ -86,12 +99,15 @@ instance MetaTrace TraceDispatcherMessage where
     namespaceFor RememberLimiting {} = Namespace [] ["RememberLimiting"]
     namespaceFor UnknownNamespace {} = Namespace [] ["UnknownNamespace"]
     namespaceFor TracerInfo {}       = Namespace [] ["TracerInfo"]
+    namespaceFor MetricsInfo {}       = Namespace [] ["MetricsInfo"]
 
-    severityFor (Namespace _ ["StartLimiting"]) _    = Just Info
-    severityFor (Namespace _ ["StopLimiting"]) _     = Just Info
-    severityFor (Namespace _ ["RememberLimiting"]) _ = Just Info
+
+    severityFor (Namespace _ ["StartLimiting"]) _    = Just Notice
+    severityFor (Namespace _ ["StopLimiting"]) _     = Just Notice
+    severityFor (Namespace _ ["RememberLimiting"]) _ = Just Notice
     severityFor (Namespace _ ["UnknownNamespace"]) _ = Just Error
-    severityFor (Namespace _ ["TracerInfo"]) _       = Just Info
+    severityFor (Namespace _ ["TracerInfo"]) _       = Just Notice
+    severityFor (Namespace _ ["MetricsInfo"]) _      = Just Debug
     severityFor _ _                                  = Nothing
 
 
@@ -112,6 +128,9 @@ instance MetaTrace TraceDispatcherMessage where
     documentFor (Namespace _ ["TracerInfo"]) = Just $ mconcat
       [ "Writes out tracers with metrics and silent tracers."
       ]
+    documentFor (Namespace _ ["MetricsInfo"]) = Just $ mconcat
+      [ "Writes out number of metrics delivered."
+      ]
     documentFor _ = Nothing
 
 
@@ -121,4 +140,5 @@ instance MetaTrace TraceDispatcherMessage where
       , Namespace [] ["RememberLimiting"]
       , Namespace [] ["UnknownNamespace"]
       , Namespace [] ["TracerInfo"]
+      , Namespace [] ["MetricsInfo"]
       ]

@@ -91,9 +91,7 @@ isMessageWithId mid (FormattedMachine txt)  = idInText mid txt
 isMessageWithId mid (FormattedForwarder to) =
   case toHuman to of
     Just txt -> idInText mid txt
-    Nothing  -> case toMachine to of
-                  Just txt -> idInText mid txt
-                  Nothing  -> error "No text found in trace object"
+    Nothing  -> idInText mid (toMachine to)
 
 -- | Is this message id part of the text?
 idInText :: MessageID -> T.Text -> Bool

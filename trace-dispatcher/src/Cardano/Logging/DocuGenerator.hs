@@ -53,6 +53,7 @@ addDocumentedNamespace  tl (Documented list) =
     list
 
 -- | Convenience function
+{-# INLINE showT #-}
 showT :: Show a => a -> Text
 showT = pack . show
 

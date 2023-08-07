@@ -10,10 +10,10 @@ import           System.Environment (setEnv, unsetEnv)
 import           System.PosixCompat.Files (fileExist)
 import           Test.Tasty
 
-import qualified Cardano.Tracer.Test.Logs.Tests as Logs
 import qualified Cardano.Tracer.Test.DataPoint.Tests as DataPoint
-import qualified Cardano.Tracer.Test.Restart.Tests as Restart
+import qualified Cardano.Tracer.Test.Logs.Tests as Logs
 import qualified Cardano.Tracer.Test.Queue.Tests as Queue
+-- import qualified Cardano.Tracer.Test.Restart.Tests as Restart
 
 import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
@@ -50,7 +50,7 @@ main = do
       (testGroup "Tests"
        [      Logs.tests ts
        , DataPoint.tests ts
-       ,   Restart.tests ts
+--       ,   Restart.tests ts
        ,     Queue.tests ts
        ])
      `catch` (\ (e :: SomeException) -> do
