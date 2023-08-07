@@ -65,3 +65,15 @@ for running on production networks. The same version can be re-released without 
 
 The release team meets for a quick touch-point weekly where all team leads are invited. Currently these calls are closed to the public, but in the future we expect
 to open them up to the larger community. The release team also meets ad-hoc as needed and collaborates asynchronously throughout the week.
+
+# Release notes
+
+# Detailed changelog table
+
+There's a script (`scripts/generate-release-changelog-links.hs`) that generates a table of changelogs for each of the package versions included in a given `cardano-node` release. The script takes a cabal-generated `plan.json` and a GitHub API access token, and outputs a large table which contains links to the `CHANGELOG.md` file (if one exists) for each of the package versions contained in the build plan.
+
+> example usage (be sure to run `cabal build all` at least once beforehand):
+> ```
+> ./scripts/generate-release-changelog-links.hs ./dist-newstyle/cache/build.json $GITHUB_API_TOKEN
+> ```
+> for more information, including how to generate / retrieve a GitHub API token, use `./scripts/generate-release-changelog-links.hs --help`
