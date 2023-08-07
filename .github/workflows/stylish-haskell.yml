@@ -35,7 +35,6 @@ jobs:
         cardano-testnet
         cardano-git-rev
         cardano-node
-        cardano-client-demo
         cardano-node-chairman
         cardano-tracer
         trace-resources
