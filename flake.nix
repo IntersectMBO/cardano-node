@@ -206,10 +206,7 @@
                     inherit profileName workbenchStartArgs;
                     backendName = "supervisor";
                     useCabalRun = false;
-                    cardano-node-rev =
-                      if builtins.hasAttr "rev" self
-                      then pkgs.gitrev
-                      else throw "Cannot get git revision of 'cardano-node', unclean checkout?";
+                    cardano-node-rev = pkgs.gitrev;
                   }).workbench-profile-run;
           in
           {
@@ -231,7 +228,11 @@
               name = "system-tests";
               runtimeInputs = with pkgs; [ git gnused ];
               text = ''
-                  NODE_REV="${self.rev or (throw "Sorry, need clean/pushed git revision to run system tests")}"
+                  NODE_REV="${self.rev or ""}"
+                  if [[ -z $NODE_REV ]]; then
+                    echo "Sorry, need clean/pushed git revision to run system tests"
+                    exit 1;
+                  fi
                   MAKE_TARGET=testpr
                   mkdir -p tmp && cd tmp
                   rm -rf cardano-node-tests
