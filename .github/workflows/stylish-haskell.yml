@@ -27,7 +27,7 @@ jobs:
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2023-07-27"
+      CABAL_CACHE_VERSION: "2023-07-28"
 
       STYLISH_HASKELL_VERSION: "0.14.4.0"
 
