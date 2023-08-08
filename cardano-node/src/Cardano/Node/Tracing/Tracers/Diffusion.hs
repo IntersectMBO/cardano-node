@@ -1,8 +1,11 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
@@ -13,6 +16,7 @@ import           Cardano.Logging
 import           Data.Aeson (Value (String), (.=))
 import           Data.Text (pack)
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
+import           Network.Mux.Types
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
 
 import           Cardano.Node.Types (UseLedger (..))
@@ -29,14 +33,14 @@ import qualified Ouroboros.Network.Protocol.Handshake.Type as HS
 -- Mux Tracer
 --------------------------------------------------------------------------------
 
-instance (LogFormatting peer, Show peer) =>
+instance (LogFormatting peer, LogFormatting MuxTrace) =>
     LogFormatting (WithMuxBearer peer MuxTrace) where
     forMachine dtal (WithMuxBearer b ev) =
-      mconcat [ "kind" .= String "MuxTrace"
+      mconcat [ "kind"   .= String "MuxTrace"
               , "bearer" .= forMachine dtal b
-              , "event" .= showT ev ]
-    forHuman (WithMuxBearer b ev) = "With mux bearer " <> showT b
-                                      <> ". " <> showT ev
+              , "event"  .= forMachine dtal ev ]
+    forHuman (WithMuxBearer b ev) = "With mux bearer " <> forHuman b
+                                      <> ". " <> forHuman ev
 
 instance MetaTrace tr => MetaTrace (WithMuxBearer peer tr) where
     namespaceFor (WithMuxBearer _peer obj) = (nsCast . namespaceFor) obj
@@ -52,6 +56,193 @@ instance MetaTrace tr => MetaTrace (WithMuxBearer peer tr) where
     documentFor ns = documentFor (nsCast ns :: Namespace tr)
     metricsDocFor ns = metricsDocFor (nsCast ns :: Namespace tr)
     allNamespaces = map nsCast (allNamespaces :: [Namespace tr])
+
+instance LogFormatting MuxTrace where
+    forMachine _dtal MuxTraceRecvHeaderStart = mconcat
+      [ "kind" .= String "MuxTraceRecvHeaderStart"
+      , "msg"  .= String "Bearer Receive Header Start"
+      ]
+    forMachine _dtal (MuxTraceRecvHeaderEnd MuxSDUHeader { mhTimestamp, mhNum, mhDir, mhLength }) = mconcat
+      [ "kind" .= String "MuxTraceRecvHeaderStart"
+      , "msg"  .=  String "Bearer Receive Header End"
+      , "timestamp" .= String (showT (unRemoteClockModel mhTimestamp))
+      , "miniProtocolNum" .= String (showT mhNum)
+      , "miniProtocolDir" .= String (showT mhDir)
+      , "length" .= String (showT mhLength)
+      ]
+    forMachine _dtal (MuxTraceRecvDeltaQObservation MuxSDUHeader { mhTimestamp, mhLength } ts) = mconcat
+      [ "kind" .= String "MuxTraceRecvDeltaQObservation"
+      , "msg"  .=  String "Bearer DeltaQ observation"
+      , "timeRemote" .=  String (showT ts)
+      , "timeLocal" .= String (showT (unRemoteClockModel mhTimestamp))
+      , "length" .= String (showT mhLength)
+      ]
+    forMachine _dtal (MuxTraceRecvDeltaQSample d sp so dqs dqvm dqvs estR sdud) = mconcat
+      [ "kind" .= String "MuxTraceRecvDeltaQSample"
+      , "msg"  .=  String "Bearer DeltaQ Sample"
+      , "duration" .=  String (showT d)
+      , "packets" .= String (showT sp)
+      , "sumBytes" .= String (showT so)
+      , "DeltaQ_S" .= String (showT dqs)
+      , "DeltaQ_VMean" .= String (showT dqvm)
+      , "DeltaQ_VVar" .= String (showT dqvs)
+      , "DeltaQ_estR" .= String (showT estR)
+      , "sizeDist" .= String (showT sdud)
+      ]
+    forMachine _dtal (MuxTraceRecvStart len) = mconcat
+      [ "kind" .= String "MuxTraceRecvStart"
+      , "msg"  .= String "Bearer Receive Start"
+      , "length" .= String (showT len)
+      ]
+    forMachine _dtal (MuxTraceRecvEnd len) = mconcat
+      [ "kind" .= String "MuxTraceRecvEnd"
+      , "msg"  .= String "Bearer Receive End"
+      , "length" .= String (showT len)
+      ]
+    forMachine _dtal (MuxTraceSendStart MuxSDUHeader { mhTimestamp, mhNum, mhDir, mhLength }) = mconcat
+      [ "kind" .= String "MuxTraceSendStart"
+      , "msg"  .= String "Bearer Send Start"
+      , "timestamp" .= String (showT (unRemoteClockModel mhTimestamp))
+      , "miniProtocolNum" .= String (showT mhNum)
+      , "miniProtocolDir" .= String (showT mhDir)
+      , "length" .= String (showT mhLength)
+      ]
+    forMachine _dtal MuxTraceSendEnd = mconcat
+      [ "kind" .= String "MuxTraceSendEnd"
+      , "msg"  .= String "Bearer Send End"
+      ]
+    forMachine _dtal (MuxTraceState new) = mconcat
+      [ "kind" .= String "MuxTraceState"
+      , "msg"  .= String "MuxState"
+      , "state" .= String (showT new)
+      ]
+    forMachine _dtal (MuxTraceCleanExit mid dir) = mconcat
+      [ "kind" .= String "MuxTraceCleanExit"
+      , "msg"  .= String "Miniprotocol terminated cleanly"
+      , "miniProtocolNum" .= String (showT mid)
+      , "miniProtocolDir" .= String (showT dir)
+      ]
+    forMachine _dtal (MuxTraceExceptionExit mid dir exc) = mconcat
+      [ "kind" .= String "MuxTraceExceptionExit"
+      , "msg"  .= String "Miniprotocol terminated with exception"
+      , "miniProtocolNum" .= String (showT mid)
+      , "miniProtocolDir" .= String (showT dir)
+      , "exception" .= String (showT exc)
+      ]
+    forMachine _dtal (MuxTraceChannelRecvStart mid) = mconcat
+      [ "kind" .= String "MuxTraceChannelRecvStart"
+      , "msg"  .= String "Channel Receive Start"
+      , "miniProtocolNum" .= String (showT mid)
+      ]
+    forMachine _dtal (MuxTraceChannelRecvEnd mid len) = mconcat
+      [ "kind" .= String "MuxTraceChannelRecvEnd"
+      , "msg"  .= String "Channel Receive End"
+      , "miniProtocolNum" .= String (showT mid)
+      , "length" .= String (showT len)
+      ]
+    forMachine _dtal (MuxTraceChannelSendStart mid len) = mconcat
+      [ "kind" .= String "MuxTraceChannelSendStart"
+      , "msg"  .= String "Channel Send Start"
+      , "miniProtocolNum" .= String (showT mid)
+      , "length" .= String (showT len)
+      ]
+    forMachine _dtal (MuxTraceChannelSendEnd mid) = mconcat
+      [ "kind" .= String "MuxTraceChannelSendEnd"
+      , "msg"  .= String "Channel Send End"
+      , "miniProtocolNum" .= String (showT mid)
+      ]
+    forMachine _dtal MuxTraceHandshakeStart = mconcat
+      [ "kind" .= String "MuxTraceHandshakeStart"
+      , "msg"  .= String "Handshake start"
+      ]
+    forMachine _dtal (MuxTraceHandshakeClientEnd duration) = mconcat
+      [ "kind" .= String "MuxTraceHandshakeClientEnd"
+      , "msg"  .= String "Handshake Client end"
+      , "duration" .= String (showT duration)
+      ]
+    forMachine _dtal MuxTraceHandshakeServerEnd = mconcat
+      [ "kind" .= String "MuxTraceHandshakeServerEnd"
+      , "msg"  .= String "Handshake Server end"
+      ]
+    forMachine dtal (MuxTraceHandshakeClientError e duration) = mconcat
+      [ "kind" .= String "MuxTraceHandshakeClientError"
+      , "msg"  .= String "Handshake Client Error"
+      , "duration" .= String (showT duration)
+      -- Client Error can include an error string from the peer which could be very large.
+      , "error" .= if dtal >= DDetailed
+                      then show e
+                      else take 256 $ show e
+      ]
+    forMachine dtal (MuxTraceHandshakeServerError e) = mconcat
+      [ "kind" .= String "MuxTraceHandshakeServerError"
+      , "msg"  .= String "Handshake Server Error"
+      , "error" .= if dtal >= DDetailed
+                      then show e
+                      else take 256 $ show e
+      ]
+    forMachine _dtal MuxTraceSDUReadTimeoutException = mconcat
+      [ "kind" .= String "MuxTraceSDUReadTimeoutException"
+      , "msg"  .= String "Timed out reading SDU"
+      ]
+    forMachine _dtal MuxTraceSDUWriteTimeoutException = mconcat
+      [ "kind" .= String "MuxTraceSDUWriteTimeoutException"
+      , "msg"  .= String "Timed out writing SDU"
+      ]
+    forMachine _dtal (MuxTraceStartEagerly mid dir) = mconcat
+      [ "kind" .= String "MuxTraceStartEagerly"
+      , "msg"  .= String "Eagerly started"
+      , "miniProtocolNum" .= String (showT mid)
+      , "miniProtocolDir" .= String (showT dir)
+      ]
+    forMachine _dtal (MuxTraceStartOnDemand mid dir) = mconcat
+      [ "kind" .= String "MuxTraceStartOnDemand"
+      , "msg"  .= String "Preparing to start"
+      , "miniProtocolNum" .= String (showT mid)
+      , "miniProtocolDir" .= String (showT dir)
+      ]
+    forMachine _dtal (MuxTraceStartedOnDemand mid dir) = mconcat
+      [ "kind" .= String "MuxTraceStartedOnDemand"
+      , "msg"  .= String "Started on demand"
+      , "miniProtocolNum" .= String (showT mid)
+      , "miniProtocolDir" .= String (showT dir)
+      ]
+    forMachine _dtal (MuxTraceTerminating mid dir) = mconcat
+      [ "kind" .= String "MuxTraceTerminating"
+      , "msg"  .= String "Terminating"
+      , "miniProtocolNum" .= String (showT mid)
+      , "miniProtocolDir" .= String (showT dir)
+      ]
+    forMachine _dtal MuxTraceStopping = mconcat
+      [ "kind" .= String "MuxTraceStopping"
+      , "msg"  .= String "Mux stopping"
+      ]
+    forMachine _dtal MuxTraceStopped = mconcat
+      [ "kind" .= String "MuxTraceStopped"
+      , "msg"  .= String "Mux stoppped"
+      ]
+#ifdef os_HOST_linux
+    forMachine _dtal (MuxTraceTCPInfo StructTCPInfo
+            { tcpi_snd_mss, tcpi_rcv_mss, tcpi_lost, tcpi_retrans
+            , tcpi_rtt, tcpi_rttvar, tcpi_snd_cwnd }
+            len) =
+      [ "kind" .= String "MuxTraceTCPInfo"
+      , "msg"  .= String "TCPInfo"
+      , "rtt"  .= String (show (fromIntegral tcpi_rtt :: Word))
+      , "rttvar" .= String (show (fromIntegral tcpi_rttvar :: Word))
+      , "snd_cwnd" .= String (show (fromIntegral tcpi_snd_cwnd :: Word))
+      , "snd_mss" .= String (show (fromIntegral tcpi_snd_mss :: Word))
+      , "rcv_mss" .= String (show (fromIntegral tcpi_rcv_mss :: Word))
+      , "lost" .= String (show (fromIntegral tcpi_lost :: Word))
+      , "retrans" .= String (show (fromIntegral tcpi_retrans :: Word))
+      , "length" .= String (showT len)
+      ]
+#else
+    forMachine _dtal (MuxTraceTCPInfo _ len) = mconcat
+      [ "kind" .= String "MuxTraceTCPInfo"
+      , "msg"  .= String "TCPInfo"
+      , "len"  .= String (showT len)
+      ]
+#endif
 
 instance MetaTrace MuxTrace where
     namespaceFor MuxTraceRecvHeaderStart {}       =
