@@ -1,0 +1,42 @@
+name: Update Hackage and CHaP
+
+on:
+  workflow_dispatch: # allows manual triggering
+  schedule:
+    - cron: '0 0 * * 0' # runs weekly on Sunday at 00:00
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Nix
+        uses: cachix/install-nix-action@v18
+        with:
+          # Use last stable nixos channel and the same nix as in channel:
+          install_url: https://releases.nixos.org/nix/nix-2.11.1/install
+          nix_path: nixpkgs=channel:nixos-22.11
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+            experimental-features = nix-command flakes
+            allow-import-from-derivation = true
+            substituters = https://cache.nixos.org https://cache.iog.io
+            trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Update flake.lock
+        uses: DeterminateSystems/update-flake-lock@v19
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          inputs: hackageNix CHaP
+          nix-options: --accept-flake-config
+          pr-title: "flake.lock: update Hackage and CHaP"
+          pr-labels: dependencies, automated
+          pr-body: |
+            Automated changes by the [update-flake-lock](https://github.com/DeterminateSystems/update-flake-lock) GitHub Action.
+
+            ```
+            {{ env.GIT_COMMIT_MESSAGE }}
+            ```
