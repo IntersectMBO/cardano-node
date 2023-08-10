@@ -134,6 +134,11 @@ wb_nomad() {
           mkdir -p "${webfs_dir}"
           echo "${webfs_dir}"
         ;;
+        ssh )
+          local ssh_dir="${nomad_cache_dir}"/ssh
+          mkdir -p "${ssh_dir}"
+          echo "${ssh_dir}"
+        ;;
         * )
           usage_nomad
         ;;
@@ -316,7 +321,83 @@ wb_nomad() {
       esac
     ;;
 ################################################################################
-### nodes ) ###################################################################
+### ssh ) ######################################################################
+################################################################################
+    ssh )
+      local usage="USAGE: wb nomad ${op} key"
+      local ssh_dir="$(wb_nomad dir-path ssh)"
+      local subop=${1:?$usage}; shift
+      case "${subop}" in
+####### ssh -> key )############################################################
+        key )
+          local key=${1:?$usage}; shift
+          case "${key}" in
+####### ssh -> key -> server )##################################################
+            server )
+              local key_path="${ssh_dir}"/server.id_ed25519
+              if ! test -f "${key_path}"
+              then
+                ssh-keygen -t ed25519 -f "${key_path}" -C "" -N ""
+              fi
+              echo "${key_path}"
+            ;;
+####### ssh -> key -> user )####################################################
+            user )
+              local key_path="${ssh_dir}"/user.id_ed25519
+              if ! test -f "${key_path}"
+              then
+                ssh-keygen -t ed25519 -f "${key_path}" -C "" -N ""
+              fi
+              echo "${key_path}"
+            ;;
+####### ssh -> key -> * )#######################################################
+            * )
+              usage_nomad
+            ;;
+          esac
+        ;;
+####### ssh -> config )####################################################
+        config )
+          local file_path="${ssh_dir}"/config
+          if ! test -f "${file_path}"
+          then
+cat > "${file_path}" << EOL
+StrictHostKeyChecking    accept-new
+GlobalKnownHostsFile     $(wb nomad ssh known_hosts)
+UserKnownHostsFile       $(wb nomad ssh known_hosts)
+PasswordAuthentication   no
+PubKeyAuthentication     yes
+PreferredAuthentications publickey
+IdentitiesOnly           yes
+IdentityFile             $(wb nomad ssh key user)
+Compression              yes
+TCPKeepAlive             no
+ServerAliveInterval      15
+ServerAliveCountMax      4
+ControlMaster            auto
+ControlPath              ${ssh_dir}/%h-%p-%r
+ControlPersist           15
+EOL
+          fi
+          echo "${file_path}"
+        ;;
+####### ssh -> known_hosts )####################################################
+        known_hosts )
+          local file_path="${ssh_dir}"/known_hosts
+          if ! test -f "${file_path}"
+          then
+            touch "${file_path}"
+          fi
+          echo "${file_path}"
+        ;;
+####### ssh -> * )##############################################################
+        * )
+          usage_nomad
+        ;;
+      esac
+    ;;
+################################################################################
+### nodes ) ####################################################################
 ################################################################################
     nodes )
       local usage="USAGE: wb nomad ${op}"
@@ -576,7 +657,9 @@ wb_nomad() {
           local usage="USAGE: wb nomad ${op} ${subop} SERVER-NAME"
           local name=${1:?$usage}; shift
           local config_file=$(wb_nomad server config-file-path "${name}")
-          pgrep --delimiter ' ' --full "nomad.*${config_file}.*"
+          # Make it Mac compatible by only using shorthand options:
+          # `-d` instead of `--delimiter` and `-f` instead of `--full`
+          pgrep -d ' ' -f "nomad.*${config_file}.*"
           # Clean up is only done by the `stop` subcommand!
           # No `rm "${pid_file}"` if not running.
         ;;
@@ -587,7 +670,9 @@ wb_nomad() {
           local pid_file=$(wb_nomad server pid-filepath "${name}")
           local config_file=$(wb_nomad server config-file-path "${name}")
           # It's running if we haven't PROPERLY stopped it or PIDs exist!
-          test -f "${pid_file}" || test $(pgrep --count --full "nomad.*${config_file}.*") -gt 0
+          # `pgrep` piped to `wc -l` instead "--count" to make it Mac comptible
+          # Also only shorthand options: like `-f` instead of `--full`
+          test -f "${pid_file}" || test $(pgrep -f "nomad.*${config_file}.*" | wc -l) -gt 0
         ;;
 ####### server -> start )#######################################################
         start )
@@ -798,7 +883,9 @@ wb_nomad() {
           local usage="USAGE: wb nomad ${op} ${subop} CLIENT-NAME"
           local name=${1:?$usage}; shift
           local config_file=$(wb_nomad client config-file-path "${name}")
-          pgrep --delimiter ' ' --full "nomad.*${config_file}.*"
+          # Make it Mac compatible by only using shorthand options:
+          # `-d` instead of `--delimiter` and `-f` instead of `--full`
+          pgrep -d ' ' -f "nomad.*${config_file}.*"
           # Clean up is only done by the `stop` subcommand!
           # No `rm "${pid_file}"` if not running.
         ;;
@@ -809,7 +896,9 @@ wb_nomad() {
           local pid_file=$(wb_nomad client pid-filepath "${name}")
           local config_file=$(wb_nomad client config-file-path "${name}")
           # It's running if we haven't PROPERLY stopped it or PIDs exist!
-          test -f "${pid_file}" || test $(pgrep --count --full "nomad.*${config_file}.*") -gt 0
+          # `pgrep` piped to `wc -l` instead "--count" to make it Mac comptible
+          # Also only shorthand options: like `-f` instead of `--full`
+          test -f "${pid_file}" || test $(pgrep -f "nomad.*${config_file}.*" | wc -l) -gt 0
         ;;
 ####### client -> start )#######################################################
         # Agent is started with `-network-interface lo` if not without a proper
@@ -1236,7 +1325,9 @@ EOF
         pids-array )
           local usage="USAGE: wb nomad ${op} ${subop}"
           local state_dir=$(wb_nomad webfs state-dir-path)
-          pgrep --delimiter ' ' --full "webfsd.*${state_dir}"/webfsd.log
+          # Make it Mac compatible by only using shorthand options:
+          # `-d` instead of `--delimiter` and `-f` instead of `--full`
+          pgrep -d ' ' -f "webfsd.*${state_dir}"/webfsd.log
           # Clean up is only done by the `stop` subcommand!
           # No `rm "${pid_file}"` if not running.
         ;;
@@ -1245,7 +1336,9 @@ EOF
           local pid_file=$(wb_nomad webfs pid-filepath)
           local state_dir=$(wb_nomad webfs state-dir-path)
           # It's running if we haven't PROPERLY stopped it or PIDs exist!
-          test -f "${pid_file}" && test $(pgrep --count --full "webfsd.*${state_dir}"/webfsd.log) -gt 0
+          # `pgrep` piped to `wc -l` instead "--count" to make it Mac comptible
+          # Also only shorthand options: like `-f` instead of `--full`
+          test -f "${pid_file}" && test $(pgrep -f "webfsd.*${state_dir}"/webfsd.log | wc -l) -gt 0
         ;;
         start )
           local usage="USAGE: wb nomad ${op} ${subop}"
