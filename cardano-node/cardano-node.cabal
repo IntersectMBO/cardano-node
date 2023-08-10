@@ -160,6 +160,7 @@ library
                       , ekg
                       , ekg-core
                       , filepath
+                      , formatting
                       , generic-data
                       , hostname
                       , io-classes >= 0.3
