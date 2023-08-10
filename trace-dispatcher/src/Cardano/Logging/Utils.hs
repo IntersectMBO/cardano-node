@@ -4,11 +4,15 @@ module Cardano.Logging.Utils (
     runInLoop
   , uncurry3
   , mapSnd
+  , showT
+  , showTHex
   ) where
 
 import           Control.Concurrent (threadDelay)
 import           Control.Exception (SomeAsyncException (..), fromException, tryJust)
 import           Control.Tracer (stdoutTracer, traceWith)
+import qualified Data.Text as T
+import           Numeric (showHex)
 
 -- | Run monadic action in a loop. If there's an exception, it will re-run
 --   the action again, after pause that grows.
@@ -39,3 +43,13 @@ uncurry3 f (a,b,c) = f a b c
 
 mapSnd :: (a -> b) -> (c, a) -> (c, b)
 mapSnd f (x,y) = (x,f y)
+
+-- | Convenience function
+{-# INLINE showT #-}
+showT :: Show a => a -> T.Text
+showT = T.pack . show
+
+-- | Convenience function
+{-# INLINE showTHex #-}
+showTHex :: (Integral a, Show a) => a -> T.Text
+showTHex i = T.pack (showHex i [])

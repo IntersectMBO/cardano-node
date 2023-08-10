@@ -25,13 +25,13 @@ module Cardano.Logging.DocuGenerator (
   , DocTracer
 ) where
 
+import           Prelude hiding (lines, unlines)
 
 import           Data.IORef (modifyIORef, newIORef, readIORef)
 import           Data.List (groupBy, intersperse, nub, sortBy)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
-import           Data.Text (Text, pack, toLower)
-import qualified Data.Text as T
+import           Data.Text (Text, lines, split, toLower, unlines)
 import           Data.Text.Internal.Builder (toLazyText)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder (Builder, fromString, fromText, singleton)
@@ -39,11 +39,10 @@ import           Data.Time (getZonedTime)
 
 import           Cardano.Logging.Types
 import           Control.Monad.IO.Class (MonadIO, liftIO)
-import qualified Control.Tracer as T
+import qualified Control.Tracer as TR
 
+import           Cardano.Logging.Utils (showT)
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
-
-
 
 -- | Convenience function for adding a namespace prefix to a documented
 addDocumentedNamespace  :: [Text] -> Documented a -> Documented a
@@ -51,11 +50,6 @@ addDocumentedNamespace  tl (Documented list) =
   Documented $ map
     (\ dm@DocMsg {} -> dm {dmNamespace = nsReplacePrefix (dmNamespace dm) tl})
     list
-
--- | Convenience function
-{-# INLINE showT #-}
-showT :: Show a => a -> Text
-showT = pack . show
 
 data DocuResult =
   DocuTracer Builder
@@ -294,7 +288,7 @@ documentTracersRun tracers = do
                             , ldPrivacyCoded  = privacyFor ns Nothing
                             , ldDetailsCoded  = detailsFor ns Nothing
                           }))
-            T.traceWith tr (emptyLoggingContext {lcNSInner = nsGetInner ns},
+            TR.traceWith tr (emptyLoggingContext {lcNSInner = nsGetInner ns},
                             Left (TCDocument idx dc)))
         nsIdx
 
@@ -303,7 +297,7 @@ documentTracersRun tracers = do
 docTracer :: MonadIO m =>
      BackendConfig
   -> Trace m FormattedMessage
-docTracer backendConfig = Trace $ T.arrow $ T.emit output
+docTracer backendConfig = Trace $ TR.arrow $ TR.emit output
   where
     output p@(_, Left TCDocument {}) =
       docIt backendConfig p
@@ -312,7 +306,7 @@ docTracer backendConfig = Trace $ T.arrow $ T.emit output
 docTracerDatapoint :: MonadIO m =>
      BackendConfig
   -> Trace m DataPoint
-docTracerDatapoint backendConfig = Trace $ T.arrow $ T.emit output
+docTracerDatapoint backendConfig = Trace $ TR.arrow $ TR.emit output
   where
     output p@(_, Left TCDocument {}) =
       docItDatapoint backendConfig p
@@ -530,7 +524,7 @@ generateTOC dt traces metrics datapoints =
         [] -> error "inpossible"
 
     splitToNS :: [Text] -> [Text]
-    splitToNS [sym] = T.split (== '.') sym
+    splitToNS [sym] = split (== '.') sym
     splitToNS other = other
 
 
@@ -562,4 +556,4 @@ accentuated :: Text -> Builder
 accentuated t = if t == ""
                   then fromText "\n"
                   else fromText "\n"
-                        <> fromText (T.unlines $ map ("> " <>) (T.lines t))
+                        <> fromText (unlines $ map ("> " <>) (lines t))

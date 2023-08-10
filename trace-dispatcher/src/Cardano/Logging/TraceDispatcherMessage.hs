@@ -46,9 +46,9 @@ instance LogFormatting TraceDispatcherMessage where
     ". Suppressed " <> pack (show num) <> " messages."
   forHuman (RememberLimiting txt num) = "Frequency limiting still active for " <> txt <>
     ". Suppressed so far " <> pack (show num) <> " messages."
-  forHuman (UnknownNamespace nsUnknown nsLegal qk) = "Unknown namespace detected "
-    <> intercalate (singleton '.') nsUnknown <> ". Used for querying " <> (pack . show) qk
-    <> " a legal namespace would be " <> intercalate (singleton '.') nsLegal <> "."
+  forHuman (UnknownNamespace nsPrefixNS nsInnerNS qk) = "Unknown namespace detected "
+    <> intercalate (singleton '.') (nsPrefixNS ++ nsInnerNS)
+    <> ". Used for querying " <> (pack . show) qk <> "."
   forHuman (TracerInfo silent noMetrics allTracers) = "The tracing system has silent the following tracer,"
     <> " as they will never have any output according to the current config: "
     <> intercalate (singleton ' ') silent <> ". The following tracers will not emit metrics "

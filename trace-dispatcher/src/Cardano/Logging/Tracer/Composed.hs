@@ -71,6 +71,7 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerPrefix hook = do
                       trForward
                       Nothing
                       (Trace T.nullTracer)
+                    >>= addContextAndFilter
 
     -- handle the messages
     !messageTrace <- withBackendsFromConfig (backendsAndFormat trStdout trForward)
@@ -92,7 +93,7 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerPrefix hook = do
     pure (messageTrace <> metricsTrace)
 
   where
-    addContextAndFilter :: Trace IO evt1 -> IO (Trace IO evt1)
+    addContextAndFilter :: MetaTrace a => Trace IO a -> IO (Trace IO a)
     addContextAndFilter tr = do
       tr'  <- withDetailsFromConfig tr
       tr'' <- filterSeverityFromConfig tr'
