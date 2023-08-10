@@ -15,6 +15,7 @@ import           Control.Monad
 import qualified Data.ByteString.Lazy.Char8 as BSL
 
 import           Data.Either (fromRight)
+import           Data.Maybe (fromMaybe)
 import           Data.String
 
 import           Cardano.Api
@@ -38,14 +39,15 @@ import           Paths_tx_generator
 -- transaction 'Streaming.Stream' that
 -- 'Cardano.Benchmarking.Script.Core.submitInEra'
 -- does 'show' and 'writeFile' on.
-runSelftest :: IOManager -> Maybe FilePath -> IO (Either Script.Error ())
-runSelftest iom outFile = do
+runSelftest :: IOManager -> Maybe FilePath -> Maybe FilePath -> IO (Either Script.Error ())
+runSelftest iom genFile outFile = do
   protocolFile <-  getDataFileName "data/protocol-parameters.json"
+  generator <- pure Nothing `maybe` (liftM (Just . read) . readFile) $ genFile
   let
     submitMode = maybe DiscardTX DumpToFile outFile
     fullScript = do
         setBenchTracers initNullTracers
-        forM_ (testScript protocolFile submitMode) action
+        forM_ (testScript generator protocolFile submitMode) action
   runActionM fullScript iom >>= \case
     (Right a  , _ ,  ()) -> return $ Right a
     (Left err , _  , ()) -> return $ Left err
@@ -53,13 +55,13 @@ runSelftest iom outFile = do
 -- | 'printJSON' prints out the list of actions using Aeson.
 -- It has no callers within @cardano-node@.
 printJSON :: IO ()
-printJSON = BSL.putStrLn $ prettyPrint $ testScript "/dev/zero" DiscardTX
+printJSON = BSL.putStrLn $ prettyPrint $ testScript Nothing "/dev/zero" DiscardTX
 
 -- | 'testScript' is a static list of 'Action' parametrised with a
 -- file name and a mode indicating how to submit a transaction in
 -- 'SubmitMode' passed along as a parameter within a 'Submit' action.
-testScript :: FilePath -> SubmitMode -> [Action]
-testScript protocolFile submitMode =
+testScript :: Maybe Generator -> FilePath -> SubmitMode -> [Action]
+testScript generator protocolFile submitMode =
   [ SetProtocolParameters (UseLocalProtocolFile protocolFile)
   , SetNetworkId (Testnet (NetworkMagic {unNetworkMagic = 42}))
   , InitWallet genesisWallet
@@ -74,16 +76,15 @@ testScript protocolFile submitMode =
   , createChange genesisWallet splitWallet1 1 10
   , createChange splitWallet1 splitWallet2 10 30 -- 10 TXs with 30 outputs -> in total 300 outputs
   , createChange splitWallet2 splitWallet3 300 30
+  ]
+  ++
 {-
   , createChange genesisWallet splitWallet3 1 10
   -- Fifo implementation should also work fine when sourceWallet==destWallet
   , createChange splitWallet3 splitWallet3 10 30
   , createChange splitWallet3 splitWallet3 300 30
 -}
-
-  , Submit era submitMode txParams $ Take 4000 $ Cycle
-      $ NtoM splitWallet3 (PayToAddr key doneWallet) 2 2 Nothing Nothing
-  ]
+  [Submit era submitMode txParams $ fromMaybe (Take 4000 $ Cycle $ NtoM splitWallet3 (PayToAddr key doneWallet) 2 2 Nothing Nothing) generator]
   where
     skey = fromRight (error "could not parse hardcoded signing key") $
       parseSigningKeyTE $

@@ -88,7 +88,7 @@ data TxGenPlutusType
   | LimitTxPerBlock_8                           -- ^ Generate Txs for a Plutus loop script, choosing settings to best fit 8 Txs into block script budget
   | BenchCustomCall                             -- ^ Built-in script for benchmarking various complexity of data passed via Plutus API
   | CustomScript
-  deriving (Show, Eq, Enum, Generic, FromJSON, ToJSON)
+  deriving (Read, Show, Eq, Enum, Generic, FromJSON, ToJSON)
 
 data TxGenPlutusParams
   = PlutusOn                                    -- ^ Generate Plutus Txs for given script

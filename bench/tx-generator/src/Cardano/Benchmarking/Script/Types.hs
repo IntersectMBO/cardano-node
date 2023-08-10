@@ -168,8 +168,9 @@ data Generator where
   -- practical level is unclear, though its name suggests something
   -- tough to reconcile with the constructor type.
   OneOf :: [(Generator, Double)] -> Generator
-  deriving (Show, Eq)
+  deriving (Read, Show, Eq)
 deriving instance Generic Generator
+deriving instance Read Lovelace
 
 data ProtocolParametersSource where
   QueryLocalNode :: ProtocolParametersSource
@@ -191,14 +192,15 @@ deriving instance Generic SubmitMode
 data PayMode where
   PayToAddr :: !String -> !String -> PayMode
   PayToScript :: !ScriptSpec -> !String -> PayMode
-  deriving (Show, Eq)
+  deriving (Read, Show, Eq)
 deriving instance Generic PayMode
 
 data ScriptBudget where
   StaticScriptBudget :: !FilePath -> !FilePath -> !ExecutionUnits -> !Bool -> ScriptBudget
   AutoScript :: !FilePath -> !Int -> ScriptBudget
-  deriving (Show, Eq)
+  deriving (Read, Show, Eq)
 deriving instance Generic ScriptBudget
+deriving instance Read ExecutionUnits
 
 data ScriptSpec = ScriptSpec
   {
@@ -206,7 +208,7 @@ data ScriptSpec = ScriptSpec
   , scriptSpecBudget :: !ScriptBudget
   , scriptSpecPlutusType :: !TxGenPlutusType
   }
-  deriving (Show, Eq)
+  deriving (Read, Show, Eq)
 deriving instance Generic ScriptSpec
 
 newtype TxList era = TxList [Tx era]

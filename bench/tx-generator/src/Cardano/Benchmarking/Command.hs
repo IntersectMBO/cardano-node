@@ -32,7 +32,7 @@ data Command
   = Json FilePath
   | JsonHL FilePath (Maybe FilePath) (Maybe FilePath)
   | Compile FilePath
-  | Selftest (Maybe FilePath)
+  | Selftest (Maybe FilePath) (Maybe FilePath)
   | VersionCmd
 
 runCommand :: IO ()
@@ -60,7 +60,7 @@ runCommand = withIOManager $ \iocp -> do
       case compileOptions o of
         Right script -> BSL.putStr $ prettyPrint script
         err -> handleError err
-    Selftest outFile -> runSelftest iocp outFile >>= handleError
+    Selftest genFile outFile -> runSelftest genFile iocp outFile >>= handleError
     VersionCmd -> runVersionCommand
   where
   handleError :: Show a => Either a b -> IO ()
@@ -103,7 +103,17 @@ commandParser
   compileCmd :: Parser Command
   compileCmd = Compile <$> filePath "benchmarking options"
 
-  selfTestCmd = Selftest <$> optional (filePath "output file")
+  selfTestCmd = Selftest <$> selfTestGenOpt
+                         <*> optional (filePath "output file")
+
+  selfTestGenOpt :: Parser (Maybe FilePath)
+  selfTestGenOpt = option (Just <$> str)
+    ( long "generator"
+      <> short 'g'
+      <> metavar "GENERATOR"
+      <> value Nothing
+      <> help "the generator to use for the selftest"
+    )
 
   nodeConfigOpt :: Parser (Maybe FilePath)
   nodeConfigOpt = option (Just <$> str)
