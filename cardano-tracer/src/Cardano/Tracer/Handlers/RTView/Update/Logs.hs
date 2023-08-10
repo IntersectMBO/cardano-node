@@ -17,7 +17,7 @@ import           Data.Time.Format (defaultTimeLocale, formatTime)
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 
-import           Cardano.Logging (SeverityS (..))
+import           Cardano.Logging (SeverityS (..), showT)
 
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.TraceObjects

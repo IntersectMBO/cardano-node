@@ -35,6 +35,8 @@ import           Graphics.UI.Threepenny.Core
 import           Text.Printf (printf)
 import           Text.Read (readMaybe)
 
+import           Cardano.Logging (showT)
+
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Metrics.Utils
