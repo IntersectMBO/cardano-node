@@ -4,7 +4,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
 
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
@@ -12,9 +14,11 @@
 module Cardano.Node.Tracing.Tracers.Diffusion
   () where
 
+
 import           Cardano.Logging
 import           Data.Aeson (Value (String), (.=))
 import           Data.Text (pack)
+import           Formatting
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import           Network.Mux.Types
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
@@ -65,7 +69,7 @@ instance LogFormatting MuxTrace where
     forMachine _dtal (MuxTraceRecvHeaderEnd MuxSDUHeader { mhTimestamp, mhNum, mhDir, mhLength }) = mconcat
       [ "kind" .= String "MuxTraceRecvHeaderStart"
       , "msg"  .=  String "Bearer Receive Header End"
-      , "timestamp" .= String (showT (unRemoteClockModel mhTimestamp))
+      , "timestamp" .= String (showTHex (unRemoteClockModel mhTimestamp))
       , "miniProtocolNum" .= String (showT mhNum)
       , "miniProtocolDir" .= String (showT mhDir)
       , "length" .= String (showT mhLength)
@@ -74,7 +78,7 @@ instance LogFormatting MuxTrace where
       [ "kind" .= String "MuxTraceRecvDeltaQObservation"
       , "msg"  .=  String "Bearer DeltaQ observation"
       , "timeRemote" .=  String (showT ts)
-      , "timeLocal" .= String (showT (unRemoteClockModel mhTimestamp))
+      , "timeLocal" .= String (showTHex (unRemoteClockModel mhTimestamp))
       , "length" .= String (showT mhLength)
       ]
     forMachine _dtal (MuxTraceRecvDeltaQSample d sp so dqs dqvm dqvs estR sdud) = mconcat
@@ -102,7 +106,7 @@ instance LogFormatting MuxTrace where
     forMachine _dtal (MuxTraceSendStart MuxSDUHeader { mhTimestamp, mhNum, mhDir, mhLength }) = mconcat
       [ "kind" .= String "MuxTraceSendStart"
       , "msg"  .= String "Bearer Send Start"
-      , "timestamp" .= String (showT (unRemoteClockModel mhTimestamp))
+      , "timestamp" .= String (showTHex (unRemoteClockModel mhTimestamp))
       , "miniProtocolNum" .= String (showT mhNum)
       , "miniProtocolDir" .= String (showT mhDir)
       , "length" .= String (showT mhLength)
@@ -244,6 +248,87 @@ instance LogFormatting MuxTrace where
       ]
 #endif
 
+    forHuman MuxTraceRecvHeaderStart =
+      "Bearer Receive Header Start"
+    forHuman (MuxTraceRecvHeaderEnd MuxSDUHeader { mhTimestamp, mhNum, mhDir, mhLength }) =
+      sformat ("Bearer Receive Header End: ts:" % prefixHex % "(" % shown % ") " % shown % " len " % int)
+        (unRemoteClockModel mhTimestamp) mhNum mhDir mhLength
+    forHuman (MuxTraceRecvDeltaQObservation MuxSDUHeader { mhTimestamp, mhLength } ts) =
+      sformat ("Bearer DeltaQ observation: remote ts" % int % " local ts " % shown % " length " % int)
+         (unRemoteClockModel mhTimestamp) ts mhLength
+    forHuman (MuxTraceRecvDeltaQSample d sp so dqs dqvm dqvs estR sdud) =
+      sformat ("Bearer DeltaQ Sample: duration " % fixed 3 % " packets " % int % " sumBytes "
+        % int % " DeltaQ_S " % fixed 3 % " DeltaQ_VMean " % fixed 3 % "DeltaQ_VVar " % fixed 3
+        % " DeltaQ_estR " % fixed 3 % " sizeDist " % string)
+        d sp so dqs dqvm dqvs estR sdud
+    forHuman (MuxTraceRecvStart len) =
+      sformat ("Bearer Receive Start: length " % int) len
+    forHuman (MuxTraceRecvEnd len) =
+      sformat ("Bearer Receive End: length " % int) len
+    forHuman (MuxTraceSendStart MuxSDUHeader { mhTimestamp, mhNum, mhDir, mhLength }) =
+      sformat ("Bearer Send Start: ts: " % prefixHex % " (" % shown % ") " % shown % " length " % int)
+        (unRemoteClockModel mhTimestamp) mhNum mhDir mhLength
+    forHuman MuxTraceSendEnd =
+      "Bearer Send End"
+    forHuman (MuxTraceState new) =
+      sformat ("State: " % shown) new
+    forHuman (MuxTraceCleanExit mid dir) =
+      sformat ("Miniprotocol (" % shown % ") " % shown % " terminated cleanly")
+      mid dir
+    forHuman (MuxTraceExceptionExit mid dir e) =
+      sformat ("Miniprotocol (" % shown % ") " % shown %
+        " terminated with exception " % shown) mid dir e
+    forHuman (MuxTraceChannelRecvStart mid) =
+      sformat ("Channel Receive Start on " % shown) mid
+    forHuman (MuxTraceChannelRecvEnd mid len) =
+      sformat ("Channel Receive End on (" % shown % ") " % int) mid len
+    forHuman (MuxTraceChannelSendStart mid len) =
+      sformat ("Channel Send Start on (" % shown % ") " % int) mid len
+    forHuman (MuxTraceChannelSendEnd mid) =
+      sformat ("Channel Send End on " % shown) mid
+    forHuman MuxTraceHandshakeStart =
+      "Handshake start"
+    forHuman (MuxTraceHandshakeClientEnd duration) =
+      sformat ("Handshake Client end, duration " % shown) duration
+    forHuman MuxTraceHandshakeServerEnd =
+      "Handshake Server end"
+    forHuman (MuxTraceHandshakeClientError e duration) =
+         -- Client Error can include an error string from the peer which could be very large.
+        sformat ("Handshake Client Error " % string % " duration " % shown)
+          (take 256 $ show e) duration
+    forHuman (MuxTraceHandshakeServerError e) =
+      sformat ("Handshake Server Error " % shown) e
+    forHuman MuxTraceSDUReadTimeoutException =
+      "Timed out reading SDU"
+    forHuman MuxTraceSDUWriteTimeoutException =
+      "Timed out writing SDU"
+    forHuman (MuxTraceStartEagerly mid dir) =
+      sformat ("Eagerly started (" % shown % ") in " % shown) mid dir
+    forHuman (MuxTraceStartOnDemand mid dir) =
+      sformat ("Preparing to start (" % shown % ") in " % shown) mid dir
+    forHuman (MuxTraceStartedOnDemand mid dir) =
+      sformat ("Started on demand (" % shown % ") in " % shown) mid dir
+    forHuman (MuxTraceTerminating mid dir) =
+      sformat ("Terminating (" % shown % ") in " % shown) mid dir
+    forHuman MuxTraceStopping = "Mux stopping"
+    forHuman MuxTraceStopped  = "Mux stoppped"
+#ifdef os_HOST_linux
+    forHuman (MuxTraceTCPInfo StructTCPInfo
+            { tcpi_snd_mss, tcpi_rcv_mss, tcpi_lost, tcpi_retrans
+            , tcpi_rtt, tcpi_rttvar, tcpi_snd_cwnd }
+            len) =
+      sformat ("TCPInfo rtt % int % " rttvar " % ínt % " cwnd " % int %
+               " smss " % int % " rmss " % int % " lost " % int %
+               " retrans " % int % " len " %int)
+              (fromIntegral tcpi_rtt :: Word) (fromIntegral tcpi_rttvar :: Word)
+              (fromIntegral tcpi_snd_cwnd :: Word) (fromIntegral tcpi_snd_mss :: Word)
+              (fromIntegral tcpi_rcv_mss :: Word) (fromIntegral tcpi_lost :: Word)
+              (fromIntegral tcpi_retrans :: Word)
+              len
+#else
+    forHuman (MuxTraceTCPInfo _ len) = sformat ("TCPInfo len " % int) len
+#endif
+
 instance MetaTrace MuxTrace where
     namespaceFor MuxTraceRecvHeaderStart {}       =
       Namespace [] ["RecvHeaderStart"]
@@ -331,6 +416,8 @@ instance MetaTrace MuxTrace where
     severityFor (Namespace _ ["StartedOnDemand"]) _       = Just Debug
     severityFor (Namespace _ ["Terminating"]) _           = Just Debug
     severityFor (Namespace _ ["Shutdown"]) _              = Just Debug
+    severityFor (Namespace _ ["Stopping"]) _               = Just Debug
+    severityFor (Namespace _ ["Stopped"]) _               = Just Debug
     severityFor (Namespace _ ["TCPInfo"]) _               = Just Debug
     severityFor _ _ = Nothing
 
@@ -386,6 +473,10 @@ instance MetaTrace MuxTrace where
       "Started on demand."
     documentFor (Namespace _ ["Terminating"])           = Just
       "Terminating."
+    documentFor (Namespace _ ["Stopping"])              = Just
+      "Mux shutdown."
+    documentFor (Namespace _ ["Stopped"])              = Just
+      "Mux shutdown."
     documentFor (Namespace _ ["Shutdown"])              = Just
       "Mux shutdown."
     documentFor (Namespace _ ["TCPInfo"])               = Just
@@ -419,6 +510,8 @@ instance MetaTrace MuxTrace where
       , Namespace [] ["StartOnDemand"]
       , Namespace [] ["StartedOnDemand"]
       , Namespace [] ["Terminating"]
+      , Namespace [] ["Stopping"]
+      , Namespace [] ["Stopped"]
       , Namespace [] ["Shutdown"]
       , Namespace [] ["TCPInfo"]
       ]
