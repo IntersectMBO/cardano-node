@@ -32,70 +32,18 @@ packages:
   trace-resources
   trace-forward
 
-package cardano-api
+program-options
   ghc-options: -Werror
-
-package cardano-cli
-  ghc-options: -Werror
-  -- TODO delete the following when the warning is fixed
-  ghc-options: -Wno-redundant-constraints
-
-package cardano-git-rev
-  ghc-options: -Werror
-
-package cardano-node-capi
-  ghc-options: -Werror
-
-package cardano-node-chairman
-  ghc-options: -Werror
-
-package cardano-node
-  ghc-options: -Werror
-
-package cardano-submit-api
-  ghc-options: -Werror
-
-package cardano-testnet
-  ghc-options: -Werror
-
-package cardano-topology
-  ghc-options: -Werror
-
-package cardano-tracer
-  ghc-options: -Werror
-
-package locli
-  ghc-options: -Werror
-
-package plutus-scripts-bench
-  ghc-options: -Werror
-
-package trace-analyzer
-  ghc-options: -Werror
-
-package trace-dispatcher
-  ghc-options: -Werror
-
-package trace-forward
-  ghc-options: -Werror
-
-package trace-resources
-  ghc-options: -Werror
-
-package tx-generator
-  ghc-options: -Werror
-
-package cryptonite
-  -- Using RDRAND instead of /dev/urandom as an entropy source for key
-  -- generation is dubious. Set the flag so we use /dev/urandom by default.
-  flags: -support_rdrand
-
-tests: True
 
 test-show-details: direct
 
 -- Always write GHC env files, because they are needed for ghci.
 write-ghc-environment-files: always
+
+package cryptonite
+  -- Using RDRAND instead of /dev/urandom as an entropy source for key
+  -- generation is dubious. Set the flag so we use /dev/urandom by default.
+  flags: -support_rdrand
 
 package snap-server
   flags: +openssl
