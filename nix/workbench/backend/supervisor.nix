@@ -41,7 +41,9 @@ let
         { inherit pkgs lib stateDir;
           # Create a `supervisord.conf`
           nodeSpecs = profileData.node-specs.value;
+          withGenerator = true;
           withTracer = profileData.value.node.tracer;
+          withSsh = false;
           inetHttpServerPort = "127.0.0.1:9001";
         };
       in pkgs.runCommand "workbench-backend-output-${profileData.profileName}-supervisor"

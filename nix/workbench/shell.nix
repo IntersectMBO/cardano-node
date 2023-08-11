@@ -107,6 +107,7 @@ in project.shellFor {
     db-analyser
     pkgs.graphviz
     graphmod
+    jq
     weeder
     nix
     pkgconfig

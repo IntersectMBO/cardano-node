@@ -9,14 +9,20 @@
 , profileData
 , containerSpecs
 , execTaskDriver
+, generatorTaskName
 , oneTracerPerNode ? false
+, withSsh ? false
 }:
 
 let
 
-  # Task (Container or chroot) defaults:
-  ## This values are the defaults that are stored on the job's "meta" stanza to
-  ## be able to overrided them with `jq` inside the workbench shell.
+  # Task's (Container or chroot) defaults:
+  #
+  ## Default values below are stored in the job's "meta" stanza to be able to
+  ## overrided them with 'jq' from a workbench shell. These values in "meta"
+  ## are used to programatically create a "template" with "env = true;" so they
+  ## are automagically reachable as envars inside the Task's entrypoint and
+  ## 'supervisord' programs.
   ## Values go: Nix (defaults) -> meta -> template -> envars
   #
   ## See ./oci-images.nix for further details if using the `podman` driver.
@@ -39,7 +45,7 @@ let
     then "/local"
     # This value must also be used inside the `podman` `config` stanza.
     else "/local"
-    ;
+  ;
   # Usually "*/local/run/current"
   task_statedir = "${task_workdir}${if stateDir == "" then "" else ("/" + stateDir)}";
   # A symlink to the supervisord nix-installed inside the OCI image/chroot.
@@ -67,12 +73,10 @@ let
   entrypoint =
     let
       coreutils  = containerSpecs.containerPkgs.coreutils.nix-store-path;
-      gnutar     = containerSpecs.containerPkgs.gnutar.nix-store-path;
-      zstd       = containerSpecs.containerPkgs.zstd.nix-store-path;
       supervisor = containerSpecs.containerPkgs.supervisor.nix-store-path;
     in escapeTemplate
       ''
-      # Store the entrypoint env vars for debugging purposes
+      # Store the entrypoint's envars in a file for debugging purposes.
       ${coreutils}/bin/env > /local/entrypoint.env
 
       # Only needed for "exec" ?
@@ -87,11 +91,13 @@ let
       # The SUPERVISORD_CONFIG variable must be set
       [ -z "''${SUPERVISORD_CONFIG:-}" ] && echo "SUPERVISORD_CONFIG env var must be set -- aborting" && exit 1
 
-      # Create a link to the `supervisor` Nix folder.
-      # First check if already exists to be able to restart containers.
-      if ! test -e "$SUPERVISOR_NIX"
+      # Create a symlink to 'supervisor' Nix Store folder so we can call it from
+      # 'ssh' or 'nomad exec' without having it in PATH or knowing the currently
+      # running version. But first check if it already exists to be able to
+      # restart containers without errors.
+      if ! test -e "''${SUPERVISOR_NIX}"
       then
-        ${coreutils}/bin/ln -s "${supervisor}" "$SUPERVISOR_NIX"
+        ${coreutils}/bin/ln -s "${supervisor}" "''${SUPERVISOR_NIX}"
       fi
 
       # The SUPERVISORD_LOGLEVEL variable defaults to "info" if not present
@@ -101,26 +107,33 @@ let
       LOGLEVEL="''${SUPERVISORD_LOGLEVEL:-info}"
 
       # Start `supervisord` on the foreground.
-      ${supervisor}/bin/supervisord --nodaemon --configuration "$SUPERVISORD_CONFIG" --loglevel="$LOGLEVEL"
+      # Avoid buffer related problems with stdout and stderr disabling buffering
+      # https://docs.python.org/3/using/cmdline.html#envvar-PYTHONUNBUFFERED
+      PYTHONUNBUFFERED=TRUE ${supervisor}/bin/supervisord --nodaemon --configuration "''${SUPERVISORD_CONFIG}" --loglevel="''${LOGLEVEL}"
       ''
   ;
 
-  # About the JSON Job Specification and its odd assumptions:
+  # About the JSON Job Specification and my odd assumptions:
+  #
+  # TL;DR; We are using what HashiCorp calls an unespecified format but it's the
+  # same format the SRE team is using.
   #
   # At least in Nomad version v1.4.3, the CLI command to submit new jobs
   # (https://developer.hashicorp.com/nomad/docs/commands/job/run) says:
   # "Job files must conform to the job specification format." With this link:
   # https://developer.hashicorp.com/nomad/docs/job-specification. This is the
-  # HCL format that is heavily specified in the docs. Nice!
+  # HCL format that is heavily specified in the docs. Nice but not compatible
+  # with Nix, can't easily be used here.
   #
-  # But note that it starts saying "Nomad HCL is parsed in the command line and
-  # sent to Nomad in JSON format via the HTTP API." and here there are the API
-  # docs that have "JSON Job Specification" in its title:
+  # Hopefully note that it starts saying "Nomad HCL is parsed in the command
+  # line and sent to Nomad in JSON format via the HTTP API." and here you can
+  # see the API docs I found with "JSON Job Specification" in its title:
   # https://developer.hashicorp.com/nomad/api-docs/json-jobs
-  # well, this is the format that `nomad job run` expects if you use the `-json`
-  # argument.
+  # This is the format `nomad job run` expects when using the `-json` argument
+  # but probably incomplete/outdated because when I tried to follow it I got
+  # errors.
   #
-  # I finally found this in the HCL overview page:
+  # I finally found this explanation in the HCL overview page:
   # https://developer.hashicorp.com/nomad/docs/job-specification/hcl2
   # "Since HCL is a superset of JSON, `nomad job run example.json` will attempt
   # to parse a JSON job using the HCL parser. However, the JSON format accepted
@@ -130,9 +143,6 @@ let
   #
   # So, if you don't provide the `-json` argument it expects HCL or its JSON
   # representation: https://github.com/hashicorp/hcl/blob/main/json/spec.md
-  #
-  # We are using what HashiCorp calls an unespecified format but it the same
-  # format the SRE team is using.
 
   # The job stanza is the top-most configuration option in the job
   # specification. A job is a declarative specification of tasks that Nomad
@@ -154,7 +164,7 @@ let
     # namespace can be specified either with the flag -namespace or read from
     # the NOMAD_NAMESPACE environment variable."
     # https://developer.hashicorp.com/nomad/tutorials/manage-clusters/namespaces
-    namespace = "perf";
+    namespace = "perf"; # Default to "perf" to avoid errors were possible.
 
     # The region in which to execute the job.
     region = "global"; # SRE: They are actually using global.
@@ -188,7 +198,7 @@ let
 
     # Specifies a key-value map that annotates with user-defined metadata.
     meta = {
-      # Only top level "KEY=STRING" are allowed!
+      # Only top level "KEY=STRING" are allowed, no child objects/attributes!
       TASK_DRIVER = if execTaskDriver then "exec" else "podman";
       TASK_WORKDIR = task_workdir;
       TASK_STATEDIR = task_statedir;
@@ -204,7 +214,7 @@ let
     # https://developer.hashicorp.com/nomad/docs/job-specification/group
     group = let
       # For each node-specs.json object
-      valueF = (taskName: serviceName: portName: portNum: nodeSpec: (groupDefaults // {
+      valueF = (taskName: nodeSpec: servicePortName: portNum: (groupDefaults // {
 
         # Specifies the number of instances that should be running under for
         # this group. This value must be non-negative. This defaults to the min
@@ -261,51 +271,105 @@ let
         constraint = {
           attribute = "\${node.class}";
           operator = "=";
-          # For testing we avoid using "infra" node class as HA jobs runs there
-          # For benchmarking dedicated static machines in the "perf"
-          # class are used and this value should be updated accordingly.
-          value = "qa";
+          # For cloud benchmarking, dedicated static machines in the "perf"
+          # class are used. We mimic that for local/test runs.
+          # This default is just a precaution, like the top level namespace,
+          # because there are also available "qa" Class nodes but usage of these
+          # must be limited to short test and "infra" Class nodes are used for
+          # HA jobs and must be avoided entirely.
+          value = "perf";
         };
 
         # The network stanza specifies the networking requirements for the task
         # group, including the network mode and port allocations.
+        # When scheduling jobs in Nomad they are provisioned across your fleet
+        # of machines along with other jobs and services. Because you don't know
+        # in advance what host your job will be provisioned on, Nomad will
+        # provide your tasks with network configuration when they start up.
         # https://developer.hashicorp.com/nomad/docs/job-specification/network
-        # TODO: Use "bridge" mode and port allocations ?
         network = {
-          # FIXME: "bridge" right now is not working. Client error is:
-          # {"@level":"error","@message":"prerun failed","@module":"client.alloc_runner","@timestamp":"2023-02-01T13:52:24.948596Z","alloc_id":"03faca46-0fdc-4ba0-01e9-50f67c088f99","error":"pre-run hook \"network\" failed: failed to create network for alloc: mkdir /var/run/netns: permission denied"}
-          # {"@level":"info","@message":"waiting for task to exit","@module":"client.alloc_runner","@timestamp":"2023-02-01T13:52:24.983021Z","alloc_id":"03faca46-0fdc-4ba0-01e9-50f67c088f99","task":"tracer"}
-          # {"@level":"info","@message":"marking allocation for GC","@module":"client.gc","@timestamp":"2023-02-01T13:52:24.983055Z","alloc_id":"03faca46-0fdc-4ba0-01e9-50f67c088f99"}
-          # {"@level":"info","@message":"node registration complete","@module":"client","@timestamp":"2023-02-01T13:52:27.489795Z"}
+          # Mode of the network. This option is only supported on Linux clients.
+          # All other operating systems use the host networking mode.
+          # The following modes are available:
+          # - none:       Task group will have an isolated network without any
+          #               network interfaces.
+          # - bridge:     Task group will have an isolated network namespace
+          #               with an interface that is bridged with the host. Note
+          #               that bridge networking is only currently supported for
+          #               the docker, exec, raw_exec, and java task drivers.
+          # - host:       Each task will join the host network namespace and a
+          #               shared network namespace is not created. This matches
+          #               the current behavior in Nomad 0.9.
+          # - cni/<name>: Task group will have an isolated network namespace
+          #               with the network configured by CNI.
+          # Actually using the interface specified on Nomad Client startup that
+          # for local runs it's forced to "lo" and whatever is automatically
+          # fingerprinted or provided for cloud runs.
+          # TODO: Use "bridge" mode for podman, this will allow to run isolated
+          # local cluster with no addresses or ports clashing.
           mode = "host";
-          port = lib.listToAttrs (
-            if portNum != 0
-            then
-              [
-                {
-                  # All names of the form node#, without the "-", instead of node-#
-                  name = portName;
-                  value =
-                    # The "podman" driver accepts "Mapped Ports", but not the "exec" driver
+          # Specifies a TCP/UDP port allocation and can be used to specify both
+          # dynamic ports and reserved ports.
+          # https://developer.hashicorp.com/nomad/docs/job-specification/network#port-parameters
+          port = lib.listToAttrs [
+            {
+              # The label assigned to the port is used to identify the port
+              # in service discovery, and used in the name of the
+              # environment variable that indicates which port your
+              # application should bind to (envar only available for the
+              # ports of current Tasks, not to resolve all port names).
+              # Names need to be "node#" instead of "node-#" (without "-").
+              name = servicePortName;
+              value =
+                if portNum != null && portNum != 0
+                then
+                  (
+                    # Dynamic ports vs Static ports as seen by Nomad:
+                    # Most services run in your cluster should use dynamic
+                    # ports. This means that the port will be allocated
+                    # dynamically by the scheduler, and your service will have
+                    # to read an environment variable to know which port to bind
+                    # to at startup.
+                    # https://developer.hashicorp.com/nomad/docs/job-specification/network#dynamic-ports
+                    # Static ports bind your job to a specific port on the host
+                    # they are placed on. Since multiple services cannot share
+                    # a port, the port must be open in order to place your task.
+                    # https://developer.hashicorp.com/nomad/docs/job-specification/network#static-ports
+                    # Some drivers (such as Docker and QEMU) allow you to map
+                    # ports. A mapped port means that your application can
+                    # listen on a fixed port (it does not need to read the
+                    # environment variable) and the dynamic port will be mapped
+                    # to the port in your container or virtual machine.
                     # https://developer.hashicorp.com/nomad/docs/job-specification/network#mapped-ports
-                    # If you use a network in bridge mode you can use "Mapped Ports"
-                    # https://developer.hashicorp.com/nomad/docs/job-specification/network#bridge-mode
-                    if execTaskDriver
-                    then
-                      {
-                        to     = ''${toString portNum}'';
-                        static = ''${toString portNum}'';
-                      }
-                    else
-                      {
-                        to     = ''${toString portNum}'';
-                      }
-                    ;
-                }
-              ]
-            else
-              [{name = portName; value ={};}]
-          );
+                    {
+                      # Specifies the static TCP/UDP port to allocate. If
+                      # omitted, a dynamic port is chosen. We do not recommend
+                      # using static ports, except for system or specialized
+                      # jobs like load balancers.
+                      static = ''${toString portNum}'';
+
+                      # TODO: When switching the network mode to "bridge" for
+                      # podman use "Mapped Ports" to be able to run isolated
+                      # local cluster with no addresses or ports clashing.
+                      # Applicable when using "bridge" mode to configure port
+                      # to map to inside the task's network namespace. Omitting
+                      # this field or setting it to -1 sets the mapped port
+                      # equal to the dynamic port allocated by the scheduler.
+                      # The NOMAD_PORT_<label> environment variable will contain
+                      # the to value.
+                      # to = ''${toString portNum}'';
+                      # The "podman" driver accepts "Mapped Ports", but not the
+                      # "exec" driver
+                      # https://developer.hashicorp.com/nomad/docs/job-specification/network#mapped-ports
+                      # https://developer.hashicorp.com/nomad/docs/job-specification/network#bridge-mode
+                    }
+                  )
+                else
+                  # Only reserve the name!
+                  {}
+              ;
+            }
+          ];
         };
 
         # The Consul namespace in which group and task-level services within the
@@ -328,23 +392,48 @@ let
 
           # Specifies environment variables that will be passed to the running
           # process.
-          # `null` because we are using a "template" (see below).
-          env = {};
+          env = {
+            # The "old Nomad" setup somehow included the CA certs inside the
+            # task namespace but apparently not "new Nomad". We are adding the
+            # necessary Nix package ("cacert") and making sure `wget` finds it.
+            #
+            # "All nix-docker images set environment variables which point to
+            # cacert.", see:
+            # - https://github.com/NixOS/nixpkgs/issues/48211#issuecomment-434102565
+            # - https://github.com/LnL7/nix-docker/blob/8dcfb3aff1f87cdafeecb0d27964b27c3fb8b1d2/default.nix#L70-L71
+            #
+            # Error when using `wget` to deploy the genesis tar file was:
+            # ERROR: cannot verify iog-cardano-perf.s3.eu-central-1.amazonaws.com's certificate, issued by 'CN=Amazon RSA 2048 M01,O=Amazon,C=US':
+            # Unable to locally verify the issuer's authority.
+            # To connect to iog-cardano-perf.s3.eu-central-1.amazonaws.com insecurely, use `--no-check-certificate'.
+            SSL_CERT_FILE = "${containerSpecs.containerPkgs.cacert.nix-store-path}/etc/ssl/certs/ca-bundle.crt";
+          };
 
           # Sensible defaults to run cloud version of "default", "ci-test" and
           # "ci-bench" in cardano-world qa class Nomad nodes.
           # For benchmarking dedicated static machines in the "perf" class are
           # used and this value should be updated accordingly.
           resources = {
-            # Task can only ask for 'cpu' or 'cores' resource, not both.
-            #cpu = 512;
-            cores = 2;
-            memory = 1024*4;
-            #memory_max = 32768;
+            # Task can only ask for 'cpu' or 'cores' resource but not both.
+            cores = 2;       # cpu = 512;
+            memory = 1024*4; # memory_max = 32768;
           };
 
+          # The service block instructs Nomad to register a service with the
+          # specified provider; Nomad or Consul (we are using Nomad).
           # https://developer.hashicorp.com/nomad/docs/job-specification/service
+          #
+          # This services are used to dynamically configure the IP and ports of
+          # nodes using the "template" stanza below.
           service = {
+            # Specifies the service registration provider to use for service
+            # registrations. Valid options are either consul or nomad. All
+            # services within a single task group must utilise the same provider
+            # value.
+            # We don't use Consul to avoid having one extra dependency / thing
+            # to configure and monitor during local runs while sharing as much
+            # code as possible with cloud runs.
+            provider = "nomad";
             # Specifies the name this service will be advertised as in Consul.
             # If not supplied, this will default to the name of the job, task
             # group, and task concatenated together with a dash, like
@@ -352,32 +441,64 @@ let
             # the cluster. Names must adhere to RFC-1123 §2.1 and are limited to
             # alphanumeric and hyphen characters (i.e. [a-z0-9\-]), and be less
             # than 64 characters in length.
-            name = serviceName;
-            # Specifies the service registration provider to use for service
-            # registrations. Valid options are either consul or nomad. All
-            # services within a single task group must utilise the same provider
-            # value.
-            provider = "nomad";
+            name = servicePortName;
+            # Specifies a custom address to advertise in Consul or Nomad service
+            # registration. If set, address_mode must be in auto mode. Useful
+            # with interpolation - for example to advertise the public IP
+            # address of an AWS EC2 instance set this to
+            # ${attr.unique.platform.aws.public-ipv4}.
+            address =
+              # When using Cardano World (nomad.world.dev.cardano.org) "perf"
+              # class nodes we use public IPs/routing, all the other cloud runs
+              # are behind a VPC/firewall. Local runs just use 12.0.0.1.
+              if lib.strings.hasInfix "cw-perf" profileData.profileName
+              then "\${attr.unique.platform.aws.public-ipv4}"
+              else ""
+            ;
             # Specifies the port to advertise for this service. The value of
             # port depends on which address_mode is being used:
-            # - alloc: Advertise the mapped to value of the labeled port and the
-            # allocation address. If a to value is not set, the port falls back
-            # to using the allocated host port. The port field may be a numeric
-            # port or a port label specified in the same group's network block.
+            # - alloc:  Advertise the mapped to value of the labeled port and the
+            #           allocation address. If a to value is not set, the port
+            #           falls back to using the allocated host port. The port
+            #           field may be a numeric port or a port label specified in
+            #           the same group's network block.
             # - driver: Advertise the port determined by the driver (e.g.
-            # Docker). The port may be a numeric port or a port label specified
-            # in the driver's ports field.
-            # - host: Advertise the host port for this service. port must match
-            # a port label specified in the network block.
-            port = portName;
-            # TODO: Use it to heartbeat with cardano-ping!!!
+            #           Docker). The port may be a numeric port or a port label
+            #           specified in the driver's ports field.
+            # - host:   Advertise the host port for this service. port must
+            #           match a port label specified in the network block.
+            # Here we use "network"->"port"->"name" specified in the Group.
+            port = servicePortName;
+            # Checks of type "script" need "consul" instead of "nomad" as
+            # service provider, so as healthcheck we are using a supervisord
+            # "program".
+            # The initial idea was to use Nomad's builtin `service -> check`
+            # functionality but it won't be 100% compatible/interchangeable with
+            # local runs using the `supervisord` backend and critical business
+            # logic, like when to start it/how to control it, will be delegated
+            # to Nomad. Plus, Nomad needs `consul` to configure "check"s and
+            # that means an extra dependency for local runs.
             # https://developer.hashicorp.com/nomad/docs/job-specification/check
-            # check = {};
+            check = null;
           };
 
           # Specifies the set of templates to render for the task. Templates can
           # be used to inject both static and dynamic configuration with data
           # populated from environment variables, Consul and Vault.
+          #
+          # We are using the template machinery to populate IP and ports.
+          # See "Dynamic Configuration":
+          # Nomad's job specification includes a template block that utilizes a
+          # Consul ecosystem tool called Consul Template. This mechanism creates
+          # a convenient way to ship configuration files that are populated from
+          # environment variables, Consul data, Vault secrets, or just general
+          # configurations within a Nomad task.
+          # For more information on Nomad's template block and how it leverages
+          # Consul Template, please see the template job specification
+          # documentation.
+          # - Template block: https://developer.hashicorp.com/nomad/docs/job-specification/template
+          # - Consul template: https://github.com/hashicorp/consul-template
+          # https://developer.hashicorp.com/nomad/docs/integrations/consul-integration#dynamic-configuration
           template = [
             # Envars
             {
@@ -402,6 +523,24 @@ let
               # the template to the specified destination. The following
               # possible values describe Nomad's action after writing the
               # template to disk.
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+            ## Make the profile.json file available (mainly for healthchecks)
+            {
+              env = false;
+              destination = "${task_statedir}/profile.json";
+              data = escapeTemplate (__readFile
+                profileData.JSON.outPath);
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+            ## Make the node-specs.json file available (mainly for healthchecks)
+            {
+              env = false;
+              destination = "${task_statedir}/node-specs.json";
+              data = escapeTemplate (__readFile
+                profileData.node-specs.JSON.outPath);
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -468,33 +607,16 @@ let
                       then {}
                       else {"${nodeSpec.name}"=nodeSpec;}
                     ;
+                    # Only for the node that will run the generator
+                    withGenerator = taskName == generatorTaskName;
                     # Only for the tracer task or also nodes if oneTracerPerNode
                     withTracer = oneTracerPerNode || taskName == "tracer";
+                    inherit withSsh;
                     # ''{{ env "NOMAD_TASK_DIR" }}/supervisor.sock''
                     inherit unixHttpServerPort;
                   };
                 in supervisorConf.INI
               ));
-              change_mode = "noop";
-              error_on_missing_key = true;
-            }
-            # Generator
-            ## Generator start.sh script.
-            {
-              env = false;
-              destination = "${task_statedir}/generator/start.sh";
-              data = escapeTemplate
-                profileData.generator-service.startupScript.value;
-              change_mode = "noop";
-              error_on_missing_key = true;
-              perms = "744"; # Only for every "start.sh" script. Default: "644"
-            }
-            ## Generator configuration file.
-            {
-              env = false;
-              destination = "${task_statedir}/generator/run-script.json";
-              data = escapeTemplate (__readFile
-                profileData.generator-service.runScript.JSON.outPath);
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -510,7 +632,7 @@ let
               env = false;
               destination = "${task_statedir}/tracer/start.sh";
               data = escapeTemplate
-                profileData.tracer-service.startupScript.value;
+                profileData.tracer-service.start.value;
               change_mode = "noop";
               error_on_missing_key = true;
               perms = "744"; # Only for every "start.sh" script. Default: "644"
@@ -549,13 +671,11 @@ let
               env = false;
               destination = "${task_statedir}/${nodeSpec.name}/start.sh";
               data = escapeTemplate (
-                let scriptValue = profileData.node-services."${nodeSpec.name}".startupScript.value;
+                let scriptValue = profileData.node-services."${nodeSpec.name}".start.value;
                 in if execTaskDriver
                   then (startScriptToGoTemplate
-                    taskName                         # taskName
-                    serviceName                      # serviceName
-                    portName                         # portName (can't have "-")
                     nodeSpec                         # nodeSpec
+                    servicePortName                  # servicePortName
                     scriptValue                      # startScript
                   )
                   else scriptValue
@@ -569,7 +689,7 @@ let
               env = false;
               destination = "${task_statedir}/${nodeSpec.name}/config.json";
               data = escapeTemplate (lib.generators.toJSON {}
-                profileData.node-services."${nodeSpec.name}".nodeConfig.value);
+                profileData.node-services."${nodeSpec.name}".config.value);
               change_mode = "noop";
               error_on_missing_key = true;
             }
@@ -587,6 +707,84 @@ let
               error_on_missing_key = true;
             }
           ])
+          ++
+          # Generator
+          (lib.optionals (taskName == generatorTaskName) [
+            ## Generator start.sh script.
+            {
+              env = false;
+              destination = "${task_statedir}/generator/start.sh";
+              data = escapeTemplate
+                profileData.generator-service.start.value;
+              change_mode = "noop";
+              error_on_missing_key = true;
+              perms = "744"; # Only for every "start.sh" script. Default: "644"
+            }
+            ## Generator configuration file.
+            {
+              env = false;
+              destination = "${task_statedir}/generator/run-script.json";
+              data = escapeTemplate (
+                let runScript = profileData.generator-service.config;
+                in if execTaskDriver
+                  then (runScriptToGoTemplate runScript.value)
+                  else (__readFile            runScript.JSON )
+              );
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+          ])
+          ++
+          # healthcheck
+          [
+            ## healthcheck start.sh script.
+            {
+              env = false;
+              destination = "${task_statedir}/healthcheck/start.sh";
+              data = escapeTemplate
+                profileData.healthcheck-service.start.value;
+              change_mode = "noop";
+              error_on_missing_key = true;
+              perms = "744"; # Only for every "start.sh" script. Default: "644"
+            }
+          ]
+          ++
+          # ssh
+          (lib.optionals withSsh (
+            let
+              ssh-service = import
+                  ../service/ssh.nix
+                  {
+                    inherit pkgs;
+                    bashInteractive = containerSpecs.containerPkgs.bashInteractive.nix-store-path;
+                    coreutils = containerSpecs.containerPkgs.coreutils.nix-store-path;
+                    openssh_hacks = containerSpecs.containerPkgs.openssh_hacks.nix-store-path;
+                  }
+              ;
+            in [
+              ## ssh start.sh script.
+              {
+                env = false;
+                destination = "${task_statedir}/ssh/start.sh";
+                data = escapeTemplate ssh-service.start.value;
+                change_mode = "noop";
+                error_on_missing_key = true;
+                perms = "744"; # Only for every "start.sh" script. Default: "644"
+              }
+              ## ssh config file.
+              {
+                env = false;
+                destination = "${task_statedir}/ssh/sshd_config";
+                data = escapeTemplate ssh-service.config.value;
+                change_mode = "noop";
+                error_on_missing_key = true;
+                perms = "744"; # Only for every "start.sh" script. Default: "644"
+              }
+              # The deployer script must add the templates for the private keys:
+              # - ${task_statedir}/ssh/sshd.id_ed25519
+              # - ${task_statedir}/ssh/nobody.id_ed25519.pub
+            ]
+          ))
           ;
 
           # Specifies logging configuration for the stdout and stderr of the
@@ -672,7 +870,7 @@ let
 
                 # This can be used here but not with "exec"!
                 # All names of the form node#, without the "-", instead of node-#
-                ports = [ portName ];
+                ports = [ servicePortName ];
 
                 # A list of /container_path strings for tmpfs mount points. See
                 # podman run --tmpfs options for details.
@@ -701,11 +899,12 @@ let
             name = "tracer";
             value = valueF
               "tracer"                               # taskName
-              "perf-tracer"                          # serviceName
-              "tracer"                               # portName (can't have "-")
-              0                                      # portNum
               # TODO: Which region?
-              {region=null;};                        # node-spec
+              {region=null;}                         # node-spec
+              # (can't have "-")
+              "perftracer"                           # servicePortName
+              0                                      # portNum
+            ;
           }
         ]
         ++
@@ -721,10 +920,11 @@ let
             name = nodeSpec.name;
             value = valueF
               nodeSpec.name                          # taskName
-              ("perf-node-" + (toString nodeSpec.i)) # serviceName
-              ("node" + (toString nodeSpec.i))       # portName (can't have "-")
+              nodeSpec                               # node-spec
+              # (can't have "-")
+              (nodeSpecToServicePortName nodeSpec)   # servicePortName
               nodeSpec.port                          # portNum
-              nodeSpec;                              # node-spec
+            ;
           })
           (profileData.node-specs.value)
         )
@@ -964,25 +1164,40 @@ let
   # https://developer.hashicorp.com/nomad/docs/job-specification/hcl2/expressions#string-literals
   escapeTemplate = str: builtins.replaceStrings ["\${" "%{"] ["\$\${" "%%{"] str;
 
-  startScriptToGoTemplate = taskName: serviceName: portName: nodeSpec: startScript:
+  # A single node's service and network port use the same name, they are
+  # "perfnode0" .. "perfnode53" without "-" because they are not allowed for
+  # port names, I guess it's because Nomad uses them to create "NOMAD_HOST_IP_?"
+  # like envars.
+  nodeSpecToServicePortName = nodeSpec: "${"perfnode" + (toString nodeSpec.i)}";
+
+  startScriptToGoTemplate = nodeSpec: servicePortName: startScript:
     builtins.replaceStrings
       [
         # Address string from
         ''--host-addr 127.0.0.1''
         # Port string from
-        ''--port ${toString profileData.node-specs.value."${nodeSpec.name}".port}''
+        ''--port ${toString nodeSpec.port}''
       ]
+      # On cloud deployments to SRE-managed Nomad, that uses AWS, the hosts at
+      # Linux level may not be aware of the EIP public address they have so we
+      # can't bind to the public IP (that we can resolve to using templates).
+      # I prefer being more specific but the "all-weather" alternative is to
+      # bind to 0.0.0.0 instead of the private IP, just in case the Nomad Client
+      # was not started with the correct `-network-interface XX` parameter.
       [
         # Address string to
-        #''--host-addr {{ env "NOMAD_IP_${portName}" }}''
-        ''--host-addr {{ env "NOMAD_HOST_IP_${portName}" }}''
-        #''--host-addr {{range nomadService "${serviceName}"}}{{.Address}}{{end}}''
-        #''--host-addr 0.0.0.0''
+        ''--host-addr 0.0.0.0''
+        # Alternatives (may not work):
+        #''--host-addr {{ env "NOMAD_HOST_IP_${servicePortName}" }}''
+        #''--host-addr {{ env "NOMAD_IP_${servicePortName}" }}''
+        #''--host-addr {{range nomadService "${servicePortName}"}}{{.Address}}{{end}}''
+
         # Port string to
-        #''--port {{ env "NOMAD_PORT_${portName}" }}''
-        ''--port {{ env "NOMAD_HOST_PORT_${portName}" }}''
+        ''--port {{ env "NOMAD_HOST_PORT_${servicePortName}" }}''
+        # Alternatives (may not work):
+        #''--port {{ env "NOMAD_PORT_${servicePortName}" }}''
         #''--port {{ env "NOMAD_ALLOC_PORT_${name}" }}''
-        #''--port {{range nomadService "${serviceName}"}}{{.Port}}{{end}}''
+        #''--port {{range nomadService "${servicePortName}"}}{{.Port}}{{end}}''
       ]
       startScript
   ;
@@ -1017,21 +1232,13 @@ let
   # Input is a profileData.node-services."${nodeSpec.name}".topology.value
   topologyToGoTemplate =
     let
-#            "addr": "127.0.0.1"
-#          , "port":  {{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Port}}{{end}}
-# OR
-#            "addr": "{{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Address}}{{end}}"
-#          , "port":  {{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Port}}{{end}}
-# OR
-#            "addr": "{{ env "NOMAD_IP_${"node" + (toString mergedNodeSpecs.i)}"   }}"
-#          , "port":  {{ env "NOMAD_PORT_${"node" + (toString mergedNodeSpecs.i)}" }}
-# OR
-#            "addr": "''${NOMAD_HOST_IP_${"node" + (toString mergedNodeSpecs.i)}}"
-#          , "port":  ''${NOMAD_HOST_PORT_${"node" + (toString mergedNodeSpecs.i)}}
+      # Here we must use the "service" definitions to resolve dynamically the
+      # other nodes' IPs and PORTs. Envars will only contain information from
+      # the actual node the "template" will run.
       mergedNodeSpecToStr = mergedNodeSpecs: ''
         {
-            "addr": "{{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Address}}{{end}}"
-          , "port":  {{range nomadService "${"perf-node-" + (toString mergedNodeSpecs.i)}"}}{{.Port}}{{end}}
+            "addr": "{{range nomadService "${(nodeSpecToServicePortName mergedNodeSpecs)}"}}{{.Address}}{{end}}"
+          , "port":  {{range nomadService "${(nodeSpecToServicePortName mergedNodeSpecs)}"}}{{.Port}}{{end}}
           , "valency": ${toString mergedNodeSpecs.valency}
         }
       '';
@@ -1042,14 +1249,56 @@ let
             ${builtins.concatStringsSep "," (
                 builtins.map
                   mergedNodeSpecToStr
-                  (insertNodeSpecsInProducers topology).Producers
+                  (insertNodeSpecsInAddressesArray topology).Producers
             )}
           ]
         }
       ''
   ;
+
+  # Input is a profileData.node-services."${nodeSpec.name}".topology.value
+  runScriptToGoTemplate =
+    let
+      mergedNodeSpecToStr = mergedNodeSpecs: ''
+        {
+            "addr": "{{range nomadService "${(nodeSpecToServicePortName mergedNodeSpecs)}"}}{{.Address}}{{end}}"
+          , "port":  {{range nomadService "${(nodeSpecToServicePortName mergedNodeSpecs)}"}}{{.Port}}{{end}}
+        }
+      '';
+    in
+      runScript: builtins.replaceStrings
+        # builtins.toJSON {a=null;} => "{\"a\":null}"
+        ["\"targetNodes\":null"]
+        [''
+          "targetNodes": [
+            ${builtins.concatStringsSep "," (
+              builtins.map
+                mergedNodeSpecToStr
+                (insertNodeSpecsInAddressesArray runScript).targetNodes
+            )}
+          ]
+        '']
+        (lib.generators.toJSON {} (runScript // {targetNodes=null;}))
+  ;
+
+  # Topology.Producers are like:
+  # "Producers": [
+  #   {
+  #     "addr": "127.0.0.1",
+  #     "port": 30001,
+  #     "valency": 1
+  #   }
+  # ]
+  # Tracer.targetNodes are like:
+  # "targetNodes": [
+  #   {
+  #     "addr": "127.0.0.1",
+  #     "port": 30000
+  #   }
+  # ]
+
   # builtins.concatStringsSep
-  insertNodeSpecsInProducers =
+  insertNodeSpecsInAddressesArray =
     let fromPortToNodeSpec = port: (
       builtins.head # Must exist!
         # Returns
@@ -1061,10 +1310,10 @@ let
           )
         )
     );
-# lib.debug.traceVal
-    in topology: builtins.mapAttrs
+    # lib.debug.traceVal
+    in addressesArray: builtins.mapAttrs
       (key: value:
-        if key == "Producers"
+        if key == "Producers" || key == "targetNodes"
         then builtins.map
           (remoteAddress:
             remoteAddress // (fromPortToNodeSpec remoteAddress.port)
@@ -1072,7 +1321,7 @@ let
           value
         else value # Error!
       )
-      topology
+      addressesArray
   ;
 
 in lib.generators.toJSON {} clusterJob

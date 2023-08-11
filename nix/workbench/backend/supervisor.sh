@@ -25,8 +25,10 @@ case "$op" in
                 grep ':9001 '             |
                 wc -l)" = "0" ||
             echo 'supervisord'
+        # `pgrep` piped to `wc -l` instead "--count" to make it Mac comptible
+        # Also only shorthand options: like `-x` instead of `--exact`
         for exe in 'cardano-node' 'tx-generator' 'cardano-tracer'
-        do test $(pgrep --exact --count $exe)   = 0 || echo $exe
+        do test $(pgrep -x $exe | wc -l)   = 0 || echo $exe
         done
         ;;
 
@@ -53,6 +55,33 @@ case "$op" in
 
         mkdir -p               "$dir"/supervisor
         cp -f $supervisor_conf "$dir"/supervisor/supervisord.conf
+
+        local svcs=$dir/profile/node-services.json
+        local gtor=$dir/profile/generator-service.json
+        local trac=$dir/profile/tracer-service.json
+        local hche=$dir/profile/healthcheck-service.json
+
+        for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
+        do local node_dir="$dir"/$node
+           mkdir -p                                          "$node_dir"
+           cp $(jq '."'"$node"'"."start"'          -r $svcs) "$node_dir"/start.sh
+           cp $(jq '."'"$node"'"."config"'         -r $svcs) "$node_dir"/config.json
+           cp $(jq '."'"$node"'"."topology"'       -r $svcs) "$node_dir"/topology.json
+        done
+
+        local gen_dir="$dir"/generator
+        mkdir -p                                              "$gen_dir"
+        cp $(jq '."start"'                         -r $gtor)  "$gen_dir"/start.sh
+        cp $(jq '."config"'                        -r $gtor)  "$gen_dir"/run-script.json
+
+        local trac_dir="$dir"/tracer
+        mkdir -p                                    "$trac_dir"
+        cp $(jq '."start"'                        -r $trac) "$trac_dir"/start.sh
+        cp $(jq '."config"'                        -r $trac) "$trac_dir"/config.json
+
+        local hche_dir="$dir"/healthcheck
+        mkdir -p                                    "$hche_dir"
+        cp $(jq '."start"'                        -r $hche) "$hche_dir"/start.sh
         ;;
 
     deploy-genesis )
@@ -143,11 +172,13 @@ EOF
         backend_supervisor save-pid-maps   "$dir"
         ;;
 
-    start )
+    start-cluster )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
-        if ! supervisord --config  "$dir"/supervisor/supervisord.conf $@
+        # Avoid buffer related problems with stdout and stderr disabling buffering
+        # https://docs.python.org/3/using/cmdline.html#envvar-PYTHONUNBUFFERED
+        if ! PYTHONUNBUFFERED=TRUE supervisord --config "$dir"/supervisor/supervisord.conf $@ >"$dir"/supervisor/stderr 2>"$dir"/supervisor/stderr
         then progress "supervisor" "$(red fatal: failed to start) $(white supervisord)"
              echo "$(red supervisord.conf) --------------------------------" >&2
              cat "$dir"/supervisor/supervisord.conf
@@ -155,13 +186,17 @@ EOF
              cat "$dir"/supervisor/supervisord.log
              echo "$(white -------------------------------------------------)" >&2
              fatal "could not start $(white supervisord)"
-        fi
+        fi;;
+
+    start-tracers )
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
 
         if jqtest ".node.tracer" "$dir"/profile.json
         then if ! supervisorctl start tracer
              then progress "supervisor" "$(red fatal: failed to start) $(white cardano-tracer)"
-                  echo "$(red tracer-config.json) ------------------------------" >&2
-                  cat "$dir"/tracer/tracer-config.json
+                  echo "$(red config.json) -------------------------------------" >&2
+                  cat "$dir"/tracer/config.json
                   echo "$(red tracer stdout) -----------------------------------" >&2
                   cat "$dir"/tracer/stdout
                   echo "$(red tracer stderr) -----------------------------------" >&2
@@ -184,6 +219,27 @@ EOF
         echo -n $state_dir/$node_name/node.socket
         ;;
 
+    start-healthchecks )
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
+
+        while test $# -gt 0
+        do case "$1" in
+               --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
+               * ) break;; esac; shift; done
+
+        ls -l $dir/{tracer/tracer,node-{0,1}/node}.socket || true
+        if ! supervisorctl start healthcheck
+        then progress "supervisor" "$(red fatal: failed to start) $(white healthcheck)"
+             echo "$(red healthcheck stdout) -----------------------------------" >&2
+             cat "$dir"/healthcheck/stdout
+             echo "$(red healthcheck stderr) -----------------------------------" >&2
+             cat "$dir"/healthcheck/stderr
+             echo "$(white -------------------------------------------------)" >&2
+             fatal "could not start $(white supervisord)"
+        fi
+        backend_supervisor save-child-pids "$dir";;
+
     start-generator )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
@@ -196,8 +252,8 @@ EOF
         ls -l $dir/{tracer/tracer,node-{0,1}/node}.socket || true
         if ! supervisorctl start generator
         then progress "supervisor" "$(red fatal: failed to start) $(white generator)"
-             echo "$(red generator.json) ------------------------------" >&2
-             cat "$dir"/generator/service-config.json
+             echo "$(red run-script.json) ------------------------------------" >&2
+             cat "$dir"/generator/run-script.json
              echo "$(red generator stdout) -----------------------------------" >&2
              cat "$dir"/generator/stdout
              echo "$(red generator stderr) -----------------------------------" >&2
@@ -255,12 +311,24 @@ EOF
         fi
         ;;
 
-    stop-cluster )
+    stop-all )
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
         supervisorctl stop all || true
+        ;;
 
+    fetch-logs )
+        # Unlike Nomad local or cloud, nothing to do here, logs are already in
+        # the run directory.
+        ;;
+
+    stop-cluster )
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
+
+        # This flag/file makes `scenario_watcher` exit
+        touch ${dir}/flag/cluster-stopping
         if test -f ${dir}/supervisor/supervisord.pid -a \
                 -f ${dir}/supervisor/child.pids
         then kill $(<${dir}/supervisor/supervisord.pid) $(<${dir}/supervisor/child.pids) 2>/dev/null
@@ -273,7 +341,7 @@ EOF
         local dir=${1:?$usage}; shift
 
         msg "supervisor:  resetting cluster state in:  $dir"
-        rm -f $dir/*/std{out,err} $dir/node-*/*.socket $dir/*/logs/* 2>/dev/null || true
+        rm -f $dir/*/std{out,err} $dir/*/exit_code $dir/node-*/*.socket $dir/*/logs/* 2>/dev/null || true
         rm -fr $dir/node-*/state-cluster/;;
 
     save-child-pids )
@@ -321,4 +389,23 @@ EOF
         ;;
 
     * ) usage_supervisor;; esac
+}
+
+###############################################################################
+# Debugging ###################################################################
+###############################################################################
+
+if test -n "${SUPERVISOR_DEBUG:-}"
+then
+  exec 5> "$(dirname "$(readlink -f "$0")")"/supervisor.sh.debug
+  BASH_XTRACEFD="5"
+  PS4='$LINENO: '
+  set -x
+fi
+
+debugMsg() {
+  if test -n "${SUPERVISOR_DEBUG:-}"
+  then
+    >&2 echo -e "\n\n\t\t----------$1\n"
+  fi
 }

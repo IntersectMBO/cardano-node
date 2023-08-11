@@ -56,6 +56,7 @@ let
       inherit isProducer port;
 
       nodeId         = i;
+      databasePath   = "db";
       socketPath     = "node.socket";
       topology       = "topology.json";
       nodeConfigFile = "config.json";
@@ -185,31 +186,16 @@ let
       serviceConfig = nodeServiceConfig nodeSpec;
       service       = evalServiceConfigToService serviceConfig;
     in {
-      nodeSpec = {
-        value = nodeSpec;
-        JSON  = runJq "node-spec-${name + modeIdSuffix}.json"
-                  ''--null-input --sort-keys
-                    --argjson x '${__toJSON nodeSpec}'
-                  '' "$x";
+      start = rec {
+        value = ''
+          #!${pkgs.stdenv.shell}
+
+          ${service.script}
+          '';
+        JSON = pkgs.writeScript "startup-${name}.sh" value;
       };
 
-      serviceConfig = {
-        value = serviceConfig;
-        JSON  = runJq "node-service-config-${name + modeIdSuffix}.json"
-                  ''--null-input --sort-keys
-                    --argjson x '${__toJSON serviceConfig}'
-                  '' "$x";
-      };
-
-      service = {
-        value = service;
-        JSON  = runJq "node-service-${name + modeIdSuffix}.json"
-                  ''--null-input --sort-keys
-                    --argjson x '${__toJSON service}'
-                  '' "$x";
-      };
-
-      nodeConfig = {
+      config = {
         value = service.nodeConfig;
         JSON  = runJq "node-config-${name + modeIdSuffix}.json"
                   ''--null-input --sort-keys
@@ -224,15 +210,6 @@ let
                     "topology projection-for local-${nodeSpec.kind} ${toString i} ${profileName} ${topologyFiles} ${toString backend.basePort}";
           value = __fromJSON (__readFile JSON);
         };
-
-      startupScript = rec {
-        JSON = pkgs.writeScript "startup-${name}.sh" value;
-        value = ''
-          #!${pkgs.stdenv.shell}
-
-          ${service.script}
-          '';
-      };
     };
 
   ##

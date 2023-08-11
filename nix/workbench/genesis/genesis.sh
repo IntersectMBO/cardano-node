@@ -201,6 +201,7 @@ case "$op" in
 
         jq '
           to_entries
+        | map( select(.value.kind == "pool") )
         | map
           ({ key:   (.value.i | tostring)
            , value:

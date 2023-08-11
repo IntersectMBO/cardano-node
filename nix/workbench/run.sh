@@ -475,13 +475,22 @@ EOF
         ln -s "$profile_data"/topology.json        "$dir"
         ln -s "$profile_data"/topology.dot         "$dir"
 
-        if test "${WB_BACKEND:0:5}" != 'nomad' # Doesn't start with "nomad"
-        then run_instantiate_rundir_profile_services "$dir"; fi
-
-        ## 5. populate the directory with backend specifics:
+        ## 5. backend specifics allocations:
         backend allocate-run "$dir" "${backend_args[@]}"
 
-        ## 6. allocate genesis time
+        ## 6. to be able to deploy the genesis the cluster must be started
+        #     because Nomad uses `nomad exec wget`
+        # FIXME: the problem is that supervisor uses "run/current" in its
+        #        configuration and a "meta.json" is needed to pass `run check`
+        #        that is called by `run set-current`. This error is only showing
+        #        a "FATAL" message and not exiting by pure chance (bash error
+        #        supression because of a command called inside `local`). So
+        #        we ignore it as a temporary solution because all the bash
+        #        cleaup needed to fix this will take too long.
+        run set-current "$run" 2>/dev/null || true
+        backend start-cluster "$dir"
+
+        ## 7. allocate genesis time
         ##    NOTE: The genesis time is different from the tag time.
         progress "run | time" "allocating time:"
         local timing=$(profile allocate-time "$dir"/profile.json)
@@ -521,13 +530,16 @@ EOF
         cp "$dir"/genesis/genesis-shelley.json "$dir"/genesis-shelley.json
         cp "$dir"/genesis/genesis.alonzo.json  "$dir"/genesis.alonzo.json
         echo >&2
+
+        ## 8. deploy genesis
         progress "run | genesis" "deploying.."
         backend deploy-genesis "$dir"
 
+        ## 9. everything needed to start-[tracers|nodes|generator] should be
+        ##    ready
         progress "run" "allocated $(with_color white $run) @ $dir"
         run     describe "$run"
         profile describe "$dir"/profile.json
-        run  set-current "$run"
         ;;
 
     allocate-from-machine-run-slice | alloc-from-mrs )
@@ -787,6 +799,9 @@ EOF
         local scenario=${scenario_override:-$(jq -r .scenario "$dir"/profile.json)}
         scenario "$scenario" "$dir"
 
+        backend fetch-logs     "$dir"
+        backend stop-cluster   "$dir"
+
         run compat-meta-fixups "$run"
         ;;
 
@@ -817,7 +832,7 @@ EOF
           } * .
         '
         backend cleanup-cluster "$dir"
-        run start          "$@" "$run"
+        run start-cluster  "$@" "$run"
 
         msg "cluster re-started in the same run directory: $dir"
         ;;
@@ -1037,35 +1052,4 @@ run_ls_sets_cmd() {
           find -L . -mindepth 3 -maxdepth 3 -type f -name meta.json -exec dirname \{\} \; |
           cut -d/ -f2 |
           sort -u || true'
-}
-
-run_instantiate_rundir_profile_services() {
-    local dir=${1:?run_instantiate_rundir_profile_services arg1: expects a run directory}; shift
-
-    local svcs=$dir/profile/node-services.json
-    local gtor=$dir/profile/generator-service.json
-    local trac=$dir/profile/tracer-service.json
-
-    for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
-    do local node_dir="$dir"/$node
-       mkdir -p                                          "$node_dir"
-       jq      '."'"$node"'"' "$dir"/node-specs.json   > "$node_dir"/node-spec.json
-       cp $(jq '."'"$node"'"."config"'         -r $svcs) "$node_dir"/config.json
-       cp $(jq '."'"$node"'"."service-config"' -r $svcs) "$node_dir"/service-config.json
-       cp $(jq '."'"$node"'"."start"'          -r $svcs) "$node_dir"/start.sh
-       cp $(jq '."'"$node"'"."topology"'       -r $svcs) "$node_dir"/topology.json
-    done
-
-    local gen_dir="$dir"/generator
-    mkdir -p                                              "$gen_dir"
-    cp $(jq '."run-script"'                    -r $gtor)  "$gen_dir"/run-script.json
-    cp $(jq '."service-config"'                -r $gtor)  "$gen_dir"/service-config.json
-    cp $(jq '."start"'                         -r $gtor)  "$gen_dir"/start.sh
-
-    local trac_dir="$dir"/tracer
-    mkdir -p                                    "$trac_dir"
-    cp $(jq '."tracer-config"'                 -r $trac) "$trac_dir"/tracer-config.json
-    cp $(jq '."service-config"'                -r $trac) "$trac_dir"/service-config.json
-    cp $(jq '."config"'                        -r $trac) "$trac_dir"/config.json
-    cp $(jq '."start"'                         -r $trac) "$trac_dir"/start.sh
 }
