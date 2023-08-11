@@ -1,0 +1,54 @@
+name: Upload to ghci.io
+
+on:
+  push:
+    tags:
+      - '**'
+
+env:
+  # Only to avoid some repetition
+  FLAKE_REF: github:${{ github.repository }}/${{ github.ref_name }}
+  # We need to tell skopeo where to write the authentication token
+  REGISTRY_AUTH_FILE: ./skopeo-registry-auth-file.json
+
+jobs:
+  build:
+    name: "Upload to ghcr.io"
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Nix
+      uses: input-output-hk/install-nix-action@v20
+
+    - name: Display flake metadata
+      id: flake-metadata
+      run: |
+        nix flake metadata ${{ env.FLAKE_REF }}
+        nix flake metadata ${{ env.FLAKE_REF }} --json | jq -r '"LOCKED_URL=\(.url)"' >> "$GITHUB_OUTPUT"
+
+    - name: Login to GitHub Container Registry
+      run: skopeo login --username ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }} ghcr.io
+
+    # NOTE We assume that hydra has already built the image, this is
+    # reasonable since, before applying the tag, we must have already
+    # pushed the tagged commit somewhere, and Hydra will have had the
+    # change to build the image.
+
+    - name: Uploading input-output-hk/cardano-node
+      run: |
+        echo "::group::Downloading from cache"
+        nix build --accept-flake-config --print-out-paths --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#dockerImage/node
+        echo "::endgroup::"
+
+        echo "::group::Uploading to registry"
+        skopeo copy docker-archive:./result docker://ghcr.io/input-output-hk/cardano-node:$GITHUB_REF_NAME
+        echo "::endgroup::"
+
+    - name: Uploading input-output-hk/cardano-submit-api
+      run: |
+        echo "::group::Downloading from cache"
+        nix build --accept-flake-config --print-out-paths --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#dockerImage/submit-api
+        echo "::endgroup::"
+
+        echo "::group::Uploading to registry"
+        skopeo copy docker-archive:./result docker://ghcr.io/input-output-hk/cardano-submit-api:$GITHUB_REF_NAME
+        echo "::endgroup::"
