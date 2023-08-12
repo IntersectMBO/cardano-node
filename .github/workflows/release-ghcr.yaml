@@ -4,6 +4,14 @@ on:
   push:
     tags:
       - '**'
+  # GITHUB_SHA: Last commit in the tagged release
+  # GITHUB_REF: Tag ref of release refs/tags/<tag_name>
+  release:
+    types:
+      - published
+  # GITHUB_SHA: Last commit on the GITHUB_REF branch or tag
+  # GITHUB_REF: Branch or tag that received dispatch
+  workflow_dispatch: {}
 
 env:
   # Only to avoid some repetition
