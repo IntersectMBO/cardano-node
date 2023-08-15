@@ -55,23 +55,20 @@ module Cardano.Logging.Types (
 
 
 import           Codec.Serialise (Serialise (..))
-import qualified Control.Tracer as T
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as AE
 import qualified Data.HashMap.Strict as HM
-import           Data.Set (Set)
-import qualified Data.Set as Set
-
 import           Data.IORef
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Time (UTCTime)
-
-
-
+import           Data.Set (Set)
+import qualified Data.Set as Set
 import           Data.Text (Text, intercalate, pack, singleton, unpack)
+import           Data.Time (UTCTime)
 import           GHC.Generics
 import           Network.HostName (HostName)
+
+import qualified Control.Tracer as T
 
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
@@ -103,7 +100,7 @@ instance Monad m => Monoid (Trace m a) where
 -- or more prefixes, in this moment it is a NamespaceOuter is used
 data Namespace a = Namespace {
     nsPrefix :: [Text]
-  , nsInner :: [Text]}
+  , nsInner  :: [Text]}
   deriving Eq
 
 instance Show (Namespace a) where
