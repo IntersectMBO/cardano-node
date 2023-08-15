@@ -52,15 +52,11 @@ import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints
 
-import           Ouroboros.Consensus.Block.Forging
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
-import           Ouroboros.Consensus.Ledger.Inspect
-import           Ouroboros.Consensus.Ledger.Query (Query, ShowQuery)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId,
-                   LedgerSupportsMempool)
-import           Ouroboros.Consensus.Ledger.SupportsProtocol
+import           Ouroboros.Consensus.Ledger.Query (Query)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId)
 import           Ouroboros.Consensus.Mempool (TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
@@ -68,14 +64,12 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSy
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
-import           Ouroboros.Consensus.Node.NetworkProtocolVersion
-import qualified Ouroboros.Consensus.Node.Run as Consensus
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 
 
-import           Ouroboros.Network.Block (Point (..), SlotNo, Tip)
+import           Ouroboros.Network.Block (Point (..), SlotNo, Tip, Serialised)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
@@ -163,19 +157,10 @@ runTraceDocumentationCmd TraceDocumentationCmd{..} = do
 -- Can be changed, when old tracers have gone
 docTracers :: forall blk peer remotePeer.
   ( TraceConstraints blk
-  , InspectLedger blk
-  , LedgerSupportsMempool blk
-  , LedgerSupportsProtocol blk
-  , Consensus.SerialiseNodeToNodeConstraints blk
   , LogFormatting peer
   , LogFormatting remotePeer
-  , Show (BlockNodeToClientVersion blk)
-  , Show (BlockNodeToNodeVersion blk)
   , Show remotePeer
   , Show peer
-  , Show (ForgeStateUpdateError blk)
-  , Show (CannotForge blk)
-  , ShowQuery (BlockQuery blk)
   )
   => FilePath
   -> FilePath
@@ -463,7 +448,7 @@ docTracers configFileName outputFileName _ _ _ = do
       Trace IO
             (BlockFetch.TraceLabelPeer peer
              (TraceSendRecv
-               (BlockFetch blk (Point blk)))))
+               (BlockFetch (Serialised blk) (Point blk)))))
 
     txSubmission2Tr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
