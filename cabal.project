@@ -99,3 +99,71 @@ write-ghc-environment-files: always
 
 package snap-server
   flags: +openssl
+
+-- IMPORTANT
+-- Do NOT add more source-repository-package stanzas here unless they are strictly
+-- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger
+  tag: d4dfc0e5e519c09e525f99c954f6816a340bdc87
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/babbage/impl
+    eras/babbage/test-suite
+    eras/byron/chain/executable-spec
+    eras/byron/crypto
+    eras/byron/crypto/test
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/byron/ledger/impl/test
+    eras/conway/impl
+    eras/conway/test-suite
+    eras/mary/impl
+    eras/shelley-ma/test-suite
+    eras/shelley/impl
+    eras/shelley/test-suite
+    libs/cardano-data
+    libs/cardano-ledger-api
+    libs/cardano-ledger-binary
+    libs/cardano-ledger-core
+    libs/cardano-ledger-pretty
+    libs/cardano-ledger-test
+    libs/cardano-protocol-tpraos
+    libs/ledger-state
+    libs/non-integral
+    libs/plutus-preprocessor
+    libs/set-algebra
+    libs/small-steps-test
+    libs/small-steps
+    libs/vector-map
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-consensus
+  tag: b2b7d4926e1183b72e5653bf40e64c226e0efb72
+  subdir:
+      ouroboros-consensus
+      ouroboros-consensus-cardano
+      ouroboros-consensus-diffusion
+      ouroboros-consensus-protocol
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-api
+  tag: cd92d05e97b173bf51417dea5c4b42e0c9957d04
+  subdir:
+      cardano-api
+      cardano-api-gen
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-cli
+  tag: c508c17d67935c2dbe15a8585331615c8902bda3
+  subdir:
+      cardano-cli
