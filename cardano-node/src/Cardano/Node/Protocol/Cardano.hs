@@ -141,7 +141,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
     --TODO: all these protocol versions below are confusing and unnecessary.
     -- It could and should all be automated and these config entries eliminated.
     return $!
-      SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano
+      SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano $ CardanoProtocolParams {
+        paramsByron =
         Consensus.ProtocolParamsByron {
           byronGenesis = byronGenesis,
           byronPbftSignatureThreshold =
@@ -166,12 +167,14 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           byronMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
+      , paramsShelleyBased =
         Consensus.ProtocolParamsShelleyBased {
           shelleyBasedGenesis           = shelleyGenesis,
           shelleyBasedInitialNonce      = Shelley.genesisHashToPraosNonce
                                             shelleyGenesisHash,
           shelleyBasedLeaderCredentials = shelleyLeaderCredentials
         }
+      , paramsShelley =
         Consensus.ProtocolParamsShelley {
           -- This is /not/ the Shelley protocol version. It is the protocol
           -- version that this node will declare that it understands, when it
@@ -182,6 +185,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           shelleyMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
+      , paramsAllegra =
         Consensus.ProtocolParamsAllegra {
           -- This is /not/ the Allegra protocol version. It is the protocol
           -- version that this node will declare that it understands, when it
@@ -192,6 +196,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           allegraMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
+      , paramsMary =
         Consensus.ProtocolParamsMary {
           -- This is /not/ the Mary protocol version. It is the protocol
           -- version that this node will declare that it understands, when it
@@ -201,6 +206,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           maryMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
+      , paramsAlonzo =
         Consensus.ProtocolParamsAlonzo {
           -- This is /not/ the Alonzo protocol version. It is the protocol
           -- version that this node will declare that it understands, when it
@@ -215,6 +221,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           alonzoMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
+      , paramsBabbage =
         Praos.ProtocolParamsBabbage {
           -- This is /not/ the Babbage protocol version. It is the protocol
           -- version that this node will declare that it understands, when it
@@ -227,6 +234,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           Praos.babbageMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
+      , paramsConway =
         Praos.ProtocolParamsConway {
           -- This is /not/ the Babbage protocol version. It is the protocol
           -- version that this node will declare that it understands, when it
@@ -236,12 +244,11 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           Praos.conwayMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
-        -- ProtocolParamsTransition specifies the parameters needed to transition between two eras
-        -- The comments below also apply for the Shelley -> Allegra and Allegra -> Mary hard forks.
-        -- Byron to Shelley hard fork parameters
-        Consensus.ProtocolTransitionParamsShelleyBased {
-          transitionTranslationContext = emptyFromByronTranslationContext,
-          transitionTrigger =
+        -- The remaining arguments specify the parameters needed to transition between two eras
+      , transitionParamsByronToShelley =
+        Consensus.ProtocolTransitionParamsByronToShelley {
+          transitionByronToShelleyTranslationContext = emptyFromByronTranslationContext,
+          transitionByronToShelleyTrigger =
             -- What will trigger the Byron -> Shelley hard fork?
             case npcTestShelleyHardForkAtEpoch of
 
@@ -269,53 +276,54 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                --
                Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
         }
-        -- Shelley to Allegra hard fork parameters
-        Consensus.ProtocolTransitionParamsShelleyBased {
-          transitionTranslationContext = (),
-          transitionTrigger =
+      , transitionParamsShelleyToAllegra =
+        Consensus.ProtocolTransitionParamsIntraShelley {
+          transitionIntraShelleyTranslationContext = (),
+          transitionIntraShelleyTrigger =
             case npcTestAllegraHardForkAtEpoch of
                Nothing -> Consensus.TriggerHardForkAtVersion
                             (maybe 3 fromIntegral npcTestAllegraHardForkAtVersion)
                Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
         }
-        -- Allegra to Mary hard fork parameters
-        Consensus.ProtocolTransitionParamsShelleyBased {
-          transitionTranslationContext = (),
-          transitionTrigger =
+      , transitionParamsAllegraToMary =
+        Consensus.ProtocolTransitionParamsIntraShelley {
+          transitionIntraShelleyTranslationContext = (),
+          transitionIntraShelleyTrigger =
             case npcTestMaryHardForkAtEpoch of
                Nothing -> Consensus.TriggerHardForkAtVersion
                             (maybe 4 fromIntegral npcTestMaryHardForkAtVersion)
                Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
         }
-        -- Mary to Alonzo hard fork parameters
-        Consensus.ProtocolTransitionParamsShelleyBased {
-          transitionTranslationContext = alonzoGenesis,
-          transitionTrigger =
+      , transitionParamsMaryToAlonzo =
+        Consensus.ProtocolTransitionParamsIntraShelley {
+          transitionIntraShelleyTranslationContext = alonzoGenesis,
+          transitionIntraShelleyTrigger =
             case npcTestAlonzoHardForkAtEpoch of
                Nothing -> Consensus.TriggerHardForkAtVersion
                             (maybe 5 fromIntegral npcTestAlonzoHardForkAtVersion)
                Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
         }
-        -- Alonzo to Babbage hard fork parameters
-        Consensus.ProtocolTransitionParamsShelleyBased {
-          transitionTranslationContext = (),
-          transitionTrigger =
+      , transitionParamsAlonzoToBabbage =
+        Consensus.ProtocolTransitionParamsIntraShelley {
+          transitionIntraShelleyTranslationContext = (),
+          transitionIntraShelleyTrigger =
              case npcTestBabbageHardForkAtEpoch of
                 Nothing -> Consensus.TriggerHardForkAtVersion
                              (maybe 7 fromIntegral npcTestBabbageHardForkAtVersion)
                 Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
 
         }
-        -- Babbage to Conway hard fork parameters
-        Consensus.ProtocolTransitionParamsShelleyBased {
-          transitionTranslationContext = conwayGenesis,
-          transitionTrigger =
+      , transitionParamsBabbageToConway =
+        Consensus.ProtocolTransitionParamsIntraShelley {
+          transitionIntraShelleyTranslationContext = conwayGenesis,
+          transitionIntraShelleyTrigger =
              case npcTestConwayHardForkAtEpoch of
                 Nothing -> Consensus.TriggerHardForkAtVersion
                              (maybe 9 fromIntegral npcTestConwayHardForkAtVersion)
                 Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
 
         }
+      }
 
         ----------------------------------------------------------------------
         -- WARNING When adding new entries above, be aware that if there is an

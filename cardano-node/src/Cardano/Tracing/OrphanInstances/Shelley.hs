@@ -147,35 +147,35 @@ instance
 instance
   ( ToObject (PredicateFailure (Ledger.EraRule "DELEG" era))
   , ToObject (PredicateFailure (Ledger.EraRule "POOL" era))
-  , ToObject (PredicateFailure (Ledger.EraRule "VDEL" era))
+  , ToObject (PredicateFailure (Ledger.EraRule "GOVCERT" era))
   ) => ToObject (Conway.ConwayCertPredFailure era) where
   toObject verb = mconcat . \case
     Conway.DelegFailure f ->
       [ "kind" .= String "DelegFailure " , "failure" .= toObject verb f ]
     Conway.PoolFailure f ->
       [ "kind" .= String "PoolFailure" , "failure" .= toObject verb f ]
-    Conway.VDelFailure f ->
-      [ "kind" .= String "VDelFailure" , "failure" .= toObject verb f ]
+    Conway.GovCertFailure f ->
+      [ "kind" .= String "GovCertFailure" , "failure" .= toObject verb f ]
 
-instance ToObject (Conway.ConwayVDelPredFailure era) where
+instance ToObject (Conway.ConwayGovCertPredFailure era) where
   toObject _verb = mconcat . \case
-    Conway.ConwayDRepAlreadyRegisteredVDEL credential ->
-      [ "kind" .= String "ConwayDRepAlreadyRegisteredVDEL"
+    Conway.ConwayDRepAlreadyRegistered credential ->
+      [ "kind" .= String "ConwayDRepAlreadyRegistered"
       , "credential" .= String (textShow credential)
       , "error" .= String "DRep is already registered"
       ]
-    Conway.ConwayDRepNotRegisteredVDEL credential ->
-      [ "kind" .= String "ConwayDRepNotRegisteredVDEL"
+    Conway.ConwayDRepNotRegistered credential ->
+      [ "kind" .= String "ConwayDRepNotRegistered"
       , "credential" .= String (textShow credential)
       , "error" .= String "DRep is not registered"
       ]
-    Conway.ConwayDRepIncorrectDepositVDEL coin ->
-      [ "kind" .= String "ConwayDRepIncorrectDepositVDEL"
+    Conway.ConwayDRepIncorrectDeposit coin ->
+      [ "kind" .= String "ConwayDRepIncorrectDeposit"
       , "coin" .= coin
       , "error" .= String "DRep delegation has incorrect deposit"
       ]
-    Conway.ConwayCommitteeHasResignedVDEL kHash ->
-      [ "kind" .= String "ConwayCommitteeHasResignedVDEL"
+    Conway.ConwayCommitteeHasResigned kHash ->
+      [ "kind" .= String "ConwayCommitteeHasResigned"
       , "credential" .= String (textShow kHash)
       , "error" .= String "Committee has resigned"
       ]
@@ -330,19 +330,23 @@ instance
 instance
   ( ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
   , ToObject (PredicateFailure (Core.EraRule "UTXOW" ledgerera))
-  , ToObject (PredicateFailure (Core.EraRule "TALLY" ledgerera))
+  , ToObject (PredicateFailure (Core.EraRule "GOV" ledgerera))
   , ToObject (Set (Credential 'Staking (Consensus.EraCrypto ledgerera)))
   ) => ToObject (Conway.ConwayLedgerPredFailure ledgerera) where
   toObject verb (Conway.ConwayUtxowFailure f) = toObject verb f
   toObject verb (Conway.ConwayCertsFailure f) = toObject verb f
-  toObject verb (Conway.ConwayTallyFailure f) = toObject verb f
+  toObject verb (Conway.ConwayGovFailure f) = toObject verb f
   toObject verb (Conway.ConwayWdrlNotDelegatedToDRep f) = toObject verb f
 
 
-instance ToObject (Conway.ConwayTallyPredFailure era) where
-  toObject _ (Conway.GovernanceActionDoesNotExist govActionId) =
-    mconcat [ "kind" .= String "GovernanceActionDoesNotExist"
-            , "govActionId" .= govActionIdToText govActionId
+instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) where
+  toObject _ (Conway.GovActionsDoNotExist govActionIds) =
+    mconcat [ "kind" .= String "GovActionsDoNotExist"
+            , "govActionIds" .= map govActionIdToText (Set.toList govActionIds)
+            ]
+  toObject _ (Conway.MalformedProposal govAction) =
+    mconcat [ "kind" .= String "MalformedProposal"
+            , "govAction" .= govAction
             ]
 
 instance
