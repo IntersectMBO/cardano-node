@@ -140,10 +140,13 @@ instance MetaTrace (AnyMessageAndAgency (BlockFetch blk1 (Point blk2))) where
 -- TODO Tracers
 -- Provide complete implementation of forMachine
 instance ( ConvertTxId blk
+         , ConvertTxId (Serialised blk)
          , ConvertRawHash blk
          , StandardHash blk
          , HasTxs blk
+         , HasTxs (Serialised blk)
          , HasTxId (GenTx blk)
+         , HasTxId (GenTx (Serialised blk))
          , GetHeader (Serialised blk)
          , SerialiseNodeToNodeConstraints (Serialised blk)
          , HasHeader (Serialised blk)
@@ -156,16 +159,16 @@ instance ( ConvertTxId blk
              , "blockSize" .= toJSON (estimateBlockSize (getHeader blk'))
              ]
 
-  forMachine _dtal (AnyMessageAndAgency stok (MsgBlock blk')) =
+  forMachine dtal (AnyMessageAndAgency stok (MsgBlock blk')) =
     mconcat  [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk')
              , "blockSize" .= toJSON (estimateBlockSize (getHeader blk'))
-             --, "txIds" .= toJSON (presentTx <$> extractTxs blk')
+             , "txIds" .= toJSON (presentTx <$> extractTxs blk')
              ]
       where
-        -- presentTx :: GenTx (Serialised blk) -> Value
-        -- presentTx =  String . renderTxIdForDetails dtal . txId
+        presentTx :: GenTx (Serialised blk) -> Value
+        presentTx =  String . renderTxIdForDetails dtal . txId
 
   forMachine _v (AnyMessageAndAgency stok MsgRequestRange{}) =
     mconcat [ "kind" .= String "MsgRequestRange"
