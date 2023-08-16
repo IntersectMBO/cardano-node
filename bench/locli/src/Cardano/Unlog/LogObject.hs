@@ -201,6 +201,8 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
                  -- BlockContext's block number is inconsistent
                  -- with the rest of traces.
                  <&> BlockNo . fromIntegral . pred @Int)
+            <*> (v .: "tip"
+                 <&> hashFromPoint)
 
   , (,,,) "TraceLedgerState" "Forge.LedgerState" "Forge.Loop.LedgerState" $
     \v -> LOLedgerState
@@ -364,6 +366,7 @@ data LOBody
   | LOBlockContext
     { loSlotNo           :: !SlotNo
     , loBlockNo          :: !BlockNo
+    , loBlock            :: !Hash
     }
   | LOLedgerState
     { loSlotNo           :: !SlotNo
