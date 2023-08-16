@@ -36,6 +36,8 @@ import qualified Hedgehog.Extras.Test.File as H (writeFile)
 import           Cardano.Api (ByronAddr, ByronKeyLegacy, PaymentKey, StakeKey, bounded)
 import           Cardano.Api.Shelley (KesKey, StakePoolKey, VrfKey)
 
+import           GHC.Stack (HasCallStack)
+import qualified GHC.Stack as GHC
 import           Testnet.Process.Run
 
 data KeyNames = KeyNames
@@ -45,29 +47,52 @@ data KeyNames = KeyNames
 
 type KeyGen a = (File (VKey a), File (SKey a))
 
-cliAddressKeyGen :: TmpDir -> KeyNames -> H.Integration (KeyGen PaymentKey)
-cliAddressKeyGen = shelleyKeyGen "address" "key-gen"
+cliAddressKeyGen :: ()
+  => HasCallStack
+  => TmpDir
+  -> KeyNames
+  -> H.Integration (KeyGen PaymentKey)
+cliAddressKeyGen = GHC.withFrozenCallStack $ shelleyKeyGen "address" "key-gen"
 
-cliStakeAddressKeyGen :: TmpDir -> KeyNames -> H.Integration (KeyGen StakeKey)
-cliStakeAddressKeyGen = shelleyKeyGen "stake-address" "key-gen"
+cliStakeAddressKeyGen :: ()
+  => HasCallStack
+  => TmpDir
+  -> KeyNames
+  -> H.Integration (KeyGen StakeKey)
+cliStakeAddressKeyGen = GHC.withFrozenCallStack $ shelleyKeyGen "stake-address" "key-gen"
 
-cliNodeKeyGenVrf :: TmpDir -> KeyNames -> H.Integration (KeyGen VrfKey)
-cliNodeKeyGenVrf = shelleyKeyGen "node" "key-gen-VRF"
+cliNodeKeyGenVrf :: ()
+  => HasCallStack
+  => TmpDir
+  -> KeyNames
+  -> H.Integration (KeyGen VrfKey)
+cliNodeKeyGenVrf = GHC.withFrozenCallStack $ shelleyKeyGen "node" "key-gen-VRF"
 
-cliNodeKeyGenKes :: TmpDir -> KeyNames -> H.Integration (KeyGen KesKey)
-cliNodeKeyGenKes = shelleyKeyGen "node" "key-gen-KES"
+cliNodeKeyGenKes :: ()
+  => HasCallStack
+  => TmpDir
+  -> KeyNames
+  -> H.Integration (KeyGen KesKey)
+cliNodeKeyGenKes = GHC.withFrozenCallStack $ shelleyKeyGen "node" "key-gen-KES"
 
-shelleyKeyGen :: String -> String -> TmpDir -> KeyNames -> H.Integration (KeyGen x)
-shelleyKeyGen command subCommand tmpDir keyNames = do
-  let
-    vKeyPath = tmpDir </> verificationKeyFile keyNames
-    sKeyPath = tmpDir </> signingKeyFile keyNames
-  execCli_
-      [ command, subCommand
-      , "--verification-key-file", vKeyPath
-      , "--signing-key-file", sKeyPath
-      ]
-  return (File vKeyPath, File sKeyPath)
+shelleyKeyGen :: ()
+  => HasCallStack
+  => String
+  -> String
+  -> TmpDir
+  -> KeyNames
+  -> H.Integration (KeyGen x)
+shelleyKeyGen command subCommand tmpDir keyNames =
+  GHC.withFrozenCallStack $ do
+    let
+      vKeyPath = tmpDir </> verificationKeyFile keyNames
+      sKeyPath = tmpDir </> signingKeyFile keyNames
+    execCli_
+        [ command, subCommand
+        , "--verification-key-file", vKeyPath
+        , "--signing-key-file", sKeyPath
+        ]
+    return (File vKeyPath, File sKeyPath)
 
 cliNodeKeyGen
   :: TmpDir

@@ -102,35 +102,36 @@ instance LogFormatting (Set (Credential 'Staking StandardCrypto)) where
 instance
   ( LogFormatting (PredicateFailure (Ledger.EraRule "DELEG" era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "POOL" era))
-  , LogFormatting (PredicateFailure (Ledger.EraRule "VDEL" era))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "GOVCERT" era))
   ) => LogFormatting (Conway.ConwayCertPredFailure era) where
     forMachine dtal = mconcat . \case
       Conway.DelegFailure f ->
         [ "kind" .= String "DelegFailure " , "failure" .= forMachine dtal f ]
       Conway.PoolFailure f ->
         [ "kind" .= String "PoolFailure" , "failure" .= forMachine dtal f ]
-      Conway.VDelFailure f ->
-        [ "kind" .= String "VDelFailure" , "failure" .= forMachine dtal f ]
+      Conway.GovCertFailure f ->
+        [ "kind" .= String "GovCertFailure" , "failure" .= forMachine dtal f ]
 
-instance LogFormatting (Conway.ConwayVDelPredFailure era) where
+instance LogFormatting (Conway.ConwayGovCertPredFailure era) where
   forMachine _dtal = mconcat . \case
-    Conway.ConwayDRepAlreadyRegisteredVDEL credential ->
-      [ "kind" .= String "ConwayDRepAlreadyRegisteredVDEL"
+    Conway.ConwayDRepAlreadyRegistered credential ->
+      [ "kind" .= String "ConwayDRepAlreadyRegistered"
       , "credential" .= String (textShow credential)
       , "error" .= String "DRep is already registered"
       ]
-    Conway.ConwayDRepNotRegisteredVDEL credential ->
-      [ "kind" .= String "ConwayDRepNotRegisteredVDEL"
+    Conway.ConwayDRepNotRegistered credential ->
+      [ "kind" .= String "ConwayDRepNotRegistered"
       , "credential" .= String (textShow credential)
       , "error" .= String "DRep is not registered"
       ]
-    Conway.ConwayDRepIncorrectDepositVDEL coin ->
-      [ "kind" .= String "ConwayDRepIncorrectDepositVDEL"
-      , "coin" .= coin
+    Conway.ConwayDRepIncorrectDeposit givenCoin expectedCoin ->
+      [ "kind" .= String "ConwayDRepIncorrectDeposit"
+      , "givenCoin" .= givenCoin
+      , "expectedCoin" .= expectedCoin
       , "error" .= String "DRep delegation has incorrect deposit"
       ]
-    Conway.ConwayCommitteeHasResignedVDEL kHash ->
-      [ "kind" .= String "ConwayCommitteeHasResignedVDEL"
+    Conway.ConwayCommitteeHasPreviouslyResigned kHash ->
+      [ "kind" .= String "ConwayCommitteeHasPreviouslyResigned"
       , "credential" .= String (textShow kHash)
       , "error" .= String "Committee has resigned"
       ]
@@ -143,8 +144,8 @@ instance LogFormatting (Conway.ConwayDelegPredFailure era) where
       , "amount" .= coin
       , "error" .= String "Incorrect deposit amount"
       ]
-    Conway.StakeKeyAlreadyRegisteredDELEG credential ->
-      [ "kind" .= String "StakeKeyAlreadyRegisteredDELEG"
+    Conway.StakeKeyRegisteredDELEG credential ->
+      [ "kind" .= String "StakeKeyRegisteredDELEG"
       , "credential" .= String (textShow credential)
       , "error" .= String "Stake key already registered"
       ]
@@ -153,8 +154,8 @@ instance LogFormatting (Conway.ConwayDelegPredFailure era) where
       , "amount" .= String (textShow credential)
       , "error" .= String "Stake key not registered"
       ]
-    Conway.StakeKeyHasNonZeroAccountBalanceDELEG coin ->
-      [ "kind" .= String "StakeKeyHasNonZeroAccountBalanceDELEG"
+    Conway.StakeKeyHasNonZeroRewardAccountBalanceDELEG coin ->
+      [ "kind" .= String "StakeKeyHasNonZeroRewardAccountBalanceDELEG"
       , "amount" .= coin
       , "error" .= String "Stake key has non-zero account balance"
       ]
@@ -1085,21 +1086,25 @@ instance
 instance
   ( Consensus.ShelleyBasedEra era
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOW" era))
-  , LogFormatting (PredicateFailure (Ledger.EraRule "TALLY" era))
+  , LogFormatting (PredicateFailure (Ledger.EraRule "GOV" era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "CERTS" era))
   , LogFormatting (Set (Credential 'Staking (Ledger.EraCrypto era)))
   ) => LogFormatting (Conway.ConwayLedgerPredFailure era) where
   forMachine v (Conway.ConwayUtxowFailure f) = forMachine v f
   forMachine v (Conway.ConwayCertsFailure f) = forMachine v f
-  forMachine v (Conway.ConwayTallyFailure f) = forMachine v f
+  forMachine v (Conway.ConwayGovFailure f) = forMachine v f
   forMachine verb (Conway.ConwayWdrlNotDelegatedToDRep f) = forMachine verb f
 
 instance
   ( Consensus.ShelleyBasedEra era
-  ) => LogFormatting (Conway.ConwayTallyPredFailure era) where
-  forMachine _ (Conway.GovernanceActionDoesNotExist govActionId) =
-    mconcat [ "kind" .= String "GovernanceActionDoesNotExist"
-            , "govActionId" .= govActionIdToText govActionId
+  ) => LogFormatting (Conway.ConwayGovPredFailure era) where
+  forMachine _ (Conway.GovActionsDoNotExist govActionIds) =
+    mconcat [ "kind" .= String "GovActionsDoNotExist"
+            , "govActionId" .= map govActionIdToText (Set.toList govActionIds)
+            ]
+  forMachine _ (Conway.MalformedProposal govAction) =
+    mconcat [ "kind" .= String "MalformedProposal"
+            , "govAction" .= govAction
             ]
 
 instance

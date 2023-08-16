@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use camelCase" #-}
 
-module Spec.Chairman.Cardano
-  ( hprop_chairman
-  ) where
+module Spec.Chairman.Cardano where
 
 import           Spec.Chairman.Chairman (chairmanOver)
 
@@ -11,10 +11,7 @@ import qualified Hedgehog as H
 import qualified Cardano.Testnet as H
 import qualified Testnet.Property.Utils as H
 
-{- HLINT ignore "Reduce duplication" -}
-{- HLINT ignore "Redundant <&>" -}
-{- HLINT ignore "Redundant flip" -}
-
+-- TODO: Conway broken in conway
 hprop_chairman :: H.Property
 hprop_chairman = H.integrationRetryWorkspace 2 "cardano-chairman" $ \tempAbsPath' -> do
   conf <- H.mkConf tempAbsPath'
