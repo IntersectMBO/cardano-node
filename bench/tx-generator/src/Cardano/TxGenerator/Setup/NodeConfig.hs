@@ -12,7 +12,7 @@ import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Bifunctor (first)
 import           Data.Monoid
 
-import           Ouroboros.Consensus.Cardano (ProtocolParamsShelleyBased (..))
+import qualified Ouroboros.Consensus.Cardano as Consensus
 
 import           Cardano.Api (BlockType (..), ProtocolInfoArgs (..))
 import           Cardano.Node.Configuration.POM
@@ -32,10 +32,12 @@ getGenesis :: SomeConsensusProtocol -> ShelleyGenesis
 getGenesis (SomeConsensusProtocol CardanoBlockType proto)
     = genesis
   where
-    ProtocolInfoArgsCardano
-      _
-      ProtocolParamsShelleyBased{shelleyBasedGenesis = genesis}
-      _ _ _ _ _ _ _ _ _ _ _ _ = proto
+    ProtocolInfoArgsCardano Consensus.CardanoProtocolParams
+      { Consensus.paramsShelleyBased =
+          Consensus.ProtocolParamsShelleyBased
+            { Consensus.shelleyBasedGenesis = genesis
+            }
+      } = proto
 
 -- | extract the path to genesis file from a NodeConfiguration for Cardano protocol
 getGenesisPath :: NodeConfiguration -> Maybe GenesisFile

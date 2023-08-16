@@ -20,6 +20,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KeyMapAeson
 import           Data.Bifunctor
+import qualified Data.Default.Class as DefaultClass
 import qualified Data.Map.Strict as Map
 import           Data.Proxy
 import           Data.Ratio
@@ -123,7 +124,7 @@ defaultAlonzoGenesis = do
 
 
 defaultConwayGenesis :: ConwayGenesis StandardCrypto
-defaultConwayGenesis = ConwayGenesis { cgGenDelegs = GenDelegs mempty}
+defaultConwayGenesis = ConwayGenesis { cgUpgradePParams = DefaultClass.def }
 
 
 

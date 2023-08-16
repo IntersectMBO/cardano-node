@@ -42,7 +42,7 @@ import           Cardano.Ledger.Keys (coerceKeyRole)
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..))
-import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelley (..),
+import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParams (..),
                    ProtocolParamsShelleyBased (..), ShelleyLeaderCredentials (..))
 
 import           Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)

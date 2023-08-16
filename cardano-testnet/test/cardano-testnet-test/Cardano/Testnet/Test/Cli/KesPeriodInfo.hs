@@ -17,7 +17,7 @@ import           Hedgehog (Property, (===))
 import           Prelude
 import           System.FilePath ((</>))
 
-import           Cardano.CLI.Run.Legacy.Query
+import           Cardano.CLI.Legacy.Run.Query
 import           Cardano.CLI.Types.Output
 
 import qualified Data.Aeson as J
