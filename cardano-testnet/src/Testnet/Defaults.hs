@@ -35,7 +35,6 @@ import           Cardano.Ledger.BaseTypes
 import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Conway.Genesis
 import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Keys
 
 import           Cardano.Tracing.Config
 
