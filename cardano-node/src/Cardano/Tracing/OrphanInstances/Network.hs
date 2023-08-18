@@ -216,17 +216,19 @@ instance HasPrivacyAnnotation TraceLedgerPeers
 instance HasSeverityAnnotation TraceLedgerPeers where
   getSeverityAnnotation ev =
     case ev of
-      PickedLedgerPeer {}            -> Debug
-      PickedLedgerPeers {}           -> Info
-      PickedBigLedgerPeer {}         -> Info
-      PickedBigLedgerPeers {}        -> Info
-      FetchingNewLedgerState {}      -> Info
-      DisabledLedgerPeers {}         -> Info
-      TraceUseLedgerAfter {}         -> Info
-      WaitingOnRequest {}            -> Debug
-      RequestForPeers {}             -> Debug
-      ReusingLedgerState {}          -> Debug
-      FallingBackToBootstrapPeers {} -> Info
+      PickedLedgerPeer {}             -> Debug
+      PickedLedgerPeers {}            -> Info
+      PickedBigLedgerPeer {}          -> Info
+      PickedBigLedgerPeers {}         -> Info
+      FetchingNewLedgerState {}       -> Info
+      DisabledLedgerPeers {}          -> Info
+      TraceUseLedgerAfter {}          -> Info
+      WaitingOnRequest {}             -> Debug
+      RequestForPeers {}              -> Debug
+      ReusingLedgerState {}           -> Debug
+      FallingBackToPublicRootPeers {} -> Info
+      NotEnoughBigLedgerPeers {}      -> Error
+      NotEnoughLedgerPeers {}         -> Error
 
 
 instance HasPrivacyAnnotation (WithAddr addr ErrorPolicyTrace)
@@ -1357,9 +1359,21 @@ instance ToObject TraceLedgerPeers where
       , "numberOfPools" .= cnt
       , "ledgerStateAge" .= age
       ]
-  toObject _verb FallingBackToBootstrapPeers =
+  toObject _verb FallingBackToPublicRootPeers =
     mconcat
-      [ "kind" .= String "FallingBackToBootstrapPeers"
+      [ "kind" .= String "FallingBackToPublicRootPeers"
+      ]
+  toObject _verb (NotEnoughBigLedgerPeers (NumberOfPeers sampleSize) n) =
+    mconcat
+      [ "kind" .= String "NotEnoughBigLedgerPeers"
+      , "desiredSampleSize" .= sampleSize
+      , "totalNumOfBigLedgerPeers" .= n
+      ]
+  toObject _verb (NotEnoughLedgerPeers (NumberOfPeers sampleSize) n) =
+    mconcat
+      [ "kind" .= String "NotEnoughLedgerPeers"
+      , "desiredSampleSize" .= sampleSize
+      , "totalNumOfLedgerPeers" .= n
       ]
 
 
@@ -1400,16 +1414,16 @@ instance ToObject peer => ToObject (WithMuxBearer peer MuxTrace) where
 
 instance Aeson.ToJSONKey RelayAccessPoint where
 
-instance ToJSON HotValency where
-  toJSON (HotValency v) = toJSON v
-instance ToJSON WarmValency where
-  toJSON (WarmValency v) = toJSON v
+instance ToJSON LocalRootPeers.HotValency where
+  toJSON (LocalRootPeers.HotValency v) = toJSON v
+instance ToJSON LocalRootPeers.WarmValency where
+  toJSON (LocalRootPeers.WarmValency v) = toJSON v
 
-instance FromJSON HotValency where
-  parseJSON v = HotValency <$> parseJSON v
+instance FromJSON LocalRootPeers.HotValency where
+  parseJSON v = LocalRootPeers.HotValency <$> parseJSON v
 
-instance FromJSON WarmValency where
-  parseJSON v = WarmValency <$> parseJSON v
+instance FromJSON LocalRootPeers.WarmValency where
+  parseJSON v = LocalRootPeers.WarmValency <$> parseJSON v
 
 instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception) where
   toObject _verb (TraceLocalRootDomains groups) =

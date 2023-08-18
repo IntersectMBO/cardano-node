@@ -57,7 +57,7 @@ library
                       , hostname
                       , network
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.8.2.0
+                      , ouroboros-network ^>= 0.9
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , serialise
@@ -149,7 +149,7 @@ test-suite trace-dispatcher-test
                       , generic-data
                       , hostname
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.8.2.0
+                      , ouroboros-network ^>= 0.9
                       , text
                       , stm
                       , tasty

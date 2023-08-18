@@ -535,9 +535,9 @@ instance LogFormatting TraceLedgerPeers where
       , "numberOfPools" .= cnt
       , "ledgerStateAge" .= age
       ]
-  forMachine _dtal FallingBackToBootstrapPeers =
+  forMachine _dtal FallingBackToPublicRootPeers =
     mconcat
-      [ "kind" .= String "FallingBackToBootstrapPeers"
+      [ "kind" .= String "FallingBackToPublicRootPeers"
       ]
 
 instance MetaTrace TraceLedgerPeers where
@@ -561,8 +561,8 @@ instance MetaTrace TraceLedgerPeers where
       Namespace [] ["RequestForPeers"]
     namespaceFor ReusingLedgerState {} =
       Namespace [] ["ReusingLedgerState"]
-    namespaceFor FallingBackToBootstrapPeers {} =
-      Namespace [] ["FallingBackToBootstrapPeers"]
+    namespaceFor FallingBackToPublicRootPeers {} =
+      Namespace [] ["FallingBackToPublicRootPeers"]
 
     severityFor (Namespace _ ["PickedPeer"]) _ = Just Debug
     severityFor (Namespace _ ["PickedPeers"]) _ = Just Info
@@ -572,7 +572,7 @@ instance MetaTrace TraceLedgerPeers where
     severityFor (Namespace _ ["WaitingOnRequest"]) _ = Just Debug
     severityFor (Namespace _ ["RequestForPeers"]) _ = Just Debug
     severityFor (Namespace _ ["ReusingLedgerState"]) _ = Just Debug
-    severityFor (Namespace _ ["FallingBackToBootstrapPeers"]) _ = Just Info
+    severityFor (Namespace _ ["FallingBackToPublicRootPeers"]) _ = Just Info
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["PickedPeer"]) = Just
@@ -593,7 +593,7 @@ instance MetaTrace TraceLedgerPeers where
       "RequestForPeers (NumberOfPeers 1)"
     documentFor (Namespace _ ["ReusingLedgerState"]) = Just
       ""
-    documentFor (Namespace _ ["FallingBackToBootstrapPeers"]) = Just
+    documentFor (Namespace _ ["FallingBackToPublicRootPeers"]) = Just
       ""
     documentFor _ = Nothing
 
@@ -606,5 +606,5 @@ instance MetaTrace TraceLedgerPeers where
       , Namespace [] ["WaitingOnRequest"]
       , Namespace [] ["RequestForPeers"]
       , Namespace [] ["ReusingLedgerState"]
-      , Namespace [] ["FallingBackToBootstrapPeers"]
+      , Namespace [] ["FallingBackToPublicRootPeers"]
       ]

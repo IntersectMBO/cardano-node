@@ -126,7 +126,7 @@ library
                       , ouroboros-consensus >= 0.6
                       , ouroboros-consensus-cardano >= 0.5
                       , ouroboros-consensus-diffusion >= 0.7.0
-                      , ouroboros-network ^>= 0.8.2.0
+                      , ouroboros-network ^>= 0.9
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , ouroboros-network-protocols

@@ -31,9 +31,10 @@ import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..
 import           Cardano.Node.Types (UseLedger (..))
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
-import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency (..), WarmValency (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (DomainAccessPoint (..),
                    RelayAccessPoint (..))
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
+                   WarmValency (..))
 
 
 import qualified Data.IP as IP

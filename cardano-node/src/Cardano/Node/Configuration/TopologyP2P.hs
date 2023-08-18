@@ -47,8 +47,8 @@ import           Cardano.Tracing.OrphanInstances.Network ()
 import           Control.Applicative (Alternative (..))
 import           Ouroboros.Network.NodeToNode (PeerAdvertise (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
-import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency (..), WarmValency (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..), WarmValency (..))
 
 data NodeSetup = NodeSetup
   { nodeId          :: !Word64
