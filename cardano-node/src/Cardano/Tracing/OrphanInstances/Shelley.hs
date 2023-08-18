@@ -169,13 +169,14 @@ instance ToObject (Conway.ConwayGovCertPredFailure era) where
       , "credential" .= String (textShow credential)
       , "error" .= String "DRep is not registered"
       ]
-    Conway.ConwayDRepIncorrectDeposit coin ->
+    Conway.ConwayDRepIncorrectDeposit givenCoin expectedCoin  ->
       [ "kind" .= String "ConwayDRepIncorrectDeposit"
-      , "coin" .= coin
+      , "givenCoin" .= givenCoin
+      , "expectedCoin" .= expectedCoin
       , "error" .= String "DRep delegation has incorrect deposit"
       ]
-    Conway.ConwayCommitteeHasResigned kHash ->
-      [ "kind" .= String "ConwayCommitteeHasResigned"
+    Conway.ConwayCommitteeHasPreviouslyResigned kHash ->
+      [ "kind" .= String "ConwayCommitteeHasPreviouslyResigned"
       , "credential" .= String (textShow kHash)
       , "error" .= String "Committee has resigned"
       ]
@@ -187,8 +188,8 @@ instance ToObject (Conway.ConwayDelegPredFailure era) where
       , "amount" .= coin
       , "error" .= String "Incorrect deposit amount"
       ]
-    Conway.StakeKeyAlreadyRegisteredDELEG credential ->
-      [ "kind" .= String "StakeKeyAlreadyRegisteredDELEG"
+    Conway.StakeKeyRegisteredDELEG credential ->
+      [ "kind" .= String "StakeKeyRegisteredDELEG"
       , "credential" .= String (textShow credential)
       , "error" .= String "Stake key already registered"
       ]
@@ -197,7 +198,7 @@ instance ToObject (Conway.ConwayDelegPredFailure era) where
       , "amount" .= String (textShow credential)
       , "error" .= String "Stake key not registered"
       ]
-    Conway.StakeKeyHasNonZeroAccountBalanceDELEG coin ->
+    Conway.StakeKeyHasNonZeroRewardAccountBalanceDELEG coin ->
       [ "kind" .= String "StakeKeyHasNonZeroAccountBalanceDELEG"
       , "amount" .= coin
       , "error" .= String "Stake key has non-zero account balance"
