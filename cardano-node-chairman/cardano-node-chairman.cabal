@@ -42,7 +42,7 @@ executable cardano-node-chairman
                         -rtsopts
                         "-with-rtsopts=-T"
   build-depends:        cardano-api
-                      , cardano-crypto-class ^>= 2.1
+                      , cardano-crypto-class ^>= 2.1.2
                       , cardano-git-rev
                       , cardano-node
                       , cardano-prelude
@@ -69,7 +69,7 @@ test-suite chairman-tests
   type:                 exitcode-stdio-1.0
 
   build-depends:        cardano-testnet
-                      , cardano-crypto-class ^>= 2.1
+                      , cardano-crypto-class ^>= 2.1.2
                       , filepath
                       , hedgehog
                       , hedgehog-extras ^>= 0.4.7.0

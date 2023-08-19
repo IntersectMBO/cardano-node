@@ -42,7 +42,7 @@ library
                       , cardano-api ^>= 8.15
                       , cardano-binary
                       , cardano-cli ^>= 8.5
-                      , cardano-crypto-class ^>= 2.1
+                      , cardano-crypto-class ^>= 2.1.2
                       , cardano-ledger-byron ^>= 1.0
                       , formatting
                       , http-media
@@ -87,7 +87,7 @@ executable cardano-submit-api
   build-depends:        base
                       , optparse-applicative-fork
                       , cardano-cli ^>= 8.5
-                      , cardano-crypto-class ^>= 2.1
+                      , cardano-crypto-class ^>= 2.1.2
                       , cardano-submit-api
 
 test-suite unit
@@ -96,4 +96,4 @@ test-suite unit
   main-is:              test.hs
   hs-source-dirs:       test
   build-depends:        base
-                      , cardano-crypto-class ^>= 2.1
+                      , cardano-crypto-class ^>= 2.1.2
