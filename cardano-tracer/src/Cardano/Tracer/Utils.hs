@@ -29,7 +29,6 @@ module Cardano.Tracer.Utils
   , nl
   , runInLoop
   , showProblemIfAny
-  , showT
   ) where
 
 #if MIN_VERSION_base(4,18,0)
@@ -54,6 +53,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Data.Text as T
 import           Data.Tuple.Extra (uncurry3)
+
 import           System.IO (hFlush, stdout)
 import           System.Mem.Weak (deRefWeak)
 import qualified System.Signal as S
@@ -207,9 +207,6 @@ nl = "\n"
 #else
 nl = "\r\n"
 #endif
-
-showT :: Show a => a -> T.Text
-showT = T.pack . show
 
 -- | If 'cardano-tracer' process is going to die (by receiving some system signal),
 --   we want to do something before it stops.
