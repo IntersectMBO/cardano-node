@@ -13,7 +13,7 @@ maintainer:             operations@iohk.io
 license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
-extra-source-files:     CHANGELOG.md
+extra-doc-files:        CHANGELOG.md
                         README.md
                         doc/trace-dispatcher.md
 
@@ -21,6 +21,7 @@ common project-config
   default-language:     Haskell2010
 
 library
+  import:               project-config
   hs-source-dirs:     src
   exposed-modules:    Cardano.Logging
                       Cardano.Logging.Configuration
@@ -129,6 +130,7 @@ executable trace-dispatcher-examples
                         -Wno-incomplete-patterns
 
 test-suite trace-dispatcher-test
+  import:              project-config
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             trace-dispatcher-test.hs
