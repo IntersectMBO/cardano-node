@@ -30,7 +30,6 @@ common project-config
                         -Wpartial-fields
                         -Wredundant-constraints
                         -Wunused-packages
-                        -fprof-auto
 
 library
   import:               project-config

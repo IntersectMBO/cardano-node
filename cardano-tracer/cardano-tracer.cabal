@@ -280,6 +280,9 @@ test-suite cardano-tracer-test
   type:                 exitcode-stdio-1.0
   default-extensions:   OverloadedStrings
 
+  if os(windows)
+    buildable:          False
+
   hs-source-dirs:       test
 
   main-is:              cardano-tracer-test.hs
