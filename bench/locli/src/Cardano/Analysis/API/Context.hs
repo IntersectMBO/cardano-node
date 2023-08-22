@@ -9,7 +9,7 @@ import Cardano.Prelude
 import Control.Monad (fail)
 
 import Data.Aeson ( FromJSON (..), ToJSON (..), Value
-                  , withObject, object, (.:), (.:?), (.=))
+                  , withObject, object, (.:), (.:?), (.=), (.!=))
 import Data.Aeson.Key qualified as AE
 import Data.Aeson.KeyMap qualified as AE
 import Data.Aeson.Types qualified as AE
@@ -108,7 +108,7 @@ unknownComponent ciName = ComponentInfo
 instance FromJSON ComponentInfo where
   parseJSON = withObject "Component" $ \v -> do
     ciName    <- v .: "name"
-    ciCommit  <- v .: "commit"
+    ciCommit  <- v .:? "commit" .!= Commit "unknown"      -- workaround for commit hash missing from manifest
     ciBranch  <- v .:? "branch"
     ciStatus  <- v .:? "status"
     ciVersion <- v .: "version"
