@@ -11,11 +11,13 @@
 module Cardano.Analysis.BlockProp
   ( summariseMultiBlockProp
   , MachView
+  , buildForgeTimeline
   , buildMachViews
   , rebuildChain
   , blockProp
   , BlockPropError(..)
   , renderBlockPropError
+  , checkAllForgersKnown
   )
 where
 
@@ -29,6 +31,7 @@ import Data.Function            (on)
 import Data.List                (dropWhileEnd, intercalate, partition)
 import Data.Map.Strict          (Map)
 import Data.Map.Strict          qualified as Map
+import Data.Set                 qualified as Set
 import Data.Maybe               (catMaybes, mapMaybe, isNothing)
 import Data.Set                 (Set)
 import Data.Set                 qualified as Set
@@ -286,6 +289,13 @@ machViewMaxBlock MachView{..} =
 beForgedAt :: BlockEvents -> UTCTime
 beForgedAt BlockEvents{beForge=BlockForge{..}} =
   bfForged `afterSlot` bfSlotStart
+
+buildForgeTimeline :: [(JsonLogfile, [LogObject])] -> IO [LogObject]
+buildForgeTimeline los = do
+  loAllForges <- concat <$> mapConcurrentlyPure (filter match . snd) los
+  pure $! sortOn loAt loAllForges
+  where match LogObject{loBody = LOBlockForged{}} = True
+        match _                                   = False
 
 buildMachViews :: Run -> [(JsonLogfile, [LogObject])] -> IO [(JsonLogfile, MachView)]
 buildMachViews run = mapConcurrentlyPure (fst &&& blockEventMapsFromLogObjects run)
@@ -832,3 +842,17 @@ collectEventErrors mbe phases =
   , let neg  = ((< 0) <$> proj) == SJust True
   , miss || neg
   ]
+
+-- | Expects a log object stream of or including block forges.
+-- Returns those log objects where block hash doesn't reference a known forge.
+checkAllForgersKnown :: [LogObject] -> [LogObject]
+checkAllForgersKnown = go (Set.singleton $ Hash "GenesisHash")
+  where
+    go forged = \case
+      [] -> []
+      lo@LogObject{loBody = LOBlockForged{..}}:los ->
+        let next = go (loBlock `Set.insert` forged)
+        in if loPrev `Set.member` forged
+          then next los
+          else lo : next los
+      lo:_ -> error $ "checkAllForgersKnown: unexpected LogObject: " ++ show lo

@@ -55,6 +55,8 @@ data ChainCommand
   |        Unlog            (JsonInputFile (RunLogs ())) Bool (Maybe [LOAnyType])
   |        DumpLogObjects
 
+  |      BuildForgeTimeline
+
   |        BuildMachViews
   |         DumpMachViews
   |         ReadMachViews   [JsonLogfile]
@@ -144,6 +146,8 @@ parseChainCommand =
    ]) <|>
 
    subparser (mconcat [ commandGroup "Block propagation"
+   , op "forge-timeline" "Validate timeline of all forge events"
+     (BuildForgeTimeline & pure)
    , op "rebuild-chain" "Rebuild chain"
      (RebuildChain
        <$> many
@@ -442,6 +446,19 @@ runChainCommand _ c@DumpLogObjects = missingCommandData c
   ["lifted log objects"]
 
 -- runChainCommand s c@(ReadMachViews _ _)    -- () -> [(JsonLogfile, MachView)]
+
+runChainCommand s@State{sRunLogs=Just (rlLogs -> objs)}
+  c@BuildForgeTimeline = do
+  progress "machviews" (Q $ printf "gathering forges from %d machines" $ length objs)
+  allForges <- buildForgeTimeline objs & liftIO
+  case checkAllForgersKnown allForges of 
+    [] -> progress "machviews" (Q $ printf "all forgers known")
+    xs -> throwE $ CommandError c $ LT.toStrict $ LT.unlines $
+          "unknown forger for previous block hash of:" : map Aeson.encodeToLazyText xs
+  pure s
+
+runChainCommand _ c@BuildForgeTimeline = missingCommandData c
+  ["lifted logobjects"]
 
 runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
   BuildMachViews = do

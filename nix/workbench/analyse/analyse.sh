@@ -223,6 +223,7 @@ EOF
         local script=(
             logs               $(test -n "$dump_logobjects" && echo 'dump-logobjects')
             read-context
+            forge-timeline
 
             build-mach-views   $(test -n "$dump_machviews"  && echo 'dump-mach-views')
             rebuild-chain
@@ -400,9 +401,9 @@ EOF
         local v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 va vb vc vd ve vf vg vh vi vj vk vl vm vn vo
         v0=( $* )
         v1=("${v0[@]/#logs/                 'unlog' --run-logs \"$adir\"/log-manifest.json ${analysis_allowed_loanys[*]/#/--ok-loany } }")
-        v2=("${v1[@]/#read-context/         'read-meta-genesis' --run-metafile    \"$dir\"/meta.json --shelley-genesis \"$dir\"/genesis-shelley.json }")
+        v2=("${v1[@]/#read-context/         'read-meta-genesis'  --run-metafile    \"$dir\"/meta.json --shelley-genesis \"$dir\"/genesis-shelley.json }")
         v3=("${v2[@]/#write-context/        'write-meta-genesis' --run-metafile    \"$dir\"/meta.json --shelley-genesis \"$dir\"/genesis-shelley.json }")
-        v4=("${v3[@]/#read-chain/           'read-chain'            --chain \"$adir\"/chain.json}")
+        v4=("${v3[@]/#read-chain/           'read-chain'         --chain \"$adir\"/chain.json}")
         v5=("${v4[@]/#rebuild-chain/        'rebuild-chain'                  ${filters[@]}}")
         v6=("${v5[@]/#dump-chain/           'dump-chain'         --chain \"$adir\"/chain.json --chain-rejecta \"$adir\"/chain-rejecta.json }")
         v7=("${v6[@]/#chain-timeline/       'timeline-chain'     --timeline \"$adir\"/chain.txt                ${locli_render[*]} ${locli_timeline[*]} }")
@@ -427,6 +428,7 @@ EOF
         vq=("${vp[@]/#read-summaries/       'read-summaries'        --summary \"$adir\"/summary.json }")
         vr=("${vq[@]/#summary-json/         'render-summary'           --json \"$adir\"/summary.json }")
         vs=("${vr[@]/#summary-report/       'render-summary'     --org-report \"$adir\"/summary.org            ${locli_render[*]}}")
+        vt=("${vs[@]/#forge-timeline/       'forge-timeline'}")
         local ops_final=()
         for v in "${vs[@]}"
         do eval ops_final+=($v); done
@@ -564,13 +566,16 @@ EOF
         if   test -z "$(ls 2>/dev/null $dir/node-*/*.json)"
         then remanifest_reasons+=("$(blue consolidated logs missing)")
         elif test ! -f "$run_logs"
-        then remanifest_reasons+=("$(green logs-modified-after-manifest)")
-        elif test "$(ls 2>/dev/null --sort=time $dir/node-*/*.json analysis/log-manifest.json | head -n1)" != "$run_logs"
-        then remanifest_reasons+=("$(red logs-modified-after-manifest)")
+        then remanifest_reasons+=("$(green missing $run_logs)")
+        # with workbench runs, a node's log files are just called 'stdout'
+        elif test "$(ls 2>/dev/null --sort=time $dir/node-*/*.json $dir/node-*/stdout $run_logs | head -n1)" != "$run_logs"
+        then remanifest_reasons+=("$(red logs modified after manifest)")
         fi
 
+        echo $(ls 2>/dev/null --sort=time $dir/node-*/*.json $dir/node-*/stdout $run_logs)
+
         if test ${#remanifest_reasons[*]} = 0
-        then progress "analyse" "log manifest exist and is up to date"
+        then progress "analyse" "log manifest exists and is up to date"
         else progress "analyse" "assembling log manifest:  ${remanifest_reasons[*]}"
              echo '{}' > $run_logs
              time {
