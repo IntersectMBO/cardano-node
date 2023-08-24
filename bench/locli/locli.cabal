@@ -113,6 +113,7 @@ library
                       , file-embed
                       , filepath
                       , fingertree
+                      , hashable
                       , ghc
                       , gnuplot
                       , iohk-monitoring
