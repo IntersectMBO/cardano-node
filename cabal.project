@@ -123,7 +123,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 78f7a588ad6434f1edfcfff152c733fc14ade9f0
-  --sha256: sha256-fWk898Pu9wio120Vc/8HNz9clUYmu1D8gxQh6XJFMnY=
+  tag: 81d2e208a4509f89b8602973c47aaf572da8dd77
+  --sha256: sha256-qAhTKmtGbbOIkZNnD5E7MWXE80gjYWFOC7aV2OAlOOg=
   subdir:
       eras/conway/impl
+      eras/shelley/impl
