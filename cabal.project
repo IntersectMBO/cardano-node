@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2023-08-09T22:19:16Z
-  , cardano-haskell-packages 2023-08-18T20:00:00Z
+  , cardano-haskell-packages 2023-08-23T11:00:00Z
 
 packages:
   cardano-git-rev
@@ -105,23 +105,13 @@ package snap-server
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: 2097e06a2ede5ba49ec54fed76763af18bc7fccf
-  --sha256: sha256-LPM4VXlyEmWjmEnxP8/S6JvBvZuKrehhQMz8uneI6eU=
-  subdir:
-      ouroboros-consensus
-      ouroboros-consensus-cardano
-      ouroboros-consensus-diffusion
-      ouroboros-consensus-protocol
-
-source-repository-package
-  type: git
   location: https://github.com/input-output-hk/cardano-api
   tag: 513de10344151360282633f1d1f254c5c3b820b8
   --sha256: sha256-TIQ9eRJQMpkO8Wd87FmzzBexd8nBoptvlEwmaoWeANc=
   subdir:
       cardano-api
       cardano-api-gen
+
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-cli
@@ -129,3 +119,11 @@ source-repository-package
   --sha256: sha256-NguvoV0+DQceTmcdbXBGTD1oDf6upuihbegCyPR9S2U=
   subdir:
       cardano-cli
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger
+  tag: 78f7a588ad6434f1edfcfff152c733fc14ade9f0
+  --sha256: sha256-fWk898Pu9wio120Vc/8HNz9clUYmu1D8gxQh6XJFMnY=
+  subdir:
+      eras/conway/impl
