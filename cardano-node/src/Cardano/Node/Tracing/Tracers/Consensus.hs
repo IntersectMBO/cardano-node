@@ -931,7 +931,7 @@ instance MetaTrace (TraceEventMempool blk) where
     namespaceFor TraceMempoolAttemptingSync = Namespace [] ["MempoolAttemptingSync"]
     namespaceFor TraceMempoolSyncNotNeeded {} = Namespace [] ["MempoolSyncNotNeeded"]
     namespaceFor TraceMempoolSyncDone = Namespace [] ["MempoolSyncDone"]
-    namespaceFor TraceMempoolAttemptingAdd {} = Namespace [] ["MepoolAttemptAdd"]
+    namespaceFor TraceMempoolAttemptingAdd {} = Namespace [] ["MempoolAttemptAdd"]
     namespaceFor TraceMempoolLedgerFound {} = Namespace [] ["MempoolLedgerFound"]
     namespaceFor TraceMempoolLedgerNotFound {} = Namespace [] ["MempoolLedgerNotFound"]
 

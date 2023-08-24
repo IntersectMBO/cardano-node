@@ -1649,7 +1649,7 @@ instance LogFormatting BS.BackingStoreTrace where
   forMachine _dtals BS.BSCreatingValueHandle =
     mconcat [ "kind" .= String "BSCreatingValueHandle" ]
   forMachine dtals (BS.BSValueHandleTrace i p) =
-    mconcat ([ "kind" .= String "BSCopied"
+    mconcat ([ "kind" .= String "BSValueHandleTrace"
              , "event" .= forMachine dtals p
              ] ++ maybe [] (\i' -> [ "index" .= show i' ]) i)
   forMachine _dtals BS.BSCreatedValueHandle =

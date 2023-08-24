@@ -1599,7 +1599,7 @@ instance ToObject BS.BackingStoreTrace where
                                            , "path" .= show p
                                            ]
   toObject _verb BS.BSCreatingValueHandle = mconcat [ "kind" .= String "BSCreatingValueHandle" ]
-  toObject  verb (BS.BSValueHandleTrace i p) = mconcat ([ "kind" .= String "BSCopied"
+  toObject  verb (BS.BSValueHandleTrace i p) = mconcat ([ "kind" .= String "BSValueHandleTrace"
                                                        , "event" .= toObject verb p
                                                        ] ++ maybe [] (\i' -> [ "index" .= show i' ]) i)
   toObject _verb BS.BSCreatedValueHandle = mconcat [ "kind" .= String "BSCreatedValueHandle" ]
