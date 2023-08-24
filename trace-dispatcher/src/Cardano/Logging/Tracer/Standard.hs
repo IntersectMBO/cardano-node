@@ -7,6 +7,7 @@ module Cardano.Logging.Tracer.Standard (
 
 import           Control.Concurrent.Async
 import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Exception
 import           Control.Monad (forever, when)
 import           Control.Monad.IO.Class
 import           Data.IORef (IORef, modifyIORef', newIORef, readIORef)
@@ -66,8 +67,13 @@ standardTracer = do
 startStdoutThread :: IORef StandardTracerState -> IO ()
 startStdoutThread stateRef = do
     (inChan, outChan) <- newChan 2048
-    as <- async (myThreadId >>= flip labelThread "TraceStdoutWriter"
-                            >> stdoutThread outChan)
+    as <- async (do
+       tid <- myThreadId
+       labelThread tid "TraceStdoutWriter"
+       catch
+         (stdoutThread outChan)
+         (\(_ :: BlockedIndefinitelyOnMVar) -> pure ())
+      )
     link as
     modifyIORef' stateRef (\ st ->
       st {stRunning = Just (inChan, outChan, as)})
