@@ -23,7 +23,7 @@ import           Network.Mux.Trace (TraceLabelPeer (..))
 
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
-import           Ouroboros.Consensus.Node (NetworkP2PMode, RunNode)
+import           Ouroboros.Consensus.Node (NetworkP2PMode)
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import           Ouroboros.Network.Magic (NetworkMagic)
 import           Ouroboros.Network.NodeToClient (withIOManager)
@@ -47,8 +47,7 @@ import           Cardano.Node.Tracing.Tracers.Resources (startResourceTracer)
 
 initTraceDispatcher ::
   forall blk p2p.
-  ( RunNode blk
-  , TraceConstraints blk
+  ( TraceConstraints blk
   , LogFormatting (LedgerEvent blk)
   , LogFormatting
     (TraceLabelPeer (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))

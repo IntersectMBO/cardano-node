@@ -14,10 +14,11 @@ module Cardano.Node.Tracing.Tracers
   ) where
 
 import           Codec.CBOR.Read (DeserialiseFailure)
+import           Control.Monad (unless)
 import           Data.Proxy (Proxy (..))
 
 import           Cardano.Logging
-
+import           Cardano.Node.Tracing.Consistency (checkConfiguration')
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
@@ -33,7 +34,6 @@ import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer ()
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
-import           Trace.Forward.Utils.DataPoint (DataPoint)
 
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.Node.Queries (NodeKernelData)
@@ -42,6 +42,8 @@ import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.Peers
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           "contra-tracer" Control.Tracer (Tracer (..))
+
+import           Network.Mux.Trace (TraceLabelPeer (..))
 
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
@@ -56,8 +58,6 @@ import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 
-import           Network.Mux.Trace (TraceLabelPeer (..))
-
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.Diffusion as Diffusion
@@ -65,6 +65,8 @@ import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
 import qualified Ouroboros.Network.Diffusion.P2P as P2P
 import           Ouroboros.Network.NodeToClient (LocalAddress)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
+
+import           Trace.Forward.Utils.DataPoint (DataPoint)
 
 -- | Construct tracers for all system components.
 --
@@ -159,6 +161,10 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
       mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG trDataPoint trConfig enableP2P
 
     traceTracerInfo trBase trForward configReflection
+
+    let warnings = checkConfiguration' trConfig
+    unless (null warnings) $
+      traceConfigWarnings trBase trForward warnings
 
     pure Tracers
       {
@@ -279,7 +285,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
 
     !forgeThreadStatsTr <- mkCardanoTracer'
                 trBase trForward mbTrEKG
-                ["Forge"]
+                ["Forge", "ThreadStats"]
                 forgeThreadStats
     configureTracers configReflection trConfig [forgeThreadStatsTr]
 

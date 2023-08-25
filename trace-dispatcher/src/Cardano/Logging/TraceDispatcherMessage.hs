@@ -37,6 +37,8 @@ data TraceDispatcherMessage =
     --    The third array gives the names of all tracers
   | MetricsInfo (Map.Map Text Int)
     -- ^  Outputs optional statistics about metrics frequency
+  | TracerErrors [Text]
+    -- ^  Consistency check found warnings
 
   deriving Show
 
@@ -55,6 +57,8 @@ instance LogFormatting TraceDispatcherMessage where
     <> intercalate (singleton ' ') noMetrics <> ". Here is a complete list of all tracers: "
     <> intercalate (singleton ' ') allTracers <> "."
   forHuman (MetricsInfo mmap) = "Number of metrics delivered, " <> (pack . show) mmap
+  forHuman (TracerErrors errs) = "Consistency check found error:  " <> (pack . show) errs
+
 
   forMachine _dtl StartLimiting {} = mconcat
         [ "kind" .= String "StartLimiting"
@@ -83,6 +87,11 @@ instance LogFormatting TraceDispatcherMessage where
         [ "kind" .= String "MetricsInfo"
         , "metrics count" .= String ((pack . show) mmap)
         ]
+  forMachine _dtl (TracerErrors errs) = mconcat
+        [ "kind" .= String "TracerErrors"
+        , "errors" .= String ((pack . show) errs)
+        ]
+
 
   asMetrics StartLimiting {} = []
   asMetrics (StopLimiting txt num)  = [IntM
@@ -91,7 +100,9 @@ instance LogFormatting TraceDispatcherMessage where
   asMetrics RememberLimiting {} = []
   asMetrics UnknownNamespace {} = []
   asMetrics TracerInfo {}       = []
-  asMetrics MetricsInfo {}       = []
+  asMetrics MetricsInfo {}      = []
+  asMetrics TracerErrors {}     = []
+
 
 instance MetaTrace TraceDispatcherMessage where
     namespaceFor StartLimiting {}    = Namespace [] ["StartLimiting"]
@@ -99,7 +110,8 @@ instance MetaTrace TraceDispatcherMessage where
     namespaceFor RememberLimiting {} = Namespace [] ["RememberLimiting"]
     namespaceFor UnknownNamespace {} = Namespace [] ["UnknownNamespace"]
     namespaceFor TracerInfo {}       = Namespace [] ["TracerInfo"]
-    namespaceFor MetricsInfo {}       = Namespace [] ["MetricsInfo"]
+    namespaceFor MetricsInfo {}      = Namespace [] ["MetricsInfo"]
+    namespaceFor TracerErrors {}     = Namespace [] ["TracerErrors"]
 
 
     severityFor (Namespace _ ["StartLimiting"]) _    = Just Notice
@@ -108,6 +120,7 @@ instance MetaTrace TraceDispatcherMessage where
     severityFor (Namespace _ ["UnknownNamespace"]) _ = Just Error
     severityFor (Namespace _ ["TracerInfo"]) _       = Just Notice
     severityFor (Namespace _ ["MetricsInfo"]) _      = Just Debug
+    severityFor (Namespace _ ["TracerErrors"]) _     = Just Error
     severityFor _ _                                  = Nothing
 
 
@@ -131,6 +144,9 @@ instance MetaTrace TraceDispatcherMessage where
     documentFor (Namespace _ ["MetricsInfo"]) = Just $ mconcat
       [ "Writes out number of metrics delivered."
       ]
+    documentFor (Namespace _ ["TracerErrors"]) = Just $ mconcat
+      [ "Tracer consistency check found errors."
+      ]
     documentFor _ = Nothing
 
 
@@ -141,4 +157,5 @@ instance MetaTrace TraceDispatcherMessage where
       , Namespace [] ["UnknownNamespace"]
       , Namespace [] ["TracerInfo"]
       , Namespace [] ["MetricsInfo"]
+      , Namespace [] ["TracerErrors"]
       ]
