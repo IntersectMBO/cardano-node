@@ -1,8 +1,8 @@
 -- | Check namespace consistencies agains configurations
 module Test.Cardano.Tracing.NewTracing.Consistency (tests) where
 
-import           Data.Text
 import           Control.Monad.IO.Class (liftIO)
+import           Data.Text
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H

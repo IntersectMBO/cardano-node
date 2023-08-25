@@ -69,7 +69,7 @@ import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 
 
-import           Ouroboros.Network.Block (Point (..), SlotNo, Tip, Serialised)
+import           Ouroboros.Network.Block (Point (..), Serialised, SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
@@ -297,7 +297,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     forgeKESInfoTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                ["Forge", "KESInfo"]
+                ["Forge"]
     configureTracers configReflection trConfig [forgeKESInfoTr]
     forgeKESInfoTrDoc <- documentTracer (forgeKESInfoTr ::
       Trace IO (Consensus.TraceLabelCreds HotKey.KESInfo))
