@@ -171,7 +171,7 @@ stderrTracer =
 
 mkTracerTracer :: SeverityF -> IO (Trace IO TracerTrace)
 mkTracerTracer defSeverity = do
-  base     :: Trace IO FormattedMessage <- standardTracer
+  (base     :: Trace IO FormattedMessage, _) <- standardTracer
   metaBase :: Trace IO TracerTrace      <-
     machineFormatter Nothing base
     >>= withDetailsFromConfig

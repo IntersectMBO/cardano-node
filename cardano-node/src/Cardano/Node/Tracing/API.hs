@@ -86,7 +86,9 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
     EKG.registerGcMetrics ekgStore
     ekgTrace <- ekgTracer (Left ekgStore)
 
-    stdoutTrace <- standardTracer
+    -- We don't shutdown the trace layer in the node so we can ignore the
+    -- shutdown action
+    (stdoutTrace, _shutdown) <- standardTracer
 
     -- We should initialize forwarding only if 'Forwarder' backend
     -- is presented in the node's configuration.

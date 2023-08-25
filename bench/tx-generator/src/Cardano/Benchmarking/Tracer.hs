@@ -22,6 +22,7 @@
 module Cardano.Benchmarking.Tracer
   ( initNullTracers
   , initTxGenTracers
+  , shutdownTxGenTracers
   )
 where
 
@@ -76,13 +77,14 @@ initNullTracers = BenchTracers
     , btConnect_     = nullTracer
     , btSubmission2_ = nullTracer
     , btN2N_         = nullTracer
+    , btShutdown     = pure ()
     }
 
 -- if the first argument isJust, we assume we have a socket path
 -- and want to use trace-dispatcher, so we'll create a forwarding tracer
 initTxGenTracers :: Maybe (IOManager, NetworkId, FilePath) -> IO BenchTracers
 initTxGenTracers mbForwarding = do
-  mbStdoutTracer <- fmap Just standardTracer
+  (theStdoutTracer, shutdown) <- standardTracer
   mbForwardingTracer <- prepareForwardingTracer
   confState       <- emptyConfigReflection
 
@@ -91,7 +93,7 @@ initTxGenTracers mbForwarding = do
     mkTracer namespace
       | isPrefixSilent namespace = pure nullTracer
       | otherwise = do
-        tracer <-  generatorTracer namespace mbStdoutTracer mbForwardingTracer
+        tracer <-  generatorTracer namespace (Just theStdoutTracer) mbForwardingTracer
         configureTracers confState initialTraceConfig [tracer]
         pure $ Tracer (traceWith tracer)
 
@@ -107,6 +109,7 @@ initTxGenTracers mbForwarding = do
     , btConnect_     = connectTracer
     , btSubmission2_ = submitTracer
     , btN2N_         = n2nSubmitTracer
+    , btShutdown     = shutdown
     }
  where
   prepareForwardingTracer :: IO (Maybe (Trace IO FormattedMessage))
@@ -138,6 +141,9 @@ initTxGenTracers mbForwarding = do
         , niStartTime       = now
         , niSystemStartTime = now
         }
+
+shutdownTxGenTracers :: BenchTracers -> IO ()
+shutdownTxGenTracers = btShutdown
 
 isPrefixSilent :: Text -> Bool
 isPrefixSilent namespace =

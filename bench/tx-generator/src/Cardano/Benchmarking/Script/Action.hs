@@ -75,4 +75,5 @@ startProtocol configFile tracerSocket = do
     tracerSocket' = (,,) iomgr networkId `fmap` tracerSocket
 
   setEnvNetworkId networkId
+  getBenchTracers >>= liftIO . shutdownTxGenTracers
   liftIO (initTxGenTracers tracerSocket') >>= setBenchTracers

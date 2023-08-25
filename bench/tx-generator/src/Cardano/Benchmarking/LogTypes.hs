@@ -61,6 +61,7 @@ data BenchTracers =
   , btConnect_    :: Tracer IO SendRecvConnect
   , btSubmission2_:: Tracer IO SendRecvTxSubmission2
   , btN2N_        :: Tracer IO NodeToNodeSubmissionTrace
+  , btShutdown    :: IO ()
   }
 
 data TraceBenchTxSubmit txid
