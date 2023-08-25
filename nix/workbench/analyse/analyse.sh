@@ -572,8 +572,6 @@ EOF
         then remanifest_reasons+=("$(red logs modified after manifest)")
         fi
 
-        echo $(ls 2>/dev/null --sort=time $dir/node-*/*.json $dir/node-*/stdout $run_logs)
-
         if test ${#remanifest_reasons[*]} = 0
         then progress "analyse" "log manifest exists and is up to date"
         else progress "analyse" "assembling log manifest:  ${remanifest_reasons[*]}"
@@ -623,6 +621,13 @@ EOF
 
                  done
                  wait
+
+                 for mach in $(jq_tolist '.rlHostLogs | keys' $run_logs)
+                 do jq_fmutate "$run_logs" '
+                      .rlHostLogs["'"$mach"'"].hlRawFirstAt = '"$(cat $adir/logs-$mach.flt.json | head -n1 | jq .at)"'
+                    | .rlHostLogs["'"$mach"'"].hlRawLastAt  = '"$(cat $adir/logs-$mach.flt.json | tail -n1 | jq .at)"'
+                    '
+                 done
              }
         fi
 

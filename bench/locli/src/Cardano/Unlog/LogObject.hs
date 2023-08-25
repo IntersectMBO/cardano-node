@@ -114,6 +114,8 @@ data HostLogs a
     , hlLogs           :: (JsonLogfile, a)
     , hlFilteredSha256 :: Hash
     , hlProfile        :: [ProfileEntry I]
+    , hlRawFirstAt     :: Maybe UTCTime
+    , hlRawLastAt      :: Maybe UTCTime
     }
   deriving (Generic)
 
