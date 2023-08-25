@@ -25,6 +25,7 @@ module Cardano.Unlog.LogObject
   , logObjectStreamInterpreterKeys
   , LOBody (..)
   , LOAnyType (..)
+  , readLogObjectStream
   , textRefEquals
   )
 where
@@ -65,6 +66,7 @@ data TextRef
   deriving Generic
   deriving anyclass NFData
 
+{-# NOINLINE lookupTextRef #-}
 lookupTextRef :: Int -> Text
 lookupTextRef ref = Map.findWithDefault Text.empty ref dict
   where

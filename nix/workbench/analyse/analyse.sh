@@ -221,9 +221,9 @@ EOF
 
     standard | full | std )
         local script=(
+            hash-timeline
             logs               $(test -n "$dump_logobjects" && echo 'dump-logobjects')
             read-context
-            forge-timeline
 
             build-mach-views   $(test -n "$dump_machviews"  && echo 'dump-mach-views')
             rebuild-chain
@@ -428,9 +428,9 @@ EOF
         vq=("${vp[@]/#read-summaries/       'read-summaries'        --summary \"$adir\"/summary.json }")
         vr=("${vq[@]/#summary-json/         'render-summary'           --json \"$adir\"/summary.json }")
         vs=("${vr[@]/#summary-report/       'render-summary'     --org-report \"$adir\"/summary.org            ${locli_render[*]}}")
-        vt=("${vs[@]/#forge-timeline/       'forge-timeline'}")
+        vt=("${vs[@]/#hash-timeline/        'hash-timeline'        --timeline \"$adir\"/hash-timeline.json }")
         local ops_final=()
-        for v in "${vs[@]}"
+        for v in "${vt[@]}"
         do eval ops_final+=($v); done
 
         call_locli "$rtsmode" "${ops_final[@]}"
@@ -439,6 +439,7 @@ EOF
                                     fgrep -v -e '.flt.json'             \
                                              -e '.logobjs.json'         \
                                              -e 'chain.json'            \
+                                             -e 'hash-timeline.json'    \
                                              -e 'log-manifest.json'     \
                                              -e 'mach-views.json'       \
                                              -e 'prof.json'             \
@@ -573,7 +574,7 @@ EOF
         fi
 
         if test ${#remanifest_reasons[*]} = 0
-        then progress "analyse" "log manifest exists and is up to date"
+        then progress "analyse" "log manifest up to date for raw logs"
         else progress "analyse" "assembling log manifest:  ${remanifest_reasons[*]}"
              echo '{}' > $run_logs
              time {
@@ -622,6 +623,7 @@ EOF
                  done
                  wait
 
+                 # in case consolidated logs have to be truncated, we document the actual timestamps from the raw logs
                  for mach in $(jq_tolist '.rlHostLogs | keys' $run_logs)
                  do jq_fmutate "$run_logs" '
                       .rlHostLogs["'"$mach"'"].hlRawFirstAt = '"$(cat $adir/logs-$mach.flt.json | head -n1 | jq .at)"'
@@ -631,6 +633,7 @@ EOF
              }
         fi
 
+        progress "analyse" "log manifest updating for consolidated logs"
         for mach in $(jq_tolist '.rlHostLogs | keys' $run_logs)
         do jq_fmutate "$run_logs" '
              .rlHostLogs[$mach].hlRawSha256      = $raw_sha256
@@ -643,15 +646,28 @@ EOF
                - ($keypairs | map (.[1]))    # old tracing .kinds
                - ["", "unknown0", "unknown1"]
                | unique)
-           | .rlHostLogs[$mach].hlFilteredSha256 = $filtered_sha256
            ' --sort-keys                                                         \
              --arg                mach         $mach                             \
              --rawfile      raw_sha256 "$adir"/logs-$mach.sha256                 \
-             --arg     filtered_sha256 $(sha256sum < $adir/logs-$mach.flt.json | \
-                                          cut -d' ' -f1 | xargs echo -n)         \
              --slurpfile         freqs "$adir"/logs-$mach.tracefreq.json         \
              --rawfile            keys $keyfile
         done
+
+        local ht_json=$adir/hash-timeline.json
+        if test "$(ls 2>/dev/null --sort=time $adir/logs-*.flt.json $ht_json | head -n1)" = "$ht_json"
+        then progress "analyse" "hash timeline up to date"
+        else progress "analyse" "building hash timeline"
+          grep -h 'TraceForgedBlock\|DownloadedHeader' $adir/logs-*.flt.json | sort > $ht_json
+
+          # skip checksumming consolidated logs for now, to facilitate fast truncation of long runs
+          #for mach in $(jq_tolist '.rlHostLogs | keys' $run_logs)
+          #do jq_fmutate "$run_logs" '
+          #    .rlHostLogs[$mach].hlFilteredSha256 = $filtered_sha256
+          #  ' --arg                mach         $mach                             \
+          #    --arg     filtered_sha256 $(sha256sum < $adir/logs-$mach.flt.json | \
+          #                                cut -d' ' -f1 | xargs echo -n)
+          #done
+        fi
 
         jq_fmutate "$run_logs" '
           .rlMissingTraces =

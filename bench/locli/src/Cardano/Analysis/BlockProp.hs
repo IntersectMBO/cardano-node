@@ -11,7 +11,6 @@
 module Cardano.Analysis.BlockProp
   ( summariseMultiBlockProp
   , MachView
-  , buildForgeTimeline
   , buildMachViews
   , rebuildChain
   , blockProp
@@ -28,10 +27,9 @@ import Control.Arrow            ((***), (&&&))
 import Data.Aeson               (ToJSON(..), FromJSON(..))
 import Data.Bifunctor
 import Data.Function            (on)
-import Data.List                (dropWhileEnd, intercalate, partition)
+import Data.List                (break, dropWhileEnd, intercalate, partition, span)
 import Data.Map.Strict          (Map)
 import Data.Map.Strict          qualified as Map
-import Data.Set                 qualified as Set
 import Data.Maybe               (catMaybes, mapMaybe, isNothing)
 import Data.Set                 (Set)
 import Data.Set                 qualified as Set
@@ -289,13 +287,6 @@ machViewMaxBlock MachView{..} =
 beForgedAt :: BlockEvents -> UTCTime
 beForgedAt BlockEvents{beForge=BlockForge{..}} =
   bfForged `afterSlot` bfSlotStart
-
-buildForgeTimeline :: [(JsonLogfile, [LogObject])] -> IO [LogObject]
-buildForgeTimeline los = do
-  loAllForges <- concat <$> mapConcurrentlyPure (filter match . snd) los
-  pure $! sortOn loAt loAllForges
-  where match LogObject{loBody = LOBlockForged{}} = True
-        match _                                   = False
 
 buildMachViews :: Run -> [(JsonLogfile, [LogObject])] -> IO [(JsonLogfile, MachView)]
 buildMachViews run = mapConcurrentlyPure (fst &&& blockEventMapsFromLogObjects run)
@@ -844,15 +835,29 @@ collectEventErrors mbe phases =
   ]
 
 -- | Expects a log object stream of or including block forges.
--- Returns those log objects where block hash doesn't reference a known forge.
-checkAllForgersKnown :: [LogObject] -> [LogObject]
-checkAllForgersKnown = go (Set.singleton $ Hash "GenesisHash")
+-- Returns the first log object + hash that we don't know a forge for.
+checkAllForgersKnown :: [LogObject] -> Maybe (LogObject, Hash)
+checkAllForgersKnown logobjs =
+  getFirst $ First pass1 <> First pass2
   where
-    go forged = \case
-      [] -> []
-      lo@LogObject{loBody = LOBlockForged{..}}:los ->
-        let next = go (loBlock `Set.insert` forged)
-        in if loPrev `Set.member` forged
-          then next los
-          else lo : next los
-      lo:_ -> error $ "checkAllForgersKnown: unexpected LogObject: " ++ show lo
+    (pass1, forged) = go1 (Set.singleton $ Hash "GenesisHash") logobjs
+    pass2           = go2 forged logobjs
+
+    go1 forged = \case
+      [] -> (Nothing, forged)
+      lo@LogObject{loBody}:los -> case loBody of
+        LOBlockForged{..}
+          | loPrev `Set.member` forged  -> go1 (loBlock `Set.insert` forged) los
+          | otherwise                   -> (Just (lo, loPrev), forged)
+        _                               -> go1 forged los
+
+    go2 forged = \case
+      [] -> Nothing
+      lo@LogObject{loBody}:los -> case loBody of
+        LOChainSyncClientSeenHeader{loBlock}
+          | loBlock `Set.member` forged -> go2 forged los
+          | otherwise                   -> Just (lo, loBlock)
+        LOChainSyncServerSendHeader{loBlock}
+          | loBlock `Set.member` forged -> go2 forged los
+          | otherwise                   -> Just (lo, loBlock)
+        _                               -> go2 forged los

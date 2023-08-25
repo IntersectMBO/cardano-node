@@ -19,6 +19,7 @@ import Data.Tuple.Extra                 (both)
 import Options.Applicative
 import Options.Applicative              qualified as Opt
 
+import System.Directory                 (doesFileExist)
 import System.FilePath
 import System.Posix.Files               qualified as IO
 
@@ -55,7 +56,7 @@ data ChainCommand
   |        Unlog            (JsonInputFile (RunLogs ())) Bool (Maybe [LOAnyType])
   |        DumpLogObjects
 
-  |      BuildForgeTimeline
+  |    ValidateHashTimeline (JsonInputFile [LogObject])
 
   |        BuildMachViews
   |         DumpMachViews
@@ -132,6 +133,9 @@ parseChainCommand =
      )
    , op "dump-logobjects" "Dump lifted log object streams, alongside input files"
      (DumpLogObjects & pure)
+   , op "hash-timeline" "Quickly validate timeline by hashes"
+     (ValidateHashTimeline
+        <$> optJsonInputFile  "timeline"     "Hash timeline (JSON from prepare step)")
    ]) <|>
 
   subparser (mconcat [ commandGroup "Block propagation:  machine views"
@@ -146,8 +150,6 @@ parseChainCommand =
    ]) <|>
 
    subparser (mconcat [ commandGroup "Block propagation"
-   , op "forge-timeline" "Validate timeline of all forge events"
-     (BuildForgeTimeline & pure)
    , op "rebuild-chain" "Rebuild chain"
      (RebuildChain
        <$> many
@@ -447,18 +449,21 @@ runChainCommand _ c@DumpLogObjects = missingCommandData c
 
 -- runChainCommand s c@(ReadMachViews _ _)    -- () -> [(JsonLogfile, MachView)]
 
-runChainCommand s@State{sRunLogs=Just (rlLogs -> objs)}
-  c@BuildForgeTimeline = do
-  progress "machviews" (Q $ printf "gathering forges from %d machines" $ length objs)
-  allForges <- buildForgeTimeline objs & liftIO
-  case checkAllForgersKnown allForges of 
-    [] -> progress "machviews" (Q $ printf "all forgers known")
-    xs -> throwE $ CommandError c $ LT.toStrict $ LT.unlines $
-          "unknown forger for previous block hash of:" : map Aeson.encodeToLazyText xs
+runChainCommand s
+  c@(ValidateHashTimeline timelineJson) = do
+  progress "logs" (Q $ printf "validating hash timeline")
+  let f = unJsonInputFile timelineJson
+  hashTimeline <- liftIO $
+    doesFileExist f >>= bool
+      (return [])
+      (readLogObjectStream f False Nothing)
+  case (hashTimeline, checkAllForgersKnown hashTimeline) of
+    ([], _)           -> progress "logs" (Q $ printf "%s not found - skipping" f)
+    (_, Nothing)      -> progress "logs" (Q $ printf "all forgers known")
+    (_, Just (x, h))  -> throwE $ CommandError c $
+                          "unknown forger for block hash " <> (toText . unHash) h
+                          <> " in:\n" <> LT.toStrict (Aeson.encodeToLazyText x)
   pure s
-
-runChainCommand _ c@BuildForgeTimeline = missingCommandData c
-  ["lifted logobjects"]
 
 runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
   BuildMachViews = do
