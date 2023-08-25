@@ -17,8 +17,7 @@ module Cardano.Logging.DocuGenerator (
   , addFiltered
   , addLimiter
   , addSilent
-  -- Convenience functions
-  , showT
+
   , addDocumentedNamespace
 
   , DocuResult
@@ -41,14 +40,13 @@ import           Cardano.Logging.Types
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as TR
 
-import           Cardano.Logging.Utils (showT)
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
 
 -- | Convenience function for adding a namespace prefix to a documented
 addDocumentedNamespace  :: [Text] -> Documented a -> Documented a
-addDocumentedNamespace  tl (Documented list) =
+addDocumentedNamespace  out (Documented list) =
   Documented $ map
-    (\ dm@DocMsg {} -> dm {dmNamespace = nsReplacePrefix (dmNamespace dm) tl})
+    (\ dm@DocMsg {} -> dm {dmNamespace = nsReplacePrefix out (dmNamespace dm)})
     list
 
 data DocuResult =
@@ -288,7 +286,7 @@ documentTracersRun tracers = do
                             , ldPrivacyCoded  = privacyFor ns Nothing
                             , ldDetailsCoded  = detailsFor ns Nothing
                           }))
-            TR.traceWith tr (emptyLoggingContext {lcNSInner = nsGetInner ns},
+            TR.traceWith tr (emptyLoggingContext {lcNSInner = nsInner ns},
                             Left (TCDocument idx dc)))
         nsIdx
 

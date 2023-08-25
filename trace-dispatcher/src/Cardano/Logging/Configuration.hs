@@ -64,7 +64,7 @@ configureTracers cr config tracers = do
               T.traceWith
                 tr
                 (emptyLoggingContext
-                  { lcNSInner = nsGetInner ns}
+                  { lcNSInner = nsInner ns}
                   , Left control))
             (allNamespaces :: [Namespace a])
 
@@ -404,7 +404,7 @@ getLimiterSpec :: TraceConfig -> Namespace a -> Maybe (Text, Double)
 getLimiterSpec config ns = getOption limiterSelector config (nsGetComplete ns)
   where
     limiterSelector :: ConfigOption -> Maybe (Text, Double)
-    limiterSelector (ConfLimiter f) = Just (intercalate "." (nsGetPrefix ns ++ nsGetInner ns), f)
+    limiterSelector (ConfLimiter f) = Just (intercalate "." (nsPrefix ns ++ nsInner ns), f)
     limiterSelector _               = Nothing
 
 -- | Searches in the config to find an option

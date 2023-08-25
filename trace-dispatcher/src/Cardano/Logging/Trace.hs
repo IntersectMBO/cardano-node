@@ -139,7 +139,7 @@ withInnerNames :: forall m a. (Monad m, MetaTrace a) => Trace m a -> Trace m a
 withInnerNames (Trace tr) = Trace $
     T.contramap
       (\case
-        (lc, Right a) -> (lc {lcNSInner = nsGetInner (namespaceFor a)}, Right a)
+        (lc, Right a) -> (lc {lcNSInner = nsInner (namespaceFor a)}, Right a)
         (lc, Left c)  -> (lc, Left c))
       tr
 
