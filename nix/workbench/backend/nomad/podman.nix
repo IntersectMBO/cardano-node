@@ -71,9 +71,13 @@ let
   ;
 
   # Nomad-generic "container-specs.json"
-  # Build a Nomad Job specification for each available Nomad "sub-backend".
+  # Build a Nomad Job specification for this Nomad "sub-backend".
   materialise-profile =
-    (import ../nomad.nix {inherit pkgs lib stateDir;}).materialise-profile
+    let params = {
+      inherit pkgs lib stateDir;
+      subBackendName = "podman";
+    };
+    in (import ../nomad.nix params).materialise-profile
   ;
 
   overlay =
