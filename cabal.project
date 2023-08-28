@@ -119,3 +119,5 @@ constraints:
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+allow-newer: cardano-cli:ouroboros-network, ouroboros-consensus-cardano:ouroboros-network
