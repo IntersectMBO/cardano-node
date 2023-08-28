@@ -17,6 +17,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
+-- needs different instances on ghc8 and on ghc9
+
 
 module Cardano.Tracing.Tracers
   ( Tracers (..)
@@ -135,6 +138,9 @@ import qualified Control.Concurrent.STM as STM
 
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.Aeson.KeyMap as KeyMap
+
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+-- needs different instances on ghc8 and on ghc9
 
 {- HLINT ignore "Redundant bracket" -}
 {- HLINT ignore "Use record patterns" -}

@@ -9,6 +9,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
+-- needs different instances on ghc8 and on ghc9
+
 module Cardano.Node.Tracing.Tracers
   ( mkDispatchTracers
   ) where
