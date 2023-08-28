@@ -689,7 +689,118 @@ let
               env = false;
               destination = "${task_statedir}/${nodeSpec.name}/config.json";
               data = escapeTemplate (lib.generators.toJSON {}
-                profileData.node-services."${nodeSpec.name}".config.value);
+                (
+                  builtins.removeAttrs (
+                    profileData.node-services."${nodeSpec.name}".config.value
+                    //
+                    # Nuke "new tracing system" options
+                    {
+                      TraceOptions = {}; # Error if removed or null!
+                      # Removed below:
+                      # UseTraceDispatcher = false;
+                    }
+                    //
+                    # Add other options only present in cardano-ops!
+                    {
+                      ApplicationName = "cardano-sl";
+                      ApplicationVersion = 0;
+                      MaxConcurrencyDeadline = 4;
+                    }
+                    //
+                    # Set "old tracing system" options as in cardano-ops
+                    {
+                      TraceAcceptPolicy = true;
+                      TraceBlockFetchClient = true;
+                      TraceBlockFetchDecisions = false;
+                      TraceBlockFetchProtocol = false;
+                      TraceBlockFetchProtocolSerialised = false;
+                      TraceBlockFetchServer = true;
+                      TraceChainDb = true;
+                      TraceChainSyncBlockServer = false;
+                      TraceChainSyncClient = true;
+                      TraceChainSyncHeaderServer = true;
+                      TraceChainSyncProtocol = false;
+                      TraceConnectionManager = true;
+                      TraceDNSResolver = true;
+                      TraceDNSSubscription = true;
+                      TraceDiffusionInitialization = true;
+                      TraceErrorPolicy = true;
+                      TraceForge = true;
+                      TraceHandshake = false;
+                      TraceInboundGovernor = true;
+                      TraceIpSubscription = true;
+                      TraceLedgerPeers = true;
+                      TraceLocalChainSyncProtocol = false;
+                      TraceLocalErrorPolicy = true;
+                      TraceLocalHandshake = false;
+                      TraceLocalRootPeers = true;
+                      TraceLocalTxSubmissionProtocol = false;
+                      TraceLocalTxSubmissionServer = false;
+                      TraceMempool = true;
+                      TraceMux = false;
+                      TracePeerSelection = true;
+                      TracePeerSelectionActions = true;
+                      TracePublicRootPeers = true;
+                      TraceServer = true;
+                      TraceTxInbound = true;
+                      TraceTxOutbound = false;
+                      TraceTxSubmissionProtocol = false;
+                      TracingVerbosity = "NormalVerbosity";
+                      TurnOnLogMetrics = true;
+                      TurnOnLogging = true;
+                      defaultBackends = [
+                        "KatipBK"
+                      ];
+                      defaultScribes = [
+                        [ "StdoutSK" "stdout" ]
+                        [ "FileSK" "logs/node.json" ]
+                      ];
+                      minSeverity = "Debug";
+                      options = {
+                        mapBackends = {
+                          "cardano.node.metrics" = [
+                            "EKGViewBK"
+                          ];
+                          "cardano.node.resources" = [
+                            "KatipBK"
+                          ];
+                        };
+                        mapSubtrace = {
+                          "cardano.node.metrics" = {
+                            subtrace = "Neutral";
+                          };
+                        };
+                      };
+                      setupBackends = [
+                        "KatipBK"
+                      ];
+                      setupScribes = [
+                        {
+                          scFormat = "ScJson";
+                          scKind = "StdoutSK";
+                          scName = "stdout";
+                        }
+                        {
+                          scFormat = "ScJson";
+                          scKind = "FileSK";
+                          scName = "logs/node.json";
+                          scRotation = {
+                            "rpKeepFilesNum" = 20;
+                            "rpLogLimitBytes" = 10000000000;
+                            "rpMaxAgeHours" = 12;
+                          };
+                        }
+                      ];
+                    }
+                  )
+                  # Nuke "new tracing system" options
+                  [
+                    "UseTraceDispatcher"
+                    # Remove other options not present in cardano-ops
+                    "ExperimentalProtocolsEnabled"
+                  ]
+                )
+              );
               change_mode = "noop";
               error_on_missing_key = true;
             }
