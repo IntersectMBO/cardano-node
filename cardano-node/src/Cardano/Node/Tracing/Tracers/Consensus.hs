@@ -936,7 +936,7 @@ instance MetaTrace (TraceEventMempool blk) where
     namespaceFor TraceMempoolLedgerNotFound {} = Namespace [] ["MempoolLedgerNotFound"]
 
     severityFor (Namespace _ ["AddedTx"]) _ = Just Info
-    severityFor (Namespace _ ["RejectedTx"]) _ = Just Warning
+    severityFor (Namespace _ ["RejectedTx"]) _ = Just Info
     severityFor (Namespace _ ["RemoveTxs"]) _ = Just Debug
     severityFor (Namespace _ ["ManuallyRemovedTxs"]) _ = Just Warning
     severityFor (Namespace _ ["MempoolAttemptingSync"]) _ = Just Debug

@@ -259,7 +259,7 @@ instance HasSeverityAnnotation (TraceChainSyncServerEvent blk) where
 instance HasPrivacyAnnotation (TraceEventMempool blk)
 instance HasSeverityAnnotation (TraceEventMempool blk) where
   getSeverityAnnotation TraceMempoolAddedTx{} = Info
-  getSeverityAnnotation TraceMempoolRejectedTx{} = Warning
+  getSeverityAnnotation TraceMempoolRejectedTx{} = Info
   getSeverityAnnotation TraceMempoolRemoveTxs{} = Debug
   getSeverityAnnotation TraceMempoolManuallyRemovedTxs{} = Warning
   getSeverityAnnotation TraceMempoolAttemptingSync = Debug
