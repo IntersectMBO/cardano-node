@@ -67,8 +67,8 @@ if impl(ghc >= 9.6)
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: 5f94982bd6400b2dca3cfc3619e6bb9896775e68
-  --sha256: 1prkxx0bwfcy8ss61hxnxk94zfkyx653l28h6bhc08hsg7pbd58z
+  tag: 54105aac98596d94be805d608a60294d74e2c710
+  --sha256: 1ijfrg3161w8fzd4aqsvp2jdx0vcbbdl7h6v38h8r4ifg151384p
   subdir:
    ouroboros-consensus
    ouroboros-consensus-protocol

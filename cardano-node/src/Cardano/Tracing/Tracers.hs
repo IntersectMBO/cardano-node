@@ -136,6 +136,7 @@ import qualified Control.Concurrent.STM as STM
 
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.Aeson.KeyMap as KeyMap
+import Ouroboros.Consensus.Storage.LedgerDB.BackingStore.Init (BackingStoreTraceByBackend)
 
 {- HLINT ignore "Redundant bracket" -}
 {- HLINT ignore "Use record patterns" -}
@@ -465,6 +466,7 @@ mkTracers _ _ _ _ _ enableP2P =
       , Consensus.txOutboundTracer = nullTracer
       , Consensus.localTxSubmissionServerTracer = nullTracer
       , Consensus.mempoolTracer = nullTracer
+      , Consensus.backingStoreTracer = nullTracer
       , Consensus.forgeTracer = nullTracer
       , Consensus.blockchainTimeTracer = nullTracer
       , Consensus.consensusErrorTracer = nullTracer
@@ -733,6 +735,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound trSel) verb "TxOutbound" tr
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
     , Consensus.mempoolTracer = tracerOnOff' (traceMempool trSel) $ mempoolTracer trSel tr fStats
+    , Consensus.backingStoreTracer = tracerOnOff' (traceBackingStore trSel) $ backingStoreTracer trSel tr
     , Consensus.forgeTracer = tracerOnOff' (traceForge trSel) $
         Tracer $ \tlcev@Consensus.TraceLabelCreds{} -> do
           traceWith (annotateSeverity
@@ -783,11 +786,11 @@ traceBlockFetchServerMetrics
   -> STM.TVar SlotNo
   -> Tracer IO (TraceLabelPeer peer (TraceBlockFetchServerEvent blk))
   -> Tracer IO (TraceLabelPeer peer (TraceBlockFetchServerEvent blk))
-traceBlockFetchServerMetrics trMeta meta tBlocksServed tLocalUp tMaxSlotNo tracer = Tracer bsTracer
+traceBlockFetchServerMetrics trMeta meta tBlocksServed tLocalUp tMaxSlotNo tracer = Tracer bfsTracer
 
   where
-    bsTracer :: TraceLabelPeer peer (TraceBlockFetchServerEvent blk) -> IO ()
-    bsTracer e@(TraceLabelPeer _p (TraceBlockFetchServerSendBlock p)) = do
+    bfsTracer :: TraceLabelPeer peer (TraceBlockFetchServerEvent blk) -> IO ()
+    bfsTracer e@(TraceLabelPeer _p (TraceBlockFetchServerSendBlock p)) = do
       traceWith tracer e
 
       (served, mbLocalUpstreamyness) <- atomically $ do
@@ -1233,6 +1236,21 @@ mpTracer :: ( ToJSON (GenTxId blk)
             )
          => TraceSelection -> Trace IO Text -> Tracer IO (TraceEventMempool blk)
 mpTracer tc tr = annotateSeverity $ toLogObject' (traceVerbosity tc) tr
+
+-------------------------------------------------------------------------------
+-- BackingStore Tracer
+-------------------------------------------------------------------------------
+
+backingStoreTracer
+  :: TraceSelection
+  -> Trace IO Text
+  -> Tracer IO BackingStoreTraceByBackend
+backingStoreTracer tc tracer = Tracer $ \ev -> do
+    let tr = appendName "BackingStore" tracer
+    traceWith (bsTracer tc tr) ev
+
+bsTracer :: TraceSelection -> Trace IO Text -> Tracer IO BackingStoreTraceByBackend
+bsTracer tc tr = annotateSeverity $ toLogObject' (traceVerbosity tc) tr
 
 --------------------------------------------------------------------------------
 -- ForgeStateInfo Tracers
