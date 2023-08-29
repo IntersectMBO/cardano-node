@@ -1440,40 +1440,29 @@ instance ( StandardHash blk
     mconcat [ "kind" .= String "SnapshotEvent"
             , "event" .= forMachine dtals ev
             ]
-  forMachine dtals (LedgerDB.BackingStoreEvent ev) =
-    mconcat [ "kind" .= String "BackingStore"
-            , "event" .= forMachine dtals ev
-            ]
   forMachine dtals (LedgerDB.BackingStoreInitEvent ev) =
     mconcat [ "kind" .= String "BackingStoreInit"
             , "event" .= forMachine dtals ev
             ]
 
   forHuman (LedgerDB.LedgerDBSnapshotEvent ev) = forHuman ev
-  forHuman (LedgerDB.BackingStoreEvent ev) = forHuman ev
   forHuman (LedgerDB.BackingStoreInitEvent ev) = forHuman ev
 
 instance MetaTrace (LedgerDB.TraceLedgerDBEvent blk) where
 
   namespaceFor (LedgerDB.LedgerDBSnapshotEvent ev) =
     nsPrependInner "Snapshot" (namespaceFor ev)
-  namespaceFor (LedgerDB.BackingStoreEvent ev) =
-    nsPrependInner "BackingStore" (namespaceFor ev)
   namespaceFor (LedgerDB.BackingStoreInitEvent ev) =
     nsPrependInner "BackingStoreInit" (namespaceFor ev)
 
   severityFor (Namespace out ("Snapshot" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (LedgerDB.TraceSnapshotEvent blk)) Nothing
-  severityFor (Namespace out ("BackingStore" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace LedgerDB.BackingStoreTrace) Nothing
   severityFor (Namespace out ("BackingStoreInit" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace LedgerDB.TraceBackingStoreInitEvent) Nothing
   severityFor _ _ = Nothing
 
   documentFor (Namespace o ("Snapshot" : tl)) =
     documentFor (Namespace o tl :: Namespace (LedgerDB.TraceSnapshotEvent blk))
-  documentFor (Namespace out ("BackingStore" : tl)) =
-    documentFor (Namespace out tl :: Namespace LedgerDB.BackingStoreTrace)
   documentFor (Namespace out ("BackingStoreInit" : tl)) =
     documentFor (Namespace out tl :: Namespace LedgerDB.TraceBackingStoreInitEvent)
   documentFor _ = Nothing
@@ -1481,8 +1470,6 @@ instance MetaTrace (LedgerDB.TraceLedgerDBEvent blk) where
   allNamespaces =
        map (nsPrependInner "Snapshot")
          (allNamespaces :: [Namespace (LedgerDB.TraceSnapshotEvent blk)])
-    ++ map (nsPrependInner "BackingStore")
-         (allNamespaces :: [Namespace LedgerDB.BackingStoreTrace])
     ++ map (nsPrependInner "BackingStoreInit")
          (allNamespaces :: [Namespace LedgerDB.TraceBackingStoreInitEvent])
 
@@ -1571,7 +1558,7 @@ instance MetaTrace LedgerDB.TraceBackingStoreInitEvent where
     , Namespace [] ["LMDB"]
     ]
 
-instance LogFormatting LedgerDB.BackingStoreTrace where
+instance LogFormatting LedgerDB.BackingStoreTraceByBackend where
 
   forMachine dtals (LedgerDB.LMDBTrace ev) =
     mconcat [ "kind" .= String "BackingStore.LMDBTrace"
@@ -1585,7 +1572,7 @@ instance LogFormatting LedgerDB.BackingStoreTrace where
   forHuman (LedgerDB.LMDBTrace ev) = forHuman ev
   forHuman (LedgerDB.InMemoryTrace ev) = forHuman ev
 
-instance MetaTrace LedgerDB.BackingStoreTrace where
+instance MetaTrace LedgerDB.BackingStoreTraceByBackend where
   namespaceFor (LedgerDB.LMDBTrace ev) =
     nsPrependInner "LMDB" (namespaceFor ev)
   namespaceFor (LedgerDB.InMemoryTrace ev) =

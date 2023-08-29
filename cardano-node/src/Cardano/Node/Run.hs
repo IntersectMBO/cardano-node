@@ -92,6 +92,7 @@ import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNodeArgs (..)
                    StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
+import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.Diffusion as Diffusion
@@ -486,6 +487,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnDiffusionTracersExtra        = diffusionTracersExtra tracers
               , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
               , srnTraceChainDB                 = chainDBTracer tracers
+              , srnTraceBackingStore           = Consensus.backingStoreTracer $ consensusTracers tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               , srnSnapshotInterval             = ncSnapshotInterval nc
               , srnFlushFrequency               = ncFlushFrequency nc
@@ -537,6 +539,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnDiffusionTracersExtra       = diffusionTracersExtra tracers
               , srnEnableInDevelopmentVersions = ncExperimentalProtocolsEnabled nc
               , srnTraceChainDB                = chainDBTracer tracers
+              , srnTraceBackingStore           = Consensus.backingStoreTracer $ consensusTracers tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               , srnSnapshotInterval            = ncSnapshotInterval nc
               , srnFlushFrequency              = ncFlushFrequency nc

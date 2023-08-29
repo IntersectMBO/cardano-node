@@ -122,6 +122,10 @@ instance ConvertRawHash blk => ConvertRawHash (Header blk) where
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
+instance HasPrivacyAnnotation LedgerDB.BackingStoreTraceByBackend
+instance HasSeverityAnnotation LedgerDB.BackingStoreTraceByBackend where
+  getSeverityAnnotation _ = Debug
+
 instance HasPrivacyAnnotation (ChainDB.TraceEvent blk)
 instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation (ChainDB.TraceAddBlockEvent ev) = case ev of
@@ -158,7 +162,6 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
       LedgerDB.TookSnapshot {} -> Info
       LedgerDB.DeletedSnapshot {} -> Debug
       LedgerDB.InvalidSnapshot {} -> Error
-    LedgerDB.BackingStoreEvent {} -> Debug
     LedgerDB.BackingStoreInitEvent {} -> Info
 
   getSeverityAnnotation (ChainDB.TraceCopyToImmutableDBEvent ev) = case ev of
@@ -488,6 +491,14 @@ instance ( ConvertRawHash blk
       => Transformable Text IO (ChainDB.TraceEvent blk) where
   trTransformer = trStructuredText
 
+instance Transformable Text IO LedgerDB.BackingStoreTraceByBackend where
+  trTransformer = trStructuredText
+
+instance HasTextFormatter LedgerDB.BackingStoreTraceByBackend where
+    formatText ev _obj = case ev of
+      LedgerDB.LMDBTrace ev' -> "LMDB: " <> showT ev'
+      LedgerDB.InMemoryTrace ev' -> "InMemory: " <> showT ev'
+
 instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
          , InspectLedger blk)
@@ -589,9 +600,6 @@ instance ( ConvertRawHash blk
             " at " <> renderRealPointAsPhrase pt
           LedgerDB.DeletedSnapshot snap ->
             "Deleted old snapshot " <> showT snap
-        LedgerDB.BackingStoreEvent ev' -> case ev' of
-          LedgerDB.LMDBTrace ev'' -> "LMDB: " <> showT ev''
-          LedgerDB.InMemoryTrace ev'' -> "InMemory: " <> showT ev''
         LedgerDB.BackingStoreInitEvent ev' -> case ev' of
           LedgerDB.BackingStoreInitialisedInMemory ->
             "Using In-Memory backing store"
@@ -1027,7 +1035,6 @@ instance ( ConvertRawHash blk
         mconcat [ "kind" .= String "TraceLedgerDBEvent.LedgerDBSnapshotEvent.InvalidSnapshot"
                  , "snapshot" .= toObject verb snap
                  , "failure" .= show failure ]
-    LedgerDB.BackingStoreEvent ev' -> toObject verb ev'
     LedgerDB.BackingStoreInitEvent ev' -> case ev' of
       LedgerDB.BackingStoreInitialisedLMDB limits ->
         mconcat [ "kind" .= String "TraceLedgerDBEvent.BackingStoreInitialisedLMDB"
@@ -1622,7 +1629,7 @@ instance ToObject BS.BackingStoreValueHandleTrace where
   toObject _verb BS.BSVHStatting      = mconcat [ "kind" .= String "BSVHStatting" ]
   toObject _verb BS.BSVHStatted       = mconcat [ "kind" .= String "BSVHStatted" ]
 
-instance ToObject LedgerDB.BackingStoreTrace where
+instance ToObject LedgerDB.BackingStoreTraceByBackend where
   toObject verb ev = case ev of
     LedgerDB.LMDBTrace ev' -> mconcat [ "backend" .= String "LMDB"
                                       , "event" .= toObject verb ev'
