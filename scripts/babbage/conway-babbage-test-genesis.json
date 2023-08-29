@@ -1,3 +1,26 @@
 {
-  "genDelegs": {}
+  "poolVotingThresholds": {
+      "pvtCommitteeNormal": 0,
+      "pvtCommitteeNoConfidence": 0,
+      "pvtHardForkInitiation": 0,
+      "pvtMotionNoConfidence": 0
+  },
+  "dRepVotingThresholds": {
+      "dvtCommitteeNormal": 0,
+      "dvtCommitteeNoConfidence": 0,
+      "dvtHardForkInitiation": 0,
+      "dvtMotionNoConfidence": 0,
+      "dvtPPEconomicGroup": 0,
+      "dvtPPGovGroup": 0,
+      "dvtPPNetworkGroup": 0,
+      "dvtPPTechnicalGroup": 0,
+      "dvtTreasuryWithdrawal": 0,
+      "dvtUpdateToConstitution": 0
+  },
+  "minCommitteeSize": 0,
+  "committeeTermLimit": 0,
+  "govActionExpiration": 0,
+  "govActionDeposit": 0,
+  "dRepDeposit": 0,
+  "dRepActivity": 0
 }
