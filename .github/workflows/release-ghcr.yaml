@@ -16,11 +16,34 @@ on:
 env:
   # Only to avoid some repetition
   FLAKE_REF: github:${{ github.repository }}/${{ github.ref_name }}
+  GH_TOKEN: ${{ github.token }}
   # We need to tell skopeo where to write the authentication token
   REGISTRY_AUTH_FILE: ./skopeo-registry-auth-file.json
 
 jobs:
+  wait-for-hydra:
+    name: "Wait for hydra check-runs"
+    runs-on: ubuntu-latest
+    steps:
+    - name: Waiting for ci/hydra-build:required to complete
+      run: |
+        while [[ true ]]; do
+          conclusion=$(gh api repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs --jq '.check_runs[] | select(.name == "ci/hydra-build:required") | .conclusion')
+          case "$conclusion" in
+            success)
+              echo "ci/hydra-build:required succeeded"
+              exit 0;;
+            failure)
+              echo "ci/hydra-build:required failed"
+              exit 1;;
+            *)
+              echo "ci/hydra-build:required pending. Waiting 30s..."
+              sleep 30;;
+          esac
+        done
+    
   build:
+    needs: [wait-for-hydra]
     name: "Upload to ghcr.io"
     runs-on: ubuntu-latest
     steps:

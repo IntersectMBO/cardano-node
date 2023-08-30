@@ -8,16 +8,46 @@ name: Post Release Upload
 # It uses `--builders "" --max-jobs 0` to ensure the assets are
 # from the IOG cache.
 on:
+  workflow_dispatch:
   release:
     types:
       - published
   push:
     tags:
       - '**'
+env:
+  # Only to avoid some repetition
+  FLAKE_REF: github:${{ github.repository }}/${{ github.ref_name }}
+  GH_TOKEN: ${{ github.token }}
 
 jobs:
-  build:
-    name: "Upload Assets"
+  wait-for-hydra:
+    name: "Wait for hydra check-runs"
+    runs-on: ubuntu-latest
+    steps:
+    - name: Get specific check run status
+      run: |
+        while [[ true ]]; do
+          conclusion=$(gh api repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs --jq '.check_runs[] | select(.name == "ci/hydra-build:required") | .conclusion')
+          case "$conclusion" in
+            success)
+              echo "ci/hydra-build:required succeeded"
+              exit 0;;
+            failure)
+              echo "ci/hydra-build:required failed"
+              exit 1;;
+            *)
+              echo "ci/hydra-build:required pending. Waiting 30s..."
+              sleep 30;;
+          esac
+        done
+    
+  pull:
+    needs: [wait-for-hydra]
+    strategy:
+      matrix:
+        arch: [linux, macos, win64]
+    name: "Download Asset from the Cache"
     runs-on: ubuntu-latest
     steps:
       - name: Install Nix with good defaults
@@ -27,16 +57,47 @@ jobs:
             trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
             substituters = https://cache.iog.io/ https://cache.nixos.org/
           nix_path: nixpkgs=channel:nixos-unstable
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Display flake metadata
+        id: flake-metadata
+        run: |
+          nix flake metadata ${{ env.FLAKE_REF }}
+          nix flake metadata ${{ env.FLAKE_REF }} --json | jq -r '"LOCKED_URL=\(.url)"' >> "$GITHUB_OUTPUT"
       - name: Build
         run: |
-          nix build --builders "" --max-jobs 0 .#hydraJobs.musl.cardano-node-linux
-          cp result/cardano-node-*-linux.tar.gz .
-          nix build --builders "" --max-jobs 0 .#legacyPackages.x86_64-darwin.hydraJobs.native.cardano-node-macos
-          cp result/cardano-node-*-macos.tar.gz .
-          nix build --builders "" --max-jobs 0 .#hydraJobs.windows.cardano-node-win64
-          cp result/cardano-node-*-win64.zip .
+          case ${{ matrix.arch }} in
+            linux)
+              nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.x86_64-linux.musl.cardano-node-linux
+              cp result/cardano-node-*-*.tar.gz .
+              ;;
+            macos)
+              nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.x86_64-darwin.native.cardano-node-macos
+              cp result/cardano-node-*-*.tar.gz .
+              ;;
+            win64)
+              nix build --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#hydraJobs.x86_64-linux.windows.cardano-node-win64
+              cp result/cardano-node-*-*.zip .
+              ;;              
+          esac
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ github.sha }}-${{ matrix.arch }}       
+          path: cardano-node-*-*.*
+          retention-days: 1
+
+  upload-assets:
+    needs: [pull]
+    name: "Upload Assets"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ github.sha }}-linux
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ github.sha }}-macos
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ github.sha }}-win64
       - name: Release
         uses: input-output-hk/action-gh-release@v1
         with:
