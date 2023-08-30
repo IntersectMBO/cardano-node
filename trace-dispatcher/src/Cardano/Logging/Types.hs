@@ -22,8 +22,6 @@ module Cardano.Logging.Types (
   , nsReplaceInner
   , nsCast
   , nsPrependInner
-  , nsGetPrefix
-  , nsGetInner
   , nsGetComplete
   , MetaTrace(..)
   , DetailLevel(..)
@@ -55,23 +53,20 @@ module Cardano.Logging.Types (
 
 
 import           Codec.Serialise (Serialise (..))
-import qualified Control.Tracer as T
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as AE
 import qualified Data.HashMap.Strict as HM
-import           Data.Set (Set)
-import qualified Data.Set as Set
-
 import           Data.IORef
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Time (UTCTime)
-
-
-
+import           Data.Set (Set)
+import qualified Data.Set as Set
 import           Data.Text (Text, intercalate, pack, singleton, unpack)
+import           Data.Time (UTCTime)
 import           GHC.Generics
 import           Network.HostName (HostName)
+
+import qualified Control.Tracer as T
 
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
@@ -103,7 +98,7 @@ instance Monad m => Monoid (Trace m a) where
 -- or more prefixes, in this moment it is a NamespaceOuter is used
 data Namespace a = Namespace {
     nsPrefix :: [Text]
-  , nsInner :: [Text]}
+  , nsInner  :: [Text]}
   deriving Eq
 
 instance Show (Namespace a) where
@@ -113,11 +108,12 @@ instance Show (Namespace a) where
   show (Namespace nsPrefix' nsInner') =
     unpack $ intercalate (singleton '.') (nsPrefix' ++ nsInner')
 
-nsReplacePrefix :: Namespace a -> [Text] -> Namespace a
-nsReplacePrefix (Namespace _ i) tl =  Namespace tl i
+nsReplacePrefix :: [Text] -> Namespace a -> Namespace a
+nsReplacePrefix o (Namespace _ i) =  Namespace o i
 
-nsReplaceInner :: Namespace a -> [Text] -> Namespace a
-nsReplaceInner (Namespace o _) =  Namespace o
+nsReplaceInner :: [Text] -> Namespace a -> Namespace a
+nsReplaceInner i (Namespace o _) =  Namespace o i
+
 
 nsPrependInner :: Text -> Namespace a -> Namespace b
 nsPrependInner t (Namespace o i) =  Namespace o (t : i)
@@ -125,16 +121,9 @@ nsPrependInner t (Namespace o i) =  Namespace o (t : i)
 nsCast :: Namespace a -> Namespace b
 nsCast (Namespace o i) =  Namespace o i
 
-nsGetInner :: Namespace a -> [Text]
-nsGetInner = nsInner
-
-nsGetPrefix :: Namespace a -> [Text]
-nsGetPrefix = nsPrefix
-
 nsGetComplete :: Namespace a -> [Text]
 nsGetComplete (Namespace [] i) = i
 nsGetComplete (Namespace o i)  = o ++ i
-
 
 -- | Every message needs this to define how to represent itself
 class LogFormatting a where

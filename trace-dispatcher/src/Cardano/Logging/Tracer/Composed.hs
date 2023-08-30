@@ -6,10 +6,11 @@
 {- HLINT ignore "Monad law, left identity" -}
 
 module Cardano.Logging.Tracer.Composed (
-    traceTracerInfo
-  , mkCardanoTracer
+    mkCardanoTracer
   , mkCardanoTracer'
   , mkMetricsTracer
+  , traceTracerInfo
+  , traceConfigWarnings
   ) where
 
 import           Cardano.Logging.Configuration
@@ -157,6 +158,21 @@ backendsAndFormat trStdout trForward mbBackends _ =
       Nothing -> pure $ Trace T.nullTracer
       Just tr -> preFormatted backends' tr
 
+traceConfigWarnings ::
+     Trace IO FormattedMessage
+  -> Trace IO FormattedMessage
+  -> [Text]
+  -> IO ()
+traceConfigWarnings trStdout trForward errs = do
+    internalTr <- backendsAndFormat
+                      trStdout
+                      trForward
+                      Nothing
+                      (Trace T.nullTracer)
+    traceWith ((withInnerNames . appendPrefixNames ["Reflection"]. withSeverity)
+                  internalTr)
+              (TracerConsistencyWarnings errs)
+
 traceTracerInfo ::
      Trace IO FormattedMessage
   -> Trace IO FormattedMessage
@@ -174,7 +190,8 @@ traceTracerInfo trStdout trForward cr = do
     let silentList  = map (intercalate (singleton '.')) (Set.toList silentSet)
     let metricsList = map (intercalate (singleton '.')) (Set.toList metricSet)
     let allTracersList = map (intercalate (singleton '.')) (Set.toList allTracerSet)
-    traceWith (withInnerNames (appendPrefixNames ["Reflection"] internalTr))
+    traceWith ((withInnerNames . appendPrefixNames ["Reflection"]. withSeverity)
+                  internalTr)
               (TracerInfo silentList metricsList allTracersList)
     writeIORef (crSilent cr) Set.empty
     writeIORef (crNoMetrics cr) Set.empty

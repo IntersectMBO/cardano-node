@@ -85,6 +85,7 @@ library
                         Cardano.Node.TraceConstraints
                         Cardano.Node.Tracing
                         Cardano.Node.Tracing.API
+                        Cardano.Node.Tracing.Consistency
                         Cardano.Node.Tracing.Compat
                         Cardano.Node.Tracing.DefaultTraceConfig
                         Cardano.Node.Tracing.Documentation
@@ -262,6 +263,7 @@ test-suite cardano-node-test
                         Test.Cardano.Node.Gen
                         Test.Cardano.Node.Json
                         Test.Cardano.Node.POM
+                        Test.Cardano.Tracing.NewTracing.Consistency
                         Test.Cardano.Tracing.OrphanInstances.HardFork
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
