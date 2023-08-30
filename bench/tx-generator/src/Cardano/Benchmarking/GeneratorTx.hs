@@ -21,13 +21,14 @@ import           Cardano.Prelude
 import           Prelude (String)
 
 import qualified Control.Concurrent.STM as STM
-import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 import qualified Data.Time.Clock as Clock
 
 import qualified Data.List.NonEmpty as NE
 import           Data.Text (pack)
 import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Family (..), SocketType (Stream),
                    addrFamily, addrFlags, addrSocketType, defaultHints, getAddrInfo)
+
+import           Cardano.Logging
 
 import           Cardano.Node.Configuration.NodeAddress
 
@@ -45,7 +46,7 @@ import           Cardano.TxGenerator.Types (NumberOfTxs, TPSRate, TxGenError (..
 
 type AsyncBenchmarkControl = (Async (), [Async ()], IO SubmissionSummary, IO ())
 
-waitBenchmark :: Tracer IO (TraceBenchTxSubmit TxId) -> AsyncBenchmarkControl -> ExceptT TxGenError IO ()
+waitBenchmark :: Trace IO (TraceBenchTxSubmit TxId) -> AsyncBenchmarkControl -> ExceptT TxGenError IO ()
 waitBenchmark traceSubmit (feeder, workers, mkSummary, _) = liftIO $ do
   mapM_ waitCatch (feeder : workers)
   traceWith traceSubmit . TraceBenchTxSubSummary =<< mkSummary
@@ -67,7 +68,7 @@ lookupNodeAddress node = do
     }
 
 handleTxSubmissionClientError ::
-     Tracer IO (TraceBenchTxSubmit TxId)
+     Trace IO (TraceBenchTxSubmit TxId)
   -> Network.Socket.AddrInfo
   -> ReportRef
   -> SubmissionErrorPolicy
@@ -91,8 +92,8 @@ handleTxSubmissionClientError
       , show err]
 
 walletBenchmark :: forall era. IsShelleyBasedEra era
-  => Tracer IO (TraceBenchTxSubmit TxId)
-  -> Tracer IO NodeToNodeSubmissionTrace
+  => Trace IO (TraceBenchTxSubmit TxId)
+  -> Trace IO NodeToNodeSubmissionTrace
   -> ConnectClient
   -> String
   -> NonEmpty NodeIPv4Address

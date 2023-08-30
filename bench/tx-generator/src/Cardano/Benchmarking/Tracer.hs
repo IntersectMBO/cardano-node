@@ -25,7 +25,6 @@ module Cardano.Benchmarking.Tracer
   )
 where
 
-import           "contra-tracer" Control.Tracer (Tracer (..), nullTracer)
 import           GHC.Generics
 
 import           Data.Aeson as A
@@ -72,10 +71,10 @@ generatorTracer tracerName mbTrStdout mbTrForward = do
 
 initNullTracers :: BenchTracers
 initNullTracers = BenchTracers
-    { btTxSubmit_    = nullTracer
-    , btConnect_     = nullTracer
-    , btSubmission2_ = nullTracer
-    , btN2N_         = nullTracer
+    { btTxSubmit_    = mempty
+    , btConnect_     = mempty
+    , btSubmission2_ = mempty
+    , btN2N_         = mempty
     }
 
 -- if the first argument isJust, we assume we have a socket path
@@ -87,20 +86,20 @@ initTxGenTracers mbForwarding = do
   confState       <- emptyConfigReflection
 
   let
-    mkTracer :: (LogFormatting a, MetaTrace a) => Text -> IO (Tracer IO a)
+    mkTracer :: (LogFormatting a, MetaTrace a) => Text -> IO (Trace IO a)
     mkTracer namespace
-      | isPrefixSilent namespace = pure nullTracer
+      | isPrefixSilent namespace = pure mempty
       | otherwise = do
         tracer <-  generatorTracer namespace mbStdoutTracer mbForwardingTracer
         configureTracers confState initialTraceConfig [tracer]
-        pure $ Tracer (traceWith tracer)
+        pure tracer
 
   benchTracer@(Tracer traceBench) <- mkTracer "Benchmark"
   n2nSubmitTracer <- mkTracer "SubmitN2N"
   connectTracer <- mkTracer "Connect"
   submitTracer <- mkTracer "Submit"
 
-  traceBench $ TraceTxGeneratorVersion Version.txGeneratorVersion
+  traceWith benchTracer (TraceTxGeneratorVersion Version.txGeneratorVersion)
 
   return $ BenchTracers
     { btTxSubmit_    = benchTracer
