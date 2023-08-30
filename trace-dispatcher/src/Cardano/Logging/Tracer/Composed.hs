@@ -171,7 +171,7 @@ traceConfigWarnings trStdout trForward errs = do
                       (Trace T.nullTracer)
     traceWith ((withInnerNames . appendPrefixNames ["Reflection"]. withSeverity)
                   internalTr)
-              (TracerErrors errs)
+              (TracerConsistencyWarnings errs)
 
 traceTracerInfo ::
      Trace IO FormattedMessage
