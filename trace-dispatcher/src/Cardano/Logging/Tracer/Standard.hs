@@ -30,6 +30,8 @@ newtype StandardTracerState =  StandardTracerState {
 emptyStandardTracerState :: StandardTracerState
 emptyStandardTracerState = StandardTracerState Nothing
 
+-- | It is mandatory to construct only one standard tracer in any application!
+-- Throwing away a standard tracer and using a new one will result in an exception
 standardTracer :: forall m. (MonadIO m)
   => m (Trace m FormattedMessage)
 standardTracer = do
