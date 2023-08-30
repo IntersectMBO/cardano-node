@@ -42,13 +42,30 @@ set -o pipefail
 
 ROOT=example
 
-BFT_NODES="node-bft1 node-bft2"
-BFT_NODES_N="1 2"
+BFT_NODES_PREFIX=node-bft
 NUM_BFT_NODES=2
 
-POOL_NODES="node-pool1"
+POOL_NODES_PREFIX=node-pool
+NUM_POOL_NODES=1
 
-ALL_NODES="${BFT_NODES} ${POOL_NODES}"
+BFT_NODES=$(
+  echo $(
+    for N in $(seq $NUM_BFT_NODES); do
+      printf '%s%d ' "$BFT_NODES_PREFIX" $N
+    done
+  )
+)
+
+POOL_NODES=$(
+  echo $(
+    for N in $(seq $NUM_POOL_NODES); do
+      printf '%s%d ' "$POOL_NODES_PREFIX" $N
+    done
+  )
+)
+
+ALL_NODES="$BFT_NODES $POOL_NODES"
+NUM_NODES=$((NUM_BFT_NODES + NUM_POOL_NODES))
 
 INIT_SUPPLY=10020000000
 FUNDS_PER_GENESIS_ADDRESS=$((${INIT_SUPPLY} / ${NUM_BFT_NODES}))
@@ -122,60 +139,44 @@ for NODE in ${ALL_NODES}; do
 done
 
 # Make topology files
-#TODO generalise this over the N BFT nodes and pool nodes
-cat > "${ROOT}/node-bft1/topology.json" <<EOF
-{
-   "Producers": [
-     {
-       "addr": "127.0.0.1",
-       "port": 3002,
-       "valency": 1
-     }
-   , {
-       "addr": "127.0.0.1",
-       "port": 3003,
-       "valency": 1
-     }
-   ]
- }
-EOF
-echo 3001 > "${ROOT}/node-bft1/port"
 
-cat > "${ROOT}/node-bft2/topology.json" <<EOF
-{
-   "Producers": [
-     {
-       "addr": "127.0.0.1",
-       "port": 3001,
-       "valency": 1
-     }
-   , {
-       "addr": "127.0.0.1",
-       "port": 3003,
-       "valency": 1
-     }
-   ]
- }
-EOF
-echo 3002 > "${ROOT}/node-bft2/port"
+all_node_ports_except () {
+  ## `all_node_ports_except` prints a space-separated list of all node
+  ## ports except for the one given as first argument.
+  echo $(
+    for N in $(seq 3001 $((3000 + NUM_NODES))); do
+      if [ $N -ne $1 ]; then
+        printf '%d ' $N
+      fi
+    done
+  )
+}
 
-cat > "${ROOT}/node-pool1/topology.json" <<EOF
-{
-   "Producers": [
-     {
-       "addr": "127.0.0.1",
-       "port": 3001,
-       "valency": 1
-     }
-   , {
-       "addr": "127.0.0.1",
-       "port": 3002,
-       "valency": 1
-     }
-   ]
- }
-EOF
-echo 3003 > "${ROOT}/node-pool1/port"
+make_topology_files_for () {
+  ## `make_topology_files_for` expects a node name as first argument and a port
+  ## as second argument. It creates the `topology.json` file for the given node,
+  ## making it aware of all the others. It saves the port in a `port` file.
+  all_node_ports_except $2 \
+    | jq -R '
+        {
+          Producers: (
+            .
+            | split(" ")
+            | map(tonumber)
+            | map({ addr: "127.0.0.1", port: ., valency: 1 })
+          )
+        }
+      ' \
+    > "$ROOT/$1/topology.json"
+  echo $2 > "$ROOT/$1/port"
+}
+
+for N in $(seq $NUM_BFT_NODES); do
+  make_topology_files_for "$BFT_NODES_PREFIX$N" $((3000 + N))
+done
+for N in $(seq $NUM_POOL_NODES); do
+  make_topology_files_for "$POOL_NODES_PREFIX$N" $((3000 + NUM_BFT_NODES + N))
+done
 
 
 cat > "${ROOT}/byron.genesis.spec.json" <<EOF
@@ -221,33 +222,33 @@ mv "${ROOT}/byron.genesis.spec.json" "${ROOT}/byron/genesis.spec.json"
 pwd
 
 # Symlink the BFT operator keys from the genesis delegates, for uniformity
-for N in ${BFT_NODES_N}; do
-  ln -s "../../byron/delegate-keys.00$((${N} - 1)).key"     "${ROOT}/node-bft${N}/byron/delegate.key"
-  ln -s "../../byron/delegation-cert.00$((${N} - 1)).json"  "${ROOT}/node-bft${N}/byron/delegate.cert"
+for N in $(seq $NUM_BFT_NODES); do
+  ln -s "../../byron/delegate-keys.00$((N - 1)).key"     "$ROOT/node-bft$N/byron/delegate.key"
+  ln -s "../../byron/delegation-cert.00$((N - 1)).json"  "$ROOT/node-bft$N/byron/delegate.cert"
 done
 
 # Create keys, addresses and transactions to withdraw the initial UTxO into
 # regular addresses.
-for N in ${BFT_NODES_N}; do
+for N in $(seq $NUM_BFT_NODES); do
 
   cardano-cli byron key keygen \
-    --secret "${ROOT}/byron/payment-keys.00$((${N} - 1)).key"
+    --secret "$ROOT/byron/payment-keys.00$((N - 1)).key"
 
   cardano-cli byron key signing-key-address \
     --testnet-magic ${NETWORK_MAGIC} \
-    --secret "${ROOT}/byron/payment-keys.00$((${N} - 1)).key" > "${ROOT}/byron/address-00$((${N} - 1))"
+    --secret "$ROOT/byron/payment-keys.00$((N - 1)).key" > "$ROOT/byron/address-00$((N - 1))"
 
   cardano-cli byron key signing-key-address \
     --testnet-magic ${NETWORK_MAGIC} \
-    --secret "${ROOT}/byron/genesis-keys.00$((${N} - 1)).key" > "${ROOT}/byron/genesis-address-00$((${N} - 1))"
+    --secret "$ROOT/byron/genesis-keys.00$((N - 1)).key" > "$ROOT/byron/genesis-address-00$((N - 1))"
 
   cardano-cli byron transaction issue-genesis-utxo-expenditure \
     --genesis-json "${ROOT}/byron/genesis.json" \
     --testnet-magic ${NETWORK_MAGIC} \
-    --tx "${ROOT}/tx$((${N} - 1)).tx" \
-    --wallet-key "${ROOT}/byron/delegate-keys.00$((${N} - 1)).key" \
-    --rich-addr-from "$(head -n 1 "${ROOT}/byron/genesis-address-00$((${N} - 1))")" \
-    --txout "(\"$(head -n 1 "${ROOT}/byron/address-00$((${N} - 1))")\", $FUNDS_PER_BYRON_ADDRESS)"
+    --tx "$ROOT/tx$((N - 1)).tx" \
+    --wallet-key "$ROOT/byron/delegate-keys.00$((N - 1)).key" \
+    --rich-addr-from "$(head -n 1 "$ROOT/byron/genesis-address-00$((N - 1))")" \
+    --txout "(\"$(head -n 1 "$ROOT/byron/address-00$((N - 1))")\", $FUNDS_PER_BYRON_ADDRESS)"
 done
 
 # Update Proposal and votes
@@ -263,13 +264,13 @@ cardano-cli byron governance create-update-proposal \
             --system-tag "linux" \
             --installer-hash 0
 
-for N in ${BFT_NODES_N}; do
+for N in $(seq $NUM_BFT_NODES); do
     cardano-cli byron governance create-proposal-vote \
                 --proposal-filepath "${ROOT}/update-proposal" \
                 --testnet-magic ${NETWORK_MAGIC} \
-                --signing-key "${ROOT}/byron/delegate-keys.00$((${N} - 1)).key" \
+                --signing-key "$ROOT/byron/delegate-keys.00$((N - 1)).key" \
                 --vote-yes \
-                --output-filepath "${ROOT}/update-vote.00$((${N} - 1))"
+                --output-filepath "$ROOT/update-vote.00$((N - 1))"
 done
 
 cardano-cli byron governance create-update-proposal \
@@ -284,13 +285,13 @@ cardano-cli byron governance create-update-proposal \
             --system-tag "linux" \
             --installer-hash 0
 
-for N in ${BFT_NODES_N}; do
+for N in $(seq $NUM_BFT_NODES); do
     cardano-cli byron governance create-proposal-vote \
                 --proposal-filepath "${ROOT}/update-proposal-1" \
                 --testnet-magic ${NETWORK_MAGIC} \
-                --signing-key "${ROOT}/byron/delegate-keys.00$((${N} - 1)).key" \
+                --signing-key "$ROOT/byron/delegate-keys.00$((N - 1)).key" \
                 --vote-yes \
-                --output-filepath "${ROOT}/update-vote-1.00$((${N} - 1))"
+                --output-filepath "$ROOT/update-vote-1.00$((N - 1))"
 done
 
 echo "====================================================================="
@@ -407,7 +408,7 @@ done
 
 # Symlink the BFT operator keys from the genesis delegates, for uniformity
 
-for N in ${BFT_NODES_N}; do
+for N in $(seq $NUM_BFT_NODES); do
   ln -s ../../shelley/delegate-keys/delegate${N}.skey "${ROOT}/node-bft${N}/shelley/operator.skey"
   ln -s ../../shelley/delegate-keys/delegate${N}.vkey "${ROOT}/node-bft${N}/shelley/operator.vkey"
   ln -s ../../shelley/delegate-keys/delegate${N}.counter "${ROOT}/node-bft${N}/shelley/operator.counter"
