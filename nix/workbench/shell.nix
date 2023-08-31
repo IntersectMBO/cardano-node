@@ -116,6 +116,7 @@ in project.shellFor {
     ghc-prof-flamegraph
     sqlite-interactive
     tmux
+    pkgs.cairo
     pkgs.git
     pkgs.hlint
     pkgs.moreutils

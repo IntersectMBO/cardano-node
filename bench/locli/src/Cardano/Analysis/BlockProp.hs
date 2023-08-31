@@ -16,6 +16,7 @@ module Cardano.Analysis.BlockProp
   , blockProp
   , BlockPropError(..)
   , renderBlockPropError
+  , checkAllForgersKnown
   )
 where
 
@@ -26,7 +27,7 @@ import Control.Arrow            ((***), (&&&))
 import Data.Aeson               (ToJSON(..), FromJSON(..))
 import Data.Bifunctor
 import Data.Function            (on)
-import Data.List                (dropWhileEnd, intercalate, partition)
+import Data.List                (break, dropWhileEnd, intercalate, partition, span)
 import Data.Map.Strict          (Map)
 import Data.Map.Strict          qualified as Map
 import Data.Maybe               (catMaybes, mapMaybe, isNothing)
@@ -832,3 +833,31 @@ collectEventErrors mbe phases =
   , let neg  = ((< 0) <$> proj) == SJust True
   , miss || neg
   ]
+
+-- | Expects a log object stream of or including block forges.
+-- Returns the first log object + hash that we don't know a forge for.
+checkAllForgersKnown :: [LogObject] -> Maybe (LogObject, Hash)
+checkAllForgersKnown logobjs =
+  getFirst $ First pass1 <> First pass2
+  where
+    (pass1, forged) = go1 (Set.singleton $ Hash "GenesisHash") logobjs
+    pass2           = go2 forged logobjs
+
+    go1 forged = \case
+      [] -> (Nothing, forged)
+      lo@LogObject{loBody}:los -> case loBody of
+        LOBlockForged{..}
+          | loPrev `Set.member` forged  -> go1 (loBlock `Set.insert` forged) los
+          | otherwise                   -> (Just (lo, loPrev), forged)
+        _                               -> go1 forged los
+
+    go2 forged = \case
+      [] -> Nothing
+      lo@LogObject{loBody}:los -> case loBody of
+        LOChainSyncClientSeenHeader{loBlock}
+          | loBlock `Set.member` forged -> go2 forged los
+          | otherwise                   -> Just (lo, loBlock)
+        LOChainSyncServerSendHeader{loBlock}
+          | loBlock `Set.member` forged -> go2 forged los
+          | otherwise                   -> Just (lo, loBlock)
+        _                               -> go2 forged los

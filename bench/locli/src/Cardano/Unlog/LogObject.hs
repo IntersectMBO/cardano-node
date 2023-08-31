@@ -25,6 +25,8 @@ module Cardano.Unlog.LogObject
   , logObjectStreamInterpreterKeys
   , LOBody (..)
   , LOAnyType (..)
+  , readLogObjectStream
+  , textRefEquals
   )
 where
 
@@ -36,6 +38,7 @@ import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Aeson.Types (Parser)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Hashable (hash)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as LText
 import           Data.Text.Short (ShortText, fromText, toText)
@@ -54,6 +57,54 @@ import           Cardano.Util
 
 type Text = ShortText
 
+-- | Us of the a TextRef replaces commonly expected string parses with references
+--   into a Map, reducing memory footprint - given that large runs can contain
+--   >25mio log objects.
+data TextRef
+    = TextRef {-# UNPACK #-} !Int
+    | TextLit {-# UNPACK #-} !Text
+  deriving Generic
+  deriving anyclass NFData
+
+{-# NOINLINE lookupTextRef #-}
+lookupTextRef :: Int -> Text
+lookupTextRef ref = Map.findWithDefault Text.empty ref dict
+  where
+    dict    = Map.fromList [(hash t, t) | t <- concat [allKeys, kinds, legacy]]
+    kinds   = map ("Cardano.Node." <>) allKeys
+    legacy  = map ("cardano.node." <>)
+      [ "BlockFetchClient"
+      , "BlockFetchServer"
+      , "ChainDB"
+      , "ChainSyncClient"
+      , "ChainSyncHeaderServer"
+      , "DnsSubscription"
+      , "Forge"
+      , "IpSubscription"
+      , "LeadershipCheck"
+      , "Mempool"
+      , "resources"
+      , "TxInbound"
+      ]
+    allKeys =
+      concatMap Map.keys [fst3 interpreters, snd3 interpreters, thd3 interpreters]
+      & filter (not . Text.null)
+
+toTextRef :: Text -> TextRef
+toTextRef t = let h = hash t in if Text.null (lookupTextRef h) then TextLit t else TextRef h
+
+textRefEquals :: TextRef -> Text -> Bool
+textRefEquals (TextRef i) = (== lookupTextRef i)
+textRefEquals (TextLit t) = (== t)
+
+instance Show TextRef where
+  show (TextRef i) = show $ lookupTextRef i
+  show (TextLit t) = show t
+
+instance ToJSON TextRef where
+  toJSON (TextRef i) = toJSON $ lookupTextRef i
+  toJSON (TextLit t) = toJSON t
+
 -- | Input data.
 data HostLogs a
   = HostLogs
@@ -65,6 +116,8 @@ data HostLogs a
     , hlLogs           :: (JsonLogfile, a)
     , hlFilteredSha256 :: Hash
     , hlProfile        :: [ProfileEntry I]
+    , hlRawFirstAt     :: Maybe UTCTime
+    , hlRawLastAt      :: Maybe UTCTime
     }
   deriving (Generic)
 
@@ -128,7 +181,7 @@ readLogObjectStream f okDErr loAnyLimit =
     fmap (\bs ->
             AE.eitherDecode bs &
             either
-            (LogObject zeroUTCTime "Cardano.Analysis.DecodeError" "DecodeError" "" (TId "0")
+            (LogObject zeroUTCTime (TextLit "Cardano.Analysis.DecodeError") (TextLit "DecodeError") "" (TId "0")
              . LODecodeError (Text.fromByteString (LBS.toStrict bs)
                                & fromMaybe "#<ERROR decoding input fromByteString>")
               . Text.fromText
@@ -143,8 +196,8 @@ readLogObjectStream f okDErr loAnyLimit =
 data LogObject
   = LogObject
     { loAt   :: !UTCTime
-    , loNS   :: !Text
-    , loKind :: !Text
+    , loNS   :: !TextRef
+    , loKind :: !TextRef
     , loHost :: !Host
     , loTid  :: !TId
     , loBody :: !LOBody
@@ -348,6 +401,8 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
    map3ple :: (a -> b) -> (a,a,a) -> (b,b,b)
    map3ple f (x,y,z) = (f x, f y, f z)
 
+
+
 logObjectStreamInterpreterKeysLegacy, logObjectStreamInterpreterKeys :: [Text]
 logObjectStreamInterpreterKeysLegacy =
   logObjectStreamInterpreterKeysLegacy1 <> logObjectStreamInterpreterKeysLegacy2
@@ -457,8 +512,8 @@ instance FromJSON LogObject where
                  "The 'ns' field must be either a string, or a singleton-String vector, was: " <> show x
     LogObject
       <$> v .: "at"
-      <*> pure ns
-      <*> pure kind
+      <*> pure (toTextRef ns)
+      <*> pure (toTextRef kind)
       <*> v .: "host"
       <*> v .: "thread"
       <*> case Map.lookup  ns                                       (thd3 interpreters)

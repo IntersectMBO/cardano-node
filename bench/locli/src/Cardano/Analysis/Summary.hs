@@ -172,16 +172,20 @@ computeSummary sumAnalysisTime
  where
    cdfLogLineRate       = cdf stdCentiles lineRates
 
+   hostLogs =
+    rlHostLogs
+    & Map.elems
+
    (,) logObjectsEmitted textLinesEmitted =
-     rlHostLogs
-     & Map.toList
-     & fmap ((hlRawLogObjects &&& hlRawLines) . snd)
+     hostLogs
+     & fmap (hlRawLogObjects &&& hlRawLines)
      & unzip
+
    objLists = rlLogs rl <&> snd
 
    losFirsts, losLasts :: [UTCTime]
-   losFirsts  = objLists <&> loAt . Prelude.head
-   losLasts   = objLists <&> loAt . Prelude.last
+   losFirsts  = hostLogs <&> (\HostLogs{hlLogs, hlRawFirstAt} -> fromMaybe (loAt $ Prelude.head $ snd hlLogs) hlRawFirstAt)
+   losLasts   = hostLogs <&> (\HostLogs{hlLogs, hlRawLastAt}  -> fromMaybe (loAt $ Prelude.last $ snd hlLogs) hlRawLastAt)
    runtimes :: [NominalDiffTime]
    runtimes   = zipWith diffUTCTime losLasts losFirsts
    lineRates  = zipWith (/) (textLinesEmitted <&> fromIntegral)
