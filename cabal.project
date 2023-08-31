@@ -127,10 +127,13 @@ source-repository-package
   subdir: ouroboros-network-api
           ouroboros-network-framework
           ouroboros-network
+  --sha256: 0h4yhn7gv52ig9px198rfpb134km3bcjzknsjzzs88fm45dfmgwb
+
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-consensus
   tag: 819bafeb3a2d45fcb7c1ea31a0b0aaff6d0c06c2
   subdir: ouroboros-consensus-diffusion
+  --sha256: 1c5m4by3rkqqb15gklaqgzpar5scspy5i5amd1gg7bc09pn8vzxm
 
