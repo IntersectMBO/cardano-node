@@ -12,6 +12,7 @@ import           Prelude
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
 import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Except
 
 import           Ouroboros.Network.NodeToClient (IOManager)
 
@@ -20,7 +21,6 @@ import           Cardano.Benchmarking.Script.Aeson (parseScriptFileAeson)
 import           Cardano.Benchmarking.Script.Core (setProtocolParameters, traceTxGeneratorVersion)
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Types
-import           Cardano.Benchmarking.Tracer
 
 type Script = [Action]
 
@@ -37,10 +37,13 @@ runScript script iom = runActionM execScript iom >>= \case
  where
   cleanup s a = void $ runActionMEnv s a iom
   execScript = do
-    liftIO (initTxGenTracers Nothing) >>= setBenchTracers
-    traceTxGeneratorVersion
     setProtocolParameters QueryLocalNode
-    forM_ script action
+    case break (\case StartProtocol {} -> True ; _ -> False) script of
+      (beforeTracerInit, (startProtoTracerInit : afterTracerInit)) -> do
+        sequence_ $ map action beforeTracerInit
+                  ++ [action startProtoTracerInit, traceTxGeneratorVersion]
+                  ++ map action afterTracerInit
+      _ -> throwE $ UserError "runScript: StartProtocol missing"
 
 shutDownLogging :: ActionM ()
 shutDownLogging = do
