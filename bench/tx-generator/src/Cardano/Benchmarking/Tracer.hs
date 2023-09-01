@@ -86,18 +86,22 @@ initTxGenTracers mbForwarding = do
   confState       <- emptyConfigReflection
 
   let
-    mkTracer :: (LogFormatting a, MetaTrace a) => Text -> IO (Trace IO a)
-    mkTracer namespace
+    mkTracer :: (LogFormatting a, MetaTrace a)
+                  => Text
+                  -> Maybe (Trace IO FormattedMessage)
+                  -> Maybe (Trace IO FormattedMessage)
+                  -> IO (Trace IO a)
+    mkTracer namespace mbStdoutTracer' mbForwardingTracer'
       | isPrefixSilent namespace = pure mempty
       | otherwise = do
-        tracer <-  generatorTracer namespace mbStdoutTracer mbForwardingTracer
+        tracer <-  generatorTracer namespace mbStdoutTracer' mbForwardingTracer'
         configureTracers confState initialTraceConfig [tracer]
         pure tracer
 
-  benchTracer@(Tracer traceBench) <- mkTracer "Benchmark"
-  n2nSubmitTracer <- mkTracer "SubmitN2N"
-  connectTracer <- mkTracer "Connect"
-  submitTracer <- mkTracer "Submit"
+  benchTracer <- mkTracer "benchmark" mbStdoutTracer mbForwardingTracer
+  n2nSubmitTracer <- mkTracer "submitN2N" mbStdoutTracer mbForwardingTracer
+  connectTracer <- mkTracer "connect" mbStdoutTracer mbForwardingTracer
+  submitTracer <- mkTracer "submit" mbStdoutTracer mbForwardingTracer
 
   traceWith benchTracer (TraceTxGeneratorVersion Version.txGeneratorVersion)
 
