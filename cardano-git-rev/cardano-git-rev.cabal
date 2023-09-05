@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-git-rev
-version:                0.1.2.0
+version:                0.1.3.0
 synopsis:               Git revisioning
 description:            Embeds git revision into Haskell packages.
 category:               Cardano,
