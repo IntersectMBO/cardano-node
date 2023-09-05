@@ -161,6 +161,7 @@ docTracers :: forall blk peer remotePeer.
   , LogFormatting remotePeer
   , Show remotePeer
   , Show peer
+  , forall fp. ShowQuery (BlockQuery blk fp)
   )
   => FilePath
   -> FilePath
