@@ -175,7 +175,7 @@ docTracers :: forall blk peer remotePeer.
   , Show peer
   , Show (ForgeStateUpdateError blk)
   , Show (CannotForge blk)
-  , ShowQuery (BlockQuery blk)
+  , forall fp. ShowQuery (BlockQuery blk fp)
   )
   => FilePath
   -> FilePath
