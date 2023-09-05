@@ -95,7 +95,8 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
           -- TODO: check if this is the correct way to use withIOManager
           (forwardSink, dpStore) <- withIOManager $ \iomgr -> do
             let tracerSocketMode = Just . first unFile =<< ncTraceForwardSocket nc
-            initForwarding iomgr (tcForwarder trConfig) networkMagic (Just ekgStore) tracerSocketMode
+                forwardingConf = fromMaybe defaultForwarder (tcForwarder trConfig)
+            initForwarding iomgr forwardingConf networkMagic (Just ekgStore) tracerSocketMode
           pure (forwardTracer forwardSink, dataPointTracer dpStore)
         else
           -- Since 'Forwarder' backend isn't enabled, there is no forwarding.

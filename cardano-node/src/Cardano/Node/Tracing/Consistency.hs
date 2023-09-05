@@ -217,7 +217,7 @@ getAllNamespaces =
         blockFetchServerNS = map (nsGetComplete . nsReplacePrefix ["BlockFetch", "Server"])
                     (allNamespaces :: [Namespace (TraceBlockFetchServerEvent blk)])
 
-        forgeKESInfoNS = map (nsGetComplete . nsReplacePrefix ["Forge"])
+        forgeKESInfoNS = map (nsGetComplete . nsReplacePrefix ["Forge", "StateInfo"])
                     (allNamespaces :: [Namespace (Consensus.TraceLabelCreds HotKey.KESInfo)])
         txInboundNS = map (nsGetComplete . nsReplacePrefix ["TxSubmission", "TxInbound"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
@@ -236,14 +236,7 @@ getAllNamespaces =
         forgeNS = map (nsGetComplete . nsReplacePrefix ["Forge", "Loop"])
                         (allNamespaces :: [Namespace (ForgeTracerType blk)])
 
-    -- TODO YUP
-    -- forgeTr' <-  mkCardanoTracer'
-    --             trBase trForward mbTrEKG
-    --             ["Forge", "ThreadStats"]
-    --             forgeThreadStats
-    -- configureTracers configReflection trConfig [forgeTr']
-    -- forgeThreadStatsTrDoc <- documentTracer' forgeThreadStats (forgeTr' ::
-    --   Trace IO (ForgeTracerType blk))
+        forgeStateNS = [["Forge", "StateInfo"]]
 
         blockchainTimeNS = map (nsGetComplete . nsReplacePrefix  ["BlockchainTime"])
                         (allNamespaces :: [Namespace (TraceBlockchainTimeEvent RelativeTime)])
@@ -380,7 +373,7 @@ getAllNamespaces =
                                 (allNamespaces :: [Namespace
                                   (InboundGovernorTrace Socket.SockAddr)])
         inboundGovernorTransitionsNS = map (nsGetComplete . nsReplacePrefix
-                                      ["Net", "InboundGovernor", "Remote", "Transition"])
+                                      ["Net", "InboundGovernor", "Transition"])
                                            (allNamespaces :: [Namespace
                                       (InboundGovernor.RemoteTransitionTrace Socket.SockAddr)])
         localConnectionManagerNS = map (nsGetComplete . nsReplacePrefix
@@ -449,7 +442,7 @@ getAllNamespaces =
             <> localTxSubmissionServerNS
             <> mempoolNS
             <> forgeNS
---            <> forgeThreadStatsNS
+            <> forgeStateNS
             <> blockchainTimeNS
 -- NodeToClient
             <> keepAliveClientNS

@@ -27,55 +27,70 @@ let
                  "Forwarder";
         };
 
-      ## These are comparision-specific config deviations from the default.
-      ##
-      ## "Resources".backends = ["EKGBackend"];
-
-      "Net.AcceptPolicy".severity = "Info";
-      "BlockFetch.Client".severity = "Info";
-      "BlockFetch.Server".severity = "Info";
-      "ChainDB".severity = "Info";
-      "ChainSync.Client".severity = "Info";
-      "ChainSync.ServerBlock".severity = "Info";
-      "ChainSync.ServerHeader".severity = "Info";
-      "Forge.Loop".severity = "Info";
-      "Net.ConnectionManager".severity = "Info";
-      "Net.Startup.DiffusionInit".severity = "Info";
-      "Net.DNSResolver".severity = "Info";
-      "Net.ErrorPolicy".severity = "Info";
-      "Net.InboundGovernor".severity = "Info";
-      "Net.Subscription.DNS".severity = "Info";
-      "Net.Subscription.IP".severity = "Info";
-      "Net.Peers".severity = "Info";
-      "Net.PeerSelection".severity = "Info";
-      "Net.Server".severity = "Info";
-      "Mempool".severity = "Info";
-      "Resources".severity= "Info";
-      "TxSubmission.TxInbound".severity = "Info";
-
-      "ChainDB.FollowerEvent.NewFollower".severity = "Debug";
-      "ChainDB.FollowerEvent.FollowerNoLongerInMem".severity = "Debug";
-      "ChainDB.AddBlockEvent.AddedBlockToQueue".severity = "Debug";
-      "ChainDB.IteratorEvent.StreamFromVolatileDB".severity = "Debug";
-      "ChainDB.GCEvent.PerformedGC".severity = "Debug";
-      "ChainDB.GCEvent.ScheduledGC".severity = "Debug";
-      "ChainDB.ImmDbEvent.CacheEvent.CurrentChunkHit".severity = "Debug";
-      "ChainDB.ImmDbEvent.CacheEvent.PastChunkHit".severity = "Debug";
-      "Forge.Loop.BlockContext".severity = "Debug";
-      "Forge.Loop.LedgerState".severity = "Debug";
-      "Forge.Loop.LedgerView".severity = "Debug";
-      "Forge.Loop.ForgingMempoolSnapshot".severity = "Debug";
-      "Forge.Loop.ForgeTickedLedgerState".severity = "Debug";
-      "TxSubmission.TxInbound.CanRequestMoreTxs".severity = "Debug";
-      "TxSubmission.TxInbound.CannotRequestMoreTxs".severity = "Debug";
-      "TxSubmission.TxInbound.Collected".severity = "Debug";
-      "TxSubmission.TxInbound.Processed".severity = "Debug";
+      ## This is a list with all tracers, adopted to the on and off state
+      ## in old tracing
+      "BlockFetch.Client".severity = "Debug";
+      "BlockFetch.Decision".severity = "Notice";
+      "BlockFetch.Remote".severity = "Notice";
+      "BlockFetch.Remote.Serialised".severity = "Notice";
+      "BlockFetch.Server".severity = "Debug";
+      "BlockchainTime".severity = "Notice";
+      "ChainDB".severity = "Debug";
+      "ChainDB.ReplayBlock.LedgerReplay".severity = "Notice";
+      "ChainSync.Client".severity = "Debug";
+      "ChainSync.Local".severity = "Notice";
+      "ChainSync.Remote".severity = "Notice";
+      "ChainSync.Remote.Serialised".severity = "Notice";
+      "ChainSync.ServerBlock".severity = "Notice";
+      "ChainSync.ServerHeader".severity = "Debug";
+      "Forge.Loop".severity = "Debug";
+      "Forge.StateInfo".severity = "Debug";
+      "Mempool".severity = "Debug";
+      "Net".severity = "Notice";
+      "Net.AcceptPolicy".severity = "Debug";
+      "Net.ConnectionManager.Local".severity = "Debug";
+      "Net.ConnectionManager.Remote".severity = "Debug";
+      "Net.DNSResolver".severity = "Notice";
+      "Net.ErrorPolicy.Local".severity = "Debug";
+      "Net.ErrorPolicy.Remote".severity = "Debug";
+      "Net.Handshake.Local".severity = "Debug";
+      "Net.Handshake.Remote".severity = "Debug";
+      "Net.InboundGovernor.Local".severity = "Debug";
+      "Net.InboundGovernor.Remote".severity = "Debug";
+      "Net.InboundGovernor.Transition".severity = "Debug";
+      "Net.Mux.Local".severity = "Notice";
+      "Net.Mux.Remote".severity = "Notice";
+      "Net.PeerSelection.Actions".severity = "Debug";
+      "Net.PeerSelection.Counters".severity = "Debug";
+      "Net.PeerSelection.Initiator".severity = "Notice";
+      "Net.PeerSelection.Responder".severity = "Notice";
+      "Net.PeerSelection.Selection".severity = "Debug";
+      "Net.Peers.Ledger".severity = "Debug";
+      "Net.Peers.List".severity = "Notice";
+      "Net.Peers.LocalRoot".severity = "Debug";
+      "Net.Peers.PublicRoot".severity = "Debug";
+      "Net.Server.Local".severity = "Debug";
+      "Net.Server.Remote".severity = "Debug";
+      "Net.Subscription.DNS".severity = "Debug";
+      "Net.Subscription.IP".severity = "Debug";
+      "NodeState".severity = "Notice";
+      "Resources".severity = "Debug";
+      "Shutdown".severity = "Notice";
+      "Startup".severity = "Notice";
+      "Startup.DiffusionInit".severity = "Debug";
+      "StateQueryServer".severity = "Notice";
+      "TxSubmission.Local".severity = "Notice";
+      "TxSubmission.LocalServer".severity = "Notice";
+      "TxSubmission.MonitorClient".severity = "Notice";
+      "TxSubmission.Remote".severity = "Notice";
+      "TxSubmission.TxInbound".severity = "Debug";
+      "TxSubmission.TxOutbound".severity = "Notice";
 
       "TraceBenchTxSubServAck".severity = "Debug";
       "TraceBenchTxSubSummary".severity = "Debug";
       "TraceTxSubmissionCollected".severity = "Debug";
       "TraceTxSubmissionProcessed".severity = "Debug";
-    };
+      };
   };
 
 

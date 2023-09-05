@@ -36,8 +36,8 @@ defaultCardanoConfig = emptyTraceConfig {
          [ ConfSeverity (SeverityF (Just Info))])
     ,(["Forge", "Loop"],
          [ ConfSeverity (SeverityF (Just Info))])
---     ,(["Forge", "KESInfo"],
---          [ ConfSeverity (SeverityF (Just Info))])
+    ,(["Forge", "StateInfo"],
+         [ ConfSeverity (SeverityF (Just Info))])
     ,(["Net", "InboundGovernor", "Remote"],
          [ ConfSeverity (SeverityF (Just Info))])
         -- includes ["Net", "InboundGovernor", "Remote", "Transition"]
@@ -54,18 +54,18 @@ defaultCardanoConfig = emptyTraceConfig {
     ,(["Resources"],
          [ ConfSeverity (SeverityF (Just Info))])
 
--- Limiters
-    ,(["ChainDB","AddBlockEvent","AddedBlockToQueue"],
-         [ ConfLimiter 2.0])
-    ,(["ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],
-         [ ConfLimiter 2.0])
-    ,(["ChainDB","AddBlockEvent","AddBlockValidation", "ValidCandidate"],
-         [ ConfLimiter 2.0])
-    ,(["ChainDB", "CopyToImmutableDBEvent", "CopiedBlockToImmutableDB"],
-         [ ConfLimiter 2.0])
-    ,(["ChainSync","Client","DownloadedHeader"],
-         [ ConfLimiter 2.0])
-    ,(["BlockFetch", "Client", "CompletedBlockFetch"],
-        [ ConfLimiter 2.0])
+--     Limiters
+     ,(["ChainDB","AddBlockEvent","AddedBlockToQueue"],
+          [ ConfLimiter 2.0])
+     ,(["ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],
+          [ ConfLimiter 2.0])
+     ,(["ChainDB","AddBlockEvent","AddBlockValidation", "ValidCandidate"],
+          [ ConfLimiter 2.0])
+     ,(["ChainDB", "CopyToImmutableDBEvent", "CopiedBlockToImmutableDB"],
+          [ ConfLimiter 2.0])
+     ,(["ChainSync","Client","DownloadedHeader"],
+          [ ConfLimiter 2.0])
+     ,(["BlockFetch", "Client", "CompletedBlockFetch"],
+          [ ConfLimiter 2.0])
     ]
   }
