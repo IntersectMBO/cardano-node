@@ -8,7 +8,7 @@
     case-insensitive,
     containers,
     foldl,
-    github,
+    github ^>= 0.28,
     optparse-applicative,
     pandoc ^>= 3.1,
     prettyprinter,
@@ -24,6 +24,9 @@
     RecordWildCards
   ghc-options: -Wall -Wextra -Wcompat
 -}
+
+-- `nix build .#project.x86_64-linux.plan-nix.json` is a reliable way to
+-- generate the `plan.json` to be fed to this script.
 
 module Main (main) where
 
