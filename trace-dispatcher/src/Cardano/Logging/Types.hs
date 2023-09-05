@@ -442,7 +442,7 @@ data TraceConfig = TraceConfig {
      -- | Options specific to a certain namespace
     tcOptions   :: Map.Map [Text] [ConfigOption]
      -- | Options for the forwarder
-  , tcForwarder :: TraceOptionForwarder
+  , tcForwarder :: Maybe TraceOptionForwarder
     -- | Optional human-readable name of the node.
   , tcNodeName  :: Maybe Text
     -- | Optional peer trace frequency in milliseconds.
@@ -455,7 +455,7 @@ data TraceConfig = TraceConfig {
 emptyTraceConfig :: TraceConfig
 emptyTraceConfig = TraceConfig {
     tcOptions = Map.empty
-  , tcForwarder = defaultForwarder
+  , tcForwarder = Nothing
   , tcNodeName = Nothing
   , tcPeerFrequency = Just 2000 -- Every 2 seconds
   , tcResourceFrequency = Just 5000 -- Every five seconds

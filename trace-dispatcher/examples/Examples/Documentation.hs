@@ -47,7 +47,7 @@ config1 = TraceConfig {
           [ ([], [ConfSeverity (SeverityF Nothing)])
           , (["node2"], [ConfSeverity (SeverityF (Just Info))])
           ]
-    , tcForwarder = TraceOptionForwarder {
+    , tcForwarder = Just TraceOptionForwarder {
         tofConnQueueSize = 100
       , tofDisconnQueueSize = 1000
       , tofVerbosity = Minimum
