@@ -195,11 +195,91 @@ let
         JSON = pkgs.writeScript "startup-${name}.sh" value;
       };
 
-      config = {
-        value = service.nodeConfig;
+      config = rec {
+        value =
+          service.nodeConfig
+          //
+          # New options to be added
+          {
+            TraceOptionPeerFrequency = 3000;
+            TraceOptionResourceFrequency = 4000;
+            TurnOnLogMetrics = true;
+          }
+          //
+          # Update "new tracing system" options
+          {
+            TraceOptions = {
+              "" = {
+                severity = "Notice";
+                detail = "DNormal";
+                backends = [
+                  "Stdout MachineFormat"
+                  "EKGBackend"
+                  "Forwarder"
+                ];
+              };
+              "BlockFetch.Client".severity = "Debug";
+              "BlockFetch.Decision".severity = "Notice";
+              "BlockFetch.Remote".severity = "Notice";
+              "BlockFetch.Remote.Serialised".severity = "Notice";
+              "BlockFetch.Server".severity = "Debug";
+              "BlockchainTime".severity = "Notice";
+              "ChainDB".severity = "Debug";
+              "ChainDB.ReplayBlock.LedgerReplay".severity = "Notice";
+              "ChainSync.Client".severity = "Debug";
+              "ChainSync.Local".severity = "Notice";
+              "ChainSync.Remote".severity = "Notice";
+              "ChainSync.Remote.Serialised".severity = "Notice";
+              "ChainSync.ServerBlock".severity = "Notice";
+              "ChainSync.ServerHeader".severity = "Debug";
+              "Forge.Loop".severity = "Debug";
+              "Forge.StateInfo".severity = "Debug";
+              "Mempool".severity = "Debug";
+              "Net".severity = "Notice";
+              "Net.AcceptPolicy".severity = "Debug";
+              "Net.ConnectionManager.Local".severity = "Debug";
+              "Net.ConnectionManager.Remote".severity = "Debug";
+              "Net.DNSResolver".severity = "Notice";
+              "Net.ErrorPolicy.Local".severity = "Debug";
+              "Net.ErrorPolicy.Remote".severity = "Debug";
+              "Net.Handshake.Local".severity = "Debug";
+              "Net.Handshake.Remote".severity = "Debug";
+              "Net.InboundGovernor.Local".severity = "Debug";
+              "Net.InboundGovernor.Remote".severity = "Debug";
+              "Net.InboundGovernor.Transition".severity = "Debug";
+              "Net.Mux.Local".severity = "Notice";
+              "Net.Mux.Remote".severity = "Notice";
+              "Net.PeerSelection.Actions".severity = "Debug";
+              "Net.PeerSelection.Counters".severity = "Debug";
+              "Net.PeerSelection.Initiator".severity = "Notice";
+              "Net.PeerSelection.Responder".severity = "Notice";
+              "Net.PeerSelection.Selection".severity = "Debug";
+              "Net.Peers.Ledger".severity = "Debug";
+              "Net.Peers.List".severity = "Notice";
+              "Net.Peers.LocalRoot".severity = "Debug";
+              "Net.Peers.PublicRoot".severity = "Debug";
+              "Net.Server.Local".severity = "Debug";
+              "Net.Server.Remote".severity = "Debug";
+              "Net.Subscription.DNS".severity = "Debug";
+              "Net.Subscription.IP".severity = "Debug";
+              "NodeState".severity = "Notice";
+              "Resources".severity = "Debug";
+              "Shutdown".severity = "Notice";
+              "Startup".severity = "Notice";
+              "Startup.DiffusionInit".severity = "Debug";
+              "StateQueryServer".severity = "Notice";
+              "TxSubmission.Local".severity = "Notice";
+              "TxSubmission.LocalServer".severity = "Notice";
+              "TxSubmission.MonitorClient".severity = "Notice";
+              "TxSubmission.Remote".severity = "Notice";
+              "TxSubmission.TxInbound".severity = "Debug";
+              "TxSubmission.TxOutbound".severity = "Notice";
+            };
+          }
+        ;
         JSON  = runJq "node-config-${name + modeIdSuffix}.json"
                   ''--null-input --sort-keys
-                    --argjson x '${__toJSON service.nodeConfig}'
+                    --argjson x '${__toJSON value}'
                   '' "$x";
       };
 
