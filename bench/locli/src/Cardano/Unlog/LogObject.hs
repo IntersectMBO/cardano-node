@@ -358,11 +358,11 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
   , (,,,) "TraceBenchTxSubServAck" "TraceBenchTxSubServAck" "TraceBenchTxSubServAck" $
     \v -> LOTxsAcked <$> v .: "txIds"
 
-  , (,,,) "TraceTxSubmissionCollected" "TraceTxSubmissionCollected" "TraceTxSubmissionCollected" $
+  , (,,,) "TraceTxSubmissionCollected" "TraceTxSubmissionCollected" "TxSubmission.TxInbound.Collected" $
     \v -> LOTxsCollected
             <$> v .: "count"
 
-  , (,,,) "TraceTxSubmissionProcessed" "TraceTxSubmissionProcessed" "TraceTxSubmissionProcessed" $
+  , (,,,) "TraceTxSubmissionProcessed" "TraceTxSubmissionProcessed" "TxSubmission.TxInbound.Processed" $
     \v -> LOTxsProcessed
             <$> v .: "accepted"
             <*> v .: "rejected"
@@ -381,7 +381,7 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
     \_ -> pure LOMempoolRejectedTx
 
   -- Generator:
-  , (,,,) "TraceBenchTxSubSummary" "TraceBenchTxSubSummary" "TraceBenchTxSubSummary" $
+  , (,,,) "TraceBenchTxSubSummary" "TraceBenchTxSubSummary" "Benchmark.BenchTxSubSummary" $
     \v -> do
        x :: Object <- v .: "summary"
        LOGeneratorSummary
