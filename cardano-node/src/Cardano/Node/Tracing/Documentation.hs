@@ -297,7 +297,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     forgeKESInfoTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                ["Forge"]
+                ["Forge", "StateInfo"]
     configureTracers configReflection trConfig [forgeKESInfoTr]
     forgeKESInfoTrDoc <- documentTracer (forgeKESInfoTr ::
       Trace IO (Consensus.TraceLabelCreds HotKey.KESInfo))
@@ -585,7 +585,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     inboundGovernorTransitionsTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      ["Net", "InboundGovernor", "Remote", "Transition"]
+      ["Net", "InboundGovernor", "Transition"]
     configureTracers configReflection trConfig [inboundGovernorTransitionsTr]
     inboundGovernorTransitionsTrDoc <- documentTracer (inboundGovernorTransitionsTr ::
        Trace IO (InboundGovernor.RemoteTransitionTrace Socket.SockAddr))

@@ -257,7 +257,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
 
     !forgeKESInfoTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                ["Forge"]
+                ["Forge", "StateInfo"]
     configureTracers configReflection trConfig [forgeKESInfoTr]
 
     !txInboundTr  <- mkCardanoTracer
@@ -548,7 +548,7 @@ mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint t
 
     !connectionManagerTransitionsTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      ["Net", "ConnectionManager", "Remote"]
+      ["Net", "ConnectionManager", "Transition"]
     configureTracers configReflection trConfig [connectionManagerTransitionsTr]
 
     !serverTr  <-  mkCardanoTracer

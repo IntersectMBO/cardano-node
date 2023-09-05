@@ -12,7 +12,7 @@ import qualified Data.List as L
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid
 import qualified System.Directory as Sys
-import           System.Environment (setEnv, unsetEnv, lookupEnv)
+import           System.Environment (lookupEnv, setEnv, unsetEnv)
 import qualified System.IO as Sys
 import           System.PosixCompat.Files (fileExist)
 import qualified System.Process as Sys
@@ -128,5 +128,6 @@ getExternalTracerState TestSetup{..} ref = do
        -- For simplicity, we are always 'Initiator',
        -- so 'cardano-tracer' is always a 'Responder'.
        let tracerSocketMode = Just (unI tsSockExternal, Initiator)
-       initForwarding iomgr (tcForwarder simpleTestConfig) (unI tsNetworkMagic) Nothing tracerSocketMode
+           forwardingConf = fromMaybe defaultForwarder (tcForwarder simpleTestConfig)
+       initForwarding iomgr forwardingConf (unI tsNetworkMagic) Nothing tracerSocketMode
      pure (externalTracerHdl, forwardTracer forwardSink)
