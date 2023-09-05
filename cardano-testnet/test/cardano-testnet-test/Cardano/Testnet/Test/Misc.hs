@@ -5,8 +5,8 @@ import           Prelude
 import           Data.List (isInfixOf)
 import qualified GHC.Stack as GHC
 
-import           Cardano.CLI.Run.Legacy.Query
-import           Cardano.CLI.Types.Legacy
+import           Cardano.CLI.Legacy.Run.Query
+import           Cardano.CLI.Types.Common
 import           Cardano.CLI.Types.Output
 
 import           Hedgehog (success)

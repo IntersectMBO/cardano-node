@@ -588,6 +588,7 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
 
     execCli_
       [ "transaction", "build-raw"
+      , "--conway-era"
       , "--invalid-hereafter", "1000"
       , "--fee", "0"
       , "--tx-in", txIn

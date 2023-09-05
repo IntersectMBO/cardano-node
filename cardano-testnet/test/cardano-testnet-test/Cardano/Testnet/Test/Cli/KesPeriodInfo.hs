@@ -17,7 +17,7 @@ import           Hedgehog (Property, (===))
 import           Prelude
 import           System.FilePath ((</>))
 
-import           Cardano.CLI.Run.Legacy.Query
+import           Cardano.CLI.Legacy.Run.Query
 import           Cardano.CLI.Types.Output
 
 import qualified Data.Aeson as J
@@ -33,6 +33,7 @@ import qualified Testnet.Property.Utils as H
 
 import           Cardano.Testnet
 import           Cardano.Testnet.Test.Misc
+import           Testnet.Process.Cli
 import           Testnet.Process.Run
 import           Testnet.Runtime
 
@@ -84,9 +85,22 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   UTxO utxo1 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) utxo1Json
   txin <- H.noteShow =<< H.headM (Map.keys utxo1)
 
-  -- Staking keys
-  utxoStakingVkey2 <- H.note $ tempAbsPath' </> "shelley/utxo-keys/utxo2-stake.vkey"
-  utxoStakingSkey2 <- H.note $ tempAbsPath' </> "shelley/utxo-keys/utxo2-stake.skey"
+  -- Generate stake keys
+
+  H.createDirectoryIfMissing_ $ tempAbsPath' </> "test-delegator"
+
+  utxoStakingVkey2 <- H.note $ tempAbsPath' </> "test-delegator" </> "test-stake.vkey"
+  utxoStakingSkey2 <- H.note $ tempAbsPath' </> "test-delegator" </> "test-stake.skey"
+
+  _stakeAddress <- cliStakeAddressKeyGen tempAbsPath'
+      $ KeyNames utxoStakingVkey2 utxoStakingSkey2
+
+
+  execCli_
+    [ "address", "key-gen"
+    , "--verification-key-file", utxoStakingVkey2
+    , "--signing-key-file", utxoStakingSkey2
+    ]
 
   utxoaddrwithstaking <- execCli [ "address", "build"
                                    , "--payment-verification-key-file", utxoVKeyFile2

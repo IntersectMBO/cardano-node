@@ -20,6 +20,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KeyMapAeson
 import           Data.Bifunctor
+import qualified Data.Default.Class as DefaultClass
 import qualified Data.Map.Strict as Map
 import           Data.Proxy
 import           Data.Ratio
@@ -34,7 +35,6 @@ import           Cardano.Ledger.BaseTypes
 import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Conway.Genesis
 import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Keys
 
 import           Cardano.Tracing.Config
 
@@ -123,7 +123,7 @@ defaultAlonzoGenesis = do
 
 
 defaultConwayGenesis :: ConwayGenesis StandardCrypto
-defaultConwayGenesis = ConwayGenesis { cgGenDelegs = GenDelegs mempty}
+defaultConwayGenesis = ConwayGenesis { cgUpgradePParams = DefaultClass.def }
 
 
 

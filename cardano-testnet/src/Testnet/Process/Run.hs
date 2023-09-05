@@ -56,7 +56,7 @@ execCli_
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => [String]
   -> m ()
-execCli_ = void . execCli
+execCli_ = GHC.withFrozenCallStack $ void . execCli
 
 -- | Run cardano-cli, returning the stdout
 execCli'
