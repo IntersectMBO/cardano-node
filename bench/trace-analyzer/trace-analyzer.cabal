@@ -39,7 +39,7 @@ executable trace-analyzer
 
   main-is:              trace-analyzer.hs
 
-  build-depends:        aeson
+  build-depends:        aeson ^>=2.1
                       , optparse-applicative
                       , text
                       , containers
