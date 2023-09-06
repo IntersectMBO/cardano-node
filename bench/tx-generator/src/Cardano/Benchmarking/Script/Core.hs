@@ -18,12 +18,13 @@
 module Cardano.Benchmarking.Script.Core
 where
 
+import           "contra-tracer" Control.Tracer (Tracer (..))
+
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
-import           "contra-tracer" Control.Tracer (nullTracer)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
 
@@ -36,6 +37,8 @@ import           Prelude
 import           Cardano.Api
 import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
                    protocolParamMaxTxExUnits, protocolParamPrices)
+
+import           Cardano.Logging hiding(LocalSocket)
 
 import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
@@ -141,8 +144,8 @@ getConnectClient = do
   ioManager <- askIOManager
   return $ benchmarkConnectTxSubmit
                        ioManager
-                       (btConnect_ tracers)
-                       nullTracer -- (btSubmission2_ tracers)
+                       (Tracer $ traceWith (btConnect_ tracers))
+                       mempty -- (btSubmission2_ tracers)
                        (protocolToCodecConfig protocol)
                        networkMagic
 waitBenchmark :: String -> ActionM ()
