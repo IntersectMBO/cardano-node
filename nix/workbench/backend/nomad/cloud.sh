@@ -42,14 +42,14 @@ backend_nomadcloud() {
     ;;
 
     allocate-run )
-      allocate-run-nomadcloud            "$@"
+      allocate-run-nomadcloud               "$@"
       # Does a pre allocation before calling the default/common allocation.
-      backend_nomad allocate-run         "$@"
+      backend_nomad allocate-run            "$@"
     ;;
 
     deploy-genesis )
       # It "overrides" completely `backend_nomad`'s `deploy-genesis`.
-      deploy-genesis-nomadcloud          "$@"
+      deploy-genesis-nomadcloud             "$@"
     ;;
 
     fetch-logs )
@@ -57,24 +57,46 @@ backend_nomadcloud() {
       # `nomad exec`, because we need to have an exclusive port open for us.
       if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"
       then
-        fetch-logs-nomadcloud            "$@"
+        fetch-logs-nomadcloud               "$@"
       else
-        backend_nomad fetch-logs         "$@"
+        backend_nomad fetch-logs            "$@"
+      fi
+    ;;
+
+    # All or clean up everything!
+    # Called after `scenario.sh` without an exit trap!
+    stop-cluster )
+      # Only if running on "perf" exclusive nodes the job is kept running!
+      if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"
+      then
+        # It "overrides" completely `backend_nomad`'s `stop-cluster`.
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
+        local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
+        msg "$(yellow "Cloud runs DO NOT automatically stop and purge Nomad jobs")"
+        msg "$(yellow "To stop the Nomad job use:")"
+        msg "$(yellow "wb nomad job stop ${dir}/nomad/nomad-job.json ${nomad_job_name}")"
+        msg "$(yellow "(With the same NOMAD_ADDR, NOMAD_NAMESPACE and NOMAD_TOKEN used for start-cluster)")"
+        true
+      else
+        # Shared code between Nomad sub-backends that internally only takes care
+        # of the Nomad job.
+        backend_nomad stop-cluster-internal "$@"
       fi
     ;;
 
     # Generic backend sub-commands, shared code between Nomad sub-backends.
 
     describe-run )
-      backend_nomad describe-run         "$@"
+      backend_nomad describe-run            "$@"
     ;;
 
     is-running )
-      backend_nomad is-running           "$@"
+      backend_nomad is-running              "$@"
     ;;
 
     start-cluster )
-      backend_nomad start-cluster        "$@"
+      backend_nomad start-cluster           "$@"
       # start-ssh
       # Only if running on "perf" exclusive nodes we use SSH, if not
       # `nomad exec`, because we need to have an exclusive port open for us.
@@ -100,55 +122,51 @@ backend_nomadcloud() {
     ;;
 
     start-tracers )
-      backend_nomad start-tracers        "$@"
+      backend_nomad start-tracers           "$@"
     ;;
 
     start-nodes )
-      backend_nomad start-nodes          "$@"
+      backend_nomad start-nodes             "$@"
     ;;
 
     start-generator )
-      backend_nomad start-generator      "$@"
+      backend_nomad start-generator         "$@"
     ;;
 
     start-healthchecks )
-      backend_nomad start-healthchecks   "$@"
+      backend_nomad start-healthchecks      "$@"
     ;;
 
     start-node )
-      backend_nomad start-node           "$@"
+      backend_nomad start-node              "$@"
     ;;
 
     stop-node )
-      backend_nomad stop-node            "$@"
+      backend_nomad stop-node               "$@"
     ;;
 
     get-node-socket-path )
-      backend_nomad get-node-socket-path "$@"
+      backend_nomad get-node-socket-path    "$@"
     ;;
 
     wait-node )
-      backend_nomad wait-node            "$@"
+      backend_nomad wait-node               "$@"
     ;;
 
     wait-node-stopped )
-      backend_nomad wait-node-stopped    "$@"
+      backend_nomad wait-node-stopped       "$@"
     ;;
 
     wait-pools-stopped )
-      backend_nomad wait-pools-stopped   "$@"
+      backend_nomad wait-pools-stopped      "$@"
     ;;
 
     stop-all )
-      backend_nomad stop-all             "$@"
-    ;;
-
-    stop-cluster )
-      backend_nomad stop-cluster         "$@"
+      backend_nomad stop-all                "$@"
     ;;
 
     cleanup-cluster )
-      backend_nomad cleanup-cluster      "$@"
+      backend_nomad cleanup-cluster         "$@"
     ;;
 
     * )
