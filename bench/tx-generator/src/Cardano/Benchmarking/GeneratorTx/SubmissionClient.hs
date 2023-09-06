@@ -9,7 +9,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -39,8 +38,6 @@ import qualified Data.Text as T
 import Data.Type.Equality               (type (~))
 #endif
 
-import           "contra-tracer" Control.Tracer (Tracer, traceWith)
-
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Common ()
 import           Cardano.Tracing.OrphanInstances.Consensus ()
@@ -64,6 +61,8 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Type (BlockingReplyLis
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (fromShelleyTxId, toConsensusGenTx)
+
+import           Cardano.Logging
 
 import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
@@ -100,8 +99,8 @@ txSubmissionClient
      , IsShelleyBasedEra era
      , tx      ~ Tx era
      )
-  => Tracer m NodeToNodeSubmissionTrace
-  -> Tracer m (TraceBenchTxSubmit TxId)
+  => Trace m NodeToNodeSubmissionTrace
+  -> Trace m (TraceBenchTxSubmit TxId)
   -> TxSource era
   -> EndOfProtocolCallback m
   -> TxSubmissionClient (GenTxId CardanoBlock) (GenTx CardanoBlock) m ()

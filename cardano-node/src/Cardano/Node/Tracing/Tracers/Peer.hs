@@ -4,14 +4,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 
-module Cardano.Node.Tracing.Tracers.Peer where
---   ( PeerT (..)
---   , startPeerTracer
---   , namesForPeers
---   , severityPeers
---   , docPeers
---   , ppPeer
---   ) where
+module Cardano.Node.Tracing.Tracers.Peer
+  ( PeerT (..)
+  , startPeerTracer
+  , ppPeer
+  ) where
 
 import           Cardano.Node.Orphans ()
 

@@ -5,15 +5,16 @@ module Cardano.Logging.Tracer.Standard (
     standardTracer
 ) where
 
+import           Control.Concurrent (myThreadId)
 import           Control.Concurrent.Async
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Exception (BlockedIndefinitelyOnMVar, catch)
 import           Control.Monad (forever, when)
 import           Control.Monad.IO.Class
 import           Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import           Data.Maybe (isNothing)
 import           Data.Text (Text)
 import qualified Data.Text.IO as TIO
+import           GHC.Conc (labelThread)
 import           System.IO (hFlush, stdout)
 
 import           Cardano.Logging.DocuGenerator
@@ -29,6 +30,8 @@ newtype StandardTracerState =  StandardTracerState {
 emptyStandardTracerState :: StandardTracerState
 emptyStandardTracerState = StandardTracerState Nothing
 
+-- | It is mandatory to construct only one standard tracer in any application!
+-- Throwing away a standard tracer and using a new one will result in an exception
 standardTracer :: forall m. (MonadIO m)
   => m (Trace m FormattedMessage)
 standardTracer = do
@@ -66,9 +69,10 @@ standardTracer = do
 startStdoutThread :: IORef StandardTracerState -> IO ()
 startStdoutThread stateRef = do
     (inChan, outChan) <- newChan 2048
-    as <- async (catch
-      (stdoutThread outChan)
-      (\(_ :: BlockedIndefinitelyOnMVar) -> pure ()))
+    as <- async (do
+                    tid <- myThreadId
+                    labelThread tid "StdoutTrace"
+                    stdoutThread outChan)
     link as
     modifyIORef' stateRef (\ st ->
       st {stRunning = Just (inChan, outChan, as)})
