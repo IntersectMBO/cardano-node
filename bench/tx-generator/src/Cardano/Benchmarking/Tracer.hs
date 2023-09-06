@@ -98,10 +98,10 @@ initTxGenTracers mbForwarding = do
         configureTracers confState initialTraceConfig [tracer]
         pure tracer
 
-  benchTracer <- mkTracer "benchmark" mbStdoutTracer mbForwardingTracer
-  n2nSubmitTracer <- mkTracer "submitN2N" mbStdoutTracer mbForwardingTracer
-  connectTracer <- mkTracer "connect" mbStdoutTracer mbForwardingTracer
-  submitTracer <- mkTracer "submit" mbStdoutTracer mbForwardingTracer
+  benchTracer <- mkTracer "Benchmark" mbStdoutTracer mbForwardingTracer
+  n2nSubmitTracer <- mkTracer "SubmitN2N" mbStdoutTracer mbForwardingTracer
+  connectTracer <- mkTracer "Connect" mbStdoutTracer mbForwardingTracer
+  submitTracer <- mkTracer "Submit" mbStdoutTracer mbForwardingTracer
 
   traceWith benchTracer (TraceTxGeneratorVersion Version.txGeneratorVersion)
 
