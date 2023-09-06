@@ -8,6 +8,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -50,6 +51,15 @@ import           Cardano.Node.Startup
 import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Version as Version
+
+pattern TracerNameBench     :: Text
+pattern TracerNameBench     = "Benchmark"
+pattern TracerNameSubmit    :: Text
+pattern TracerNameSubmit    = "Submit"
+pattern TracerNameSubmitN2N :: Text
+pattern TracerNameSubmitN2N = "SubmitN2N"
+pattern TracerNameConnect   :: Text
+pattern TracerNameConnect   = "Connect"
 
 generatorTracer ::
      (LogFormatting a, MetaTrace a)
@@ -97,10 +107,10 @@ initTxGenTracers mbForwarding = do
         configureTracers confState initialTraceConfig [tracer]
         pure tracer
 
-  benchTracer <- mkTracer "Benchmark" mbStdoutTracer mbForwardingTracer
-  n2nSubmitTracer <- mkTracer "SubmitN2N" mbStdoutTracer mbForwardingTracer
-  connectTracer <- mkTracer "Connect" mbStdoutTracer mbForwardingTracer
-  submitTracer <- mkTracer "Submit" mbStdoutTracer mbForwardingTracer
+  benchTracer     <- mkTracer TracerNameBench     mbStdoutTracer mbForwardingTracer
+  n2nSubmitTracer <- mkTracer TracerNameSubmitN2N mbStdoutTracer mbForwardingTracer
+  connectTracer   <- mkTracer TracerNameConnect   mbStdoutTracer mbForwardingTracer
+  submitTracer    <- mkTracer TracerNameSubmit    mbStdoutTracer mbForwardingTracer
 
   traceWith benchTracer (TraceTxGeneratorVersion Version.txGeneratorVersion)
 
@@ -159,10 +169,10 @@ initialTraceConfig :: TraceConfig
 initialTraceConfig = TraceConfig {
       tcOptions = Map.fromList
           [ ([], [configSilent])
-          , setMaxDetail "benchmark"
-          , (["submitN2N"], [configSilent])
-          , setMaxDetail "connect"
-          , setMaxDetail "submit"
+          , setMaxDetail TracerNameBench
+          , ([TracerNameSubmitN2N], [configSilent])
+          , setMaxDetail TracerNameConnect
+          , setMaxDetail TracerNameSubmit
           ]
     , tcForwarder = Just defaultForwarder
     , tcNodeName = Nothing
