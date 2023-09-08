@@ -1,7 +1,8 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeInType #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.Report
   ( module Cardano.Report
@@ -24,6 +25,7 @@ import System.Environment (lookupEnv)
 import Text.EDE hiding (Id)
 
 import Data.CDF
+import Data.Tuple.Extra (fst3)
 import Cardano.Util
 import Cardano.Analysis.API
 import Cardano.Analysis.Summary

@@ -63,10 +63,7 @@ saveTraceObjects savedTraceObjects nodeId traceObjects =
   getTOValue TraceObject{toNamespace, toHuman, toMachine, toSeverity, toTimestamp} =
     case (toNamespace, toHuman, toMachine) of
       ([], _,        _)        -> Nothing
-      (ns, Just msg, Nothing)  -> Just (mkName ns, (msg, toSeverity, toTimestamp))
-      (ns, Nothing,  Just msg) -> Just (mkName ns, (msg, toSeverity, toTimestamp))
-      (ns, Just msg, Just _)   -> Just (mkName ns, (msg, toSeverity, toTimestamp))
-      _                        -> Nothing
+      (ns, _, msg)   -> Just (mkName ns, (msg, toSeverity, toTimestamp))
 
   mkName = intercalate "."
 
@@ -80,7 +77,7 @@ getTraceObjects savedTraceObjects nodeId = atomically $ do
   qForThisNode <- M.lookup nodeId <$> readTVar savedTraceObjects
   maybe (return []) flushTQueue qForThisNode
 
--- | Counters for displayed logs item in "live view window". 
+-- | Counters for displayed logs item in "live view window".
 type LogsLiveViewCounters = TVar (Map NodeId Int)
 
 initLogsLiveViewCounters :: IO LogsLiveViewCounters

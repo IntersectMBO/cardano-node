@@ -1,8 +1,8 @@
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE TypeInType #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
 module Cardano.Analysis.API.Types (module Cardano.Analysis.API.Types) where

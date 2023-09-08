@@ -30,39 +30,47 @@ fi
 
 case "$op" in
     idle )
-        backend start                "$dir"
+        backend start-tracers        "$dir"
         backend start-nodes          "$dir"
         ;;
 
     tracer-only )
-        backend start                "$dir"
+        backend start-tracers        "$dir"
         ;;
 
     fixed )
-        backend start                "$dir"
+        backend start-tracers        "$dir"
 
-        scenario_setup_exit_trap     "$dir"
+        scenario_setup_exit_trap              "$dir"
         scenario_setup_workload_termination   "$dir"
+        # Trap start
+        ############
         backend start-nodes          "$dir"
         backend wait-pools-stopped   "$dir"
+        # Trap end
+        ##########
         scenario_cleanup_termination
 
-        backend stop-cluster         "$dir"
+        backend stop-all             "$dir"
         ;;
 
     fixed-loaded )
-        backend start                "$dir"
+        backend start-tracers        "$dir"
 
         scenario_setup_exit_trap     "$dir"
+        # Trap start
+        ############
         backend start-nodes          "$dir"
         backend start-generator      "$dir"
         backend start-healthchecks   "$dir"
-
         scenario_setup_workload_termination   "$dir"
+        # Trap end
+        ##########
+
         backend wait-pools-stopped   "$dir"
         scenario_cleanup_termination
 
-        backend stop-cluster         "$dir"
+        backend stop-all             "$dir"
         ;;
 
     chainsync )
@@ -70,7 +78,7 @@ case "$op" in
         # `backend start` because the node-#, generator and tracer directories
         # may be created after the nomad job has started (are symlinks to the
         # containers directories).
-        backend start "$dir"
+        backend start-tracers "$dir"
 
         # `chaindb` explorer:
         local explorer=(
@@ -104,7 +112,7 @@ case "$op" in
         backend wait-node-stopped "$dir" 'node-1'
         scenario_cleanup_exit_trap
 
-        backend stop-cluster      "$dir"
+        backend stop-all          "$dir"
 
         analysis_trace_frequencies 'current'
         ;;
@@ -116,6 +124,8 @@ __scenario_exit_trap_dir=
 scenario_exit_trap() {
     echo >&2
     msg "scenario:  $(with_color yellow exit trap triggered)"
+    backend stop-all     "$__scenario_exit_trap_dir"
+    backend fetch-logs   "$__scenario_exit_trap_dir"
     backend stop-cluster "$__scenario_exit_trap_dir"
 }
 

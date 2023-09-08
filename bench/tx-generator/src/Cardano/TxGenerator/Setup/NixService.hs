@@ -20,7 +20,7 @@ import           Data.List.NonEmpty (NonEmpty)
 import           Data.Maybe (fromMaybe)
 import           GHC.Generics (Generic)
 
-import           Cardano.CLI.Types (FileDirection (..), SigningKeyFile)
+import           Cardano.CLI.Types.Common (FileDirection (..), SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 import           Cardano.Node.Types (AdjustFilePaths (..))
 

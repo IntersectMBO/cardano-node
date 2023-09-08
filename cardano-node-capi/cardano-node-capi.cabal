@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node-capi
-version:                0.1.0.0
+version:                0.1.0.1
 synopsis:               FFI C library for Cardano
 description:            ffi c library around the full node.
 category:               Cardano,
@@ -20,9 +20,9 @@ common project-config
 library
   import:               project-config
   exposed-modules:      Node
-  build-depends:        base                          >= 4.14     && < 4.17
+  build-depends:        base                          >= 4.14     && < 5
                       , aeson                         >= 2.1.0.0
                       , bytestring
                       , cardano-node
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
   hs-source-dirs:       src

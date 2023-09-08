@@ -493,6 +493,8 @@ ppStartupInfoTrace (BlockForgingUpdate b) =
             "Disabling block forging, to enable it please make the credentials "
           <> "files available again and then re-trigger reconfiguration via SIGHUP "
           <> "signal."
+        NotEffective ->
+             "Changing block forging is not effective until consensus has started. "
 
 ppStartupInfoTrace (BlockForgingUpdateError err) =
   "Block forging reconfiguration error: "
@@ -512,7 +514,7 @@ ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerAfter) =
     pack
   $ intercalate "\n"
   [ "\nLocal Root Groups:"
-  , "  " ++ intercalate "\n  " (map (\(x,y) -> show (x, Map.assocs y))
+  , "  " ++ intercalate "\n  " (map (\(x,y,z) -> show (x, y, Map.assocs z))
                                     localRoots)
   , "Public Roots:"
   , "  " ++ intercalate "\n  " (map show $ Map.assocs publicRoots)

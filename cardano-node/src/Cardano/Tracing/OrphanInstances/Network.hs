@@ -9,6 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
@@ -82,7 +83,8 @@ import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (.
                    TracePeerSelection (..))
 import qualified Ouroboros.Network.PeerSelection.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.LedgerPeers
-import           Ouroboros.Network.PeerSelection.LocalRootPeers (LocalRootPeers)
+import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency (..), LocalRootPeers,
+                   WarmValency (..))
 import qualified Ouroboros.Network.PeerSelection.LocalRootPeers as LocalRootPeers
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS (TraceLocalRootPeers (..),
@@ -178,7 +180,7 @@ instance HasSeverityAnnotation [TraceLabelPeer peer (FetchDecision [Point header
       fetchDecisionSeverity fd =
         case fd of
           Left FetchDeclineChainNotPlausible     -> Debug
-          Left FetchDeclineChainNoIntersection   -> Notice
+          Left FetchDeclineChainIntersectionTooDeep -> Notice
           Left FetchDeclineAlreadyFetched        -> Debug
           Left FetchDeclineInFlightThisPeer      -> Debug
           Left FetchDeclineInFlightOtherPeer     -> Debug
@@ -425,6 +427,7 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceGovernorWakeup        {} -> Info
       TraceChurnWait             {} -> Info
       TraceChurnMode             {} -> Info
+      TraceKnownInboundConnection {} -> Info
 
 instance HasPrivacyAnnotation (DebugPeerSelection addr)
 instance HasSeverityAnnotation (DebugPeerSelection addr) where
@@ -1357,6 +1360,17 @@ instance ToObject peer => ToObject (WithMuxBearer peer MuxTrace) where
 
 instance Aeson.ToJSONKey RelayAccessPoint where
 
+instance ToJSON HotValency where
+  toJSON (HotValency v) = toJSON v
+instance ToJSON WarmValency where
+  toJSON (WarmValency v) = toJSON v
+
+instance FromJSON HotValency where
+  parseJSON v = HotValency <$> parseJSON v
+
+instance FromJSON WarmValency where
+  parseJSON v = WarmValency <$> parseJSON v
+
 instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception) where
   toObject _verb (TraceLocalRootDomains groups) =
     mconcat [ "kind" .= String "LocalRootDomains"
@@ -1513,10 +1527,9 @@ instance ToObject (TracePeerSelection SockAddr) where
              , "actualEstablished" .= actualKnown
              , "selectedPeers" .= Aeson.toJSONList (toList sp)
              ]
-  toObject _verb (TracePromoteColdLocalPeers tLocalEst aLocalEst sp) =
+  toObject _verb (TracePromoteColdLocalPeers tLocalEst sp) =
     mconcat [ "kind" .= String "PromoteColdLocalPeers"
              , "targetLocalEstablished" .= tLocalEst
-             , "actualLocalEstablished" .= aLocalEst
              , "selectedPeers" .= Aeson.toJSONList (toList sp)
              ]
   toObject _verb (TracePromoteColdFailed tEst aEst p d err) =
@@ -1624,6 +1637,10 @@ instance ToObject (TracePeerSelection SockAddr) where
   toObject _verb (TraceChurnMode c) =
     mconcat [ "kind" .= String "ChurnMode"
              , "event" .= show c ]
+  toObject _verb (TraceKnownInboundConnection addr sharing) =
+    mconcat [ "kind" .= String "KnownInboundConnection"
+             , "peer" .= show addr
+             , "peerSharing" .= show sharing ]
 
 -- Connection manager abstract state.  For explanation of each state see
 -- <https://hydra.iohk.io/job/Cardano/ouroboros-network/native.network-docs.x86_64-linux/latest/download/2>

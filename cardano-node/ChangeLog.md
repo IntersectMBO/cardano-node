@@ -1,6 +1,13 @@
 # Changelog for cardano-node
 
-# next version
+## 8.2.1 -- August 2023
+
+- prevent SIGHUP from killing node during ledger replay
+- upgrade cardano-cli to 8.4.1.0
+- upgrade cardano-api to 8.10.2.0
+
+
+## 8.2.0 -- July 2023
 
 ### node changes
 
@@ -8,9 +15,22 @@
   `TraceLocalHandshake`, `TraceLocalInboundGovernor`, `TraceLocalServer` and
   `TraceServer`.
 
-## 8.1.0
+- Added `hotValency` optional to P2P Topology files, keeping the backwards compatible
+  `valency` flag.
+- Added `warmValency` optional to P2P Topology files.
 
--
+## 8.1.2 -- July 2023
+
+- Update plutus interpreter
+
+## 8.1.1 -- June 2023
+
+- Address P2P Topology bug with non-DNS names in networking
+
+## 8.1.0 -- June 2023
+
+- Support Conway Era when ExperimentalHardForks enabled
+- `TickF` changes to improve epoch boundary
 
 ## 8.0.0 -- May 2023
 
@@ -83,7 +103,7 @@ None
   (input-output-hk/ouroboros-network#4357).
 
 [#4563]: https://github.com/input-output-hk/cardano-node/issues/4563
-[understanding-config-files]: https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/understanding-config-files.md
+[understanding-config-files]: https://github.com/input-output-hk/cardano-node-wiki/wiki/understanding-config-files
 
 ## 1.35.5 -- November 2022
 

@@ -12,7 +12,7 @@ defaultCardanoConfig :: TraceConfig
 defaultCardanoConfig = emptyTraceConfig {
   tcOptions = Map.fromList
     [([],
-         [ ConfSeverity (SeverityF Nothing) -- Means Silence
+         [ ConfSeverity (SeverityF (Just Notice)) -- Means Silence
          , ConfDetail DNormal
          , ConfBackend  [Stdout MachineFormat
                         , EKGBackend
@@ -28,21 +28,22 @@ defaultCardanoConfig = emptyTraceConfig {
          [ ConfSeverity (SeverityF (Just Info))])
     ,(["Net", "ConnectionManager", "Remote"],
          [ ConfSeverity (SeverityF (Just Info))])
-    ,(["DNSSubscription"],
+    ,(["Net", "Subscription", "DNS"],
          [ ConfSeverity (SeverityF (Just Info))])
-    ,(["DiffusionInit"],
+    ,(["Startup", "DiffusionInit"],
          [ ConfSeverity (SeverityF (Just Info))])
-    ,(["ErrorPolicy"],
+    ,(["Net", "ErrorPolicy"],
          [ ConfSeverity (SeverityF (Just Info))])
-    ,(["Forge"],
+    ,(["Forge", "Loop"],
          [ ConfSeverity (SeverityF (Just Info))])
-        -- includes ["Forge", "KESInfo"]
+    ,(["Forge", "StateInfo"],
+         [ ConfSeverity (SeverityF (Just Info))])
     ,(["Net", "InboundGovernor", "Remote"],
          [ ConfSeverity (SeverityF (Just Info))])
         -- includes ["Net", "InboundGovernor", "Remote", "Transition"]
-    ,(["IpSubscription"],
+    ,(["Net", "Subscription", "IP"],
          [ ConfSeverity (SeverityF (Just Info))])
-    ,(["LocalErrorPolicy"],
+    ,(["Net", "ErrorPolicy", "Local"],
          [ ConfSeverity (SeverityF (Just Info))])
     ,(["Mempool"],
          [ ConfSeverity (SeverityF (Just Info))])
@@ -53,18 +54,18 @@ defaultCardanoConfig = emptyTraceConfig {
     ,(["Resources"],
          [ ConfSeverity (SeverityF (Just Info))])
 
--- Limiters
-    ,(["ChainDB","AddBlockEvent","AddedBlockToQueue"],
-         [ ConfLimiter 2.0])
-    ,(["ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],
-         [ ConfLimiter 2.0])
-    ,(["ChainDB","AddBlockEvent","AddBlockValidation", "ValidCandidate"],
-         [ ConfLimiter 2.0])
-    ,(["ChainDB", "CopyToImmutableDBEvent", "CopiedBlockToImmutableDB"],
-         [ ConfLimiter 2.0])
-    ,(["ChainSync","Client","DownloadedHeader"],
-         [ ConfLimiter 2.0])
-    ,(["BlockFetch", "Client", "CompletedBlockFetch"],
-        [ ConfLimiter 2.0])
+--     Limiters
+     ,(["ChainDB","AddBlockEvent","AddedBlockToQueue"],
+          [ ConfLimiter 2.0])
+     ,(["ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],
+          [ ConfLimiter 2.0])
+     ,(["ChainDB","AddBlockEvent","AddBlockValidation", "ValidCandidate"],
+          [ ConfLimiter 2.0])
+     ,(["ChainDB", "CopyToImmutableDBEvent", "CopiedBlockToImmutableDB"],
+          [ ConfLimiter 2.0])
+     ,(["ChainSync","Client","DownloadedHeader"],
+          [ ConfLimiter 2.0])
+     ,(["BlockFetch", "Client", "CompletedBlockFetch"],
+          [ ConfLimiter 2.0])
     ]
   }

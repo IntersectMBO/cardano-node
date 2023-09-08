@@ -23,7 +23,7 @@ import           Network.Mux.Trace (TraceLabelPeer (..))
 
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
-import           Ouroboros.Consensus.Node (NetworkP2PMode, RunNode)
+import           Ouroboros.Consensus.Node (NetworkP2PMode)
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import           Ouroboros.Network.Magic (NetworkMagic)
 import           Ouroboros.Network.NodeToClient (withIOManager)
@@ -47,8 +47,7 @@ import           Cardano.Node.Tracing.Tracers.Resources (startResourceTracer)
 
 initTraceDispatcher ::
   forall blk p2p.
-  ( RunNode blk
-  , TraceConstraints blk
+  ( TraceConstraints blk
   , LogFormatting (LedgerEvent blk)
   , LogFormatting
     (TraceLabelPeer (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
@@ -96,7 +95,8 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
           -- TODO: check if this is the correct way to use withIOManager
           (forwardSink, dpStore) <- withIOManager $ \iomgr -> do
             let tracerSocketMode = Just . first unFile =<< ncTraceForwardSocket nc
-            initForwarding iomgr (tcForwarder trConfig) networkMagic (Just ekgStore) tracerSocketMode
+                forwardingConf = fromMaybe defaultForwarder (tcForwarder trConfig)
+            initForwarding iomgr forwardingConf networkMagic (Just ekgStore) tracerSocketMode
           pure (forwardTracer forwardSink, dataPointTracer dpStore)
         else
           -- Since 'Forwarder' backend isn't enabled, there is no forwarding.

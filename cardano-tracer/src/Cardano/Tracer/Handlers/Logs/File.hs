@@ -1,5 +1,4 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Tracer.Handlers.Logs.File
@@ -9,15 +8,10 @@ module Cardano.Tracer.Handlers.Logs.File
 import           Control.Concurrent.Extra (Lock, withLock)
 import           Control.Monad (unless)
 import           Control.Monad.Extra (ifM)
-import           Data.Aeson (Value, decodeStrict', pairs, (.=))
-import           Data.Aeson.Encoding (encodingToLazyByteString)
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
-import           Data.Char (isDigit)
-import           Data.Maybe (mapMaybe)
+import           Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import           Data.Time.Format (defaultTimeLocale, formatTime)
 import           System.Directory (createDirectoryIfMissing, doesDirectoryExist, makeAbsolute)
 import           System.Directory.Extra (listFiles)
 import           System.FilePath ((</>))
@@ -27,7 +21,7 @@ import           Cardano.Logging (TraceObject (..))
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Logs.Utils
 import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
+import           Cardano.Tracer.Utils (nl)
 
 -- | Append the list of 'TraceObject's to the latest log via symbolic link.
 --
@@ -45,12 +39,12 @@ writeTraceObjectsToFile
 writeTraceObjectsToFile nodeName currentLogLock rootDir format traceObjects = do
   rootDirAbs <- makeAbsolute rootDir
   let converter = case format of
-                    ForHuman   -> traceObjectToText
-                    ForMachine -> traceObjectToJSON
-  let itemsToWrite = mapMaybe converter traceObjects
+                    ForHuman   -> traceTextForHuman
+                    ForMachine -> traceTextForMachine
+  let itemsToWrite = map converter traceObjects
   unless (null itemsToWrite) $ do
     pathToCurrentLog <- getPathToCurrentlog nodeName rootDirAbs format
-    let preparedLine = TE.encodeUtf8 $ T.concat itemsToWrite
+    let preparedLine = TE.encodeUtf8 $ T.append nl (T.intercalate nl itemsToWrite)
     withLock currentLogLock $
       BS.appendFile pathToCurrentLog preparedLine
 
@@ -89,39 +83,10 @@ getPathToCurrentlog nodeName rootDirAbs format =
     createDirectoryIfMissing True subDirForLogs
     createEmptyLog subDirForLogs format
 
-traceObjectToText :: TraceObject -> Maybe T.Text
-traceObjectToText TraceObject{toHuman, toHostname, toNamespace, toSeverity, toThreadId, toTimestamp} =
-  case toHuman of
-    Nothing -> Nothing
-    Just msgForHuman -> Just $
-      "[" <> host <> ":" <> name <> ":" <> sev <> ":" <> thId <> "] [" <> time <> "] "
-      <> msgForHuman <> nl
- where
-  host = T.pack toHostname
-  name = mkName toNamespace
-  sev  = T.pack $ show toSeverity
-  thId = T.filter isDigit toThreadId
-  time = T.pack $ formatTime defaultTimeLocale "%F %T%2Q %Z" toTimestamp
+traceTextForHuman :: TraceObject -> T.Text
+traceTextForHuman TraceObject{toHuman, toMachine} =
+    fromMaybe toMachine toHuman
 
-mkName :: [T.Text] -> T.Text
-mkName []    = "noname"
-mkName l = T.intercalate "." l
+traceTextForMachine :: TraceObject -> T.Text
+traceTextForMachine TraceObject{toMachine} = toMachine
 
-traceObjectToJSON :: TraceObject -> Maybe T.Text
-traceObjectToJSON TraceObject{toMachine, toTimestamp, toNamespace, toHostname, toSeverity, toThreadId} =
-  case toMachine of
-    Nothing  -> Nothing
-    Just msg -> Just $ toAsJSON msg <> nl
- where
-  toAsJSON msgForMachine =
-      TE.decodeUtf8
-    . LBS.toStrict
-    . encodingToLazyByteString
-    . pairs $ "at"     .= formatTime defaultTimeLocale "%F %H:%M:%S%4QZ" toTimestamp
-           <> "ns"     .= mkName toNamespace
-           <> "data"   .= case decodeStrict' $ TE.encodeUtf8 msgForMachine of
-                            Just (v :: Value) -> v
-                            Nothing -> ""
-           <> "sev"    .= T.pack (show toSeverity)
-           <> "thread" .= T.filter isDigit toThreadId
-           <> "host"   .= T.pack toHostname

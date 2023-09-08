@@ -1,15 +1,21 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PackageImports #-}
+
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
+-- showHex needs to be a show instance on ghc8, but not any more on ghc9
 
 module Cardano.Logging.Utils (
     runInLoop
   , uncurry3
   , mapSnd
+  , showT
+  , showTHex
   ) where
 
 import           Control.Concurrent (threadDelay)
 import           Control.Exception (SomeAsyncException (..), fromException, tryJust)
-import           "contra-tracer" Control.Tracer (showTracing, stdoutTracer, traceWith)
+import           Control.Tracer (stdoutTracer, traceWith)
+import qualified Data.Text as T
+import           Numeric (showHex)
 
 -- | Run monadic action in a loop. If there's an exception, it will re-run
 --   the action again, after pause that grows.
@@ -27,7 +33,7 @@ runInLoop action localSocket prevDelayInSecs =
       Just SomeAsyncException {} -> Nothing
       _ -> Just e
 
-  logTrace = traceWith $ showTracing stdoutTracer
+  logTrace = traceWith stdoutTracer
 
   currentDelayInSecs =
     if prevDelayInSecs < 60
@@ -40,3 +46,13 @@ uncurry3 f (a,b,c) = f a b c
 
 mapSnd :: (a -> b) -> (c, a) -> (c, b)
 mapSnd f (x,y) = (x,f y)
+
+-- | Convenience function
+{-# INLINE showT #-}
+showT :: Show a => a -> T.Text
+showT = T.pack . show
+
+-- | Convenience function
+{-# INLINE showTHex #-}
+showTHex :: (Integral a, Show a) => a -> T.Text
+showTHex i = T.pack (showHex i [])

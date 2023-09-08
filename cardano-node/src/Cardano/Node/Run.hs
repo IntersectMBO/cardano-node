@@ -120,6 +120,7 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Tracing.Tracers
+import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency, WarmValency)
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
 {- HLINT ignore "Fuse concatMap/map" -}
@@ -434,9 +435,23 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 $ NetworkConfig localRoots
                                 publicRoots
                                 (useLedgerAfterSlot nt)
-        (localRootsVar :: StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)])  <- newTVarIO localRoots
+        localRootsVar <- newTVarIO localRoots
         publicRootsVar <- newTVarIO publicRoots
         useLedgerVar   <- newTVarIO (useLedgerAfterSlot nt)
+#ifdef UNIX
+        -- initial `SIGHUP` handler, which only rereads the topology file but
+        -- doesn't update block forging.  The latter is only possible once
+        -- consensus initialised (e.g. reapplied all blocks).
+        _ <- Signals.installHandler
+              Signals.sigHUP
+              (Signals.Catch $ do
+                updateTopologyConfiguration
+                  (startupTracer tracers) nc
+                  localRootsVar publicRootsVar useLedgerVar
+                traceWith (startupTracer tracers) (BlockForgingUpdate NotEffective)
+              )
+              Nothing
+#endif
         void $
           let diffusionArgumentsExtra =
                 mkP2PArguments nc
@@ -447,6 +462,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
           Node.run
             nodeArgs {
                 rnNodeKernelHook = \registry nodeKernel -> do
+                  -- reinstall `SIGHUP` handler
                   installP2PSigHUPHandler (startupTracer tracers) blockType nc nodeKernel
                                           localRootsVar publicRootsVar useLedgerVar
                   rnNodeKernelHook nodeArgs registry nodeKernel
@@ -480,10 +496,23 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                            | (NodeAddress (NodeHostIPAddress addr) port) <- ipProducerAddrs
                            ]
                            (length ipProducerAddrs)
+#ifdef UNIX
+        -- initial `SIGHUP` handler; it only warns that neither updating of
+        -- topology is supported nor updating block forging is yet possible.
+        -- It is still useful, without it the node would terminate when
+        -- receiving `SIGHUP`.
+        _ <- Signals.installHandler
+              Signals.sigHUP
+              (Signals.Catch $ do
+                traceWith (startupTracer tracers) NetworkConfigUpdateUnsupported
+                traceWith (startupTracer tracers) (BlockForgingUpdate NotEffective))
+              Nothing
+#endif
         void $
           Node.run
             nodeArgs {
                 rnNodeKernelHook = \registry nodeKernel -> do
+                  -- reinstall `SIGHUP` handler
                   installNonP2PSigHUPHandler (startupTracer tracers) blockType nc nodeKernel
                   rnNodeKernelHook nodeArgs registry nodeKernel
             }
@@ -557,7 +586,7 @@ installP2PSigHUPHandler :: Tracer IO (StartupTrace blk)
                         -> Api.BlockType blk
                         -> NodeConfiguration
                         -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
-                        -> StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)]
+                        -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint PeerAdvertise)]
                         -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
                         -> StrictTVar IO UseLedgerAfter
                         -> IO ()
@@ -646,7 +675,7 @@ updateBlockForging startupTracer blockType nodeKernel nc = do
 
 updateTopologyConfiguration :: Tracer IO (StartupTrace blk)
                             -> NodeConfiguration
-                            -> StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)]
+                            -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint PeerAdvertise)]
                             -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
                             -> StrictTVar IO UseLedgerAfter
                             -> IO ()
@@ -719,7 +748,7 @@ checkVRFFilePermissions (File vrfPrivKey) = do
 
 mkP2PArguments
   :: NodeConfiguration
-  -> STM IO [(Int, Map RelayAccessPoint PeerAdvertise)]
+  -> STM IO [(HotValency, WarmValency, Map RelayAccessPoint PeerAdvertise)]
      -- ^ non-overlapping local root peers groups; the 'Int' denotes the
      -- valency of its group.
   -> STM IO (Map RelayAccessPoint PeerAdvertise)
@@ -786,11 +815,12 @@ producerAddressesNonP2P nt =
 
 producerAddresses
   :: NetworkTopology
-  -> ([(Int, Map RelayAccessPoint PeerAdvertise)], Map RelayAccessPoint PeerAdvertise)
+  -> ([(HotValency, WarmValency, Map RelayAccessPoint PeerAdvertise)], Map RelayAccessPoint PeerAdvertise)
 producerAddresses nt =
   case nt of
     RealNodeTopology lrpg prp _ ->
-      ( map (\lrp -> ( valency lrp
+      ( map (\lrp -> ( hotValency lrp
+                     , warmValency lrp
                      , Map.fromList $ rootConfigToRelayAccessPoint
                                     $ localRoots lrp
                      )

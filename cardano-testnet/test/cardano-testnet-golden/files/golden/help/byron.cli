@@ -1,10 +1,10 @@
 Usage: cardano-testnet byron [--num-bft-nodes COUNT]
-                               [--slot-duration MILLISECONDS]
-                               --testnet-magic INT
-                               [--security-param INT]
-                               [--n-poor-addresses INT]
-                               [--total-balance INT]
-                               [--enable-p2p BOOL]
+  [--slot-duration MILLISECONDS]
+  --testnet-magic INT
+  [--security-param INT]
+  [--n-poor-addresses INT]
+  [--total-balance INT]
+  [--enable-p2p BOOL]
 
   Start a Byron testnet
 

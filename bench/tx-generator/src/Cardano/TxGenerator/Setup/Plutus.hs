@@ -18,7 +18,7 @@ import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           Control.Monad.Writer (runWriter)
 
-import           Cardano.CLI.Shelley.Run.Read (readFileScriptInAnyLang)
+import           Cardano.CLI.Read (readFileScriptInAnyLang)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (PlutusScript (..), ProtocolParameters (..), fromAlonzoExUnits,

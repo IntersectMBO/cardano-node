@@ -39,10 +39,8 @@ writeTraceObjectsToJournal nodeName = mapM_ (sendJournalFields . mkJournalFields
  where
   mkJournalFields trOb@TraceObject{toHuman, toMachine} =
     case (toHuman, toMachine) of
-      (Just msgForHuman, Nothing)            -> mkJournalFields' trOb msgForHuman
-      (Nothing,          Just msgForMachine) -> mkJournalFields' trOb msgForMachine
-      (Just _,           Just msgForMachine) -> mkJournalFields' trOb msgForMachine
-      (Nothing,          Nothing)            -> HM.empty
+      (Nothing,          msgForMachine) -> mkJournalFields' trOb msgForMachine
+      (Just _,           msgForMachine) -> mkJournalFields' trOb msgForMachine
 
   mkJournalFields' TraceObject{toSeverity, toNamespace, toThreadId, toTimestamp} msg =
        syslogIdentifier nodeName

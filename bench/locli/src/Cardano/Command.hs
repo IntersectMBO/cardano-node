@@ -15,9 +15,11 @@ import Data.Text                        qualified as T
 import Data.Text.Lazy                   qualified as LT
 import Data.Text.Short                  (toText)
 import Data.Time.Clock
+import Data.Tuple.Extra                 (both)
 import Options.Applicative
 import Options.Applicative              qualified as Opt
 
+import System.Directory                 (doesFileExist)
 import System.FilePath
 import System.Posix.Files               qualified as IO
 
@@ -53,6 +55,8 @@ data ChainCommand
 
   |        Unlog            (JsonInputFile (RunLogs ())) Bool (Maybe [LOAnyType])
   |        DumpLogObjects
+
+  |    ValidateHashTimeline (JsonInputFile [LogObject])
 
   |        BuildMachViews
   |         DumpMachViews
@@ -129,6 +133,9 @@ parseChainCommand =
      )
    , op "dump-logobjects" "Dump lifted log object streams, alongside input files"
      (DumpLogObjects & pure)
+   , op "hash-timeline" "Quickly validate timeline by hashes"
+     (ValidateHashTimeline
+        <$> optJsonInputFile  "timeline"     "Hash timeline (JSON from prepare step)")
    ]) <|>
 
   subparser (mconcat [ commandGroup "Block propagation:  machine views"
@@ -441,6 +448,22 @@ runChainCommand _ c@DumpLogObjects = missingCommandData c
   ["lifted log objects"]
 
 -- runChainCommand s c@(ReadMachViews _ _)    -- () -> [(JsonLogfile, MachView)]
+
+runChainCommand s
+  c@(ValidateHashTimeline timelineJson) = do
+  progress "logs" (Q $ printf "validating hash timeline")
+  let f = unJsonInputFile timelineJson
+  hashTimeline <- liftIO $
+    doesFileExist f >>= bool
+      (return [])
+      (readLogObjectStream f False Nothing)
+  case (hashTimeline, checkAllForgersKnown hashTimeline) of
+    ([], _)           -> progress "logs" (Q $ printf "%s not found - skipping" f)
+    (_, Nothing)      -> progress "logs" (Q $ printf "all forgers known")
+    (_, Just (x, h))  -> throwE $ CommandError c $
+                          "unknown forger for block hash " <> (toText . unHash) h
+                          <> " in:\n" <> LT.toStrict (Aeson.encodeToLazyText x)
+  pure s
 
 runChainCommand s@State{sRun=Just run, sRunLogs=Just (rlLogs -> objs)}
   BuildMachViews = do

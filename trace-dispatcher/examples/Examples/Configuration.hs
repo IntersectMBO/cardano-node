@@ -48,7 +48,7 @@ config1 = TraceConfig {
           , (["tracer2","TestMessage"], [ConfSeverity (SeverityF (Just Critical))])
           , (["tracer3","TestMessage"], [ConfSeverity (SeverityF (Just Info))])
           ]
-    , tcForwarder = TraceOptionForwarder {
+    , tcForwarder = Just TraceOptionForwarder {
         tofConnQueueSize = 100
       , tofDisconnQueueSize = 1000
       , tofVerbosity = Minimum
@@ -65,7 +65,7 @@ config2 = TraceConfig {
         , (["tracer2","TestMessage"], [ConfSeverity (SeverityF (Just Warning))])
         , (["tracer3","TestMessage"], [ConfSeverity (SeverityF (Just Warning))])
         ]
-    , tcForwarder = TraceOptionForwarder {
+    , tcForwarder = Just TraceOptionForwarder {
         tofConnQueueSize = 100
       , tofDisconnQueueSize = 1000
       , tofVerbosity = Minimum

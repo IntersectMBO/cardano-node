@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   locli
-version:                1.29
+version:                1.32
 synopsis:               Cardano log analysis CLI
 description:            Cardano log analysis CLI.
 category:               Cardano,
@@ -18,6 +18,7 @@ common project-config
   default-language:     Haskell2010
   default-extensions:   BangPatterns
                         BlockArguments
+                        DataKinds
                         DeriveGeneric
                         DerivingStrategies
                         DerivingVia
@@ -38,7 +39,6 @@ common project-config
                         TupleSections
                         TypeApplications
                         TypeFamilies
-                        TypeInType
                         ViewPatterns
 
   ghc-options:          -Wall
@@ -49,7 +49,7 @@ common project-config
                         -Wcompat
                         -Wno-all-missed-specialisations
 
-  build-depends:        base >= 4.14 && < 4.17,
+  build-depends:        base >= 4.14 && < 5,
 
   if os(windows)
     buildable: False
@@ -113,14 +113,15 @@ library
                       , file-embed
                       , filepath
                       , fingertree
+                      , hashable
                       , ghc
                       , gnuplot
                       , iohk-monitoring
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , optparse-generic
                       , ouroboros-consensus
                       -- for Data.SOP.Strict:
-                      , ouroboros-network ^>= 0.8.1.0
+                      , ouroboros-network ^>= 0.8.2.0
                       , ouroboros-network-api
                       , process
                       , quiet
@@ -155,7 +156,7 @@ executable locli
   build-depends:        aeson
                       , cardano-prelude
                       , locli
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , text
                       , text-short
                       , transformers

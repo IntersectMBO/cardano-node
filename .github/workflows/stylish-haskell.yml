@@ -27,7 +27,7 @@ jobs:
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2023-07-11"
+      CABAL_CACHE_VERSION: "2023-07-28"
 
       STYLISH_HASKELL_VERSION: "0.14.4.0"
 
@@ -35,7 +35,6 @@ jobs:
         cardano-testnet
         cardano-git-rev
         cardano-node
-        cardano-client-demo
         cardano-node-chairman
         cardano-tracer
         trace-resources
@@ -65,7 +64,11 @@ jobs:
 
         for x in $(git ls-tree --full-tree --name-only -r HEAD ${{ env.STYLISH_HASKELL_PATHS }}); do
           if [ "${x##*.}" == "hs" ]; then
-            stylish-haskell -i $x
+            if grep -qE '^#' $x; then
+              echo "$x contains CPP.  Skipping."
+            else
+              stylish-haskell -i $x
+            fi
           fi
         done
 
@@ -78,7 +81,11 @@ jobs:
         git fetch origin ${{ github.base_ref }} --unshallow
         for x in $(git diff --name-only origin/${{ github.base_ref }}..HEAD ${{ env.STYLISH_HASKELL_PATHS }}); do
           if [ "${x##*.}" == "hs" ]; then
-            stylish-haskell -i $x
+            if grep -qE '^#' $x; then
+              echo "$x contains CPP.  Skipping."
+            else
+              stylish-haskell -i $x
+            fi
           fi
         done
 

@@ -3,7 +3,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -30,10 +29,8 @@ module Cardano.Benchmarking.Script.Env (
         , Error(..)
         , runActionM
         , runActionMEnv
-        , liftToAction
         , liftTxGenError
         , liftIOSafe
-        , withTxGenError
         , askIOManager
         , traceDebug
         , traceError
@@ -65,13 +62,14 @@ import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.RWS.Strict (RWST)
 import qualified Control.Monad.Trans.RWS.Strict as RWS
-import           "contra-tracer" Control.Tracer (traceWith)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           Prelude
 
 import           Cardano.Api (File (..), SocketPath)
+
+import           Cardano.Logging
 
 import           Cardano.Benchmarking.GeneratorTx
 import qualified Cardano.Benchmarking.LogTypes as Tracer
@@ -133,7 +131,7 @@ runActionM = runActionMEnv emptyEnv
 runActionMEnv :: Env -> ActionM ret -> IOManager -> IO (Either Error ret, Env, ())
 runActionMEnv env action iom = RWS.runRWST (runExceptT action) iom env
 
--- | 'Error' adds two cases to 'Cardano.TxGenerator.Types.TxGenError' 
+-- | 'Error' adds two cases to 'Cardano.TxGenerator.Types.TxGenError'
 -- which in turn wraps 'Cardano.Api.Error' implicit contexts to a
 -- couple of its constructors. These represent errors that might arise
 -- in the execution of a transaction with some distinctions as to the
@@ -149,17 +147,6 @@ data Error where
   WalletError :: !String     -> Error
 
 deriving instance Show Error
-
--- | This abbreviates access to the fully-qualified constructor name
--- for `Cardano.Benchmarking.Script.Env.TxGenError` and the repetitive
--- usage of `withExceptT` with that as its first argument.
-withTxGenError :: Monad m => ExceptT TxGenError m a -> ExceptT Error m a
-withTxGenError = withExceptT Cardano.Benchmarking.Script.Env.TxGenError
-
--- | This injects an `IO` action using `Either` as hand-rolled
--- exceptions into the `ActionM` monad.
-liftToAction :: IO (Either TxGenError a) -> ActionM a
-liftToAction = withTxGenError . ExceptT . liftIO
 
 -- | This throws a `TxGenError` in the `ActionM` monad.
 liftTxGenError :: TxGenError -> ActionM a

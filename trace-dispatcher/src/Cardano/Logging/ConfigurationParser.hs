@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -17,10 +16,9 @@ import           Control.Exception (throwIO)
 import qualified Data.Aeson as AE
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
-import           Data.Functor
 import           Data.List (foldl')
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe, isJust)
+import           Data.Maybe (isJust)
 import           Data.Text (Text, split)
 import           Data.Yaml
 import           GHC.Generics
@@ -51,11 +49,12 @@ readConfigurationWithDefault fp defaultConf = do
     fileConf <- either throwIO pure . parseRepresentation =<< BS.readFile fp
     pure $ mergeWithDefault fileConf defaultConf
 
-
 mergeWithDefault ::  TraceConfig -> TraceConfig -> TraceConfig
 mergeWithDefault fileConf defaultConf =
   TraceConfig
-    (mergeOptionsWithDefault (tcOptions fileConf) (tcOptions defaultConf))
+    (if (not . Map.null) (tcOptions fileConf)
+      then tcOptions fileConf
+      else tcOptions defaultConf)
     (tcForwarder fileConf)
     (if isJust (tcNodeName fileConf)
         then tcNodeName fileConf
@@ -66,44 +65,6 @@ mergeWithDefault fileConf defaultConf =
     (if isJust (tcResourceFrequency fileConf)
         then tcResourceFrequency fileConf
         else tcResourceFrequency defaultConf)
-
-mergeOptionsWithDefault ::
-     Map.Map [Text] [ConfigOption]
-  -> Map.Map [Text] [ConfigOption]
-  -> Map.Map [Text] [ConfigOption]
-mergeOptionsWithDefault fileOpts defaultOpts =
-    foldr mergeOptsNs defaultOpts (Map.toList fileOpts)
-  where
-    mergeOptsNs :: ([Text],[ConfigOption]) -> Map.Map [Text] [ConfigOption] -> Map.Map [Text] [ConfigOption]
-    mergeOptsNs (ns,opts) into =
-      case Map.lookup ns into of
-        Nothing -> Map.insert ns opts into
-        Just currentOpts -> Map.insert ns (mergeOpts opts currentOpts) into
-
-    mergeOpts :: [ConfigOption] ->  [ConfigOption] -> [ConfigOption]
-    mergeOpts fromFile fromDefault = foldr mergeOpt fromDefault fromFile
-
-    mergeOpt :: ConfigOption -> [ConfigOption] ->  [ConfigOption]
-    mergeOpt (ConfSeverity severityF) configList =
-      ConfSeverity severityF : filter (\case
-                                            ConfSeverity _ -> False
-                                            _ -> True) configList
-    mergeOpt (ConfDetail detailLevel) configList =
-      ConfDetail detailLevel : filter (\case
-                                            ConfDetail _ -> False
-                                            _ -> True) configList
-    mergeOpt (ConfBackend backendConfig) configList =
-      ConfBackend backendConfig : filter (\case
-                                            ConfBackend _ -> False
-                                            _ -> True) configList
-    mergeOpt (ConfLimiter maxFrequency) configList =
-      if maxFrequency /= 0.0
-        then ConfLimiter maxFrequency : filter (\case
-                                            ConfLimiter _ -> False
-                                            _ -> True) configList
-        else filter (\case
-                      ConfLimiter _ -> False
-                      _ -> True) configList
 
 parseRepresentation :: ByteString -> Either ParseException TraceConfig
 parseRepresentation bs = transform (decodeEither' bs)
@@ -136,7 +97,7 @@ parseRepresentation bs = transform (decodeEither' bs)
 
 data ConfigRepresentation = ConfigRepresentation {
     traceOptions                :: OptionsRepresentation
-  , traceOptionForwarder        :: TraceOptionForwarder
+  , traceOptionForwarder        :: Maybe TraceOptionForwarder
   , traceOptionNodeName         :: Maybe Text
   , traceOptionPeerFrequency     :: Maybe Int
   , traceOptionResourceFrequency :: Maybe Int
@@ -148,7 +109,7 @@ type OptionsRepresentation = Map.Map Text ConfigOptionRep
 instance AE.FromJSON ConfigRepresentation where
     parseJSON (Object obj) = ConfigRepresentation
                            <$> obj .: "TraceOptions"
-                           <*> (obj .:? "TraceOptionForwarder" <&> fromMaybe defaultForwarder)
+                           <*> obj .:? "TraceOptionForwarder"
                            <*> obj .:? "TraceOptionNodeName"
                            <*> obj .:? "TraceOptionPeerFrequency"
                            <*> obj .:? "TraceOptionResourceFrequency"

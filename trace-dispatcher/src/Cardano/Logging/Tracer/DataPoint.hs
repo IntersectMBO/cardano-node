@@ -9,12 +9,10 @@ module Cardano.Logging.Tracer.DataPoint
   , mkDataPointTracer
   ) where
 
+import           Control.DeepSeq (NFData)
 import           Control.Monad.IO.Class
 import           Data.Aeson.Types (ToJSON)
-import           Data.List (intersperse)
-import           Data.Text (Text)
-import           Data.Text.Lazy (toStrict)
-import           Data.Text.Lazy.Builder (fromText, singleton, toLazyText)
+import           Data.Text (Text, intercalate)
 
 import qualified Control.Tracer as NT
 import           Trace.Forward.Utils.DataPoint (DataPoint (..), DataPointStore, writeToStore)
@@ -44,12 +42,10 @@ dataPointTracer dataPointStore =
     output LoggingContext {} _  = pure ()
 
     nameSpaceToText :: [Text] -> Text
-    nameSpaceToText namespace = toStrict $ toLazyText $
-      mconcat (intersperse (singleton '.')
-        (map fromText namespace))
+    nameSpaceToText = intercalate "."
 
 -- A simple dataPointTracer which supports building a namespace.
-mkDataPointTracer :: forall dp. (ToJSON dp, MetaTrace dp)
+mkDataPointTracer :: forall dp. (ToJSON dp, MetaTrace dp, NFData dp)
   => Trace IO DataPoint
   -> IO (Trace IO dp)
 mkDataPointTracer trDataPoint = do

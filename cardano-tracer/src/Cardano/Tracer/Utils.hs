@@ -29,16 +29,20 @@ module Cardano.Tracer.Utils
   , nl
   , runInLoop
   , showProblemIfAny
-  , showT
   ) where
 
+#if MIN_VERSION_base(4,18,0)
+-- Do not know why.
+import           Control.Applicative (liftA3)
+#else
 import           Control.Applicative (liftA2, liftA3)
+#endif
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
 import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (modifyTVar', newTVarIO, readTVarIO)
-import           Control.Exception (SomeException, SomeAsyncException (..), finally,
-                   fromException, try, tryJust)
+import           Control.Exception (SomeAsyncException (..), SomeException, finally, fromException,
+                   try, tryJust)
 import           Control.Monad (forM_)
 import           Control.Monad.Extra (whenJustM)
 import           "contra-tracer" Control.Tracer (showTracing, stdoutTracer, traceWith)
@@ -49,6 +53,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Data.Text as T
 import           Data.Tuple.Extra (uncurry3)
+
 import           System.IO (hFlush, stdout)
 import           System.Mem.Weak (deRefWeak)
 import qualified System.Signal as S
@@ -202,9 +207,6 @@ nl = "\n"
 #else
 nl = "\r\n"
 #endif
-
-showT :: Show a => a -> T.Text
-showT = T.pack . show
 
 -- | If 'cardano-tracer' process is going to die (by receiving some system signal),
 --   we want to do something before it stops.

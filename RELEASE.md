@@ -65,3 +65,32 @@ for running on production networks. The same version can be re-released without 
 
 The release team meets for a quick touch-point weekly where all team leads are invited. Currently these calls are closed to the public, but in the future we expect
 to open them up to the larger community. The release team also meets ad-hoc as needed and collaborates asynchronously throughout the week.
+
+# Release notes
+
+The release notes are drafted and published via the GitHub releases UI.
+Our current template contains the following sections.
+
+- (no header) A very-high level summary of the release.
+  For larger release, it may be best for the Cardano Head of Product to draft this summary instead of the release engineer, since they have more context.
+- Known Issues
+- Technical Specification (usually unchanged)
+- Links to `cardano-node` documentation
+  It seems to be a judgement call whether each of these should specify the upstream version.
+- Changelogs
+   - Summaries of the major dependencies' changelogs.
+     These are written as a few sentences that an interested user and/or dev would find helpful.
+     It may be best for the individual teams to draft these summaries instead of the release engineer, since they have more context.
+   - Links to the individual changelog of each upstream package that IOG maintains.
+     See the script explained below.
+
+## Detailed changelog table
+
+There's a script (`scripts/generate-release-changelog-links.hs`) that generates a table of changelogs for each of the package versions included in a given `cardano-node` release. The script takes a cabal-generated `plan.json` and a GitHub API access token, and outputs a large table which contains links to the `CHANGELOG.md` file (if one exists) for each of the package versions contained in the build plan.
+
+> example usage (be sure to run `cabal build all` at least once beforehand):
+> ```
+> $ nix build .#project.x86_64-linux.plan-nix.json
+> $ ./scripts/generate-release-changelog-links.hs result-json $GITHUB_API_TOKEN
+> ```
+> for more information, including how to generate / retrieve a GitHub API token, use `./scripts/generate-release-changelog-links.hs --help`

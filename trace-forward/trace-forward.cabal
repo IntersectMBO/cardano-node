@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   trace-forward
-version:                2.0.1
+version:                2.0.2
 synopsis:               The forwarding protocols library for cardano node.
 description:            The library providing typed protocols for forwarding different
                         information from the cardano node to an external application.
@@ -19,7 +19,7 @@ extra-doc-files:        README.md
 
 common project-config
   default-language:     Haskell2010
-  build-depends:        base >= 4.14 && < 4.17
+  build-depends:        base >= 4.14 && < 5
 
   ghc-options:          -Wall
                         -Wcompat
@@ -61,10 +61,11 @@ library
                       , cborg
                       , containers
                       , contra-tracer
+                      , deepseq
                       , extra
                       , io-classes
                       , ouroboros-network-api >= 0.3
-                      , ouroboros-network-framework >= 0.6
+                      , ouroboros-network-framework >= 0.7
                       , serialise
                       , stm
                       , text

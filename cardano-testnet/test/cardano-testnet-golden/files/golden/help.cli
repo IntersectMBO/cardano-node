@@ -1,70 +1,63 @@
 Usage: cardano-testnet 
-                         ( cardano
-                         | byron
-                         | shelley
-                         | babbage
-                         | conway
-                         | version
-                         | help
-                         )
+  (cardano | byron | shelley | babbage | conway | version | help)
 
 Usage: cardano-testnet cardano [--num-bft-nodes COUNT]
-                                 [--num-pool-nodes COUNT]
-                                 [ --byron-era
-                                 | --shelley-era
-                                 | --allegra-era
-                                 | --mary-era
-                                 | --alonzo-era
-                                 | --babbage-era
-                                 | --conway-era
-                                 ]
-                                 [--epoch-length MILLISECONDS]
-                                 [--slot-length SECONDS]
-                                 --testnet-magic INT
-                                 [--active-slots-coeff DOUBLE]
-                                 [--max-lovelace-supply WORD64]
-                                 [--enable-p2p BOOL]
-                                 [--nodeLoggingFormat LOGGING_FORMAT]
+  [--num-pool-nodes COUNT]
+  [ --byron-era
+  | --shelley-era
+  | --allegra-era
+  | --mary-era
+  | --alonzo-era
+  | --babbage-era
+  | --conway-era
+  ]
+  [--epoch-length MILLISECONDS]
+  [--slot-length SECONDS]
+  --testnet-magic INT
+  [--active-slots-coeff DOUBLE]
+  [--max-lovelace-supply WORD64]
+  [--enable-p2p BOOL]
+  [--nodeLoggingFormat LOGGING_FORMAT]
 
   Start a testnet in any era
 
 Usage: cardano-testnet byron [--num-bft-nodes COUNT]
-                               [--slot-duration MILLISECONDS]
-                               --testnet-magic INT
-                               [--security-param INT]
-                               [--n-poor-addresses INT]
-                               [--total-balance INT]
-                               [--enable-p2p BOOL]
+  [--slot-duration MILLISECONDS]
+  --testnet-magic INT
+  [--security-param INT]
+  [--n-poor-addresses INT]
+  [--total-balance INT]
+  [--enable-p2p BOOL]
 
   Start a Byron testnet
 
 Usage: cardano-testnet shelley [--num-praos-nodes COUNT]
-                                 [--num-pool-nodes COUNT]
-                                 [--active-slots-coeff DOUBLE]
-                                 [--security-param INT]
-                                 [--epoch-length MILLISECONDS]
-                                 [--slot-length MILLISECONDS]
-                                 --testnet-magic INT
-                                 [--max-lovelace-supply WORD64]
-                                 [--enable-p2p BOOL]
+  [--num-pool-nodes COUNT]
+  [--active-slots-coeff DOUBLE]
+  [--security-param INT]
+  [--epoch-length MILLISECONDS]
+  [--slot-length MILLISECONDS]
+  --testnet-magic INT
+  [--max-lovelace-supply WORD64]
+  [--enable-p2p BOOL]
 
   Start a Shelley testnet
 
 Usage: cardano-testnet babbage [--num-spo-nodes COUNT]
-                                 [--slot-duration MILLISECONDS]
-                                 [--security-param INT]
-                                 --testnet-magic INT
-                                 [--total-balance INT]
-                                 [--nodeLoggingFormat LOGGING_FORMAT]
+  [--slot-duration MILLISECONDS]
+  [--security-param INT]
+  --testnet-magic INT
+  [--total-balance INT]
+  [--nodeLoggingFormat LOGGING_FORMAT]
 
   Start a babbage testnet
 
 Usage: cardano-testnet conway [--num-spo-nodes COUNT]
-                                [--slot-duration MILLISECONDS]
-                                [--security-param INT]
-                                --testnet-magic INT
-                                [--total-balance INT]
-                                [--nodeLoggingFormat LOGGING_FORMAT]
+  [--slot-duration MILLISECONDS]
+  [--security-param INT]
+  --testnet-magic INT
+  [--total-balance INT]
+  [--nodeLoggingFormat LOGGING_FORMAT]
 
   Start a conway testnet
 

@@ -8,7 +8,7 @@ import           Prelude
 import           Options.Applicative
 import qualified Options.Applicative as OA
 
-import           Cardano.CLI.Common.Parsers hiding (pNetworkId)
+import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
 
 import           Testnet.Process.Cli
 import           Testnet.Runtime (readNodeLoggingFormat)

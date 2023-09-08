@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   trace-dispatcher
-version:                2.0.1
+version:                2.0.3
 synopsis:               Tracers for Cardano
 description:            Package for development of simple and efficient tracers
                         based on the arrow based contra-tracer package
@@ -13,7 +13,7 @@ maintainer:             operations@iohk.io
 license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
-extra-source-files:     CHANGELOG.md
+extra-doc-files:        CHANGELOG.md
                         README.md
                         doc/trace-dispatcher.md
 
@@ -21,6 +21,7 @@ common project-config
   default-language:     Haskell2010
 
 library
+  import:               project-config
   hs-source-dirs:     src
   exposed-modules:    Cardano.Logging
                       Cardano.Logging.Configuration
@@ -50,13 +51,14 @@ library
                       , cborg
                       , containers
                       , contra-tracer
+                      , deepseq
                       , ekg
                       , ekg-core
-                      , ekg-forward >= 0.3.0
+                      , ekg-forward >= 0.3.0.4
                       , hostname
                       , network
-                      , optparse-applicative-fork ^>= 0.16.1
-                      , ouroboros-network ^>= 0.8.1.0
+                      , optparse-applicative-fork
+                      , ouroboros-network ^>= 0.8.2.0
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , serialise
@@ -102,6 +104,7 @@ executable trace-dispatcher-examples
                       , aeson                         >= 2.1.0.0
                       , bytestring
                       , containers
+                      , deepseq
                       , ekg
                       , ekg-core
                       , hostname
@@ -127,6 +130,7 @@ executable trace-dispatcher-examples
                         -Wno-incomplete-patterns
 
 test-suite trace-dispatcher-test
+  import:              project-config
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             trace-dispatcher-test.hs
@@ -146,8 +150,8 @@ test-suite trace-dispatcher-test
                       , ekg-core
                       , generic-data
                       , hostname
-                      , optparse-applicative >= 0.16.0 && < 0.16.1
-                      , ouroboros-network ^>= 0.8.1.0
+                      , optparse-applicative
+                      , ouroboros-network ^>= 0.8.2.0
                       , text
                       , stm
                       , tasty

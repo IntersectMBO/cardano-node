@@ -5,8 +5,8 @@ import           Control.Concurrent.STM.TVar (newTVarIO)
 import           Criterion.Main
 import qualified Data.List.NonEmpty as NE
 import           Data.Time.Clock (getCurrentTime)
-import           System.FilePath ((</>))
 import           System.Directory (getTemporaryDirectory, removePathForcibly)
+import           System.FilePath ((</>))
 
 import           Cardano.Logging hiding (LocalSocket)
 
@@ -111,7 +111,7 @@ main = do
 
   mkTraceObject now = TraceObject
     { toHuman     = Just "Human Message About Some Important Information From The Cardano Node"
-    , toMachine   = Just "{\"msg\": \"forMachine Important Message\"}"
+    , toMachine   = "{\"msg\": \"forMachine Important Message\"}"
     , toNamespace = ["name", "space", "for", "bench"]
     , toSeverity  = Info
     , toDetails   = DNormal

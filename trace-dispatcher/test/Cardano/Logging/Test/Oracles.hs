@@ -25,8 +25,8 @@ oracleMessages conf ScriptRes {..} =
     oracleMessage :: ScriptedMessage -> Bool
     oracleMessage (ScriptedMessage _t msg) =
       let ns = namespaceFor msg
-          filterSeverity = getSeverity conf (nsReplacePrefix ns ["Test"])
-          backends = getBackends conf (nsReplacePrefix ns ["Test"])
+          filterSeverity = getSeverity conf (nsReplacePrefix ["Test"] ns)
+          backends = getBackends conf (nsReplacePrefix ["Test"] ns)
           inStdout = hasStdoutBackend backends
                       && fromEnum (fromMaybe Error (severityFor ns Nothing)) >= fromEnum filterSeverity
           isCorrectStdout = includedExactlyOnce msg srStdoutRes == inStdout
@@ -91,9 +91,7 @@ isMessageWithId mid (FormattedMachine txt)  = idInText mid txt
 isMessageWithId mid (FormattedForwarder to) =
   case toHuman to of
     Just txt -> idInText mid txt
-    Nothing  -> case toMachine to of
-                  Just txt -> idInText mid txt
-                  Nothing  -> error "No text found in trace object"
+    Nothing  -> idInText mid (toMachine to)
 
 -- | Is this message id part of the text?
 idInText :: MessageID -> T.Text -> Bool

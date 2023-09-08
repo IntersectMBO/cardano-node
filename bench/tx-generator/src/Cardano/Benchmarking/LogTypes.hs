@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
@@ -32,9 +31,9 @@ import           GHC.Generics
 import           Cardano.Api
 import qualified Codec.CBOR.Term as CBOR
 
-import           "contra-tracer" Control.Tracer
-
 import           Network.Mux (WithMuxBearer (..))
+
+import           Cardano.Logging
 
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Common ()
@@ -57,10 +56,10 @@ import           Cardano.TxGenerator.Types (TPSRate)
 
 data BenchTracers =
   BenchTracers
-  { btTxSubmit_   :: Tracer IO (TraceBenchTxSubmit TxId)
-  , btConnect_    :: Tracer IO SendRecvConnect
-  , btSubmission2_:: Tracer IO SendRecvTxSubmission2
-  , btN2N_        :: Tracer IO NodeToNodeSubmissionTrace
+  { btTxSubmit_   :: Trace IO (TraceBenchTxSubmit TxId)
+  , btConnect_    :: Trace IO SendRecvConnect
+  , btSubmission2_:: Trace IO SendRecvTxSubmission2
+  , btN2N_        :: Trace IO NodeToNodeSubmissionTrace
   }
 
 data TraceBenchTxSubmit txid

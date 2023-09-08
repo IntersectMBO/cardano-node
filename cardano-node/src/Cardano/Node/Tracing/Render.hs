@@ -1,6 +1,8 @@
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Node.Tracing.Render
   ( renderChunkNo
@@ -22,17 +24,31 @@ module Cardano.Node.Tracing.Render
   , renderTxId
   , renderTxIdForDetails
   , renderWithOrigin
+  , renderScriptHash
+  , renderScriptIntegrityHash
+  , renderScriptPurpose
+  , renderMissingRedeemers
   ) where
 
+import qualified Cardano.Api.Shelley as Api
+import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Data.ByteString.Base16 as B16
 import           Data.Proxy (Proxy (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
+import qualified Cardano.Ledger.Core as Ledger
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.SafeHash as SafeHash
 import           Cardano.Logging
 import           Cardano.Node.Queries (ConvertTxId (..))
 import           Cardano.Slotting.Slot (SlotNo (..), WithOrigin (..))
+import           Data.Aeson ((.=))
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Aeson
+import qualified Data.Aeson.Types as Aeson
 import           Ouroboros.Consensus.Block (BlockNo (..), ConvertRawHash (..), RealPoint (..))
 import           Ouroboros.Consensus.Block.Abstract (Point (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId)
@@ -156,3 +172,41 @@ trimHashTextForDetails dtal =
   case dtal of
     DMinimal  -> Text.take 7
     _         -> id
+
+renderScriptIntegrityHash :: Maybe (Alonzo.ScriptIntegrityHash StandardCrypto) -> Aeson.Value
+renderScriptIntegrityHash (Just witPPDataHash) =
+  Aeson.String . Crypto.hashToTextAsHex $ SafeHash.extractHash witPPDataHash
+renderScriptIntegrityHash Nothing = Aeson.Null
+
+
+renderMissingRedeemers :: ()
+  => Ledger.EraCrypto ledgerera ~ StandardCrypto
+  => [(Alonzo.ScriptPurpose ledgerera, Ledger.ScriptHash StandardCrypto)]
+  -> Aeson.Value
+renderMissingRedeemers scripts = Aeson.object $ map renderTuple  scripts
+  where
+    renderTuple :: ()
+      => Ledger.EraCrypto ledgerera ~ StandardCrypto
+      => (Alonzo.ScriptPurpose ledgerera, Ledger.ScriptHash StandardCrypto)
+      -> Aeson.Pair
+    renderTuple (scriptPurpose, sHash) =
+      Aeson.fromText (renderScriptHash sHash) .= renderScriptPurpose scriptPurpose
+
+renderScriptHash :: Ledger.ScriptHash StandardCrypto -> Text
+renderScriptHash = Api.serialiseToRawBytesHexText . Api.fromShelleyScriptHash
+
+renderScriptPurpose :: ()
+  => Ledger.EraCrypto ledgerera ~ StandardCrypto
+  => Alonzo.ScriptPurpose ledgerera
+  -> Aeson.Value
+renderScriptPurpose = \case
+  Alonzo.Minting pid ->
+    Aeson.object [ "minting" .= Aeson.toJSON pid]
+  Alonzo.Spending txin ->
+    Aeson.object [ "spending" .= Api.fromShelleyTxIn txin]
+  Alonzo.Rewarding rwdAcct ->
+    Aeson.object [ "rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
+  Alonzo.Certifying _cert ->
+    Aeson.object
+      [ "certifying" .= Aeson.toJSON @String "TODO CIP-1694 unimplemented" -- toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate sbe cert)
+      ]

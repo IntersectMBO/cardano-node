@@ -16,6 +16,8 @@ import qualified Data.Text as T
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
 
+import           Cardano.Logging (showT)
+
 import           Cardano.Tracer.Handlers.RTView.Notifications.Email
 import           Cardano.Tracer.Handlers.RTView.Notifications.Types
 import           Cardano.Tracer.Types

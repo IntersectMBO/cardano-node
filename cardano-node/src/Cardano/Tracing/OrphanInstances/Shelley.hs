@@ -12,8 +12,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
@@ -21,7 +21,6 @@
 module Cardano.Tracing.OrphanInstances.Shelley () where
 
 import           Cardano.Api (textShow)
-import qualified Cardano.Api as Api
 import qualified Cardano.Api.Shelley as Api
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -75,10 +74,10 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
+import           Cardano.Node.Tracing.Render (renderMissingRedeemers, renderScriptHash,
+                   renderScriptIntegrityHash, renderScriptPurpose)
 import           Data.Aeson (Value (..), object)
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Key as Aeson
-import qualified Data.Aeson.Types as Aeson
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
@@ -134,8 +133,8 @@ instance
   ) => ToObject (ShelleyLedgerError ledgerera) where
   toObject verb (BBodyError (BlockTransitionError fs)) =
     mconcat [ "kind" .= String "BBodyError"
-             , "failures" .= map (toObject verb) fs
-             ]
+            , "failures" .= map (toObject verb) fs
+            ]
 
 instance
   ( Ledger.Era ledgerera
@@ -146,21 +145,84 @@ instance
              , "updates" .= map (toObject verb) updates
              ]
 instance
-  ( Show (PredicateFailure (Ledger.EraRule "DELEG" era))
-  , Show (PredicateFailure (Ledger.EraRule "POOL" era))
-  , Show (PredicateFailure (Ledger.EraRule "VDEL" era))
+  ( ToObject (PredicateFailure (Ledger.EraRule "DELEG" era))
+  , ToObject (PredicateFailure (Ledger.EraRule "POOL" era))
+  , ToObject (PredicateFailure (Ledger.EraRule "GOVCERT" era))
   ) => ToObject (Conway.ConwayCertPredFailure era) where
-  toObject _verb cfail =
-    mconcat [ "kind" .= String "ConwayCertPredFailure"
-            , "failure" .= show cfail -- TODO: Conway era - render in a nicer way
-            ]
+  toObject verb = mconcat . \case
+    Conway.DelegFailure f ->
+      [ "kind" .= String "DelegFailure " , "failure" .= toObject verb f ]
+    Conway.PoolFailure f ->
+      [ "kind" .= String "PoolFailure" , "failure" .= toObject verb f ]
+    Conway.GovCertFailure f ->
+      [ "kind" .= String "GovCertFailure" , "failure" .= toObject verb f ]
+
+instance ToObject (Conway.ConwayGovCertPredFailure era) where
+  toObject _verb = mconcat . \case
+    Conway.ConwayDRepAlreadyRegistered credential ->
+      [ "kind" .= String "ConwayDRepAlreadyRegistered"
+      , "credential" .= String (textShow credential)
+      , "error" .= String "DRep is already registered"
+      ]
+    Conway.ConwayDRepNotRegistered credential ->
+      [ "kind" .= String "ConwayDRepNotRegistered"
+      , "credential" .= String (textShow credential)
+      , "error" .= String "DRep is not registered"
+      ]
+    Conway.ConwayDRepIncorrectDeposit givenCoin expectedCoin  ->
+      [ "kind" .= String "ConwayDRepIncorrectDeposit"
+      , "givenCoin" .= givenCoin
+      , "expectedCoin" .= expectedCoin
+      , "error" .= String "DRep delegation has incorrect deposit"
+      ]
+    Conway.ConwayCommitteeHasPreviouslyResigned kHash ->
+      [ "kind" .= String "ConwayCommitteeHasPreviouslyResigned"
+      , "credential" .= String (textShow kHash)
+      , "error" .= String "Committee has resigned"
+      ]
+
+instance ToObject (Conway.ConwayDelegPredFailure era) where
+  toObject _verb = mconcat . \case
+    Conway.IncorrectDepositDELEG coin ->
+      [ "kind" .= String "IncorrectDepositDELEG"
+      , "amount" .= coin
+      , "error" .= String "Incorrect deposit amount"
+      ]
+    Conway.StakeKeyRegisteredDELEG credential ->
+      [ "kind" .= String "StakeKeyRegisteredDELEG"
+      , "credential" .= String (textShow credential)
+      , "error" .= String "Stake key already registered"
+      ]
+    Conway.StakeKeyNotRegisteredDELEG credential ->
+      [ "kind" .= String "StakeKeyNotRegisteredDELEG"
+      , "amount" .= String (textShow credential)
+      , "error" .= String "Stake key not registered"
+      ]
+    Conway.StakeKeyHasNonZeroRewardAccountBalanceDELEG coin ->
+      [ "kind" .= String "StakeKeyHasNonZeroAccountBalanceDELEG"
+      , "amount" .= coin
+      , "error" .= String "Stake key has non-zero account balance"
+      ]
+    Conway.DRepAlreadyRegisteredForStakeKeyDELEG credential ->
+      [ "kind" .= String "DRepAlreadyRegisteredForStakeKeyDELEG"
+      , "amount" .= String (textShow credential)
+      , "error" .= String "DRep already registered for the stake key"
+      ]
+    Conway.WrongCertificateTypeDELEG ->
+      [ "kind" .= String "WrongCertificateTypeDELEG"
+      , "error" .= String "Wrong certificate type"
+      ]
+
 
 instance ToObject (Set (Credential 'Staking StandardCrypto)) where
   toObject _verb creds =
     mconcat [ "kind" .= String "StakeCreds"
-             , "stakeCreds" .= map show (Set.toList creds) -- TODO: Conway era - render in a nicer way
+             , "stakeCreds" .= map toObject' (Set.toList creds)
              ]
-
+    where
+      toObject' = object . \case
+        ScriptHashObj sHash -> ["scriptHash" .= renderScriptHash sHash]
+        KeyHashObj keyHash -> ["keyHash" .= textShow keyHash]
 
 instance
   ( Ledger.Era ledgerera
@@ -264,43 +326,41 @@ instance
   , ToObject (PredicateFailure (Core.EraRule "UTXOW" ledgerera))
   ) => ToObject (ShelleyLedgerPredFailure ledgerera) where
   toObject verb (UtxowFailure f) = toObject verb f
-  toObject _verb (DelegsFailure _f) = error "TODO: Conway era" --toObject verb f
+  toObject verb (DelegsFailure f) = toObject verb f
 
 instance
   ( ToObject (PredicateFailure (Core.EraRule "CERTS" ledgerera))
   , ToObject (PredicateFailure (Core.EraRule "UTXOW" ledgerera))
-  , ToObject (PredicateFailure (Core.EraRule "TALLY" ledgerera))
+  , ToObject (PredicateFailure (Core.EraRule "GOV" ledgerera))
   , ToObject (Set (Credential 'Staking (Consensus.EraCrypto ledgerera)))
   ) => ToObject (Conway.ConwayLedgerPredFailure ledgerera) where
   toObject verb (Conway.ConwayUtxowFailure f) = toObject verb f
   toObject verb (Conway.ConwayCertsFailure f) = toObject verb f
-  toObject verb (Conway.ConwayTallyFailure f) = toObject verb f
+  toObject verb (Conway.ConwayGovFailure f) = toObject verb f
   toObject verb (Conway.ConwayWdrlNotDelegatedToDRep f) = toObject verb f
 
 
-instance ToObject (Conway.ConwayTallyPredFailure era) where
-  toObject _ (Conway.GovernanceActionDoesNotExist govActionId) =
-    mconcat [ "kind" .= String "GovernanceActionDoesNotExist"
-            , "govActionId" .= govActionIdToText govActionId
+instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) where
+  toObject _ (Conway.GovActionsDoNotExist govActionIds) =
+    mconcat [ "kind" .= String "GovActionsDoNotExist"
+            , "govActionIds" .= map govActionIdToText (Set.toList govActionIds)
+            ]
+  toObject _ (Conway.MalformedProposal govAction) =
+    mconcat [ "kind" .= String "MalformedProposal"
+            , "govAction" .= govAction
             ]
 
-  -- TODO: Implement
-instance ToObject (Conway.ConwayCertsPredFailure era) where
-  toObject _ _ = mempty
+instance
+  ( Core.Crypto (Consensus.EraCrypto era)
+  , ToObject (PredicateFailure (Ledger.EraRule "CERT" era))
+  ) => ToObject (Conway.ConwayCertsPredFailure era) where
+  toObject verb = \case
+    Conway.DelegateeNotRegisteredDELEG targetPool ->
+      mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG" , "targetPool" .= targetPool ]
+    Conway.WithdrawalsNotInRewardsCERTS incorrectWithdrawals ->
+      mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS" , "incorrectWithdrawals" .= incorrectWithdrawals ]
+    Conway.CertFailure f -> toObject verb f
 
--- instance
---   ( ToObject (PredicateFailure (Ledger.EraRule "CERT" ledgerera))
---   ) => ToObject (Conway.ConwayDelegsPredFailure ledgerera) where
---   toObject _ (Conway.DelegateeNotRegisteredDELEG poolID) =
---     mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG"
---              , "poolID" .= String (textShow poolID)
---             ]
---   toObject _ (Conway.WithdrawalsNotInRewardsDELEGS rs) =
---     mconcat [ "kind" .= String "WithdrawalsNotInRewardsDELEGS"
---              , "rewardAccounts" .= rs
---             ]
---   toObject v (Conway.CertFailure certFailure) =
---     toObject v certFailure
 
 instance
   ( ToObject (PPUPPredFailure ledgerera)
@@ -312,9 +372,9 @@ instance
   ) => ToObject (AlonzoUtxowPredFailure ledgerera) where
   toObject v (ShelleyInAlonzoUtxowPredFailure utxoPredFail) =
     toObject v utxoPredFail
-  toObject _ (MissingRedeemers _scripts) =
+  toObject _ (MissingRedeemers scripts) =
     mconcat [ "kind" .= String "MissingRedeemers"
-             , "scripts" .= String "TODO: Conway era" --renderMissingRedeemers scripts
+             , "scripts" .= renderMissingRedeemers scripts
              ]
   toObject _ (MissingRequiredDatums required received) =
     mconcat [ "kind" .= String "MissingRequiredDatums"
@@ -347,52 +407,16 @@ instance
       , "rdmrs" .= map Api.fromAlonzoRdmrPtr rdmrs
       ]
 
-renderScriptIntegrityHash :: Maybe (Alonzo.ScriptIntegrityHash StandardCrypto) -> Aeson.Value
-renderScriptIntegrityHash (Just witPPDataHash) =
-  Aeson.String . Crypto.hashToTextAsHex $ SafeHash.extractHash witPPDataHash
-renderScriptIntegrityHash Nothing = Aeson.Null
-
-
-_renderMissingRedeemers :: ()
-  => Ledger.EraCrypto ledgerera ~ StandardCrypto
-  => [(Alonzo.ScriptPurpose ledgerera, ScriptHash StandardCrypto)]
-  -> Aeson.Value
-_renderMissingRedeemers scripts = Aeson.object $ map renderTuple  scripts
-  where
-    renderTuple :: ()
-      => Ledger.EraCrypto ledgerera ~ StandardCrypto
-      => (Alonzo.ScriptPurpose ledgerera, ScriptHash StandardCrypto)
-      -> Aeson.Pair
-    renderTuple (scriptPurpose, sHash) =
-      Aeson.fromText (renderScriptHash sHash) .= renderScriptPurpose scriptPurpose
-
-    renderScriptHash :: ScriptHash StandardCrypto -> Text
-    renderScriptHash = Api.serialiseToRawBytesHexText . Api.fromShelleyScriptHash
-
-renderScriptPurpose :: ()
-  => Ledger.EraCrypto ledgerera ~ StandardCrypto
-  => Alonzo.ScriptPurpose ledgerera
-  -> Aeson.Value
-renderScriptPurpose = \case
-  Alonzo.Minting pid ->
-    Aeson.object [ "minting" .= toJSON pid]
-  Alonzo.Spending txin ->
-    Aeson.object [ "spending" .= Api.fromShelleyTxIn txin]
-  Alonzo.Rewarding rwdAcct ->
-    Aeson.object [ "rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
-  Alonzo.Certifying _cert ->
-    Aeson.object
-      [ "certifying" .= toJSON @String "TODO CIP-1694 unimplemented" -- toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate sbe cert)
-      ]
 
 instance
   ( ToObject (PredicateFailure (ShelleyUTXO ledgerera))
   , ToObject (PredicateFailure (Core.EraRule "UTXO" ledgerera))
+  , Ledger.EraCrypto ledgerera ~ StandardCrypto
   , Core.Crypto (Ledger.EraCrypto ledgerera)
   ) => ToObject (ShelleyUtxowPredFailure ledgerera) where
   toObject _verb (ExtraneousScriptWitnessesUTXOW extraneousScripts) =
     mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
-             , "extraneousScripts" .= extraneousScripts
+             , "extraneousScripts" .= Set.map renderScriptHash extraneousScripts
              ]
   toObject _verb (InvalidWitnessesUTXOW wits') =
     mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
@@ -1065,9 +1089,9 @@ instance
              , "isvalidating" .= isValidating
              , "reason" .= reason
              ]
-  toObject _ (Alonzo.CollectErrors _errors) =
+  toObject _ (Alonzo.CollectErrors errors) =
     mconcat [ "kind" .= String "CollectErrors"
-             , "errors" .= String "TODO: Conway era" -- errors
+             , "errors" .= errors
              ]
   toObject verb (Alonzo.UpdateFailure pFailure) =
     toObject verb pFailure
@@ -1086,11 +1110,11 @@ instance
           , "error" .= String "NoRedeemer"
           , "scriptpurpose" .= renderScriptPurpose sPurpose
           ]
-      Alonzo.NoWitness _sHash ->
+      Alonzo.NoWitness sHash ->
         object
           [ "kind" .= String "CollectError"
           , "error" .= String "NoWitness"
-          , "scripthash" .= String "TODO: Conway era" -- toJSON sHash
+          , "scripthash" .= renderScriptHash sHash
           ]
       Alonzo.NoCostModel lang ->
         object

@@ -1,12 +1,12 @@
 Usage: cardano-testnet shelley [--num-praos-nodes COUNT]
-                                 [--num-pool-nodes COUNT]
-                                 [--active-slots-coeff DOUBLE]
-                                 [--security-param INT]
-                                 [--epoch-length MILLISECONDS]
-                                 [--slot-length MILLISECONDS]
-                                 --testnet-magic INT
-                                 [--max-lovelace-supply WORD64]
-                                 [--enable-p2p BOOL]
+  [--num-pool-nodes COUNT]
+  [--active-slots-coeff DOUBLE]
+  [--security-param INT]
+  [--epoch-length MILLISECONDS]
+  [--slot-length MILLISECONDS]
+  --testnet-magic INT
+  [--max-lovelace-supply WORD64]
+  [--enable-p2p BOOL]
 
   Start a Shelley testnet
 

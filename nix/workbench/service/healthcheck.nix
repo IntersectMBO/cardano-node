@@ -32,6 +32,7 @@ let
 
           # Strict runtime
           ################
+
           # e:        Immediately exit if any command has a non-zero exit status
           # u:        Reference to non previously defined variables is an error
           # pipefail: Any failed command in a pipeline is used as return code
@@ -39,28 +40,43 @@ let
 
           # Fetch profile parameters
           ##########################
-          network_magic=$(${jq}/bin/jq      .genesis.network_magic      ../profile.json)
-          slot_duration=$(${jq}/bin/jq      .genesis.slot_duration      ../profile.json)
-          epoch_length=$(${jq}/bin/jq       .genesis.epoch_length       ../profile.json)
-          active_slots_coeff=$(${jq}/bin/jq .genesis.active_slots_coeff ../profile.json)
-          #active_slots="$((epoch_length * active_slots_coeff))"
+
+          network_magic="$(${jq}/bin/jq      .genesis.network_magic      ../profile.json)"
+          # Slot duration in seconds
+          slot_duration="$(${jq}/bin/jq      .genesis.slot_duration      ../profile.json)"
+          # Number of slots per epoch
+          epoch_length="$(${jq}/bin/jq       .genesis.epoch_length       ../profile.json)"
+          # Average (%) of slots per epoch that can be used to mint blocks
+          active_slots_coeff="$(${jq}/bin/jq .genesis.active_slots_coeff ../profile.json)"
+          # The number of active slots per epoch
+          active_slots="$(${jq}/bin/jq --null-input -r    \
+            "''${epoch_length} * ''${active_slots_coeff}" \
+          )"
           ${coreutils}/bin/echo "profile.json:"
           ${coreutils}/bin/echo "- network_magic:      ''${network_magic}"
           ${coreutils}/bin/echo "- slot_duration:      ''${slot_duration}"
           ${coreutils}/bin/echo "- epoch_length:       ''${epoch_length}"
           ${coreutils}/bin/echo "- active_slots_coeff: ''${active_slots_coeff}"
-          #${coreutils}/bin/echo "- active_slots:       ''${active_slots}"
+          ${coreutils}/bin/echo "- active_slots:       ''${active_slots}"
 
           # Fetch node names (Including "explorer" nodes)
           ###############################################
-          node_specs_nodes=$(${jq}/bin/jq --raw-output "keys | join (\" \")"      ../node-specs.json)
-          node_specs_pools=$(${jq}/bin/jq 'map(select(.kind == "pool")) | length' ../node-specs.json)
+
+          node_specs_nodes=$(${jq}/bin/jq --raw-output \
+            "keys | join (\" \")"                      \
+            ../node-specs.json                         \
+          )
+          node_specs_pools=$(${jq}/bin/jq              \
+            'map(select(.kind == "pool")) | length'    \
+            ../node-specs.json                         \
+          )
           ${coreutils}/bin/echo "node-specs.json:"
           ${coreutils}/bin/echo "- Nodes: [''${node_specs_nodes[*]}]"
           ${coreutils}/bin/echo "- Pools: ''${node_specs_pools}"
 
           # Look for available nodes and allocate healthcheck
           ###################################################
+
           nodes=()
           now=$(${coreutils}/bin/date +%s)
           for node in ''${node_specs_nodes[*]}
@@ -80,10 +96,13 @@ let
 
           # Look for the generator
           ########################
+          generator=0
           if test -d "../generator"
           then
+            generator=1
             ${coreutils}/bin/echo "Found deployed generator"
           else
+            generator=0
             ${coreutils}/bin/echo "Found no deployed generator"
           fi
 
@@ -92,26 +111,51 @@ let
 
           # The main function, called at the end of the file/script.
           function healthcheck() {
-            # Start the healthcheck infinite loop
+            # Ignore PIPE "errors", mixing 'jq', 'tac', 'grep' and/or 'head'
+            # will evetually throw a PIPE exception (see jq_node_stdout_last).
             trap "${coreutils}/bin/echo \"trap PIPE\" >&2" PIPE
+
             msg "Started!"
+
             # Do a one and only networking/latency test!
             for node in ''${nodes[*]}
             do
               latency_topology_producers "''${node}"
             done
+
+            # Start the healthcheck infinite loop
             while true
             do
+
+              # First available nodes
               for node in ''${nodes[*]}
               do
                 healthcheck_node "''${node}"
               done
-              healthcheck_generator
-              ${coreutils}/bin/sleep 5 # Enough?
+
+              # Then generator if available
+              if test "''${generator}" != "0"
+              then
+                healthcheck_generator
+              fi
+
+              if test "''${#nodes[@]}" = "1"
+              then
+                # This healthcheck run is monitoring only one node
+                # This is the case for all Nomad runs, either local or cloud
+                ${coreutils}/bin/sleep 10
+              else
+                # This healthcheck run is monitoring many nodes
+                # Local/supervisord uses one healthcheck for the entire cluster
+                ${coreutils}/bin/sleep  1
+              fi
+
             done
+
             trap - PIPE
           }
 
+          # Latency ############################################################
           ######################################################################
 
           function latency_topology_producers() {
@@ -134,9 +178,13 @@ let
             done
           }
 
+          # Node ###############################################################
+          ######################################################################
+
           function healthcheck_node() {
             local node=$1
-            if is_program_running "''${node}"
+            # Checks if the node has not exited with errors
+            if assert_program_running "''${node}"
             then
               # The node is running! ###########################################
               ##################################################################
@@ -175,12 +223,15 @@ let
           }
 
           function healthcheck_generator() {
-            # Only checks that the generator has not exited with errors
-            is_program_running "generator" || true
+            # Checks if the generator has not exited with errors
+            assert_program_running "generator" || true
           }
 
-          function is_program_running() {
+          # Error if program exits with a non-zero exit code, else returns
+          # 'true' if running or 'false' if not running.
+          function assert_program_running() {
             local program=$1
+            # Using the "exit_code" files created by our supervisord config
             local exit_code_path="../''${program}/exit_code"
             # File exists and is a regular file?
             if ! test -f "''${exit_code_path}"
@@ -279,7 +330,8 @@ let
             local now=$(${coreutils}/bin/date +%s)
             local last_forged
             last_forged=$(last_block_forged "''${node}")
-            if test -z "''${last_forged}"
+            # Just for precaution also check if 'jq' returned "null"
+            if test -z "''${last_forged}" || test "''${last_forged}" = "null"
             then
               start_time=$(${coreutils}/bin/cat "../''${node}/healthcheck/start_time")
               if test $((now - start_time)) -ge 300
@@ -288,7 +340,7 @@ let
               fi
             else
               ${coreutils}/bin/echo "''${last_forged}" > "../''${node}/healthcheck/last_forged"
-              start_time=$(${coreutils}/bin/echo "''${last_forged}" | ${jq}/bin/jq .at)
+              start_time=$(msg_unix_time "''${last_forged}")
               if test $((now - start_time)) -ge 120
               then
                 exit_healthcheck "''${node}: More than 2m with no newer blocks forged"
@@ -302,19 +354,22 @@ let
             local now=$(${coreutils}/bin/date +%s)
             local last_block
             last_block=$(last_block_transmitted "''${node}")
-            if test -z "''${last_block}"
+            # Just for precaution also check if 'jq' returned "null"
+            if test -z "''${last_block}" || test "''${last_block}" = "null"
             then
               start_time=$(${coreutils}/bin/cat "../''${node}/healthcheck/start_time")
               if test $((now - start_time)) -ge 300
               then
+                # This is fatal error, exit!
                 exit_healthcheck "''${node}: More than 5m without a first block sent or received"
               fi
             else
               ${coreutils}/bin/echo "''${last_block}" > "../''${node}/healthcheck/last_block"
-              start_time=$(${coreutils}/bin/echo "''${last_block}" | ${jq}/bin/jq .at)
-              if test $((now - start_time)) -ge 180
+              start_time=$(msg_unix_time "''${last_block}")
+              if test $((now - start_time)) -ge 60
               then
-                exit_healthcheck "''${node}: More than 3m with no newer blocks sent or received\n''${last_block}"
+                # This is just a warning, don't exit!
+                msg "''${node}: More than 1m with no newer blocks sent or received\n''${last_block}"
               fi
             fi
           }
@@ -324,26 +379,49 @@ let
             local start_time
             local now=$(${coreutils}/bin/date +%s)
             local last_txs
-            last_txs=$(last_block_with_txs "''${node}")
-            if test -z "''${last_txs}"
+            last_txs=$(last_block_with_txs_received "''${node}")
+            # Just for precaution also check if 'jq' returned "null"
+            if test -z "''${last_txs}" || test "''${last_txs}" = "null"
             then
               start_time=$(${coreutils}/bin/cat "../''${node}/healthcheck/start_time")
               if test $((now - start_time)) -ge 300
               then
+                # This is fatal error, exit!
                 exit_healthcheck "''${node}: More than 5m without a first block with transactions"
               fi
             else
               ${coreutils}/bin/echo "''${last_txs}" > "../''${node}/healthcheck/last_txs"
-              start_time=$(${coreutils}/bin/echo "''${last_txs}" | ${jq}/bin/jq .at)
+              start_time=$(msg_unix_time "''${last_txs}")
+              # TODO: Ask for "data.msg.txIds" in "BlockFetch.Server.SendBlock"
+              # Doing 3 minutes because there's no log message for block sent
+              # that includes the transaction details to know if its empty!
               if test $((now - start_time)) -ge 180
               then
-                exit_healthcheck "''${node}: More than 3m with no newer blocks with transactions\n''${last_txs}"
+                # This is just a warning, don't exit!
+                msg "''${node}: More than 3m with no newer blocks with transactions\n''${last_txs}"
               fi
             fi
           }
 
-          # Helper/auxiliary functions!
+          # Helper/auxiliary functions! ########################################
           ######################################################################
+
+          # The "at" time has format "2023-05-16 19:57:19.0231Z" and I can't
+          # parse it using any standard `date` format so I'm stripping the
+          # milliseconds part and converting to Unix time (Integer).
+          function msg_unix_time() {
+            local msg=$1
+              echo "''${msg}"           \
+            |                           \
+              ${jq}/bin/jq -r           \
+                '
+                    .at[:20]
+                  |
+                    strptime("%Y-%m-%d %H:%M:%S.")
+                  |
+                    mktime
+                '
+          }
 
           # Gets the last "matching" JSON message from a Node's stdout file.
           #
@@ -369,11 +447,8 @@ let
           # finishes and exists `tac` or `grep` may throw the following error:
           # "writing output failed: Broken pipe"
           #
-          # Finally the "at" time has format "2023-05-16 19:57:19.0231Z" and I
-          # can't parse it using any standard `date` format so I'm stripping the
-          # milliseconds part and converting to Unix time (Integer). This has to
-          # be done after filtering for "null" inputs that are the output of
-          # 'nth(0;...)', if not an error occurs.
+          # Finally filter for "null" inputs that are the output of 'nth(0;...)'
+          # if no occurrence. Return the empty "string" if no value.
           #
           # $1: node name
           # $2: jq's query string
@@ -393,15 +468,7 @@ let
                     --null-input                           \
                     "nth(0; inputs | select(''${select}))" \
                 | \
-                  ${jq}/bin/jq \
-                    '   select( . != null )
-                      |
-                        (
-                             .at
-                          |=
-                             (.[:20] | strptime("%Y-%m-%d %H:%M:%S.") | mktime)
-                        )
-                    ' \
+                  ${jq}/bin/jq 'select(. != null)' \
               || \
                 { return_code="$?"; pipe_status="''${PIPESTATUS[@]}"; } \
             )"
@@ -444,12 +511,7 @@ let
                 | \
                   { ${coreutils}/bin/head --lines=+1        2>/dev/null; } \
                 | \
-                  ${jq}/bin/jq \
-                    '
-                        .at
-                      |=
-                        (.[:20] | strptime("%Y-%m-%d %H:%M:%S.") | mktime)
-                    ' \
+                  ${jq}/bin/jq 'select(. != null)' \
               || \
                 { return_code="$?"; pipe_status="''${PIPESTATUS[@]}"; } \
             )"
@@ -640,7 +702,7 @@ let
           #   "thread": "77",
           #   "host": "localhost"
           # }
-          function last_block_with_txs() {
+          function last_block_with_txs_received() {
             local node=$1
             if ! jq_node_stdout_last "''${node}" \
               '
@@ -657,7 +719,7 @@ let
                 (.data.msg?.txIds          != [])
               '
             then
-              exit_22 "jq error: last_block_with_txs: ''${node}"
+              exit_22 "jq error: last_block_with_txs_received: ''${node}"
             fi
           }
 

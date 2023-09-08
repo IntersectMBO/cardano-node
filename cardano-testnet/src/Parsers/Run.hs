@@ -8,13 +8,14 @@ module Parsers.Run
   , opts
   ) where
 
+import           Cardano.CLI.Environment
 import           Data.Foldable
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 import           Parsers.Babbage as Babbage
-import           Parsers.Conway as Conway
 import           Parsers.Byron
 import           Parsers.Cardano
+import           Parsers.Conway as Conway
 import           Parsers.Help
 import           Parsers.Shelley
 import           Parsers.Version
@@ -24,8 +25,8 @@ import           Testnet.Property.Run (runTestnet)
 pref :: ParserPrefs
 pref = Opt.prefs $ showHelpOnEmpty <> showHelpOnError
 
-opts :: ParserInfo CardanoTestnetCommands
-opts = Opt.info (commands <**> helper) idm
+opts :: EnvCli -> ParserInfo CardanoTestnetCommands
+opts envCli = Opt.info (commands envCli <**> helper) idm
 
 -- TODO: Remove StartBabbageTestnet and StartShelleyTestnet
 -- by allowing the user to start testnets in any era (excluding Byron)
@@ -39,16 +40,16 @@ data CardanoTestnetCommands
   | GetVersion VersionOptions
   | Help ParserPrefs (ParserInfo CardanoTestnetCommands) HelpOptions
 
-commands :: Parser CardanoTestnetCommands
-commands =
+commands :: EnvCli -> Parser CardanoTestnetCommands
+commands envCli =
   asum
-    [ fmap StartCardanoTestnet (subparser cmdCardano)
+    [ fmap StartCardanoTestnet (subparser (cmdCardano envCli))
     , fmap StartByrontestnet (subparser cmdByron)
     , fmap StartShelleyTestnet (subparser cmdShelley)
     , fmap StartBabbageTestnet (subparser cmdBabbage)
     , fmap StartConwayTestnet (subparser cmdConway)
     , fmap GetVersion (subparser cmdVersion)
-    , fmap (Help pref opts) (subparser cmdHelp)
+    , fmap (Help pref (opts envCli)) (subparser cmdHelp)
     ]
 
 

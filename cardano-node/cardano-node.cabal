@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                8.1.1
+version:                8.3.0
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -28,7 +28,7 @@ common project-config
   default-language:     Haskell2010
 
   default-extensions:   OverloadedStrings
-  build-depends:        base >= 4.14 && < 4.17
+  build-depends:        base >= 4.14 && < 5
 
   ghc-options:          -Wall
                         -Wcompat
@@ -38,7 +38,6 @@ common project-config
                         -Wpartial-fields
                         -Wredundant-constraints
                         -Wunused-packages
-
 common maybe-Win32
   if os(windows)
     build-depends:      Win32
@@ -86,6 +85,7 @@ library
                         Cardano.Node.TraceConstraints
                         Cardano.Node.Tracing
                         Cardano.Node.Tracing.API
+                        Cardano.Node.Tracing.Consistency
                         Cardano.Node.Tracing.Compat
                         Cardano.Node.Tracing.DefaultTraceConfig
                         Cardano.Node.Tracing.Documentation
@@ -132,12 +132,12 @@ library
   other-modules:        Paths_cardano_node
   autogen-modules:      Paths_cardano_node
 
-  build-depends:        base >= 4.14 && < 4.17
+  build-depends:        base
                       , aeson >= 1.5.6.0
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.8
+                      , cardano-api >= 8.16.3 && < 8.17
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev
@@ -161,6 +161,7 @@ library
                       , ekg
                       , ekg-core
                       , filepath
+                      , formatting
                       , generic-data
                       , hostname
                       , io-classes >= 0.3
@@ -174,14 +175,14 @@ library
                       , network
                       , network-mux >= 0.4
                       , nothunks
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork >= 0.18.1
                       , ouroboros-consensus >= 0.9
                       , ouroboros-consensus-cardano >= 0.7
                       , ouroboros-consensus-diffusion >= 0.7
                       , ouroboros-consensus-protocol >= 0.5
                       , ouroboros-network-api
-                      , ouroboros-network ^>= 0.8.1.1
-                      , ouroboros-network-framework >= 0.6
+                      , ouroboros-network ^>= 0.8.2.0
+                      , ouroboros-network-framework >= 0.7
                       , ouroboros-network-protocols
                       , prettyprinter
                       , prettyprinter-ansi-terminal
@@ -217,11 +218,11 @@ executable cardano-node
   other-modules:        Paths_cardano_node
   autogen-modules:      Paths_cardano_node
 
-  build-depends:        base >= 4.14 && < 4.17
+  build-depends:        base
                       , cardano-crypto-class
                       , cardano-git-rev
                       , cardano-node
-                      , optparse-applicative-fork ^>= 0.16.1
+                      , optparse-applicative-fork
                       , text >= 2.0
 
 test-suite cardano-node-test
@@ -231,11 +232,11 @@ test-suite cardano-node-test
   main-is:              cardano-node-test.hs
   type:                 exitcode-stdio-1.0
 
-  build-depends:        base >= 4.14 && < 4.17
+  build-depends:        base
                       , aeson >= 1.5.6.0
                       , bytestring
                       , cardano-crypto-class
-                      , cardano-api ^>= 8.8
+                      , cardano-api >= 8.16.3 && < 8.17
                       , cardano-ledger-core
                       , cardano-node
                       , cardano-slotting >= 0.1
@@ -249,7 +250,7 @@ test-suite cardano-node-test
                       , ouroboros-consensus >= 0.9
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-diffusion >= 0.7
-                      , ouroboros-network ^>= 0.8.1.1
+                      , ouroboros-network ^>= 0.8.2.0
                       , ouroboros-network-api
                       , text >= 2.0
                       , time
@@ -262,6 +263,7 @@ test-suite cardano-node-test
                         Test.Cardano.Node.Gen
                         Test.Cardano.Node.Json
                         Test.Cardano.Node.POM
+                        Test.Cardano.Tracing.NewTracing.Consistency
                         Test.Cardano.Tracing.OrphanInstances.HardFork
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T

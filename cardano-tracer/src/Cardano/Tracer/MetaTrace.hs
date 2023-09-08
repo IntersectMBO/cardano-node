@@ -186,7 +186,7 @@ mkTracerTracer defSeverity = do
    initialTraceConfig :: TraceConfig
    initialTraceConfig =
      TraceConfig
-     { tcForwarder         = defaultForwarder
+     { tcForwarder         = Nothing
      , tcNodeName          = Nothing
      , tcPeerFrequency     = Nothing
      , tcResourceFrequency = Nothing

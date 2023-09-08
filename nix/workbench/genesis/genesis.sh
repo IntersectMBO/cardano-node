@@ -161,7 +161,32 @@ case "$op" in
            "$global_basedir"/profile/presets/mainnet/genesis/genesis.alonzo.json \
            >   "$dir"/genesis.alonzo.spec.json
 
-        jq '{ genDelegs: {} }' --null-input \
+        jq '{ poolVotingThresholds:
+                { pvtMotionNoConfidence:    0
+                , pvtCommitteeNormal:       0
+                , pvtCommitteeNoConfidence: 0
+                , pvtHardForkInitiation:    0 
+                }
+            , dRepVotingThresholds:
+                { dvtMotionNoConfidence:    0
+                , dvtCommitteeNormal:       0
+                , dvtCommitteeNoConfidence: 0
+                , dvtUpdateToConstitution:  0
+                , dvtHardForkInitiation:    0
+                , dvtPPNetworkGroup:        0
+                , dvtPPEconomicGroup:       0
+                , dvtPPTechnicalGroup:      0
+                , dvtPPGovGroup:            0
+                , dvtTreasuryWithdrawal:    0
+                }
+            , minCommitteeSize:             0
+            , committeeTermLimit:           0
+            , govActionExpiration:          0
+            , govActionDeposit:             0
+            , dRepDeposit:                  0
+            , dRepActivity:                 0
+            }
+           ' --null-input \
            >   "$dir"/genesis.conway.spec.json
 
         local create_args=(

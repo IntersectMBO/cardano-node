@@ -12,11 +12,12 @@ import qualified Data.Map.Strict as M
 import           Data.Text (intercalate, isPrefixOf)
 import           Graphics.UI.Threepenny.Core (UI, liftIO)
 
+import           Cardano.Logging (showT)
+
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
 
 updateEKGMetrics :: TracerEnv -> UI ()
 updateEKGMetrics TracerEnv{teAcceptedMetrics} = do

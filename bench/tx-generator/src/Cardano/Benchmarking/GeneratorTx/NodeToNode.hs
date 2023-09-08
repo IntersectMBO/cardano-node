@@ -2,6 +2,7 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans -Wno-unticked-promoted-constructors -Wno-all-missed-specialisations #-}
 
@@ -13,6 +14,8 @@ module Cardano.Benchmarking.GeneratorTx.NodeToNode
 import           Cardano.Prelude (forever, liftIO)
 import           Prelude
 
+import           "contra-tracer" Control.Tracer (Tracer (..))
+
 import           Codec.Serialise (DeserialiseFailure)
 import           Control.Concurrent.Class.MonadSTM.Strict (newTVarIO)
 import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
@@ -22,7 +25,6 @@ import           Data.Proxy (Proxy (..))
 import           Network.Socket (AddrInfo (..))
 import           System.Random (newStdGen)
 
-import           "contra-tracer" Control.Tracer (Tracer, nullTracer)
 import           Ouroboros.Consensus.Block.Abstract
 import           Ouroboros.Consensus.Byron.Ledger.Mempool (GenTx)
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
@@ -78,7 +80,7 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
   NtN.connectTo
     (socketSnocket ioManager)
     NetworkConnectTracers {
-        nctMuxTracer       = nullTracer,
+        nctMuxTracer       = mempty,
         nctHandshakeTracer = handshakeTracer
       }
     peerMultiplex
@@ -116,12 +118,12 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
         NtN.NodeToNodeProtocols
           { NtN.chainSyncProtocol = InitiatorProtocolOnly $
                                       MuxPeer
-                                        nullTracer
+                                        mempty
                                         (cChainSyncCodec myCodecs)
                                         chainSyncPeerNull
           , NtN.blockFetchProtocol = InitiatorProtocolOnly $
                                        MuxPeer
-                                         nullTracer
+                                         mempty
                                          (cBlockFetchCodec myCodecs)
                                          (blockFetchClientPeer blockFetchClientNull)
           , NtN.keepAliveProtocol = InitiatorProtocolOnly $
@@ -134,7 +136,7 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
                                            (txSubmissionClientPeer myTxSubClient)
           , NtN.peerSharingProtocol = InitiatorProtocolOnly $
                                          MuxPeer
-                                           nullTracer
+                                           mempty
                                            (cPeerSharingCodec myCodecs)
                                            (peerSharingClientPeer peerSharingClientNull)
           } )
@@ -151,14 +153,14 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
     keepAliveRng <- newStdGen
     peerGSVMap <- liftIO . newTVarIO $ Map.singleton them defaultGSV
     runPeerWithLimits
-      nullTracer
+      mempty
       (cKeepAliveCodec myCodecs)
       (byteLimitsKeepAlive (const 0)) -- TODO: Real Bytelimits, see #1727
       timeLimitsKeepAlive
       channel
       $ keepAliveClientPeer
       $ keepAliveClient
-          nullTracer
+          mempty
           keepAliveRng
           (continueForever (Proxy :: Proxy IO)) them peerGSVMap
           (KeepAliveInterval 10)

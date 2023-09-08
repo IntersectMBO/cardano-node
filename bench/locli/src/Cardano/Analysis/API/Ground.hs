@@ -1,3 +1,4 @@
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -67,7 +68,7 @@ instance ToJSONKey Hash where
 instance FromJSONKey Hash where
   fromJSONKey = FromJSONKeyText (Hash . fromText)
 
-newtype Count a = Count { unCount :: Int }
+newtype Count (a :: k) = Count { unCount :: Int }
   deriving (Eq, Generic, Ord, Show)
   deriving newtype (Divisible, FromJSON, Num, Real, ToJSON)
   deriving anyclass NFData

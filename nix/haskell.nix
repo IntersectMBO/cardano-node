@@ -112,6 +112,11 @@ let
             packages.cardano-node-chairman.components.tests.chairman-tests.buildable = lib.mkForce pkgs.stdenv.hostPlatform.isUnix;
             packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
             packages.tx-generator.package.buildable = with pkgs.stdenv.hostPlatform; !isMusl;
+
+            packages.cardano-ledger-alonzo.components.library.doHaddock = false;
+            packages.cardano-ledger-babbage.components.library.doHaddock = false;
+            packages.cardano-ledger-conway.components.library.doHaddock = false;
+            packages.cardano-protocol-tpraos.components.library.doHaddock = false;
           })
           ({ lib, pkgs, ... }: {
             # Needed for the CLI tests.
@@ -122,7 +127,7 @@ let
           ({ lib, pkgs, ... }: {
             # Use the VRF fork of libsodium
             packages.cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.libsodium-vrf ] ];
-            packages.cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.libsodium-vrf pkgs.secp256k1 ] ];
+            packages.cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.libsodium-vrf pkgs.secp256k1 pkgs.libblst ] ];
           })
           ({ lib, pkgs, ... }:
           let postInstall = exeName: ''
@@ -282,6 +287,7 @@ let
             packages.cardano-node.flags.systemd = !pkgs.stdenv.hostPlatform.isMusl;
             packages.cardano-tracer.flags.systemd = !pkgs.stdenv.hostPlatform.isMusl;
           })
+          # disable haddock
           # Musl libc fully static build
           ({ lib, ... }: {
             options.packages = lib.mkOption {
@@ -319,7 +325,7 @@ in
 project.appendOverlays (with haskellLib.projectOverlays; [
   projectComponents
   (final: prev:
-    let inherit (final.pkgs) lib gitrev; in {
+    let inherit (final.pkgs) lib; in {
       profiled = final.appendModule {
         modules = [{
           enableLibraryProfiling = true;
@@ -361,19 +367,7 @@ project.appendOverlays (with haskellLib.projectOverlays; [
         (path: value:
           if (lib.isAttrs value) then
             lib.recursiveUpdate
-              (if lib.elemAt path 2 == "exes" && lib.elem (lib.elemAt path 3) [ "cardano-node" "cardano-cli" ] then
-              # Stamp executables with version info.
-              # Done outside the haskell.nix derivation to avoid compilation and tests depending on rev.
-                final.pkgs.buildPackages.runCommand value.name
-                  {
-                    inherit (value) exeName exePath meta passthru;
-                  } ''
-                  mkdir -p $out
-                  cp --no-preserve=timestamps --recursive ${value}/* $out/
-                  chmod -R +w $out/bin
-                  ${final.pkgs.pkgsBuildBuild.haskellBuildUtils}/bin/set-git-rev "${gitrev}" $out/bin/*
-                ''
-              else value)
+              value
               {
                 # Also add convenient passthru to some alternative compilation configurations:
                 passthru = {
@@ -381,7 +375,8 @@ project.appendOverlays (with haskellLib.projectOverlays; [
                   asserted = lib.getAttrFromPath path final.asserted.hsPkgs;
                   eventlogged = lib.getAttrFromPath path final.eventlogged.hsPkgs;
                 };
-              } else value)
+              }
+          else value)
         prev.hsPkgs;
     })
 ])

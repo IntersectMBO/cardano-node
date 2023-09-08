@@ -1,5 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Tracer.Handlers.RTView.Update.Peers
@@ -18,6 +18,8 @@ import qualified Data.Text as T
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 
+import           Cardano.Logging (showT)
+
 import           Cardano.Node.Tracing.Peers
 
 import           Cardano.Tracer.Environment
@@ -27,7 +29,6 @@ import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Handlers.RTView.Utils
 import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
 
 updateNodesPeers
   :: TracerEnv

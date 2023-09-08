@@ -8,7 +8,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -25,7 +24,6 @@ module Cardano.Benchmarking.Tracer
   )
 where
 
-import           "contra-tracer" Control.Tracer (Tracer (..), nullTracer)
 import           GHC.Generics
 
 import           Data.Aeson as A
@@ -72,10 +70,10 @@ generatorTracer tracerName mbTrStdout mbTrForward = do
 
 initNullTracers :: BenchTracers
 initNullTracers = BenchTracers
-    { btTxSubmit_    = nullTracer
-    , btConnect_     = nullTracer
-    , btSubmission2_ = nullTracer
-    , btN2N_         = nullTracer
+    { btTxSubmit_    = mempty
+    , btConnect_     = mempty
+    , btSubmission2_ = mempty
+    , btN2N_         = mempty
     }
 
 -- if the first argument isJust, we assume we have a socket path
@@ -87,20 +85,24 @@ initTxGenTracers mbForwarding = do
   confState       <- emptyConfigReflection
 
   let
-    mkTracer :: (LogFormatting a, MetaTrace a) => Text -> IO (Tracer IO a)
-    mkTracer namespace
-      | isPrefixSilent namespace = pure nullTracer
+    mkTracer :: (LogFormatting a, MetaTrace a)
+                  => Text
+                  -> Maybe (Trace IO FormattedMessage)
+                  -> Maybe (Trace IO FormattedMessage)
+                  -> IO (Trace IO a)
+    mkTracer namespace mbStdoutTracer' mbForwardingTracer'
+      | isPrefixSilent namespace = pure mempty
       | otherwise = do
-        tracer <-  generatorTracer namespace mbStdoutTracer mbForwardingTracer
+        tracer <-  generatorTracer namespace mbStdoutTracer' mbForwardingTracer'
         configureTracers confState initialTraceConfig [tracer]
-        pure $ Tracer (traceWith tracer)
+        pure tracer
 
-  benchTracer@(Tracer traceBench) <- mkTracer "benchmark"
-  n2nSubmitTracer <- mkTracer "submitN2N"
-  connectTracer <- mkTracer "connect"
-  submitTracer <- mkTracer "submit"
+  benchTracer <- mkTracer "Benchmark" mbStdoutTracer mbForwardingTracer
+  n2nSubmitTracer <- mkTracer "SubmitN2N" mbStdoutTracer mbForwardingTracer
+  connectTracer <- mkTracer "Connect" mbStdoutTracer mbForwardingTracer
+  submitTracer <- mkTracer "Submit" mbStdoutTracer mbForwardingTracer
 
-  traceBench $ TraceTxGeneratorVersion Version.txGeneratorVersion
+  traceWith benchTracer (TraceTxGeneratorVersion Version.txGeneratorVersion)
 
   return $ BenchTracers
     { btTxSubmit_    = benchTracer
@@ -112,8 +114,9 @@ initTxGenTracers mbForwarding = do
   prepareForwardingTracer :: IO (Maybe (Trace IO FormattedMessage))
   prepareForwardingTracer = forM mbForwarding $
     \(iomgr, networkId, tracerSocket) -> do
+        let forwardingConf = fromMaybe defaultForwarder (tcForwarder initialTraceConfig)
         (forwardSink :: ForwardSink TraceObject, dpStore) <-
-          initForwarding iomgr (tcForwarder initialTraceConfig) (toNetworkMagic networkId) Nothing $ Just (tracerSocket, Initiator)
+          initForwarding iomgr forwardingConf (toNetworkMagic networkId) Nothing $ Just (tracerSocket, Initiator)
 
         -- we need to provide NodeInfo DataPoint, to forward generator's name
         -- to the acceptor application (for example, 'cardano-tracer').
@@ -161,7 +164,7 @@ initialTraceConfig = TraceConfig {
           , setMaxDetail "connect"
           , setMaxDetail "submit"
           ]
-    , tcForwarder = defaultForwarder
+    , tcForwarder = Just defaultForwarder
     , tcNodeName = Nothing
     , tcPeerFrequency = Just 2000 -- Every 2 seconds
     , tcResourceFrequency = Just 1000 -- Every second
@@ -278,7 +281,7 @@ instance MetaTrace (TraceBenchTxSubmit TxId) where
     namespaceFor TraceBenchTxSubServCons {} = Namespace [] ["BenchTxSubServCons"]
     namespaceFor TraceBenchTxSubIdle {} = Namespace [] ["BenchTxSubIdle"]
     namespaceFor TraceBenchTxSubRateLimit {} = Namespace [] ["BenchTxSubRateLimit"]
-    namespaceFor TraceBenchTxSubSummary {} = Namespace [] ["eBenchTxSubSummary"]
+    namespaceFor TraceBenchTxSubSummary {} = Namespace [] ["BenchTxSubSummary"]
     namespaceFor TraceBenchTxSubDebug {} = Namespace [] ["BenchTxSubDebug"]
     namespaceFor TraceBenchTxSubError {} = Namespace [] ["BenchTxSubError"]
     namespaceFor TraceBenchPlutusBudgetSummary {} = Namespace [] ["BenchPlutusBudgetSummary"]
@@ -301,7 +304,7 @@ instance MetaTrace (TraceBenchTxSubmit TxId) where
         , Namespace [] ["BenchTxSubServCons"]
         , Namespace [] ["BenchTxSubIdle"]
         , Namespace [] ["BenchTxSubRateLimit"]
-        , Namespace [] ["eBenchTxSubSummary"]
+        , Namespace [] ["BenchTxSubSummary"]
         , Namespace [] ["BenchTxSubDebug"]
         , Namespace [] ["BenchTxSubError"]
         , Namespace [] ["BenchPlutusBudgetSummary"]

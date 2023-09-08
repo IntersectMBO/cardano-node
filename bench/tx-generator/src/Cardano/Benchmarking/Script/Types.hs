@@ -98,7 +98,7 @@ data Action where
   AddFund            :: !AnyCardanoEra -> !String -> !TxIn -> !Lovelace -> !String -> Action
   -- | 'WaitBenchmark' signifies a 'Control.Concurrent.Async.waitCatch'
   -- on the 'Cardano.Benchmarking.GeneratorTx.AsyncBenchmarkControl'
-  -- associated with the ID and also folds tracers into the completion. 
+  -- associated with the ID and also folds tracers into the completion.
   WaitBenchmark      :: !String -> Action
   -- | 'Submit' mostly wraps
   -- 'Cardano.Benchamrking.Script.Core.benchmarkTxStream'
@@ -108,7 +108,7 @@ data Action where
   -- 'Cardano.Benchmarking.GeneratorTx.SubmissionClient.txSubmissionClient'
   -- and functions local to that like @requestTxs@.
   Submit             :: !AnyCardanoEra -> !SubmitMode -> !TxGenTxParams -> !Generator -> Action
-  -- | 'CancelBenchmark' wraps a callback from the 
+  -- | 'CancelBenchmark' wraps a callback from the
   -- 'Cardano.Benchmarking.GeneratorTx.AsyncBenchmarkControl' type,
   -- which is a shutdown action.
   CancelBenchmark    :: !String -> Action

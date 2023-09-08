@@ -85,9 +85,8 @@
     }@input:
     let
       inherit (nixpkgs) lib;
-      inherit (lib) head systems mapAttrs recursiveUpdate mkDefault
-        getAttrs optionalAttrs nameValuePair attrNames;
-      inherit (utils.lib) eachSystem mkApp flattenTree;
+      inherit (lib) head mapAttrs recursiveUpdate optionalAttrs;
+      inherit (utils.lib) eachSystem flattenTree;
       inherit (iohkNix.lib) prefixNamesWith;
       removeRecurse = lib.filterAttrsRecursive (n: _: n != "recurseForDerivations");
 
@@ -103,6 +102,7 @@
         iohkNix.overlays.crypto
         haskellNix.overlay
         iohkNix.overlays.haskell-nix-extra
+        iohkNix.overlays.haskell-nix-crypto
         iohkNix.overlays.cardano-lib
         iohkNix.overlays.utils
         (final: prev: {
@@ -122,12 +122,16 @@
       ] ++ (import ops-lib.outPath {}).overlays;
 
       collectExes = project:
-        let inherit (project.pkgs.stdenv) hostPlatform;
-        in project.exes // (with project.hsPkgs; {
-          inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer db-truncater;
+        let set-git-rev = import ./nix/set-git-rev.nix { inherit (project) pkgs; };
+        in
+        # take all executables from the project local packages
+        project.exes // (with project.hsPkgs; {
+          # add some executables from other relevant packages
           inherit (bech32.components.exes) bech32;
-          inherit (cardano-cli.components.exes) cardano-cli;
-        } // lib.optionalAttrs hostPlatform.isUnix {
+          inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer db-truncater;
+          # add cardano-node and cardano-cli with their git revision stamp
+          cardano-node = set-git-rev project.exes.cardano-node;
+          cardano-cli = set-git-rev cardano-cli.components.exes.cardano-cli;
         });
 
       mkCardanoNodePackages = project: (collectExes project) // {
@@ -143,7 +147,10 @@
         project = pkgs.cardanoNodeProject;
 
         # This is used by `nix develop .` to open a devShell
-        devShells = let shell = import ./shell.nix { inherit pkgs customConfig cardano-mainnet-mirror; }; in {
+        devShells =
+        let
+          shell = import ./shell.nix { inherit pkgs customConfig cardano-mainnet-mirror; };
+        in {
           inherit (shell) devops workbench-shell;
           default = shell.dev;
           cluster = shell;
@@ -200,13 +207,10 @@
                     inherit profileName workbenchStartArgs;
                     backendName = "supervisor";
                     useCabalRun = false;
-                    cardano-node-rev =
-                      if __hasAttr "rev" self
-                      then pkgs.gitrev
-                      else throw "Cannot get git revision of 'cardano-node', unclean checkout?";
+                    cardano-node-rev = pkgs.gitrev;
                   }).workbench-profile-run;
           in
-          rec {
+          {
             "dockerImage/node" = pkgs.dockerImage;
             "dockerImage/submit-api" = pkgs.submitApiDockerImage;
 
@@ -225,7 +229,11 @@
               name = "system-tests";
               runtimeInputs = with pkgs; [ git gnused ];
               text = ''
-                  NODE_REV="${self.rev or (throw "Sorry, need clean/pushed git revision to run system tests")}"
+                  NODE_REV="${self.rev or ""}"
+                  if [[ -z $NODE_REV ]]; then
+                    echo "Sorry, need clean/pushed git revision to run system tests"
+                    exit 1;
+                  fi
                   MAKE_TARGET=testpr
                   mkdir -p tmp && cd tmp
                   rm -rf cardano-node-tests
@@ -359,18 +367,14 @@
             inherit config system overlays;
           };
           inherit (mkFlakeAttrs pkgs) environments packages checks apps project ciJobs devShells workbench;
-          # We use a generic gitrev for PR CI to avoid unecessary rebuilds:
-          ciJobsPrs = (mkFlakeAttrs (pkgs.extend (prev: final: { gitrev = "0000000000000000000000000000000000000000"; }))).ciJobs;
         in
         {
 
-          inherit environments checks project ciJobsPrs devShells workbench;
+          inherit environments checks project ciJobs devShells workbench;
 
           legacyPackages = pkgs // {
             # allows access to hydraJobs without specifying <arch>:
-            hydraJobs = ciJobs // {
-              pr = ciJobsPrs;
-            };
+            hydraJobs = ciJobs;
           };
 
           packages = packages // {
@@ -387,11 +391,11 @@
       );
 
     in
-    removeAttrs flake [ "ciJobsPrs" ] // {
+    removeAttrs flake [ "ciJobs" ] // {
 
-      hydraJobs = flake.ciJobsPrs // (let pkgs = self.legacyPackages.${defaultSystem}; in {
+      hydraJobs = flake.ciJobs // (let pkgs = self.legacyPackages.${defaultSystem}; in {
         inherit (pkgs.callPackages iohkNix.utils.ciJobsAggregates {
-          ciJobs = lib.mapAttrs (_: lib.getAttr "required") flake.ciJobsPrs // {
+          ciJobs = lib.mapAttrs (_: lib.getAttr "required") flake.ciJobs // {
             # ensure hydra notify:
             gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
           };

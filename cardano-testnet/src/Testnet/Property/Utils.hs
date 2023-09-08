@@ -22,7 +22,7 @@ module Testnet.Property.Utils
 
 import           Cardano.Api
 
-import           Cardano.CLI.Shelley.Output
+import           Cardano.CLI.Types.Output
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
 import           Control.Monad.IO.Class

@@ -1,4 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -8,10 +9,10 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
@@ -33,8 +34,9 @@ import qualified Data.List as L
 import qualified Data.List.Extra as L
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
-
-import           "contra-tracer" Control.Tracer (Tracer, traceWith)
+#if __GLASGOW_HASKELL__ >= 906
+import Data.Type.Equality               (type (~))
+#endif
 
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Common ()
@@ -59,6 +61,8 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Type (BlockingReplyLis
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (fromShelleyTxId, toConsensusGenTx)
+
+import           Cardano.Logging
 
 import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
@@ -95,8 +99,8 @@ txSubmissionClient
      , IsShelleyBasedEra era
      , tx      ~ Tx era
      )
-  => Tracer m NodeToNodeSubmissionTrace
-  -> Tracer m (TraceBenchTxSubmit TxId)
+  => Trace m NodeToNodeSubmissionTrace
+  -> Trace m (TraceBenchTxSubmit TxId)
   -> TxSource era
   -> EndOfProtocolCallback m
   -> TxSubmissionClient (GenTxId CardanoBlock) (GenTx CardanoBlock) m ()
