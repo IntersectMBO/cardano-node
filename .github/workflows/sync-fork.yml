@@ -10,10 +10,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: GitHub Sync to Upstream Repository
+      - name: Sync and merge upstream repository with your current repository
+  # You may pin to the exact commit or the version.
+  # uses: dabreadman/sync-upstream-repo@fc5fe9952946b1daaafd9abd7fcd7e260b81ddbe
         uses: dabreadman/sync-upstream-repo@v1.3.0
-        with: 
-          upstream_repo: ${{env.UPSTREAM_URL}}
-          upstream_branch: master
-          downstream_branch: master
-          token: ${{ secrets.WORKFLOW_TOKEN }}
+        with:
+        # URL of gitHub public upstream repo
+            upstream_repo: https://github.com:input-output-hk/cardano-node
+        # Branch to merge from upstream (defaults to downstream branch)
+            upstream_branch: master
+        # Branch to merge into downstream
+            downstream_branch: master
+        # GitHub Bot token
+            token: ${{ secrets.WORKFLOW_TOKEN }}
+          
