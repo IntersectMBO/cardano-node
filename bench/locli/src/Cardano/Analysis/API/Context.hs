@@ -108,10 +108,9 @@ instance FromJSON GeneratorProfile where
 
 plutusLoopScript :: GeneratorProfile -> Maybe Text
 plutusLoopScript GeneratorProfile{plutusMode, plutusAutoMode, plutus}
-  | Just True <- (&&) <$> plutusAutoMode <*> plutusMode
-    = Just "Loop"
-  | otherwise
-    = ppScript `fmap` plutus
+  | fromMaybe False
+      ((&&) <$> plutusAutoMode <*> plutusMode)  = Just $ T.pack "Loop"
+  | otherwise                                   = ppScript `fmap` plutus
 
 
 newtype Commit   = Commit  { unCommit  :: Text } deriving newtype (Eq, Show, FromJSON, ToJSON, NFData)
