@@ -1,4 +1,6 @@
 name: sync-fork
+env: 
+  UPSTREAM_URL: "https://github.com:input-output-hk/cardano-node.git"
 on:
   schedule:
     - cron: '0 0 * * *'
@@ -11,7 +13,7 @@ jobs:
       - name: GitHub Sync to Upstream Repository
         uses: dabreadman/sync-upstream-repo@v1.3.0
         with: 
-          upstream_repo: https://github.com:input-output-hk/cardano-node
+          upstream_repo: ${{env.UPSTREAM_URL}}
           upstream_branch: master
           downstream_branch: master
           token: ${{ secrets.WORKFLOW_TOKEN }}
