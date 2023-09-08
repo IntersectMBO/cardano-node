@@ -1,6 +1,6 @@
 name: sync-fork
 env: 
-  UPSTREAM_URL: "https://github.com:input-output-hk/cardano-node.git"
+  UPSTREAM_URL: "http://github.com:input-output-hk/cardano-node.git"
 on:
   schedule:
     - cron: '0 0 * * *'
