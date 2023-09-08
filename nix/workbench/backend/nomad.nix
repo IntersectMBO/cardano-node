@@ -36,6 +36,12 @@ let
                 flake-output = "legacyPackages.x86_64-linux.coreutils";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
+              iproute2 = rec {
+                nix-store-path  = pkgs.iproute2;
+                flake-reference = "github:input-output-hk/cardano-node";
+                flake-output = "legacyPackages.x86_64-linux.iproute2";
+                installable = "${flake-reference}/${gitrev}#${flake-output}";
+              };
               bashInteractive = rec {
                 nix-store-path  = pkgs.bashInteractive;
                 flake-reference = "github:input-output-hk/cardano-node";
@@ -46,6 +52,12 @@ let
                 nix-store-path  = pkgs.findutils;
                 flake-reference = "github:input-output-hk/cardano-node";
                 flake-output = "legacyPackages.x86_64-linux.findutils";
+                installable = "${flake-reference}/${gitrev}#${flake-output}";
+              };
+              iputils = rec {
+                nix-store-path  = pkgs.iputils;
+                flake-reference = "github:input-output-hk/cardano-node";
+                flake-output = "legacyPackages.x86_64-linux.iputils";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
               gnutar = rec {
