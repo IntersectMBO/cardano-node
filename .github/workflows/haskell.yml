@@ -1,4 +1,4 @@
-name: Haskell Windows & Mac CI
+name: Haskell CI
 
 on:
   pull_request: # Required for workflows to be able to be approved from forks
@@ -31,7 +31,7 @@ jobs:
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2023-09-05"
+      CABAL_CACHE_VERSION: "2023-09-11"
 
       # Modify this value to "invalidate" the secp cache.
       SECP_CACHE_VERSION: "2022-12-30"
@@ -219,10 +219,18 @@ jobs:
 
   build-complete:
     needs: [build]
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
-    - name: Build complete
-      run: echo 'Build complete'
+    - name: Check if any previous job failed
+      run: |
+        if [[ "${{ needs.build.result }}" == "failure" ]]; then
+          # this ignores skipped dependencies
+          echo 'Required jobs failed to build.'
+          exit 1
+        else
+          echo 'Build complete'
+        fi
 
   release:
     needs: [build]
