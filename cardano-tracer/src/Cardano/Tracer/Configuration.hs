@@ -92,9 +92,11 @@ data TracerConfig = TracerConfig
   , hasEKG         :: !(Maybe (Endpoint, Endpoint)) -- ^ Endpoint for EKG web-page (list of nodes, monitoring).
   , hasPrometheus  :: !(Maybe Endpoint)             -- ^ Endpoint for Prometheus web-page.
   , hasRTView      :: !(Maybe Endpoint)             -- ^ Endpoint for RTView web-page.
-  , hasForwarding  :: !(Maybe ( Network             -- ^ Socket for tracer's to reforward on,
-                              , Maybe [[Text]]      -- ^ Reforward logs with these prefixes
-                              , Log.TraceOptionForwarder -- ^ The forwarder config.
+    -- | Socket for tracer's to reforward on. Second member of the triplet is the list of prefixes to reforward.
+    -- Third member of the triplet is the forwarder config.
+  , hasForwarding  :: !(Maybe ( Network
+                              , Maybe [[Text]]
+                              , Log.TraceOptionForwarder
                               ))
   , logging        :: !(NonEmpty LoggingParams)     -- ^ Logging parameters.
   , rotation       :: !(Maybe RotationParams)       -- ^ Rotation parameters.
