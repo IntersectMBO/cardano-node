@@ -20,6 +20,7 @@ let
       grep            = pkgs.gnugrep;
       jq              = pkgs.jq;
       cardano-cli     = pkgs.cardanoNodePackages.cardano-cli;
+      iputils         = pkgs.iputils;
     in {
       start = rec {
         # Assumptions:
@@ -123,6 +124,10 @@ let
               latency_topology_producers "''${node}"
             done
 
+############# DEBUG ############################################################
+            exit 0
+############# DEBUG ############################################################
+
             # Start the healthcheck infinite loop
             while true
             do
@@ -167,14 +172,41 @@ let
             do
               local host=$(${jq}/bin/jq --raw-output ".Producers[''${key}].addr" "''${topology_path}")
               local port=$(${jq}/bin/jq --raw-output ".Producers[''${key}].port" "''${topology_path}")
-              msg "'cardano-cli ping' of \"''${host}:''${port}\""
-              # If the ping fails the whole script must fail!
-              ${cardano-cli}/bin/cardano-cli ping \
-                --magic "''${network_magic}"      \
-                --count 3                         \
-                --json                            \
-                --host "''${host}"                \
-                --port "''${port}"
+
+                # If the ping fails the whole script must fail!
+################# DEBUG ########################################################
+                msg "'ping' of \"''${host}:''${port}\""
+
+                sleep 60
+                ${iputils}/bin/ping -D -c 60 -i 1 -n -O       "''${host}"
+                sleep 60
+                ${iputils}/bin/ping -D -c 60 -i 1 -n -O       "''${host}"
+                sleep 60
+                ${iputils}/bin/ping -D -c 60 -i 1 -n -O       "''${host}"
+                sleep 60
+                ${iputils}/bin/ping -D -c 60 -i 1 -n -O       "''${host}"
+                sleep 60
+
+                sleep 60
+                ${iputils}/bin/ping -D -c 60 -i 1 -n -O -s 16 "''${host}"
+                sleep 60
+                ${iputils}/bin/ping -D -c 60 -i 1 -n -O -s 16 "''${host}"
+                sleep 60
+                ${iputils}/bin/ping -D -c 60 -i 1 -n -O -s 16 "''${host}"
+                sleep 60
+                ${iputils}/bin/ping -D -c 60 -i 1 -n -O -s 16 "''${host}"
+                sleep 60
+
+                ${iputils}/bin/ping -D -c 60 -i 1 -n -O -s 65507 "''${host}"
+                sleep 60
+                ${iputils}/bin/ping -D -c 60 -i 1 -n -O -s 65507 "''${host}"
+                sleep 60
+                ${iputils}/bin/ping -D -c 60 -i 1 -n -O -s 65507 "''${host}"
+                sleep 60
+                ${iputils}/bin/ping -D -c 60 -i 1 -n -O -s 65507 "''${host}"
+                sleep 60
+################# DEBUG ########################################################
+
             done
           }
 

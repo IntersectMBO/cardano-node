@@ -49,7 +49,7 @@ backend_nomadcloud() {
 
     deploy-genesis )
       # It "overrides" completely `backend_nomad`'s `deploy-genesis`.
-      deploy-genesis-nomadcloud          "$@"
+      true
     ;;
 
     fetch-logs )
@@ -100,15 +100,15 @@ backend_nomadcloud() {
     ;;
 
     start-tracers )
-      backend_nomad start-tracers        "$@"
+      true
     ;;
 
     start-nodes )
-      backend_nomad start-nodes          "$@"
+      true
     ;;
 
     start-generator )
-      backend_nomad start-generator      "$@"
+      true
     ;;
 
     start-healthchecks )
@@ -136,7 +136,17 @@ backend_nomadcloud() {
     ;;
 
     wait-pools-stopped )
-      backend_nomad wait-pools-stopped   "$@"
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local start_time=$(date +%s)
+      msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
+      while ! test -f "${dir}"/flag/cluster-stopping
+      do
+        local elapsed="$(($(date +%s) - start_time))"
+        echo -ne "\b\b\b\b\b\b"
+        printf "%6d" "${elapsed}"
+        sleep 1
+      done
     ;;
 
     stop-all )
