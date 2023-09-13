@@ -1181,12 +1181,17 @@ let
       # On cloud deployments to SRE-managed Nomad, that uses AWS, the hosts at
       # Linux level may not be aware of the EIP public address they have so we
       # can't bind to the public IP (that we can resolve to using templates).
-      # I prefer being more specific but the "all-weather" alternative is to
-      # bind to 0.0.0.0 instead of the private IP, just in case the Nomad Client
-      # was not started with the correct `-network-interface XX` parameter.
+      # The only options available are to bind to the "all-weather" 0.0.0.0 or
+      # use the private IP provided by AWS. We use the latter in case the Nomad
+      # Client was not started with the correct `-network-interface XX`
+      # parameter.
       [
         # Address string to
-        ''--host-addr 0.0.0.0''
+        (
+          if lib.strings.hasInfix "cw-perf" profileData.profileName
+          then ''--host-addr {{ env "attr.unique.platform.aws.local-ipv4" }}''
+          else ''--host-addr 0.0.0.0''
+        )
         # Alternatives (may not work):
         #''--host-addr {{ env "NOMAD_HOST_IP_${servicePortName}" }}''
         #''--host-addr {{ env "NOMAD_IP_${servicePortName}" }}''
