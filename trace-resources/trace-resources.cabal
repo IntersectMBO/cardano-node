@@ -69,7 +69,7 @@ test-suite trace-resources-test
   build-depends:        base >=4.12 && <5
                       , trace-dispatcher
                       , text
-                      , aeson                         >= 2.1.0.0
+                      , aeson
                       , QuickCheck
                       , tasty
                       , tasty-quickcheck

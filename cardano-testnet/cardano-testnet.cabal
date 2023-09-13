@@ -140,7 +140,7 @@ test-suite cardano-testnet-golden
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4.7.0
+                      , hedgehog-extras
                       , process
                       , regex-compat
                       , tasty
@@ -151,7 +151,7 @@ test-suite cardano-testnet-golden
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
   build-tool-depends:   cardano-node:cardano-node
-                      , cardano-cli:cardano-cli ^>= 8.8
+                      , cardano-cli:cardano-cli
                       , cardano-submit-api:cardano-submit-api
                       , cardano-testnet:cardano-testnet
 
@@ -177,15 +177,15 @@ test-suite cardano-testnet-test
   build-depends:        aeson
                       , async
                       , bytestring
-                      , cardano-api ^>= 8.20
-                      , cardano-cli ^>= 8.8
+                      , cardano-api
+                      , cardano-cli
                       , cardano-crypto-class
                       , cardano-testnet
                       , containers
                       , directory
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4.7.0
+                      , hedgehog-extras
                       , process
                       , tasty
                       , text
@@ -195,6 +195,6 @@ test-suite cardano-testnet-test
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
   build-tool-depends:   cardano-node:cardano-node
-                      , cardano-cli:cardano-cli ^>= 8.8
+                      , cardano-cli:cardano-cli
                       , cardano-submit-api:cardano-submit-api
                       , cardano-testnet:cardano-testnet

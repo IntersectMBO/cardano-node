@@ -209,7 +209,7 @@ library demo-forwarder-lib
                       , deepseq
                       , directory
                       , ekg-core
-                      , ekg-forward ^>= 0.4
+                      , ekg-forward
                       , extra
                       , filepath
                       , generic-data
@@ -304,7 +304,7 @@ test-suite cardano-tracer-test
                       , deepseq
                       , directory
                       , ekg-core
-                      , ekg-forward ^>= 0.4
+                      , ekg-forward
                       , extra
                       , filepath
                       , generic-data
@@ -358,13 +358,13 @@ test-suite cardano-tracer-test-ext
                       , deepseq
                       , directory
                       , ekg-core
-                      , ekg-forward ^>= 0.4
+                      , ekg-forward
                       , extra
                       , filepath
                       , generic-data
                       , Glob
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.9.1
+                      , ouroboros-network
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , process

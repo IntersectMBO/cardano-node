@@ -86,8 +86,8 @@ executable cardano-submit-api
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-T -I0"
   build-depends:        base
                       , optparse-applicative-fork
-                      , cardano-cli ^>= 8.8
-                      , cardano-crypto-class ^>= 2.1.2
+                      , cardano-cli
+                      , cardano-crypto-class
                       , cardano-submit-api
 
 test-suite unit

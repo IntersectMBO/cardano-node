@@ -133,7 +133,7 @@ library
   autogen-modules:      Paths_cardano_node
 
   build-depends:        base
-                      , aeson >= 1.5.6.0
+                      , aeson >= 2.1.0.0
                       , async
                       , base16-bytestring
                       , bytestring
@@ -176,7 +176,7 @@ library
                       , network-mux >= 0.4
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-consensus
+                      , ouroboros-consensus ^>= 0.11
                       , ouroboros-consensus-cardano ^>= 0.9
                       , ouroboros-consensus-diffusion ^>= 0.8
                       , ouroboros-consensus-protocol
@@ -225,7 +225,7 @@ executable cardano-node
                       , cardano-git-rev
                       , cardano-node
                       , optparse-applicative-fork
-                      , text >= 2.0
+                      , text
 
 test-suite cardano-node-test
   import:               project-config
@@ -235,13 +235,13 @@ test-suite cardano-node-test
   type:                 exitcode-stdio-1.0
 
   build-depends:        base
-                      , aeson >= 1.5.6.0
+                      , aeson
                       , bytestring
                       , cardano-crypto-class
-                      , cardano-api ^>= 8.20
+                      , cardano-api
                       , cardano-ledger-core
                       , cardano-node
-                      , cardano-slotting >= 0.1
+                      , cardano-slotting
                       , directory
                       , filepath
                       , hedgehog
@@ -249,13 +249,13 @@ test-suite cardano-node-test
                       , hedgehog-extras
                       , iproute
                       , mtl
-                      , ouroboros-consensus >= 0.9
+                      , ouroboros-consensus
                       , ouroboros-consensus-cardano
-                      , ouroboros-consensus-diffusion >= 0.7
-                      , ouroboros-network ^>= 0.9.1
+                      , ouroboros-consensus-diffusion
+                      , ouroboros-network
                       , ouroboros-network-api
                       , strict-sop-core
-                      , text >= 2.0
+                      , text
                       , time
                       , transformers
                       , vector
