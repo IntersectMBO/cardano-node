@@ -16,7 +16,8 @@ import qualified Codec.CBOR.Term as CBOR
 
 import           Ouroboros.Network.CodecCBORTerm
 import           Ouroboros.Network.Magic
-import           Ouroboros.Network.Protocol.Handshake.Version (Accept (..), Acceptable (..), Queryable (..))
+import           Ouroboros.Network.Protocol.Handshake.Version (Accept (..), Acceptable (..),
+                   Queryable (..))
 
 data ForwardingVersion
   = ForwardingV_1

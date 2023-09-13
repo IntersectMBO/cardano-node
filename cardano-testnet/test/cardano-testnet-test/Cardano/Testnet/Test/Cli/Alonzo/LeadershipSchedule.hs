@@ -36,10 +36,10 @@ import           System.FilePath ((</>))
 import qualified System.Info as SYS
 import qualified Testnet.Process.Run as H
 
-import           Cardano.Api (AlonzoEra, SerialiseAddress (serialiseAddress), UTxO (UTxO))
+import           Cardano.Api (AlonzoEra, DelegationsAndRewards, SerialiseAddress (serialiseAddress),
+                   UTxO (UTxO), mergeDelegsAndRewards)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Shelley (PoolId)
-import           Cardano.CLI.Legacy.Run.Query (DelegationsAndRewards, mergeDelegsAndRewards)
 import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (mEpoch))
 
 import           Cardano.Testnet

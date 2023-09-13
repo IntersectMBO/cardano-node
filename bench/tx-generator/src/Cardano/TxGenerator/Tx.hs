@@ -13,7 +13,7 @@ import           Data.Function ((&))
 import           Data.Maybe (mapMaybe)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters)
+import           Cardano.Api.Shelley (ProtocolParameters, convertToLedgerProtocolParameters)
 
 import           Cardano.TxGenerator.Fund
 import           Cardano.TxGenerator.Types
@@ -166,20 +166,23 @@ genTx :: forall era. ()
   -> TxMetadataInEra era
   -> TxGenerator era
 genTx _era protocolParameters (collateral, collFunds) fee metadata inFunds outputs
-  = bimap
-      ApiError
-      (\b -> (signShelleyTransaction b $ map WitnessPaymentKey allKeys, getTxId b))
-      (createAndValidateTransactionBody txBodyContent)
+  = case convertToLedgerProtocolParameters shelleyBasedEra protocolParameters of
+      Right ledgerParameters ->
+        bimap
+          ApiError
+          (\b -> (signShelleyTransaction b $ map WitnessPaymentKey allKeys, getTxId b))
+          (createAndValidateTransactionBody (txBodyContent ledgerParameters)) 
+      Left err -> Left (ApiError err)
  where
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
-  txBodyContent = defaultTxBodyContent
+  txBodyContent ledgerParameters = defaultTxBodyContent
     & setTxIns (map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds)
     & setTxInsCollateral collateral
     & setTxOuts outputs
     & setTxFee fee
     & setTxValidityRange (TxValidityNoLowerBound, upperBound)
     & setTxMetadata metadata
-    & setTxProtocolParams (BuildTxWith (Just protocolParameters))
+    & setTxProtocolParams (BuildTxWith (Just ledgerParameters))
 
   upperBound :: TxValidityUpperBound era
   upperBound = case shelleyBasedEra @era of

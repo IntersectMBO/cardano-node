@@ -18,6 +18,8 @@ module Cardano.Node.Tracing.Era.HardFork ()
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 
 import           Data.Aeson
+import           Data.Proxy (Proxy (..))
+import           Data.SOP (All, Compose, K (K))
 import           Data.SOP.Strict
 
 import           Cardano.Logging

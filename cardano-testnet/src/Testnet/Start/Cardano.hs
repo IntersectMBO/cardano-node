@@ -70,7 +70,8 @@ import           Testnet.Runtime as TR
 import           Testnet.Start.Byron hiding (TestnetOptions (..))
 import           Testnet.Start.Shelley
 
-import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency (..), WarmValency (..))
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
+                   WarmValency (..))
 
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Redundant id" -}

@@ -139,6 +139,9 @@ data NodeConfiguration
        , ncTargetNumberOfKnownPeers       :: Int
        , ncTargetNumberOfEstablishedPeers :: Int
        , ncTargetNumberOfActivePeers      :: Int
+       , ncTargetNumberOfKnownBigLedgerPeers       :: Int
+       , ncTargetNumberOfEstablishedBigLedgerPeers :: Int
+       , ncTargetNumberOfActiveBigLedgerPeers      :: Int
 
          -- Enable experimental P2P mode
        , ncEnableP2P :: SomeNetworkP2PMode
@@ -196,6 +199,9 @@ data PartialNodeConfiguration
        , pncTargetNumberOfKnownPeers       :: !(Last Int)
        , pncTargetNumberOfEstablishedPeers :: !(Last Int)
        , pncTargetNumberOfActivePeers      :: !(Last Int)
+       , pncTargetNumberOfKnownBigLedgerPeers       :: !(Last Int)
+       , pncTargetNumberOfEstablishedBigLedgerPeers :: !(Last Int)
+       , pncTargetNumberOfActiveBigLedgerPeers      :: !(Last Int)
 
          -- Enable experimental P2P mode
        , pncEnableP2P :: !(Last NetworkP2PMode)
@@ -282,6 +288,9 @@ instance FromJSON PartialNodeConfiguration where
       pncTargetNumberOfKnownPeers       <- Last <$> v .:? "TargetNumberOfKnownPeers"
       pncTargetNumberOfEstablishedPeers <- Last <$> v .:? "TargetNumberOfEstablishedPeers"
       pncTargetNumberOfActivePeers      <- Last <$> v .:? "TargetNumberOfActivePeers"
+      pncTargetNumberOfKnownBigLedgerPeers       <- Last <$> v .:? "TargetNumberOfKnownBigLedgerPeers"
+      pncTargetNumberOfEstablishedBigLedgerPeers <- Last <$> v .:? "TargetNumberOfEstablishedBigLedgerPeers"
+      pncTargetNumberOfActiveBigLedgerPeers      <- Last <$> v .:? "TargetNumberOfActiveBigLedgerPeers"
 
       -- Enable P2P switch
       p2pSwitch <- v .:? "EnableP2P" .!= Just False
@@ -322,6 +331,9 @@ instance FromJSON PartialNodeConfiguration where
            , pncTargetNumberOfKnownPeers
            , pncTargetNumberOfEstablishedPeers
            , pncTargetNumberOfActivePeers
+           , pncTargetNumberOfKnownBigLedgerPeers
+           , pncTargetNumberOfEstablishedBigLedgerPeers
+           , pncTargetNumberOfActiveBigLedgerPeers
            , pncEnableP2P
            , pncPeerSharing
            }
@@ -489,10 +501,13 @@ defaultPartialNodeConfiguration =
         , acceptedConnectionsSoftLimit = 384
         , acceptedConnectionsDelay     = 5
         }
-    , pncTargetNumberOfRootPeers        = Last (Just 100)
-    , pncTargetNumberOfKnownPeers       = Last (Just 100)
-    , pncTargetNumberOfEstablishedPeers = Last (Just 50)
-    , pncTargetNumberOfActivePeers      = Last (Just 20)
+    , pncTargetNumberOfRootPeers        = Last (Just 85)
+    , pncTargetNumberOfKnownPeers       = Last (Just 85)
+    , pncTargetNumberOfEstablishedPeers = Last (Just 40)
+    , pncTargetNumberOfActivePeers      = Last (Just 15)
+    , pncTargetNumberOfKnownBigLedgerPeers       = Last (Just 15)
+    , pncTargetNumberOfEstablishedBigLedgerPeers = Last (Just 10)
+    , pncTargetNumberOfActiveBigLedgerPeers      = Last (Just 5)
     , pncEnableP2P                      = Last (Just DisabledP2PMode)
     , pncPeerSharing                    = Last (Just NoPeerSharing)
     }
@@ -528,6 +543,15 @@ makeNodeConfiguration pnc = do
   ncTargetNumberOfActivePeers <-
     lastToEither "Missing TargetNumberOfActivePeers"
     $ pncTargetNumberOfActivePeers pnc
+  ncTargetNumberOfKnownBigLedgerPeers <-
+    lastToEither "Missing TargetNumberOfKnownBigLedgerPeers"
+    $ pncTargetNumberOfKnownBigLedgerPeers pnc
+  ncTargetNumberOfEstablishedBigLedgerPeers <-
+    lastToEither "Missing TargetNumberOfEstablishedBigLedgerPeers"
+    $ pncTargetNumberOfEstablishedBigLedgerPeers pnc
+  ncTargetNumberOfActiveBigLedgerPeers <-
+    lastToEither "Missing TargetNumberOfActiveBigLedgerPeers"
+    $ pncTargetNumberOfActiveBigLedgerPeers pnc
   ncProtocolIdleTimeout <-
     lastToEither "Missing ProtocolIdleTimeout"
     $ pncProtocolIdleTimeout pnc
@@ -583,6 +607,9 @@ makeNodeConfiguration pnc = do
              , ncTargetNumberOfKnownPeers
              , ncTargetNumberOfEstablishedPeers
              , ncTargetNumberOfActivePeers
+             , ncTargetNumberOfKnownBigLedgerPeers
+             , ncTargetNumberOfEstablishedBigLedgerPeers
+             , ncTargetNumberOfActiveBigLedgerPeers
              , ncEnableP2P = case enableP2P of
                  EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
                  DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode

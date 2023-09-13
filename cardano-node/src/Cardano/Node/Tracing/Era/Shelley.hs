@@ -68,7 +68,7 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
-import           Data.Aeson (ToJSON (..), Value (..), object, (.=))
+import           Data.Aeson (ToJSON (..), Value (..), (.=))
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
@@ -92,12 +92,8 @@ instance
 instance LogFormatting (Set (Credential 'Staking StandardCrypto)) where
   forMachine _dtal creds =
     mconcat [ "kind" .= String "StakeCreds"
-             , "stakeCreds" .= map forMachine' (Set.toList creds)
+             , "stakeCreds" .= map toJSON (Set.toList creds)
              ]
-    where
-      forMachine' = object . \case
-        ScriptHashObj sHash -> ["scriptHash" .= renderScriptHash sHash]
-        KeyHashObj keyHash -> ["keyHash" .= textShow keyHash]
 
 instance
   ( LogFormatting (PredicateFailure (Ledger.EraRule "DELEG" era))
@@ -1105,6 +1101,26 @@ instance
   forMachine _ (Conway.MalformedProposal govAction) =
     mconcat [ "kind" .= String "MalformedProposal"
             , "govAction" .= govAction
+            ]
+  forMachine _ (Conway.ProposalProcedureNetworkIdMismatch rewardAcnt network) =
+    mconcat [ "kind" .= String "ProposalProcedureNetworkIdMismatch"
+            , "rewardAccount" .= toJSON rewardAcnt
+            , "expectedNetworkId" .= toJSON network
+            ]
+  forMachine _ (Conway.TreasuryWithdrawalsNetworkIdMismatch rewardAcnts network) =
+    mconcat [ "kind" .= String "TreasuryWithdrawalsNetworkIdMismatch"
+            , "rewardAccounts" .= toJSON rewardAcnts
+            , "expectedNetworkId" .= toJSON network
+            ]
+  forMachine _ (Conway.NewCommitteeSizeTooSmall committeeSize minCommitteeSize) =
+    mconcat [ "kind" .= String "NewCommitteeSizeTooSmall"
+            , "committeeSize" .= committeeSize
+            , "minCommitteeSize" .= minCommitteeSize
+            ]
+  forMachine _ (Conway.ProposalDepositIncorrect deposit expectedDeposit) =
+    mconcat [ "kind" .= String "ProposalDepositIncorrect"
+            , "deposit" .= deposit
+            , "expectedDeposit" .= expectedDeposit
             ]
 
 instance

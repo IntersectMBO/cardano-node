@@ -14,8 +14,7 @@ module Trace.Forward.Protocol.DataPoint.Acceptor
   , dataPointAcceptorPeer
   ) where
 
-import           Network.TypedProtocol.Core (Peer (..), PeerHasAgency (..),
-                                             PeerRole (..))
+import           Network.TypedProtocol.Core (Peer (..), PeerHasAgency (..), PeerRole (..))
 
 import           Trace.Forward.Protocol.DataPoint.Type
 

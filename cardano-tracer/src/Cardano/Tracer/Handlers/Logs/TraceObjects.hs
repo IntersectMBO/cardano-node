@@ -36,7 +36,7 @@ traceObjectsHandler tracerEnv nodeId traceObjects = do
   whenJust hasRTView . const $
     saveTraceObjects teSavedTO nodeId traceObjects
   teReforwardTraceObjects traceObjects
-    
+
  where
   TracerEnv{teConfig, teCurrentLogLock, teSavedTO, teReforwardTraceObjects}
     = tracerEnv

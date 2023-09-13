@@ -7,13 +7,11 @@ module Cardano.Logging.Resources.Linux
     ) where
 
 import           Cardano.Logging.Resources.Types
-import           Data.Maybe                      (fromMaybe)
+import           Data.Maybe (fromMaybe)
 import           Data.Word
-import qualified GHC.Stats                       as GhcStats
-import           System.Posix.Files              (fileMode, getFileStatus,
-                                                  intersectFileModes,
-                                                  ownerReadMode)
-import           Text.Read                       (readMaybe)
+import qualified GHC.Stats as GhcStats
+import           System.Posix.Files (fileMode, getFileStatus, intersectFileModes, ownerReadMode)
+import           Text.Read (readMaybe)
 
 -- * Disk IO stats:
 -- /proc/[pid]/io (since kernel 2.6.20)

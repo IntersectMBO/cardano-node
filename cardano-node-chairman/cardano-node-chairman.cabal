@@ -44,7 +44,7 @@ executable cardano-node-chairman
   build-depends:        cardano-api
                       , cardano-crypto-class ^>= 2.1.2
                       , cardano-git-rev
-                      , cardano-node
+                      , cardano-node ^>= 8.3
                       , cardano-prelude
                       , containers
                       , contra-tracer
@@ -88,5 +88,5 @@ test-suite chairman-tests
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
   build-tool-depends:   cardano-node:cardano-node
-                      , cardano-cli:cardano-cli ^>= 8.6.1
+                      , cardano-cli:cardano-cli ^>= 8.8
                       , cardano-node-chairman:cardano-node-chairman

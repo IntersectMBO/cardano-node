@@ -1,5 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Acceptors.Utils
   ( notifyAboutNodeDisconnected
@@ -9,7 +9,7 @@ module Cardano.Tracer.Acceptors.Utils
   ) where
 
 import           Control.Concurrent.STM (atomically)
-import           Control.Concurrent.STM.TVar (TVar, newTVarIO, modifyTVar')
+import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO)
 import qualified Data.Bimap as BM
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S

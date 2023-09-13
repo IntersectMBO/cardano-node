@@ -12,7 +12,7 @@ import           Data.Text (Text)
 import           GHC.Generics
 import           Test.QuickCheck
 
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
+import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
 data Severity = Debug | Info | Notice
   deriving (Show, Eq, Ord, Enum, Generic)

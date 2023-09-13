@@ -9,9 +9,8 @@ module Cardano.Tracer.Handlers.Metrics.Monitoring
 
 import           Control.Concurrent (ThreadId)
 import           Control.Concurrent.STM (atomically)
+import           Control.Concurrent.STM.TMVar (TMVar, newEmptyTMVarIO, putTMVar, tryReadTMVar)
 import           Control.Concurrent.STM.TVar (readTVarIO)
-import           Control.Concurrent.STM.TMVar (TMVar, newEmptyTMVarIO, putTMVar,
-                   tryReadTMVar)
 import           Control.Monad (forM, void)
 import           Control.Monad.Extra (whenJust)
 import qualified Data.Map.Strict as M
@@ -19,7 +18,7 @@ import qualified Data.Set as S
 import qualified Data.Text as T
 import           Data.Text.Encoding (encodeUtf8)
 import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core (UI, Element, liftIO, set, (#), (#+))
+import           Graphics.UI.Threepenny.Core (Element, UI, liftIO, set, (#), (#+))
 import           System.Remote.Monitoring (forkServerWith, serverThreadId)
 import           System.Time.Extra (sleep)
 

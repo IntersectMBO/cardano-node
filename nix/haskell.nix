@@ -316,6 +316,12 @@ let
             packages.terminal-size.components.library.build-tools = lib.mkForce [ ];
             packages.network.components.library.build-tools = lib.mkForce [ ];
           })
+          ({ ... }: {
+            # TODO: requires
+            # https://github.com/input-output-hk/ouroboros-network/pull/4673 or
+            # a newer ghc
+            packages.ouroboros-network-framework.doHaddock = false;
+          })
           # TODO add flags to packages (like cs-ledger) so we can turn off tests that will
           # not build for windows on a per package bases (rather than using --disable-tests).
           # configureArgs = lib.optionalString stdenv.hostPlatform.isWindows "--disable-tests";

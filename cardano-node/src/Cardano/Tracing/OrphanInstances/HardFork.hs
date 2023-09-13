@@ -21,20 +21,14 @@ module Cardano.Tracing.OrphanInstances.HardFork () where
 import           Data.Aeson
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Short as SBS
+import           Data.Proxy (Proxy (..))
+import           Data.SOP (All, Compose, K (..))
 import           Data.SOP.Strict
 
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 
 import           Cardano.Slotting.Slot (EpochSize (..))
-import           Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common (
-                   HardForkNodeToClientVersion (..),
-                   HardForkSpecificNodeToClientVersion (..),
-                   HardForkSpecificNodeToNodeVersion (..),
-                   EraNodeToClientVersion (..),
-                   EraNodeToNodeVersion (..),
-                   HardForkNodeToNodeVersion (..)
-                   )
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateInfo,
                    ForgeStateUpdateError)
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
@@ -46,12 +40,17 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch
                    OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraValidationErr (..),
                    mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
+import           Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common
+                   (EraNodeToClientVersion (..), EraNodeToNodeVersion (..),
+                   HardForkNodeToClientVersion (..), HardForkNodeToNodeVersion (..),
+                   HardForkSpecificNodeToClientVersion (..), HardForkSpecificNodeToNodeVersion (..))
 import           Ouroboros.Consensus.HardFork.History.EraParams (EraParams (..), SafeZone)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
-import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion, BlockNodeToNodeVersion)
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
+                   BlockNodeToNodeVersion)
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))

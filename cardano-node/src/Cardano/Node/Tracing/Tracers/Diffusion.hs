@@ -763,23 +763,37 @@ instance MetaTrace (ND.DiffusionTracer ntnAddr ntcAddr) where
 --------------------------------------------------------------------------------
 
 instance LogFormatting TraceLedgerPeers where
-  forMachine _dtal (PickedPeer addr _ackStake stake) =
+  forMachine _dtal (PickedLedgerPeer addr _ackStake stake) =
     mconcat
-      [ "kind" .= String "PickedPeer"
+      [ "kind" .= String "PickedLedgerPeer"
       , "address" .= show addr
       , "relativeStake" .= (realToFrac (unPoolStake stake) :: Double)
       ]
-  forMachine _dtal (PickedPeers (NumberOfPeers n) addrs) =
+  forMachine _dtal (PickedLedgerPeers (NumberOfPeers n) addrs) =
     mconcat
-      [ "kind" .= String "PickedPeers"
+      [ "kind" .= String "PickedLedgerPeers"
       , "desiredCount" .= n
       , "count" .= List.length addrs
       , "addresses" .= show addrs
       ]
-  forMachine _dtal (FetchingNewLedgerState cnt) =
+  forMachine _dtal (PickedBigLedgerPeer addr _ackStake stake) =
+    mconcat
+      [ "kind" .= String "PickedBigLedgerPeer"
+      , "address" .= show addr
+      , "relativeStake" .= (realToFrac (unPoolStake stake) :: Double)
+      ]
+  forMachine _dtal (PickedBigLedgerPeers (NumberOfPeers n) addrs) =
+    mconcat
+      [ "kind" .= String "PickedBigLedgerPeers"
+      , "desiredCount" .= n
+      , "count" .= List.length addrs
+      , "addresses" .= show addrs
+      ]
+  forMachine _dtal (FetchingNewLedgerState cnt bigCnt) =
     mconcat
       [ "kind" .= String "FetchingNewLedgerState"
-      , "numberOfPools" .= cnt
+      , "numberOfLedgerPeers" .= cnt
+      , "numberOfBigLedgerPeers" .= bigCnt
       ]
   forMachine _dtal DisabledLedgerPeers =
     mconcat
@@ -805,16 +819,32 @@ instance LogFormatting TraceLedgerPeers where
       , "numberOfPools" .= cnt
       , "ledgerStateAge" .= age
       ]
-  forMachine _dtal FallingBackToBootstrapPeers =
+  forMachine _dtal FallingBackToPublicRootPeers =
     mconcat
-      [ "kind" .= String "FallingBackToBootstrapPeers"
+      [ "kind" .= String "FallingBackToPublicRootPeers"
+      ]
+  forMachine _dtal (NotEnoughLedgerPeers (NumberOfPeers target) numOfLedgerPeers) =
+    mconcat
+      [ "kind" .= String "NotEnoughLedgerPeers"
+      , "target" .= target
+      , "numOfLedgerPeers" .= numOfLedgerPeers
+      ]
+  forMachine _dtal (NotEnoughBigLedgerPeers (NumberOfPeers target) numOfBigLedgerPeers) =
+    mconcat
+      [ "kind" .= String "NotEnoughBigLedgerPeers"
+      , "target" .= target
+      , "numOfBigLedgerPeers" .= numOfBigLedgerPeers
       ]
 
 instance MetaTrace TraceLedgerPeers where
-    namespaceFor PickedPeer {} =
-      Namespace [] ["PickedPeer"]
-    namespaceFor PickedPeers {} =
-      Namespace [] ["PickedPeers"]
+    namespaceFor PickedLedgerPeer {} =
+      Namespace [] ["PickedLedgerPeer"]
+    namespaceFor PickedLedgerPeers {} =
+      Namespace [] ["PickedLedgerPeers"]
+    namespaceFor PickedBigLedgerPeer {} =
+      Namespace [] ["PickedBigLedgerPeer"]
+    namespaceFor PickedBigLedgerPeers {} =
+      Namespace [] ["PickedBigLedgerPeers"]
     namespaceFor FetchingNewLedgerState {} =
       Namespace [] ["FetchingNewLedgerState"]
     namespaceFor DisabledLedgerPeers {} =
@@ -827,8 +857,12 @@ instance MetaTrace TraceLedgerPeers where
       Namespace [] ["RequestForPeers"]
     namespaceFor ReusingLedgerState {} =
       Namespace [] ["ReusingLedgerState"]
-    namespaceFor FallingBackToBootstrapPeers {} =
-      Namespace [] ["FallingBackToBootstrapPeers"]
+    namespaceFor FallingBackToPublicRootPeers {} =
+      Namespace [] ["FallingBackToPublicRootPeers"]
+    namespaceFor NotEnoughLedgerPeers {} =
+      Namespace [] ["NotEnoughLedgerPeers"]
+    namespaceFor NotEnoughBigLedgerPeers {} =
+      Namespace [] ["NotEnoughBigLedgerPeers"]
 
     severityFor (Namespace _ ["PickedPeer"]) _ = Just Debug
     severityFor (Namespace _ ["PickedPeers"]) _ = Just Info
@@ -838,7 +872,9 @@ instance MetaTrace TraceLedgerPeers where
     severityFor (Namespace _ ["WaitingOnRequest"]) _ = Just Debug
     severityFor (Namespace _ ["RequestForPeers"]) _ = Just Debug
     severityFor (Namespace _ ["ReusingLedgerState"]) _ = Just Debug
-    severityFor (Namespace _ ["FallingBackToBootstrapPeers"]) _ = Just Info
+    severityFor (Namespace _ ["FallingBackToPublicRootPeers"]) _ = Just Info
+    severityFor (Namespace _ ["NotEnoughLedgerPeers"]) _ = Just Warning
+    severityFor (Namespace _ ["NotEnoughBigLedgerPeers"]) _ = Just Warning
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["PickedPeer"]) = Just
@@ -859,7 +895,7 @@ instance MetaTrace TraceLedgerPeers where
       "RequestForPeers (NumberOfPeers 1)"
     documentFor (Namespace _ ["ReusingLedgerState"]) = Just
       ""
-    documentFor (Namespace _ ["FallingBackToBootstrapPeers"]) = Just
+    documentFor (Namespace _ ["FallingBackToPublicRootPeers"]) = Just
       ""
     documentFor _ = Nothing
 
@@ -872,5 +908,5 @@ instance MetaTrace TraceLedgerPeers where
       , Namespace [] ["WaitingOnRequest"]
       , Namespace [] ["RequestForPeers"]
       , Namespace [] ["ReusingLedgerState"]
-      , Namespace [] ["FallingBackToBootstrapPeers"]
+      , Namespace [] ["FallingBackToPublicRootPeers"]
       ]

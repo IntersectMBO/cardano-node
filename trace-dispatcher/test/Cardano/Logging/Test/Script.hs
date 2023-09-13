@@ -21,7 +21,7 @@ import           Data.Time.Clock.System
 import           Test.QuickCheck
 
 import           Cardano.Logging
-import           Cardano.Logging.Test.Config()
+import           Cardano.Logging.Test.Config ()
 import           Cardano.Logging.Test.Tracer
 import           Cardano.Logging.Test.Types
 

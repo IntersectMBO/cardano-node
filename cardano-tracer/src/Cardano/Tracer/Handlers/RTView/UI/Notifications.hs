@@ -26,8 +26,8 @@ import           Cardano.Tracer.Handlers.RTView.Notifications.Settings
 import           Cardano.Tracer.Handlers.RTView.Notifications.Timer
 import           Cardano.Tracer.Handlers.RTView.Notifications.Types
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
-import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
+import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
 
 restoreEmailSettings :: TracerEnv -> UI ()

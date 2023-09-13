@@ -40,9 +40,9 @@ import           Data.Maybe (catMaybes)
 import qualified Data.Set as S
 import           Data.Text (pack, unpack)
 import           Graphics.UI.Threepenny.Core
-import           Text.Read (readMaybe)
 import           System.Directory.Extra (listFiles)
-import           System.FilePath ((</>), takeBaseName)
+import           System.FilePath (takeBaseName, (</>))
+import           Text.Read (readMaybe)
 
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Historical

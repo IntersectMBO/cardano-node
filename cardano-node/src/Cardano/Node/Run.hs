@@ -120,8 +120,8 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Tracing.Tracers
-import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency, WarmValency)
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -759,6 +759,9 @@ mkP2PArguments NodeConfiguration {
                  ncTargetNumberOfKnownPeers,
                  ncTargetNumberOfEstablishedPeers,
                  ncTargetNumberOfActivePeers,
+                 ncTargetNumberOfKnownBigLedgerPeers,
+                 ncTargetNumberOfEstablishedBigLedgerPeers,
+                 ncTargetNumberOfActiveBigLedgerPeers,
                  ncProtocolIdleTimeout,
                  ncTimeWaitTimeout,
                  ncPeerSharing
@@ -782,7 +785,10 @@ mkP2PArguments NodeConfiguration {
         targetNumberOfRootPeers        = ncTargetNumberOfRootPeers,
         targetNumberOfKnownPeers       = ncTargetNumberOfKnownPeers,
         targetNumberOfEstablishedPeers = ncTargetNumberOfEstablishedPeers,
-        targetNumberOfActivePeers      = ncTargetNumberOfActivePeers
+        targetNumberOfActivePeers      = ncTargetNumberOfActivePeers,
+        targetNumberOfKnownBigLedgerPeers       = ncTargetNumberOfKnownBigLedgerPeers,
+        targetNumberOfEstablishedBigLedgerPeers = ncTargetNumberOfEstablishedBigLedgerPeers,
+        targetNumberOfActiveBigLedgerPeers      = ncTargetNumberOfActiveBigLedgerPeers
     }
 
 mkNonP2PArguments

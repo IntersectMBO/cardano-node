@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2023-08-09T22:19:16Z
-  , cardano-haskell-packages 2023-09-01T20:45:06Z
+  , hackage.haskell.org 2023-09-01T22:19:16Z
+  , cardano-haskell-packages 2023-09-13T07:36:37Z
 
 packages:
   cardano-git-rev
@@ -100,6 +100,11 @@ write-ghc-environment-files: always
 package snap-server
   flags: +openssl
 
+package bitvec
+   flags: -simd
+
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- `smtp-mail` should depend on `crypton-connection` rather than `connection`!

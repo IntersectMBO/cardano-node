@@ -11,8 +11,8 @@ import           Data.Monoid
 import           Data.Version (showVersion)
 import           Options.Applicative
 import           Paths_cardano_node_chairman (version)
-import           System.IO (IO)
 import           System.Info (arch, compilerName, compilerVersion, os)
+import           System.IO (IO)
 import           Text.Show
 
 import qualified Data.Text as T

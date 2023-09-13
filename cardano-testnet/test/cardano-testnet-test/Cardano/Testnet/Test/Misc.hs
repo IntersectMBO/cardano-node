@@ -5,7 +5,7 @@ import           Prelude
 import           Data.List (isInfixOf)
 import qualified GHC.Stack as GHC
 
-import           Cardano.CLI.Legacy.Run.Query
+import           Cardano.CLI.EraBased.Run.Query (renderOpCertIntervalInformation)
 import           Cardano.CLI.Types.Common
 import           Cardano.CLI.Types.Output
 

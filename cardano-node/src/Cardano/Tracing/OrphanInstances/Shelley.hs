@@ -213,16 +213,11 @@ instance ToObject (Conway.ConwayDelegPredFailure era) where
       , "error" .= String "Wrong certificate type"
       ]
 
-
 instance ToObject (Set (Credential 'Staking StandardCrypto)) where
   toObject _verb creds =
     mconcat [ "kind" .= String "StakeCreds"
-             , "stakeCreds" .= map toObject' (Set.toList creds)
+             , "stakeCreds" .= map toJSON (Set.toList creds)
              ]
-    where
-      toObject' = object . \case
-        ScriptHashObj sHash -> ["scriptHash" .= renderScriptHash sHash]
-        KeyHashObj keyHash -> ["keyHash" .= textShow keyHash]
 
 instance
   ( Ledger.Era ledgerera
@@ -348,6 +343,26 @@ instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) whe
   toObject _ (Conway.MalformedProposal govAction) =
     mconcat [ "kind" .= String "MalformedProposal"
             , "govAction" .= govAction
+            ]
+  toObject _ (Conway.ProposalProcedureNetworkIdMismatch rewardAcnt network) =
+    mconcat [ "kind" .= String "ProposalProcedureNetworkIdMismatch"
+            , "rewardAccount" .= toJSON rewardAcnt
+            , "expectedNetworkId" .= toJSON network
+            ]
+  toObject _ (Conway.TreasuryWithdrawalsNetworkIdMismatch rewardAcnts network) =
+    mconcat [ "kind" .= String "TreasuryWithdrawalsNetworkIdMismatch"
+            , "rewardAccounts" .= toJSON rewardAcnts
+            , "expectedNetworkId" .= toJSON network
+            ]
+  toObject _ (Conway.NewCommitteeSizeTooSmall committeeSize minCommitteeSize) =
+    mconcat [ "kind" .= String "NewCommitteeSizeTooSmall"
+            , "committeeSize" .= committeeSize
+            , "minCommitteeSize" .= minCommitteeSize
+            ]
+  toObject _ (Conway.ProposalDepositIncorrect deposit expectedDeposit) =
+    mconcat [ "kind" .= String "ProposalDepositIncorrect"
+            , "deposit" .= deposit
+            , "expectedDeposit" .= expectedDeposit
             ]
 
 instance

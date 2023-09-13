@@ -6,9 +6,9 @@
 
 module Cardano.Tracing.Startup where
 
+import           Data.Aeson (ToJSON)
 import           Data.Text (Text)
 import           Prelude
-import           Data.Aeson (ToJSON)
 
 import           Cardano.Logging (LogFormatting (..))
 import           Cardano.Node.Startup

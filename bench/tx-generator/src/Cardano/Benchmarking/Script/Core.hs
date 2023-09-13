@@ -35,10 +35,13 @@ import qualified Data.Text as Text (unpack)
 import           Prelude
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
+import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..),
+                   ProtocolParameters, ShelleyLedgerEra,
                    protocolParamMaxTxExUnits, protocolParamPrices)
 
 import           Cardano.Logging hiding(LocalSocket)
+
+import qualified Cardano.Ledger.Core as Ledger
 
 import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
@@ -175,25 +178,29 @@ queryRemoteProtocolParameters = do
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
   era <- queryEra
   let
-    callQuery :: forall a. Show a => QueryInMode CardanoMode (Either a ProtocolParameters) -> ActionM ProtocolParameters
-    callQuery query = do
-      res <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) query
-      case res of
-        Right (Right pp) -> do
-          let pparamsFile = "protocol-parameters-queried.json"
-          liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp
-          traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
-          return pp
-        Right (Left err) -> liftTxGenError $ TxGenError $ show err
-        Left err -> liftTxGenError $ TxGenError $ show err
+    callQuery :: forall era.
+                 EraInMode era CardanoMode
+              -> QueryInEra era (Ledger.PParams (ShelleyLedgerEra era))
+              -> ActionM ProtocolParameters
+    callQuery eraInMode query@(QueryInShelleyBasedEra shelleyEra _) = do
+        res <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) (QueryInEra eraInMode query)
+        case res of
+          Right (Right pp) -> do
+            let pp' = fromLedgerPParams shelleyEra pp 
+                pparamsFile = "protocol-parameters-queried.json"
+            liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp'
+            traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
+            return pp'
+          Right (Left err) -> liftTxGenError $ TxGenError $ show err
+          Left err -> liftTxGenError $ TxGenError $ show err
   case era of
     AnyCardanoEra ByronEra   -> liftTxGenError $ TxGenError "queryRemoteProtocolParameters Byron not supported"
-    AnyCardanoEra ShelleyEra -> callQuery $ QueryInEra ShelleyEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraShelley QueryProtocolParameters
-    AnyCardanoEra AllegraEra -> callQuery $ QueryInEra AllegraEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraAllegra QueryProtocolParameters
-    AnyCardanoEra MaryEra    -> callQuery $ QueryInEra    MaryEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraMary    QueryProtocolParameters
-    AnyCardanoEra AlonzoEra  -> callQuery $ QueryInEra  AlonzoEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraAlonzo QueryProtocolParameters
-    AnyCardanoEra BabbageEra -> callQuery $ QueryInEra BabbageEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraBabbage QueryProtocolParameters
-    AnyCardanoEra ConwayEra  -> callQuery $ QueryInEra  ConwayEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraConway QueryProtocolParameters
+    AnyCardanoEra ShelleyEra -> callQuery ShelleyEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraShelley QueryProtocolParameters
+    AnyCardanoEra AllegraEra -> callQuery AllegraEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraAllegra QueryProtocolParameters
+    AnyCardanoEra MaryEra    -> callQuery MaryEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraMary    QueryProtocolParameters
+    AnyCardanoEra AlonzoEra  -> callQuery AlonzoEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraAlonzo QueryProtocolParameters
+    AnyCardanoEra BabbageEra -> callQuery BabbageEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraBabbage QueryProtocolParameters
+    AnyCardanoEra ConwayEra  -> callQuery ConwayEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraConway QueryProtocolParameters
 
 getProtocolParameters :: ActionM ProtocolParameters
 getProtocolParameters = do

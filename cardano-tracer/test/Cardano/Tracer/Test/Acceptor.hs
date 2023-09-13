@@ -6,19 +6,19 @@ module Cardano.Tracer.Test.Acceptor
   , launchAcceptorsSimple
   ) where
 
-import           Control.Concurrent.STM.TVar (newTVarIO, readTVarIO)
 import           Control.Concurrent.Async.Extra (sequenceConcurrently)
 import           Control.Concurrent.Extra (newLock)
-import           Control.Monad (forever, forM_, void)
+import           Control.Concurrent.STM.TVar (newTVarIO, readTVarIO)
+import           Control.Monad (forM_, forever, void)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import           System.Time.Extra (sleep)
 
-import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Acceptors.Run
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.Run
 import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.MetaTrace

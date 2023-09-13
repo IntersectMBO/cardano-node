@@ -16,8 +16,8 @@ import           Data.Functor ((<&>))
 import           Data.Functor.Identity
 import           Data.Maybe
 import           Data.Monoid
-import           GHC.Generics (Generic)
 import           Generic.Data (gmappend)
+import           GHC.Generics (Generic)
 
 import           Options.Applicative
 

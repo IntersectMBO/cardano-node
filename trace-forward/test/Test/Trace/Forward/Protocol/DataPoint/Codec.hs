@@ -7,7 +7,6 @@ module Test.Trace.Forward.Protocol.DataPoint.Codec () where
 import qualified Data.Aeson as A
 import           Test.QuickCheck
 
-import           Network.TypedProtocol.Core
 import           Network.TypedProtocol.Codec
 
 import           Trace.Forward.Protocol.DataPoint.Type
