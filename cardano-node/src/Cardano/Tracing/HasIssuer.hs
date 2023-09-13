@@ -28,6 +28,8 @@ import           Ouroboros.Consensus.Shelley.Ledger.Block (Header (..), ShelleyB
 
 import           Ouroboros.Consensus.Shelley.Protocol.Abstract
 
+import Legacy.LegacyBlock
+
 -- | Block issuer verification key hash.
 data BlockIssuerVerificationKeyHash
   = BlockIssuerVerificationKeyHash !ByteString
@@ -82,3 +84,6 @@ instance All HasIssuer xs => HasIssuer (HardForkBlock xs) where
       . hcmap (Proxy @HasIssuer) (K . getIssuerVerificationKeyHash)
       . getOneEraHeader
       . getHardForkHeader
+
+instance HasIssuer (LegacyBlock blk) where
+  getIssuerVerificationKeyHash = undefined

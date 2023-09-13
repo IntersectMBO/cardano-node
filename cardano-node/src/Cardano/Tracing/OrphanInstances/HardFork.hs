@@ -56,6 +56,7 @@ import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
+import Legacy.LegacyBlock
 
 --
 -- instances for hashes
@@ -75,6 +76,9 @@ instance All (ToObject `Compose` Header) xs => ToObject (Header (HardForkBlock x
         . getOneEraHeader
         . getHardForkHeader
 
+
+instance ToObject (Header (LegacyBlock blk)) where
+    toObject = undefined -- TODO
 
 --
 -- instances for GenTx HardForkBlock
@@ -97,6 +101,11 @@ instance  All (Compose ToJSON WrapGenTxId) xs => ToJSON (TxId (GenTx (HardForkBl
 instance ToJSON (TxId (GenTx blk)) => ToJSON (WrapGenTxId blk) where
     toJSON = toJSON . unwrapGenTxId
 
+instance ToJSON (TxId (GenTx (LegacyBlock blk))) where
+    toJSON = undefined -- TODO
+
+instance ToObject (GenTx (LegacyBlock blk)) where
+    toObject = undefined -- TODO
 
 --
 -- instances for HardForkApplyTxErr

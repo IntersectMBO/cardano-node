@@ -44,7 +44,7 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
-
+import Legacy.LegacyBlock
 
 --
 -- instances for Header HardForkBlock
@@ -57,6 +57,8 @@ instance All (LogFormatting `Compose` Header) xs => LogFormatting (Header (HardF
         . getOneEraHeader
         . getHardForkHeader
 
+instance LogFormatting (Header (LegacyBlock blk)) where
+    forMachine = undefined -- TODO
 
 --
 -- instances for GenTx HardForkBlock
@@ -69,6 +71,8 @@ instance All (Compose LogFormatting GenTx) xs => LogFormatting (GenTx (HardForkB
         . getOneEraGenTx
         . getHardForkGenTx
 
+instance LogFormatting (GenTx (LegacyBlock blk)) where
+    forMachine = undefined -- TODO
 
 --
 -- instances for HardForkApplyTxErr

@@ -178,6 +178,7 @@ library
                       , optparse-applicative-fork >= 0.18.1
                       , ouroboros-consensus >= 0.9
                       , ouroboros-consensus-cardano >= 0.7
+                      , ouroboros-consensus-cardano-legacy-block ^>= 0.1
                       , ouroboros-consensus-diffusion >= 0.7
                       , ouroboros-consensus-protocol >= 0.5
                       , ouroboros-network-api

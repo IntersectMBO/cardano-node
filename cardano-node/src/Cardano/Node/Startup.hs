@@ -239,6 +239,7 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
                    , getSystemStartShelley cfgBabbage
                    , getSystemStartShelley cfgConway
                    ]
+      Api.LegacyCardanoBlockType -> undefined -- TODO
 
   getSystemStartByron = WCT.getSystemStart . getSystemStart . configBlock $ cfg
   getSystemStartShelley = sgSystemStart . shelleyLedgerGenesis . shelleyLedgerConfig

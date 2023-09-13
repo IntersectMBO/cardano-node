@@ -97,6 +97,7 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
                , getGenesisValues "Babbage" cfgBabbage
                , getGenesisValues "Conway"  cfgConway
                ]
+          Api.LegacyCardanoBlockType -> undefined -- TODO
   pure (basicInfoCommon : protocolDependentItems)
     where
       getGenesisValues era config =

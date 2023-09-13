@@ -351,6 +351,7 @@ nodeBasicInfo nc (SomeConsensusProtocol whichP pForInfo) nodeStartTime' = do
                ++ getGenesisValues "Alonzo"  cfgAlonzo
                ++ getGenesisValues "Babbage" cfgBabbage
                ++ getGenesisValues "Conway"  cfgConway
+          Api.LegacyCardanoBlockType -> undefined -- TODO
       items = nub $
         [ ("protocol",      pack . show $ ncProtocol nc)
         , ("version",       pack . showVersion $ version)

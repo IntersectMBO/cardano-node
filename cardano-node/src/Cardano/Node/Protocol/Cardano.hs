@@ -141,7 +141,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
     --TODO: all these protocol versions below are confusing and unnecessary.
     -- It could and should all be automated and these config entries eliminated.
     return $!
-      SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano
+      SomeConsensusProtocol LegacyCardanoBlockType $ ProtocolInfoArgsLegacyCardano
         Consensus.ProtocolParamsByron {
           byronGenesis = byronGenesis,
           byronPbftSignatureThreshold =

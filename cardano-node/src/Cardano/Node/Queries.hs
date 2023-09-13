@@ -65,6 +65,7 @@ import qualified Ouroboros.Consensus.Byron.Ledger.Ledger as Byron
 import           Ouroboros.Consensus.Byron.Ledger.Mempool (TxId (..))
 import qualified Ouroboros.Consensus.Cardano as Cardano
 import qualified Ouroboros.Consensus.Cardano.Block as Cardano
+import qualified Legacy.Cardano as Cardano
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..),
                    OneEraForgeStateUpdateError (..))
@@ -84,6 +85,8 @@ import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
 import           Ouroboros.Network.NodeToNode (RemoteAddress, RemoteConnectionId)
+
+import Legacy.LegacyBlock
 
 --
 -- * TxId -> ByteString projection
@@ -111,6 +114,9 @@ instance All ConvertTxId xs
       . hcmap (Proxy @ConvertTxId) (K . txIdToRawBytes . unwrapGenTxId)
       . getOneEraGenTxId
       . getHardForkGenTxId
+
+instance ConvertTxId (LegacyBlock blk) where
+  txIdToRawBytes = undefined -- TODO
 
 --
 -- * KES
@@ -145,6 +151,9 @@ instance All HasKESInfo xs => HasKESInfo (HardForkBlock xs) where
            => WrapForgeStateUpdateError blk
            -> K (Maybe HotKey.KESInfo) blk
     getOne = K . getKESInfo (Proxy @blk) . unwrapForgeStateUpdateError
+
+instance HasKESInfo (LegacyBlock blk) where
+  getKESInfo _ = undefined -- TODO
 
 --
 -- * KESMetricsData
@@ -202,6 +211,10 @@ instance All HasKESMetricsData xs => HasKESMetricsData (HardForkBlock xs) where
              -> K KESMetricsData blk
       getOne = K . getKESMetricsData (Proxy @blk) . unwrapForgeStateInfo
 
+instance -- HasKESMetricsData blk =>
+        HasKESMetricsData (LegacyBlock blk) where
+  getKESMetricsData _ = undefined -- TODO
+
 --
 -- * GetKESInfo
 --
@@ -228,6 +241,9 @@ instance All GetKESInfo xs => GetKESInfo (HardForkBlock xs) where
              => WrapForgeStateInfo blk
              -> K (Maybe HotKey.KESInfo) blk
       getOne = K . getKESInfoFromStateInfo (Proxy @blk) . unwrapForgeStateInfo
+
+instance GetKESInfo (LegacyBlock blk) where
+  getKESInfoFromStateInfo = undefined -- TODO
 
 --
 -- * General ledger
@@ -280,6 +296,10 @@ instance LedgerQueries (Cardano.CardanoBlock c) where
     Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDelegMapSize ledgerAlonzo
     Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDelegMapSize ledgerBabbage
     Cardano.LedgerStateConway  ledgerConway  -> ledgerDelegMapSize ledgerConway
+
+instance LedgerQueries (Cardano.LegacyCardanoBlock c) where
+  ledgerUtxoSize = undefined -- TODO
+  ledgerDelegMapSize = undefined -- TODO
 
 --
 -- * Node kernel
