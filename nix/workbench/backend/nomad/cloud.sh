@@ -106,28 +106,6 @@ backend_nomadcloud() {
 
     start-cluster )
       backend_nomad start-cluster           "$@"
-      # start-ssh
-      # Only if running on "perf" exclusive nodes we use SSH, if not
-      # `nomad exec`, because we need to have an exclusive port open for us.
-      if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"
-      then
-        local jobs_array=()
-        local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
-        for node in ${nodes[*]}
-        do
-          # TODO: Do it in parallel ?
-          backend_nomad task-program-start "${dir}" "${node}" ssh &
-          jobs_array+=("$!")
-        done
-        # Wait and check!
-        if test -n "${jobs_array}"
-        then
-          if ! wait_fail_any "${jobs_array[@]}"
-          then
-            fatal "Failed to start ssh server(s)"
-          fi
-        fi
-      fi
     ;;
 
     start-tracers )
@@ -824,6 +802,39 @@ fetch-logs-nomadcloud() {
   local dir=${1:?$usage}; shift
 
   msg "Fetch logs ..."
+
+  msg "First start the sandboxed SSH servers ..."
+  # Only if running on "perf" exclusive nodes we use SSH, if not
+  # `nomad exec`, because we need to have an exclusive port open for us.
+  if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"
+  then
+    local jobs_array=()
+    local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+    for node in ${nodes[*]}
+    do
+      # TODO: Do it in parallel ?
+      backend_nomad task-program-start "${dir}" "${node}" ssh &
+      jobs_array+=("$!")
+    done
+    # Wait and check!
+    if test -n "${jobs_array}"
+    then
+      if ! wait_fail_any "${jobs_array[@]}"
+      then
+        fatal "Failed to start ssh server(s)"
+      fi
+    fi
+  fi
+
+  fetch-logs-nomadcloud-retry "${dir}"
+
+  msg "Sandboxed SSH servers will be kept running for debugging purposes"
+}
+
+fetch-logs-nomadcloud-retry() {
+  local usage="USAGE: wb backend $op RUN-DIR"
+  local dir=${1:?$usage}; shift
+
   local jobs_array=()
   for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
   do
@@ -844,7 +855,7 @@ fetch-logs-nomadcloud() {
       msg "$(red "Failed to fetch some logs")"
       msg "Check files \"${dir}/nomad/NODE/download_ok\" and \"${dir}/nomad/NODE/download_failed\""
       read -p "Hit enter to retry ..."
-      fetch-logs-nomadcloud "${dir}"
+      fetch-logs-nomadcloud-retry "${dir}"
     else
       msg "$(green "Finished fetching logs")"
     fi
