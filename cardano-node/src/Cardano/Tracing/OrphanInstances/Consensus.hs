@@ -1309,10 +1309,10 @@ instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
       , "tx" .= toObject verb (txForgetValidated tx)
       , "mempoolSize" .= toObject verb mpSzAfter
       ]
-  toObject verb (TraceMempoolRejectedTx tx txApplyErr mpSz) =
+  toObject verb (TraceMempoolRejectedTx tx _txApplyErr mpSz) =
     mconcat
       [ "kind" .= String "TraceMempoolRejectedTx"
-      , "err" .= toObject verb txApplyErr
+      -- , "err" .= toObject verb txApplyErr
       , "tx" .= toObject verb tx
       , "mempoolSize" .= toObject verb mpSz
       ]

@@ -837,10 +837,10 @@ instance
       , "tx" .= forMachine dtal (txForgetValidated tx)
       , "mempoolSize" .= forMachine dtal mpSzAfter
       ]
-  forMachine dtal (TraceMempoolRejectedTx tx txApplyErr mpSz) =
+  forMachine dtal (TraceMempoolRejectedTx tx _txApplyErr mpSz) =
     mconcat
       [ "kind" .= String "TraceMempoolRejectedTx"
-      , "err" .= forMachine dtal txApplyErr
+      -- , "err" .= forMachine dtal txApplyErr
       , "tx" .= forMachine dtal tx
       , "mempoolSize" .= forMachine dtal mpSz
       ]
