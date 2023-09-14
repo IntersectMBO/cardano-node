@@ -51,6 +51,10 @@ package snap-server
 package bitvec
    flags: -simd
 
+-- required for haddocks to build successfully
+package plutus-scripts-bench
+  haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
+
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.

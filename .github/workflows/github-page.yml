@@ -7,116 +7,55 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     defaults:
       run:
         shell: bash
 
-    strategy:
-      fail-fast: false
-      matrix:
-        ghc: ["9.2.7"]
-        cabal: ["3.10.1.0"]
-        os: [ubuntu-latest]
-
-    env:
-      # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2023-07-28"
-
-      # Modify this value to "invalidate" the secp cache.
-      SECP_CACHE_VERSION: "2022-12-30"
-
-      # current ref from: 27.02.2022
-      SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
-
     steps:
-    - name: Workaround runner image issue
-      if: runner.os == 'Linux'
-      # https://github.com/actions/runner-images/issues/7061
-      run: sudo chown -R $USER /usr/local/.ghcup
-
-    - name: Install Haskell
-      uses: input-output-hk/setup-haskell@v1
-      id: setup-haskell
+    - name: Install Nix
+      uses: cachix/install-nix-action@v18
       with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: ${{ matrix.cabal }}
+        # Use last stable nixos channel and the same nix as in channel:
+        install_url: https://releases.nixos.org/nix/nix-2.11.1/install
+        nix_path: nixpkgs=channel:nixos-22.11
+        github_access_token: ${{ secrets.GITHUB_TOKEN }}
+        extra_nix_config: |
+          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+          experimental-features = nix-command flakes
+          allow-import-from-derivation = true
+          substituters = https://cache.nixos.org https://cache.iog.io
+          trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
 
     - uses: actions/checkout@v3
 
-    - name: Add build script path
-      run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
-
-    - name: Install build environment
+    - name: Fetch nix cache and update cabal indices
       run: |
-        sudo apt-get update
-        sudo apt-get -y install libsodium23 libsodium-dev
-        sudo apt-get -y install libsystemd0 libsystemd-dev
-        sudo apt-get -y remove --purge software-properties-common
-        sudo apt-get -y autoremove
+        nix develop .\#project.x86_64-linux.projectVariants.ghc963.shell --command \
+          cabal update
 
-    - name: Install secp256k1
-      uses: input-output-hk/setup-secp256k1@v1
-      with:
-        git-ref: ${{ env.SECP256K1_REF }}
-        cache-version: ${{ env.SECP_CACHE_VERSION }}
-
-    - name: Cabal update
-      run: cabal update
-
-    - name: combine github-pages, and machine local project files.
+    - name: Build whole project
       run: |
-        cat .github/workflows/cabal.project.local.github-pages \
-            ".github/workflows/cabal.project.local.ci.$(uname -s)" \
-            | tee cabal.project.local
+        nix develop .\#project.x86_64-linux.projectVariants.ghc963.shell --command \
+          cabal build all
 
-    - name: Dry run
+    - name: Build documentation
       run: |
-        cabal build all --dry-run
-        mkdir ./haddocks
-        DRY_RUN=1 ./scripts/haddocs.sh ./haddocks true
+        nix develop .\#project.x86_64-linux.projectVariants.ghc963.shell --command \
+          cabal haddock-project --local --output=./haddocks --internal --foreign-libraries
 
-    - name: Cabal cache over S3
-      uses: action-works/cabal-cache-s3@v1
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      with:
-        region: ${{ vars.BINARY_CACHE_REGION }}
-        dist-dir: dist-newstyle
-        store-path: ${{ steps.cabal-store.outputs.cabal-store }}
-        threads: ${{ vars.BINARY_CACHE_THREADS }}
-        archive-uri: ${{ vars.BINARY_CACHE_URI }}/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}/${{ matrix.cabal }}/${{ matrix.ghc }}
-        skip: "${{ vars.BINARY_CACHE_URI == '' }}"
-
-    - name: Cabal cache over HTTPS
-      uses: action-works/cabal-cache-s3@v1
-      with:
-        dist-dir: dist-newstyle
-        store-path: ${{ steps.cabal-store.outputs.cabal-store }}
-        threads: ${{ vars.BINARY_CACHE_THREADS }}
-        archive-uri: https://iohk.cache.haskellworks.io/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}/${{ matrix.cabal }}/${{ matrix.ghc }}
-        skip: "${{ vars.BINARY_CACHE_URI != '' }}"
-        enable-save: false
-
-    - name: Install dependencies
-      run: cabal build all
-
-    - name: Build Haddock documentation 🔧
-      run: ./scripts/haddocs.sh ./haddocks true
-
-    - name: View HTML files
+    - name: Compress haddocks
       run: |
-        find "dist-newstyle/build" -name '*.html' | xargs grep html
+        tar -czf haddocks.tgz -C haddocks .
 
-    - name: Upload documentation
+    - name: Upload haddocks artifact
       uses: actions/upload-artifact@v2
       if: ${{ always() }}
       continue-on-error: true
       with:
-        name: haddocks-${{ matrix.os }}-${{ matrix.ghc }}
-        path: ./haddocks
+        name: haddocks
+        path: ./haddocks.tgz
 
     - name: Deploy documentation to gh-pages 🚀
       if: github.ref == 'refs/heads/master'
