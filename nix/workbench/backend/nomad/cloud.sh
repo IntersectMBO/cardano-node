@@ -885,6 +885,11 @@ fetch-logs-nomadcloud-node() {
     touch "${dir}"/nomad/"${node}"/download_failed
     msg "$(red Error fetching) $(yellow "program \"node\"") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
   fi
+  # TODO: FIXME: Look for the folder name in the "scribes" of the node's config!
+  if test -d "${dir}"/"${node}"/logs
+  then
+    mv "${dir}"/"${node}"/logs/node-[0-9]*.json "${dir}"/"${node}"/
+  fi
   # Download tracer(s) logs. ###############################################
   ##########################################################################
   msg "$(blue Fetching) $(yellow "program \"tracer\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
