@@ -7,15 +7,15 @@ module Cardano.Tracer.Handlers.Logs.Utils
   , isItLog
   ) where
 
-import           Control.Monad (void)
 import           Control.Concurrent.Extra (Lock, withLock)
+import           Control.Monad (void)
 import qualified Data.ByteString as BS
 import           Data.Maybe (isJust)
 import qualified Data.Text as T
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
-import           System.FilePath ((<.>), (</>), takeBaseName, takeExtension, takeFileName)
+import           System.FilePath (takeBaseName, takeExtension, takeFileName, (<.>), (</>))
 
 import           Cardano.Tracer.Configuration (LogFormat (..))
 

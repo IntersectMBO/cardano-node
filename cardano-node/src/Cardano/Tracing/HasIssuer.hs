@@ -12,7 +12,7 @@ module Cardano.Tracing.HasIssuer
   ) where
 
 import           Data.ByteString (ByteString)
-import           Data.SOP.Strict
+import           Data.SOP
 
 import           Cardano.Api (serialiseToRawBytes, verificationKeyHash)
 import           Cardano.Api.Byron (VerificationKey (ByronVerificationKey))

@@ -66,7 +66,8 @@ import           Testnet.Process.Run
 import           Testnet.Property.Assert
 import           Testnet.Runtime hiding (allNodes)
 
-import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency (..), WarmValency (..))
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
+                   WarmValency (..))
 
 
 {- HLINT ignore "Redundant <&>" -}

@@ -45,7 +45,7 @@ library
 
   default-extensions:   OverloadedStrings
   build-depends:        base >=4.12 && <5
-                      , aeson                         >= 2.1.0.0
+                      , aeson >= 2.1.0.0
                       , async
                       , bytestring
                       , cborg
@@ -54,11 +54,11 @@ library
                       , deepseq
                       , ekg
                       , ekg-core
-                      , ekg-forward >= 0.3.0.4
+                      , ekg-forward >= 0.4
                       , hostname
                       , network
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.8.2.0
+                      , ouroboros-network ^>= 0.9.1
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , serialise
@@ -101,7 +101,7 @@ executable trace-dispatcher-examples
   hs-source-dirs:       examples
   default-extensions:   OverloadedStrings
   build-depends:        base >=4.12 && <5
-                      , aeson                         >= 2.1.0.0
+                      , aeson
                       , bytestring
                       , containers
                       , deepseq
@@ -113,7 +113,7 @@ executable trace-dispatcher-examples
                       , trace-dispatcher
                       , trace-forward
                       , time
-                      , unagi-chan >= 0.4.1.4
+                      , unagi-chan
                       , unliftio
                       , unliftio-core
                       , unordered-containers
@@ -142,7 +142,7 @@ test-suite trace-dispatcher-test
 
   default-extensions:   OverloadedStrings
   build-depends:        base >=4.12 && <5
-                      , aeson                         >= 2.1.0.0
+                      , aeson
                       , bytestring
                       , cardano-prelude
                       , containers
@@ -151,14 +151,14 @@ test-suite trace-dispatcher-test
                       , generic-data
                       , hostname
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.8.2.0
+                      , ouroboros-network
                       , text
                       , stm
                       , tasty
                       , tasty-quickcheck
                       , time
                       , trace-dispatcher
-                      , unagi-chan >= 0.4.1.4
+                      , unagi-chan
                       , unliftio
                       , unliftio-core
                       , unordered-containers
@@ -188,7 +188,7 @@ benchmark trace-dispatcher-bench
                         Cardano.Logging.Test.Tracer
                         Cardano.Logging.Test.Script
   build-depends:        base >=4.12 && <5
-                      , aeson                         >= 2.1.0.0
+                      , aeson
                       , containers
                       , criterion
                       , ekg

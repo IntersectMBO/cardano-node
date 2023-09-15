@@ -121,13 +121,15 @@ library
                       , optparse-generic
                       , ouroboros-consensus
                       -- for Data.SOP.Strict:
-                      , ouroboros-network ^>= 0.8.2.0
+                      , ouroboros-network ^>= 0.9.1
                       , ouroboros-network-api
                       , process
                       , quiet
                       , scientific
+                      , sop-core
                       , split
                       , statistics
+                      , strict-sop-core
                       , system-filepath
                       , template-haskell
                       , text

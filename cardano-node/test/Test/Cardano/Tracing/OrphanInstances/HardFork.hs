@@ -13,12 +13,12 @@ module Test.Cardano.Tracing.OrphanInstances.HardFork (tests) where
 
 import qualified Data.Aeson as Aeson
 import           Data.ByteString.Lazy.Char8 (unpack)
-import           Data.SOP.Strict (NP ((:*), Nil))
+import           Data.SOP.Strict (NP (Nil, (:*)))
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Test.Golden as H.Golden
 import qualified Hedgehog.Extras.Test.Base as H.Base
+import qualified Hedgehog.Extras.Test.Golden as H.Golden
 import           Hedgehog.Internal.Property (PropertyName (PropertyName))
 
 import           Cardano.Ledger.Crypto (StandardCrypto)

@@ -8,11 +8,11 @@ import           Data.Functor.Identity
 
 import           System.Directory.Extra (listDirectories)
 import           System.FilePath (dropDrive, dropExtension)
-import           System.IO.Extra (newTempDirWithin)
 import           System.Info.Extra (isMac, isWindows)
+import           System.IO.Extra (newTempDirWithin)
 
-import           Test.Tasty.QuickCheck
 import           Cardano.Tracer.Test.TestSetup
+import           Test.Tasty.QuickCheck
 
 unI :: Identity a -> a
 unI (Identity x) = x
