@@ -37,7 +37,8 @@ import           Prelude
 import           Cardano.Api
 import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..),
                    ProtocolParameters, ShelleyLedgerEra,
-                   protocolParamMaxTxExUnits, protocolParamPrices)
+                   convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
+                   protocolParamPrices)
 
 import           Cardano.Logging hiding(LocalSocket)
 
@@ -293,94 +294,96 @@ evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> TxGenTxParams
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   networkId <- getEnvNetworkId
   protocolParameters <- getProtocolParameters
+  case convertToLedgerProtocolParameters (shelleyBasedEra @era) protocolParameters of
+    Left err -> throwE (Env.TxGenError (ApiError err))
+    Right ledgerParameters -> 
+      case generator of
+        SecureGenesis wallet genesisKeyName destKeyName -> do
+          genesis  <- getEnvGenesis
+          destKey  <- getEnvKeys destKeyName
+          destWallet  <- getEnvWallets wallet
+          genesisKey  <- getEnvKeys genesisKeyName
+          (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither $
+            Genesis.genesisSecureInitialFund networkId genesis genesisKey destKey txParams
+          let
+            gen = do
+              walletRefInsertFund destWallet fund
+              return $ Right tx
+          return $ Streaming.effect (Streaming.yield <$> gen)
 
-  case generator of
-    SecureGenesis wallet genesisKeyName destKeyName -> do
-      genesis  <- getEnvGenesis
-      destKey  <- getEnvKeys destKeyName
-      destWallet  <- getEnvWallets wallet
-      genesisKey  <- getEnvKeys genesisKeyName
-      (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither $
-        Genesis.genesisSecureInitialFund networkId genesis genesisKey destKey txParams
-      let
-        gen = do
-          walletRefInsertFund destWallet fund
-          return $ Right tx
-      return $ Streaming.effect (Streaming.yield <$> gen)
+        -- 'Split' combines regular payments and payments for change.
+        -- There are lists of payments buried in the 'PayWithChange'
+        -- type conditionally sent back by 'Utils.includeChange', to
+        -- then be used while partially applied as the @valueSplitter@
+        -- in 'sourceToStoreTransactionNew'.
+        Split walletName payMode payModeChange coins -> do
+          wallet <- getEnvWallets walletName
+          (toUTxO, addressOut) <- interpretPayMode payMode
+          traceDebug $ "split output address : " ++ addressOut
+          (toUTxOChange, addressChange) <- interpretPayMode payModeChange
+          traceDebug $ "split change address : " ++ addressChange
+          let
+            fundSource = walletSource wallet 1
+            inToOut = Utils.includeChange fee coins
+            txGenerator = genTx (cardanoEra @era) ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
+            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
+          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
-    -- 'Split' combines regular payments and payments for change.
-    -- There are lists of payments buried in the 'PayWithChange'
-    -- type conditionally sent back by 'Utils.includeChange', to
-    -- then be used while partially applied as the @valueSplitter@
-    -- in 'sourceToStoreTransactionNew'.
-    Split walletName payMode payModeChange coins -> do
-      wallet <- getEnvWallets walletName
-      (toUTxO, addressOut) <- interpretPayMode payMode
-      traceDebug $ "split output address : " ++ addressOut
-      (toUTxOChange, addressChange) <- interpretPayMode payModeChange
-      traceDebug $ "split change address : " ++ addressChange
-      let
-        fundSource = walletSource wallet 1
-        inToOut = Utils.includeChange fee coins
-        txGenerator = genTx (cardanoEra @era) protocolParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
-        sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
-      return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+        -- The 'SplitN' case's call chain is somewhat elaborate.
+        -- The division is done in 'Utils.inputsToOutputsWithFee'
+        -- but things are threaded through
+        -- 'Cardano.Benchmarking.Wallet.mangle' and packed into
+        -- the transaction assembled by 'sourceToStoreTransactionNew'.
+        SplitN walletName payMode count -> do
+          wallet <- getEnvWallets walletName
+          (toUTxO, addressOut) <- interpretPayMode payMode
+          traceDebug $ "SplitN output address : " ++ addressOut
+          let
+            fundSource = walletSource wallet 1
+            inToOut = Utils.inputsToOutputsWithFee fee count
+            txGenerator = genTx (cardanoEra @era) ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
+            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
+          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
-    -- The 'SplitN' case's call chain is somewhat elaborate.
-    -- The division is done in 'Utils.inputsToOutputsWithFee'
-    -- but things are threaded through
-    -- 'Cardano.Benchmarking.Wallet.mangle' and packed into
-    -- the transaction assembled by 'sourceToStoreTransactionNew'.
-    SplitN walletName payMode count -> do
-      wallet <- getEnvWallets walletName
-      (toUTxO, addressOut) <- interpretPayMode payMode
-      traceDebug $ "SplitN output address : " ++ addressOut
-      let
-        fundSource = walletSource wallet 1
-        inToOut = Utils.inputsToOutputsWithFee fee count
-        txGenerator = genTx (cardanoEra @era) protocolParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
-        sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
-      return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+        NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
+          wallet <- getEnvWallets walletName
+          collaterals <- selectCollateralFunds collateralWallet
+          (toUTxO, addressOut) <- interpretPayMode payMode
+          traceDebug $ "NtoM output address : " ++ addressOut
+          let
+            fundSource = walletSource wallet inputs
+            inToOut = Utils.inputsToOutputsWithFee fee outputs
+            txGenerator = genTx (cardanoEra @era) ledgerParameters collaterals feeInEra (toMetadata metadataSize)
+            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
 
-    NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
-      wallet <- getEnvWallets walletName
-      collaterals <- selectCollateralFunds collateralWallet
-      (toUTxO, addressOut) <- interpretPayMode payMode
-      traceDebug $ "NtoM output address : " ++ addressOut
-      let
-        fundSource = walletSource wallet inputs
-        inToOut = Utils.inputsToOutputsWithFee fee outputs
-        txGenerator = genTx (cardanoEra @era) protocolParameters collaterals feeInEra (toMetadata metadataSize)
-        sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
+          fundPreview <- liftIO $ walletPreview wallet inputs
+          case sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO) of
+            Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
+            Right tx -> do
+              let txSize = txSizeInBytes tx
+              traceDebug $ "Projected Tx size in bytes: " ++ show txSize
+              summary_ <- getEnvSummary
+              forM_ summary_ $ \summary -> do
+                let summary' = summary {projectedTxSize = Just txSize}
+                setEnvSummary summary'
+                traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
+              dumpBudgetSummaryIfExisting
 
-      fundPreview <- liftIO $ walletPreview wallet inputs
-      case sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO) of
-        Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
-        Right tx -> do
-          let txSize = txSizeInBytes tx
-          traceDebug $ "Projected Tx size in bytes: " ++ show txSize
-          summary_ <- getEnvSummary
-          forM_ summary_ $ \summary -> do
-            let summary' = summary {projectedTxSize = Just txSize}
-            setEnvSummary summary'
-            traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
-          dumpBudgetSummaryIfExisting
+          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
-      return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+        Sequence l -> do
+          gList <- forM l $ \g -> evalGenerator g txParams era
+          return $ Streaming.for (Streaming.each gList) id
 
-    Sequence l -> do
-      gList <- forM l $ \g -> evalGenerator g txParams era
-      return $ Streaming.for (Streaming.each gList) id
+        Cycle g -> Streaming.cycle <$> evalGenerator g txParams era
 
-    Cycle g -> Streaming.cycle <$> evalGenerator g txParams era
+        Take count g -> Streaming.take count <$> evalGenerator g txParams era
 
-    Take count g -> Streaming.take count <$> evalGenerator g txParams era
+        RoundRobin l -> do
+          _gList <- forM l $ \g -> evalGenerator g txParams era
+          error "return $ foldr1 Streaming.interleaves gList"
 
-    RoundRobin l -> do
-      _gList <- forM l $ \g -> evalGenerator g txParams era
-      error "return $ foldr1 Streaming.interleaves gList"
-
-    OneOf _l -> error "todo: implement Quickcheck style oneOf generator"
+        OneOf _l -> error "todo: implement Quickcheck style oneOf generator"
 
   where
     feeInEra = Utils.mkTxFee fee

@@ -13,7 +13,7 @@ import           Data.Function ((&))
 import           Data.Maybe (mapMaybe)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters, convertToLedgerProtocolParameters)
+import           Cardano.Api.Shelley (LedgerProtocolParameters)
 
 import           Cardano.TxGenerator.Fund
 import           Cardano.TxGenerator.Types
@@ -160,22 +160,19 @@ sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
 genTx :: forall era. ()
   => IsShelleyBasedEra era
   => CardanoEra era
-  -> ProtocolParameters
+  -> LedgerProtocolParameters era
   -> (TxInsCollateral era, [Fund])
   -> TxFee era
   -> TxMetadataInEra era
   -> TxGenerator era
-genTx _era protocolParameters (collateral, collFunds) fee metadata inFunds outputs
-  = case convertToLedgerProtocolParameters shelleyBasedEra protocolParameters of
-      Right ledgerParameters ->
-        bimap
-          ApiError
-          (\b -> (signShelleyTransaction b $ map WitnessPaymentKey allKeys, getTxId b))
-          (createAndValidateTransactionBody (txBodyContent ledgerParameters)) 
-      Left err -> Left (ApiError err)
+genTx _era ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
+  = bimap
+      ApiError
+      (\b -> (signShelleyTransaction b $ map WitnessPaymentKey allKeys, getTxId b))
+      (createAndValidateTransactionBody txBodyContent)
  where
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
-  txBodyContent ledgerParameters = defaultTxBodyContent
+  txBodyContent = defaultTxBodyContent
     & setTxIns (map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds)
     & setTxInsCollateral collateral
     & setTxOuts outputs
