@@ -106,7 +106,7 @@ let
         # "command" below assumes "directory" is set accordingly.
         directory      = "${stateDir}/${nodeName}";
         command        = "${command}";
-        stdout_logfile = "${stateDir}/${nodeName}/stdout";
+        stdout_logfile = "/dev/null";
         stderr_logfile = "${stateDir}/${nodeName}/stderr";
         # Set these values to 0 to indicate an unlimited log size / no rotation.
         stdout_logfile_maxbytes = 0;
