@@ -114,7 +114,7 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
       "Transaction count"
       "Number of transactions prepared for submission, but not necessarily submitted"
 
-   <> fScalar "plutusScript"           Wno Id  (IText  $ T.pack.fromMaybe "---".plutusLoopScript.sumWorkload)
+   <> fScalar "plutusScript"           Wno Id  (IText  $ fromMaybe "---".plutusLoopScript.sumWorkload)
       "Plutus script"
       "Name of th Plutus script used for smart contract workload generation, if any"
 

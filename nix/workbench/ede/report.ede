@@ -9,10 +9,9 @@
 #+latex_header: \usepackage{setspace}
 #+latex_header: \onehalfspacing
 #+LATEX_COMPILER: xelatex
-#+EXPORT_FILE_NAME: {{ report.tag }}.{{ base.workload }}.pdf
+#+EXPORT_FILE_NAME: {{ report.tag }}.{{ base.fileInfix }}.pdf
 #+TITLE: {{ report.target }} against {{ base.ver }}
 #+SUBTITLE: {{ base.workload }} workload
-#+SUBTITLE: \break\small{revision} ={{ report.revision }}=
 #+AUTHOR: {{ report.author }}, Cardano Performance team
 #+DATE: {{ report.date }}
 
@@ -35,12 +34,9 @@ Hints:
 
 *** Manifest
 
-We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and {%endif%}{%endif%}{{ run.value.ver }}/{{ run.value.meta.era | toTitle }}{% endfor %} relative to ={{ base.ver }}=/{{ base.meta.era | toTitle }}, under {{ base.workload }} workload.
+We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and {%endif%}{%endif%}={{ run.value.ver }}= ({{ run.value.meta.era | toTitle }}){% endfor %} relative to ={{ base.ver }}= ({{ base.meta.era | toTitle }}), under {{ base.workload }} workload.
 
 {% include "table.ede" with table = summary %}
-
-***** Revision history
-      - rev 1, {{ report.date }}:  initial release
 
 *** Analysis
 {% for sec in analyses %}
@@ -65,9 +61,7 @@ We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and 
 
 ***** End-to-end propagation
 
-...
-
-@Kevin Hammond, @neil, @jared.corduan, @Damian, @nfrisby, @Jasagredo, @marcin, @Javier Franco, @carlos.lopezdelara, @disasm
+1. ...
 
 * Appendix A: charts
 
