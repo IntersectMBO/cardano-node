@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE UndecidableInstances #-}
 module Cardano.Analysis.API.Context (module Cardano.Analysis.API.Context) where
@@ -98,9 +100,10 @@ data GeneratorProfile
 
 plutusLoopScript :: GeneratorProfile -> Maybe Text
 plutusLoopScript GeneratorProfile{plutusMode, plutusAutoMode, plutus}
-  | fromMaybe False
-      ((&&) <$> plutusAutoMode <*> plutusMode)  = Just $ T.pack "Loop"
-  | otherwise                                   = ppScript `fmap` plutus
+  | Just True <- (&&) <$> plutusAutoMode <*> plutusMode
+    = Just "Loop"
+  | otherwise
+    = ppScript `fmap` plutus
 
 
 newtype Commit   = Commit  { unCommit  :: Text } deriving newtype (Eq, Show, FromJSON, ToJSON, NFData)
