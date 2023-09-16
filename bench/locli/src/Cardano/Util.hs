@@ -10,6 +10,7 @@ module Cardano.Util
   , module Util
   , module Data.Aeson
   , module Data.IntervalMap.FingerTree
+  , module Data.SOP
   , module Data.SOP.Strict
   , module Data.List.Split
   , module Data.Time.Clock
@@ -55,6 +56,7 @@ import Data.IntervalMap.FingerTree      (Interval (..), low, high, point)
 import Data.List                        (span)
 import Data.List.Split                  (chunksOf)
 import Data.Text                        qualified as T
+import Data.SOP                         (I (..), unI)
 import Data.SOP.Strict
 import Data.Time.Clock                  (NominalDiffTime, UTCTime (..), diffUTCTime, addUTCTime)
 import Data.Time.Clock.POSIX

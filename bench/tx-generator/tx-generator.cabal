@@ -97,9 +97,9 @@ library
                       , attoparsec
                       , base16-bytestring
                       , bytestring
-                      , cardano-api >= 8.16.3 && < 8.17
+                      , cardano-api ^>= 8.20
                       , cardano-binary
-                      , cardano-cli ^>= 8.6.1
+                      , cardano-cli ^>= 8.8
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data
@@ -126,7 +126,7 @@ library
                       , ouroboros-consensus >= 0.6
                       , ouroboros-consensus-cardano >= 0.5
                       , ouroboros-consensus-diffusion >= 0.7.0
-                      , ouroboros-network ^>= 0.8.2.0
+                      , ouroboros-network
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , ouroboros-network-protocols
@@ -173,7 +173,7 @@ executable tx-generator
                         -rtsopts
                         "-with-rtsopts=-T"
 
-  build-depends:        base >=4.12 && <5
+  build-depends:        base
                       , tx-generator
 
 test-suite tx-generator-apitest
@@ -188,13 +188,13 @@ test-suite tx-generator-apitest
                         -rtsopts
                         "-with-rtsopts=-T"
 
-  build-depends:        base >=4.12 && <5
+  build-depends:        base
                       , aeson
                       , bytestring
                       , filepath
                       , optparse-applicative-fork
-                      , cardano-api >= 8.16.3 && < 8.17
-                      , cardano-cli ^>= 8.6.1
+                      , cardano-api
+                      , cardano-cli
                       , cardano-node
                       , plutus-tx
                       , transformers
@@ -204,13 +204,13 @@ test-suite tx-generator-apitest
   other-modules:        Paths_tx_generator
   autogen-modules:      Paths_tx_generator
 
-  build-depends:       base >=4.12 && <5
+  build-depends:       base
                      , aeson
                      , bytestring
                      , filepath
                      , optparse-applicative-fork
-                     , cardano-api >= 8.16.3 && < 8.17
-                     , cardano-cli ^>= 8.6.1
+                     , cardano-api
+                     , cardano-cli
                      , cardano-node
                      , transformers
                      , transformers-except
@@ -222,7 +222,7 @@ test-suite tx-generator-test
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0
 
-  build-depends:        base >=4.12 && <5
+  build-depends:        base
                       , tasty
                       , tasty-hunit
                       , tx-generator
@@ -241,7 +241,7 @@ benchmark tx-generator-bench
   main-is:              Bench.hs
   type:                 exitcode-stdio-1.0
 
-  build-depends:        base >=4.12 && <5
+  build-depends:        base
                       , criterion
                       , tx-generator
 

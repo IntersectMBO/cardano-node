@@ -8,7 +8,7 @@ module Cardano.Node.Tracing.Formatting
   ) where
 
 import           Data.Aeson (Value (String), toJSON, (.=))
-import           Data.Proxy (Proxy(..))
+import           Data.Proxy (Proxy (..))
 import           Data.Void (Void)
 
 import           Cardano.Logging (LogFormatting (..))

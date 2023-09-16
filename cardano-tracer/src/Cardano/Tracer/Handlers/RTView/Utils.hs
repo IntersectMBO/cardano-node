@@ -10,8 +10,8 @@ module Cardano.Tracer.Handlers.RTView.Utils
   ) where
 
 import           Control.Concurrent.STM.TVar (readTVarIO)
-import qualified Data.Set as S
 import qualified Data.Map.Strict as M
+import qualified Data.Set as S
 import           Graphics.UI.Threepenny.Core
 
 import           Cardano.Tracer.Environment

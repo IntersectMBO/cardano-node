@@ -39,10 +39,10 @@ library
                       , aeson
                       , async
                       , bytestring
-                      , cardano-api >= 8.16.3 && < 8.17
+                      , cardano-api ^>= 8.20
                       , cardano-binary
-                      , cardano-cli ^>= 8.6.1
-                      , cardano-crypto-class >= 2.1.2 && <2.2
+                      , cardano-cli ^>= 8.8
+                      , cardano-crypto-class ^>= 2.1.2
                       , cardano-ledger-byron ^>= 1.0
                       , formatting
                       , http-media
@@ -51,7 +51,7 @@ library
                       , network
                       , optparse-applicative-fork
                       , ouroboros-consensus-cardano
-                      , ouroboros-network ^>= 0.8.2.0
+                      , ouroboros-network ^>= 0.9.1
                       , ouroboros-network-protocols
                       , prometheus >= 2.2.4
                       , servant
@@ -86,8 +86,8 @@ executable cardano-submit-api
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-T -I0"
   build-depends:        base
                       , optparse-applicative-fork
-                      , cardano-cli ^>= 8.6.1
-                      , cardano-crypto-class >= 2.1.2 && < 2.2
+                      , cardano-cli
+                      , cardano-crypto-class
                       , cardano-submit-api
 
 test-suite unit

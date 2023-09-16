@@ -24,9 +24,9 @@ import           Cardano.Tracing.Render (renderTxId)
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Network.Block (blockHash, blockNo, blockSlot)
 
-import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..),
-                   ByronOtherHeaderEnvelopeError (..), TxId (..), byronHeaderRaw,
-                   ByronNodeToClientVersion (..), ByronNodeToNodeVersion (..))
+import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..), ByronNodeToClientVersion (..),
+                   ByronNodeToNodeVersion (..), ByronOtherHeaderEnvelopeError (..), TxId (..),
+                   byronHeaderRaw)
 import           Ouroboros.Consensus.Byron.Ledger.Inspect (ByronLedgerUpdate (..),
                    ProtocolUpdate (..), UpdateState (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, txId)

@@ -104,7 +104,7 @@ test-suite test
                       , serialise
                       , tasty
                       , tasty-quickcheck
-                      , typed-protocols ^>= 0.1
+                      , typed-protocols
                       , text
 
   ghc-options:          -rtsopts

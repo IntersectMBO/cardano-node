@@ -54,7 +54,7 @@ import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 
 import           Cardano.Git.Rev (gitRev)
-import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency, WarmValency)
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
 import           Paths_cardano_node (version)
 
 data StartupTrace blk =

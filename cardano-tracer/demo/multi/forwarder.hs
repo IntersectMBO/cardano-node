@@ -1,8 +1,8 @@
 {-# LANGUAGE LambdaCase #-}
 
-import System.Environment (getArgs)
+import           System.Environment (getArgs)
 
-import Cardano.Tracer.Test.Forwarder
+import           Cardano.Tracer.Test.Forwarder
 
 main :: IO ()
 main = getArgs >>= \case

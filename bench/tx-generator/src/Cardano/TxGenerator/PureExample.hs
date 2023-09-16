@@ -14,7 +14,7 @@ import           Data.String (fromString)
 import           System.Exit (die)
 
 import           Cardano.Api
--- import           Cardano.Api.Shelley (ProtocolParameters)
+import           Cardano.Api.Shelley (convertToLedgerProtocolParameters)
 
 import           Data.Aeson (eitherDecodeFileStrict')
 
@@ -103,7 +103,11 @@ generateTx TxEnvironment{..}
     TxFeeExplicit _ fee = txEnvFee
 
     generator :: TxGenerator BabbageEra
-    generator = genTx BabbageEra txEnvProtocolParams collateralFunds txEnvFee txEnvMetadata
+    generator =
+        case convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
+          Right ledgerParameters ->
+            genTx BabbageEra ledgerParameters collateralFunds txEnvFee txEnvMetadata
+          Left err -> \_ _ -> Left (ApiError err)
       where
         -- collateralFunds are needed for Plutus transactions
         collateralFunds :: (TxInsCollateral BabbageEra, [Fund])
@@ -150,7 +154,11 @@ generateTxPure TxEnvironment{..} inQueue
     TxFeeExplicit _ fee = txEnvFee
 
     generator :: TxGenerator BabbageEra
-    generator = genTx BabbageEra txEnvProtocolParams collateralFunds txEnvFee txEnvMetadata
+    generator =
+        case convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
+          Right ledgerParameters ->
+            genTx BabbageEra ledgerParameters collateralFunds txEnvFee txEnvMetadata
+          Left err -> \_ _ -> Left (ApiError err)
       where
         -- collateralFunds are needed for Plutus transactions
         collateralFunds :: (TxInsCollateral BabbageEra, [Fund])

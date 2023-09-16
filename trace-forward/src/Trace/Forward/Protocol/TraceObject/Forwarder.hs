@@ -1,16 +1,15 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Trace.Forward.Protocol.TraceObject.Forwarder
   ( TraceObjectForwarder (..)
   , traceObjectForwarderPeer
   ) where
 
-import           Network.TypedProtocol.Core (Peer (..), PeerHasAgency (..),
-                                             PeerRole (..))
+import           Network.TypedProtocol.Core (Peer (..), PeerHasAgency (..), PeerRole (..))
 
 import           Trace.Forward.Protocol.TraceObject.Type
 

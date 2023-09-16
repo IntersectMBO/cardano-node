@@ -13,8 +13,8 @@ import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad (forever)
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.Bimap as BM
-import qualified Data.HashMap.Strict as HM
 import           Data.Functor ((<&>))
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import           Data.String (IsString (..))
 import           Data.Text (Text)
@@ -22,8 +22,8 @@ import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import           Snap.Blaze (blaze)
 import           Snap.Core (Snap, getRequest, route, rqParams, writeText)
-import           Snap.Http.Server (Config, ConfigLog (..), defaultConfig, setAccessLog,
-                   setBind, setErrorLog, setPort, simpleHttpServe)
+import           Snap.Http.Server (Config, ConfigLog (..), defaultConfig, setAccessLog, setBind,
+                   setErrorLog, setPort, simpleHttpServe)
 import           System.Metrics (Sample, Value (..), sampleAll)
 import           System.Time.Extra (sleep)
 import           Text.Blaze.Html5 hiding (map)

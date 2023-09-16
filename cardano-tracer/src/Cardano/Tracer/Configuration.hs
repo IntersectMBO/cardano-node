@@ -20,13 +20,13 @@ module Cardano.Tracer.Configuration
 import           Data.Aeson (FromJSON, ToJSON)
 import           Data.Fixed (Pico)
 import           Data.List (intercalate)
+import           Data.List.Extra (notNull)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
-import           Data.List.Extra (notNull)
-import           Data.Maybe (catMaybes)
 import           Data.Map.Strict (Map)
-import           Data.Word (Word16, Word32, Word64)
+import           Data.Maybe (catMaybes)
 import           Data.Text (Text)
+import           Data.Word (Word16, Word32, Word64)
 import           Data.Yaml (decodeFileEither)
 import           GHC.Generics (Generic)
 import           System.Exit (die)
@@ -92,9 +92,11 @@ data TracerConfig = TracerConfig
   , hasEKG         :: !(Maybe (Endpoint, Endpoint)) -- ^ Endpoint for EKG web-page (list of nodes, monitoring).
   , hasPrometheus  :: !(Maybe Endpoint)             -- ^ Endpoint for Prometheus web-page.
   , hasRTView      :: !(Maybe Endpoint)             -- ^ Endpoint for RTView web-page.
-  , hasForwarding  :: !(Maybe ( Network             -- ^ Socket for tracer's to reforward on,
-                              , Maybe [[Text]]      -- ^ Reforward logs with these prefixes
-                              , Log.TraceOptionForwarder -- ^ The forwarder config.
+    -- | Socket for tracer's to reforward on. Second member of the triplet is the list of prefixes to reforward.
+    -- Third member of the triplet is the forwarder config.
+  , hasForwarding  :: !(Maybe ( Network
+                              , Maybe [[Text]]
+                              , Log.TraceOptionForwarder
                               ))
   , logging        :: !(NonEmpty LoggingParams)     -- ^ Logging parameters.
   , rotation       :: !(Maybe RotationParams)       -- ^ Rotation parameters.

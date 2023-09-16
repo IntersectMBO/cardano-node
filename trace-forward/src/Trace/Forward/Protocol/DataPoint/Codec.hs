@@ -15,8 +15,8 @@ import           Control.Monad.Class.MonadST (MonadST)
 import qualified Data.ByteString.Lazy as LBS
 import           Text.Printf (printf)
 
-import           Network.TypedProtocol.Codec (Codec, PeerHasAgency (..),
-                                              PeerRole (..), SomeMessage (..))
+import           Network.TypedProtocol.Codec (Codec, PeerHasAgency (..), PeerRole (..),
+                   SomeMessage (..))
 import           Network.TypedProtocol.Codec.CBOR (mkCodecCborLazyBS)
 
 import           Trace.Forward.Protocol.DataPoint.Type
