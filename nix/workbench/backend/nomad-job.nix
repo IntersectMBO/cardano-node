@@ -107,9 +107,9 @@ let
       LOGLEVEL="''${SUPERVISORD_LOGLEVEL:-info}"
 
       # Start `supervisord` on the foreground.
-      # Avoid buffer related problems with stdout and stderr disabling buffering
+      # Make sure it never runs in unbuffered mode:
       # https://docs.python.org/3/using/cmdline.html#envvar-PYTHONUNBUFFERED
-      PYTHONUNBUFFERED=TRUE ${supervisor}/bin/supervisord --nodaemon --configuration "''${SUPERVISORD_CONFIG}" --loglevel="''${LOGLEVEL}"
+      PYTHONUNBUFFERED="" ${supervisor}/bin/supervisord --nodaemon --configuration "''${SUPERVISORD_CONFIG}" --loglevel="''${LOGLEVEL}"
       ''
   ;
 
