@@ -263,13 +263,6 @@ let
                   export WORKDIR=$TMP/testTracerExt
               '';
             })
-          ({ lib, pkgs, ... }: lib.mkIf (!pkgs.stdenv.hostPlatform.isDarwin) {
-            # Needed for profiled builds to fix an issue loading recursion-schemes part of makeBaseFunctor
-            # that is missing from the `_p` output.  See https://gitlab.haskell.org/ghc/ghc/-/issues/18320
-            # This work around currently breaks regular builds on macOS with:
-            # <no location info>: error: ghc: ghc-iserv terminated (-11)
-            packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
-          })
           ({ lib, ... }: {
             options.packages = lib.mkOption {
               type = lib.types.attrsOf (lib.types.submodule (

@@ -100,9 +100,6 @@ write-ghc-environment-files: always
 package snap-server
   flags: +openssl
 
-package bitvec
-   flags: -simd
-
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
