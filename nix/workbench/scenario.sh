@@ -62,7 +62,7 @@ case "$op" in
         ############
         backend start-nodes          "$dir"
         backend start-generator      "$dir"
-        backend start-healthchecks   "$dir"
+        #backend start-healthchecks   "$dir"
         scenario_setup_workload_termination   "$dir"
         # Trap end
         ##########
