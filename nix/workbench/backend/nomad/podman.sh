@@ -52,6 +52,15 @@ backend_nomadpodman() {
       deploy-genesis-nomadpodman         "$@"
     ;;
 
+    # All or clean up everything!
+    # Called after `scenario.sh` without an exit trap!
+    stop-cluster )
+      # It "overrides" completely `backend_nomad`'s `stop-cluster` by calling
+      # `stop-cluster-local` that takes care of any local Nomad cluster that
+      # was setup for only this run.
+      backend_nomad stop-cluster-local   "$@"
+    ;;
+
     # Generic backend sub-commands, shared code between Nomad sub-backends.
 
     describe-run )
@@ -112,10 +121,6 @@ backend_nomadpodman() {
 
     fetch-logs )
       backend_nomad fetch-logs           "$@"
-    ;;
-
-    stop-cluster )
-      backend_nomad stop-cluster         "$@"
     ;;
 
     cleanup-cluster )

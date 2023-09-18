@@ -656,7 +656,7 @@ backend_nomad() {
     # - stop-all-nodes        RUN-DIR                               (Nomad only)
     # - stop-all-tracers      RUN-DIR                               (Nomad only)
     # - fetch-logs            RUN-DIR
-    # - stop-cluster          RUN-DIR
+    # - stop-cluster-local    RUN-DIR
     # - cleanup-cluster       RUN-DIR
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
@@ -860,8 +860,8 @@ backend_nomad() {
     ;;
 
     # All or clean up everything!
-    # Called by `scenario.sh` without exit trap (`scenario_setup_exit_trap`)!
-    stop-cluster )
+    # Called after `scenario.sh` without exit trap (`scenario_setup_exit_trap`)!
+    stop-cluster-local )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
       local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)

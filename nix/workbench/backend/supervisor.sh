@@ -176,9 +176,9 @@ EOF
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
-        # Avoid buffer related problems with stdout and stderr disabling buffering
+        # Make sure it never runs in unbuffered mode:
         # https://docs.python.org/3/using/cmdline.html#envvar-PYTHONUNBUFFERED
-        if ! PYTHONUNBUFFERED=TRUE supervisord --config "$dir"/supervisor/supervisord.conf $@ >"$dir"/supervisor/stderr 2>"$dir"/supervisor/stderr
+        if ! PYTHONUNBUFFERED="" supervisord --config "$dir"/supervisor/supervisord.conf $@ >"$dir"/supervisor/stderr 2>"$dir"/supervisor/stderr
         then progress "supervisor" "$(red fatal: failed to start) $(white supervisord)"
              echo "$(red supervisord.conf) --------------------------------" >&2
              cat "$dir"/supervisor/supervisord.conf

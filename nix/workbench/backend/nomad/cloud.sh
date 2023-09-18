@@ -63,6 +63,20 @@ backend_nomadcloud() {
       fi
     ;;
 
+    # All or clean up everything!
+    # Called after `scenario.sh` without an exit trap!
+    stop-cluster )
+      # It "overrides" completely `backend_nomad`'s `stop-cluster`.
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
+      msg "$(yellow "Cloud runs DO NOT automatically stop and purge Nomad jobs")"
+      msg "$(yellow "To stop the Nomad job use:")"
+      msg "$(yellow "wb nomad job stop ${dir}/nomad/nomad-job.json ${nomad_job_name}")"
+      msg "$(yellow "(With the same NOMAD_ADDR, NOMAD_NAMESPACE and NOMAD_TOKEN used for start-cluster)")"
+      true
+    ;;
+
     # Generic backend sub-commands, shared code between Nomad sub-backends.
 
     describe-run )
@@ -75,28 +89,6 @@ backend_nomadcloud() {
 
     start-cluster )
       backend_nomad start-cluster        "$@"
-      # start-ssh
-      # Only if running on "perf" exclusive nodes we use SSH, if not
-      # `nomad exec`, because we need to have an exclusive port open for us.
-      if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"
-      then
-        local jobs_array=()
-        local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
-        for node in ${nodes[*]}
-        do
-          # TODO: Do it in parallel ?
-          backend_nomad task-program-start "${dir}" "${node}" ssh &
-          jobs_array+=("$!")
-        done
-        # Wait and check!
-        if test -n "${jobs_array}"
-        then
-          if ! wait_fail_any "${jobs_array[@]}"
-          then
-            fatal "Failed to start ssh server(s)"
-          fi
-        fi
-      fi
     ;;
 
     start-tracers )
@@ -141,10 +133,6 @@ backend_nomadcloud() {
 
     stop-all )
       backend_nomad stop-all             "$@"
-    ;;
-
-    stop-cluster )
-      backend_nomad stop-cluster         "$@"
     ;;
 
     cleanup-cluster )
@@ -443,10 +431,15 @@ allocate-run-nomadcloud() {
       ## - memory.totalbytes    = 16300142592
       ## Pesimistic: 1,798 MiB / 15,545 MiB Total
       ## Optimistic: 1,396 MiB / 15,545 MiB Total
+      #
+      # WARNING: Don't use more than roughly 15400, for example 15432, because
+      # some clients show a couple bytes less available and Nomad chooses a
+      # client for that tasks and ignores the datacenter affinities, tasks end
+      # running in any datacenter/region!
       local producer_resources='{
           "cores":      8
-        , "memory":     13000
-        , "memory_max": 15000
+        , "memory":     15400
+        , "memory_max": 32000
       }'
       # Set this for every non-explorer node
         jq \
@@ -484,8 +477,8 @@ allocate-run-nomadcloud() {
       # client named "ip-10-24-30-90.eu-central-1.compute.internal"
       local explorer_resources='{
           "cores":      16
-        , "memory":     29000
-        , "memory_max": 31000
+        , "memory":     32000
+        , "memory_max": 64000
       }'
         jq \
           --argjson resources "${explorer_resources}" \
@@ -801,6 +794,39 @@ fetch-logs-nomadcloud() {
   local dir=${1:?$usage}; shift
 
   msg "Fetch logs ..."
+
+  msg "First start the sandboxed SSH servers ..."
+  # Only if running on "perf" exclusive nodes we use SSH, if not
+  # `nomad exec`, because we need to have an exclusive port open for us.
+  if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"
+  then
+    local jobs_array=()
+    local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+    for node in ${nodes[*]}
+    do
+      # TODO: Do it in parallel ?
+      backend_nomad task-program-start "${dir}" "${node}" ssh &
+      jobs_array+=("$!")
+    done
+    # Wait and check!
+    if test -n "${jobs_array}"
+    then
+      if ! wait_fail_any "${jobs_array[@]}"
+      then
+        fatal "Failed to start ssh server(s)"
+      fi
+    fi
+  fi
+
+  fetch-logs-nomadcloud-retry "${dir}"
+
+  msg "Sandboxed SSH servers will be kept running for debugging purposes"
+}
+
+fetch-logs-nomadcloud-retry() {
+  local usage="USAGE: wb backend $op RUN-DIR"
+  local dir=${1:?$usage}; shift
+
   local jobs_array=()
   for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
   do
@@ -821,7 +847,7 @@ fetch-logs-nomadcloud() {
       msg "$(red "Failed to fetch some logs")"
       msg "Check files \"${dir}/nomad/NODE/download_ok\" and \"${dir}/nomad/NODE/download_failed\""
       read -p "Hit enter to retry ..."
-      fetch-logs-nomadcloud "${dir}"
+      fetch-logs-nomadcloud-retry "${dir}"
     else
       msg "$(green "Finished fetching logs")"
     fi
