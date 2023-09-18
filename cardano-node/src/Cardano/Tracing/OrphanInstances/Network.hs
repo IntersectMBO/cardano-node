@@ -116,6 +116,7 @@ import           Ouroboros.Network.TxSubmission.Inbound (ProcessedTxCount (..),
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
 
 import qualified Ouroboros.Network.Diffusion as ND
+import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing)
 
 {- HLINT ignore "Use record patterns" -}
 
@@ -2412,3 +2413,13 @@ instance ToJSON addr
                , "from"    .= toJSON (ConnMgr.fromState tr)
                , "to"      .= toJSON (ConnMgr.toState   tr)
                ]
+
+instance FromJSON PeerSharing where
+  parseJSON = withText "PeerSharing" $ \t ->
+    case readMaybe (Text.unpack t) of
+      Nothing -> fail ("PeerSharing.parseJSON: could not parse value: "
+                     ++ Text.unpack t)
+      Just ps -> return ps
+
+instance ToJSON PeerSharing where
+  toJSON = String . Text.pack . show
