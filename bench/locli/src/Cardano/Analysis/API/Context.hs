@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE UndecidableInstances #-}
 module Cardano.Analysis.API.Context (module Cardano.Analysis.API.Context) where
@@ -63,6 +65,26 @@ data PParams
   }
   deriving (Eq, Generic, Show, FromJSON, ToJSON, NFData)
 
+data PlutusParams
+  = PlutusParams
+  { ppType            :: Text
+  , ppScript          :: Text
+  }
+  deriving (Eq, Generic, Show, NFData)
+
+instance FromJSON PlutusParams where
+  parseJSON = withObject "PlutusParams" $ \v ->
+    PlutusParams
+      <$> v .: "type"
+      <*> v .: "script"
+
+instance ToJSON PlutusParams where
+  toJSON PlutusParams{..} =
+    object
+      [ "type"    .= ppType
+      , "script"  .= ppScript
+      ]
+
 data GeneratorProfile
   = GeneratorProfile
   { add_tx_size      :: Word64
@@ -70,10 +92,19 @@ data GeneratorProfile
   , outputs_per_tx   :: Word64
   , tps              :: Double
   , tx_count         :: Word64
-  , plutusMode       :: Maybe Bool
-  , plutusLoopScript :: Maybe FilePath
+  , plutusMode       :: Maybe Bool            -- legacy format
+  , plutusAutoMode   :: Maybe Bool            -- legacy format
+  , plutus           :: Maybe PlutusParams
   }
   deriving (Eq, Generic, Show, FromJSON, ToJSON, NFData)
+
+plutusLoopScript :: GeneratorProfile -> Maybe Text
+plutusLoopScript GeneratorProfile{plutusMode, plutusAutoMode, plutus}
+  | Just True <- (&&) <$> plutusAutoMode <*> plutusMode
+    = Just "Loop"
+  | otherwise
+    = ppScript `fmap` plutus
+
 
 newtype Commit   = Commit  { unCommit  :: Text } deriving newtype (Eq, Show, FromJSON, ToJSON, NFData)
 newtype Branch   = Branch  { unBranch  :: Text } deriving newtype (Eq, Show, FromJSON, ToJSON, NFData)
