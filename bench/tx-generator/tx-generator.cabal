@@ -236,6 +236,15 @@ test-suite tx-generator-test
                         -fno-warn-unsafe
                         -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
+test-suite tx-generator-monad-test
+  import:               project-config
+  hs-source-dirs:       test
+  main-is:              MonadicMain.hs
+  type:                 exitcode-stdio-1.0
+
+  build-depends:        base >= 4.12
+                      , cardano-node <= 8.1.1
+
 benchmark tx-generator-bench
   import:               project-config
   hs-source-dirs:       test
