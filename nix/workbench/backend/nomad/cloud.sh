@@ -52,6 +52,15 @@ backend_nomadcloud() {
       deploy-genesis-nomadcloud             "$@"
     ;;
 
+    wait-pools-stopped )
+      # It passes the sleep time (in seconds) required argument.
+      # This time is different between local and cloud backends to avoid
+      # unnecesary Nomad specific traffic (~99% happens waiting for node-0, the
+      # first one it waits to stop inside a loop) and at the same time be less
+      # sensitive to network failures.
+      backend_nomad wait-pools-stopped   60 "$@"
+    ;;
+
     fetch-logs )
       # Only if running on "perf" exclusive nodes we use SSH, if not
       # `nomad exec`, because we need to have an exclusive port open for us.
@@ -155,10 +164,6 @@ backend_nomadcloud() {
 
     wait-node-stopped )
       backend_nomad wait-node-stopped       "$@"
-    ;;
-
-    wait-pools-stopped )
-      backend_nomad wait-pools-stopped      "$@"
     ;;
 
     stop-all )
