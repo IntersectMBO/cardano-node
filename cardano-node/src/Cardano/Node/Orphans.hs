@@ -12,7 +12,6 @@ import           Data.Aeson.Types
 import qualified Data.Text as Text
 
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
-import qualified Cardano.Chain.Update as Update
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
@@ -33,12 +32,6 @@ deriving instance Show TracingVerbosity
 
 instance PrintfArg SizeInBytes where
     formatArg (SizeInBytes s) = formatArg s
-
-instance FromJSON Update.ApplicationName where
-  parseJSON (String x) = pure $ Update.ApplicationName x
-  parseJSON invalid  =
-    fail $ "Parsing of application name failed due to type mismatch. "
-    <> "Encountered: " <> show invalid
 
 instance ToJSON AcceptedConnectionsLimit where
   toJSON AcceptedConnectionsLimit

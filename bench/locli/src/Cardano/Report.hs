@@ -18,7 +18,6 @@ import Data.Map.Strict      qualified as Map
 import Data.Text            qualified as T
 import Data.Text.Lazy       qualified as LT
 import Data.Time.Clock
-import System.FilePath as FS
 import System.Posix.User
 import System.Environment (lookupEnv)
 
@@ -32,7 +31,6 @@ import Cardano.Analysis.Summary
 
 
 newtype Author   = Author   { unAuthor   :: Text } deriving newtype (FromJSON, ToJSON)
-newtype Revision = Revision { unRevision :: Int }  deriving newtype (FromJSON, ToJSON)
 newtype ShortId  = ShortId  { unShortId  :: Text } deriving newtype (FromJSON, ToJSON)
 newtype Tag      = Tag      { unTag      :: Text } deriving newtype (FromJSON, ToJSON)
 
@@ -40,7 +38,6 @@ data ReportMeta
   = ReportMeta
     { rmAuthor       :: !Author
     , rmDate         :: !Text
-    , rmRevision     :: !Revision
     , rmLocliVersion :: !LocliVersion
     , rmTarget       :: !Version
     , rmTag          :: !Tag
@@ -49,21 +46,19 @@ instance ToJSON ReportMeta where
   toJSON ReportMeta{..} = object
     [ "author"     .= rmAuthor
     , "date"       .= rmDate
-    , "revision"   .= rmRevision
     , "locli"      .= rmLocliVersion
     , "target"     .= rmTarget
     , "tag"        .= rmTag
     ]
 
-getReport :: [Metadata] -> Version -> Maybe Revision -> IO ReportMeta
-getReport metas _ver mrev = do
+getReport :: [Metadata] -> Version -> IO ReportMeta
+getReport metas _ver = do
   rmAuthor <- getGecosFullUsername
               `catch`
               \(_ :: SomeException) ->
                  getFallbackUserId
   rmDate <- getCurrentTime <&> T.take 16 . show
-  let rmRevision = fromMaybe (Revision 1) mrev
-      rmLocliVersion = getLocliVersion
+  let rmLocliVersion = getLocliVersion
       rmTarget = Version $ ident $ last metas
       rmTag = Tag $ multiRunTag Nothing metas
   pure ReportMeta{..}
@@ -84,12 +79,21 @@ data Workload
   = WValue
   | WPlutusLoopCountdown
   | WPlutusLoopSECP
+  | WPlutusUnknown
 
 instance ToJSON Workload where
   toJSON = \case
     WValue               -> "value-only"
     WPlutusLoopCountdown -> "Plutus countdown loop"
     WPlutusLoopSECP      -> "Plutus SECP loop"
+    WPlutusUnknown       -> "Plutus (other)"
+
+filenameInfix :: Workload -> Text
+filenameInfix = \case
+  WPlutusLoopCountdown  -> "plutus"
+  WPlutusLoopSECP       -> "plutus-secp"
+  WValue                -> "value-only"
+  _                     -> "unknown"
 
 data Section where
   STable ::
@@ -130,19 +134,19 @@ analysesReportSections mp bp =
 --
 
 liftTmplRun :: Summary a -> TmplRun
-liftTmplRun Summary{sumWorkload=GeneratorProfile{..}
+liftTmplRun Summary{sumWorkload=generatorProfile
                    ,sumMeta=meta@Metadata{..}} =
   TmplRun
   { trMeta      = meta
   , trManifest  = manifest & unsafeShortenManifest 5
   , trWorkload  =
-    case ( plutusMode       & fromMaybe False
-         , plutusLoopScript & fromMaybe "" & FS.takeFileName & FS.dropExtension ) of
-         (False, _)                       -> WValue
-         (True, "loop")                   -> WPlutusLoopCountdown
-         (True, "schnorr-secp256k1-loop") -> WPlutusLoopSECP
-         (_, scr) ->
-           error $ "Unknown Plutus script:  " <> scr
+    case plutusLoopScript generatorProfile of
+      Nothing                               -> WValue
+      Just script
+        | script == "Loop"                  -> WPlutusLoopCountdown
+        | script == "EcdsaSecp256k1Loop"    -> WPlutusLoopSECP
+        | script == "SchnorrSecp256k1Loop"  -> WPlutusLoopSECP
+        | otherwise                         -> WPlutusUnknown
   }
 
 data TmplRun
@@ -160,6 +164,7 @@ instance ToJSON TmplRun where
       , "branch"     .= componentBranch (getComponent "cardano-node" trManifest)
       , "ver"        .= ident trMeta
       , "rev"        .= unManifest trManifest
+      , "fileInfix"  .= filenameInfix trWorkload
       ]
 
 liftTmplSection :: Section -> TmplSection
@@ -211,7 +216,7 @@ generate :: InputDir -> Maybe TextInputFile
          -> (SomeSummary, ClusterPerf, SomeBlockProp) -> [(SomeSummary, ClusterPerf, SomeBlockProp)]
          -> IO (ByteString, ByteString, Text)
 generate (InputDir ede) mReport (SomeSummary summ, cp, SomeBlockProp bp) rest = do
-  ctx  <- getReport metas (last restTmpls & trManifest & getComponent "cardano-node" & ciVersion) Nothing
+  ctx  <- getReport metas (last restTmpls & trManifest & getComponent "cardano-node" & ciVersion)
   tmplRaw <- BS.readFile (maybe defaultReportPath unTextInputFile mReport)
   tmpl <- parseWith defaultSyntax (includeFile ede) "report" tmplRaw
   let tmplEnv           = mkTmplEnv ctx baseTmpl restTmpls

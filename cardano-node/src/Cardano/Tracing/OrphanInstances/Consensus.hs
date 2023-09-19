@@ -675,10 +675,10 @@ instance ( ConvertRawHash blk
         ImmDB.ChunkValidationEvent e -> case e of
           ImmDB.StartedValidatingChunk chunkNo outOf ->
                "Validating chunk no. " <> showT chunkNo <> " out of " <> showT outOf
-            <> ". Progress: " <> showProgressT (max (chunkNoToInt chunkNo - 1) 0) (chunkNoToInt outOf) <> "%"
+            <> ". Progress: " <> showProgressT (chunkNoToInt chunkNo) (chunkNoToInt outOf + 1) <> "%"
           ImmDB.ValidatedChunk chunkNo outOf ->
                "Validated chunk no. " <> showT chunkNo <> " out of " <> showT outOf
-            <> ". Progress: " <> showProgressT (chunkNoToInt chunkNo) (chunkNoToInt outOf) <> "%"
+            <> ". Progress: " <> showProgressT (chunkNoToInt chunkNo + 1) (chunkNoToInt outOf + 1) <> "%"
           ImmDB.MissingChunkFile cn      ->
             "The chunk file with number " <> showT cn <> " is missing."
           ImmDB.InvalidChunkFile cn er    ->
