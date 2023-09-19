@@ -25,6 +25,7 @@ import qualified Testnet.Property.Run as H
 
 
 import qualified Cardano.Crypto.Init as Crypto
+import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber as Cardano.Testnet.Test.Cli.Ping
 
 tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
@@ -49,6 +50,7 @@ tests = pure $ T.testGroup "test/Spec.hs"
     -- TODO Conway: broken in conway
     -- , H.ignoreOnWindows "kes-period-info" Cardano.Testnet.Test.Cli.KesPeriodInfo.hprop_kes_period_info --
     -- , H.ignoreOnWindows "query-slot-number" Cardano.Testnet.Test.Cli.QuerySlotNumber.hprop_querySlotNumber
+      H.ignoreOnWindows "ping" Cardano.Testnet.Test.Cli.Ping.hprop_ping
     ]
     -- TODO Conway: broken in conway
   -- , H.ignoreOnWindows "foldBlocks receives ledger state" Cardano.Testnet.Test.FoldBlocks.prop_foldBlocks

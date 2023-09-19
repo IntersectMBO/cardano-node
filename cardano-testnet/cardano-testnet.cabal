@@ -167,6 +167,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
                         Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
                         Cardano.Testnet.Test.Cli.KesPeriodInfo
+                        Cardano.Testnet.Test.Cli.Ping
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
                         Cardano.Testnet.Test.FoldBlocks
                         Cardano.Testnet.Test.Misc
