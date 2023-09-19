@@ -6,10 +6,7 @@ module Testnet.Start.Types
   , cardanoDefaultTestnetOptions
 
   , TestnetNodeOptions(..)
-  , extraBftNodeCliArgs
-  , cardanoPoolNodes
-  , cardanoBftNodes
-  , cardanoNumPoolNodes
+  , extraSpoNodeCliArgs
   , cardanoDefaultTestnetNodeOptions
 
   , NodeLoggingFormat(..)
@@ -44,7 +41,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
 cardanoDefaultTestnetOptions :: CardanoTestnetOptions
 cardanoDefaultTestnetOptions = CardanoTestnetOptions
   { cardanoNodes = cardanoDefaultTestnetNodeOptions
-  , cardanoEra = AnyCardanoEra AlonzoEra
+  , cardanoEra = AnyCardanoEra BabbageEra
   , cardanoEpochLength = 1500
   , cardanoSlotLength = 0.2
   , cardanoTestnetMagic = 42
@@ -55,31 +52,21 @@ cardanoDefaultTestnetOptions = CardanoTestnetOptions
   }
 
 -- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)
-data TestnetNodeOptions
-  = BftTestnetNodeOptions [String]
+newtype TestnetNodeOptions
+  = SpoTestnetNodeOptions [String]
     -- ^ These arguments will be appended to the default set of CLI options when
     -- starting the node.
-  | SpoTestnetNodeOptions
   deriving (Eq, Show)
 
-extraBftNodeCliArgs :: TestnetNodeOptions -> [String]
-extraBftNodeCliArgs (BftTestnetNodeOptions args) = args
-extraBftNodeCliArgs SpoTestnetNodeOptions = []
+extraSpoNodeCliArgs :: TestnetNodeOptions -> [String]
+extraSpoNodeCliArgs (SpoTestnetNodeOptions args) = args
 
-cardanoPoolNodes :: [TestnetNodeOptions] -> [TestnetNodeOptions]
-cardanoPoolNodes = filter (== SpoTestnetNodeOptions)
-
-cardanoBftNodes :: [TestnetNodeOptions] -> [TestnetNodeOptions]
-cardanoBftNodes = filter (/= SpoTestnetNodeOptions)
-
-cardanoNumPoolNodes :: [TestnetNodeOptions] -> Int
-cardanoNumPoolNodes = length . cardanoPoolNodes
 
 cardanoDefaultTestnetNodeOptions :: [TestnetNodeOptions]
 cardanoDefaultTestnetNodeOptions =
-  [ SpoTestnetNodeOptions
-  , SpoTestnetNodeOptions
-  , SpoTestnetNodeOptions
+  [ SpoTestnetNodeOptions []
+  , SpoTestnetNodeOptions []
+  , SpoTestnetNodeOptions []
   ]
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)

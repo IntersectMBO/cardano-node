@@ -11,19 +11,30 @@ module Cardano.Testnet.Test.Node.Shutdown
   ) where
 
 import           Cardano.Api
+
+import           Cardano.Testnet
+
+import           Prelude
+
 import           Control.Monad
 import           Data.Aeson
 import           Data.Aeson.Types
 import           Data.Bifunctor
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Either (isRight)
 import           Data.Functor ((<&>))
 import qualified Data.List as L
 import           Data.Maybe
 import qualified Data.Time.Clock as DTC
-import           Hedgehog (Property, (===))
-import           Prelude
+import           GHC.IO.Exception (ExitCode (ExitFailure, ExitSuccess))
+import           GHC.Stack (callStack)
+import qualified System.Exit as IO
 import           System.FilePath ((</>))
+import qualified System.IO as IO
+import qualified System.Process as IO
+import           System.Process (interruptProcessGroupOf)
 
+import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
@@ -32,18 +43,10 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
-import qualified System.Exit as IO
-import qualified System.IO as IO
-import qualified System.Process as IO
-import qualified Testnet.Property.Utils as H
 
-import           Cardano.Testnet
-import           Data.Either (isRight)
-import           GHC.IO.Exception (ExitCode (ExitFailure, ExitSuccess))
-import           GHC.Stack (callStack)
-import           System.Process (interruptProcessGroupOf)
 import           Testnet.Defaults
 import           Testnet.Process.Run (execCli_, procNode)
+import qualified Testnet.Property.Utils as H
 import           Testnet.Property.Utils
 import           Testnet.Runtime
 import           Testnet.Start.Byron
@@ -187,8 +190,8 @@ hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-syn
           , SpoTestnetNodeOptions
           ]
         }
-  TestnetRuntime { bftNodes = node:_ } <- Cardano.Testnet.testnet fastTestnetOptions conf
-
+  testnetRuntime <- Cardano.Testnet.testnet fastTestnetOptions conf
+  node <- H.headM $ poolRuntime <$> poolNodes testnetRuntime
   -- Wait for the node to exit
   let timeout :: Int
       timeout = round (40 + (fromIntegral maxSlot * slotLen))
@@ -220,8 +223,9 @@ hprop_shutdownOnSigint = H.integrationRetryWorkspace 2 "shutdown-on-sigint" $ \t
         { cardanoEpochLength = 300
         , cardanoSlotLength = 0.01
         }
-  TestnetRuntime { bftNodes = node@NodeRuntime{nodeProcessHandle}:_ }
+  testnetRuntime
     <- Cardano.Testnet.testnet fastTestnetOptions conf
+  node@NodeRuntime{nodeProcessHandle} <- H.headM $ poolRuntime <$> poolNodes testnetRuntime
 
   -- send SIGINT
   H.evalIO $ interruptProcessGroupOf nodeProcessHandle

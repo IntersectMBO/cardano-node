@@ -19,7 +19,6 @@ module Testnet.Runtime
   , PoolNodeKeys(..)
   , Delegator(..)
   , allNodes
-  , bftSprockets
   , poolSprockets
   , poolNodeStdout
   , readNodeLoggingFormat
@@ -73,7 +72,6 @@ data TestnetRuntime = TestnetRuntime
   { configurationFile :: FilePath
   , shelleyGenesisFile :: FilePath
   , testnetMagic :: Int
-  , bftNodes :: [NodeRuntime]
   , poolNodes :: [PoolNode]
   , wallets :: [PaymentKeyInfo]
   , delegators :: [Delegator]
@@ -131,9 +129,6 @@ data LeadershipSlot = LeadershipSlot
 poolNodeStdout :: PoolNode -> FilePath
 poolNodeStdout = nodeStdout . poolRuntime
 
-bftSprockets :: TestnetRuntime -> [Sprocket]
-bftSprockets = fmap nodeSprocket . bftNodes
-
 poolSprockets :: TestnetRuntime -> [Sprocket]
 poolSprockets = fmap (nodeSprocket . poolRuntime) . poolNodes
 
@@ -177,7 +172,7 @@ readNodeLoggingFormat = \case
   s -> Left $ "Unrecognised node logging format: " <> show s <> ".  Valid options: \"json\", \"text\""
 
 allNodes :: TestnetRuntime -> [NodeRuntime]
-allNodes tr = bftNodes tr <> fmap poolRuntime (poolNodes tr)
+allNodes tr = fmap poolRuntime (poolNodes tr)
 
 -- TODO: We probably want a check that this node has the necessary config files to run and
 -- if it doesn't we fail hard.

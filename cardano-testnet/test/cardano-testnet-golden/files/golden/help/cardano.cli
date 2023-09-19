@@ -19,9 +19,9 @@ Usage: cardano-testnet cardano [--num-bft-nodes COUNT]
 
 Available options:
   --num-bft-nodes COUNT    Number of BFT nodes
-                           (default: [BftTestnetNodeOptions [],BftTestnetNodeOptions [],SpoTestnetNodeOptions])
+                           (default: [SpoTestnetNodeOptions,SpoTestnetNodeOptions,SpoTestnetNodeOptions])
   --num-pool-nodes COUNT   Number of pool nodes
-                           (default: [BftTestnetNodeOptions [],BftTestnetNodeOptions [],SpoTestnetNodeOptions])
+                           (default: [SpoTestnetNodeOptions,SpoTestnetNodeOptions,SpoTestnetNodeOptions])
   --byron-era              Specify the Byron era
   --shelley-era            Specify the Shelley era
   --allegra-era            Specify the Allegra era

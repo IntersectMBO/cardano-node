@@ -392,7 +392,7 @@ shelleyTestnet testnetOptions H.Conf {H.tempAbsPath} = do
   -- Launch cluster of three nodes
   H.evalIO $ LBS.writeFile (tempAbsPath' </> "configuration.yaml") $ J.encode defaultShelleyOnlyYamlConfig
   let spoNodesWithPortNos = L.zip allNodes [3001..]
-  allNodeRuntimes <- forM spoNodesWithPortNos
+  _allNodeRuntimes <- forM spoNodesWithPortNos
      $ \(node, portNo) -> startNode (TmpAbsolutePath tempAbsPath') node portNo
         [ "run"
         , "--config", tempAbsPath' </> "configuration.yaml"
@@ -425,7 +425,6 @@ shelleyTestnet testnetOptions H.Conf {H.tempAbsPath} = do
     , testnetMagic = testnetMagic
     , poolNodes = [ ]
     , wallets = [ ]
-    , bftNodes = allNodeRuntimes
     , delegators = [ ]
     }
 

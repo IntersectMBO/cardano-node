@@ -347,7 +347,6 @@ babbageTestnet testnetOptions (H.Conf tempAbsPath) = do
         , testnetMagic
         , poolNodes
         , wallets = wallets
-        , bftNodes = []
         , delegators = delegators
         }
 

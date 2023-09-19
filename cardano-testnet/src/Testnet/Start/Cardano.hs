@@ -7,10 +7,7 @@
 module Testnet.Start.Cardano
   ( ForkPoint(..)
   , CardanoTestnetOptions(..)
-  , cardanoPoolNodes
-  , cardanoBftNodes
-  , cardanoNumPoolNodes
-  , extraBftNodeCliArgs
+  , extraSpoNodeCliArgs
   , TestnetNodeOptions(..)
   , cardanoDefaultTestnetOptions
   , cardanoDefaultTestnetNodeOptions
@@ -41,6 +38,7 @@ import qualified System.Info as OS
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.OS as OS
+import qualified Hedgehog.Extras.Stock.Time as DTC
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
@@ -112,7 +110,7 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
 
   configurationFile <- H.noteShow $ tempAbsPath' </> "configuration.yaml"
 
-  let numPoolNodes = cardanoNumPoolNodes $ cardanoNodes testnetOptions
+  let numPoolNodes = length $ cardanoNodes testnetOptions
   -- TODO: No need to use the executable directly. We need to wrap
   -- the function that create-staked called and parameterize it on CardanoTestnetOptions or TestnetOptions
   execCli_
@@ -124,6 +122,7 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
     , "--supply-delegated", "1000000000000"
     , "--gen-stake-delegs", "3"
     , "--gen-utxo-keys", "3"
+    , "--start-time", DTC.formatIso8601 startTime
     ]
 
   poolKeys <- H.noteShow $ flip fmap [1..numPoolNodes] $ \n ->
@@ -355,7 +354,6 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
         , testnetMagic
         , poolNodes
         , wallets = wallets
-        , bftNodes = []
         , delegators = []
         }
 
