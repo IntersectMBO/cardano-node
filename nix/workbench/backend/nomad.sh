@@ -1921,7 +1921,9 @@ backend_nomad() {
     ;;
 
     wait-pools-stopped )
-      local usage="USAGE: wb backend $op RUN-DIR"
+      local usage="USAGE: wb backend $op SLEEP-SECONDS RUN-DIR"
+      # This parameters is added by the nomad backend being used.
+      local sleep_seconds=${1:?$usage}; shift
       local dir=${1:?$usage}; shift
       local generator_task=$(envjqr 'generator_task_name')
 
@@ -1976,7 +1978,10 @@ backend_nomad() {
           local elapsed="$(($(date +%s) - start_time))"
           echo -ne "\b\b\b\b\b\b"
           printf "%6d" "${elapsed}"
-          sleep 1
+          # This time is different between local and cloud backends to avoid
+          # unnecesary Nomad specific traffic and at the same time be less
+          # sensitive to network failures.
+          sleep "${sleep_seconds}"
         done # While
         if ! test -f "${dir}"/flag/cluster-stopping
         then

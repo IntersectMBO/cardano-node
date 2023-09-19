@@ -52,6 +52,15 @@ backend_nomadexec() {
       deploy-genesis-nomadexec              "$@"
     ;;
 
+    wait-pools-stopped )
+      # It passes the sleep time (in seconds) required argument.
+      # This time is different between local and cloud backends to avoid
+      # unnecesary Nomad specific traffic (~99% happens waiting for node-0, the
+      # first one it waits to stop inside a loop) and at the same time be less
+      # sensitive to network failures.
+      backend_nomad wait-pools-stopped    1 "$@"
+    ;;
+
     # All or clean up everything!
     # Called after `scenario.sh` without an exit trap!
     stop-cluster )
@@ -111,10 +120,6 @@ backend_nomadexec() {
 
     wait-node-stopped )
       backend_nomad wait-node-stopped       "$@"
-    ;;
-
-    wait-pools-stopped )
-      backend_nomad wait-pools-stopped      "$@"
     ;;
 
     stop-all )
