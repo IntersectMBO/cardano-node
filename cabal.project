@@ -58,8 +58,8 @@ package snap-server
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: b081836c84301167d2e5038ecf92fdb6a8408c06
-  --sha256: 04cpvyl0l9gqczw4f3wpl50gmwihhiqpvfpf1q9x0gjy66gcx4my
+  tag: ccb450a0622a66042f83db37068a54792e4b9ca1
+  --sha256: 1kpsz30drgmpkxrsnklkhnkp9775q5hb67wx6fdhkhzan8vjzyl4
   subdir:
    ouroboros-consensus
    ouroboros-consensus-protocol
@@ -71,7 +71,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-api
-  tag: edbde1e63139add04905ce313eed668e596a2f91
-  --sha256: 0dffz6w5pwjf4zqgznfaqcdc7qvg6gjbq2jq6f6g82nkqdsvwq18
+  tag: c2f492c0425bb8d36658ead973be14489daf3b1a
+  --sha256: 0l5qdh9yvvis7yn5524w4416aahjaca8cpdxpyrmy2iyb91mwil2
   subdir:
     cardano-api
