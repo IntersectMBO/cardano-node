@@ -1,5 +1,9 @@
 # Revision history for trace-dispatcher
 
+## 2.1.0 -- Sep 2023
+
+* Updated to `ouroboros-network-0.9.1.0`
+
 ## 2.0.0 -- May 2023
 
 * First version that diverges from caradno-node versioning scheme

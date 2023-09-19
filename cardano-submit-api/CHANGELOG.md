@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 8.4.0 -- Sep 2023
+
+* Updated dependencies to `cardano-api-8.20`, `ouroboros-network-0.9.1`.
+
 ## 8.0.0 -- May 2023
 
 - [Add tx_submit_fail_count metric](https://github.com/input-output-hk/cardano-node/pull/4566)

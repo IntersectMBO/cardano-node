@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node-chairman
-version:                8.3.0
+version:                8.4.0
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -44,7 +44,7 @@ executable cardano-node-chairman
   build-depends:        cardano-api
                       , cardano-crypto-class
                       , cardano-git-rev
-                      , cardano-node ^>= 8.3
+                      , cardano-node ^>= 8.4
                       , cardano-prelude
                       , containers
                       , contra-tracer
