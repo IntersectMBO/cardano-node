@@ -42,7 +42,6 @@ import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Map.Strict as Map
 import           Data.SOP
 import           Data.SOP.Functors
-import           Data.SOP.Strict
 import           Data.Word (Word64)
 
 import qualified Cardano.Chain.Block as Byron

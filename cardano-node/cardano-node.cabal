@@ -192,6 +192,7 @@ library
                       , scientific
                       , si-timers
                       , sop-core
+                      , sop-extras
                       , stm
                       , strict-sop-core
                       , strict-stm

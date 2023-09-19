@@ -61,20 +61,22 @@ package bitvec
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: ccb450a0622a66042f83db37068a54792e4b9ca1
-  --sha256: 1kpsz30drgmpkxrsnklkhnkp9775q5hb67wx6fdhkhzan8vjzyl4
+  tag: 93c448efdba56e0ccf99b3fbd63785f32800e0ad
+  --sha256: 03p8pbh299q6wmlkg9gwws3jlfhwmxaj45mw4flddj46zlcr2i2l
   subdir:
    ouroboros-consensus
    ouroboros-consensus-protocol
    ouroboros-consensus-cardano-legacy-block
    ouroboros-consensus-diffusion
    ouroboros-consensus-cardano
+   strict-sop-core
+   sop-extras
 
--- utxo-hd on 8.12.0.0
+-- utxo-hd
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-api
-  tag: c2f492c0425bb8d36658ead973be14489daf3b1a
-  --sha256: 0l5qdh9yvvis7yn5524w4416aahjaca8cpdxpyrmy2iyb91mwil2
+  tag: 3643b79ba40619da478d9b6b034fb88f3745a20e
+  --sha256: 0zxayw6bcyv28yrrf61ah50qscksp5pkh79vyg4rqmraqpq4nffl
   subdir:
     cardano-api

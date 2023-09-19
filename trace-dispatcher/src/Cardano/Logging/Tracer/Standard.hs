@@ -8,7 +8,6 @@ module Cardano.Logging.Tracer.Standard (
 import           Control.Concurrent (myThreadId)
 import           Control.Concurrent.Async
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Exception
 import           Control.Monad (forever, when)
 import           Control.Monad.IO.Class
 import           Data.IORef (IORef, modifyIORef', newIORef, readIORef)
