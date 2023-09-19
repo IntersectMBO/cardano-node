@@ -15,6 +15,8 @@ module Testnet.Start.Babbage
   , babbageDefaultTestnetOptions
   ) where
 
+import           Cardano.Api
+
 import           Prelude
 
 import           Control.Monad
@@ -28,7 +30,11 @@ import qualified Data.Time.Clock as DTC
 import           System.FilePath.Posix ((</>))
 import qualified System.Info as OS
 
-import           Cardano.Api
+import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Stock.Aeson as J
+import qualified Hedgehog.Extras.Stock.OS as OS
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 
 import qualified Testnet.Conf as H
 import           Testnet.Defaults
@@ -41,12 +47,6 @@ import           Testnet.Runtime (Delegator (..), NodeLoggingFormat (..), Paymen
                    PaymentKeyPair (..), PoolNode (PoolNode), PoolNodeKeys (..), StakingKeyPair (..),
                    TestnetRuntime (..), poolSprockets, startNode)
 import qualified Testnet.Start.Byron as Byron
-
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Stock.Aeson as J
-import qualified Hedgehog.Extras.Stock.OS as OS
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
 
 {- HLINT ignore "Redundant flip" -}
 
@@ -317,9 +317,9 @@ babbageTestnet testnetOptions (H.Conf tempAbsPath) = do
         ]
       ]
     ]
-
-  poolNodes <- forM (L.zip spoNodes poolKeys) $ \(node,key) -> do
-    runtime <- startNode (TmpAbsolutePath tempAbsPath') node
+  let spoNodesWithPortNos = L.zip spoNodes [3001..]
+  poolNodes <- forM (L.zip spoNodesWithPortNos poolKeys) $ \((node, portNo), key) -> do
+    runtime <- startNode (TmpAbsolutePath tempAbsPath') node portNo
         [ "run"
         , "--config", tempAbsPath' </> "configuration.yaml"
         , "--topology", tempAbsPath' </> node </> "topology.json"

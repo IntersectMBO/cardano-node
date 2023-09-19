@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -29,6 +30,16 @@ module Testnet.Runtime
   , fromNominalDiffTimeMicro
   ) where
 
+import           Cardano.Api
+
+import qualified Cardano.Chain.Genesis as G
+import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Shelley.Genesis
+import           Cardano.Node.Configuration.POM
+import qualified Cardano.Node.Protocol.Byron as Byron
+import           Cardano.Node.Types
+
 import           Prelude
 
 import           Control.Monad
@@ -41,30 +52,22 @@ import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime)
 import           GHC.Generics (Generic)
 import           GHC.Stack
-import qualified Hedgehog as H
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import qualified Hedgehog.Extras.Stock.String as S
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
-import qualified Hedgehog.Extras.Test.Process as H
+import qualified GHC.Stack as GHC
 import           System.FilePath
 import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
 
-import           Cardano.Api
-import qualified Cardano.Chain.Genesis as G
-import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Shelley.Genesis
-import           Cardano.Node.Configuration.POM
-import qualified Cardano.Node.Protocol.Byron as Byron
-import           Cardano.Node.Types
+import qualified Hedgehog as H
+import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test.Process as H
+
 import           Testnet.Filepath
 import qualified Testnet.Process.Run as H
-
-data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
+import           Testnet.Start.Types
 
 data TestnetRuntime = TestnetRuntime
   { configurationFile :: FilePath
@@ -138,7 +141,9 @@ shelleyGenesis :: (H.MonadTest m, MonadIO m, HasCallStack) => TestnetRuntime -> 
 shelleyGenesis TestnetRuntime{shelleyGenesisFile} = withFrozenCallStack $
   H.evalEither =<< H.evalIO (A.eitherDecodeFileStrict' shelleyGenesisFile)
 
-getStartTime :: (H.MonadTest m, MonadIO m, HasCallStack) => FilePath -> TestnetRuntime -> m UTCTime
+getStartTime
+  :: (H.MonadTest m, MonadIO m, HasCallStack)
+  => FilePath -> TestnetRuntime -> m UTCTime
 getStartTime tempRootPath TestnetRuntime{configurationFile} = withFrozenCallStack $ H.evalEither <=< H.evalIO . runExceptT $ do
   byronGenesisFile <-
     decodeNodeConfiguration configurationFile >>=
@@ -174,16 +179,20 @@ readNodeLoggingFormat = \case
 allNodes :: TestnetRuntime -> [NodeRuntime]
 allNodes tr = bftNodes tr <> fmap poolRuntime (poolNodes tr)
 
+-- TODO: We probably want a check that this node has the necessary config files to run and
+-- if it doesn't we fail hard.
 -- | Start a node, creating file handles, sockets and temp-dirs.
 startNode
   :: TmpAbsolutePath
   -- ^ The temporary absolute path
   -> String
   -- ^ The name of the node
+  -> Int
+  -- ^ Node port
   -> [String]
-  -- ^ The command --socket-path and --port will be added automatically.
+  -- ^ The command --socket-path will be added automatically.
   -> H.Integration NodeRuntime
-startNode tp@(TmpAbsolutePath tempAbsPath) node nodeCmd = do
+startNode tp@(TmpAbsolutePath _tempAbsPath) node port nodeCmd = GHC.withFrozenCallStack $ do
   let tempBaseAbsPath = makeTmpBaseAbsPath tp
       socketDir = makeSocketDir tp
       logDir = makeLogDir tp
@@ -200,8 +209,7 @@ startNode tp@(TmpAbsolutePath tempAbsPath) node nodeCmd = do
 
   H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
 
-  portString <- fmap S.strip . H.readFile $ tempAbsPath </> node </> "port"
-
+  let portString = show port
 
   createProcessNode
     <- H.procNode $ mconcat
