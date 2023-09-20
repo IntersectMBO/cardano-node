@@ -7,17 +7,18 @@
 # ln -s $(git-root)/scripts/githooks/haskell-style-lint $(git rev-parse --git-dir)/hooks/pre-commit
 #
 
-for x in $(git diff --staged --name-only --diff-filter=ACM | tr '\n' ' '); do
-  if [ "${x##*.}" = "hs" ]; then
-    if grep -qE '^#' "$x"; then
-      echo "$x contains CPP.  Skipping."
-    else
-      stylish-haskell -i "$x"
-    fi
-    # fail on linting issues
-    hlint "$x"
+hlint_rc="0"
+
+for x in $(git diff --staged --name-only --diff-filter=ACM "*.hs" | tr '\n' ' '); do
+  if grep -qE '^#' "$x"; then
+    echo "$x contains CPP.  Skipping."
+  else
+    stylish-haskell -i "$x"
   fi
+  hlint "$x" || hlint_rc="1"
 done
 
 # fail if there are style issues
-git --no-pager diff --exit-code
+git --no-pager diff --exit-code || exit 1
+# if there are no style issue, there could be hlint issues:
+exit $hlint_rc
