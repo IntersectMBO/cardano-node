@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                8.3.0
+version:                8.4.0
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -196,9 +196,9 @@ library
                       , strict-stm
                       , text >= 2.0
                       , time
-                      , trace-dispatcher ^>= 2.0
-                      , trace-forward ^>= 2.0
-                      , trace-resources ^>= 0.2
+                      , trace-dispatcher ^>= 2.2
+                      , trace-forward ^>= 2.2
+                      , trace-resources ^>= 0.2.0.2
                       , tracer-transformers
                       , transformers
                       , transformers-except
