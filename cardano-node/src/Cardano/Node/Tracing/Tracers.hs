@@ -169,6 +169,8 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
     unless (null warnings) $
       traceConfigWarnings trBase trForward warnings
 
+    traceEffectiveConfiguration trBase trForward trConfig
+
     pure Tracers
       {
         chainDBTracer = Tracer (traceWith chainDBTr')
