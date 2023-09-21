@@ -231,26 +231,29 @@ EOF
 
 
 for NODE in ${SPO_NODES}; do
-  (
-    echo "#!/usr/bin/env bash"
-    echo ""
-    echo "cardano-node run \\"
-    echo "  --config                          '${ROOT}/configuration.yaml' \\"
-    echo "  --topology                        '${ROOT}/${NODE}/topology.json' \\"
-    echo "  --database-path                   '${ROOT}/${NODE}/db' \\"
-    echo "  --socket-path                     '$(sprocket "${ROOT}/${NODE}/node.sock")' \\"
-    echo "  --shelley-kes-key                 '${ROOT}/${NODE}/kes.skey' \\"
-    echo "  --shelley-vrf-key                 '${ROOT}/${NODE}/vrf.skey' \\"
-    echo "  --byron-delegation-certificate    '${ROOT}/${NODE}/byron-delegation.cert' \\"
-    echo "  --byron-signing-key               '${ROOT}/${NODE}/byron-delegate.key' \\"
-    echo "  --shelley-operational-certificate '${ROOT}/${NODE}/opcert.cert' \\"
-    echo "  --port                            $(cat "${ROOT}/${NODE}/port") \\"
-    echo "  | tee -a '${ROOT}/${NODE}/node.log'"
-  ) > "${ROOT}/${NODE}.sh"
+  RUN_FILE="${ROOT}/${NODE}.sh"
+  cat << EOF > "${RUN_FILE}"
+#!/usr/bin/env bash
 
-  chmod a+x "${ROOT}/${NODE}.sh"
+CARDANO_NODE="\${CARDANO_NODE:-cardano-node}"
 
-  echo "${ROOT}/${NODE}.sh"
+\$CARDANO_NODE run \\
+  --config                          '${ROOT}/configuration.yaml' \\
+  --topology                        '${ROOT}/${NODE}/topology.json' \\
+  --database-path                   '${ROOT}/${NODE}/db' \\
+  --socket-path                     '$(sprocket "${ROOT}/${NODE}/node.sock")' \\
+  --shelley-kes-key                 '${ROOT}/${NODE}/kes.skey' \\
+  --shelley-vrf-key                 '${ROOT}/${NODE}/vrf.skey' \\
+  --byron-delegation-certificate    '${ROOT}/${NODE}/byron-delegation.cert' \\
+  --byron-signing-key               '${ROOT}/${NODE}/byron-delegate.key' \\
+  --shelley-operational-certificate '${ROOT}/${NODE}/opcert.cert' \\
+  --port                            $(cat "${ROOT}/${NODE}/port") \\
+  | tee -a '${ROOT}/${NODE}/node.log'
+EOF
+
+  chmod a+x "${RUN_FILE}"
+
+  echo "${RUN_FILE}"
 done
 
 mkdir -p "${ROOT}/run"
