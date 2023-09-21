@@ -44,15 +44,16 @@ runInLoop action localSocket prevDelayInSecs =
 uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
 uncurry3 f (a,b,c) = f a b c
 
+-- | map over second element of a tuple
 mapSnd :: (a -> b) -> (c, a) -> (c, b)
 mapSnd f (x,y) = (x,f y)
 
--- | Convenience function
+-- | Convenience function for a Show instance to be converted to text immediately
 {-# INLINE showT #-}
 showT :: Show a => a -> T.Text
 showT = T.pack . show
 
--- | Convenience function
+-- | Convenience function for a showHex call converted to text immediately
 {-# INLINE showTHex #-}
 showTHex :: (Integral a, Show a) => a -> T.Text
 showTHex i = T.pack (showHex i [])

@@ -11,6 +11,7 @@ module Cardano.Logging.Tracer.Composed (
   , mkMetricsTracer
   , traceTracerInfo
   , traceConfigWarnings
+  , traceEffectiveConfiguration
   ) where
 
 import           Cardano.Logging.Configuration
@@ -34,13 +35,13 @@ import           Data.Text hiding (map)
 
 -- | Construct a tracer according to the requirements for cardano node.
 -- The tracer gets a 'name', which is appended to its namespace.
--- The tracer has to be an instance of LogFormat-ting for the display of
+-- The tracer has to be an instance of LogFormatting for the display of
 -- messages and an instance of MetaTrace for meta information such as
 -- severity, privacy, details and backends'.
 -- The tracer gets the backends': 'trStdout', 'trForward' and 'mbTrEkg'
 -- as arguments.
--- The returned tracer needs to be configured with a configuration.
-
+-- The returned tracer needs to be configured with a configuration
+-- before it is used.
 mkCardanoTracer :: forall evt.
      ( LogFormatting evt
      , MetaTrace evt)
@@ -140,7 +141,7 @@ backendsAndFormat ::
   -> IO (Trace IO a)
 backendsAndFormat trStdout trForward mbBackends _ =
   let backends' = fromMaybe
-                    [Forwarder, Stdout HumanFormatColoured]
+                    [Forwarder, Stdout MachineFormat]
                     mbBackends
   in do
     let mbForwardTrace  = if Forwarder `L.elem` backends'
@@ -172,6 +173,21 @@ traceConfigWarnings trStdout trForward errs = do
     traceWith ((withInnerNames . appendPrefixNames ["Reflection"]. withSeverity)
                   internalTr)
               (TracerConsistencyWarnings errs)
+
+traceEffectiveConfiguration ::
+     Trace IO FormattedMessage
+  -> Trace IO FormattedMessage
+  -> TraceConfig
+  -> IO ()
+traceEffectiveConfiguration trStdout trForward trConfig = do
+    internalTr <- backendsAndFormat
+                      trStdout
+                      trForward
+                      Nothing
+                      (Trace T.nullTracer)
+    traceWith ((withInnerNames . appendPrefixNames ["Reflection"]. withSeverity)
+                  internalTr)
+              (TracerInfoConfig trConfig)
 
 traceTracerInfo ::
      Trace IO FormattedMessage
