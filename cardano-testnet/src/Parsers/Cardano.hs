@@ -6,6 +6,7 @@ module Parsers.Cardano
 import           Prelude
 
 import           Cardano.CLI.Environment
+import           Cardano.CLI.Legacy.Options
 import qualified Data.List as L
 import           Options.Applicative
 import qualified Options.Applicative as OA
@@ -24,7 +25,7 @@ newtype CardanoOptions = CardanoOptions
 optsTestnet :: EnvCli -> Parser CardanoTestnetOptions
 optsTestnet envCli = CardanoTestnetOptions
   <$> pNumBftAndSpoNodes
-  <*> pCardanoEra envCli
+  <*> pLegacyCardanoEra envCli
   <*> OA.option auto
       (   OA.long "epoch-length"
       <>  OA.help "Epoch length"
