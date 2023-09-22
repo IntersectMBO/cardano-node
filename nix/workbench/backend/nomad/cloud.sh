@@ -13,7 +13,7 @@ backend_nomadcloud() {
       # Can be:
       # nomadpodman       (Using podman Task Driver in the cloud is not planned)
       # nomadexec  (Starts Nomad Agents supporting the "nix_installable" stanza)
-      # nomadcloud  (IOG Nomad Agents and Amazon S3 with credentials from Vault)
+      # nomadcloud    (SRE managed Nomad Agents on Amazon S3 (dedicated or not))
       echo 'nomadcloud'
     ;;
 
@@ -42,113 +42,115 @@ backend_nomadcloud() {
     ;;
 
     allocate-run )
-      allocate-run-nomadcloud            "$@"
+      allocate-run-nomadcloud             "$@"
       # Does a pre allocation before calling the default/common allocation.
-      backend_nomad allocate-run         "$@"
+      backend_nomad allocate-run          "$@"
     ;;
 
     deploy-genesis )
       # It "overrides" completely `backend_nomad`'s `deploy-genesis`.
-      deploy-genesis-nomadcloud          "$@"
+      deploy-genesis-nomadcloud           "$@"
+    ;;
+
+    wait-pools-stopped )
+      # It passes the sleep time (in seconds) required argument.
+      # This time is different between local and cloud backends to avoid
+      # unnecesary Nomad specific traffic (~99% happens waiting for node-0, the
+      # first one it waits to stop inside a loop) and at the same time be less
+      # sensitive to network failures.
+      backend_nomad wait-pools-stopped 60 "$@"
     ;;
 
     fetch-logs )
-      # Only if running on "perf" exclusive nodes we use SSH, if not
-      # `nomad exec`, because we need to have an exclusive port open for us.
-      if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"
+      # Only if running on the dedicated P&T Nomad cluster on AWS we use SSH, if
+      # not `nomad exec`, because we need to have a dedicated port open for us.
+      if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
       then
-        fetch-logs-nomadcloud            "$@"
+        # It "overrides" completely `backend_nomad`'s `fetch-logs`.
+        fetch-logs-nomadcloud             "$@"
       else
-        backend_nomad fetch-logs         "$@"
+        # Generic backend sub-commands, shared code between Nomad sub-backends.
+        backend_nomad fetch-logs          "$@"
+      fi
+    ;;
+
+    # All or clean up everything!
+    # Called after `scenario.sh` without an exit trap!
+    stop-cluster )
+      # Only when running on dedicated P&T Nomad cluster job is kept running!
+      if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
+      then
+        # It "overrides" completely `backend_nomad`'s `stop-cluster`.
+        local usage="USAGE: wb backend $op RUN-DIR"
+        local dir=${1:?$usage}; shift
+        local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
+        msg "$(yellow "Cloud runs DO NOT automatically stop and purge Nomad jobs")"
+        msg "$(yellow "To stop the Nomad job use:")"
+        msg "$(yellow "wb nomad job stop ${dir}/nomad/nomad-job.json ${nomad_job_name}")"
+        msg "$(yellow "(With the same NOMAD_ADDR, NOMAD_NAMESPACE and NOMAD_TOKEN used for start-cluster)")"
+        true
+      else
+        # Generic backend sub-commands, shared code between Nomad sub-backends.
+        backend_nomad stop-cluster-local  "$@"
       fi
     ;;
 
     # Generic backend sub-commands, shared code between Nomad sub-backends.
 
     describe-run )
-      backend_nomad describe-run         "$@"
+      backend_nomad describe-run          "$@"
     ;;
 
     is-running )
-      backend_nomad is-running           "$@"
+      backend_nomad is-running            "$@"
     ;;
 
     start-cluster )
-      backend_nomad start-cluster        "$@"
-      # start-ssh
-      # Only if running on "perf" exclusive nodes we use SSH, if not
-      # `nomad exec`, because we need to have an exclusive port open for us.
-      if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"
-      then
-        local jobs_array=()
-        local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
-        for node in ${nodes[*]}
-        do
-          # TODO: Do it in parallel ?
-          backend_nomad task-program-start "${dir}" "${node}" ssh &
-          jobs_array+=("$!")
-        done
-        # Wait and check!
-        if test -n "${jobs_array}"
-        then
-          if ! wait_fail_any "${jobs_array[@]}"
-          then
-            fatal "Failed to start ssh server(s)"
-          fi
-        fi
-      fi
+      backend_nomad start-cluster         "$@"
     ;;
 
     start-tracers )
-      backend_nomad start-tracers        "$@"
+      backend_nomad start-tracers         "$@"
     ;;
 
     start-nodes )
-      backend_nomad start-nodes          "$@"
+      backend_nomad start-nodes           "$@"
     ;;
 
     start-generator )
-      backend_nomad start-generator      "$@"
+      backend_nomad start-generator       "$@"
     ;;
 
     start-healthchecks )
-      backend_nomad start-healthchecks   "$@"
+      backend_nomad start-healthchecks    "$@"
     ;;
 
     start-node )
-      backend_nomad start-node           "$@"
+      backend_nomad start-node            "$@"
     ;;
 
     stop-node )
-      backend_nomad stop-node            "$@"
+      backend_nomad stop-node             "$@"
     ;;
 
     get-node-socket-path )
-      backend_nomad get-node-socket-path "$@"
+      backend_nomad get-node-socket-path  "$@"
     ;;
 
     wait-node )
-      backend_nomad wait-node            "$@"
+      backend_nomad wait-node             "$@"
     ;;
 
     wait-node-stopped )
-      backend_nomad wait-node-stopped    "$@"
-    ;;
-
-    wait-pools-stopped )
-      backend_nomad wait-pools-stopped   "$@"
+      backend_nomad wait-node-stopped     "$@"
     ;;
 
     stop-all )
-      backend_nomad stop-all             "$@"
-    ;;
-
-    stop-cluster )
-      backend_nomad stop-cluster         "$@"
+      backend_nomad stop-all              "$@"
     ;;
 
     cleanup-cluster )
-      backend_nomad cleanup-cluster      "$@"
+      backend_nomad cleanup-cluster       "$@"
     ;;
 
     * )
@@ -159,72 +161,141 @@ backend_nomadcloud() {
 
 }
 
-# Sets jq envars "profile_container_specs_file" ,"nomad_environment",
-# "nomad_task_driver" and "one_tracer_per_node".
+# Sets jq envars ("profile_container_specs_file" ,"nomad_environment",
+# "nomad_task_driver" and "one_tracer_per_node") and checks Nomad envars
+# (NOMAD_ADDR, NOMAD_NAMESPACE, NOMAD_TOKEN).
 setenv-defaults-nomadcloud() {
   local backend_dir="${1}"
 
   local profile_container_specs_file
   profile_container_specs_file="${backend_dir}"/container-specs.json
 
+  # Nomad cloud profiles only available for Cardano World "qa" nodes ("-cw-qa")
+  # or the P&T dedicated Nomad cluster ("-nomadperf")
+  if                                                          \
+        ! echo "${WB_SHELL_PROFILE}" | grep --quiet "\-cw-qa" \
+     &&                                                       \
+        ! echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
+  then
+    fatal "Unknown profile for Nomad Cloud: \"${WB_SHELL_PROFILE}\""
+  fi
+
+  ##############
+  # NOMAD_ADDR #
+  ##############
   if test -z "${NOMAD_ADDR+set}"
   then
-    # The variable is not set, not set but empty, just not set!
-    msg $(yellow "WARNING: Nomad address \"NOMAD_ADDR\" envar is not set")
-    # TODO: New Nomad cluster:export NOMAD_ADDR=http://10.200.0.1:4646
-    export NOMAD_ADDR="https://nomad.world.dev.cardano.org"
-    msg $(blue "INFO: Setting \"NOMAD_ADDR\" to the SRE provided address for \"Performance and Tracing\" (\"${NOMAD_ADDR}\")")
+    # The variable is not set, it's not set to an empty value, just not set!
+    ########################################################################
+    msg $(blue "INFO: Nomad address \"NOMAD_ADDR\" envar is not set")
+    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-cw-qa"
+    then
+      export NOMAD_ADDR="https://nomad.world.dev.cardano.org"
+    fi
+    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
+    then
+      export NOMAD_ADDR="http://10.200.0.1:4646"
+    fi
+    msg $(yellow "WARNING: Setting \"NOMAD_ADDR\" to the SRE provided address for \"Performance and Tracing\" (\"${NOMAD_ADDR}\")")
   else
     # The variable is set and maybe empty!
+    ######################################
     msg $(blue "INFO: Nomad address \"NOMAD_ADDR\" envar is \"${NOMAD_ADDR}\"")
-    if test "${NOMAD_ADDR}" != "https://nomad.world.dev.cardano.org"
+    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-cw-qa"
     then
-      msg $(yellow "WARNING: Nomad address \"NOMAD_ADDR\" envar is not \"https://nomad.world.dev.cardano.org\"")
+      if test "${NOMAD_ADDR}" != "https://nomad.world.dev.cardano.org"
+      then
+        fatal "Nomad address \"NOMAD_ADDR\" envar is not \"https://nomad.world.dev.cardano.org\""
+      fi
+    fi
+    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
+    then
+      if test "${NOMAD_ADDR}" != "http://10.200.0.1:4646"
+      then
+        fatal "Nomad address \"NOMAD_ADDR\" envar is not \"http://10.200.0.1:4646\""
+      fi
     fi
   fi
-  # The abscence of `NOMAD_NAMESPACE` or `NOMAD_TOKEN` needs confirmation
+  ###################
+  # NOMAD_NAMESPACE #
+  ###################
   if test -z ${NOMAD_NAMESPACE+set}
   then
-    # The variable is not set, not set but empty, just not set!
-    msg $(yellow "WARNING: Nomad namespace \"NOMAD_NAMESPACE\" envar is not set")
-    # TODO: New Nomad cluster: export NOMAD_NAMESPACE=""
-    export NOMAD_NAMESPACE="perf"
-    msg $(blue "INFO: Setting \"NOMAD_NAMESPACE\" to the SRE provided namespace for \"Performance and Tracing\" (\"${NOMAD_NAMESPACE}\")")
+    msg $(blue "INFO: Nomad namespace \"NOMAD_NAMESPACE\" envar is not set")
+    # The variable is not set, it's not set to an empty value, just not set!
+    ########################################################################
+    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-cw-qa"
+    then
+      export NOMAD_NAMESPACE="perf"
+      msg $(yellow "WARNING: Setting \"NOMAD_NAMESPACE\" to the SRE provided namespace for \"Performance and Tracing\" (\"${NOMAD_NAMESPACE}\")")
+    fi
   else
     # The variable is set and maybe empty!
+    ######################################
     msg $(blue "INFO: Nomad namespace \"NOMAD_NAMESPACE\" envar is \"${NOMAD_NAMESPACE}\"")
-    if test "${NOMAD_NAMESPACE}" != "perf"
+    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-cw-qa"
     then
-      msg $(yellow "WARNING: Nomad namespace \"NOMAD_NAMESPACE\" envar is not \"perf\"")
+      if test "${NOMAD_NAMESPACE}" != "perf"
+      then
+        fatal "Nomad namespace \"NOMAD_NAMESPACE\" envar is not \"perf\""
+      fi
+    fi
+    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
+    then
+      if test "${NOMAD_NAMESPACE}" != ""
+      then
+        fatal "Nomad namespace \"NOMAD_NAMESPACE\" envar is not empty"
+      fi
     fi
   fi
+  ###############
+  # NOMAD_TOKEN #
+  ###############
   if test -z "${NOMAD_TOKEN+set}"
   then
-    # The variable is not set, not set but empty, just not set!
-    msg $(yellow "WARNING: Nomad token \"NOMAD_TOKEN\" envar is not set")
-    msg $(yellow "If you need to fetch a NOMAD_TOKEN for world.dev.cardano.org provide an empty string")
+    msg $(blue "INFO: Nomad token \"NOMAD_TOKEN\" envar is not set")
+    # The variable is not set, it's not set to an empty value, just not set!
+    ########################################################################
+    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-cw-qa"
+    then
+      export NOMAD_TOKEN="$(wb_nomad vault world nomad-token)"
+      msg $(yellow "WARNING: Fetching a \"NOMAD_TOKEN\" from SRE provided Vault for \"Performance and Tracing\"")
+    fi
   else
     # The variable is set and maybe empty!
-    if test -z "${NOMAD_TOKEN}"
+    ######################################
+    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-cw-qa"
     then
-      msg $(blue "INFO: Fetching a \"NOMAD_TOKEN\" from SRE provided Vault for \"Performance and Tracing\"")
-      export NOMAD_TOKEN="$(wb_nomad vault world nomad-token)"
-    else
-      msg $(blue "INFO: Using provided Nomad token \"NOMAD_TOKEN\" envar")
+      if test -z "${NOMAD_TOKEN}"
+      then
+        msg $(red "FATAL: Nomad token \"NOMAD_TOKEN\" envar is empty")
+        fatal "If you need to fetch a NOMAD_TOKEN for world.dev.cardano.org don't set the envar"
+      else
+        msg $(blue "INFO: Using provided Nomad token \"NOMAD_TOKEN\" envar")
+      fi
+    fi
+    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
+    then
+      if test -n "${NOMAD_TOKEN}"
+      then
+        fatal "A non-empty Nomad token \"NOMAD_TOKEN\" envar was provided but none is needed"
+      fi
     fi
   fi
+
   # Check all the AWS S3 envars needed for the HTTP PUT request
   # Using same names as the AWS CLI
   # https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html
   if test -z "${AWS_ACCESS_KEY_ID:-}" || test -z "${AWS_SECRET_ACCESS_KEY:-}"
   then
-    msg $(yellow "WARNING: Amazon S3 \"AWS_ACCESS_KEY_ID\" or \"AWS_SECRET_ACCESS_KEY\" envar is not set")
-    msg $(blue "INFO: Fetching \"AWS_ACCESS_KEY_ID\" and \"AWS_SECRET_ACCESS_KEY\" from SRE provided Vault for \"Performance and Tracing\"")
+    msg $(blue "INFO: Amazon S3 \"AWS_ACCESS_KEY_ID\" or \"AWS_SECRET_ACCESS_KEY\" envar is not set")
+    msg $(yellow "WARNING: Fetching \"AWS_ACCESS_KEY_ID\" and \"AWS_SECRET_ACCESS_KEY\" from SRE provided Vault for \"Performance and Tracing\"")
     local aws_credentials
     aws_credentials="$(wb_nomad vault world aws-s3-credentials)"
     export AWS_ACCESS_KEY_ID=$(echo "${aws_credentials}" | jq -r .data.access_key)
     export AWS_SECRET_ACCESS_KEY=$(echo "${aws_credentials}" | jq -r .data.secret_key)
   fi
+
   # The Nomad job spec will contain links ("nix_installables" stanza) to
   # the Nix Flake outputs it needs inside the container, these are
   # refereced with a GitHub commit ID inside the "container-specs" file.
@@ -267,6 +338,7 @@ setenv-defaults-nomadcloud() {
       fatal "Could not fetch commit info from GitHub (\`curl\` error)"
     fi
   fi
+
   # There are so many assumptions that I like having the user confirm them!
   read -p "Hit enter to continue ..."
 }
@@ -285,15 +357,16 @@ allocate-run-nomadcloud() {
   # Create nomad folder and copy the Nomad job spec file to run.
   mkdir -p "${dir}"/nomad
   # Select which version of the Nomad job spec file we are running and
-  # create a nicely sorted and indented copy it "nomad/nomad-job.json".
-  # Only if running on "perf" exclusive nodes we use SSH, if not `nomad exec`,
-  # because we need to have an exclusive port open for us.
-  if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"
+  # create a nicely sorted and indented copy in "nomad/nomad-job.json".
+  # Only if running on the dedicated P&T Nomad Cluster we use SSH, if not
+  # `nomad exec`, because we need to have an exclusive port open for us.
+  if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
   then
     jq -r ".nomadJob.cloud.ssh"                  \
       "${dir}"/container-specs.json              \
     > "${dir}"/nomad/nomad-job.json
   else
+    # This avoids building some extra non-needed dependencies.
     jq -r ".nomadJob.cloud.nomadExec"            \
       "${dir}"/container-specs.json              \
     > "${dir}"/nomad/nomad-job.json
@@ -316,12 +389,11 @@ allocate-run-nomadcloud() {
   ##########################################################################
   # Profile name dependent changes #########################################
   ##########################################################################
-  # "cw-perf-*" profiles are profiles that only run on Cardano World's Nomad
-  # Nodes of class "perf".
-  # Other cloud profiles are for example "ci-test-cw-qa", "ci-test-cw-perf",
-  # "ci-test-cw-qa", "ci-test-cw-perf". "qa" means that they run on Nomad
-  # nodes that belong to the "qa" class, runs on these should be limited to
-  # short tests and must never use the "infra" class where HA jobs runs.
+  # "*-nomadperf" profiles only run on the dedicated P&T Nomad Cluster on AWS.
+  # "*-cw-qa" (for example "ci-test-cw-qa" or "default-cw-qa") means that they
+  # run on Cardano World Nomad cluster's nodes that belong to the "qa" class,
+  # runs on these should be limited to short tests and must never use the
+  # "infra" class where HA jobs runs.
   if test -z "${WB_SHELL_PROFILE:-}"
   then
     fatal "Envar \"WB_SHELL_PROFILE\" is empty!"
@@ -329,17 +401,22 @@ allocate-run-nomadcloud() {
     ########################################################################
     # Fix for region mismatches ############################################
     ########################################################################
-    # We use "us-east-2" and they use "us-east-1"
-      jq \
-        ".[\"job\"][\"${nomad_job_name}\"][\"datacenters\"] |= [\"eu-central-1\", \"us-east-1\", \"ap-southeast-2\"]" \
-        "${dir}"/nomad/nomad-job.json \
-    | \
+    # - Cardano World cluster uses: "eu-central-1", "us-east-2"
+    # - The workbench at Nix level: "eu-central-1", "us-east-2", and "ap-southeast-2"
+    # - Dedicated P&T cluster uses: "eu-central-1", "us-east-1", and "ap-southeast-2"
+    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
+    then
+        jq \
+          ".[\"job\"][\"${nomad_job_name}\"][\"datacenters\"] |= [\"eu-central-1\", \"us-east-1\", \"ap-southeast-2\"]" \
+          "${dir}"/nomad/nomad-job.json \
+      | \
         sponge "${dir}"/nomad/nomad-job.json
-      jq \
-        ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries( if (.value.affinity.value == \"us-east-2\") then (.value.affinity.value |= \"us-east-1\") else (.) end )" \
-        "${dir}"/nomad/nomad-job.json \
-    | \
+        jq \
+          ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries( if (.value.affinity.value == \"us-east-2\") then (.value.affinity.value |= \"us-east-1\") else (.) end )" \
+          "${dir}"/nomad/nomad-job.json \
+      | \
         sponge "${dir}"/nomad/nomad-job.json
+    fi
     ########################################################################
     # Unique placement: ####################################################
     ########################################################################
@@ -377,7 +454,7 @@ allocate-run-nomadcloud() {
     # making sure "perf" class nodes runs can't clash because service names
     # and resources definitions currently won't allow that to happen but a new
     # "perf" run may still mess up a previously running cluster.
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-qa"
+    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-cw-qa"
     then
       # Using "qa" class distinct nodes. Only "short" test allowed here.
       group_constraints_array='
@@ -427,7 +504,7 @@ allocate-run-nomadcloud() {
     # Set the resources, only for perf exlusive cloud runs!
     # When not "perf", when "cw-qa", only "short" tests are allowed on
     # whatever resources we are given.
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"
+    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
     then
       # Producer nodes use this specs, make sure they are available!
       # AWS:
@@ -443,10 +520,15 @@ allocate-run-nomadcloud() {
       ## - memory.totalbytes    = 16300142592
       ## Pesimistic: 1,798 MiB / 15,545 MiB Total
       ## Optimistic: 1,396 MiB / 15,545 MiB Total
+      #
+      # WARNING: Don't use more than roughly 15400, for example 15432, because
+      # some clients show a couple bytes less available and Nomad chooses a
+      # client for that tasks and ignores the datacenter affinities, tasks end
+      # running in any datacenter/region!
       local producer_resources='{
           "cores":      8
-        , "memory":     13000
-        , "memory_max": 15000
+        , "memory":     15400
+        , "memory_max": 32000
       }'
       # Set this for every non-explorer node
         jq \
@@ -484,8 +566,8 @@ allocate-run-nomadcloud() {
       # client named "ip-10-24-30-90.eu-central-1.compute.internal"
       local explorer_resources='{
           "cores":      16
-        , "memory":     29000
-        , "memory_max": 31000
+        , "memory":     32000
+        , "memory_max": 64000
       }'
         jq \
           --argjson resources "${explorer_resources}" \
@@ -497,7 +579,7 @@ allocate-run-nomadcloud() {
     ############################################################################
     # SSH Server: ##############################################################
     ############################################################################
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "cw-perf"
+    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
     then
       local template_json_srv template_json_usr
       template_json_srv="$( \
@@ -537,7 +619,7 @@ allocate-run-nomadcloud() {
     ########################################################################
     # If value profile on "perf", using always the same placement!
     # This means node-N always runs on the same Nomad Client/AWS EC2 machine
-    if test "${WB_SHELL_PROFILE:0:13}" = 'cw-perf-value'
+    if test "${WB_SHELL_PROFILE:0:15}" = 'value-nomadperf'
     then
       # A file with all the available Nomad Clients is needed!
       # This files is a list of Nomad Clients with a minimun of ".id",
@@ -801,6 +883,39 @@ fetch-logs-nomadcloud() {
   local dir=${1:?$usage}; shift
 
   msg "Fetch logs ..."
+
+  msg "First start the sandboxed SSH servers ..."
+  # Only if running on dedicated P&T Nomad cluster on AWS we use SSH, if not
+  # `nomad exec`, because we need to have an exclusive port open for us.
+  if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
+  then
+    local jobs_array=()
+    local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+    for node in ${nodes[*]}
+    do
+      # TODO: Do it in parallel ?
+      backend_nomad task-program-start "${dir}" "${node}" ssh &
+      jobs_array+=("$!")
+    done
+    # Wait and check!
+    if test -n "${jobs_array}"
+    then
+      if ! wait_fail_any "${jobs_array[@]}"
+      then
+        fatal "Failed to start ssh server(s)"
+      fi
+    fi
+  fi
+
+  fetch-logs-nomadcloud-retry "${dir}"
+
+  msg "Sandboxed SSH servers will be kept running for debugging purposes"
+}
+
+fetch-logs-nomadcloud-retry() {
+  local usage="USAGE: wb backend $op RUN-DIR"
+  local dir=${1:?$usage}; shift
+
   local jobs_array=()
   for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
   do
@@ -821,7 +936,7 @@ fetch-logs-nomadcloud() {
       msg "$(red "Failed to fetch some logs")"
       msg "Check files \"${dir}/nomad/NODE/download_ok\" and \"${dir}/nomad/NODE/download_failed\""
       read -p "Hit enter to retry ..."
-      fetch-logs-nomadcloud "${dir}"
+      fetch-logs-nomadcloud-retry "${dir}"
     else
       msg "$(green "Finished fetching logs")"
     fi

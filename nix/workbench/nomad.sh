@@ -25,6 +25,8 @@ usage_nomad() {
                      Creates a JSON array with all the SRE's perf nodes in a
                      format that can be used to ensure cloud runs are
                      reproducible.
+                     Needed envars (NOMAD_TOKEN, NOMAD_ADDR or NOMAD_NAMESPACE)
+                     must be provided by the user.
 
     $(helpcmd agents start SERVER-NAME CLIENT-NAME TASK-DRIVER-NAME)
                      Start a default 1 server 1 client Nomad cluster.
@@ -337,7 +339,7 @@ wb_nomad() {
               local key_path="${ssh_dir}"/server.id_ed25519
               if ! test -f "${key_path}"
               then
-                ssh-keygen -t ed25519 -f "${key_path}" -C "" -N ""
+                ssh-keygen -t ed25519 -f "${key_path}" -C "" -N "" >/dev/null
               fi
               echo "${key_path}"
             ;;
@@ -346,7 +348,7 @@ wb_nomad() {
               local key_path="${ssh_dir}"/user.id_ed25519
               if ! test -f "${key_path}"
               then
-                ssh-keygen -t ed25519 -f "${key_path}" -C "" -N ""
+                ssh-keygen -t ed25519 -f "${key_path}" -C "" -N "" >/dev/null
               fi
               echo "${key_path}"
             ;;
@@ -401,12 +403,11 @@ EOL
 ################################################################################
     nodes )
       local usage="USAGE: wb nomad ${op}"
-      local nomad_address="https://nomad.world.dev.cardano.org"
-      local nomad_token
-      nomad_token=$(wb_nomad vault world nomad-token)
-      # Fetch the status of all nodes of class "perf"
+      # Fetch the status of all nodes that are in the "ready" state.
+      # If a node is removed status is "down" and will still show its details.
+      # Not using cardano specific filters anymore (-filter 'NodeClass=="perf"').
       local perf_nodes
-      perf_nodes="$(NOMAD_TOKEN="${nomad_token}" NOMAD_NAMESPACE=perf nomad node status -address="${nomad_address}" -filter 'NodeClass=="perf"' -json)"
+      perf_nodes="$(nomad node status -filter 'Status=="ready"' -json)"
       # Create the base JSON string but without the "attributes" because those
       # are only available when fetching the status of individual nodes.
       local nodes_json
@@ -433,7 +434,7 @@ EOL
       do
         # Fetch the attributes
         local node_attributes
-        node_attributes="$(NOMAD_TOKEN="${nomad_token}" NOMAD_NAMESPACE=perf nomad node status -address="${nomad_address}" -json "${node_id}" | jq .Attributes)"
+        node_attributes="$(nomad node status -json "${node_id}" | jq .Attributes)"
         # Add the attributes of this node to the JSON string
         nodes_json="$( \
             echo "${nodes_json}" \
