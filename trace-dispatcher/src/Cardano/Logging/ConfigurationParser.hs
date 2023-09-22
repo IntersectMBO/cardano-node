@@ -1,8 +1,6 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -13,16 +11,16 @@ module Cardano.Logging.ConfigurationParser
   , configToRepresentation
   ) where
 
+import           Control.Applicative ((<|>))
 import           Control.Exception (throwIO)
 import qualified Data.Aeson as AE
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import           Data.List (foldl')
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (isJust)
-import           Data.Text (Text, split, intercalate)
+import           Data.Maybe (catMaybes, listToMaybe)
+import           Data.Text (Text, intercalate, split)
 import           Data.Yaml
-import           GHC.Generics
 
 import           Cardano.Logging.Types
 
@@ -52,9 +50,9 @@ instance AE.ToJSON ConfigRepresentation where
   toJSON ConfigRepresentation{..} = object
     [ "TraceOptions"                  .= traceOptions
     , "TraceOptionForwarder"          .= traceOptionForwarder
-    , "traceOptionNodeName"           .= traceOptionNodeName
+    , "TraceOptionNodeName"           .= traceOptionNodeName
     , "TraceOptionPeerFrequency"      .= traceOptionPeerFrequency
-    , "traceOptionResourceFrequency"  .= traceOptionResourceFrequency
+    , "TraceOptionResourceFrequency"  .= traceOptionResourceFrequency
     ]
 
 -- | In the external configuration representation for configuration files
@@ -65,7 +63,7 @@ data ConfigOptionRep = ConfigOptionRep
     , backends :: Maybe [BackendConfig]
     , maxFrequency :: Maybe Double
     }
-  deriving (Eq, Ord, Show, Generic)
+  deriving (Eq, Ord, Show)
 
 instance AE.FromJSON ConfigOptionRep where
   parseJSON (Object obj) = ConfigOptionRep
@@ -107,18 +105,10 @@ readConfigurationWithDefault fp defaultConf = do
         (if (not . Map.null) (tcOptions fileConf)
           then tcOptions fileConf
           else tcOptions defaultConf)
-        (if isJust (tcForwarder fileConf)
-            then tcForwarder fileConf
-            else tcForwarder defaultConf)
-        (if isJust (tcNodeName fileConf)
-            then tcNodeName fileConf
-            else tcNodeName defaultConf)
-        (if isJust (tcPeerFrequency fileConf)
-            then tcPeerFrequency fileConf
-            else tcPeerFrequency defaultConf)
-        (if isJust (tcResourceFrequency fileConf)
-            then tcResourceFrequency fileConf
-            else tcResourceFrequency defaultConf)
+        (tcForwarder fileConf <|> tcForwarder defaultConf)
+        (tcNodeName fileConf <|> tcNodeName defaultConf)
+        (tcPeerFrequency fileConf <|> tcPeerFrequency defaultConf)
+        (tcResourceFrequency fileConf <|> tcResourceFrequency defaultConf)
 
 -- | Parse the byteString as external representation and converts to internal
 -- representation
@@ -154,21 +144,11 @@ parseRepresentation bs = transform (decodeEither' bs)
       -- | Convert from external to internal representation
     toConfigOptions :: ConfigOptionRep -> [ConfigOption]
     toConfigOptions ConfigOptionRep {..} =
-      case severity of
-        Nothing -> []
-        Just sev -> [ConfSeverity sev]
-      ++
-      case detail of
-        Nothing -> []
-        Just dtl -> [ConfDetail dtl]
-      ++
-      case backends of
-        Nothing -> []
-        Just bcks -> [ConfBackend bcks]
-      ++
-      case maxFrequency of
-        Nothing -> []
-        Just lim -> [ConfLimiter lim]
+      catMaybes
+        [ ConfSeverity <$> severity
+        , ConfDetail <$> detail
+        , ConfBackend <$> backends
+        , ConfLimiter <$> maxFrequency]
 
 
 -- | Convert from internal to external representation
@@ -197,27 +177,12 @@ configToRepresentation traceConfig =
     fromOptions :: [ConfigOption] -> ConfigOptionRep
     fromOptions opts =
       ConfigOptionRep
-      { severity = case filter (\case
-                          ConfSeverity _ -> True
-                          _ -> False) opts of
-                      ConfSeverity sev : _ -> Just sev
-                      _ -> Nothing
-      , detail   = case filter (\case
-                          ConfDetail _ -> True
-                          _ -> False) opts of
-                      ConfDetail det : _ -> Just det
-                      _ -> Nothing
-      , backends = case filter (\case
-                          ConfBackend _ -> True
-                          _ -> False) opts of
-                      ConfBackend back : _ -> Just back
-                      _ -> Nothing
-      , maxFrequency = case filter (\case
-                          ConfLimiter _ -> True
-                          _ -> False) opts of
-                      ConfLimiter freq : _ -> Just freq
-                      _ -> Nothing
+      { severity     = listToMaybe [d | ConfSeverity d <- opts]
+      , detail       = listToMaybe [d | ConfDetail d <- opts]
+      , backends     = listToMaybe [d | ConfBackend d <- opts]
+      , maxFrequency = listToMaybe [d | ConfLimiter d <- opts]
       }
+
 
 
 

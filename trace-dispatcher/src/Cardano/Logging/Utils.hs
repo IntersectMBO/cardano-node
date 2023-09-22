@@ -6,7 +6,6 @@
 module Cardano.Logging.Utils (
     runInLoop
   , uncurry3
-  , mapSnd
   , showT
   , showTHex
   ) where
@@ -44,9 +43,6 @@ runInLoop action localSocket prevDelayInSecs =
 uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
 uncurry3 f (a,b,c) = f a b c
 
--- | map over second element of a tuple
-mapSnd :: (a -> b) -> (c, a) -> (c, b)
-mapSnd f (x,y) = (x,f y)
 
 -- | Convenience function for a Show instance to be converted to text immediately
 {-# INLINE showT #-}

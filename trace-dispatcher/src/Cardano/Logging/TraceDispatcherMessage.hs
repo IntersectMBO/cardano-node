@@ -5,13 +5,13 @@ module Cardano.Logging.TraceDispatcherMessage
   ) where
 
 import           Data.Aeson hiding (Error)
+import           Data.ByteString.Lazy (toStrict)
 import qualified Data.Map as Map
 import           Data.Text
 import           Data.Text.Encoding
-import           Data.ByteString.Lazy (toStrict)
 
-import           Cardano.Logging.Types
 import           Cardano.Logging.ConfigurationParser ()
+import           Cardano.Logging.Types
 
 data UnknownNamespaceKind =
     UKFSeverity
@@ -122,7 +122,7 @@ instance MetaTrace TraceDispatcherMessage where
     namespaceFor TracerInfo {}       = Namespace [] ["TracerInfo"]
     namespaceFor MetricsInfo {}      = Namespace [] ["MetricsInfo"]
     namespaceFor TracerConsistencyWarnings {}     = Namespace [] ["TracerConsistencyWarnings"]
-    namespaceFor TracerInfoConfig {} = Namespace [] ["InfoConfig"]
+    namespaceFor TracerInfoConfig {} = Namespace [] ["TracerConfigInfo"]
 
 
 
@@ -133,7 +133,7 @@ instance MetaTrace TraceDispatcherMessage where
     severityFor (Namespace _ ["TracerInfo"]) _       = Just Notice
     severityFor (Namespace _ ["MetricsInfo"]) _      = Just Debug
     severityFor (Namespace _ ["TracerConsistencyWarnings"]) _  = Just Error
-    severityFor (Namespace _ ["InfoConfig"]) _       = Just Notice
+    severityFor (Namespace _ ["TracerConfigInfo"]) _       = Just Notice
     severityFor _ _                                  = Nothing
 
 
@@ -160,7 +160,7 @@ instance MetaTrace TraceDispatcherMessage where
     documentFor (Namespace _ ["TracerConsistencyWarnings"]) = Just $ mconcat
       [ "Tracer consistency check found errors."
       ]
-    documentFor (Namespace _ ["InfoConfig"]) = Just $ mconcat
+    documentFor (Namespace _ ["TracerConfigInfo"]) = Just $ mconcat
       [ "Trace the tracer configuration which is effectively used."
       ]
     documentFor _ = Nothing
@@ -173,5 +173,5 @@ instance MetaTrace TraceDispatcherMessage where
       , Namespace [] ["TracerInfo"]
       , Namespace [] ["MetricsInfo"]
       , Namespace [] ["TracerConsistencyWarnings"]
-      , Namespace [] ["InfoConfig"]
+      , Namespace [] ["TracerConfigInfo"]
       ]
