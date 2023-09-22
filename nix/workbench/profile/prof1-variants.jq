@@ -179,7 +179,7 @@ def all_profile_variants:
   |
     # P&T Nomad cluster Nodes in ["eu-central-1", "us-east-2", "ap-southeast-2"] datacenters
     { composition:
-      { locations:                      ["EU", "US", "AP"]
+      { locations:                      ["EU", "US"]
       , topology:                       "torus"
       , with_explorer:                  true
       }
