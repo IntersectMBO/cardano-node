@@ -446,7 +446,23 @@ EOL
                     .attributes                                                \
                   |=                                                           \
                     {                                                          \
-                      \"os\": {                                                \
+                      \"cpu\": {                                               \
+                         \"arch\": \$attrs[\"cpu.arch\"]                       \
+                       , \"frequency\": \$attrs[\"cpu.frequency\"]             \
+                       , \"modelname\": \$attrs[\"cpu.modelname\"]             \
+                       , \"numcores\": \$attrs[\"cpu.numcores\"]               \
+                       , \"reservablecores\": \$attrs[\"cpu.reservablecores\"] \
+                       , \"totalcompute\": \$attrs[\"cpu.totalcompute\"]       \
+                      }                                                        \
+                    , \"kernel\": {                                            \
+                         \"arch\": \$attrs[\"kernel.arch\"]                    \
+                       , \"name\": \$attrs[\"kernel.name\"]                    \
+                       , \"version\": \$attrs[\"kernel.version\"]              \
+                      }                                                        \
+                    , \"memory\": {                                            \
+                         \"totalbytes\": \$attrs[\"memory.totalbytes\"]        \
+                      }                                                        \
+                    , \"os\": {                                                \
                          \"name\": \$attrs[\"os.name\"]                        \
                        , \"version\": \$attrs[\"os.version\"]                  \
                       }                                                        \

@@ -2400,6 +2400,14 @@ backend_nomad() {
       backend_nomad task-file-contents "${dir}" "${node}" \
         /local/entrypoint.env                             \
       > "${dir}"/nomad/"${node}"/entrypoint.env
+      # Dynamically generated file with system info!
+      backend_nomad task-file-contents "${dir}" "${node}" \
+        /local/entrypoint.uname                           \
+      > "${dir}"/nomad/"${node}"/entrypoint.uname
+      # Dynamically generated file with cpu info!
+      backend_nomad task-file-contents "${dir}" "${node}" \
+        /local/entrypoint.cpuinfo                           \
+      > "${dir}"/nomad/"${node}"/entrypoint.cpuinfo
       # Dynamically generated file with all the services/addresses found!
       backend_nomad task-file-contents "${dir}" "${node}" \
         /local/networking.json                            \
@@ -2448,6 +2456,14 @@ backend_nomad() {
           backend_nomad task-file-contents "${dir}" "tracer" \
             /local/entrypoint.env                            \
           > "${dir}"/nomad/tracer/entrypoint.env
+          # Dynamically generated file with system info!
+          backend_nomad task-file-contents "${dir}" "tracer" \
+            /local/entrypoint.uname                          \
+          > "${dir}"/nomad/tracer/entrypoint.uname
+          # Dynamically generated file with cpu info!
+          backend_nomad task-file-contents "${dir}" "tracer" \
+            /local/entrypoint.cpuinfo                        \
+          > "${dir}"/nomad/tracer/entrypoint.cpuinfo
           # Dynamically generated file with all the services/addresses found!
           backend_nomad task-file-contents "${dir}" "tracer" \
             /local/networking.json                           \
@@ -2667,6 +2683,7 @@ backend_nomad() {
         "$@"
     ;;
 
+    # Generic function, tries all known runtime log files names.
     task-exec-program-run-files-tar-zstd )
       local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
       local dir=${1:?$usage}; shift
@@ -2684,27 +2701,28 @@ backend_nomad() {
       # tar (child): xz: Cannot exec: No such file or directory
       # tar (child): Error is not recoverable: exiting now
       # Code example of the files needed: https://github.com/input-output-hk/cardano-ops/blob/bench-master/bench/bench.sh#L646-L670
-      backend_nomad task-exec "${dir}" "${task}"         \
-        "${bash_path}" -c                                \
-        "                                                \
-          \"${find_path}\" \"${prog_dir}\"               \
-            -mindepth 1 -maxdepth 1 -type f              \
-            \(                                           \
-                 -name "exit_code"                       \
-              -o -name "stdout"                          \
-              -o -name "stderr"                          \
-              -o -name "*.prof"                          \
-              -o -name "*.eventlog"                      \
-              -o -name "*.gcstats"                       \
-              -o -name "*.log"                           \
-              -o -name "start.sh.debug"                  \
-            \)                                           \
-            -printf \"%P\\n\"                            \
-        |                                                \
-          \"${tar_path}\" --create                       \
-            --directory=\"${prog_dir}\" --files-from=-   \
-        |                                                \
-          \"${cat_path}\"                                \
+      backend_nomad task-exec "${dir}" "${task}"          \
+        "${bash_path}" -c                                 \
+        "                                                 \
+          \"${find_path}\" \"${prog_dir}\"                \
+            -mindepth 1 -maxdepth 1 -type f               \
+            \(                                            \
+                 -name "exit_code"                        \
+              -o -name "stdout"                           \
+              -o -name "stderr"                           \
+              -o -name "*.prof"                           \
+              -o -name "*.eventlog"                       \
+              -o -name "*.gcstats"                        \
+              -o -name "*.log"                            \
+              -o -name "protocol-parameters-queried.json" \
+              -o -name "start.sh.debug"                   \
+            \)                                            \
+            -printf \"%P\\n\"                             \
+        |                                                 \
+          \"${tar_path}\" --create                        \
+            --directory=\"${prog_dir}\" --files-from=-    \
+        |                                                 \
+          \"${cat_path}\"                                 \
         "
     ;;
 

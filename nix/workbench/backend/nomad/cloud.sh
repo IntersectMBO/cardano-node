@@ -545,8 +545,9 @@ allocate-run-nomadcloud() {
       # ".datacenter", ".attributes.platform.aws["instance-type"]",
       # ".attributes.platform.aws.placement["availability-zone"]",
       # ".attributes.unique.platform.aws["instance-id"]",
-      # ".attributes.unique.platform.aws.["public-ipv4"]" and
-      # ".attributes.unique.platform.aws.mac".
+      # ".attributes.unique.platform.aws.["public-ipv4"]"
+      # ".attributes.unique.platform.aws.mac", ".attributes.cpu.modelname" and
+      # ".attributes.kernel.version".
       if test -z "${NOMAD_CLIENTS_FILE:-}" || ! test -f "${NOMAD_CLIENTS_FILE}"
       then
         fatal "No \"\$NOMAD_CLIENTS_FILE\". For reproducible builds provide this file that ensures cluster nodes are always placed on the same machines, or create a new one with 'wb nomad nodes' if Nomad Clients have suffered changes and runs fail with \"placement errors\""
@@ -614,7 +615,7 @@ allocate-run-nomadcloud() {
             " \
             "${NOMAD_CLIENTS_FILE}" \
           )
-          local instance_id availability_zone public_ipv4 mac_address
+          local instance_id availability_zone public_ipv4 mac_address cpu_model kernel_version
           instance_id="$( \
              echo "${actual_client}" \
             | \
@@ -638,6 +639,18 @@ allocate-run-nomadcloud() {
             | \
               jq -r \
                 '.attributes.unique.platform.aws.mac' \
+          )"
+          cpu_model="$( \
+             echo "${actual_client}" \
+            | \
+              jq -r \
+                '.attributes.cpu.modelname' \
+          )"
+          kernel_version="$( \
+             echo "${actual_client}" \
+            | \
+              jq -r \
+                '.attributes.kernel.version' \
           )"
           # Pin the actual node to an specific Nomad Client / AWS instance
           # by appending below constraints to the already there group
@@ -671,6 +684,16 @@ allocate-run-nomadcloud() {
                 { \
                   \"attribute\": \"\${attr.unique.platform.aws.mac}\" \
                 , \"value\":     \"${mac_address}\" \
+                } \
+              ,
+                { \
+                  \"attribute\": \"\${attr.cpu.modelname}\" \
+                , \"value\":     \"${cpu_model}\" \
+                } \
+              ,
+                { \
+                  \"attribute\": \"\${attr.kernel.version}\" \
+                , \"value\":     \"${kernel_version}\" \
                 } \
             ] \
           "
