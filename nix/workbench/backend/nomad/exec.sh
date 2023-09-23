@@ -13,7 +13,7 @@ backend_nomadexec() {
       # Can be:
       # nomadpodman       (Using podman Task Driver in the cloud is not planned)
       # nomadexec  (Starts Nomad Agents supporting the "nix_installable" stanza)
-      # nomadcloud  (IOG Nomad Agents and Amazon S3 with credentials from Vault)
+      # nomadcloud    (SRE managed Nomad Agents on Amazon S3 (dedicated or not))
       echo 'nomadexec'
     ;;
 
