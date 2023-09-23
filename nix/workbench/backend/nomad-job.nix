@@ -273,12 +273,12 @@ let
         constraint = {
           attribute = "\${node.class}";
           operator = "=";
-          # For cloud benchmarking, dedicated static machines in the "perf"
-          # class are used. We mimic that for local/test runs.
+          # Cloud jobs can run in the dedicated P&T Nomad cluster on AWS or in
+          # Cardano World Nomad cluster's "qa" class nodes.
           # This default is just a precaution, like the top level namespace,
-          # because there are also available "qa" Class nodes but usage of these
-          # must be limited to short test and "infra" Class nodes are used for
-          # HA jobs and must be avoided entirely.
+          # because "qa" Class nodes usage must be limited to short test and
+          # "infra" Class nodes, that are used for HA jobs, must be avoided
+          # entirely.
           value = "perf";
         };
 
@@ -412,9 +412,9 @@ let
           };
 
           # Sensible defaults to run cloud version of "default", "ci-test" and
-          # "ci-bench" in cardano-world qa class Nomad nodes.
-          # For benchmarking dedicated static machines in the "perf" class are
-          # used and this value should be updated accordingly.
+          # "ci-bench" in Cardano World Nomad cluster's "qa" class nodes.
+          # For benchmarking the dedicated P&T Nomad cluster on AWS is used and
+          # this value should be updated accordingly.
           resources = {
             # Task can only ask for 'cpu' or 'cores' resource but not both.
             cores = 2;       # cpu = 512;
@@ -450,10 +450,10 @@ let
             # address of an AWS EC2 instance set this to
             # ${attr.unique.platform.aws.public-ipv4}.
             address =
-              # When using Cardano World (nomad.world.dev.cardano.org) "perf"
-              # class nodes we use public IPs/routing, all the other cloud runs
-              # are behind a VPC/firewall. Local runs just use 12.0.0.1.
-              if lib.strings.hasInfix "cw-perf" profileData.profileName
+              # When using the dedicated P&T Nomad cluster on AWS we use public
+              # IPs/routing, all the other cloud runs are behind a VPC/firewall.
+              # Local runs just use 12.0.0.1.
+              if lib.strings.hasInfix "-nomadperf" profileData.profileName
               then "\${attr.unique.platform.aws.public-ipv4}"
               else ""
             ;
@@ -1180,17 +1180,17 @@ let
         # Port string from
         ''--port ${toString nodeSpec.port}''
       ]
-      # On cloud deployments to SRE-managed Nomad, that uses AWS, the hosts at
-      # Linux level may not be aware of the EIP public address they have so we
-      # can't bind to the public IP (that we can resolve to using templates).
-      # The only options available are to bind to the "all-weather" 0.0.0.0 or
-      # use the private IP provided by AWS. We use the latter in case the Nomad
-      # Client was not started with the correct `-network-interface XX`
-      # parameter.
+      # On cloud deployments to SRE-managed / dedicated P&T Nomad cluster, that
+      # uses AWS, the hosts at Linux level may not be aware of the EIP public
+      # address they have so we can't bind to the public IP (that we can resolve
+      # to using templates). The only options available are to bind to the
+      # "all-weather" 0.0.0.0 or use the private IP provided by AWS. We use the
+      # latter in case the Nomad Client was not started with the correct
+      # `-network-interface XX` parameter.
       [
         # Address string to
         (
-          if lib.strings.hasInfix "cw-perf" profileData.profileName
+          if lib.strings.hasInfix "-nomadperf" profileData.profileName
           then ''--host-addr {{ env "attr.unique.platform.aws.local-ipv4" }}''
           else ''--host-addr 0.0.0.0''
         )
