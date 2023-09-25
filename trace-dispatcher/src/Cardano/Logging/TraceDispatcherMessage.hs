@@ -5,9 +5,12 @@ module Cardano.Logging.TraceDispatcherMessage
   ) where
 
 import           Data.Aeson hiding (Error)
+import           Data.ByteString.Lazy (toStrict)
 import qualified Data.Map as Map
 import           Data.Text
+import           Data.Text.Encoding
 
+import           Cardano.Logging.ConfigurationParser ()
 import           Cardano.Logging.Types
 
 data UnknownNamespaceKind =
@@ -39,7 +42,8 @@ data TraceDispatcherMessage =
     -- ^  Outputs optional statistics about metrics frequency
   | TracerConsistencyWarnings [Text]
     -- ^  Consistency check found warnings
-
+  | TracerInfoConfig TraceConfig
+    -- ^  Trace the effective configuration as JSON
   deriving Show
 
 instance LogFormatting TraceDispatcherMessage where
@@ -58,6 +62,7 @@ instance LogFormatting TraceDispatcherMessage where
     <> intercalate (singleton ' ') allTracers <> "."
   forHuman (MetricsInfo mmap) = "Number of metrics delivered, " <> (pack . show) mmap
   forHuman (TracerConsistencyWarnings errs) = "Consistency check found error:  " <> (pack . show) errs
+  forHuman (TracerInfoConfig tc) = "Effective Tracer config is:  " <> decodeUtf8 (toStrict (encode tc))
 
 
   forMachine _dtl StartLimiting {} = mconcat
@@ -91,6 +96,9 @@ instance LogFormatting TraceDispatcherMessage where
         [ "kind" .= String "TracerConsistencyWarnings"
         , "errors" .= String ((pack . show) errs)
         ]
+  forMachine _dtl (TracerInfoConfig tc) = mconcat
+        [ "conf" .= toJSON tc
+        ]
 
 
   asMetrics StartLimiting {} = []
@@ -102,6 +110,8 @@ instance LogFormatting TraceDispatcherMessage where
   asMetrics TracerInfo {}       = []
   asMetrics MetricsInfo {}      = []
   asMetrics TracerConsistencyWarnings {}     = []
+  asMetrics TracerInfoConfig {} = []
+
 
 
 instance MetaTrace TraceDispatcherMessage where
@@ -112,6 +122,8 @@ instance MetaTrace TraceDispatcherMessage where
     namespaceFor TracerInfo {}       = Namespace [] ["TracerInfo"]
     namespaceFor MetricsInfo {}      = Namespace [] ["MetricsInfo"]
     namespaceFor TracerConsistencyWarnings {}     = Namespace [] ["TracerConsistencyWarnings"]
+    namespaceFor TracerInfoConfig {} = Namespace [] ["TracerConfigInfo"]
+
 
 
     severityFor (Namespace _ ["StartLimiting"]) _    = Just Notice
@@ -120,7 +132,8 @@ instance MetaTrace TraceDispatcherMessage where
     severityFor (Namespace _ ["UnknownNamespace"]) _ = Just Error
     severityFor (Namespace _ ["TracerInfo"]) _       = Just Notice
     severityFor (Namespace _ ["MetricsInfo"]) _      = Just Debug
-    severityFor (Namespace _ ["TracerConsistencyWarnings"]) _     = Just Error
+    severityFor (Namespace _ ["TracerConsistencyWarnings"]) _  = Just Error
+    severityFor (Namespace _ ["TracerConfigInfo"]) _       = Just Notice
     severityFor _ _                                  = Nothing
 
 
@@ -147,8 +160,10 @@ instance MetaTrace TraceDispatcherMessage where
     documentFor (Namespace _ ["TracerConsistencyWarnings"]) = Just $ mconcat
       [ "Tracer consistency check found errors."
       ]
+    documentFor (Namespace _ ["TracerConfigInfo"]) = Just $ mconcat
+      [ "Trace the tracer configuration which is effectively used."
+      ]
     documentFor _ = Nothing
-
 
     allNamespaces = [
         Namespace [] ["StartLimiting"]
@@ -158,4 +173,5 @@ instance MetaTrace TraceDispatcherMessage where
       , Namespace [] ["TracerInfo"]
       , Namespace [] ["MetricsInfo"]
       , Namespace [] ["TracerConsistencyWarnings"]
+      , Namespace [] ["TracerConfigInfo"]
       ]

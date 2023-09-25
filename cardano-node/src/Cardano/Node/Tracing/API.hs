@@ -59,8 +59,9 @@ initTraceDispatcher ::
   -> NetworkP2PMode p2p
   -> IO (Tracers RemoteConnectionId LocalConnectionId blk p2p)
 initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
-  trConfig <- readConfigurationWithDefault (unConfigPath $ ncConfigFile nc) defaultCardanoConfig
-  putStrLn $ "New tracer configuration: " <> show trConfig
+  trConfig <- readConfigurationWithDefault
+                (unConfigPath $ ncConfigFile nc)
+                defaultCardanoConfig
 
   tracers <- mkTracers trConfig
 
