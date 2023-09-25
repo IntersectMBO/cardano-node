@@ -48,6 +48,21 @@ backend_nomadcloud() {
     ;;
 
     # Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
+    start-cluster )
+      backend_nomad start-cluster           "$@"
+      # If value profile on the dedicated P&T Nomad cluster on AWS extra checks
+      # to make sure the topology that was deployed is the correct one.
+      if                                                                 \
+          test "${WB_SHELL_PROFILE:0:15}" = 'value-nomadperf'            \
+        ||                                                               \
+          test "${WB_SHELL_PROFILE:0:26}" = 'value-oldtracing-nomadperf'
+      then
+        # Show a big warning but let the run continue!
+        check-deployment "${dir}"
+      fi
+    ;;
+
+    # Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
     deploy-genesis )
       # It "overrides" completely `backend_nomad`'s `deploy-genesis`.
       deploy-genesis-nomadcloud             "$@"
@@ -104,10 +119,6 @@ backend_nomadcloud() {
 
     is-running )
       backend_nomad is-running              "$@"
-    ;;
-
-    start-cluster )
-      backend_nomad start-cluster           "$@"
     ;;
 
     start-tracers )
@@ -404,9 +415,13 @@ allocate-run-nomadcloud() {
     ########################################################################
     # Fix for region mismatches ############################################
     ########################################################################
-    # - Cardano World cluster uses: "eu-central-1", "us-east-2"
-    # - The workbench at Nix level: "eu-central-1", "us-east-2", and "ap-southeast-2"
-    # - Dedicated P&T cluster uses: "eu-central-1", "us-east-1", and "ap-southeast-2"
+    # If value profile, "value-nomadperf", topology was imported from
+    # cardano-ops / nixops that was already using "us-east-1", but not
+    # "default-nomadperf", "ci-test-nomadperf" and "ci-bench" that is generated
+    # by `cardano-topology` (Haskell project in bench/).
+    # - Cardano World cluster: "eu-central-1", "us-east-2"
+    # - Workbench (Nix level): "eu-central-1", "us-east-2", and "ap-southeast-2"
+    # - Dedicated P&T cluster: "eu-central-1", "us-east-1", and "ap-southeast-2"
     if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
     then
         jq \
@@ -665,7 +680,10 @@ allocate-run-nomadcloud() {
     ########################################################################
     # If value profile on "-nomadperf", using always the same placement!
     # This means node-N always runs on the same Nomad Client/AWS EC2 machine
-    if test "${WB_SHELL_PROFILE:0:15}" = 'value-nomadperf'
+    if                                                                  \
+         test "${WB_SHELL_PROFILE:0:15}" = 'value-nomadperf'            \
+      ||                                                                \
+         test "${WB_SHELL_PROFILE:0:26}" = 'value-oldtracing-nomadperf'
     then
       # A file with all the available Nomad Clients is needed!
       # This files is a list of Nomad Clients with a minimun of ".id",
@@ -679,6 +697,8 @@ allocate-run-nomadcloud() {
       then
         fatal "No \"\$NOMAD_CLIENTS_FILE\". For reproducible builds provide this file that ensures cluster nodes are always placed on the same machines, or create a new one with 'wb nomad nodes' if Nomad Clients have suffered changes and runs fail with \"placement errors\""
       fi
+      # Keep a copy of the file used for this run!
+      cp "${NOMAD_CLIENTS_FILE}" "${dir}"/nomad/clients.json
       # For each (instance-type, datacener/region) we look incrementally for
       # the unique AWS EC2 "instance-id" only after ordering the Nomad
       # Clients by its unique Nomad provided "id".
@@ -916,6 +936,91 @@ allocate-run-nomadcloud() {
   # Show the summary before starting the job, a precaution!
   jq . "${dir}"/nomad/nomad-job.summary.json
   read -p "Hit enter to continue ..."
+}
+
+check-deployment() {
+  local usage="USAGE: check-deployment RUN-DIR"
+  local dir=${1:?$usage}; shift
+
+  # Can only be created if `"${dir}"/nomad/clients.json` exists
+  # (Requested by `allocate-run`).
+  msg "Creating ex-post node-specs.json and topology.json files ..."
+  local jobs_array=()
+  # A node-specs.json like file with only "i", "name", "region", "port"
+  # but adds a "nomad-client" object with "id", "name", "az" and "ip".
+      wb_nomad job node-specs "${dir}"/nomad/nomad-job.json \
+    > "${dir}"/nomad/node-specs.json                        \
+  &
+  jobs_array+=("$!")
+  # A topology.json like file with only "nodeId", "name", "region" and
+  # the list of "producers" that is re-constructed.
+      wb_nomad job topology   "${dir}"/nomad/nomad-job.json \
+    > "${dir}"/nomad/topology.json                          \
+  &
+  jobs_array+=("$!")
+  if ! wait_kill_em_all "${jobs_array[@]}"
+  then
+    return 1
+  fi
+
+  # An easy to compare .csv version of the topology.
+    jq -r \
+      '
+        .coreNodes as $nodes | $nodes | map(
+            .name as $name
+          | .region as $region
+          | .producers | map( . as $prodName |
+              $name
+            + ","
+            + $region[0:2]
+            + ","
+            + $prodName
+            + ","
+            + ($nodes | map(select(.name == $prodName))[0] | .region[0:2])
+          )
+        ) | .[] | .[]
+      '                             \
+      "${dir}"/nomad/topology.json  \
+  | sort --version-sort           \
+  > "${dir}"/nomad/topology.csv
+
+  local node_specs_filter='
+      map( {i: .i, name: .name, region: .region[0:2], port: .port} )
+    | sort_by(.i)
+  '
+  local node_specs_ante node_specs_post
+  node_specs_ante="$(jq "${node_specs_filter}" "${dir}"/node-specs.json)"
+  node_specs_post="$(jq "${node_specs_filter}" "${dir}"/nomad/node-specs.json)"
+  if ! test "${node_specs_ante}" = "${node_specs_post}"
+  then
+    echo "${node_specs_ante}" > "${dir}"/node-specs.ante.json
+    echo "${node_specs_post}" > "${dir}"/node-specs.post.json
+    diff --side-by-side "${dir}"/node-specs.ante.json "${dir}"/node-specs.post.json
+    msg "$(red "----------")"
+    msg "$(red "REQUESTED AND DEPLOYED node-specs.json DO NOT MATCH")"
+    msg "$(red "----------")"
+  fi
+  local topology_filter='
+      .coreNodes
+    | map({
+          name:      .name
+        , nodeId:    .nodeId
+        , region:    .region[0:2]
+        , producers: (.producers | sort)
+      })
+  '
+  local topology_ante topology_post
+  topology_ante="$(jq "${topology_filter}" "${dir}"/topology.json)"
+  topology_post="$(jq "${topology_filter}" "${dir}"/nomad/topology.json)"
+  if ! test "${topology_ante}" = "${topology_post}"
+  then
+    echo "${topology_ante}" > "${dir}"/topology.ante.json
+    echo "${topology_post}" > "${dir}"/topology.post.json
+    diff --side-by-side "${dir}"/topology.ante.json "${dir}"/topology.post.json
+    msg "$(red "----------")"
+    msg "$(red "REQUESTED AND DEPLOYED topology.json DO NOT MATCH")"
+    msg "$(red "----------")"
+  fi
 }
 
 # Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!

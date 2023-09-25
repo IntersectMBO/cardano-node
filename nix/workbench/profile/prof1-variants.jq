@@ -177,13 +177,22 @@ def all_profile_variants:
       }
     } as $nomad_cardano_world_qa
   |
+    # nomad_perf using cardano-ops "dense" topology
+    # Can only be used with the 52 + explorer value profile!
+    { composition:
+      { locations:                      ["EU", "US", "AP"]
+      , topology:                       "dense"
+      , with_explorer:                  true
+      }
+    } as $nomad_perf_dense
+  |
     # P&T Nomad cluster Nodes in ["eu-central-1", "us-east-2", "ap-southeast-2"] datacenters
     { composition:
       { locations:                      ["EU", "US", "AP"]
       , topology:                       "torus"
       , with_explorer:                  true
       }
-    } as $nomad_perf
+    } as $nomad_perf_torus
   |
   ##
   ### Definition vocabulary:  filtering
@@ -365,6 +374,11 @@ def all_profile_variants:
       | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
       | .genesis.pparamsOverlays      = ["v8-preview", "doublebudget"]
     ) as $costmodel_v8_preview_doubleb
+  |
+    ({}
+      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
+      | .genesis.pparamsOverlays      = ["mimic-ops"]
+    ) as $mimic_ops_params
   ##
   ### Definition vocabulary:  node config variants
   ##
@@ -598,11 +612,11 @@ def all_profile_variants:
     }
   , $nomad_cardano_world_qa *
     { name: "default-nomadcwqa"
-    , desc: "Default, but on Cardano World QA"
+    , desc: "Default on Cardano World QA"
     }
-  , $nomad_perf *
+  , $nomad_perf_torus *
     { name: "default-nomadperf"
-    , desc: "Default, but on P&T cluster"
+    , desc: "Default on P&T exclusive cluster"
     }
   , $plutus_base * $costmodel_v8_preview * $plutus_loop_counter *
     { name: "plutus"
@@ -619,6 +633,14 @@ def all_profile_variants:
   , $old_tracing *
     { name: "oldtracing"
     , desc: "Default in legacy tracing mode"
+    }
+  , $nomad_cardano_world_qa * $old_tracing *
+    { name: "oldtracing-nomadcwqa"
+    , desc: "Default in legacy tracing mode on Cardano World QA"
+    }
+  , $nomad_perf_torus * $old_tracing *
+    { name: "oldtracing-nomadperf"
+    , desc: "Default in legacy tracing mode on P&T exclusive cluster"
     }
   , $scenario_idle *
     { name: "idle"
@@ -664,11 +686,19 @@ def all_profile_variants:
     }
   , $citest_base * $nomad_cardano_world_qa *
     { name: "ci-test-nomadcwqa"
-    , desc: "ci-test, but on Cardano World QA"
+    , desc: "ci-test on Cardano World QA"
     }
-  , $citest_base * $nomad_perf *
+  , $citest_base * $nomad_cardano_world_qa * $old_tracing *
+    { name: "ci-test-oldtracing-nomadcwqa"
+    , desc: "ci-test in legacy tracing mode on Cardano World QA"
+    }
+  , $citest_base * $nomad_perf_torus *
     { name: "ci-test-nomadperf"
-    , desc: "ci-test, but on P&T cluster"
+    , desc: "ci-test on P&T exclusive cluster"
+    }
+  , $citest_base * $nomad_perf_torus * $old_tracing *
+    { name: "ci-test-oldtracing-nomadperf"
+    , desc: "ci-test in legacy tracing mode on P&T exclusive cluster"
     }
 
   ## CI variants: bench duration, 15 blocks
@@ -695,11 +725,19 @@ def all_profile_variants:
     }
   , $cibench_base * $nomad_cardano_world_qa *
     { name: "ci-bench-nomadcwqa"
-    , desc: "ci-bench but on Cardano World QA"
+    , desc: "ci-bench on Cardano World QA"
     }
-  , $cibench_base * $nomad_perf *
+  , $cibench_base * $nomad_cardano_world_qa * $old_tracing *
+    { name: "ci-bench-oldtracing-nomadcwqa"
+    , desc: "ci-bench in legacy tracing mode on Cardano World QA"
+    }
+  , $cibench_base * $nomad_perf_torus *
     { name: "ci-bench-nomadperf"
-    , desc: "ci-bench but on P&T cluster"
+    , desc: "ci-bench on P&T exclusive cluster"
+    }
+  , $cibench_base * $nomad_perf_torus * $old_tracing *
+    { name: "ci-bench-oldtracing-nomadperf"
+    , desc: "ci-bench in legacy tracing mode on P&T exclusive cluster"
     }
 
   ## CI variants: test duration, 3 blocks, dense10
@@ -756,8 +794,11 @@ def all_profile_variants:
     }
 
 ## P&T Nomad cluster: 52 nodes, 3 regions, value variant
-  , $nomad_perf_base * $nomad_perf * $costmodel_v8_preview *
+  , $nomad_perf_base * $nomad_perf_dense * $costmodel_v8_preview *
     { name: "value-nomadperf"
+    }
+  , $nomad_perf_base * $nomad_perf_dense * $costmodel_v8_preview * $old_tracing *
+    { name: "value-oldtracing-nomadperf"
     }
 
 ## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)

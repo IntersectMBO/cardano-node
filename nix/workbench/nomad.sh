@@ -2101,7 +2101,7 @@ EOF
           local usage="USAGE:wb nomad ${op} ${subop} JOB-FILE TASK-NAME"
           local job_file=${1:?$usage};  shift
           local task_name=${1:?$usage}; shift
-          jq -r '.ID' "${job_file}.run/task.${task_name}.final.json"
+          jq -r '.ID' "${job_file}".run/task.${task_name}.final.json
         ;;
 ####### job -> stop )###########################################################
         stop )
@@ -2110,6 +2110,267 @@ EOF
           local job_name=${1:?$usage}; shift
           # Do the prune, purge, garbage collect thing!
           nomad job stop -global -no-shutdown-delay -purge -yes -verbose "${job_name}" || msg "$(red "Failed to stop Nomad job")"
+        ;;
+####### job -> node-specs )#####################################################
+        node-specs )
+          # Creates an ex-post "node-specs.json" like file.
+          # It uses Nomad tasks and allocations data plus the files that were
+          # actually deployed, these last ones because parts of them are
+          # dynamically generated using Nomad templates.
+          local usage="USAGE:wb nomad ${op} ${subop} JOB-FILE"
+          local job_file=${1:?$usage}; shift
+          # The nodes/clients file must exists!
+          local clients_file_path="$(dirname "${job_file}")"/clients.json
+          local node_specs_path="$(dirname "${job_file}")"/../node-specs.json
+          # Top object start
+          ##################
+          echo "{"
+          # Grab all the "i" properties from inside each "node-i" object
+          # Why "i" and not "name"? `jq` sorts like this: "node-49", "node-5",
+          # "node-50".
+          local node_specs_is
+          node_specs_is=$(jq --raw-output \
+            'map(.i) | join (" ")' \
+            "${node_specs_path}" \
+          )
+          local first_node="true"
+          for node_i in ${node_specs_is[*]}
+          do
+            # Nomad Job Tasks' names are taken from the `node-specs.json` file.
+            # Task names are of the form "node-0", "node-1", "node-10" (not
+            # "node-04").
+            local task_name
+            task_name=$(jq --raw-output \
+              "map(select(.i == ${node_i})) | .[] | .name" \
+              "${node_specs_path}" \
+            )
+            # Node open "{"
+            ###############
+            # If not the first one ","
+            if test "${first_node}" == "true"
+            then
+              first_node="false"
+              echo "    \"${task_name}\": {"
+            else
+              echo "  , \"${task_name}\": {"
+            fi
+            # Fetch from the allocation data the Nomad Client ID, Name and
+            # Datacenter/region were this Task was deployed.
+            local nomad_client_id
+            nomad_client_id=$(jq --raw-output \
+              .NodeID \
+              "${job_file}".run/task."${task_name}".final.json \
+            )
+            local nomad_client_name
+            nomad_client_name=$(jq --raw-output \
+              .NodeName \
+              "${job_file}".run/task."${task_name}".final.json \
+            )
+            local nomad_client_datacenter
+            nomad_client_datacenter=$(jq --raw-output \
+              ". | map(select(.id == \"${nomad_client_id}\")) | .[0] | .datacenter" \
+              "${clients_file_path}" \
+            )
+            # With the Nomad Client data now fetch AZ and port.
+            local nomad_client_az # Client's AWS AZ were this task was deployed!
+            nomad_client_az=$(jq --raw-output \
+              ". | map(select(.id == \"${nomad_client_id}\")) | .[0] | .attributes.platform.aws.placement[\"availability-zone\"]" \
+              "${clients_file_path}" \
+            )
+            local nomad_task_port # Task's reserved port number!
+            nomad_task_port=$(jq --raw-output \
+              .Resources.Networks[0].ReservedPorts[0].Value \
+              "${job_file}".run/task."${task_name}".final.json \
+            )
+            local nomad_task_ip
+            nomad_task_ip=$(jq --raw-output \
+              ". | map(select(.name == \"${nomad_client_name}\")) | .[0] | .attributes.unique.platform.aws[\"public-ipv4\"]" \
+              "${clients_file_path}" \
+            )
+            # Same data as "node-specs.json".
+            #################################
+            echo "          \"i\":      ${node_i}"
+            echo "        , \"name\":   \"${task_name}\""
+            echo "        , \"region\": \"${nomad_client_datacenter}\""
+            echo "        , \"port\":   ${nomad_task_port}"
+            # Extra Nomad client data.
+            ##########################
+            echo "        , \"nomad-client\": {"
+            echo "              \"id\":   \"${nomad_client_id}\""
+            echo "            , \"name\": \"${nomad_client_name}\""
+            echo "            , \"az\":   \"${nomad_client_az}\""
+            echo "            , \"ip\":   \"${nomad_task_ip}\""
+            echo "        }"
+            # Node close "}"
+            ################
+            echo "  }"
+          done
+          # Top object end
+          ################
+          echo "}"
+        ;;
+####### job -> topology )#######################################################
+        topology )
+          # Creates an ex-post "topology.json" like file.
+          # It uses Nomad tasks and allocations data plus the files that were
+          # actually deployed, these last ones because parts of them are
+          # dynamically generated using Nomad templates.
+          # The "producers" list of each node is re-constructed using the Nomad
+          # services definitions.
+          local usage="USAGE:wb nomad ${op} ${subop} JOB-FILE"
+          local job_file=${1:?$usage}; shift
+          # The nodes/clients file must exists!
+          local clients_file_path="$(dirname "${job_file}")"/clients.json
+          local topology_path="$(dirname "${job_file}")"/../topology.json
+          # Helper, called for "coreNodes" and "relayNodes" separately.
+          topology-node-helper() {
+            local task_name="$1"
+            local node_i="$2"
+            # Fetch from the allocation data the Nomad Client ID and
+            # Datacenter/region were this Task was deployed.
+            local nomad_client_id
+            nomad_client_id=$(jq --raw-output \
+              .NodeID \
+              "${job_file}".run/task."${task_name}".final.json \
+            )
+            local nomad_client_datacenter
+            nomad_client_datacenter=$(jq --raw-output \
+              ". | map(select(.id == \"${nomad_client_id}\")) | .[0] | .datacenter" \
+              "${clients_file_path}" \
+            )
+            # Same data as "topology.json".
+            ###############################
+            echo "             \"name\":   \"${task_name}\""
+            echo "           , \"nodeId\": ${node_i}"
+            echo "           , \"region\": \"${nomad_client_datacenter}\""
+            # producers start
+            #################
+            echo "           , \"producers\": ["
+            local node_topology_file_path
+            node_topology_file_path="$(dirname "${job_file}")"/../"${task_name}"/topology.json
+            # Grab producers from the fetched, after deployment, "topology.json" files
+            local node_producers
+            node_producers=$(jq .Producers "${node_topology_file_path}")
+            local node_producers_keys
+            node_producers_keys=$(echo "${node_producers}" | jq --raw-output 'keys | join (" ")')
+            local node_producer_i=0
+            for node_producer_key in ${node_producers_keys[*]}
+            do
+              # The topology file, as used by the node, is already formated as
+              # {"addr":XX,"port":YY} were the XX and YY values were resolved
+              # using Nomad templates.
+              local producer_addr producer_port
+              producer_addr=$(echo "${node_producers}" | jq -r ".[${node_producer_key}] | .addr")
+              producer_port=$(echo "${node_producers}" | jq -r ".[${node_producer_key}] | .port")
+              # From the public IP and port look for the node that was deployed
+              # with this values by searching thorugh the services definitions.
+              local node_specs_path="$(dirname "${job_file}")"/../node-specs.json
+              local node_specs_names
+              node_specs_names=$(jq --raw-output \
+                'map(.name) | join (" ")' \
+                "${node_specs_path}" \
+              )
+              for node_name in ${node_specs_names[*]}
+              do
+                if jq -e "any(select(.Address == \"${producer_addr}\" and .Port == ${producer_port}))" "$(dirname "${job_file}")"/"${node_name}"/service-info.json >/dev/null
+                then
+                  if test "${node_producer_i}" == "0"
+                  then
+                    echo "                  \"${node_name}\""
+                  else
+                    echo "                , \"${node_name}\""
+                  fi
+                  node_producer_i=$((node_producer_i + 1))
+                fi
+              done
+            done
+            # producers end
+            ###############
+            echo "            ]"
+          }
+          # Top object start
+          ##################
+          echo "{"
+          # coreNodes start
+          #################
+          echo "    \"coreNodes\": ["
+          # Grab all the "nodeId" properties from inside each array's objects
+          # Why "nodeId" and not "name"? `jq` sorts like this: "node-49",
+          # "node-5", "node-50".
+          local coreNodes_is
+          coreNodes_is=$(jq --raw-output \
+            '.coreNodes | map(.nodeId) | join (" ")' \
+            "${topology_path}" \
+          )
+          local first_coreNode="true"
+          for node_i in ${coreNodes_is[*]}
+          do
+            # Nomad Job Tasks' names are taken from the `topology.json` file.
+            # Task names are of the form "node-0", "node-1", "node-10" (not "node-04").
+            local task_name
+            task_name=$(jq --raw-output \
+              ".coreNodes | map(select(.nodeId == ${node_i})) | .[] | .name" \
+              "${topology_path}" \
+            )
+            # Node open "{"
+            ###############
+            # If not the first one ","
+            if test "${first_coreNode}" == "true"
+            then
+              first_coreNode="false"
+              echo "        {"
+            else
+              echo "      , {"
+            fi
+            topology-node-helper "${task_name}" "${node_i}"
+            # Node close "}"
+            ################
+            echo "        }"
+          done
+          # coreNodes end
+          ###############
+          echo "  ]"
+          # relayNodes start
+          ##################
+          echo "  , \"relayNodes\": ["
+          # Grab all the "i" properties from inside each "node-i" object
+          # Why "i" and not name? `jq` sorts like this: "node-49", "node-5", "node-50"
+          local relayNodes_is
+          relayNodes_is=$(jq --raw-output \
+            '.relayNodes | map(.nodeId) | join (" ")' \
+            "${topology_path}" \
+          )
+          local first_relayNode="true"
+          for node_i in ${relayNodes_is[*]}
+          do
+            # Nomad Job Tasks' names are taken from the `topology.json` file.
+            # Task names are of the form "node-0", "node-1", "node-10" (not "node-04").
+            local task_name
+            task_name=$(jq --raw-output \
+              ".relayNodes | map(select(.nodeId == ${node_i})) | .[] | .name" \
+              "${topology_path}" \
+            )
+            # Node open "{"
+            ###############
+            # If not the first one ","
+            if test "${first_relayNode}" == "true"
+            then
+              first_relayNode="false"
+              echo "      {"
+            else
+              echo "    , {"
+            fi
+            topology-node-helper "${task_name}" "${node_i}"
+            # Node close "}"
+            ################
+            echo "      }"
+          done
+          # relayNodes end
+          ################
+          echo "  ]"
+          # Top object end
+          ################
+          echo "}"
         ;;
 ####### job -> * )##############################################################
         * )
