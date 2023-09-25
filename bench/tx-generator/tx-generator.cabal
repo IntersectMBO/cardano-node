@@ -177,6 +177,7 @@ executable tx-generator
   build-depends:        base
                       , tx-generator
 
+
 test-suite tx-generator-apitest
   import:               project-config, with-library
 
@@ -219,7 +220,7 @@ test-suite tx-generator-apitest
 
 test-suite tx-generator-test
   import:               project-config
-  hs-source-dirs:       test
+  hs-source-dirs:       test test/MonadicGen
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0
 
@@ -242,8 +243,58 @@ test-suite tx-generator-monad-test
   main-is:              MonadicMain.hs
   type:                 exitcode-stdio-1.0
 
-  build-depends:        base >= 4.12
-                      , cardano-node <= 8.1.1
+  build-depends:        aeson
+                      , base >= 4.12
+                      , base16-bytestring
+                      , bytestring
+                      , cardano-api
+                      , cardano-cli
+                      , cardano-ledger-core
+                      , cardano-ledger-shelley
+                      , cardano-node
+                      , ouroboros-consensus
+                      , ouroboros-consensus-cardano
+                      , ouroboros-consensus-diffusion
+                      , ouroboros-network-api
+                      , ouroboros-network-protocols
+                      , transformers
+  other-modules:      MonadicGen.Cardano.Benchmarking.Command
+                      MonadicGen.Cardano.Benchmarking.Compiler
+                      MonadicGen.Cardano.Benchmarking.GeneratorTx
+                      MonadicGen.Cardano.Benchmarking.GeneratorTx.NodeToNode
+                      MonadicGen.Cardano.Benchmarking.GeneratorTx.SizedMetadata
+                      MonadicGen.Cardano.Benchmarking.GeneratorTx.Submission
+                      MonadicGen.Cardano.Benchmarking.GeneratorTx.SubmissionClient
+                      MonadicGen.Cardano.Benchmarking.LogTypes
+                      MonadicGen.Cardano.Benchmarking.OuroborosImports
+                      MonadicGen.Cardano.Benchmarking.Script
+                      MonadicGen.Cardano.Benchmarking.Script.Action
+                      MonadicGen.Cardano.Benchmarking.Script.Aeson
+                      MonadicGen.Cardano.Benchmarking.Script.Core
+                      MonadicGen.Cardano.Benchmarking.Script.Env
+                      MonadicGen.Cardano.Benchmarking.Script.Selftest
+                      MonadicGen.Cardano.Benchmarking.Script.Types
+                      MonadicGen.Cardano.Benchmarking.TpsThrottle
+                      MonadicGen.Cardano.Benchmarking.Tracer
+                      MonadicGen.Cardano.Benchmarking.Types
+                      MonadicGen.Cardano.Benchmarking.Version
+                      MonadicGen.Cardano.Benchmarking.Wallet
+                      MonadicGen.Cardano.TxGenerator.Fund
+                      MonadicGen.Cardano.TxGenerator.FundQueue
+                      MonadicGen.Cardano.TxGenerator.Genesis
+                      MonadicGen.Cardano.TxGenerator.Internal.Fifo
+                      MonadicGen.Cardano.TxGenerator.Internal.Orphans
+                      MonadicGen.Cardano.TxGenerator.PlutusContext
+                      MonadicGen.Cardano.TxGenerator.Setup.NixService
+                      MonadicGen.Cardano.TxGenerator.Setup.NodeConfig
+                      MonadicGen.Cardano.TxGenerator.Setup.Plutus
+                      MonadicGen.Cardano.TxGenerator.Setup.SigningKey
+                      MonadicGen.Cardano.TxGenerator.Tx
+                      MonadicGen.Cardano.TxGenerator.Types
+                      MonadicGen.Cardano.TxGenerator.UTxO
+                      MonadicGen.Cardano.TxGenerator.Utils
+                      Paths_tx_generator
+autogen-modules:      Paths_tx_generator
 
 benchmark tx-generator-bench
   import:               project-config
