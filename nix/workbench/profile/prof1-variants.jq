@@ -365,6 +365,11 @@ def all_profile_variants:
       | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
       | .genesis.pparamsOverlays      = ["v8-preview", "doublebudget"]
     ) as $costmodel_v8_preview_doubleb
+  |
+    ({}
+      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
+      | .genesis.pparamsOverlays      = ["mimic-ops"]
+    ) as $mimic_ops_params
   ##
   ### Definition vocabulary:  node config variants
   ##
@@ -758,6 +763,9 @@ def all_profile_variants:
 ## Cardano World QA cluster: 52 nodes, 3 regions, value variant
   , $cw_perf_base * $cardano_world_perf * $costmodel_v8_preview *
     { name: "cw-perf-value"
+    }
+  , $cw_perf_base * $cardano_world_perf * $mimic_ops_params *
+    { name: "cw-perf-value-mimicops"
     }
 
 ## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)
