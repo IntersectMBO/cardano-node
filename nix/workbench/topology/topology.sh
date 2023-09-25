@@ -47,54 +47,180 @@ case "${op}" in
         local profile_json=${1:?$usage}
         local outdir=${2:?$usage}
 
+        local topology_name=$(jq '.composition.topology' --raw-output "$profile_json")
         local n_hosts=$(jq .composition.n_hosts "$profile_json")
 
         ## 0. Generate:
         #
-        mkdir -p                 "$outdir"
-        args=( --topology-output "$outdir"/topology.json
-               --dot-output      "$outdir"/topology.dot
-               $(jq '.composition.topology
-                    ' --raw-output "$profile_json")
-               --size             $n_hosts
-               $(jq '.composition.locations
-                    | map("--loc " + .)
-                    | join(" ")
-                    ' --raw-output "$profile_json")
-             )
-        if jqtest .composition.with_explorer $profile_json
-        then args+=('--with-explorer')
-        fi
-        progress "topology" "cardano-topology ${args[*]}"
-        cardano-topology "${args[@]}"
+        if                                                         \
+               test "${topology_name}" = "dense"                   \
+            && test "${n_hosts}"       = 52                        \
+            && jqtest .composition.with_explorer "${profile_json}"
+        then
+            # If the value profiles's 52 nodes dense topology we just copy it as
+            # it was imported from cardano-ops when switching to Nomad.
+            # The other difference is that the .dot file is generated here
+            # instead of by `cardano-topology`.
+            progress "topology" "Copying cardano-ops 52 nodes + explorer \"dense\" topology"
+            cp \
+                "$(dirname "$(readlink -f "$0")")"/topology/bench-dense-52.json \
+                "${outdir}"/topology.json
+            topology dot "${outdir}"/topology.json > "${outdir}"/topology.dot
+        else
+            mkdir -p                 "$outdir"
+            args=( --topology-output "$outdir"/topology.json
+                   --dot-output      "$outdir"/topology.dot
+                   "$topology_name"
+                   --size             $n_hosts
+                   $(jq '.composition.locations
+                        | map("--loc " + .)
+                        | join(" ")
+                        ' --raw-output "$profile_json")
+                 )
+            if jqtest .composition.with_explorer $profile_json
+            then args+=('--with-explorer')
+            fi
+            progress "topology" "cardano-topology ${args[*]}"
+            cardano-topology "${args[@]}"
+            # Patch the nixops topology with the density information:
+            # This is only needed here, the dense topology was already imported
+            # from nixops / cardano-ops.
+            jq --slurpfile prof "$profile_json" '
+               def nixops_topology_set_pool_density($topo; $density):
+                  $topo *
+                  { coreNodes:
+                    ( .coreNodes
+                    | map
+                      ( . *
+                        { pools:
+                          (if .pools == null then 0 else
+                           if .pools == 1    then 1 else
+                              ([$density, 1] | max) end end)
+                        }
+                      )
+                    )
+                  };
 
-        ## 1. Render PDF:
+               nixops_topology_set_pool_density(.; $prof[0].dense_pool_density)
+               '   "$outdir"/topology.json |
+              sponge "$outdir"/topology.json
+        fi
+
+        ## 1. Render GraphViz topology PDF:
         #
         neato -s120 -Tpdf \
               "$outdir"/topology.dot > "$outdir"/topology.pdf
-
-        ## 2. Patch the nixops topology with the density information:
-        #
-        jq --slurpfile prof "$profile_json" '
-           def nixops_topology_set_pool_density($topo; $density):
-              $topo *
-              { coreNodes:
-                ( .coreNodes
-                | map
-                  ( . *
-                    { pools:
-                      (if .pools == null then 0 else
-                       if .pools == 1    then 1 else
-                          ([$density, 1] | max) end end)
-                    }
-                  )
-                )
-              };
-
-           nixops_topology_set_pool_density(.; $prof[0].dense_pool_density)
-           '   "$outdir"/topology.json |
-        sponge "$outdir"/topology.json
         ;;
+
+    dot )
+        local usage="USAGE:  wb topology dot TOPOLOGY-JSON"
+        local topology_file=${1:?$usage}
+
+        # Top object start
+        ##################
+        echo "digraph dense {"
+        echo "  splines=true;"
+        echo "  overlap=false;"
+        # Add each node to its corresponding location array.
+        local lo_array=() eu_array=() us_array=() ap_array=()
+        # Grab all the "i" properties from inside each "node-i" object
+        # Why "i" and not name? `jq` sorts like: "node-49", "node-5", "node-50"
+        local nodes_array
+        nodes_array=$(jq --raw-output '.coreNodes | map(.nodeId) | sort | join (" ")' "${topology_file}")
+        for node_i in ${nodes_array[*]}
+        do
+            # Fetch this node's JSON object description.
+            local node
+            node=$(jq -r ".coreNodes | map(select( .nodeId == ${node_i} )) | .[0]" "${topology_file}")
+            local region
+            region="$(echo "${node}" | jq -r .region)"
+            local color
+            if echo "${region}" | grep --quiet "eu-central-"
+            then
+                color="blue"
+                eu_array+=("${node_i}")
+            elif echo "${region}" | grep --quiet "us-east-"
+            then
+                color="red"
+                us_array+=("${node_i}")
+            elif echo "${region}" | grep --quiet "ap-southeast-"
+            then
+                color="green"
+                ap_array+=("${node_i}")
+            else
+                color="black"
+                lo_array+=("${node_i}")
+            fi
+        done
+        # Output a GraphViz "subgraph" for each of the regions.
+        echo "  subgraph eu {"
+        echo "    label = \"EU\";"
+        echo "    cluster=true;"
+        for node_i in ${eu_array[*]}
+        do
+            local color="blue"
+            echo "    \"node-${node_i}\" [fillcolor=${color}, style=filled];"
+        done
+        echo "  }"
+        echo "  subgraph us {"
+        echo "    label = \"US\";"
+        echo "    cluster=true;"
+        for node_i in ${us_array[*]}
+        do
+            local color="red"
+            echo "    \"node-${node_i}\" [fillcolor=${color}, style=filled];"
+        done
+        echo "  }"
+        echo "  subgraph ap {"
+        echo "    label = \"AP\";"
+        echo "    cluster=true;"
+        for node_i in ${ap_array[*]}
+        do
+            local color="green"
+            echo "    \"node-${node_i}\" [fillcolor=${color}, style=filled];"
+        done
+        echo "  }"
+        # Output each node's connections with its corresponding color.
+        for node_i in ${eu_array[*]}
+        do
+            local node
+            node=$(jq -r ".coreNodes | map(select( .nodeId == ${node_i} )) | .[0]" "${topology_file}")
+            local producers_array
+            producers_array=$(echo "${node}" | jq --raw-output '.producers | sort | join (" ")')
+            local color="blue"
+            for producer in ${producers_array[*]}
+            do
+                echo "  \"node-${node_i}\" -> \"${producer}\" [color=${color}];"
+            done
+        done
+        for node_i in ${us_array[*]}
+        do
+            local node
+            node=$(jq -r ".coreNodes | map(select( .nodeId == ${node_i} )) | .[0]" "${topology_file}")
+            local producers_array
+            producers_array=$(echo "${node}" | jq --raw-output '.producers | sort | join (" ")')
+            local color="red"
+            for producer in ${producers_array[*]}
+            do
+                echo "  \"node-${node_i}\" -> \"${producer}\" [color=${color}];"
+            done
+        done
+        for node_i in ${ap_array[*]}
+        do
+            local node
+            node=$(jq -r ".coreNodes | map(select( .nodeId == ${node_i} )) | .[0]" "${topology_file}")
+            local producers_array
+            producers_array=$(echo "${node}" | jq --raw-output '.producers | sort | join (" ")')
+            local color="green"
+            for producer in ${producers_array[*]}
+            do
+                echo "  \"node-${node_i}\" -> \"${producer}\" [color=${color}];"
+            done
+        done
+        # Top object end
+        ################
+        echo "}"
+    ;;
 
     # For the value profile returns:
     # {

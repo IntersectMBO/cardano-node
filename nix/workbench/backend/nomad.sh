@@ -284,10 +284,11 @@ backend_nomad() {
 
     ############################################################################
     # Functions to start the cluster:
-    # - is-running            RUN-DIR
-    # - start-cluster         RUN-DIR
-    # - start-config-download RUN-DIR                               (Nomad only)
-    # - deploy-genesis-wget   RUN-DIR                               (Nomad only)
+    # - is-running              RUN-DIR
+    # - start-cluster           RUN-DIR
+    # - start-config-download   RUN-DIR                             (Nomad only)
+    # - start-services-download RUN-DIR                             (Nomad only)
+    # - deploy-genesis-wget     RUN-DIR                             (Nomad only)
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
 
@@ -334,7 +335,7 @@ backend_nomad() {
         fatal "Backend start failed!"
       else
         # Don't send to the background!
-        if ! backend_nomad start-config-download  "${dir}"
+        if ! backend_nomad start-config-download "${dir}" || ! backend_nomad start-services-download "${dir}"
         then
           msg "$(yellow "We don't want to start a job/cluster if we are not able to download what has been deployed (copies of dynamically generated files)")"
           backend_nomad stop-nomad-job "${dir}" || msg "stop-nomad-job failed!"
@@ -431,6 +432,41 @@ backend_nomad() {
           return 1
         else
           msg "Finished fetching Nomad generated files"
+        fi
+      fi
+    ;;
+
+    # Downloads all Nomad services definitions, the "service" stanzas.
+    start-services-download )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local one_tracer_per_node=$(envjqr 'one_tracer_per_node')
+
+      msg "Fetch Nomad services definitions ..."
+      local jobs_array=()
+      # For every node ...
+      local i_array=($(jq_tolist 'map(.i)' "${dir}"/node-specs.json))
+      for i in ${i_array[*]}
+      do
+        local node_name
+        node_name=$(jq -r "map(select( .i == ${i} ))[0].name" "${dir}"/node-specs.json)
+        nomad service info -json "perfnode${i}" > "${dir}"/nomad/"${node_name}"/service-info.json &
+        jobs_array+=("$!")
+      done
+      if ! test "${one_tracer_per_node}" = "true"
+      then
+        nomad service info -json "perftracer" > "${dir}"/nomad/tracer/service-info.json &
+        jobs_array+=("$!")
+      fi
+      # Wait and check!
+      if test -n "${jobs_array}"
+      then
+        if ! wait_kill_em_all "${jobs_array[@]}"
+        then
+          msg "$(red "Service definitions downloads failed!")"
+          return 1
+        else
+          msg "Finished fetching Nomad services definitions"
         fi
       fi
     ;;
