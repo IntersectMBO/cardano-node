@@ -99,7 +99,7 @@ library
                       , bytestring
                       , cardano-api ^>= 8.20
                       , cardano-binary
-                      , cardano-cli ^>= 8.8
+                      , cardano-cli ^>= 8.9
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data
