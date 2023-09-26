@@ -1,0 +1,52 @@
+cabal-version:          3.0
+
+name:                   cddl
+version:                1.0.0
+synopsis:               A Haskell binding to Rust 'cddl' crate for validating CBOR.
+description:            A Haskell binding to Rust 'cddl' crate for validating CBOR.
+category:               Codec
+copyright:              2023 Cardano Foundation <matthias.benkort@cardanofoundation.org>
+author:                 KtorZ <matthias.benkort@cardanofoundation.org>
+maintainer:             matthias.benkort@cardanofoundation.org
+license:                Apache-2.0
+license-files:          LICENSE
+extra-source-files:     cbits/libcddl.h
+
+common project-config
+  default-language:     Haskell2010
+  default-extensions:   OverloadedStrings
+  ghc-options:          -Wall
+                        -Wcompat
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wno-unticked-promoted-constructors
+                        -Wpartial-fields
+                        -Wredundant-constraints
+                        -Wunused-packages
+
+library
+  import:               project-config
+  hs-source-dirs:       src
+  install-includes:     cbits/libcddl.h
+  extra-libraries:      cddl
+  exposed-modules:      Codec.CBOR.Schema
+  other-modules:        Paths_cddl
+  autogen-modules:      Paths_cddl
+  build-depends:        , base
+                        , base16-bytestring
+                        , bytestring
+                        , text
+
+test-suite unit
+  import:               project-config
+  type:                 exitcode-stdio-1.0
+  hs-source-dirs:       test
+  main-is:              Spec.hs
+  other-modules:        Codec.CBOR.SchemaSpec
+                        Paths_cddl
+  build-depends:        , base
+                        , base16-bytestring
+                        , cddl
+                        , hspec
+                        , text
+  build-tool-depends:   hspec-discover:hspec-discover

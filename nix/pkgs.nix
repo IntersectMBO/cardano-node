@@ -64,6 +64,8 @@ in with final;
   inherit (cardanoNodeProject.args) compiler-nix-name;
   inherit workbench workbench-runner;
 
+  cddl = callPackage ../cddl/rbits { };
+
   cabal = haskell-nix.cabal-install.${compiler-nix-name};
 
   hlint = haskell-nix.tool compiler-nix-name "hlint" {

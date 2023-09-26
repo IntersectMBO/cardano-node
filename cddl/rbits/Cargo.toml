@@ -1,0 +1,11 @@
+[package]
+name = "cddl"
+version = "1.0.0"
+edition = "2021"
+
+[lib]
+name = "cddl"
+crate-type = ["cdylib"]
+
+[dependencies]
+cddl-cat = "0.6.1"
