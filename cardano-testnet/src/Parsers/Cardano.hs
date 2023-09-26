@@ -11,6 +11,7 @@ import           Options.Applicative
 import qualified Options.Applicative as OA
 
 import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
+import           Cardano.CLI.Legacy.Options (pLegacyCardanoEra)
 
 import           Testnet.Process.Cli
 import           Testnet.Property.Utils
@@ -24,7 +25,7 @@ newtype CardanoOptions = CardanoOptions
 optsTestnet :: EnvCli -> Parser CardanoTestnetOptions
 optsTestnet envCli = CardanoTestnetOptions
   <$> pNumBftAndSpoNodes
-  <*> pCardanoEra envCli
+  <*> pLegacyCardanoEra envCli
   <*> OA.option auto
       (   OA.long "epoch-length"
       <>  OA.help "Epoch length"
