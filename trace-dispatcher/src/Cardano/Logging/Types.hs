@@ -378,9 +378,6 @@ data ConfigOption =
   | ConfLimiter {maxFrequency :: Double}
   deriving (Eq, Ord, Show, Generic)
 
-instance AE.FromJSON ConfigOption where
-  parseJSON = AE.genericParseJSON AE.defaultOptions{AE.sumEncoding = AE.UntaggedValue}
-
 newtype ForwarderAddr
   = LocalSocket FilePath
   deriving (Eq, Ord, Show)
@@ -451,6 +448,7 @@ data TraceConfig = TraceConfig {
   , tcResourceFrequency :: Maybe Int
 }
   deriving (Eq, Ord, Show)
+
 
 emptyTraceConfig :: TraceConfig
 emptyTraceConfig = TraceConfig {
