@@ -49,6 +49,8 @@ import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers
                    (TracePublicRootPeers (..))
 import qualified Ouroboros.Network.PeerSelection.State.EstablishedPeers as EstablishedPeers
 import qualified Ouroboros.Network.PeerSelection.State.KnownPeers as KnownPeers
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
+                   WarmValency (..))
 import           Ouroboros.Network.PeerSelection.Types ()
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 (ServerTrace (..))
@@ -233,7 +235,7 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              ]
   forMachine _dtal (TracePublicRootsResults res group dt) =
     mconcat [ "kind" .= String "PublicRootsResults"
-             , "result" .= toJSONList (toList res)
+             , "result" .= toJSON res
              , "group" .= group
              , "diffTime" .= dt
              ]
@@ -494,6 +496,26 @@ instance LogFormatting (TracePeerSelection SockAddr) where
     mconcat [ "kind" .= String "KnownInboundConnection"
             , "peer" .= toJSON addr
             , "peerSharing" .= String (pack . show $ sharing) ]
+  forMachine _dtal (TraceLedgerStateJudgementChanged new) =
+    mconcat [ "kind" .= String "LedgerStateJudgementChanged"
+            , "new" .= show new ]
+  forMachine _dtal TraceOnlyBootstrapPeers =
+    mconcat [ "kind" .= String "LedgerStateJudgementChanged" ]
+  forMachine _dtal (TraceUseBootstrapPeersChanged ubp) =
+    mconcat [ "kind" .= String "UseBootstrapPeersChanged"
+            , "useBootstrapPeers" .= toJSON ubp ]
+  forMachine _dtal TraceBootstrapPeersFlagChangedWhilstInSensitiveState =
+    mconcat [ "kind" .= String "BootstrapPeersFlagChangedWhilstInSensitiveState"
+            ]
+  forMachine _dtal (TraceOutboundGovernorCriticalFailure err) =
+    mconcat [ "kind" .= String "OutboundGovernorCriticalFailure"
+            , "reason" .= show err
+            ]
+  forMachine _dtal (TraceDebugState _ dpst) =
+    mconcat [ "kind" .= String "DebugState"
+            , "peerSelectionState" .= show dpst
+            ]
+
   forHuman = pack . show
 
 instance MetaTrace (TracePeerSelection SockAddr) where
@@ -595,6 +617,18 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["ChurnMode"]
     namespaceFor TraceKnownInboundConnection {} =
       Namespace [] ["KnownInboundConnection"]
+    namespaceFor TraceLedgerStateJudgementChanged {} =
+      Namespace [] ["LedgerStateJudgementChanged"]
+    namespaceFor TraceOnlyBootstrapPeers {} =
+      Namespace [] ["OnlyBootstrapPeers"]
+    namespaceFor TraceUseBootstrapPeersChanged {} =
+      Namespace [] ["UseBootstrapPeersChanged"]
+    namespaceFor TraceBootstrapPeersFlagChangedWhilstInSensitiveState =
+      Namespace [] ["BootstrapPeersFlagChangedWhilstInSensitiveState"]
+    namespaceFor TraceOutboundGovernorCriticalFailure {} =
+      Namespace [] ["OutboundGovernorCriticalFailure"]
+    namespaceFor TraceDebugState {} =
+      Namespace [] ["DebugState"]
 
     severityFor (Namespace [] ["LocalRootPeersChanged"]) _ = Just Notice
     severityFor (Namespace [] ["TargetsChanged"]) _ = Just Notice
@@ -804,10 +838,10 @@ instance LogFormatting PeerSelectionCounters where
         (fromIntegral hotBigLedgerPeers)
     , IntM
         "Net.PeerSelection.WarmLocalRoots"
-        (fromIntegral $ foldl' (\a (b, _) -> a + b) 0 localRoots)
+        (fromIntegral $ getWarmValency $ foldl' (\a (_, b) -> a + b) 0 localRoots)
     , IntM
         "Net.PeerSelection.HotLocalRoots"
-        (fromIntegral $ foldl' (\a (_, b) -> a + b) 0 localRoots)
+        (fromIntegral $ getHotValency $ foldl' (\a (b, _) -> a + b) 0 localRoots)
     ]
 
 instance MetaTrace PeerSelectionCounters where

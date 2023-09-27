@@ -46,7 +46,9 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Control.Applicative (Alternative (..))
 import           Ouroboros.Network.NodeToNode (PeerAdvertise (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers (..))
+import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    WarmValency (..))
@@ -56,7 +58,7 @@ data NodeSetup = NodeSetup
   , nodeIPv4Address :: !(Maybe NodeIPv4Address)
   , nodeIPv6Address :: !(Maybe NodeIPv6Address)
   , producers       :: ![RootConfig]
-  , useLedger       :: !UseLedger
+  , useLedger       :: !UseLedgerPeers
   } deriving (Eq, Show)
 
 instance FromJSON NodeSetup where
@@ -66,7 +68,7 @@ instance FromJSON NodeSetup where
                   <*> o .:  "nodeIPv4Address"
                   <*> o .:  "nodeIPv6Address"
                   <*> o .:  "producers"
-                  <*> o .:? "useLedgerAfterSlot" .!= UseLedger DontUseLedger
+                  <*> o .:? "useLedgerAfterSlot" .!= DontUseLedgerPeers
 
 instance ToJSON NodeSetup where
   toJSON ns =
@@ -88,7 +90,7 @@ data RootConfig = RootConfig
     -- or domain name and a port number.
   , rootAdvertise    :: PeerAdvertise
     -- ^ 'advertise' configures whether the root should be advertised through
-    -- gossip.
+    -- peer sharing.
   } deriving (Eq, Show)
 
 instance FromJSON RootConfig where
@@ -124,6 +126,9 @@ data LocalRootPeersGroup = LocalRootPeersGroup
   { localRoots :: RootConfig
   , hotValency :: HotValency
   , warmValency :: WarmValency
+  , trustable   :: PeerTrustable
+    -- ^ 'trustable' configures whether the root should be trusted in fallback
+    -- state.
   } deriving (Eq, Show)
 
 -- | Does not use the 'FromJSON' instance of 'RootConfig', so that
@@ -137,6 +142,7 @@ instance FromJSON LocalRootPeersGroup where
                   <$> parseJSON (Object o)
                   <*> pure hv
                   <*> o .:? "warmValency" .!= WarmValency v
+                  <*> o .:? "trustable" .!= IsNotTrustable
 
 instance ToJSON LocalRootPeersGroup where
   toJSON lrpg =
@@ -145,6 +151,7 @@ instance ToJSON LocalRootPeersGroup where
       , "advertise" .= rootAdvertise (localRoots lrpg)
       , "hotValency" .= hotValency lrpg
       , "warmValency" .= warmValency lrpg
+      , "trustable" .= trustable lrpg
       ]
 
 newtype LocalRootPeersGroups = LocalRootPeersGroups
@@ -167,22 +174,24 @@ instance FromJSON PublicRootPeers where
 instance ToJSON PublicRootPeers where
   toJSON = toJSON . publicRoots
 
-data NetworkTopology = RealNodeTopology !LocalRootPeersGroups ![PublicRootPeers] !UseLedger
+data NetworkTopology = RealNodeTopology !LocalRootPeersGroups ![PublicRootPeers] !UseLedgerPeers !UseBootstrapPeers
   deriving (Eq, Show)
 
 instance FromJSON NetworkTopology where
   parseJSON = withObject "NetworkTopology" $ \o ->
-                RealNodeTopology <$> (o .: "localRoots"                                     )
-                                 <*> (o .: "publicRoots"                                    )
-                                 <*> (o .:? "useLedgerAfterSlot" .!= UseLedger DontUseLedger)
+                RealNodeTopology <$> (o .: "localRoots"                                  )
+                                 <*> (o .: "publicRoots"                                 )
+                                 <*> (o .:? "useLedgerAfterSlot" .!= DontUseLedgerPeers  )
+                                 <*> (o .:? "useBootstrapPeers" .!= DontUseBootstrapPeers)
 
 instance ToJSON NetworkTopology where
   toJSON top =
     case top of
-      RealNodeTopology lrpg prp ul -> object [ "localRoots"         .= lrpg
-                                             , "publicRoots"        .= prp
-                                             , "useLedgerAfterSlot" .= ul
-                                             ]
+      RealNodeTopology lrpg prp ul ubp -> object [ "localRoots"         .= lrpg
+                                                 , "publicRoots"        .= prp
+                                                 , "useLedgerAfterSlot" .= ul
+                                                 , "useBootstrapPeers"  .= ubp
+                                                 ]
 
 --
 -- Legacy p2p topology file format
@@ -198,10 +207,12 @@ instance FromJSON (Legacy a) => FromJSON (Legacy [a]) where
 instance FromJSON (Legacy LocalRootPeersGroup) where
   parseJSON = withObject "LocalRootPeersGroup" $ \o -> do
                 hv@(HotValency v) <- o .: "hotValency"
+                wv <- o .:? "warmValency" .!= WarmValency v
                 fmap Legacy $ LocalRootPeersGroup
                   <$> o .: "localRoots"
                   <*> pure hv
-                  <*> pure (WarmValency v)
+                  <*> pure wv
+                  <*> o .: "trustable"
 
 instance FromJSON (Legacy LocalRootPeersGroups) where
   parseJSON = withObject "LocalRootPeersGroups" $ \o ->
@@ -216,9 +227,10 @@ instance FromJSON (Legacy PublicRootPeers) where
 instance FromJSON (Legacy NetworkTopology) where
   parseJSON = fmap Legacy
             . withObject "NetworkTopology" (\o ->
-                RealNodeTopology <$> fmap getLegacy (o .: "LocalRoots")
-                                 <*> fmap getLegacy (o .: "PublicRoots")
-                                 <*> (o .:? "useLedgerAfterSlot" .!= UseLedger DontUseLedger))
+              RealNodeTopology <$> fmap getLegacy (o .: "LocalRoots")
+                               <*> fmap getLegacy (o .: "PublicRoots")
+                               <*> (o .:? "useLedgerAfterSlot" .!= DontUseLedgerPeers)
+                               <*> pure DontUseBootstrapPeers)
 
 -- | Read the `NetworkTopology` configuration from the specified file.
 --
@@ -231,7 +243,12 @@ readTopologyFile tr nc = do
     Left e -> return . Left $ handler e
     Right bs ->
       let bs' = LBS.fromStrict bs in
-      first handlerJSON (eitherDecode bs')
+      (case eitherDecode bs' of
+        Left err -> Left (handlerJSON err)
+        Right t
+          | hasBootstrapChance t -> Right t
+          | otherwise            -> Left handlerBootstrap
+      )
       `combine`
       first handlerJSON (eitherDecode bs')
 
@@ -259,6 +276,14 @@ readTopologyFile tr nc = do
     , "configuration flag. "
     , Text.pack err
     ]
+  handlerBootstrap :: Text
+  handlerBootstrap = mconcat
+    [ "You seem to have not configured any trustable peer. "
+    , "This is important in order for the node to make progress "
+    , "in bootstrap mode. Make sure you provide at least one bootstrap peer "
+    , "source (by setting useBootstrapPeer topology file option) "
+    , "or mark a local root peer as trustable. "
+    ]
 
 readTopologyFileOrError :: Tracer IO (StartupTrace blk)
                         -> NodeConfiguration -> IO NetworkTopology
@@ -267,3 +292,25 @@ readTopologyFileOrError tr nc =
   >>= either (\err -> error $ "Cardano.Node.Configuration.TopologyP2P.readTopologyFile: "
                            <> Text.unpack err)
              pure
+
+--
+-- Checking for chance of progress in bootstrap phase
+--
+
+-- | This function returns false if non-trustable peers are configured
+--
+hasBootstrapChance :: NetworkTopology -> Bool
+hasBootstrapChance (RealNodeTopology (LocalRootPeersGroups lprgs) _ _ ubp) =
+    case ubp of
+      DontUseBootstrapPeers   -> True
+      UseBootstrapPeers []    -> anyTrustable
+      UseBootstrapPeers (_:_) -> True
+  where
+    anyTrustable =
+      any (\(LocalRootPeersGroup lr _ _ pt) -> case pt of
+              IsNotTrustable -> False
+              IsTrustable    -> not
+                             . null
+                             . rootAccessPoints
+                             $ lr
+          ) lprgs

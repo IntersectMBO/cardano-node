@@ -42,7 +42,6 @@ import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket,
                    NodeToClientVersion)
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
 import           Ouroboros.Network.Subscription.Dns (DnsSubscriptionTarget (..))
 import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
@@ -54,6 +53,8 @@ import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 
 import           Cardano.Git.Rev (gitRev)
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
+import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
 import           Paths_cardano_node (version)
 
@@ -111,9 +112,9 @@ data StartupTrace blk =
   -- | Log peer-to-peer network configuration, either on startup or when its
   -- updated.
   --
-  | NetworkConfig [(HotValency, WarmValency, Map RelayAccessPoint PeerAdvertise)]
+  | NetworkConfig [(HotValency, WarmValency, Map RelayAccessPoint (PeerAdvertise, PeerTrustable))]
                   (Map RelayAccessPoint PeerAdvertise)
-                  UseLedgerAfter
+                  UseLedgerPeers
 
   -- | Warn when 'EnableP2P' is set.
   | P2PWarning

@@ -171,7 +171,7 @@ library
                       , formatting
                       , generic-data
                       , hostname
-                      , io-classes >= 0.3
+                      , io-classes >= 1.3
                       , iohk-monitoring
                       , iproute
                       , lobemo-backend-aggregation
@@ -201,6 +201,7 @@ library
                       , stm
                       , strict-sop-core
                       , strict-stm
+                      , strict-checked-vars
                       , time
                       , trace-dispatcher ^>= 2.5
                       , trace-forward ^>= 2.2

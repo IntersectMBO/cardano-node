@@ -9,6 +9,7 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TupleSections #-}
 
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -101,7 +102,6 @@ import qualified Ouroboros.Network.Diffusion.P2P as P2P
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), ConnectionId,
                    PeerSelectionTargets (..), RemoteAddress)
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
@@ -124,6 +124,9 @@ import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Tracing.Tracers
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
+import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable)
+import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers)
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -439,10 +442,11 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
         traceWith (startupTracer tracers)
                 $ NetworkConfig localRoots
                                 publicRoots
-                                (useLedgerAfterSlot nt)
+                                (useLedgerPeers nt)
         localRootsVar <- newTVarIO localRoots
         publicRootsVar <- newTVarIO publicRoots
-        useLedgerVar   <- newTVarIO (useLedgerAfterSlot nt)
+        useLedgerVar   <- newTVarIO (useLedgerPeers nt)
+        useBootstrapVar <- newTVarIO (useBootstrapPeers nt)
 #ifdef UNIX
         -- initial `SIGHUP` handler, which only rereads the topology file but
         -- doesn't update block forging.  The latter is only possible once
@@ -452,7 +456,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               (Signals.Catch $ do
                 updateTopologyConfiguration
                   (startupTracer tracers) nc
-                  localRootsVar publicRootsVar useLedgerVar
+                  localRootsVar publicRootsVar useLedgerVar useBootstrapVar
                 traceWith (startupTracer tracers) (BlockForgingUpdate NotEffective)
               )
               Nothing
@@ -463,13 +467,14 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                   (readTVar localRootsVar)
                   (readTVar publicRootsVar)
                   (readTVar useLedgerVar)
+                  (readTVar useBootstrapVar)
           in
           Node.run
             nodeArgs {
                 rnNodeKernelHook = \registry nodeKernel -> do
                   -- reinstall `SIGHUP` handler
                   installP2PSigHUPHandler (startupTracer tracers) blockType nc nodeKernel
-                                          localRootsVar publicRootsVar useLedgerVar
+                                          localRootsVar publicRootsVar useLedgerVar useBootstrapVar
                   rnNodeKernelHook nodeArgs registry nodeKernel
             }
             StdRunNodeArgs
@@ -605,19 +610,21 @@ installP2PSigHUPHandler :: Tracer IO (StartupTrace blk)
                         -> Api.BlockType blk
                         -> NodeConfiguration
                         -> NodeKernel IO RemoteAddress (ConnectionId LocalAddress) blk
-                        -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint PeerAdvertise)]
+                        -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint (PeerAdvertise, PeerTrustable))]
                         -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
-                        -> StrictTVar IO UseLedgerAfter
+                        -> StrictTVar IO UseLedgerPeers
+                        -> StrictTVar IO UseBootstrapPeers
                         -> IO ()
 #ifndef UNIX
 installP2PSigHUPHandler _ _ _ _ _ _ _ = return ()
 #else
-installP2PSigHUPHandler startupTracer blockType nc nodeKernel localRootsVar publicRootsVar useLedgerVar =
+installP2PSigHUPHandler startupTracer blockType nc nodeKernel localRootsVar publicRootsVar useLedgerVar
+                        useBootstrapPeersVar =
   void $ Signals.installHandler
     Signals.sigHUP
     (Signals.Catch $ do
       updateBlockForging startupTracer blockType nodeKernel nc
-      updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLedgerVar
+      updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLedgerVar useBootstrapPeersVar
     )
     Nothing
 #endif
@@ -694,11 +701,13 @@ updateBlockForging startupTracer blockType nodeKernel nc = do
 
 updateTopologyConfiguration :: Tracer IO (StartupTrace blk)
                             -> NodeConfiguration
-                            -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint PeerAdvertise)]
+                            -> StrictTVar IO [(HotValency, WarmValency, Map RelayAccessPoint (PeerAdvertise, PeerTrustable))]
                             -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
-                            -> StrictTVar IO UseLedgerAfter
+                            -> StrictTVar IO UseLedgerPeers
+                            -> StrictTVar IO UseBootstrapPeers
                             -> IO ()
-updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLedgerVar = do
+updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLedgerVar
+                            useBootsrapPeersVar = do
     traceWith startupTracer NetworkConfigUpdate
     result <- try $ readTopologyFileOrError startupTracer nc
     case result of
@@ -709,11 +718,12 @@ updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLed
       Right nt -> do
         let (localRoots, publicRoots) = producerAddresses nt
         traceWith startupTracer
-                $ NetworkConfig localRoots publicRoots (useLedgerAfterSlot nt)
+                $ NetworkConfig localRoots publicRoots (useLedgerPeers nt)
         atomically $ do
           writeTVar localRootsVar localRoots
           writeTVar publicRootsVar publicRoots
-          writeTVar useLedgerVar (useLedgerAfterSlot nt)
+          writeTVar useLedgerVar (useLedgerPeers nt)
+          writeTVar useBootsrapPeersVar (useBootstrapPeers nt)
 #endif
 
 --------------------------------------------------------------------------------
@@ -767,11 +777,12 @@ checkVRFFilePermissions (File vrfPrivKey) = do
 
 mkP2PArguments
   :: NodeConfiguration
-  -> STM IO [(HotValency, WarmValency, Map RelayAccessPoint PeerAdvertise)]
+  -> STM IO [(HotValency, WarmValency, Map RelayAccessPoint (PeerAdvertise, PeerTrustable))]
      -- ^ non-overlapping local root peers groups; the 'Int' denotes the
      -- valency of its group.
   -> STM IO (Map RelayAccessPoint PeerAdvertise)
-  -> STM IO UseLedgerAfter
+  -> STM IO UseLedgerPeers
+  -> STM IO UseBootstrapPeers
   -> Diffusion.ExtraArguments 'Diffusion.P2P IO
 mkP2PArguments NodeConfiguration {
                  ncTargetNumberOfRootPeers,
@@ -787,12 +798,14 @@ mkP2PArguments NodeConfiguration {
                }
                daReadLocalRootPeers
                daReadPublicRootPeers
-               daReadUseLedgerAfter =
+               daReadUseLedgerPeers
+               daReadUseBootstrapPeers =
     Diffusion.P2PArguments P2P.ArgumentsExtra
       { P2P.daPeerSelectionTargets
       , P2P.daReadLocalRootPeers
       , P2P.daReadPublicRootPeers
-      , P2P.daReadUseLedgerAfter
+      , P2P.daReadUseLedgerPeers
+      , P2P.daReadUseBootstrapPeers
       , P2P.daProtocolIdleTimeout   = ncProtocolIdleTimeout
       , P2P.daTimeWaitTimeout       = ncTimeWaitTimeout
       , P2P.daDeadlineChurnInterval = 3300
@@ -840,13 +853,14 @@ producerAddressesNonP2P nt =
 
 producerAddresses
   :: NetworkTopology
-  -> ([(HotValency, WarmValency, Map RelayAccessPoint PeerAdvertise)], Map RelayAccessPoint PeerAdvertise)
+  -> ([(HotValency, WarmValency, Map RelayAccessPoint (PeerAdvertise, PeerTrustable))], Map RelayAccessPoint PeerAdvertise)
 producerAddresses nt =
   case nt of
-    RealNodeTopology lrpg prp _ ->
+    RealNodeTopology lrpg prp _ _ ->
       ( map (\lrp -> ( hotValency lrp
                      , warmValency lrp
-                     , Map.fromList $ rootConfigToRelayAccessPoint
+                     , Map.fromList $ map (fmap (, trustable lrp))
+                                    $ rootConfigToRelayAccessPoint
                                     $ localRoots lrp
                      )
             )
@@ -854,7 +868,12 @@ producerAddresses nt =
       , foldMap (Map.fromList . rootConfigToRelayAccessPoint . publicRoots) prp
       )
 
-useLedgerAfterSlot
+useLedgerPeers
   :: NetworkTopology
-  -> UseLedgerAfter
-useLedgerAfterSlot (RealNodeTopology _ _ (UseLedger ul)) = ul
+  -> UseLedgerPeers
+useLedgerPeers (RealNodeTopology _ _ ulp _) = ulp
+
+useBootstrapPeers
+  :: NetworkTopology
+  -> UseBootstrapPeers
+useBootstrapPeers (RealNodeTopology _ _ _ ubp) = ubp
