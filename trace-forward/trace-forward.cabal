@@ -64,12 +64,13 @@ library
                       , deepseq
                       , extra
                       , io-classes
-                      , ouroboros-network-api ^>= 0.7.3
-                      , ouroboros-network-framework
+                      , ouroboros-network-api >= 0.3
+                      , ouroboros-network-framework >= 0.7
+                      , singletons
                       , serialise
                       , stm
                       , text
-                      , typed-protocols ^>= 0.1
+                      , typed-protocols ^>= 0.2
                       , typed-protocols-cborg
 
 test-suite test

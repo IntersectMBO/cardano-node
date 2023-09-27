@@ -30,8 +30,8 @@ import           Trace.Forward.Utils.TraceObject (getTraceObjectsFromReply)
 
 acceptTraceObjectsInit
   :: (CBOR.Serialise lo,
-      ShowProxy lo,
-      Typeable lo)
+      Typeable lo,
+      ShowProxy lo)
   => AcceptorConfiguration lo -- ^ Acceptor's configuration.
   -> (initiatorCtx -> [lo] -> IO ()) -- ^ The handler for accepted 'TraceObject's.
   -> (initiatorCtx -> IO ())         -- ^ The handler for exceptions from 'runPeer'.
@@ -41,8 +41,8 @@ acceptTraceObjectsInit config loHandler peerErrorHandler =
 
 acceptTraceObjectsResp
   :: (CBOR.Serialise lo,
-      ShowProxy lo,
-      Typeable lo)
+      Typeable lo,
+      ShowProxy lo)
   => AcceptorConfiguration lo -- ^ Acceptor's configuration.
   -> (responderCtx -> [lo] -> IO ()) -- ^ The handler for accepted 'TraceObject's.
   -> (responderCtx -> IO ())         -- ^ The handler for exceptions from 'runPeer'.
@@ -52,8 +52,8 @@ acceptTraceObjectsResp config loHandler peerErrorHandler = do
 
 runPeerWithHandler
   :: (CBOR.Serialise lo,
-      ShowProxy lo,
-      Typeable lo)
+      Typeable lo,
+      ShowProxy lo)
   => AcceptorConfiguration lo
   -> (ctx -> [lo] -> IO ())
   -> (ctx -> IO ())
@@ -73,13 +73,12 @@ runPeerWithHandler config@AcceptorConfiguration{acceptorTracer, shouldWeStop} lo
 
 acceptorActions
   :: (CBOR.Serialise lo,
-      ShowProxy lo,
       Typeable lo)
   => AcceptorConfiguration lo -- ^ Acceptor's configuration.
   -> ([lo] -> IO ())          -- ^ The handler for accepted 'TraceObject's.
   -> Acceptor.TraceObjectAcceptor lo IO ()
 acceptorActions config@AcceptorConfiguration{whatToRequest, shouldWeStop} loHandler =
-  Acceptor.SendMsgTraceObjectsRequest TokBlocking whatToRequest $ \replyWithTraceObjects -> do
+  Acceptor.SendMsgTraceObjectsRequest SingBlocking whatToRequest $ \replyWithTraceObjects -> do
     loHandler $ getTraceObjectsFromReply replyWithTraceObjects
     ifM (readTVarIO shouldWeStop)
       (return $ Acceptor.SendMsgDone $ return ())
