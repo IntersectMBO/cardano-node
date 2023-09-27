@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2024-06-23T23:01:13Z
-  , cardano-haskell-packages 2024-07-24T14:16:32Z
+  , cardano-haskell-packages 2024-07-30T13:21:24Z
 
 packages:
   cardano-node
@@ -65,3 +65,53 @@ allow-newer: katip:Win32
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- coot/typed-protocols-new-api
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/typed-protocols
+  tag: f36ac61d188be2252eed859937fdf3f98c9d0bbb
+  --sha256: sha256-QWTulG6okgE5nNbl8l/lkTv7IaxZ/nLHhSsc7Dmhgtc=
+  subdir:
+    typed-protocols
+    typed-protocols-cborg
+    typed-protocols-stateful
+    typed-protocols-stateful-cborg
+    typed-protocols-examples
+
+-- coot/typed-protocols-new-api
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: 0789fc1e6df63065671eaa5f9845a479bc78518f
+  --sha256: sha256-tOo0OzbtHiwEKEYtFHarCvmXlGLBX1N5kmCMZtI5m9s=
+  subdir: network-mux
+          ouroboros-network
+          ouroboros-network-api
+          ouroboros-network-framework
+          ouroboros-network-protocols
+          ouroboros-network-testing
+
+-- coot/typed-protocols-new-api
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: e237a013d568e106712f2de626886286ca296f83
+  --sha256: sha256-hI+SYQmQoIr01uVsI6g45ih/5evPD8A2HoHS/R7wv94=
+  subdir: ouroboros-consensus
+          ouroboros-consensus-cardano
+          ouroboros-consensus-diffusion
+
+-- coot/typed-protocols-new-api
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api
+  tag: 628906befc8587b1061f787875174b0dc6d708fb
+  --sha256: sha256-gVw4aFRB/J5URrpt50AXxIjrT9B4/naQ/xPkSDK+z54=
+  subdir: cardano-api
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ekg-forward
+  tag: 59c99bb78a0f3da8cccc9a0f7a32bc84607e3f58
+  --sha256: sha256-I7xSHeMwH+1RIi0lwlvxaI76uut57gxE8U4klaTSxCM=

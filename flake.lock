@@ -3,11 +3,11 @@
     "CHaP": {
       "flake": false,
       "locked": {
-        "lastModified": 1721831314,
-        "narHash": "sha256-I1j5HPSbbh3l1D0C9oP/59YB4e+64K9NDRl7ueD1c/Y=",
+        "lastModified": 1722347096,
+        "narHash": "sha256-0hNZ2kvXB/lgWeamza/KqJMDShA8iT9Tsb7Nsm43M7c=",
         "owner": "intersectmbo",
         "repo": "cardano-haskell-packages",
-        "rev": "8815ee7598bc39a02db8896b788f69accf892790",
+        "rev": "98a4c7fdf12f313ad9312ff43aecde270368cbf1",
         "type": "github"
       },
       "original": {
@@ -544,11 +544,11 @@
     "hackageNix": {
       "flake": false,
       "locked": {
-        "lastModified": 1719794527,
-        "narHash": "sha256-qHo/KumtwAzPkfLWODu/6EFY/LeK+C7iPJyAUdT8tGA=",
+        "lastModified": 1721953589,
+        "narHash": "sha256-ctYOxCvXQS5MPILV8YPyUhylKhgIhOM4Dc5g0vGNFbM=",
         "owner": "input-output-hk",
         "repo": "hackage.nix",
-        "rev": "da2a3bc9bd1b3dd41bb147279529c471c615fd3e",
+        "rev": "3f0675337984f15834fcd52b97fc766e30f4d684",
         "type": "github"
       },
       "original": {
@@ -564,10 +564,8 @@
         "cabal-34": "cabal-34",
         "cabal-36": "cabal-36",
         "cardano-shell": "cardano-shell",
-        "flake-compat": "flake-compat_3",
+        "flake-compat": "flake-compat_2",
         "ghc-8.6.5-iohk": "ghc-8.6.5-iohk",
-        "ghc910X": "ghc910X",
-        "ghc911": "ghc911",
         "hackage": [
           "hackageNix"
         ],
@@ -584,7 +582,8 @@
         "hydra": "hydra",
         "iserv-proxy": "iserv-proxy",
         "nixpkgs": [
-          "nixpkgs"
+          "haskellNix",
+          "nixpkgs-unstable"
         ],
         "nixpkgs-2003": "nixpkgs-2003",
         "nixpkgs-2105": "nixpkgs-2105",
@@ -598,11 +597,11 @@
         "stackage": "stackage"
       },
       "locked": {
-        "lastModified": 1718797200,
-        "narHash": "sha256-ueFxTuZrQ3ZT/Fj5sSeUWlqKa4+OkUU1xW0E+q/XTfw=",
+        "lastModified": 1720058742,
+        "narHash": "sha256-QcJiQDEvR6F653AhYBUA6Jukg7DGdkuBj/EsGDZCCLo=",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "cb139fa956158397aa398186bb32dd26f7318784",
+        "rev": "cbd75e3669c44a383e7d80e35c8e96aa795336f3",
         "type": "github"
       },
       "original": {

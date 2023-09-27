@@ -19,8 +19,7 @@ import qualified Trace.Forward.Protocol.TraceObject.Forwarder as Forwarder
 import           Trace.Forward.Utils.TraceObject
 
 forwardTraceObjectsInit
-  :: (CBOR.Serialise lo,
-      ShowProxy lo)
+  :: (CBOR.Serialise lo, ShowProxy lo)
   => ForwarderConfiguration lo
   -> ForwardSink lo
   -> RunMiniProtocol 'InitiatorMode initiatorCtx responderCtx LBS.ByteString IO () Void
@@ -28,8 +27,7 @@ forwardTraceObjectsInit config sink =
   InitiatorProtocolOnly $ runPeerWithSink config sink
 
 forwardTraceObjectsResp
-  :: (CBOR.Serialise lo,
-      ShowProxy lo)
+  :: (CBOR.Serialise lo, ShowProxy lo)
   => ForwarderConfiguration lo
   -> ForwardSink lo
   -> RunMiniProtocol 'ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
@@ -37,7 +35,8 @@ forwardTraceObjectsResp config sink =
   ResponderProtocolOnly $ runPeerWithSink config sink
 
 runPeerWithSink
-  :: (ShowProxy lo, CBOR.Serialise lo)
+  :: (CBOR.Serialise lo,
+      ShowProxy lo)
   => ForwarderConfiguration lo
   -> ForwardSink lo
   -> MiniProtocolCb ctx LBS.ByteString IO ()
