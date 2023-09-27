@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
@@ -6,12 +7,10 @@ module Test.Trace.Forward.Protocol.DataPoint.Tests
   ( tests
   ) where
 
-import           Ouroboros.Network.Channel
-import           Ouroboros.Network.Driver.Simple (runConnectedPeers)
-
+import           Control.Applicative (Alternative)
 import qualified Codec.Serialise as CBOR
 import           Control.Monad.Class.MonadAsync
-import           Control.Monad.Class.MonadST
+import           Control.Monad.Class.MonadSTM
 import           Control.Monad.Class.MonadThrow
 import           Control.Monad.IOSim (runSimOrThrow)
 import           Control.Monad.ST (runST)
@@ -43,7 +42,7 @@ tests = testGroup "Trace.Forward.Protocol.DataPoint"
   ]
 
 prop_codec_DataPointForward
-  :: AnyMessageAndAgency DataPointForward
+  :: AnyMessage DataPointForward
   -> Bool
 prop_codec_DataPointForward msg = runST $
   prop_codecM
@@ -52,7 +51,7 @@ prop_codec_DataPointForward msg = runST $
     msg
 
 prop_codec_splits2_DataPointForward
-  :: AnyMessageAndAgency DataPointForward
+  :: AnyMessage DataPointForward
   -> Bool
 prop_codec_splits2_DataPointForward msg = runST $
   prop_codec_splitsM
@@ -63,7 +62,7 @@ prop_codec_splits2_DataPointForward msg = runST $
 
 
 prop_codec_splits3_DataPointForward
-  :: AnyMessageAndAgency DataPointForward
+  :: AnyMessage DataPointForward
   -> Bool
 prop_codec_splits3_DataPointForward msg = runST $
   prop_codec_splitsM
@@ -90,15 +89,18 @@ prop_connect_DataPointForward
   -> Bool
 prop_connect_DataPointForward f (NonNegative n) =
   case runSimOrThrow
-         (connect
+         (connect [] []
             (dataPointForwarderPeer   dataPointForwarderCount)
             (dataPointAcceptorPeer  $ dataPointAcceptorApply f 0 n)) of
-    (s, c, TerminalStates TokDone TokDone) -> (s, c) == (n, foldr ($) 0 (replicate n f))
+    (s, c, TerminalStates SingDone SingDone) -> (s, c) == (n, foldr ($) 0 (replicate n f))
 
 prop_channel
-  :: ( MonadST    m
+  :: ( Alternative (STM m)
+     , MonadST    m
      , MonadAsync m
-     , MonadCatch m
+     , MonadLabelledSTM m
+     , MonadMask  m
+     , MonadThrow (STM m)
      )
   => (Int -> Int)
   -> Int

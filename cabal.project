@@ -65,3 +65,53 @@ allow-newer: katip:Win32
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+-- coot/typed-protocols-new-api
+source-repository-package
+  type: git
+  location: git@github.com:input-output-hk/typed-protocols
+  tag: 7205294d61e811ac63def67bed3deef00fefd75a
+  --sha256: sha256-HYDwHgT7wUorn7ByhJpX/H6u8lROWM1gh7WqgtC7NAw=
+  subdir:
+    typed-protocols
+    typed-protocols-cborg
+    typed-protocols-stateful
+    typed-protocols-stateful-cborg
+    typed-protocols-examples
+
+-- coot/typed-protocols-new-api
+source-repository-package
+  type: git
+  location: git@github.com:IntersectMBO/ouroboros-network
+  tag: f635dbefd306a5491b4921ba92708c746574e605
+  --sha256: sha256-LoPuQIl u1QNEzb/p2Gnb/SqMxJpBQLUQVGz0TlyIho=
+  subdir: network-mux
+          ouroboros-network
+          ouroboros-network-api
+          ouroboros-network-framework
+          ouroboros-network-protocols
+          ouroboros-network-testing
+
+-- coot/typed-protocols-new-api
+source-repository-package
+  type: git
+  location: git@github.com:IntersectMBO/ouroboros-consensus
+  tag: 0f2d920d5443163e2bb494044d3b81109503d3ec
+  --sha256: sha256-LoPuQIl u1QNEzb/p2Gnb/SqMxJpBQLUQVGz0TlyIho=
+  subdir: ouroboros-consensus
+          ouroboros-consensus-cardano
+          ouroboros-consensus-diffusion
+
+
+-- coot/typed-protocols-new-api
+source-repository-package
+  type: git
+  location: git@github.com:IntersectMBO/cardano-api
+  tag: 4565513d6efb9297cecf5675dd72052998790f40
+  --sha256: sha256-LoPuQIl u1QNEzb/p2Gnb/SqMxJpBQLUQVGz0TlyIho=
+  subdir: cardano-api
+
+source-repository-package
+  type: git
+  location: git@github.com:input-output-hk/ekg-forward
+  tag: 59c99bb78a0f3da8cccc9a0f7a32bc84607e3f58
