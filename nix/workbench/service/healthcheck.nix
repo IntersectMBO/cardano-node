@@ -3,6 +3,7 @@
 , backend
 , profile
 , nodeSpecs
+, eventlogged ? true
 }:
 
 with pkgs.lib;
@@ -27,6 +28,7 @@ let
         value = ''
           #!${bashInteractive}/bin/sh
 
+          ######################################################################
           # Set script globals #################################################
           ######################################################################
 
@@ -59,8 +61,8 @@ let
           ${coreutils}/bin/echo "- active_slots_coeff: ''${active_slots_coeff}"
           ${coreutils}/bin/echo "- active_slots:       ''${active_slots}"
 
-          # Fetch node names (Including "explorer" nodes)
-          ###############################################
+          # Fetch all node names (Including "explorer" nodes)
+          ###################################################
 
           node_specs_nodes=$(${jq}/bin/jq --raw-output \
             "keys | join (\" \")"                      \
@@ -74,11 +76,11 @@ let
           ${coreutils}/bin/echo "- Nodes: [''${node_specs_nodes[*]}]"
           ${coreutils}/bin/echo "- Pools: ''${node_specs_pools}"
 
-          # Look for available nodes and allocate healthcheck
-          ###################################################
+          # Look for deployed nodes and allocate healthcheck
+          ##################################################
 
           nodes=()
-          now=$(${coreutils}/bin/date +%s)
+          started_time=$(${coreutils}/bin/date +%s)
           for node in ''${node_specs_nodes[*]}
           do
             if test -d "../''${node}"
@@ -86,9 +88,8 @@ let
               nodes+=("''${node}")
               # Create healthcheck directory inside available node directories
               ${coreutils}/bin/mkdir "../''${node}/healthcheck"
-              # TODO: Store the `+RTS --info`
               # Save the starting time
-              ${coreutils}/bin/echo "''${now}" > "../''${node}/healthcheck/start_time"
+              ${coreutils}/bin/echo "''${started_time}" > "../''${node}/healthcheck/start_time"
             fi
           done
           ${coreutils}/bin/echo "Found deployed nodes:"
@@ -96,6 +97,7 @@ let
 
           # Look for the generator
           ########################
+
           generator=0
           if test -d "../generator"
           then
@@ -106,68 +108,119 @@ let
             ${coreutils}/bin/echo "Found no deployed generator"
           fi
 
+          ######################################################################
           # Main ###############################################################
           ######################################################################
 
           # The main function, called at the end of the file/script.
           function healthcheck() {
+
+            msg "Started!"
+
+            # Do a one and only connectivity/latency test!
+            ##############################################
+
+            for node in ''${nodes[*]}
+            do
+
+              # TODO: A couple of simple pings
+              # latency_topology_producers "''${node}"
+
+              # Cardano cluster connectivity (cardano-ping)
+              connectivity_topology_producers "''${node}"
+
+              # Store the `+RTS --info`
+              ${if eventlogged
+                then pkgs.cardanoNodePackages.cardano-node.passthru.eventlogged
+                else pkgs.cardanoNodePackages.cardano-node
+              }/bin/cardano-node +RTS --info > "../''${node}/healthcheck/rts.info"
+
+            done
+
+            # Start individual nodes' healthchecks
+            ######################################
+
+            # Check that all available nodes are synced and past slot zero!
+            for node in ''${nodes[*]}
+            do
+              # Returns false if not synced and true when synced.
+              # Will exit with an error after a defined time has passed.
+              while ! healthcheck_node_synced "''${node}"
+              do
+                ${coreutils}/bin/sleep 1
+              done
+              msg "Node "\"''${node}\"" is now synced!"
+            done
+
             # Ignore PIPE "errors", mixing 'jq', 'tac', 'grep' and/or 'head'
             # will evetually throw a PIPE exception (see jq_node_stdout_last).
             trap "${coreutils}/bin/echo \"trap PIPE\" >&2" PIPE
 
-            msg "Started!"
-
-            # Do a one and only networking/latency test!
-            for node in ''${nodes[*]}
-            do
-              latency_topology_producers "''${node}"
-            done
-
-            # Start the healthcheck infinite loop
-            while true
-            do
-
-              # First available nodes
-              for node in ''${nodes[*]}
+            # This is an "explorer" node (only one node and generator).
+            # If not an explorer node we don't keep unwanted stuff running!
+            if test "''${#nodes[@]}" = "1" && test "''${nodes[0]}" = "explorer" && test "''${generator}" != "0"
+            then
+              # Start a healthcheck infinite loop
+              while true
               do
-                healthcheck_node "''${node}"
+
+                # TODO: An array from node-specs.json with nodes like
+                #  '"kind": "explorer"' and '"isProducer": false'
+
+                for node in ''${nodes[*]}
+                do
+                  # TODO: Check forges?
+                  #       healthcheck_node_forge "''${node}"
+                  # Checks that blocks are being transmitted
+                  healthcheck_node_block "''${node}"
+                  # TODO: Right now there no traces with a "txIds" to check.
+                  #       healthcheck_node_txs "''${node}"
+                done
+
+                # Then generator if available
+                if test "''${generator}" != "0"
+                then
+                  healthcheck_generator
+                fi
+
+                if test "''${#nodes[@]}" = "1"
+                then
+                  # This healthcheck run is monitoring only one node
+                  # This is the case for all Nomad runs, either local or cloud
+                  ${coreutils}/bin/sleep 10
+                else
+                  # This healthcheck run is monitoring many nodes
+                  # Local/supervisord uses one healthcheck for the entire cluster
+                  ${coreutils}/bin/sleep  1
+                fi
+
               done
-
-              # Then generator if available
-              if test "''${generator}" != "0"
-              then
-                healthcheck_generator
-              fi
-
-              if test "''${#nodes[@]}" = "1"
-              then
-                # This healthcheck run is monitoring only one node
-                # This is the case for all Nomad runs, either local or cloud
-                ${coreutils}/bin/sleep 10
-              else
-                # This healthcheck run is monitoring many nodes
-                # Local/supervisord uses one healthcheck for the entire cluster
-                ${coreutils}/bin/sleep  1
-              fi
-
-            done
+            else
+              # Seconds supervisor needs to consider the start successful
+              ${coreutils}/bin/sleep 5
+              msg "Done, bye!"
+            fi
 
             trap - PIPE
+
           }
 
-          # Latency ############################################################
+          ######################################################################
+          # Network ############################################################
           ######################################################################
 
-          function latency_topology_producers() {
+          # TODO: latency_topology_producers "''${node}"
+
+          function connectivity_topology_producers() {
             local node=$1
-            msg "Latencies using 'cardano-cli ping' of \"''${node}\"'s Producers"
+            msg "Connectivity using 'cardano-cli ping' of \"''${node}\"'s Producers"
             local topology_path="../''${node}/topology.json"
             local keys=$(${jq}/bin/jq --raw-output '.Producers | keys | join (" ")' "''${topology_path}")
             for key in ''${keys[*]}
             do
               local host=$(${jq}/bin/jq --raw-output ".Producers[''${key}].addr" "''${topology_path}")
               local port=$(${jq}/bin/jq --raw-output ".Producers[''${key}].port" "''${topology_path}")
-              msg "'cardano-cli ping' of \"''${host}:''${port}\""
+              msg "Executing 'cardano-cli ping' to \"''${host}:''${port}\""
               # If the ping fails the whole script must fail!
               ${cardano-cli}/bin/cardano-cli ping \
                 --magic "''${network_magic}"      \
@@ -178,10 +231,11 @@ let
             done
           }
 
+          ######################################################################
           # Node ###############################################################
           ######################################################################
 
-          function healthcheck_node() {
+          function healthcheck_node_synced() {
             local node=$1
             # Checks if the node has not exited with errors
             if assert_program_running "''${node}"
@@ -206,6 +260,8 @@ let
                   if test $((now - start_time)) -ge 180
                   then
                     exit_healthcheck "''${node}: More than 3m waiting for slot 0"
+                  else
+                    false
                   fi
                 else
                   # The node is now synced! ####################################
@@ -215,9 +271,7 @@ let
               else
                 # The node was already flagged as synced! ######################
                 ################################################################
-                # TODO: healthcheck_node_forge "''${node}"
-                healthcheck_node_block "''${node}"
-                healthcheck_node_txs   "''${node}"
+                true
               fi
             fi
           }
@@ -403,12 +457,15 @@ let
             fi
           }
 
+          ######################################################################
           # Helper/auxiliary functions! ########################################
           ######################################################################
 
-          # The "at" time has format "2023-05-16 19:57:19.0231Z" and I can't
-          # parse it using any standard `date` format so I'm stripping the
-          # milliseconds part and converting to Unix time (Integer).
+          # The "at" time has format "2023-05-16 19:57:19.0231Z" for the new
+          # tracing system and "2023-10-04T21:06:21.03Z" for the old tracing
+          # system and I can't parse it using any standard `date` format so I'm
+          # stripping the milliseconds part and converting to Unix time
+          # (Integer).
           function msg_unix_time() {
             local msg=$1
               echo "''${msg}"           \
@@ -417,7 +474,10 @@ let
                 '
                     .at[:20]
                   |
-                    strptime("%Y-%m-%d %H:%M:%S.")
+                    if .[10:11] == "T"
+                    then (. | strptime("%Y-%m-%dT%H:%M:%S."))
+                    else (. | strptime("%Y-%m-%d %H:%M:%S."))
+                    end
                   |
                     mktime
                 '
@@ -441,10 +501,10 @@ let
           #
           # Also, the stdout of the node starts with some text that's echoed by
           # node's start.sh script that is not valid JSON, so we `grep` for
-          # "{"at": ... }". We still need to check the exit code of these
-          # functions just in case because if it fails a query may have failed
-          # and the healthcheck should fail. This is tricky because when 'jq'
-          # finishes and exists `tac` or `grep` may throw the following error:
+          # "{"... }". We still need to check the exit code of these functions
+          # just in case because if it fails a query may have failed and the
+          # healthcheck should fail. This is tricky because when 'jq' finishes
+          # and exists `tac` or `grep` may throw the following error:
           # "writing output failed: Broken pipe"
           #
           # Finally filter for "null" inputs that are the output of 'nth(0;...)'
@@ -460,7 +520,7 @@ let
             ans="$( \
                   { ${coreutils}/bin/tac "''${stdout_path}" 2>/dev/null; } \
                 | \
-                  { ${grep}/bin/grep -E  "^{\"at\":.*}$"    2>/dev/null; } \
+                  { ${grep}/bin/grep -E  "^{\".*}$"         2>/dev/null; } \
                 | \
                   ${jq}/bin/jq                             \
                     --compact-output                       \
@@ -583,62 +643,123 @@ let
             fi
           }
 
-          # Block sent:
-          # {
-          #   "at": "2023-05-17 16:00:57.0222Z",
-          #   "ns": "BlockFetch.Server.SendBlock",
-          #   "data": {
-          #     "block": "dde....414",
-          #     "kind": "BlockFetchServer"
-          #   },
-          #   "sev": "Info",
-          #   "thread": "67",
-          #   "host": "localhost"
-          # }
-          # Block received:
-          # {
-          #   "at": "2023-05-17 16:00:57.0246Z",
-          #   "ns": "BlockFetch.Remote.Receive.Block",
-          #   "data": {
-          #     "kind": "Recv",
-          #     "msg": {
-          #       "agency": "ServerAgency TokStreaming",
-          #       "blockHash": "dde....414",
-          #       "blockSize": 64334,
-          #       "kind": "MsgBlock",
-          #       "txIds": [
-          #         "60e....6ec",
-          #         ...
-          #         "95d....165"
-          #       ]
-          #     },
-          #     "peer": {
-          #       "connectionId": "127.0.0.1:37117 127.0.0.1:30000"
-          #     }
-          #   },
-          #   "sev": "Info",
-          #   "thread": "77",
-          #   "host": "localhost"
-          # }
+          #####################
+          # Old Tracing System:
+          #####################
+          ## Block received:
+          ## {
+          ##   "app": [],
+          ##   "at": "2023-10-04T21:06:21.03Z",
+          ##   "data": {
+          ##     "block": "944....10a",
+          ##     "delay": 0.029996935,
+          ##     "kind": "CompletedBlockFetch",
+          ##     "peer": {
+          ##       "local": {
+          ##         "addr": "10.0.0.1",
+          ##         "port": "41179"
+          ##       },
+          ##       "remote": {
+          ##         "addr": "10.0.0.52",
+          ##         "port": "30051"
+          ##       }
+          ##     },
+          ##     "size": 863
+          ##   },
+          ##   "env": "8.2.1:00000",
+          ##   "host": "client-e",
+          ##   "loc": null,
+          ##   "msg": "",
+          ##   "ns": [
+          ##     "cardano.node.BlockFetchClient"
+          ##   ],
+          ##   "pid": "89",
+          ##   "sev": "Info",
+          ##   "thread": "245"
+          ## }
+          ## Block sent:
+          ## {
+          ##   "app": [],
+          ##   "at": "2023-10-04T21:06:08.16Z",
+          ##   "data": {
+          ##     "block": "b30....c60",
+          ##     "kind": "TraceBlockFetchServerSendBlock",
+          ##     "peer": {
+          ##       "local": {
+          ##         "addr": "10.0.0.1",
+          ##         "port": "30000"
+          ##       },
+          ##       "remote": {
+          ##         "addr": "10.0.0.52",
+          ##         "port": "37949"
+          ##       }
+          ##     }
+          ##   },
+          ##   "env": "8.2.1:00000",
+          ##   "host": "client-e",
+          ##   "loc": null,
+          ##   "msg": "",
+          ##   "ns": [
+          ##     "cardano.node.BlockFetchServer"
+          ##   ],
+          ##   "pid": "89",
+          ##   "sev": "Info",
+          ##   "thread": "202"
+          ## }
+          #####################
+          # New Tracing System:
+          #####################
+          ## Block received:
+          ## {
+          ##   "at": "2023-11-02 18:49:00.2802Z",
+          ##   "ns": "BlockFetch.Client.CompletedBlockFetch",
+          ##   "data": {
+          ##     "block": "18c....33d",
+          ##     "delay": 0.279370276,
+          ##     "kind": "CompletedBlockFetch",
+          ##     "peer": {
+          ##       "connectionId": "10.0.0.3:42527 10.0.0.1:30001"
+          ##     },
+          ##     "size": 13484
+          ##   },
+          ##   "sev": "Info",
+          ##   "thread": "85",
+          ##   "host": "host.compute.internal"
+          ## }
+          ## Block sent:
+          ## {
+          ##   "at": "2023-11-02 18:49:00.1283Z",
+          ##   "ns": "BlockFetch.Server.SendBlock",
+          ##   "data": {
+          ##     "block": "18c....33d",
+          ##     "kind": "BlockFetchServer",
+          ##     "peer": {
+          ##       "connectionId": "0.0.0.0:30001 10.0.0.3:42527"
+          ##     }
+          ##   },
+          ##   "sev": "Info",
+          ##   "thread": "84",
+          ##   "host": "host.compute.internal"
+          ## }
 
           function last_block_transmitted() {
             local node=$1
             if ! jq_node_stdout_last "''${node}" \
               '
                 (
-                  (.ns                     == "BlockFetch.Server.SendBlock")
+                  (.data.block             != null)
                   and
+                  (.data.kind?             == "CompletedBlockFetch")
+                ) or (
                   (.data.block?            != null)
                   and
-                  (.data.kind?             == "BlockFetchServer")
+                  (.data.kind?             == "TraceBlockFetchServerSendBlock")
                 ) or (
-                  (.ns                     == "BlockFetch.Remote.Receive.Block")
+                  (.ns                     == "BlockFetch.Server.SendBlock")
                   and
-                  (.data.kind?             == "Recv")
+                  (.data.block             != null)
                   and
-                  (.data.msg?.blockHash    != null)
-                  and
-                  (.data.msg?.kind         == "MsgBlock")
+                  (.data.kind?             == "BlockFetchServer")
                 )
               '
             then
@@ -646,35 +767,37 @@ let
             fi
           }
 
-          function last_block_sent() {
-            local node=$1
-            if ! jq_node_stdout_last "''${node}" \
-              '
-                (.ns                       == "BlockFetch.Server.SendBlock")
-                and
-                (.data.block?              != null)
-                and
-                (.data.kind?               == "BlockFetchServer")
-              '
-            then
-              exit_22 "jq error: last_block_sent: ''${node}"
-            fi
-          }
-
           function last_block_received() {
             local node=$1
             if ! jq_node_stdout_last "''${node}" \
               '
-                (.ns                       == "BlockFetch.Remote.Receive.Block")
+                (.data.block             != null)
                 and
-                (.data.kind?               == "Recv")
-                and
-                (.data.msg?.blockHash      != null)
-                and
-                (.data.msg?.kind           == "MsgBlock")
+                (.data.kind?             == "CompletedBlockFetch")
               '
             then
               exit_22 "jq error: last_block_received: ''${node}"
+            fi
+          }
+
+          function last_block_sent() {
+            local node=$1
+            if ! jq_node_stdout_last "''${node}" \
+              '
+                (
+                  (.data.block?            != null)
+                  and
+                  (.data.kind?             == "TraceBlockFetchServerSendBlock")
+                ) or (
+                  (.ns                     == "BlockFetch.Server.SendBlock")
+                  and
+                  (.data.block             != null)
+                  and
+                  (.data.kind?             == "BlockFetchServer")
+                )
+              '
+            then
+              exit_22 "jq error: last_block_sent: ''${node}"
             fi
           }
 
@@ -706,8 +829,6 @@ let
             local node=$1
             if ! jq_node_stdout_last "''${node}" \
               '
-                (.ns                       == "BlockFetch.Remote.Receive.Block")
-                and
                 (.data.kind?               == "Recv")
                 and
                 (.data.msg?.blockHash      != null)

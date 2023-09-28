@@ -204,7 +204,7 @@ let
     # multiple times to define additional constraints.
     # Cloud runs set the distinct hosts constraint here but local runs can't
     # because we are only starting one Nomad client.
-    constraint = null;
+    constraint = null; # Values are appended inside the workbench (bash).
 
     # The reschedule stanza specifies the group's rescheduling strategy. If
     # specified at the job level, the configuration will apply to all groups
