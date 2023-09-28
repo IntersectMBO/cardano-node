@@ -15,10 +15,21 @@ let
         nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
           [ bash cardano-cli coreutils gnused jq moreutils workbench.workbench ];
       }
-      ''
-      mkdir $out
-      wb topology make ${profileJson} $out
-      ''
+      (if lib.strings.hasInfix "cw-perf-value-dense-mimicops" profileName
+      then
+        let benchDense52Nix  = import ../topology/bench-dense-52.nix;
+            benchDense52Json = builtins.toJSON( benchDense52Nix );
+        in ''
+           mkdir $out
+           echo '${benchDense52Json}' > $out/topology.json
+           echo "graph {}"            > $out/topology.dot
+           ''
+      else
+        ''
+        mkdir $out
+        wb topology make ${profileJson} $out
+        ''
+      )
   ;
 
   mkNodeSpecsJson = { profileName, profileJson }:

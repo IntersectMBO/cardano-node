@@ -185,6 +185,14 @@ def all_profile_variants:
       }
     } as $cardano_world_perf
   |
+    # cardano_world_perf using cardano-ops "dense" topology
+    { composition:
+      { locations:                      ["EU", "US", "AP"]
+      , topology:                       "dense"
+      , with_explorer:                  true
+      }
+    } as $cardano_world_perf_dense
+  |
   ##
   ### Definition vocabulary:  filtering
   ##
@@ -761,11 +769,14 @@ def all_profile_variants:
     }
 
 ## Cardano World QA cluster: 52 nodes, 3 regions, value variant
-  , $cw_perf_base * $cardano_world_perf * $costmodel_v8_preview *
+  , $cw_perf_base * $cardano_world_perf       * $costmodel_v8_preview *
     { name: "cw-perf-value"
     }
-  , $cw_perf_base * $cardano_world_perf * $mimic_ops_params *
+  , $cw_perf_base * $cardano_world_perf       * $mimic_ops_params     *
     { name: "cw-perf-value-mimicops"
+    }
+  , $cw_perf_base * $cardano_world_perf_dense * $mimic_ops_params     *
+    { name: "cw-perf-value-dense-mimicops"
     }
 
 ## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)
