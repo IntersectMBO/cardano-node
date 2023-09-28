@@ -47,6 +47,7 @@ backend_nomadexec() {
       backend_nomad allocate-run            "$@"
     ;;
 
+    # Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
     deploy-genesis )
       # It "overrides" completely `backend_nomad`'s `deploy-genesis`.
       deploy-genesis-nomadexec              "$@"
@@ -177,9 +178,10 @@ allocate-run-nomadexec() {
   ## Empty the global namespace. Local runs ignore "${NOMAD_NAMESPACE:-}"
   backend_nomad allocate-run-nomad-job-patch-namespace "${dir}"
   # Will set the /nix/store paths from ".nix-store-path" in container-specs.json
-  backend_nomad allocate-run-nomad-job-patch-nix "${dir}"
+# backend_nomad allocate-run-nomad-job-patch-nix "${dir}"
 }
 
+# Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
 deploy-genesis-nomadexec() {
   local usage="USAGE: wb backend $op RUN-DIR"
   local dir=${1:?$usage}; shift
@@ -197,8 +199,8 @@ deploy-genesis-nomadexec() {
       if test "${nomad_agents_were_already_running}" = "false"
       then
         msg "$(red "Startup of webfs failed, cleaning up ...")"
+        backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
         wb_nomad agents stop "${server_name}" "${client_name}" "exec"
-        backend_nomad stop-nomad-job "${dir}"
       fi
       fatal "Failed to start a local HTTP server"
     fi
@@ -211,8 +213,8 @@ deploy-genesis-nomadexec() {
     if test "${nomad_agents_were_already_running}" = "false"
     then
       msg "$(red "Startup of webfs failed, cleaning up ...")"
+      backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
       wb_nomad agents stop "${server_name}" "${client_name}" "exec"
-      backend_nomad stop-nomad-job "${dir}"
     fi
     fatal "Failed to add genesis file to local HTTP server"
   else
@@ -222,6 +224,9 @@ deploy-genesis-nomadexec() {
   local uri="http://127.0.0.1:12000/${nomad_job_name}.tar.zst"
   if ! backend_nomad deploy-genesis-wget "${dir}" "${uri}"
   then
+    msg "$(red "Deploy of genesis failed, cleaning up ...")"
+    backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
+    wb_nomad agents stop "${server_name}" "${client_name}" "exec"
     fatal "Deploy of genesis \"${uri}\" failed"
   else
     msg "$(green "Genesis \"${uri}\" deployed successfully")"

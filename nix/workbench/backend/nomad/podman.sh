@@ -47,6 +47,7 @@ backend_nomadpodman() {
       backend_nomad allocate-run            "$@"
     ;;
 
+    # Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
     deploy-genesis )
       # It "overrides" completely `backend_nomad`'s `deploy-genesis`.
       deploy-genesis-nomadpodman            "$@"
@@ -188,7 +189,7 @@ allocate-run-nomadpodman() {
   nomad_job_file_create_mounts "${dir}"
 }
 
-# It "overrides" completely `backend_nomad`'s `deploy-genesis`.
+# Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
 deploy-genesis-nomadpodman() {
   local usage="USAGE: wb backend $op RUN-DIR"
   local dir=${1:?$usage}; shift

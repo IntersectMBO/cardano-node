@@ -339,7 +339,7 @@ wb_nomad() {
               local key_path="${ssh_dir}"/server.id_ed25519
               if ! test -f "${key_path}"
               then
-                ssh-keygen -t ed25519 -f "${key_path}" -C "" -N ""
+                ssh-keygen -t ed25519 -f "${key_path}" -C "" -N "" >/dev/null
               fi
               echo "${key_path}"
             ;;
@@ -348,7 +348,7 @@ wb_nomad() {
               local key_path="${ssh_dir}"/user.id_ed25519
               if ! test -f "${key_path}"
               then
-                ssh-keygen -t ed25519 -f "${key_path}" -C "" -N ""
+                ssh-keygen -t ed25519 -f "${key_path}" -C "" -N "" >/dev/null
               fi
               echo "${key_path}"
             ;;
@@ -364,21 +364,22 @@ wb_nomad() {
           if ! test -f "${file_path}"
           then
 cat > "${file_path}" << EOL
-StrictHostKeyChecking    accept-new
-GlobalKnownHostsFile     $(wb nomad ssh known_hosts)
-UserKnownHostsFile       $(wb nomad ssh known_hosts)
-PasswordAuthentication   no
-PubKeyAuthentication     yes
-PreferredAuthentications publickey
-IdentitiesOnly           yes
-IdentityFile             $(wb nomad ssh key user)
-Compression              yes
-TCPKeepAlive             no
-ServerAliveInterval      15
-ServerAliveCountMax      4
-ControlMaster            auto
-ControlPath              ${ssh_dir}/%h-%p-%r
-ControlPersist           15
+Host *
+  StrictHostKeyChecking    accept-new
+  GlobalKnownHostsFile     $(wb nomad ssh known_hosts)
+  UserKnownHostsFile       $(wb nomad ssh known_hosts)
+  PasswordAuthentication   no
+  PubKeyAuthentication     yes
+  PreferredAuthentications publickey
+  IdentitiesOnly           yes
+  IdentityFile             $(wb nomad ssh key user)
+  Compression              yes
+  TCPKeepAlive             no
+  ServerAliveInterval      15
+  ServerAliveCountMax      4
+  ControlMaster            auto
+  ControlPath              ${ssh_dir}/%h-%p-%r
+  ControlPersist           15
 EOL
           fi
           echo "${file_path}"
@@ -576,13 +577,20 @@ EOL
           # https://support.hashicorp.com/hc/en-us/articles/360000654467-Removing-Orphaned-Mounts-from-Nomad-Allocation-Directory
           nomad system gc 2>&1 >/dev/null || true
           # Stop client
-          wb_nomad client stop "${client_name}" || true
+            wb_nomad client stop "${client_name}" \
+          ||                                      \
+            msg "$(red "Failed to stop Nomad client \"${client_name}\"")"
+          # Stop driver(s)
           if test "${task_driver}" = "podman"
           then
-            wb_nomad plugin nomad-driver-podman stop || true
+              wb_nomad plugin nomad-driver-podman stop \
+            ||                                         \
+              msg "$(red "Failed to stop nomad-driver-podman")"
           fi
           # Stop server
-          wb_nomad server stop "${server_name}" || true
+            wb_nomad server stop "${server_name}" \
+          ||                                      \
+            msg "$(red "Failed to stop Nomad server \"${server_name}\"")"
         ;;
 ####### agents -> * )###########################################################
         * )
@@ -1447,7 +1455,7 @@ EOF
           local job_file=${1:?$usage}; shift
           local job_name=${1:?$usage}; shift
           # Post a Nomad job without "monitor" (`-detach`) mode!
-          # I don't want to have `nomad` process attached to my terminal,
+          # I don't want to have a `nomad` process attached to my terminal,
           # funny things are happening with the workbench's log output!
           ### -detach
           ### Return immediately instead of entering monitor mode. After job
@@ -1531,7 +1539,7 @@ EOF
             &
           jobs_array+=("$!")
           # Wait for all processes to finish or kill them if at least one fails!
-          wait_fail_any "${jobs_array[@]}" || touch "${job_file}.run/job.error"
+          wait_kill_em_all "${jobs_array[@]}" || touch "${job_file}.run/job.error"
           # Check for every possible error
           local return_code=0
           # Any failed evaluation(s)?
@@ -1640,7 +1648,7 @@ EOF
               jobs_array+=("$!")
             done
             # Wait for all processes to finish or kill them if at least one fails!
-            if ! wait_fail_any "${jobs_array[@]}" || test -f "${job_file}.run/evaluations.error"
+            if ! wait_kill_em_all "${jobs_array[@]}" || test -f "${job_file}.run/evaluations.error"
             then
               "${msgoff}" || msg "$(red "Exiting monitor of Nomad Evaluation(s) [${ids_array[@]}] due to errors")"
               # Send fatal job error signal after printing this error's messages!
@@ -1706,7 +1714,7 @@ EOF
               jobs_array+=("$!")
             done
             # Wait for all processes to finish or kill them if at least one fails!
-            if ! wait_fail_any "${jobs_array[@]}" || test -f "${job_file}.run/allocations.error"
+            if ! wait_kill_em_all "${jobs_array[@]}" || test -f "${job_file}.run/allocations.error"
             then
               "${msgoff}" || msg "$(red "Exiting monitor of Nomad Allocation(s) [${ids_array[@]}] due to errors")"
               # Send fatal job error signal after printing this error's messages!
@@ -1773,7 +1781,7 @@ EOF
               jobs_array+=("$!")
             done
             # Wait for all processes to finish or kill them if at least one fails!
-            if ! wait_fail_any "${jobs_array[@]}" || test -f "${job_file}.run/tasks.error"
+            if ! wait_kill_em_all "${jobs_array[@]}" || test -f "${job_file}.run/tasks.error"
             then
               "${msgoff}" || msg "$(red "Exiting monitor of Nomad Allocation \"${alloc_id}\" Task(s) [${ids_array[@]}] due to errors")"
               # Send fatal job error signal after printing this error's messages!
@@ -2101,7 +2109,7 @@ EOF
           local job_file=${1:?$usage}; shift
           local job_name=${1:?$usage}; shift
           # Do the prune, purge, garbage collect thing!
-          nomad job stop -global -no-shutdown-delay -purge -yes -verbose "${job_name}"
+          nomad job stop -global -no-shutdown-delay -purge -yes -verbose "${job_name}" || msg "$(red "Failed to stop Nomad job")"
         ;;
 ####### job -> * )##############################################################
         * )

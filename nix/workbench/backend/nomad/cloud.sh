@@ -47,6 +47,7 @@ backend_nomadcloud() {
       backend_nomad allocate-run            "$@"
     ;;
 
+    # Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
     deploy-genesis )
       # It "overrides" completely `backend_nomad`'s `deploy-genesis`.
       deploy-genesis-nomadcloud             "$@"
@@ -88,7 +89,6 @@ backend_nomadcloud() {
         msg "$(yellow "To stop the Nomad job use:")"
         msg "$(yellow "wb nomad job stop ${dir}/nomad/nomad-job.json ${nomad_job_name}")"
         msg "$(yellow "(With the same NOMAD_ADDR, NOMAD_NAMESPACE and NOMAD_TOKEN used for start-cluster)")"
-        true
       else
         # Shared code between Nomad sub-backends that internally only takes care
         # of the Nomad job.
@@ -389,9 +389,9 @@ allocate-run-nomadcloud() {
   # Set the placement info and resources accordingly
   local nomad_job_name
   nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-  ##########################################################################
-  # Profile name dependent changes #########################################
-  ##########################################################################
+  ##############################################################################
+  # Profile name dependent changes #############################################
+  ##############################################################################
   # "*-nomadperf" profiles only run on the dedicated P&T Nomad Cluster on AWS.
   # "*-nomadcwqa" (for example "ci-test-nomadcwqa" or "default-nomadcwqa") means
   # that they run on Cardano World Nomad cluster's nodes that belong to the "qa"
@@ -410,19 +410,34 @@ allocate-run-nomadcloud() {
     if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
     then
         jq \
-          ".[\"job\"][\"${nomad_job_name}\"][\"datacenters\"] |= [\"eu-central-1\", \"us-east-1\", \"ap-southeast-2\"]" \
+          "                                                         \
+              .[\"job\"][\"${nomad_job_name}\"][\"datacenters\"]    \
+            |=                                                      \
+              [\"eu-central-1\", \"us-east-1\", \"ap-southeast-2\"] \
+          " \
           "${dir}"/nomad/nomad-job.json \
       | \
         sponge "${dir}"/nomad/nomad-job.json
+      # Nix creates a Nomad Job file with affinities taken from node-specs.json
         jq \
-          ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries( if (.value.affinity.value == \"us-east-2\") then (.value.affinity.value |= \"us-east-1\") else (.) end )" \
+          "                                                  \
+               .[\"job\"][\"${nomad_job_name}\"][\"group\"]  \
+            |= with_entries(                                 \
+                 if (.value.affinity.value == \"us-east-2\") \
+                 then                                        \
+                   (.value.affinity.value |= \"us-east-1\")  \
+                 else                                        \
+                   (.)                                       \
+                 end                                         \
+               )                                             \
+          " \
           "${dir}"/nomad/nomad-job.json \
       | \
         sponge "${dir}"/nomad/nomad-job.json
     fi
-    ########################################################################
-    # Unique placement: ####################################################
-    ########################################################################
+    ############################################################################
+    # Unique placement: ########################################################
+    ############################################################################
     ## "distinct_hosts": Instructs the scheduler to not co-locate any groups
     ## on the same machine. When specified as a job constraint, it applies
     ## to all groups in the job. When specified as a group constraint, the
@@ -439,16 +454,20 @@ allocate-run-nomadcloud() {
         }
       ]
     '
-    # Adds it as a job level contraint.
+    # Adds it as an extra job level contraint.
       jq \
         --argjson job_constraints_array "${job_constraints_array}" \
-        ".[\"job\"][\"${nomad_job_name}\"].constraint |= \$job_constraints_array" \
+        "                                                \
+            .[\"job\"][\"${nomad_job_name}\"].constraint \
+          |=                                             \
+            (. + \$job_constraints_array)                \
+        " \
         "${dir}"/nomad/nomad-job.json \
     | \
       sponge "${dir}"/nomad/nomad-job.json
-    ########################################################################
-    # Node class: ##########################################################
-    ########################################################################
+    ############################################################################
+    # Node class: ##############################################################
+    ############################################################################
     local group_constraints_array
     # Nomad nodes that belong to the "perf" class are the default in the Job
     # definition and it stays like that unless the profile name contains
@@ -471,7 +490,8 @@ allocate-run-nomadcloud() {
       '
     elif test -n "${NOMAD_NAMESPACE:-}"
     then
-      # Ensure only Performance & Tracing exclusive "perf" class distinct nodes!
+      # Use what was provided.
+      # If no namespace all group level constraints will be emptied!
       group_constraints_array="                   \
         [                                         \
           {                                       \
@@ -486,27 +506,35 @@ allocate-run-nomadcloud() {
     # Sets or deletes all groups level constraints.
     if test -n "${group_constraints_array:-}"
     then
-      # Adds it as a group level contraint to all groups.
+      # Adds it as a group level contraint to all groups replacing default ones.
         jq \
           --argjson group_constraints_array "${group_constraints_array}" \
-          ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries(.value.constraint = \$group_constraints_array)" \
+          "                                                               \
+              .[\"job\"][\"${nomad_job_name}\"][\"group\"]                \
+            |=                                                            \
+              with_entries(.value.constraint = \$group_constraints_array) \
+          " \
           "${dir}"/nomad/nomad-job.json \
       | \
         sponge "${dir}"/nomad/nomad-job.json
     else
       # Else, empties all group level constraints, like previous namespaces.
         jq \
-          ".[\"job\"][\"${nomad_job_name}\"][\"group\"] |= with_entries(.value.constraint = null)" \
+          "                                                \
+              .[\"job\"][\"${nomad_job_name}\"][\"group\"] \
+            |=                                             \
+              with_entries(.value.constraint = null)       \
+          " \
           "${dir}"/nomad/nomad-job.json \
       | \
         sponge "${dir}"/nomad/nomad-job.json
     fi
-    ########################################################################
-    # Memory/resources: ####################################################
-    ########################################################################
+    ############################################################################
+    # Memory/resources: ########################################################
+    ############################################################################
     # Set the resources, only for perf exlusive cloud runs!
-    # When not "perf", when "-nomadcwqa", only "short" tests are allowed on
-    # whatever resources we are given.
+    # When not "-nomadperf", when "-nomadcwqa", only "short" tests are allowed
+    # on whatever resources we are given.
     if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
     then
       # Producer nodes use this specs, make sure they are available!
@@ -523,27 +551,30 @@ allocate-run-nomadcloud() {
       ## - memory.totalbytes    = 16300142592
       ## Pesimistic: 1,798 MiB / 15,545 MiB Total
       ## Optimistic: 1,396 MiB / 15,545 MiB Total
+      #
+      # WARNING: Don't use more than roughly 15400, for example 15432, because
+      # some clients show a couple bytes less available.
       local producer_resources='{
           "cores":      8
-        , "memory":     13000
-        , "memory_max": 15000
+        , "memory":     15400
+        , "memory_max": 32000
       }'
       # Set this for every non-explorer node
         jq \
           --argjson producer_resources "${producer_resources}" \
-          " \
-              .[\"job\"][\"${nomad_job_name}\"][\"group\"] \
-            |= \
-              with_entries( \
-                if ( .key != \"explorer\" ) \
-                then ( \
-                    .value.task \
-                  |= \
+          "                                                                 \
+              .[\"job\"][\"${nomad_job_name}\"][\"group\"]                  \
+            |=                                                              \
+              with_entries(                                                 \
+                if ( .key != \"explorer\" )                                 \
+                then (                                                      \
+                    .value.task                                             \
+                  |=                                                        \
                     with_entries( .value.resources = \$producer_resources ) \
-                ) else ( \
-                  . \
-                ) end \
-              ) \
+                ) else (                                                    \
+                  .                                                         \
+                ) end                                                       \
+              )                                                             \
           " \
           "${dir}"/nomad/nomad-job.json \
       | \
@@ -564,12 +595,23 @@ allocate-run-nomadcloud() {
       # client named "ip-10-24-30-90.eu-central-1.compute.internal"
       local explorer_resources='{
           "cores":      16
-        , "memory":     29000
-        , "memory_max": 31000
+        , "memory":     32000
+        , "memory_max": 64000
       }'
+      # TODO/MAYBE: When not "value" profile, let the explorer run in any node?
+      # resource wise. So more than one "ci-test", "ci-bench", "default" profile
+      # can be run at the same time. This will need some changes to Nomad
+      # services names (currently all "perfnode#").
+      # WARNING: By always using/placing the explorer node in the only machine
+      # with more memory, we are sure runs do not overlap and no ports, etc are
+      # clashing and interfering with benchmarks results!
         jq \
           --argjson resources "${explorer_resources}" \
-          ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"explorer\"][\"task\"] |= with_entries( .value.resources = \$resources )" \
+          "                                                                        \
+              .[\"job\"][\"${nomad_job_name}\"][\"group\"][\"explorer\"][\"task\"] \
+            |=                                                                     \
+              with_entries( .value.resources = \$resources )                       \
+          " \
           "${dir}"/nomad/nomad-job.json \
       | \
         sponge "${dir}"/nomad/nomad-job.json
@@ -579,6 +621,7 @@ allocate-run-nomadcloud() {
     ############################################################################
     if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
     then
+      # Get or create the keys for the SSH servers and add them as templates.
       local template_json_srv template_json_usr
       template_json_srv="$( \
         ssh-key-template \
@@ -602,10 +645,15 @@ allocate-run-nomadcloud() {
         tasks_array=$(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"task\"] | keys | join (\" \")" "${dir}"/nomad/nomad-job.json)
         for task_name in ${tasks_array[*]}
         do
+          # Append the new templates.
             jq \
               --argjson template_json_srv "${template_json_srv}" \
               --argjson template_json_usr "${template_json_usr}" \
-              ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"task\"][\"${task_name}\"][\"template\"] |= ( . + [\$template_json_srv, \$template_json_usr])" \
+              " \
+                  .[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"task\"][\"${task_name}\"][\"template\"] \
+                |= \
+                  ( . + [\$template_json_srv, \$template_json_usr]) \
+              " \
               "${dir}"/nomad/nomad-job.json \
           | \
             sponge "${dir}"/nomad/nomad-job.json
@@ -615,7 +663,7 @@ allocate-run-nomadcloud() {
     ########################################################################
     # Reproducibility: #####################################################
     ########################################################################
-    # If value profile on "perf", using always the same placement!
+    # If value profile on "-nomadperf", using always the same placement!
     # This means node-N always runs on the same Nomad Client/AWS EC2 machine
     if test "${WB_SHELL_PROFILE:0:15}" = 'value-nomadperf'
     then
@@ -638,11 +686,13 @@ allocate-run-nomadcloud() {
       # For each Nomad Job Group
       local groups_array
       # Keys MUST be sorted to always get the same order for the same profile!
-      groups_array=$(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"] | keys | sort | join (\" \")" "${dir}"/nomad/nomad-job.json)
+      # Bash's `sort --version-sort` to correctly sort "node-20" and "node-9".
+      readarray -t groups_array < <(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"] | keys | .[]" "${dir}"/nomad/nomad-job.json | sort --version-sort)
       for group_name in ${groups_array[*]}
       do
-        # Obtain the datacenter as Nomad sees it, not as an AWS attributes.
+        # Obtain the datacenter as Nomad sees it, not as an AWS attribute.
         # For example "eu-central-1" instead of "eu-central-1a".
+        # These values were corrected above.
         local datacenter
         datacenter=$(jq \
           -r \
@@ -652,7 +702,8 @@ allocate-run-nomadcloud() {
         # For each Nomad Job Group Task
         local tasks_array
         # Keys MUST be sorted to always get the same order for the same profile!
-        tasks_array=$(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"task\"] | keys | sort | join (\" \")" "${dir}"/nomad/nomad-job.json)
+        # Bash's `sort --version-sort` to correctly sort "node-20" and "node-9".
+        readarray -t tasks_array < <(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"task\"] | keys | .[]" "${dir}"/nomad/nomad-job.json | sort --version-sort)
         for task_name in ${tasks_array[*]}
         do
           local count instance_type
@@ -681,10 +732,14 @@ allocate-run-nomadcloud() {
           fi
           # Get the actual client for this datacenter and instance type.
           local actual_client
+          # Sort first by name so if a Nomad client gets redeployed, replaced
+          # by a new one with the same name, only that Task is placed in a
+          # different EC2 machine instead of having random changes depending on
+          # where the new UUID lands on the clients NOMAD_CLIENTS_FILE file.
           actual_client=$(jq \
             "   . \
               | \
-                sort_by(.id) \
+                sort_by(.name, .id) \
               | \
                 map(select(.datacenter == \"${datacenter}\")) \
               | \
@@ -778,13 +833,55 @@ allocate-run-nomadcloud() {
           "
             jq \
               --argjson group_constraints_array_plus "${group_constraints_array_plus}" \
-              ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"constraint\"] |= ( . + \$group_constraints_array_plus)" \
+              " \
+                  .[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"constraint\"] \
+                |= \
+                  ( . + \$group_constraints_array_plus) \
+              " \
               "${dir}"/nomad/nomad-job.json \
           | \
             sponge "${dir}"/nomad/nomad-job.json
         done
       done
+    # Else, if not value profile but still the P&T exclusive cluster, it's not
+    # always the same exact placement, we just make sure regions are OK
+    # When not "-nomadperf", when "-nomadcwqa", only "short" tests are allowed
+    # on whatever resources we are given, regions are only an affinity.
+    elif echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
+    then
+      local groups_array
+      groups_array=$(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"] | keys | sort | join (\" \")" "${dir}"/nomad/nomad-job.json)
+      for group_name in ${groups_array[*]}
+      do
+        # Obtain the datacenter as Nomad sees it, not as an AWS attribute.
+        # For example "eu-central-1" instead of "eu-central-1a".
+        # These values were corrected above.
+        local datacenter
+        datacenter=$(jq \
+          -r \
+          ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"].affinity.value" \
+          "${dir}"/nomad/nomad-job.json \
+        )
+        local group_constraints_array_plus="
+          [                                            \
+            {   \"attribute\": \"\${node.datacenter}\" \
+              , \"value\":     \"${datacenter}\"       \
+            }                                          \
+          ]                                            \
+        "
+          jq \
+            --argjson group_constraints_array_plus "${group_constraints_array_plus}" \
+            "                                                                                   \
+                .[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"constraint\"] \
+              |=                                                                                \
+                ( . + \$group_constraints_array_plus)                                           \
+            " \
+            "${dir}"/nomad/nomad-job.json \
+        | \
+          sponge "${dir}"/nomad/nomad-job.json
+      done
     fi
+    ############################################################################
   fi
 
   # Store a summary of the job.
@@ -821,6 +918,7 @@ allocate-run-nomadcloud() {
   read -p "Hit enter to continue ..."
 }
 
+# Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
 deploy-genesis-nomadcloud() {
   local usage="USAGE: wb backend $op RUN-DIR"
   local dir=${1:?$usage}; shift
@@ -863,13 +961,8 @@ deploy-genesis-nomadcloud() {
     msg "$(green "File \"${genesis_file_name}\" uploaded successfully")"
   else
     msg "$(red "FATAL: Upload to Amazon S3 failed")"
-    local nomad_agents_were_already_running=$(envjqr 'nomad_agents_were_already_running')
-    if test "${nomad_agents_were_already_running}" = "false"
-    then
-      wb_nomad agents stop "${server_name}" "${client_name}" "exec"
-    fi
     # Already "fatal" -> ignore errors!
-    backend_nomad stop-nomad-job "${dir}" || true
+    backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
     fatal "Failed to upload genesis"
   fi
 
@@ -880,7 +973,7 @@ deploy-genesis-nomadcloud() {
     # File kept for debugging!
     msg "$(red "FATAL: deploy-genesis-wget \"${dir}\" \"${uri}\"")"
     # Already "fatal" -> ignore errors!
-    backend_nomad stop-nomad-job "${dir}" || true
+    backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
     fatal "Deploy of genesis \"${uri}\" failed"
   else
     msg "$(green "Genesis \"${uri}\" deployed successfully")"
@@ -921,9 +1014,18 @@ fetch-logs-nomadcloud() {
     # Wait and check!
     if test -n "${jobs_array}"
     then
-      if ! wait_fail_any "${jobs_array[@]}"
+      if ! wait_kill_em_all "${jobs_array[@]}"
       then
         fatal "Failed to start ssh server(s)"
+      else
+        msg "Sandboxed ssh server(s) should be now ready"
+        # Make sure the SSH config file used to connect is already created.
+        # Ugly but if `ssh` is called inmediately after `wb nomad ssh config`
+        # race conditions can happen because the file contents are still in the
+        # cache.
+        local ssh_config_path
+        ssh_config_path="$(wb nomad ssh config)"
+        msg "Used ssh config file: $(realpath ${ssh_config_path})"
       fi
     fi
   fi
@@ -950,9 +1052,9 @@ fetch-logs-nomadcloud-retry() {
   done
   if test -n "${jobs_array:-}" # If = () "unbound variable" error
   then
-    # Wait until all jobs finish, don't use `wait_fail_any` that kills
-    # Returns the exit code of the last job, ignore it!
-    if ! wait "${jobs_array[@]}"
+    # Wait until all jobs finish, don't use `wait_kill_em_all` that kills.
+    # Returns the exit code of the last failed job, we ignore it!
+    if ! wait_all "${jobs_array[@]}"
     then
       msg "$(red "Failed to fetch some logs")"
       msg "Check files \"${dir}/nomad/NODE/download_ok\" and \"${dir}/nomad/NODE/download_failed\""
@@ -979,12 +1081,14 @@ fetch-logs-nomadcloud-node() {
     |                                                        \
       jq -r .Attributes[\"unique.platform.aws.public-ipv4\"] \
   )"
-  local ssh_command="ssh -F $(wb nomad ssh config) -p 32000 -l nobody"
+  local ssh_config_path ssh_command
+  ssh_config_path="$(wb nomad ssh config)"
+  ssh_command="ssh -F ${ssh_config_path} -p 32000 -l nobody"
   local node_ok="true"
-  # Download healthcheck(s) logs. ############################################
-  ############################################################################
+  # Download healthcheck(s) logs. ##############################################
+  ##############################################################################
   msg "$(blue "Fetching") $(yellow "program \"healthcheck\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
-  if ! rsync -au -e "${ssh_command}"                      \
+  if ! rsync -e "${ssh_command}" -au                      \
          -f'- start.sh'                                   \
          "${public_ipv4}":/local/run/current/healthcheck/ \
          "${dir}"/healthcheck/"${node}"/
@@ -993,12 +1097,12 @@ fetch-logs-nomadcloud-node() {
     touch "${dir}"/nomad/"${node}"/download_failed
     msg "$(red Error fetching) $(yellow "program \"healthcheck\"") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
   fi
-  # Download generator logs. #################################################
-  ############################################################################
+  # Download generator logs. ###################################################
+  ##############################################################################
   if test "${node}" = "explorer"
   then
     msg "$(blue Fetching) $(yellow "program \"generator\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
-    if ! rsync -au -e "${ssh_command}"                    \
+    if ! rsync -e "${ssh_command}" -au                    \
            -f'- start.sh' -f'- run-script.json'           \
            "${public_ipv4}":/local/run/current/generator/ \
            "${dir}"/generator/
@@ -1008,10 +1112,10 @@ fetch-logs-nomadcloud-node() {
       msg "$(red Error fetching) $(yellow "program \"generator\"") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
     fi
   fi
-  # Download node(s) logs. ###################################################
-  ############################################################################
+  # Download node(s) logs. #####################################################
+  ##############################################################################
   msg "$(blue Fetching) $(yellow "program \"node\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
-  if ! rsync -au -e "${ssh_command}"                          \
+  if ! rsync -e "${ssh_command}" -au                          \
          -f'- start.sh' -f'- config.json' -f'- topology.json' \
          -f'- node.socket' -f'- db/'                          \
          "${public_ipv4}":/local/run/current/"${node}"/       \
@@ -1021,10 +1125,10 @@ fetch-logs-nomadcloud-node() {
     touch "${dir}"/nomad/"${node}"/download_failed
     msg "$(red Error fetching) $(yellow "program \"node\"") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
   fi
-  # Download tracer(s) logs. ###############################################
-  ##########################################################################
+  # Download tracer(s) logs. ###################################################
+  ##############################################################################
   msg "$(blue Fetching) $(yellow "program \"tracer\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
-  if ! rsync -au -e "${ssh_command}"                 \
+  if ! rsync -e "${ssh_command}" -au                 \
          -f'- start.sh' -f'- config.json'            \
          -f'- tracer.socket' -f'- logRoot/'          \
          "${public_ipv4}":/local/run/current/tracer/ \
