@@ -36,10 +36,10 @@ jobs:
         with:
           push: true
           file: Dockerfile.relay
-          tags: emurgornd/cardano-node-relay:${{ github.ref_name }}
+          tags: emurgornd/cardano-node-relay:latest,emurgornd/cardano-node-relay:${{ github.ref_name }}
       - name: Build and push Cardano block producer
         uses: docker/build-push-action@v4
         with:
           push: true
           file: Dockerfile.blockproducer
-          tags: emurgornd/cardano-node-block-producer:${{ github.ref_name }}
+          tags: emurgornd/cardano-node-block-producer:latest,emurgornd/cardano-node-block-producer:${{ github.ref_name }}
