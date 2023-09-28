@@ -401,12 +401,16 @@ backend_nomad() {
       for node in ${nodes[*]}
       do
         msg "$(blue Downloading) $(yellow "\"${uri}\"") from $(yellow "node \"${node}\"") ..."
-        backend_nomad task-exec "${dir}" "${node}"               \
-          "${wget_path}"/bin/wget                                \
-            --output-document=/local/run/current/genesis.tar.zst \
-            "${uri}"                                             \
-            --no-verbose                                         \
-        > /dev/null                                              \
+        # When executing commands the directories used depend on the filesystem
+        # isolation mode (AKA chroot or not).
+        local state_dir
+        state_dir="$(backend_nomad task-workbench-state-dir "${dir}" "${node}")"
+        backend_nomad task-exec "${dir}" "${node}"              \
+          "${wget_path}"/bin/wget                               \
+            --output-document="${state_dir}"/genesis.tar.zst    \
+            "${uri}"                                            \
+            --no-verbose                                        \
+        > /dev/null                                             \
         &
         uploads_array+=("$!")
       done
@@ -425,11 +429,15 @@ backend_nomad() {
           local unpacks_array=()
           for node in ${nodes[*]}
           do
+            # When executing commands the directories used depend on the
+            # filesystem isolation mode (AKA chroot or not).
+            local state_dir
+            state_dir="$(backend_nomad task-workbench-state-dir "${dir}" "${node}")"
             backend_nomad task-exec "${dir}" "${node}"         \
-              ${tar_path}/bin/tar --extract                    \
+              "${tar_path}"/bin/tar --extract                  \
                 --use-compress-program="${zstd_path}"/bin/zstd \
-                --file=/local/run/current/genesis.tar.zst      \
-                --one-top-level=/local/run/current/genesis     \
+                --file="${state_dir}"/genesis.tar.zst          \
+                --one-top-level="${state_dir}"/genesis         \
                 --same-permissions                             \
                 --no-same-owner                                \
                 --numeric-owner                                \
@@ -1787,28 +1795,21 @@ backend_nomad() {
           fi
         done
       else
+        local socket_name
         if test "${one_tracer_per_node}" = "true" || test "${task}" != "tracer"
         then
-          local socket_path_relative=$(jq -r '.network.contents' "${dir}/tracer/${task}/config.json")
-          local socket_path_absolute=/"${task}"/local/run/current/tracer/"${socket_path_relative}"
+          socket_name=$(jq -r '.network.contents' "${dir}/tracer/${task}/config.json")
         else
-          local socket_path_relative=$(jq -r '.network.contents' "${dir}/tracer/config.json")
-          local socket_path_absolute=/tracer/local/run/current/tracer/"${socket_path_relative}"
+          socket_name=$(jq -r '.network.contents' "${dir}/tracer/config.json")
         fi
         # Wait for tracer socket
-        #local socket_path_absolute="$dir/tracer/$node/$socket_path_relative"
         msg "$(blue Waiting) ${patience}s for socket of supervisord $(yellow "program \"tracer\"") inside Nomad $(yellow "Task \"${task}\"") ..."
         local i=0
-        # while test ! -S "$socket_path_absolute"
-        local task_alloc_id
-        task_alloc_id=$(wb_nomad job task-name-allocation-id \
-          "${dir}/nomad/nomad-job.json"                      \
-          "${task}")
         # Always keep checking that the supervisord program is still running!
         while \
-              backend_nomad is-task-program-running "${dir}" "${task}" tracer                                                \
-          &&                                                                                                                 \
-            ! nomad alloc fs -stat -H "${task_alloc_id}" "${socket_path_absolute}" | grep --quiet "application/octet-stream"
+              backend_nomad is-task-program-running "${dir}" "${task}" tracer  \
+          &&                                                                   \
+            ! backend_nomad task-file-stat "${dir}" "${task}" run/current/tracer/"${socket_name}" | grep --quiet "application/octet-stream"
         do printf "%3d" $i; sleep 1
           i=$((i+1))
           if test "${i}" -ge "${patience}"
@@ -1850,20 +1851,14 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
       local node=${1:-$(dirname $CARDANO_NODE_SOCKET_PATH | xargs basename)}; shift
 
-      local socket=$(backend_nomad get-node-socket-path "${dir}" ${node})
-      local socket_path_absolute=/"${node}"/local/run/current/"${node}"/node.socket
       local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' ${dir}/profile.json)
       msg "$(blue Waiting) ${patience}s for socket of supervisord $(yellow "program \"${node}\"") inside Nomad $(yellow "Task \"${node}\"") ..."
       local i=0
-      local node_alloc_id
-      node_alloc_id=$(wb_nomad job task-name-allocation-id \
-        "$dir/nomad/nomad-job.json"                        \
-        "${node}")
       # Always keep checking that the supervisord program is still running!
       while \
-            backend_nomad is-task-program-running "${dir}" "${node}" "${node}"                                                         \
-        &&                                                                                                                             \
-          ! nomad alloc fs -stat -H "${node_alloc_id}" "${socket_path_absolute}" 2>/dev/null | grep --quiet "application/octet-stream"
+            backend_nomad is-task-program-running "${dir}" "${node}" "${node}" \
+        &&                                                                     \
+          ! backend_nomad task-file-stat "${dir}" "${node}" run/current/"${node}"/node.socket 2>/dev/null | grep --quiet "application/octet-stream"
       # TODO: Add the "timer" `printf "%3d" $i;` but for concurrent processes!
       do
         sleep 1
@@ -2066,7 +2061,7 @@ backend_nomad() {
       # If the entrypoint was ran till the end, this file should be available!
       msg "$(blue Fetching) $(yellow supervisord.log) of Nomad $(yellow "Task \"${task}\"") ..."
       backend_nomad task-file-contents "${dir}" "${task}"    \
-        /local/run/current/supervisor/supervisord.log        \
+        run/current/supervisor/supervisord.log               \
       > "${dir}"/supervisor/"${task}"/supervisord.log        \
       || download_ok="false"
       # Downloads "exit_code", "stdout", "stderr" and GHC files.
@@ -2110,7 +2105,7 @@ backend_nomad() {
       # If the entrypoint was ran till the end, this file should be available!
       msg "$(blue Fetching) $(yellow supervisord.log) of Nomad $(yellow "Task \"${task}\"") ..."
       backend_nomad task-file-contents "${dir}" "${task}"    \
-        /local/run/current/supervisor/supervisord.log        \
+        run/current/supervisor/supervisord.log               \
       > "${dir}"/supervisor/"${task}"/supervisord.log        \
       || download_ok="false"
       # Downloads "exit_code", "stdout", "stderr" and GHC files.
@@ -2144,7 +2139,7 @@ backend_nomad() {
       # If the entrypoint was ran till the end, this file should be available!
       msg "$(blue Fetching) $(yellow supervisord.log) of Nomad $(yellow "Task \"${node}\"") ..."
       backend_nomad task-file-contents "${dir}" "${node}" \
-        /local/run/current/supervisor/supervisord.log     \
+        run/current/supervisor/supervisord.log            \
       > "${dir}"/supervisor/"${node}"/supervisord.log     \
       || download_ok="false"
       # Downloads "exit_code", "stdout", "stderr" and GHC files.
@@ -2214,7 +2209,7 @@ backend_nomad() {
         # If the entrypoint was ran till the end, this file should be available!
         msg "$(blue Fetching) $(yellow supervisord.log) of Nomad $(yellow "Task \"tracer\"") ..."
         backend_nomad task-file-contents "${dir}" "tracer" \
-          /local/run/current/supervisor/supervisord.log    \
+          run/current/supervisor/supervisord.log           \
         > "${dir}"/supervisor/tracer/supervisord.log       \
         || download_ok="false"
         # When "local" and "podman" "tracer" folder is mounted
@@ -2360,6 +2355,7 @@ backend_nomad() {
       fi
     ;;
 
+
     download-config-generator )
       local usage="USAGE: wb backend pass $op RUN-DIR"
       local dir=${1:?$usage}; shift
@@ -2367,10 +2363,10 @@ backend_nomad() {
       # Generator runs inside task/supervisord "${generator_task}"
       # Node files that may suffer interpolation/sed replace.
       backend_nomad task-file-contents "${dir}" "${generator_task}" \
-        /local/run/current/generator/start.sh                       \
+        run/current/generator/start.sh                              \
       > "${dir}"/generator/start.sh
       backend_nomad task-file-contents "${dir}" "${generator_task}" \
-        /local/run/current/generator/run-script.json                \
+        run/current/generator/run-script.json                       \
       > "${dir}"/generator/run-script.json
     ;;
 
@@ -2380,37 +2376,37 @@ backend_nomad() {
       local node=${1:?$usage}; shift
       # Node files that may suffer interpolation/sed replace.
       backend_nomad task-file-contents "${dir}" "${node}" \
-        /local/run/current/"${node}"/start.sh             \
+        run/current/"${node}"/start.sh                    \
       > "${dir}"/"${node}"/start.sh
       backend_nomad task-file-contents "${dir}" "${node}" \
-        /local/run/current/"${node}"/config.json          \
+        run/current/"${node}"/config.json                 \
       > "${dir}"/"${node}"/config.json
       backend_nomad task-file-contents "${dir}" "${node}" \
-        /local/run/current/"${node}"/topology.json        \
+        run/current/"${node}"/topology.json               \
       > "${dir}"/"${node}"/topology.json
       # This Task's supervisor files
       backend_nomad task-file-contents "${dir}" "${node}" \
-        /local/run/current/supervisor/supervisord.conf    \
+        run/current/supervisor/supervisord.conf           \
       > "${dir}"/supervisor/"${node}"/supervisord.conf
       # Dynamically modified file, store to be able to debug!
       backend_nomad task-file-contents "${dir}" "${node}" \
-        /local/entrypoint.sh                              \
+        entrypoint.sh                                     \
       > "${dir}"/nomad/"${node}"/entrypoint.sh
       # Dynamically generated file with the envars of the entrypoint!
       backend_nomad task-file-contents "${dir}" "${node}" \
-        /local/entrypoint.env                             \
+        entrypoint.env                                    \
       > "${dir}"/nomad/"${node}"/entrypoint.env
       # Dynamically generated file with system info!
       backend_nomad task-file-contents "${dir}" "${node}" \
-        /local/entrypoint.uname                           \
+        entrypoint.uname                                  \
       > "${dir}"/nomad/"${node}"/entrypoint.uname
       # Dynamically generated file with cpu info!
       backend_nomad task-file-contents "${dir}" "${node}" \
-        /local/entrypoint.cpuinfo                           \
+        entrypoint.cpuinfo                                \
       > "${dir}"/nomad/"${node}"/entrypoint.cpuinfo
       # Dynamically generated file with all the services/addresses found!
       backend_nomad task-file-contents "${dir}" "${node}" \
-        /local/networking.json                            \
+        networking.json                                   \
       > "${dir}"/nomad/"${node}"/networking.json
     ;;
 
@@ -2425,48 +2421,49 @@ backend_nomad() {
         then
           # Node files that may suffer interpolation/sed replace.
           backend_nomad task-file-contents "${dir}" "${task}" \
-            /local/run/current/tracer/start.sh                \
+            run/current/tracer/start.sh                       \
           > "${dir}"/tracer/"${task}"/start.sh
           backend_nomad task-file-contents "${dir}" "${task}" \
-            /local/run/current/tracer/config.json             \
+            run/current/tracer/config.json                    \
           > "${dir}"/tracer/"${task}"/config.json
         else
           local nomad_task_driver=$(envjqr 'nomad_task_driver')
           # When "local" and "podman" "tracer" folder is mounted and contents
           # created locally by the workbench (obtained from the profile services).
+          local nomad_task_driver=$(envjqr 'nomad_task_driver')
           if ! test "${nomad_task_driver}" = "podman"
           then
             # Node files that may suffer interpolation/sed replace.
             backend_nomad task-file-contents "${dir}" "tracer" \
-              /local/run/current/tracer/start.sh               \
+              run/current/tracer/start.sh                      \
             > "${dir}"/tracer/start.sh
             backend_nomad task-file-contents "${dir}" "tracer" \
-              /local/run/current/tracer/config.json            \
+              run/current/tracer/config.json                   \
             > "${dir}"/tracer/config.json
           fi
           # This Task's supervisor files
           backend_nomad task-file-contents "${dir}" "tracer" \
-            /local/run/current/supervisor/supervisord.conf   \
+            run/current/supervisor/supervisord.conf          \
           > "${dir}"/supervisor/tracer/supervisord.conf
           # Dynamically modified file, store to be able to debug!
           backend_nomad task-file-contents "${dir}" "tracer" \
-            /local/entrypoint.sh                             \
+            entrypoint.sh                                    \
           > "${dir}"/nomad/tracer/entrypoint.sh
           # Dynamically generated file with the envars of the entrypoint!
           backend_nomad task-file-contents "${dir}" "tracer" \
-            /local/entrypoint.env                            \
+            entrypoint.env                                   \
           > "${dir}"/nomad/tracer/entrypoint.env
           # Dynamically generated file with system info!
           backend_nomad task-file-contents "${dir}" "tracer" \
-            /local/entrypoint.uname                          \
+            entrypoint.uname                                 \
           > "${dir}"/nomad/tracer/entrypoint.uname
           # Dynamically generated file with cpu info!
           backend_nomad task-file-contents "${dir}" "tracer" \
-            /local/entrypoint.cpuinfo                        \
+            entrypoint.cpuinfo                               \
           > "${dir}"/nomad/tracer/entrypoint.cpuinfo
           # Dynamically generated file with all the services/addresses found!
           backend_nomad task-file-contents "${dir}" "tracer" \
-            /local/networking.json                           \
+            networking.json                                  \
           > "${dir}"/nomad/tracer/networking.json
         fi
       fi
@@ -2477,12 +2474,12 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
       local node=${1:?$usage}; shift
       backend_nomad task-file-contents "${dir}" "${node}" \
-        /local/run/current/healthcheck/start.sh           \
+        run/current/healthcheck/start.sh                  \
       > "${dir}"/healthcheck/"${node}"/start.sh
     ;;
 
-    ## Nomad job tasks supervisord queries
-    ######################################
+    ## Nomad Job's Tasks supervisord queries
+    ########################################
 
     task-program-start )
       local usage="USAGE: wb backend pass $op RUN-DIR SUPERVISOR-PROGRAM"
@@ -2596,7 +2593,7 @@ backend_nomad() {
       :> "${stderr_file}"
       local exit_code
       if ! exit_code=$(backend_nomad task-file-contents "${dir}" "${task}" \
-        /local/run/current/"${program}"/exit_code 2> "${stderr_file}")
+        run/current/"${program}"/exit_code 2> "${stderr_file}")
       then
         # Command returned "false"
         if test -n "${strikes}"
@@ -2643,27 +2640,33 @@ backend_nomad() {
       local task=${1:?$usage}; shift
       local action=${1:?$usage}; shift
 
+      # MUST FIRST CALL `download-config-entrypoint` to fetch "entrypoint.dirs"!
+      if ! test -f "${dir}"/nomad/"${task}"/entrypoint.dirs
+      then
+        backend_nomad download-config-entrypoint "${dir}" "${task}"
+      fi
+
       # The `supervisord` binary is nix-installed inside the container but not
       # added to $PATH (resides in /nix/store)
-      local container_supervisor_nix=$(jq -r '.containerPkgs.supervisor."nix-store-path"' "$dir"/container-specs.json)
+      local container_supervisor_nix="$(jq -r .supervisor.nix ${dir}/nomad/${task}/entrypoint.dirs)"
       # The `--serverurl` argument is needed in every call to `nomad exec`.
       # Uusually a socket/file decided between the container and the Job file.
-      local container_supervisord_url=$(jq -r .supervisord.url "$dir"/container-specs.json)
+      local container_supervisord_url="$(jq -r .supervisor.url ${dir}/nomad/${task}/entrypoint.dirs)"
       # The container needs to know where the `supervisord` config file is
       # located so it can be started.
-      local container_supervisord_conf=$(jq -r .supervisord.conf "$dir"/container-specs.json)
+      local container_supervisord_conf="$(jq -r .supervisor.config ${dir}/nomad/${task}/entrypoint.dirs)"
       # Returns "PROGRAM-NAME: ERROR (no such file)" when `supervisord` is not
       # able to find the command defined in "command=XXX" for PROGRAM-NAME
       # "[program:PROGRAM-NAME]"
-      backend_nomad task-exec "$dir" "$task"            \
-        "$container_supervisor_nix"/bin/supervisorctl   \
-          --serverurl "$container_supervisord_url"      \
-          --configuration "$container_supervisord_conf" \
-          "$action" $@
+      backend_nomad task-exec "${dir}" "${task}"          \
+        "${container_supervisor_nix}"/bin/supervisorctl   \
+          --serverurl "${container_supervisord_url}"      \
+          --configuration "${container_supervisord_conf}" \
+          "${action}" $@
     ;;
 
-    ## Nomad job tasks exec queries
-    ###############################
+    ## Nomad Job's Tasks exec queries
+    #################################
 
     task-exec )
       local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME CMD"
@@ -2671,9 +2674,10 @@ backend_nomad() {
       local task=${1:?$usage}; shift
 
       local task_alloc_id
-      task_alloc_id=$(wb_nomad job task-name-allocation-id \
-        "${dir}/nomad/nomad-job.json"                                 \
-        "${task}")
+      task_alloc_id="$(wb_nomad job task-name-allocation-id \
+        "$dir/nomad/nomad-job.json"                         \
+        "${task}"                                           \
+      )"
       # If you run it without `-i=false -t=false` supervisord starts an
       # interactive shell (output "supervisor>") and breaks the whole script
       # expecting you to hit enter on every call!
@@ -2694,7 +2698,11 @@ backend_nomad() {
       local find_path="$(jq -r ".containerPkgs.findutils.\"nix-store-path\""       "${dir}"/container-specs.json)"/bin/find
       local tar_path="$(jq  -r ".containerPkgs.gnutar.\"nix-store-path\""          "${dir}"/container-specs.json)"/bin/tar
       local cat_path="$(jq  -r ".containerPkgs.coreutils.\"nix-store-path\""       "${dir}"/container-specs.json)"/bin/cat
-      local prog_dir=/local/run/current/"${program}"/
+      # When executing commands the directories used depend on the filesystem
+      # isolation mode (AKA chroot or not).
+      local state_dir
+      state_dir="$(backend_nomad task-workbench-state-dir "${dir}" "${task}")"
+      local prog_dir="${state_dir}"/"${program}"/
       # TODO: Add compression, either "--zstd" or "--xz"
       # tar (child): zstd: Cannot exec: No such file or directory
       # tar (child): Error is not recoverable: exiting now
@@ -2737,7 +2745,11 @@ backend_nomad() {
       local cat_path="$(jq  -r ".containerPkgs.coreutils.\"nix-store-path\""       "${dir}"/container-specs.json)"/bin/cat
       # TODO: Fetch the logRoot
       local log_root="$(jq -r ".containerPkgs.findutils.\"nix-store-path\""        "${dir}"/container-specs.json)"/bin/find
-      local tracer_dir=/local/run/current/tracer/
+      # When executing commands the directories used depend on the filesystem
+      # isolation mode (AKA chroot or not).
+      local state_dir
+      state_dir="$(backend_nomad task-workbench-state-dir "${dir}" "${task}")"
+      local tracer_dir="${state_dir}"/tracer/
       # TODO: Add compression, either "--zstd" or "--xz"
       # tar (child): zstd: Cannot exec: No such file or directory
       # tar (child): Error is not recoverable: exiting now
@@ -2757,8 +2769,44 @@ backend_nomad() {
         "
     ;;
 
-    ## Nomad job tasks file queries
-    ###############################
+    ## Nomad Job's Tasks file queries
+    #################################
+
+    # Always use this functions as entrypoint to everything filesystem related
+    # because Nomad has an specific folder hierarchy and I want to have an
+    # abstraction over that.
+    # Also Nomad has different filesystem isolation modes but right now all
+    # Nomad `logs` and `fs` commands are using the same directory as its root
+    # directory, the allocation's working directory, so it's usefull mostly to
+    # execute commands inside the Job's Tasks (`nomad exec`).
+    #
+    # Allocation's/task's working directory:
+    # https://developer.hashicorp.com/nomad/docs/concepts/filesystem
+    ### <<data_dir>>/alloc/<<alloc_id>>
+    ###    alloc/               (envar `NOMAD_ALLOC_DIR`)
+    ###       data/
+    ###       logs/
+    ###       tmp/
+    ###    <<task_name>>/
+    ###       local/            (envar `NOMAD_TASK_DIR` )
+    ###       private/
+    ###       secrets/
+    ###       tmp/
+
+    # Our "local/run/current" prefix that can be used with `nomad exec` without
+    # worrying if running isolated or not.
+    task-workbench-state-dir )
+      local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
+      local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
+
+      # MUST FIRST CALL `download-config-entrypoint` to fetch "entrypoint.dirs"!
+      if ! test -f "${dir}"/nomad/"${task}"/entrypoint.dirs
+      then
+        backend_nomad download-config-entrypoint "${dir}" "${task}"
+      fi
+      jq -r .workbench.state "${dir}"/nomad/"${task}"/entrypoint.dirs
+    ;;
 
     task-entrypoint-stdout )
       local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
@@ -2766,11 +2814,14 @@ backend_nomad() {
       local task=${1:?$usage}; shift
 
       local task_alloc_id
-      task_alloc_id=$(wb_nomad job task-name-allocation-id \
-        "$dir/nomad/nomad-job.json"                                   \
-        "${task}")
-      nomad alloc logs \
-        "${task_alloc_id}" "${task}"
+      task_alloc_id="$(wb_nomad job task-name-allocation-id \
+        "$dir/nomad/nomad-job.json"                         \
+        "${task}"                                           \
+      )"
+      # Log commands don't need a folder argument.
+      nomad alloc logs     \
+        "${task_alloc_id}" \
+        "${task}"
     ;;
 
     task-entrypoint-stderr )
@@ -2779,11 +2830,32 @@ backend_nomad() {
       local task=${1:?$usage}; shift
 
       local task_alloc_id
-      task_alloc_id=$(wb_nomad job task-name-allocation-id \
-        "$dir/nomad/nomad-job.json"                                   \
-        "${task}")
+      task_alloc_id="$(wb_nomad job task-name-allocation-id \
+        "$dir/nomad/nomad-job.json"                         \
+        "${task}"                                           \
+      )"
+      # Log commands don't need a folder argument.
       nomad alloc logs -stderr \
-        "${task_alloc_id}" "${task}"
+        "${task_alloc_id}"     \
+        "${task}"
+    ;;
+
+    # Machine friendly output of file stat information, instead of displaying
+    # the file, or listing the directory.
+    task-file-stat )
+      local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME PATH"
+      local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
+      local path=${1:?$usage}; shift
+
+      local task_alloc_id
+      task_alloc_id="$(wb_nomad job task-name-allocation-id \
+        "$dir/nomad/nomad-job.json"                         \
+        "${task}"                                           \
+      )"
+      nomad alloc fs -stat -H      \
+        "${task_alloc_id}"         \
+        /"${task}"/local/"${path}"
     ;;
 
     task-file-contents )
@@ -2793,11 +2865,18 @@ backend_nomad() {
       local path=${1:?$usage}; shift
 
       local task_alloc_id
-      task_alloc_id=$(wb_nomad job task-name-allocation-id \
-        "$dir/nomad/nomad-job.json"                                   \
-        "${task}")
-      nomad alloc fs "${task_alloc_id}" \
-        /"${task}""${path}"             \
+      task_alloc_id="$(wb_nomad job task-name-allocation-id \
+        "$dir/nomad/nomad-job.json"                         \
+        "${task}"                                           \
+      )"
+      # Always adds as prefix the `NOMAD_TASK_DIR`, "TASK-NAME/local" inside the
+      # `NOMAD_ALLOC_DIR` ("DATA-DIR/alloc/XXXXXXXX/alloc").
+      # If running the `exec` (isolated) or `raw_exec` (no isolation) the root
+      # directory of `nomad alloc fs` is always the same, the task's working
+      # directory.
+      nomad alloc fs               \
+        "${task_alloc_id}"         \
+        /"${task}"/local/"${path}"
     ;;
 
     * )
@@ -3465,6 +3544,12 @@ plugin "exec" {
   # the host system.
   # https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities
   allow_caps = [ "kill", "mknod", "net_bind_service" ]
+}
+plugin "raw_exec" {
+  config = {
+    enabled = true
+    no_cgroups = true
+  }
 }
 
 EOF

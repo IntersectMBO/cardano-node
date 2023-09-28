@@ -1059,7 +1059,7 @@ ssh-key-template() {
     '
       {
         "env":  false
-      , "destination":          ("/local/run/current/ssh/" + $key_name)
+      , "destination":          ("local/run/current/ssh/" + $key_name)
       , "data":                 $key_data
       , "change_mode":          "noop"
       , "error_on_missing_key": true
