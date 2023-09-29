@@ -2,7 +2,7 @@
 
 module Cardano.Testnet.Test.FoldBlocks where
 
-import           Cardano.Api (File (..))
+import           Cardano.Api hiding (cardanoEra)
 import qualified Cardano.Api as C
 
 import           Cardano.Testnet as TN
@@ -42,14 +42,15 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
   conf <- HE.noteShowM $ TN.mkConf (tempAbsBasePath' <> "/")
 
   let tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
-      options = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
-        -- NB! The `activeSlotsCoeff` value is very important for
-        -- chain extension for the two-node/one-pool testnet that
-        -- `defaultTestnetOptions` define. The default 0.2 often fails
-        -- to extend the chain in a reasonable time (< 90s, e.g as the
-        -- deadline is defined in Testnet.Start.Cardano).
-        { cardanoActiveSlotsCoeff = 0.9 }
-  runtime <- testnet options conf
+      era = BabbageEra
+      options = cardanoDefaultTestnetOptions
+                          { cardanoNodes = cardanoDefaultTestnetNodeOptions
+                          , cardanoEpochLength = 1000
+                          , cardanoSlotLength = 0.02
+                          , cardanoEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+                          }
+      fastTestnetOptions = CardanoOnlyTestnetOptions options
+  runtime <- testnet fastTestnetOptions conf
 
   -- Get socketPath
   socketPathAbs <- do
