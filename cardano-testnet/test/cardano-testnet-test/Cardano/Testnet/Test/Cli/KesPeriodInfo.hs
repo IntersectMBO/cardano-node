@@ -377,7 +377,3 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   -- TODO: Linking to the node log file like this is fragile.
   spoLogFile <- H.note $ tempAbsPath' </> "logs/test-spo.stdout.log"
   prop_node_minted_block spoLogFile
-
-
-decodeEraUTxO :: (IsShelleyBasedEra era, H.MonadTest m) => ShelleyBasedEra era -> J.Value -> m (UTxO era)
-decodeEraUTxO _ = H.jsonErrorFail . J.fromJSON
