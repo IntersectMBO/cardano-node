@@ -9,6 +9,7 @@ import qualified Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
 import qualified Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
+import qualified Cardano.Testnet.Test.FoldBlocks
 import qualified Cardano.Testnet.Test.Node.Shutdown
 
 import           Prelude
@@ -25,28 +26,26 @@ import qualified Testnet.Property.Run as H
 tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
-    [ H.ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
+    [  H.ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
     , H.ignoreOnWindows "ShutdownOnSigint" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSigint
-  --  , H.ignoreOnWindows "ShutdownOnSlotSynced" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSlotSynced
-    -- TODO: Remove leadership-schedule test for Alonzo
-    -- , T.testGroup "Alonzo"
-    --   [ H.ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.Alonzo.LeadershipSchedule.hprop_leadershipSchedule
-    --   ]
+    -- ShutdownOnSlotSynced FAILS Still. The node times out and it seems the "shutdown-on-slot-synced" flag does nothing
+    -- , H.ignoreOnWindows "ShutdownOnSlotSynced" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSlotSynced
     , T.testGroup "Babbage"
+        -- TODO: Babbage --next leadership schedule still fails. Once this fix is propagated to the cli (https://github.com/input-output-hk/cardano-api/pull/274)
+        -- this should remedy. Double check and make sure we have re-enabled it and remove this comment.
         [ H.ignoreOnWindows "leadership-schedule" Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule -- FAILS
-      -- SUCCEEDS  , H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot.hprop_stakeSnapshot
+        , H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot.hprop_stakeSnapshot
         ]
-    -- Reenable when create-staked is working in conway again
+    -- TODO: Conway -  Re-enable when create-staked is working in conway again
     --, T.testGroup "Conway"
     --  [ H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Conway.StakeSnapshot.hprop_stakeSnapshot
     --  ]
       -- Ignored on Windows due to <stdout>: cosmmitBuffer: invalid argument (invalid character)
       -- as a result of the kes-period-info output to stdout.
-      -- TODO: Babbage temporarily ignored due to broken protocol-state query
     , H.ignoreOnWindows "kes-period-info" Cardano.Testnet.Test.Cli.KesPeriodInfo.hprop_kes_period_info
     , H.ignoreOnWindows "query-slot-number" Cardano.Testnet.Test.Cli.QuerySlotNumber.hprop_querySlotNumber
+    , H.ignoreOnWindows "foldBlocks receives ledger state" Cardano.Testnet.Test.FoldBlocks.prop_foldBlocks
     ]
-  --, H.ignoreOnWindows "foldBlocks receives ledger state" Cardano.Testnet.Test.FoldBlocks.prop_foldBlocks
   ]
 
 ingredients :: [T.Ingredient]
