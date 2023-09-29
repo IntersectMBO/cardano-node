@@ -8,6 +8,7 @@ module Testnet.Components.SPO
   , convertToEraFlag
   , createStakeDelegationCertificate
   , createStakeKeyRegistrationCertificate
+  , decodeEraUTxO
   , registerSingleSpo
   ) where
 
@@ -170,6 +171,8 @@ registerSingleSpo
   -> m ( String -- ^ Registered stake pool id
        , FilePath -- ^ Stake pool cold signing key
        , FilePath -- ^ Stake pool cold verification key
+       , FilePath -- ^ Stake pool VRF signing key
+       , FilePath -- ^ Stake pool VRF verification key
        )
 registerSingleSpo identifier tempAbsPath cTestnetOptions execConfig (fundingInput, fundingSigninKey, changeAddr) = GHC.withFrozenCallStack $ do
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -316,8 +319,9 @@ registerSingleSpo identifier tempAbsPath cTestnetOptions execConfig (fundingInpu
               poolColdVkeyFp
               cTestnetOptions
               currentRegistedPoolsJson
-  return (poolId, poolColdSkeyFp, poolColdVkeyFp)
+  return (poolId, poolColdSkeyFp, poolColdVkeyFp, vrfSkeyFp, vrfVkeyFp)
 
 
 
-
+decodeEraUTxO :: (IsShelleyBasedEra era, MonadTest m) => ShelleyBasedEra era -> Aeson.Value -> m (UTxO era)
+decodeEraUTxO _ = H.jsonErrorFail . Aeson.fromJSON

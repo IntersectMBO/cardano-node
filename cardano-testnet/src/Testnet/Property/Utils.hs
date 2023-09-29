@@ -22,7 +22,11 @@ module Testnet.Property.Utils
 
 import           Cardano.Api
 
+import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
 import           Cardano.CLI.Types.Output
+import qualified Cardano.Crypto.Hash.Blake2b as Crypto
+import qualified Cardano.Crypto.Hash.Class as Crypto
+
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
 import           Control.Monad.IO.Class
@@ -38,13 +42,9 @@ import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           Options.Applicative
 import           System.Directory (doesFileExist, removeFile)
+import qualified System.Environment as IO
 import           System.Info (os)
-
-import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
-import qualified Cardano.Crypto.Hash.Blake2b as Crypto
-import qualified Cardano.Crypto.Hash.Class as Crypto
-
-import qualified Testnet.Process.Run as H
+import qualified System.IO.Unsafe as IO
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
@@ -52,8 +52,8 @@ import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import           Hedgehog.Extras.Test.Process (ExecConfig)
 import           Hedgehog.Internal.Property (MonadTest)
-import qualified System.Environment as IO
-import qualified System.IO.Unsafe as IO
+
+import qualified Testnet.Process.Run as H
 
 disableRetries :: Bool
 disableRetries = IO.unsafePerformIO $ do
@@ -170,3 +170,4 @@ getShelleyGenesisHash path key = do
   content <- H.evalIO  $ BS.readFile path
   let genesisHash = Crypto.hashWith id content :: Crypto.Hash Crypto.Blake2b_256 BS.ByteString
   pure . singleton (fromText key) $ toJSON genesisHash
+

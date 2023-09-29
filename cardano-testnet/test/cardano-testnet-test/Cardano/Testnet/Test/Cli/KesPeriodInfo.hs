@@ -63,8 +63,10 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
                           , cardanoEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                           }
       fastTestnetOptions = CardanoOnlyTestnetOptions cTestnetOptions
+
   sbe <- case cardanoEraStyle era of
            ShelleyBasedEra era' -> return era'
+
   runTime@TestnetRuntime { testnetMagic } <- testnet fastTestnetOptions conf
 
   execConfig <- H.headM (poolSprockets runTime) >>= H.mkExecConfig tempBaseAbsPath
@@ -96,7 +98,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
   txin <- H.noteShow =<< H.headM (Map.keys utxo1)
 
-  (stakePoolId, stakePoolColdSigningKey, stakePoolColdVKey)
+  (stakePoolId, stakePoolColdSigningKey, stakePoolColdVKey, _, _)
     <- registerSingleSpo 1 tempAbsPath cTestnetOptions execConfig (txin, utxoSKeyFile, utxoAddr)
 
   -- Create test stake address to delegate to the new stake pool
@@ -375,7 +377,3 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   -- TODO: Linking to the node log file like this is fragile.
   spoLogFile <- H.note $ tempAbsPath' </> "logs/test-spo.stdout.log"
   prop_node_minted_block spoLogFile
-
-
-decodeEraUTxO :: (IsShelleyBasedEra era, H.MonadTest m) => ShelleyBasedEra era -> J.Value -> m (UTxO era)
-decodeEraUTxO _ = H.jsonErrorFail . J.fromJSON
