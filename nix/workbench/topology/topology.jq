@@ -1,6 +1,7 @@
 def loopback_node_topology_from_nixops_topology($topo; $i):
-    $topo.coreNodes[$i].producers                      as $producers
-  | ($producers | map(ltrimstr("node-") | fromjson))   as $prod_indices
+    # DON'T ASSUME NODES ARE ORDERED INSIDE THE GLOBAL TOPOLOGY FILE!!!!!!!!!!!!
+    ($topo.coreNodes | map(select(.nodeId == $i)) | .[0] | .producers) as $producers
+  | ($producers | map(ltrimstr("node-") | fromjson))                   as $prod_indices
   | { Producers:
       ( $prod_indices
         | map
