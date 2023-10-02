@@ -9,11 +9,9 @@ module Cardano.Testnet (
   -- ** Testnet options
   TestnetOptions(..),
   CardanoTestnetOptions(..),
-  BabbageTestnetOptions(..),
   ConwayTestnetOptions(..),
   TestnetNodeOptions(..),
   cardanoDefaultTestnetOptions,
-  babbageDefaultTestnetOptions,
   conwayDefaultTestnetOptions,
   cardanoDefaultTestnetNodeOptions,
 
@@ -45,6 +43,5 @@ import           Testnet.Options
 import           Testnet.Process.Run (procChairman)
 import           Testnet.Property.Utils
 import           Testnet.Runtime
-import           Testnet.Start.Babbage
 import           Testnet.Start.Cardano
 import           Testnet.Start.Conway

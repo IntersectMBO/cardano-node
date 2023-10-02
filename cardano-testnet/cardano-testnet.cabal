@@ -74,7 +74,6 @@ library
   hs-source-dirs:       src
   exposed-modules:      Cardano.Testnet
                         Parsers.Run
-                        Testnet.Start.Babbage
                         Testnet.Start.Byron
                         Testnet.Start.Conway
                         Testnet.Start.Types
@@ -93,8 +92,7 @@ library
                         Testnet.Runtime
                         Testnet.Topology
 
-  other-modules:        Parsers.Babbage
-                        Parsers.Byron
+  other-modules:        Parsers.Byron
                         Parsers.Cardano
                         Parsers.Conway
                         Parsers.Help

@@ -5,8 +5,7 @@
 {-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
 
 module Testnet.Options
-  ( BabbageTestnetOptions(..)
-  , ConwayTestnetOptions(..)
+  ( ConwayTestnetOptions(..)
   , TestnetOptions(..)
   , testnet
   , runCardanoOptions
@@ -22,7 +21,6 @@ import           Hedgehog.Extras.Test.Base (Integration, noteShow_)
 import           Parsers.Cardano as Cardano
 import           Testnet.Conf
 import           Testnet.Property.Run
-import           Testnet.Start.Babbage
 import           Testnet.Start.Cardano
 import           Testnet.Start.Conway
 
@@ -30,14 +28,12 @@ import           Testnet.Start.Conway
 {- HLINT ignore "Redundant flip" -}
 
 data TestnetOptions
-  = BabbageOnlyTestnetOptions BabbageTestnetOptions
-  | ConwayOnlyTestnetOptions ConwayTestnetOptions
+  = ConwayOnlyTestnetOptions ConwayTestnetOptions
   | CardanoOnlyTestnetOptions CardanoTestnetOptions
   deriving (Eq, Show)
 
 testnet :: TestnetOptions -> Conf -> Integration TestnetRuntime
 testnet options conf = case options of
-  BabbageOnlyTestnetOptions o -> babbageTestnet o conf
   ConwayOnlyTestnetOptions o -> conwayTestnet o conf
   CardanoOnlyTestnetOptions o -> do
     testnetMinimumConfigurationRequirements o

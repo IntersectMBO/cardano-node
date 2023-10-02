@@ -14,7 +14,6 @@ import           Data.Foldable
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
-import           Parsers.Babbage as Babbage
 import           Parsers.Byron
 import           Parsers.Cardano
 import           Parsers.Conway as Conway
@@ -34,7 +33,6 @@ opts envCli = Opt.info (commands envCli <**> helper) idm
 -- via StartCardanoTestnet
 data CardanoTestnetCommands
   = StartConwayTestnet ConwayOptions
-  | StartBabbageTestnet BabbageOptions
   | StartByrontestnet ByronOptions -- TODO: Do we care about being able to start a Byron only testnet?
   | StartCardanoTestnet CardanoOptions
   | GetVersion VersionOptions
@@ -45,7 +43,6 @@ commands envCli =
   asum
     [ fmap StartCardanoTestnet (subparser (cmdCardano envCli))
     , fmap StartByrontestnet (subparser cmdByron)
-    , fmap StartBabbageTestnet (subparser cmdBabbage)
     , fmap StartConwayTestnet (subparser cmdConway)
     , fmap GetVersion (subparser cmdVersion)
     , fmap (Help pref (opts envCli)) (subparser cmdHelp)
@@ -54,16 +51,12 @@ commands envCli =
 
 runTestnetCmd :: CardanoTestnetCommands -> IO ()
 runTestnetCmd = \case
-  StartBabbageTestnet cmdOpts -> runBabbageOptions cmdOpts
   StartConwayTestnet cmdOpts -> runConwayOptions cmdOpts
   StartByrontestnet cmdOpts -> runByronOptions cmdOpts
   StartCardanoTestnet cmdOpts -> runCardanoOptions cmdOpts
   GetVersion cmdOpts -> runVersionOptions cmdOpts
   Help pPrefs pInfo cmdOpts -> runHelpOptions pPrefs pInfo cmdOpts
 
-runBabbageOptions :: BabbageOptions -> IO ()
-runBabbageOptions options =
-  runTestnet $ testnet (BabbageOnlyTestnetOptions $ Babbage.testnetOptions options)
 
 runConwayOptions :: ConwayOptions -> IO ()
 runConwayOptions options =

@@ -12,11 +12,19 @@ module Cardano.Testnet.Test.Cli.QuerySlotNumber
   ( hprop_querySlotNumber
   ) where
 
-import           Control.Monad
+import           Cardano.Api
+
+import           Cardano.Testnet
+
+import           Prelude
+
 import           Data.Either
 import           Data.Monoid (Last (..))
 import qualified Data.Time.Clock as DT
 import qualified Data.Time.Format as DT
+import           System.Environment (getEnvironment)
+import qualified System.Info as SYS
+
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock as H
@@ -24,11 +32,7 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified Hedgehog.Internal.Property as H
-import           Prelude
-import           System.Environment (getEnvironment)
-import qualified System.Info as SYS
 
-import           Cardano.Testnet
 import           Testnet.Process.Run
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
@@ -40,13 +44,19 @@ hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tem
   conf <- H.noteShowM $ mkConf tempAbsBasePath'
 
   let tempBaseAbsPath' = makeTmpBaseAbsPath $ tempAbsPath conf
-      testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions
-        { babbageNodeLoggingFormat = NodeLoggingFormatAsJson
-        }
+      era = BabbageEra
+      options = cardanoDefaultTestnetOptions
+                          { cardanoNodes = cardanoDefaultTestnetNodeOptions
+                          , cardanoEpochLength = 1000
+                          , cardanoSlotLength = 0.02
+                          , cardanoEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+                          }
+      fastTestnetOptions = CardanoOnlyTestnetOptions options
+
   tr@TestnetRuntime
     { testnetMagic
     , poolNodes
-    } <- testnet testnetOptions conf
+    } <- testnet fastTestnetOptions conf
   ShelleyGenesis{sgSlotLength, sgEpochLength} <- H.noteShowM $ shelleyGenesis tr
   startTime <- H.noteShowM $ getStartTime tempAbsBasePath' tr
 
