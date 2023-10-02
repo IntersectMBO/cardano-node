@@ -9,15 +9,16 @@ module Parsers.Run
   ) where
 
 import           Cardano.CLI.Environment
+
 import           Data.Foldable
 import           Options.Applicative
 import qualified Options.Applicative as Opt
+
 import           Parsers.Babbage as Babbage
 import           Parsers.Byron
 import           Parsers.Cardano
 import           Parsers.Conway as Conway
 import           Parsers.Help
-import           Parsers.Shelley
 import           Parsers.Version
 import           Testnet.Options
 import           Testnet.Property.Run (runTestnet)
@@ -36,7 +37,6 @@ data CardanoTestnetCommands
   | StartBabbageTestnet BabbageOptions
   | StartByrontestnet ByronOptions -- TODO: Do we care about being able to start a Byron only testnet?
   | StartCardanoTestnet CardanoOptions
-  | StartShelleyTestnet ShelleyOptions
   | GetVersion VersionOptions
   | Help ParserPrefs (ParserInfo CardanoTestnetCommands) HelpOptions
 
@@ -45,7 +45,6 @@ commands envCli =
   asum
     [ fmap StartCardanoTestnet (subparser (cmdCardano envCli))
     , fmap StartByrontestnet (subparser cmdByron)
-    , fmap StartShelleyTestnet (subparser cmdShelley)
     , fmap StartBabbageTestnet (subparser cmdBabbage)
     , fmap StartConwayTestnet (subparser cmdConway)
     , fmap GetVersion (subparser cmdVersion)
@@ -59,7 +58,6 @@ runTestnetCmd = \case
   StartConwayTestnet cmdOpts -> runConwayOptions cmdOpts
   StartByrontestnet cmdOpts -> runByronOptions cmdOpts
   StartCardanoTestnet cmdOpts -> runCardanoOptions cmdOpts
-  StartShelleyTestnet cmdOpts -> runShelleyOptions cmdOpts
   GetVersion cmdOpts -> runVersionOptions cmdOpts
   Help pPrefs pInfo cmdOpts -> runHelpOptions pPrefs pInfo cmdOpts
 

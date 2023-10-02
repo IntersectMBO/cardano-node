@@ -4,9 +4,9 @@ import           Data.Function
 import           Data.Monoid
 import           Options.Applicative
 import           System.IO (IO)
+
 import           Testnet.Commands.Byron
 import           Testnet.Commands.Cardano
-import           Testnet.Commands.Shelley
 import           Testnet.Commands.Version
 
 {- HLINT ignore "Monoid law, left identity" -}

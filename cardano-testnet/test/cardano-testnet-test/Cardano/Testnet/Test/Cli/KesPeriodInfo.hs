@@ -276,6 +276,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
         , "--shelley-vrf-key", testSpoVrfSKey
         , "--shelley-operational-certificate", testSpoOperationalCertFp
         ]
+
   threadDelay 5_000000
 
   stakeSnapshot1 <- execCli' execConfig
