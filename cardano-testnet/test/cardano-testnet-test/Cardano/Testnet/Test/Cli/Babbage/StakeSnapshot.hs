@@ -57,7 +57,7 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \
                         { cardanoNodes = cardanoDefaultTestnetNodeOptions
                         , cardanoEpochLength = 1000
                         , cardanoSlotLength = 0.02
-                        , cardanoEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+                        , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                         }
 
   TestnetRuntime
