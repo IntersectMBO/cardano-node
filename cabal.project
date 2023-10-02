@@ -33,8 +33,6 @@ packages:
     trace-dispatcher
     trace-resources
     trace-forward
---    ../ouroboros-consensus/ouroboros-consensus
---    ../ouroboros-consensus/ouroboros-consensus-diffusion
 
 package cardano-api
   ghc-options: -Werror
@@ -129,3 +127,11 @@ source-repository-package
   subdir:
     ouroboros-consensus
     ouroboros-consensus-diffusion
+
+source-repository-package
+  type: git
+  location: https://github.com/karknu/ouroboros-network.git
+  tag: 06eaf130374374e9098f9629231590a1546fd172
+  subdir:
+    ouroboros-network-framework
+    ouroboros-network-protocols
