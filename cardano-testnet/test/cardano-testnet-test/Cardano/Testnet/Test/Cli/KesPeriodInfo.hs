@@ -43,7 +43,7 @@ import           Testnet.Process.Run
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
 
-{- HLINT ignore "Use underscore -}
+{- HLINT ignore "Use underscore" -}
 
 hprop_kes_period_info :: Property
 hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> do

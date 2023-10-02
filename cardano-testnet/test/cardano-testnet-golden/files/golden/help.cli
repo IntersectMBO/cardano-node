@@ -1,8 +1,7 @@
 Usage: cardano-testnet 
   (cardano | byron | shelley | babbage | conway | version | help)
 
-Usage: cardano-testnet cardano [--num-bft-nodes COUNT]
-  [--num-pool-nodes COUNT]
+Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [ --byron-era
   | --shelley-era
   | --allegra-era
