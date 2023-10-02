@@ -4,8 +4,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-{- HLINT ignore "Redundant return" -}
-
 module Testnet.Property.Checks
   ( prop_spos_in_ledger_state
   ) where
@@ -55,9 +53,7 @@ prop_spos_in_ledger_state output tNetOptions execConfig =
     H.cat output
 
     let numPoolsInLedgerState = Set.size poolSet
-    if numPoolsInLedgerState == numExpectedPools
-    then return ()
-    else
+    unless (numPoolsInLedgerState == numExpectedPools) $
       failMessage GHC.callStack
         $ unlines [ "Expected number of stake pools not found in ledger state"
                   , "Expected: ", show numExpectedPools

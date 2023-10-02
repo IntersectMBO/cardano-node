@@ -40,10 +40,10 @@ checkStakePoolRegistered
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
   -> ExecConfig
-  -> FilePath -- ^ Satke pool cold verification key file
+  -> FilePath -- ^ Stake pool cold verification key file
   -> CardanoTestnetOptions
   -> FilePath -- ^ Output file path of stake pool info
-  -> m String
+  -> m String -- ^ Stake pool ID
 checkStakePoolRegistered tempAbsPath execConfig poolColdVkeyFp cTestnetOpts outputFp =
   GHC.withFrozenCallStack $ do
     let tempAbsPath' = unTmpAbsPath tempAbsPath
