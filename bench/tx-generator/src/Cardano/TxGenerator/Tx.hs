@@ -1,7 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module  Cardano.TxGenerator.Tx
         (module Cardano.TxGenerator.Tx)
@@ -177,18 +176,9 @@ genTx _era ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
     & setTxInsCollateral collateral
     & setTxOuts outputs
     & setTxFee fee
-    & setTxValidityRange (TxValidityNoLowerBound, upperBound)
+    & setTxValidityRange (TxValidityNoLowerBound, defaultTxValidityUpperBound)
     & setTxMetadata metadata
     & setTxProtocolParams (BuildTxWith (Just ledgerParameters))
-
-  upperBound :: TxValidityUpperBound era
-  upperBound = case shelleyBasedEra @era of
-    ShelleyBasedEraShelley -> TxValidityUpperBound ValidityUpperBoundInShelleyEra $ SlotNo maxBound
-    ShelleyBasedEraAllegra -> TxValidityNoUpperBound ValidityNoUpperBoundInAllegraEra
-    ShelleyBasedEraMary    -> TxValidityNoUpperBound ValidityNoUpperBoundInMaryEra
-    ShelleyBasedEraAlonzo  -> TxValidityNoUpperBound ValidityNoUpperBoundInAlonzoEra
-    ShelleyBasedEraBabbage -> TxValidityNoUpperBound ValidityNoUpperBoundInBabbageEra
-    ShelleyBasedEraConway  -> TxValidityNoUpperBound ValidityNoUpperBoundInConwayEra
 
 
 txSizeInBytes :: forall era. IsShelleyBasedEra era =>

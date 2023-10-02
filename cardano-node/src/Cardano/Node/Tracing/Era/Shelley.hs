@@ -69,6 +69,7 @@ import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, block
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
+import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
@@ -1089,7 +1090,12 @@ instance
   forMachine v (Conway.ConwayUtxowFailure f) = forMachine v f
   forMachine v (Conway.ConwayCertsFailure f) = forMachine v f
   forMachine v (Conway.ConwayGovFailure f) = forMachine v f
-  forMachine verb (Conway.ConwayWdrlNotDelegatedToDRep f) = forMachine verb f
+  forMachine v (Conway.ConwayWdrlNotDelegatedToDRep f) = forMachine v f
+  forMachine _ (Conway.ConwayTreasuryValueMismatch actual inTx) =
+    mconcat [ "kind" .= String "ConwayTreasuryValueMismatch"
+            , "actual" .= actual
+            , "submittedInTx" .= inTx
+            ]
 
 instance
   ( Consensus.ShelleyBasedEra era
@@ -1112,15 +1118,22 @@ instance
             , "rewardAccounts" .= toJSON rewardAcnts
             , "expectedNetworkId" .= toJSON network
             ]
-  forMachine _ (Conway.NewCommitteeSizeTooSmall committeeSize minCommitteeSize) =
-    mconcat [ "kind" .= String "NewCommitteeSizeTooSmall"
-            , "committeeSize" .= committeeSize
-            , "minCommitteeSize" .= minCommitteeSize
-            ]
   forMachine _ (Conway.ProposalDepositIncorrect deposit expectedDeposit) =
     mconcat [ "kind" .= String "ProposalDepositIncorrect"
             , "deposit" .= deposit
             , "expectedDeposit" .= expectedDeposit
+            ]
+  forMachine _ (Conway.DisallowedVoters govActionIdToVoter) =
+    mconcat [ "kind" .= String "DisallowedVoters"
+            , "govActionIdToVoter" .= Map.toList govActionIdToVoter
+            ]
+  forMachine _ (Conway.ConflictingCommitteeUpdate creds) =
+    mconcat [ "kind" .= String "ConflictingCommitteeUpdate"
+            , "credentials" .= creds
+            ]
+  forMachine _ (Conway.ExpirationEpochTooSmall credsToEpoch) =
+    mconcat [ "kind" .= String "ExpirationEpochTooSmall"
+            , "credentialsToEpoch" .= credsToEpoch
             ]
 
 instance

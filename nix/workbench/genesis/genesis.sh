@@ -161,30 +161,42 @@ case "$op" in
            "$global_basedir"/profile/presets/mainnet/genesis/genesis.alonzo.json \
            >   "$dir"/genesis.alonzo.spec.json
 
-        jq '{ poolVotingThresholds:
-                { pvtMotionNoConfidence:    0
-                , pvtCommitteeNormal:       0
-                , pvtCommitteeNoConfidence: 0
-                , pvtHardForkInitiation:    0 
+        jq '{
+              "poolVotingThresholds": {
+                "pvtCommitteeNormal": 0.51,
+                "pvtCommitteeNoConfidence": 0.51,
+                "pvtHardForkInitiation": 0.51,
+                "pvtMotionNoConfidence": 0.51
+              },
+              "dRepVotingThresholds": {
+                "dvtMotionNoConfidence": 0.51,
+                "dvtCommitteeNormal": 0.51,
+                "dvtCommitteeNoConfidence": 0.51,
+                "dvtUpdateToConstitution": 0.51,
+                "dvtHardForkInitiation": 0.51,
+                "dvtPPNetworkGroup": 0.51,
+                "dvtPPEconomicGroup": 0.51,
+                "dvtPPTechnicalGroup": 0.51,
+                "dvtPPGovGroup": 0.51,
+                "dvtTreasuryWithdrawal": 0.51
+              },
+              "committeeMinSize": 0,
+              "committeeMaxTermLength": 60,
+              "govActionLifetime": 14,
+              "govActionDeposit": 0,
+              "dRepDeposit": 0,
+              "dRepActivity": 0,
+              "constitution": {
+                "anchor": {
+                  "url": "",
+                  "dataHash": "0000000000000000000000000000000000000000000000000000000000000000"
                 }
-            , dRepVotingThresholds:
-                { dvtMotionNoConfidence:    0
-                , dvtCommitteeNormal:       0
-                , dvtCommitteeNoConfidence: 0
-                , dvtUpdateToConstitution:  0
-                , dvtHardForkInitiation:    0
-                , dvtPPNetworkGroup:        0
-                , dvtPPEconomicGroup:       0
-                , dvtPPTechnicalGroup:      0
-                , dvtPPGovGroup:            0
-                , dvtTreasuryWithdrawal:    0
-                }
-            , minCommitteeSize:             0
-            , committeeTermLimit:           0
-            , govActionExpiration:          0
-            , govActionDeposit:             0
-            , dRepDeposit:                  0
-            , dRepActivity:                 0
+              },
+              "committee": {
+                "members": {
+                },
+                "quorum": 0
+              }
             }
            ' --null-input \
            >   "$dir"/genesis.conway.spec.json

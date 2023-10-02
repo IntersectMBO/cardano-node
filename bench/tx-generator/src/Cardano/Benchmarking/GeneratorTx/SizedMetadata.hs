@@ -129,7 +129,7 @@ dummyTxSize _p m = (dummyTxSizeInEra @era) $ metadataInEra m
 
 metadataInEra :: forall era . IsShelleyBasedEra era => Maybe TxMetadata -> TxMetadataInEra era
 metadataInEra Nothing = TxMetadataNone
-metadataInEra (Just m) = case txMetadataSupportedInEra (cardanoEra @era) of
+metadataInEra (Just m) = case forEraMaybeEon (cardanoEra @era) of
   Nothing -> error "unreachable"
   Just e -> TxMetadataInEra e m
 

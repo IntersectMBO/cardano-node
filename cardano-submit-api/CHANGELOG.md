@@ -2,6 +2,11 @@
 
 ## vNext
 
+## 8.5.0 -- Oct 2023
+
+* Using `cardano-api-8.25` and `cardano-cli-8.11`
+* Add Conway Tx support
+
 ## 8.4.0 -- Sep 2023
 
 * Updated dependencies to `cardano-api-8.20`, `ouroboros-network-0.9.1`.
