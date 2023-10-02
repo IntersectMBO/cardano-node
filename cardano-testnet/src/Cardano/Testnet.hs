@@ -8,10 +8,8 @@ module Cardano.Testnet (
 
   -- ** Testnet options
   CardanoTestnetOptions(..),
-  ConwayTestnetOptions(..),
   TestnetNodeOptions(..),
   cardanoDefaultTestnetOptions,
-  conwayDefaultTestnetOptions,
   cardanoDefaultTestnetNodeOptions,
 
   -- * Configuration
@@ -43,4 +41,3 @@ import           Testnet.Process.Run (procChairman)
 import           Testnet.Property.Utils
 import           Testnet.Runtime
 import           Testnet.Start.Cardano
-import           Testnet.Start.Conway

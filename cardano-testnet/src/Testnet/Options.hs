@@ -5,8 +5,7 @@
 {-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
 
 module Testnet.Options
-  ( ConwayTestnetOptions(..)
-  , CardanoTestnetOptions(..)
+  ( CardanoTestnetOptions(..)
   , testnet
   , runCardanoOptions
   ) where
@@ -22,7 +21,6 @@ import           Parsers.Cardano as Cardano
 import           Testnet.Conf
 import           Testnet.Property.Run
 import           Testnet.Start.Cardano
-import           Testnet.Start.Conway
 
 
 {- HLINT ignore "Redundant flip" -}
