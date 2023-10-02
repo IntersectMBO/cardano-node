@@ -72,12 +72,12 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
                           , cardanoActiveSlotsCoeff = 0.1
                           , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                           }
-      fastTestnetOptions = CardanoOnlyTestnetOptions cTestnetOptions
+
   tr@TestnetRuntime
     { testnetMagic
     -- , wallets
     -- , delegators
-    } <- testnet fastTestnetOptions conf
+    } <- testnet cTestnetOptions conf
 
   execConfig <- H.headM (poolSprockets tr) >>= H.mkExecConfig tempBaseAbsPath
 

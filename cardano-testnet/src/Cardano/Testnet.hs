@@ -7,7 +7,6 @@ module Cardano.Testnet (
   testnet,
 
   -- ** Testnet options
-  TestnetOptions(..),
   CardanoTestnetOptions(..),
   ConwayTestnetOptions(..),
   TestnetNodeOptions(..),

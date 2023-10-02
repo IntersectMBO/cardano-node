@@ -59,12 +59,11 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \
                         , cardanoSlotLength = 0.02
                         , cardanoEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                         }
-    fastTestnetOptions = CardanoOnlyTestnetOptions options
 
   TestnetRuntime
     { testnetMagic
     , poolNodes
-    } <- testnet fastTestnetOptions conf
+    } <- testnet options conf
 
   poolNode1 <- H.headM poolNodes
 

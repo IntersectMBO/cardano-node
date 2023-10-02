@@ -112,7 +112,7 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
 
   let numPoolNodes = length $ cardanoNodes testnetOptions
   -- TODO: No need to use the executable directly. We need to wrap
-  -- the function that create-staked called and parameterize it on CardanoTestnetOptions or TestnetOptions
+  -- the function that create-staked called and parameterize it on CardanoTestnetOptions or CardanoTestnetOptions
   execCli_
     [ "genesis", "create-staked"
     , "--genesis-dir", tempAbsPath'

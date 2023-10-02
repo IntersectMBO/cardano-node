@@ -4,24 +4,24 @@ module Parsers.Byron
   , runByronOptions
   ) where
 
+import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
+
 import           Options.Applicative
 import qualified Options.Applicative as OA
-
-import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
 
 import           Testnet.Process.Cli
 import           Testnet.Property.Run (runTestnet)
 import           Testnet.Start.Byron
 
 newtype ByronOptions = ByronOptions
-  { testnetOptions :: TestnetOptions
+  { testnetOptions :: CardanoTestnetOptions
   } deriving (Eq, Show)
 
 optsByron :: Parser ByronOptions
 optsByron = ByronOptions <$> optsTestnet
 
-optsTestnet :: Parser TestnetOptions
-optsTestnet = TestnetOptions
+optsTestnet :: Parser CardanoTestnetOptions
+optsTestnet = CardanoTestnetOptions
   <$> OA.option auto
       (   OA.long "num-bft-nodes"
       <>  OA.help "Number of BFT nodes"

@@ -51,12 +51,11 @@ hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tem
                           , cardanoSlotLength = 0.02
                           , cardanoEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                           }
-      fastTestnetOptions = CardanoOnlyTestnetOptions options
 
   tr@TestnetRuntime
     { testnetMagic
     , poolNodes
-    } <- testnet fastTestnetOptions conf
+    } <- testnet options conf
   ShelleyGenesis{sgSlotLength, sgEpochLength} <- H.noteShowM $ shelleyGenesis tr
   startTime <- H.noteShowM $ getStartTime tempAbsBasePath' tr
 

@@ -9,48 +9,52 @@ module Testnet.Start.Byron
   , createByronUpdateProposal
   , createByronUpdateProposalVote
   , testnet
-  , TestnetOptions(..)
+  , CardanoTestnetOptions(..)
   , byronDefaultTestnetOptions
   ) where
-
-import           Control.Monad (forM_, void, when)
-import           Control.Monad.Catch (MonadCatch)
-import           Control.Monad.IO.Class (MonadIO)
-import           Data.Aeson
-import           Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy as LBS
-import           Data.Functor ((<&>))
-import           Data.Time.Clock (UTCTime)
-import           GHC.Stack
-import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
-import           Hedgehog.Extras.Stock.Time (showUTCTimeSeconds)
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
-import           System.FilePath.Posix ((</>))
 
 import           Cardano.Api hiding (Value)
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Cardano.Node.Types (UseLedger (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
+                   WarmValency (..))
+
+import           Control.Monad (forM_, void, when)
+import           Control.Monad.Catch (MonadCatch)
+import           Control.Monad.IO.Class (MonadIO)
+import           Data.Aeson
 import qualified Data.Aeson as J
+import           Data.ByteString.Lazy (ByteString)
+import qualified Data.ByteString.Lazy as LBS
+import           Data.Functor ((<&>))
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
+import           Data.Time.Clock (UTCTime)
 import qualified Data.Time.Clock as DTC
+import           GHC.Stack
+import           System.FilePath.Posix ((</>))
+import qualified System.Info as OS
+import qualified System.IO as IO
+import qualified System.Process as IO
+
 import qualified Hedgehog as H
+import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
 import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
+import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.String as S
+import           Hedgehog.Extras.Stock.Time (showUTCTimeSeconds)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 import qualified Hedgehog.Extras.Test.Process as H
 import           Hedgehog.Internal.Property (MonadTest)
-import qualified System.Info as OS
-import qualified System.IO as IO
-import qualified System.Process as IO
+
 import qualified Testnet.Conf as H
 import           Testnet.Defaults
 import           Testnet.Filepath
@@ -59,15 +63,12 @@ import           Testnet.Process.Run
 import           Testnet.Property.Assert
 import           Testnet.Property.Utils
 
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
-                   WarmValency (..))
-
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Use head" -}
 
-data TestnetOptions = TestnetOptions
+data CardanoTestnetOptions = CardanoTestnetOptions
   { numBftNodes :: Int
   , slotDuration :: Int
   , securityParam :: Int
@@ -77,8 +78,8 @@ data TestnetOptions = TestnetOptions
   , enableP2P :: Bool
   } deriving (Eq, Show)
 
-byronDefaultTestnetOptions :: TestnetOptions
-byronDefaultTestnetOptions = TestnetOptions
+byronDefaultTestnetOptions :: CardanoTestnetOptions
+byronDefaultTestnetOptions = CardanoTestnetOptions
   { numBftNodes = 3
   , slotDuration = 2000
   , securityParam = 10
@@ -99,7 +100,7 @@ createByronGenesis
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => Int
   -> UTCTime
-  -> TestnetOptions
+  -> CardanoTestnetOptions
   -> String
   -> String
   -> m ()
@@ -152,7 +153,7 @@ createByronUpdateProposalVote testnetMagic' updateProposalFp signingKey outputFp
       ]
 
 
-rewriteParams :: TestnetOptions -> Value -> Value
+rewriteParams :: CardanoTestnetOptions -> Value -> Value
 rewriteParams testnetOptions = rewriteObject
   $ HM.insert "slotDuration" (J.toJSON @String (show @Int (slotDuration testnetOptions)))
 
@@ -195,7 +196,7 @@ mkTopologyConfig i numBftNodes' allPorts True = J.encode topologyP2P
         (UseLedger DontUseLedger)
 
 
-testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
+testnet :: CardanoTestnetOptions -> H.Conf -> H.Integration [String]
 testnet testnetOptions conf = do
   void $ H.note OS.os
   let tNetMagic = testnetMagic testnetOptions

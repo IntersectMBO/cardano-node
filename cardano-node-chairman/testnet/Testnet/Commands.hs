@@ -5,7 +5,6 @@ import           Data.Monoid
 import           Options.Applicative
 import           System.IO (IO)
 
-import           Testnet.Commands.Byron
 import           Testnet.Commands.Cardano
 import           Testnet.Commands.Version
 

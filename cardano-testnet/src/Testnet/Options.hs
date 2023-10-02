@@ -6,7 +6,7 @@
 
 module Testnet.Options
   ( ConwayTestnetOptions(..)
-  , TestnetOptions(..)
+  , CardanoTestnetOptions(..)
   , testnet
   , runCardanoOptions
   ) where
@@ -27,21 +27,15 @@ import           Testnet.Start.Conway
 
 {- HLINT ignore "Redundant flip" -}
 
-data TestnetOptions
-  = ConwayOnlyTestnetOptions ConwayTestnetOptions
-  | CardanoOnlyTestnetOptions CardanoTestnetOptions
-  deriving (Eq, Show)
 
-testnet :: TestnetOptions -> Conf -> Integration TestnetRuntime
-testnet options conf = case options of
-  ConwayOnlyTestnetOptions o -> conwayTestnet o conf
-  CardanoOnlyTestnetOptions o -> do
-    testnetMinimumConfigurationRequirements o
-    cardanoTestnet o conf
+testnet :: CardanoTestnetOptions -> Conf -> Integration TestnetRuntime
+testnet o conf = do
+  testnetMinimumConfigurationRequirements o
+  cardanoTestnet o conf
 
 runCardanoOptions :: CardanoOptions -> IO ()
 runCardanoOptions options =
-  runTestnet $ testnet (CardanoOnlyTestnetOptions $ Cardano.testnetOptions options)
+  runTestnet $ testnet (Cardano.testnetOptions options)
 
 
 -- | There are certain conditions that need to be met in order to run
