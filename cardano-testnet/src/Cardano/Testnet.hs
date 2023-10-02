@@ -11,12 +11,10 @@ module Cardano.Testnet (
   CardanoTestnetOptions(..),
   BabbageTestnetOptions(..),
   ConwayTestnetOptions(..),
-  ShelleyTestnetOptions(..),
   TestnetNodeOptions(..),
   cardanoDefaultTestnetOptions,
   babbageDefaultTestnetOptions,
   conwayDefaultTestnetOptions,
-  shelleyDefaultTestnetOptions,
   cardanoDefaultTestnetNodeOptions,
 
   -- * Configuration
@@ -44,11 +42,9 @@ module Cardano.Testnet (
 import           Testnet.Conf
 import           Testnet.Filepath
 import           Testnet.Options
-import           Testnet.Start.Babbage
-import           Testnet.Start.Cardano
-import           Testnet.Start.Conway
-import           Testnet.Start.Shelley as Shelley
-
 import           Testnet.Process.Run (procChairman)
 import           Testnet.Property.Utils
 import           Testnet.Runtime
+import           Testnet.Start.Babbage
+import           Testnet.Start.Cardano
+import           Testnet.Start.Conway

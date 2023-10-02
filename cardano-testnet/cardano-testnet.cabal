@@ -98,10 +98,8 @@ library
                         Parsers.Cardano
                         Parsers.Conway
                         Parsers.Help
-                        Parsers.Shelley
                         Parsers.Version
                         Testnet.Start.Cardano
-                        Testnet.Start.Shelley
                         Paths_cardano_testnet
 
   autogen-modules:      Paths_cardano_testnet
