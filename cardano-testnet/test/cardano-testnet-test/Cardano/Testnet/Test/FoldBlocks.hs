@@ -47,7 +47,7 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
                           { cardanoNodes = cardanoDefaultTestnetNodeOptions
                           , cardanoEpochLength = 1000
                           , cardanoSlotLength = 0.02
-                          , cardanoEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+                          , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                           }
       fastTestnetOptions = CardanoOnlyTestnetOptions options
   runtime <- testnet fastTestnetOptions conf

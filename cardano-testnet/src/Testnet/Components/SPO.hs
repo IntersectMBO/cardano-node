@@ -177,7 +177,7 @@ registerSingleSpo
 registerSingleSpo identifier tempAbsPath cTestnetOptions execConfig (fundingInput, fundingSigninKey, changeAddr) = GHC.withFrozenCallStack $ do
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       testnetMag = cardanoTestnetMagic cTestnetOptions
-      eraFlag= convertToEraFlag $ cardanoEra cTestnetOptions
+      eraFlag= convertToEraFlag $ cardanoNodeEra cTestnetOptions
 
   workDir <- H.note tempAbsPath'
 
@@ -259,7 +259,7 @@ registerSingleSpo identifier tempAbsPath cTestnetOptions execConfig (fundingInpu
 
   createStakeKeyRegistrationCertificate
     tempAbsPath
-    (cardanoEra cTestnetOptions)
+    (cardanoNodeEra cTestnetOptions)
     poolOwnerstakeVkeyFp
     (workDir </> "pledger.regcert")
 

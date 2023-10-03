@@ -224,7 +224,7 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
   -- TODO: These genesis filepaths should not be hardcoded. Using the cli as a library
   -- rather as an executable will allow us to get the genesis files paths in a more
   -- direct fashion.
-  finalYamlConfig <- createConfigYaml tempAbsPath $ cardanoEra testnetOptions
+  finalYamlConfig <- createConfigYaml tempAbsPath $ cardanoNodeEra testnetOptions
 
   H.evalIO $ LBS.writeFile configurationFile finalYamlConfig
 

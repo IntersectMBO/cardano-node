@@ -28,7 +28,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | List of node options. Each option will result in a single node being
     -- created.
     cardanoNodes :: [TestnetNodeOptions]
-  , cardanoEra :: AnyCardanoEra
+  , cardanoNodeEra :: AnyCardanoEra
   , cardanoEpochLength :: Int
   , cardanoSlotLength :: Double
   , cardanoTestnetMagic :: Int
@@ -41,7 +41,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
 cardanoDefaultTestnetOptions :: CardanoTestnetOptions
 cardanoDefaultTestnetOptions = CardanoTestnetOptions
   { cardanoNodes = cardanoDefaultTestnetNodeOptions
-  , cardanoEra = AnyCardanoEra BabbageEra
+  , cardanoNodeEra = AnyCardanoEra BabbageEra
   , cardanoEpochLength = 1500
   , cardanoSlotLength = 0.2
   , cardanoTestnetMagic = 42

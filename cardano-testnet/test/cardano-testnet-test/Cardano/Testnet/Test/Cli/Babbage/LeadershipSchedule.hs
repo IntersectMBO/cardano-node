@@ -19,7 +19,7 @@ module Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
   ( hprop_leadershipSchedule
   ) where
 
-import           Cardano.Api hiding (cardanoEra)
+import           Cardano.Api
 
 import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (..))
 import           Cardano.Testnet
@@ -70,7 +70,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
                           , cardanoEpochLength = 1000
                           , cardanoSlotLength = 0.02
                           , cardanoActiveSlotsCoeff = 0.1
-                          , cardanoEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+                          , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                           }
       fastTestnetOptions = CardanoOnlyTestnetOptions cTestnetOptions
   tr@TestnetRuntime
@@ -151,14 +151,14 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   -- Test stake address registration cert
   createStakeKeyRegistrationCertificate
     tempAbsPath
-    (cardanoEra cTestnetOptions)
+    (cardanoNodeEra cTestnetOptions)
     testDelegatorVkeyFp
     testDelegatorRegCertFp
 
   -- Test stake address deleg  cert
   createStakeDelegationCertificate
     tempAbsPath
-    (cardanoEra cTestnetOptions)
+    (cardanoNodeEra cTestnetOptions)
     testDelegatorVkeyFp
     stakePoolIdNewSpo
     testDelegatorDelegCert
@@ -180,7 +180,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   UTxO utxo2 <- H.noteShowM $ H.noteShowM $ decodeEraUTxO sbe utxo2Json
   txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 
-  let eraFlag = convertToEraFlag $ cardanoEra cTestnetOptions
+  let eraFlag = convertToEraFlag $ cardanoNodeEra cTestnetOptions
       delegRegTestDelegatorTxBodyFp = work </> "deleg-register-test-delegator.txbody"
 
   void $ execCli' execConfig
@@ -278,7 +278,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
       , "--out-file", testSpoOperationalCertFp
       ]
 
-  yamlBs <- createConfigYaml tempAbsPath (cardanoEra cTestnetOptions)
+  yamlBs <- createConfigYaml tempAbsPath (cardanoNodeEra cTestnetOptions)
   H.lbsWriteFile (work </> "configuration.yaml") yamlBs
   runtime <- startNode (TmpAbsolutePath tempAbsPath') "test-spo" 3005
         [ "run"
