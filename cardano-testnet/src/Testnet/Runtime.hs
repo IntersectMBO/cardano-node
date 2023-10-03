@@ -53,7 +53,6 @@ import           GHC.Generics (Generic)
 import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           System.FilePath
-import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
 
@@ -229,8 +228,9 @@ startNode tp@(TmpAbsolutePath _tempAbsPath) node port nodeCmd = GHC.withFrozenCa
   -- parsing the configuration yaml file. If we don't fail
   -- when stderr is populated, we end up having to wait for the
   -- timeout to expire before we can see the error.
-
-  when (OS.os `L.elem` ["darwin", "linux"]) $ do
-    H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
+  -- TODO: This is flakey. Hydra error:
+  -- Unable to run finally: Failure Nothing "\9473\9473\9473 Exception (IOException) \9473\9473\9473\nlsof: readCreateProcess: posix_spawnp: illegal operation (Inappropriate ioctl for device)\n" Nothing
+  -- when (OS.os `L.elem` ["darwin", "linux"]) $ do
+  --   H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
 
   return $ NodeRuntime node sprocket stdIn nodeStdoutFile nodeStderrFile hProcess

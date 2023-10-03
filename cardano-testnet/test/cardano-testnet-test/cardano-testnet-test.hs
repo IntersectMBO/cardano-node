@@ -33,7 +33,7 @@ tests = pure $ T.testGroup "test/Spec.hs"
     , T.testGroup "Babbage"
         -- TODO: Babbage --next leadership schedule still fails. Once this fix is propagated to the cli (https://github.com/input-output-hk/cardano-api/pull/274)
         -- this should remedy. Double check and make sure we have re-enabled it and remove this comment.
-        [ H.ignoreOnWindows "leadership-schedule" Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule -- FAILS
+        [ H.ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule -- FAILS
         , H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot.hprop_stakeSnapshot
         ]
     -- TODO: Conway -  Re-enable when create-staked is working in conway again

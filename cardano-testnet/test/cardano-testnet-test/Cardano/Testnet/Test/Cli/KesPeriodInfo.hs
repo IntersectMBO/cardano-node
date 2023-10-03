@@ -269,7 +269,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   H.lbsWriteFile (work </> "configuration.yaml") yamlBs
   _runtime <- startNode (TmpAbsolutePath tempAbsPath') "test-spo" 3005
         [ "run"
-        , "--config", (work </> "configuration.yaml")
+        , "--config", work </> "configuration.yaml"
         , "--topology", topologyFile
         , "--database-path", testSpoDir </> "db"
         , "--shelley-kes-key", testSpoKesSKey
