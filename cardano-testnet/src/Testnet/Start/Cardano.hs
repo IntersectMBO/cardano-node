@@ -43,7 +43,6 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
 import           Testnet.Components.Configuration
-import qualified Testnet.Conf as H
 import           Testnet.Defaults
 import           Testnet.Filepath
 import qualified Testnet.Process.Run as H
@@ -76,8 +75,8 @@ startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
 
-cardanoTestnet :: CardanoTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
-cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
+cardanoTestnet :: CardanoTestnetOptions -> Conf -> H.Integration TestnetRuntime
+cardanoTestnet testnetOptions Conf {tempAbsPath} = do
   void $ H.note OS.os
   currentTime <- H.noteShowIO DTC.getCurrentTime
   let tempAbsPath' = unTmpAbsPath tempAbsPath

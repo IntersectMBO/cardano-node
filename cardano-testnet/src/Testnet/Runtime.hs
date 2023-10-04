@@ -12,7 +12,6 @@ module Testnet.Runtime
   , PaymentKeyInfo(..)
   , PaymentKeyPair(..)
   , StakingKeyPair(..)
-  , TmpAbsolutePath(..)
   , TestnetRuntime(..)
   , NodeRuntime(..)
   , PoolNode(..)

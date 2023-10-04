@@ -18,9 +18,9 @@ import qualified Hedgehog as H
 import           Hedgehog.Extras.Test.Base (Integration, noteShow_)
 
 import           Parsers.Cardano as Cardano
-import           Testnet.Conf
 import           Testnet.Property.Run
 import           Testnet.Start.Cardano
+import           Testnet.Start.Types
 
 
 {- HLINT ignore "Redundant flip" -}

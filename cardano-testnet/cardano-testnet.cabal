@@ -75,7 +75,6 @@ library
                         Parsers.Run
                         Testnet.Start.Byron
                         Testnet.Start.Types
-                        Testnet.Conf
                         Testnet.Components.Configuration
                         Testnet.Components.SPO
                         Testnet.Defaults

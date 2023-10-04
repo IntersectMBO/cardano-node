@@ -34,10 +34,10 @@ module Cardano.Testnet (
 
   ) where
 
-import           Testnet.Conf
 import           Testnet.Filepath
 import           Testnet.Options
 import           Testnet.Process.Run (procChairman)
 import           Testnet.Property.Utils
 import           Testnet.Runtime
 import           Testnet.Start.Cardano
+import           Testnet.Start.Types

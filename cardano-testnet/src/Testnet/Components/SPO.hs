@@ -31,9 +31,9 @@ import           Hedgehog.Extras (ExecConfig, threadDelay)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
+import           Testnet.Filepath
 import           Testnet.Process.Cli
 import           Testnet.Process.Run (execCli, execCli', execCli_)
-import           Testnet.Runtime
 import           Testnet.Start.Types
 
 checkStakePoolRegistered
@@ -44,9 +44,9 @@ checkStakePoolRegistered
   -> CardanoTestnetOptions
   -> FilePath -- ^ Output file path of stake pool info
   -> m String -- ^ Stake pool ID
-checkStakePoolRegistered tempAbsPath execConfig poolColdVkeyFp cTestnetOpts outputFp =
+checkStakePoolRegistered tempAbsP execConfig poolColdVkeyFp cTestnetOpts outputFp =
   GHC.withFrozenCallStack $ do
-    let tempAbsPath' = unTmpAbsPath tempAbsPath
+    let tempAbsPath' = unTmpAbsPath tempAbsP
         testnetMag = cardanoTestnetMagic cTestnetOpts
         oFpAbs = tempAbsPath' </> outputFp
 
@@ -82,9 +82,9 @@ checkStakeKeyRegistered
   -> String -- ^ Stake address
   -> FilePath -- ^ Output file path of stake address info
   -> m DelegationsAndRewards
-checkStakeKeyRegistered tempAbsPath execConfig cTestnetOpts stakeAddr outputFp  =
+checkStakeKeyRegistered tempAbsP execConfig cTestnetOpts stakeAddr outputFp  =
   GHC.withFrozenCallStack $ do
-    let tempAbsPath' = unTmpAbsPath tempAbsPath
+    let tempAbsPath' = unTmpAbsPath tempAbsP
         testnetMag = cardanoTestnetMagic cTestnetOpts
         oFpAbs = tempAbsPath' </> outputFp
 
@@ -120,9 +120,9 @@ createStakeDelegationCertificate
   -> String -- ^ Pool id
   -> FilePath
   -> m ()
-createStakeDelegationCertificate tempAbsPath anyCera delegatorStakeVerKey poolId outputFp =
+createStakeDelegationCertificate tempAbsP anyCera delegatorStakeVerKey poolId outputFp =
   GHC.withFrozenCallStack $ do
-    let tempAbsPath' = unTmpAbsPath tempAbsPath
+    let tempAbsPath' = unTmpAbsPath tempAbsP
     void $ execCli
       [ "stake-address", "delegation-certificate"
       , convertToEraFlag anyCera
@@ -138,9 +138,9 @@ createStakeKeyRegistrationCertificate
   -> FilePath -- ^ Stake verification key file
   -> FilePath -- ^ Output file path
   -> m ()
-createStakeKeyRegistrationCertificate tempAbsPath anyCEra stakeVerKey outputFp =
+createStakeKeyRegistrationCertificate tempAbsP anyCEra stakeVerKey outputFp =
   GHC.withFrozenCallStack $ do
-    let tempAbsPath' = unTmpAbsPath tempAbsPath
+    let tempAbsPath' = unTmpAbsPath tempAbsP
 
     void $ execCli
       [ "stake-address", "registration-certificate"
@@ -263,7 +263,7 @@ registerSingleSpo identifier tempAbsPath cTestnetOptions execConfig (fundingInpu
   -- Create pledger registration certificate
 
   createStakeKeyRegistrationCertificate
-    tempAbsPath
+    tempAbsP
     (cardanoNodeEra cTestnetOptions)
     poolOwnerstakeVkeyFp
     (workDir </> "pledger.regcert")
@@ -306,7 +306,7 @@ registerSingleSpo identifier tempAbsPath cTestnetOptions execConfig (fundingInpu
   -- Check the pledger/owner stake key was registered
   delegsAndRewards <-
     checkStakeKeyRegistered
-      tempAbsPath
+      tempAbsP
       execConfig
       cTestnetOptions
       poolownerstakeaddr
@@ -319,7 +319,7 @@ registerSingleSpo identifier tempAbsPath cTestnetOptions execConfig (fundingInpu
   let currentRegistedPoolsJson = workDir </> "current-registered.pools.json"
 
   poolId <- checkStakePoolRegistered
-              tempAbsPath
+              tempAbsP
               execConfig
               poolColdVkeyFp
               cTestnetOptions

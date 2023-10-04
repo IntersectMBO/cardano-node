@@ -10,6 +10,9 @@ module Testnet.Start.Types
   , cardanoDefaultTestnetNodeOptions
 
   , NodeLoggingFormat(..)
+  , Conf(..)
+  , YamlFilePath(..)
+  , mkConf
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
@@ -18,6 +21,9 @@ import           Prelude
 
 import           Data.Word
 
+import           Hedgehog.Extras.Test.Base (Integration)
+
+import           Testnet.Filepath
 
 
 {- HLINT ignore "Redundant flip" -}
@@ -70,3 +76,20 @@ cardanoDefaultTestnetNodeOptions =
   ]
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
+
+
+newtype YamlFilePath = YamlFilePath
+  { unYamlFilePath :: FilePath
+  } deriving (Eq, Show)
+
+newtype Conf = Conf
+  { tempAbsPath :: TmpAbsolutePath
+  } deriving (Eq, Show)
+
+mkConf :: FilePath -> Integration Conf
+mkConf tempAbsPath' =
+  return $ Conf
+    { tempAbsPath = TmpAbsolutePath tempAbsPath'
+    }
+
+
