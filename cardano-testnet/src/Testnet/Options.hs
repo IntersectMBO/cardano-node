@@ -45,10 +45,6 @@ testnetMinimumConfigurationRequirements cTestnetOpts = do
      noteShow_ cTestnetOpts
      H.assert False
 
-  when (null $ cardanoNodes cTestnetOpts) $ do
-     noteShow_ ("Need at least one SPO to run a cluster" :: String)
-     noteShow_ cTestnetOpts
-     H.assert False
 
 
 

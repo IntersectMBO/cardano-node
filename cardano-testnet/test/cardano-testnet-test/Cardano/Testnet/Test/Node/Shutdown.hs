@@ -89,7 +89,7 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
   createByronGenesis
     testnetMagic'
     startTime
-    byronDefaultTestnetOptions
+    byronDefaultGenesisOptions
     (tempAbsPath' </> "byron.genesis.spec.json")
     (tempAbsPath' </> "byron")
 

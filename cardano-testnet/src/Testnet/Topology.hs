@@ -12,6 +12,6 @@ defaultMainnetTopology =
   let single = RemoteAddress
          { raAddress  = "relays-new.cardano-mainnet.iohk.io"
          , raPort     = 3001
-         , raValency= 2
+         , raValency  = 2
          }
   in RealNodeTopology [single]

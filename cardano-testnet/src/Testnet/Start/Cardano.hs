@@ -94,7 +94,7 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
   Byron.createByronGenesis
     testnetMagic
     startTime
-    Byron.byronDefaultTestnetOptions
+    Byron.byronDefaultGenesisOptions
     (tempAbsPath' </> "byron.genesis.spec.json")
     (tempAbsPath' </> "byron-gen-command")
   -- Because in Conway the overlay schedule and decentralization parameter
