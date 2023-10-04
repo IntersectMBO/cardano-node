@@ -141,7 +141,7 @@ parseRepresentation bs = transform (decodeEither' bs)
           (traceOptionPeerFrequency cr)
           (traceOptionResourceFrequency cr)
 
-      -- | Convert from external to internal representation
+    -- | Convert from external to internal representation
     toConfigOptions :: ConfigOptionRep -> [ConfigOption]
     toConfigOptions ConfigOptionRep {..} =
       catMaybes

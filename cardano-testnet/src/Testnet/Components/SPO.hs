@@ -168,12 +168,17 @@ registerSingleSpo
   -> CardanoTestnetOptions
   -> ExecConfig
   -> (TxIn, FilePath, String)
-  -> m ( String -- ^ Registered stake pool id
-       , FilePath -- ^ Stake pool cold signing key
-       , FilePath -- ^ Stake pool cold verification key
-       , FilePath -- ^ Stake pool VRF signing key
-       , FilePath -- ^ Stake pool VRF verification key
-       )
+  -> m ( String
+       , FilePath
+       , FilePath
+       , FilePath
+       , FilePath
+       ) -- ^ Result tuple:
+         --   1. String: Registered stake pool ID
+         --   2. FilePath: Stake pool cold signing key
+         --   3. FilePath: Stake pool cold verification key
+         --   4. FilePath: Stake pool VRF signing key
+         --   5. FilePath: Stake pool VRF verification key
 registerSingleSpo identifier tempAbsPath cTestnetOptions execConfig (fundingInput, fundingSigninKey, changeAddr) = GHC.withFrozenCallStack $ do
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       testnetMag = cardanoTestnetMagic cTestnetOptions
