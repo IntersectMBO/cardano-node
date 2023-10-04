@@ -5,12 +5,9 @@
 {-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
 
 module Testnet.Options
-  ( BabbageTestnetOptions(..)
-  , ConwayTestnetOptions(..)
-  , TestnetOptions(..)
+  ( CardanoTestnetOptions(..)
   , testnet
   , runCardanoOptions
-  , runShelleyOptions
   ) where
 
 import           Prelude
@@ -21,40 +18,22 @@ import qualified Hedgehog as H
 import           Hedgehog.Extras.Test.Base (Integration, noteShow_)
 
 import           Parsers.Cardano as Cardano
-import           Parsers.Shelley as Shelley
 import           Testnet.Conf
 import           Testnet.Property.Run
-import           Testnet.Start.Babbage
 import           Testnet.Start.Cardano
-import           Testnet.Start.Conway
-import           Testnet.Start.Shelley
 
 
 {- HLINT ignore "Redundant flip" -}
 
-data TestnetOptions
-  = ShelleyOnlyTestnetOptions ShelleyTestnetOptions
-  | BabbageOnlyTestnetOptions BabbageTestnetOptions
-  | ConwayOnlyTestnetOptions ConwayTestnetOptions
-  | CardanoOnlyTestnetOptions CardanoTestnetOptions
-  deriving (Eq, Show)
 
-testnet :: TestnetOptions -> Conf -> Integration TestnetRuntime
-testnet options conf = case options of
-  ShelleyOnlyTestnetOptions o -> shelleyTestnet o conf
-  BabbageOnlyTestnetOptions o -> babbageTestnet o conf
-  ConwayOnlyTestnetOptions o -> conwayTestnet o conf
-  CardanoOnlyTestnetOptions o -> do
-    testnetMinimumConfigurationRequirements o
-    cardanoTestnet o conf
+testnet :: CardanoTestnetOptions -> Conf -> Integration TestnetRuntime
+testnet o conf = do
+  testnetMinimumConfigurationRequirements o
+  cardanoTestnet o conf
 
 runCardanoOptions :: CardanoOptions -> IO ()
 runCardanoOptions options =
-  runTestnet $ testnet (CardanoOnlyTestnetOptions $ Cardano.testnetOptions options)
-
-runShelleyOptions :: ShelleyOptions -> IO ()
-runShelleyOptions options =
-  runTestnet $ testnet (ShelleyOnlyTestnetOptions $ Shelley.testnetOptions options)
+  runTestnet $ testnet (Cardano.testnetOptions options)
 
 
 -- | There are certain conditions that need to be met in order to run

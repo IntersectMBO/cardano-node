@@ -57,7 +57,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
   let
     tempAbsPath' = unTmpAbsPath tempAbsPath
     tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-    fastTestnetOptions = CardanoOnlyTestnetOptions cardanoDefaultTestnetOptions
+    fastTestnetOptions = cardanoDefaultTestnetOptions
       { cardanoEpochLength = 500
       , cardanoSlotLength = 0.01
       , cardanoActiveSlotsCoeff = 0.1

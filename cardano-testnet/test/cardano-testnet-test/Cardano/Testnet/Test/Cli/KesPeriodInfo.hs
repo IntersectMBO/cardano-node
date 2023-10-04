@@ -62,12 +62,11 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
                           , cardanoActiveSlotsCoeff = 0.1
                           , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                           }
-      fastTestnetOptions = CardanoOnlyTestnetOptions cTestnetOptions
 
   sbe <- case cardanoEraStyle era of
            ShelleyBasedEra era' -> return era'
 
-  runTime@TestnetRuntime { testnetMagic } <- testnet fastTestnetOptions conf
+  runTime@TestnetRuntime { testnetMagic } <- testnet cTestnetOptions conf
 
   execConfig <- H.headM (poolSprockets runTime) >>= H.mkExecConfig tempBaseAbsPath
 
@@ -276,6 +275,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
         , "--shelley-vrf-key", testSpoVrfSKey
         , "--shelley-operational-certificate", testSpoOperationalCertFp
         ]
+
   threadDelay 5_000000
 
   stakeSnapshot1 <- execCli' execConfig

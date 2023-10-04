@@ -180,7 +180,7 @@ hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-syn
 
   let maxSlot = 150
       slotLen = 0.01
-  let fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
+  let fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 300
         , cardanoSlotLength = slotLen
         , cardanoNodes =
@@ -226,7 +226,7 @@ hprop_shutdownOnSigint = H.integrationRetryWorkspace 2 "shutdown-on-sigint" $ \t
   -- TODO: Move yaml filepath specification into individual node options
   conf <- H.noteShowM $  mkConf tempAbsBasePath'
 
-  let fastTestnetOptions = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
+  let fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 300
         , cardanoSlotLength = 0.01
         }
