@@ -20,8 +20,8 @@ RUN cabal update \
     && echo "  flags: -external-libsodium-vrf" >>  cabal.project.local \
     && cabal build all \
     && mkdir -p /root/.local/bin/ \
-    && ls 
-    && find / -name cardano-cli-*
+    && ls \
+    && find / -name cardano-cli-* \
     && cp -p dist-newstyle/build/x86_64-linux/ghc-8.10.7/cardano-node-*/x/cardano-node/build/cardano-node/cardano-node /root/.local/bin/ \
     && cp -p dist-newstyle/build/x86_64-linux/ghc-8.10.7/cardano-cli-*/x/cardano-cli/build/cardano-cli/cardano-cli /root/.local/bin/
 
