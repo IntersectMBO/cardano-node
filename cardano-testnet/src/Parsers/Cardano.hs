@@ -3,15 +3,15 @@ module Parsers.Cardano
   , cmdCardano
   ) where
 
+import           Cardano.CLI.Environment
+import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
+import           Cardano.CLI.Legacy.Options
+
 import           Prelude
 
-import           Cardano.CLI.Environment
-import           Cardano.CLI.Legacy.Options
 import qualified Data.List as L
 import           Options.Applicative
 import qualified Options.Applicative as OA
-
-import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
 
 import           Testnet.Process.Cli
 import           Testnet.Property.Utils
@@ -66,23 +66,14 @@ optsTestnet envCli = CardanoTestnetOptions
 
 pNumBftAndSpoNodes :: Parser [TestnetNodeOptions]
 pNumBftAndSpoNodes =
-  (++)
-    <$> OA.option
-          ((`L.replicate` BftTestnetNodeOptions []) <$> auto)
-          (   OA.long "num-bft-nodes"
-          <>  OA.help "Number of BFT nodes"
-          <>  OA.metavar "COUNT"
-          <>  OA.showDefault
-          <>  OA.value (cardanoNodes cardanoDefaultTestnetOptions)
-          )
-    <*> OA.option
-          ((`L.replicate` SpoTestnetNodeOptions) <$> auto)
-          (   OA.long "num-pool-nodes"
-          <>  OA.help "Number of pool nodes"
-          <>  OA.metavar "COUNT"
-          <>  OA.showDefault
-          <>  OA.value (cardanoNodes cardanoDefaultTestnetOptions)
-          )
+  OA.option
+    ((`L.replicate` SpoTestnetNodeOptions []) <$> auto)
+    (   OA.long "num-pool-nodes"
+    <>  OA.help "Number of pool nodes"
+    <>  OA.metavar "COUNT"
+    <>  OA.showDefault
+    <>  OA.value (cardanoNodes cardanoDefaultTestnetOptions)
+    )
 
 optsCardano :: EnvCli -> Parser CardanoOptions
 optsCardano envCli = CardanoOptions <$> optsTestnet envCli

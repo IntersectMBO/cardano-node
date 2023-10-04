@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -18,7 +19,6 @@ module Testnet.Runtime
   , PoolNodeKeys(..)
   , Delegator(..)
   , allNodes
-  , bftSprockets
   , poolSprockets
   , poolNodeStdout
   , readNodeLoggingFormat
@@ -28,6 +28,16 @@ module Testnet.Runtime
   , getStartTime
   , fromNominalDiffTimeMicro
   ) where
+
+import           Cardano.Api
+
+import qualified Cardano.Chain.Genesis as G
+import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Shelley.Genesis
+import           Cardano.Node.Configuration.POM
+import qualified Cardano.Node.Protocol.Byron as Byron
+import           Cardano.Node.Types
 
 import           Prelude
 
@@ -41,36 +51,26 @@ import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime)
 import           GHC.Generics (Generic)
 import           GHC.Stack
-import qualified Hedgehog as H
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import qualified Hedgehog.Extras.Stock.String as S
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
-import qualified Hedgehog.Extras.Test.Process as H
+import qualified GHC.Stack as GHC
 import           System.FilePath
-import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
 
-import           Cardano.Api
-import qualified Cardano.Chain.Genesis as G
-import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Shelley.Genesis
-import           Cardano.Node.Configuration.POM
-import qualified Cardano.Node.Protocol.Byron as Byron
-import           Cardano.Node.Types
+import qualified Hedgehog as H
+import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test.Process as H
+
 import           Testnet.Filepath
 import qualified Testnet.Process.Run as H
-
-data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
+import           Testnet.Start.Types
 
 data TestnetRuntime = TestnetRuntime
   { configurationFile :: FilePath
   , shelleyGenesisFile :: FilePath
   , testnetMagic :: Int
-  , bftNodes :: [NodeRuntime]
   , poolNodes :: [PoolNode]
   , wallets :: [PaymentKeyInfo]
   , delegators :: [Delegator]
@@ -128,9 +128,6 @@ data LeadershipSlot = LeadershipSlot
 poolNodeStdout :: PoolNode -> FilePath
 poolNodeStdout = nodeStdout . poolRuntime
 
-bftSprockets :: TestnetRuntime -> [Sprocket]
-bftSprockets = fmap nodeSprocket . bftNodes
-
 poolSprockets :: TestnetRuntime -> [Sprocket]
 poolSprockets = fmap (nodeSprocket . poolRuntime) . poolNodes
 
@@ -138,7 +135,9 @@ shelleyGenesis :: (H.MonadTest m, MonadIO m, HasCallStack) => TestnetRuntime -> 
 shelleyGenesis TestnetRuntime{shelleyGenesisFile} = withFrozenCallStack $
   H.evalEither =<< H.evalIO (A.eitherDecodeFileStrict' shelleyGenesisFile)
 
-getStartTime :: (H.MonadTest m, MonadIO m, HasCallStack) => FilePath -> TestnetRuntime -> m UTCTime
+getStartTime
+  :: (H.MonadTest m, MonadIO m, HasCallStack)
+  => FilePath -> TestnetRuntime -> m UTCTime
 getStartTime tempRootPath TestnetRuntime{configurationFile} = withFrozenCallStack $ H.evalEither <=< H.evalIO . runExceptT $ do
   byronGenesisFile <-
     decodeNodeConfiguration configurationFile >>=
@@ -172,18 +171,22 @@ readNodeLoggingFormat = \case
   s -> Left $ "Unrecognised node logging format: " <> show s <> ".  Valid options: \"json\", \"text\""
 
 allNodes :: TestnetRuntime -> [NodeRuntime]
-allNodes tr = bftNodes tr <> fmap poolRuntime (poolNodes tr)
+allNodes tr = fmap poolRuntime (poolNodes tr)
 
+-- TODO: We probably want a check that this node has the necessary config files to run and
+-- if it doesn't we fail hard.
 -- | Start a node, creating file handles, sockets and temp-dirs.
 startNode
   :: TmpAbsolutePath
   -- ^ The temporary absolute path
   -> String
   -- ^ The name of the node
+  -> Int
+  -- ^ Node port
   -> [String]
-  -- ^ The command --socket-path and --port will be added automatically.
+  -- ^ The command --socket-path will be added automatically.
   -> H.Integration NodeRuntime
-startNode tp@(TmpAbsolutePath tempAbsPath) node nodeCmd = do
+startNode tp@(TmpAbsolutePath _tempAbsPath) node port nodeCmd = GHC.withFrozenCallStack $ do
   let tempBaseAbsPath = makeTmpBaseAbsPath tp
       socketDir = makeSocketDir tp
       logDir = makeLogDir tp
@@ -200,8 +203,7 @@ startNode tp@(TmpAbsolutePath tempAbsPath) node nodeCmd = do
 
   H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
 
-  portString <- fmap S.strip . H.readFile $ tempAbsPath </> node </> "port"
-
+  let portString = show port
 
   createProcessNode
     <- H.procNode $ mconcat
@@ -226,8 +228,9 @@ startNode tp@(TmpAbsolutePath tempAbsPath) node nodeCmd = do
   -- parsing the configuration yaml file. If we don't fail
   -- when stderr is populated, we end up having to wait for the
   -- timeout to expire before we can see the error.
-
-  when (OS.os `L.elem` ["darwin", "linux"]) $ do
-    H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
+  -- TODO: This is flakey. Hydra error:
+  -- Unable to run finally: Failure Nothing "\9473\9473\9473 Exception (IOException) \9473\9473\9473\nlsof: readCreateProcess: posix_spawnp: illegal operation (Inappropriate ioctl for device)\n" Nothing
+  -- when (OS.os `L.elem` ["darwin", "linux"]) $ do
+  --   H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
 
   return $ NodeRuntime node sprocket stdIn nodeStdoutFile nodeStderrFile hProcess

@@ -17,6 +17,9 @@ import           Prelude
 
 import           Control.Monad
 
+import qualified Hedgehog as H
+import           Hedgehog.Extras.Test.Base (Integration, noteShow_)
+
 import           Parsers.Cardano as Cardano
 import           Parsers.Shelley as Shelley
 import           Testnet.Conf
@@ -25,9 +28,6 @@ import           Testnet.Start.Babbage
 import           Testnet.Start.Cardano
 import           Testnet.Start.Conway
 import           Testnet.Start.Shelley
-
-import qualified Hedgehog as H
-import           Hedgehog.Extras.Test.Base (Integration, noteShow_)
 
 
 {- HLINT ignore "Redundant flip" -}
@@ -66,7 +66,7 @@ testnetMinimumConfigurationRequirements cTestnetOpts = do
      noteShow_ cTestnetOpts
      H.assert False
 
-  when (cardanoNumPoolNodes (cardanoNodes cTestnetOpts) < 1) $ do
+  when (null $ cardanoNodes cTestnetOpts) $ do
      noteShow_ ("Need at least one SPO to run a cluster" :: String)
      noteShow_ cTestnetOpts
      H.assert False

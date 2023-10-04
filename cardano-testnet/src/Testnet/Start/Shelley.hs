@@ -11,40 +11,44 @@ module Testnet.Start.Shelley
   , createShelleyGenesisInitialTxIn
   ) where
 
-import           Prelude
+import           Cardano.Api hiding (Value)
 
+import qualified Cardano.Node.Configuration.Topology as NonP2P
+import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Cardano.Node.Types (UseLedger (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
+                   WarmValency (..))
+
+import           Prelude
 
 import           Control.Monad
 import           Control.Monad.Catch
 import           Control.Monad.IO.Class
 import           Data.Aeson (ToJSON (toJSON), Value)
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson as J
 import qualified Data.Aeson.KeyMap as KeyMapAeson
 import           Data.Bifunctor
 import           Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.HashMap.Lazy as HM
 import           Data.List ((\\))
+import qualified Data.List as L
+import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.String
 import           Data.Time.Clock (UTCTime)
+import qualified Data.Time.Clock as DTC
 import           Data.Word
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
+import qualified System.Directory as IO
 import           System.FilePath.Posix ((</>))
+import qualified System.Info as OS
 
-import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
-
-import           Cardano.Api hiding (Value)
-import qualified Cardano.Node.Configuration.Topology as NonP2P
-import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Cardano.Node.Types (UseLedger (..))
-import qualified Data.Aeson as J
-import qualified Data.HashMap.Lazy as HM
-import qualified Data.List as L
-import qualified Data.Map.Strict as M
-import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
+import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
 import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
@@ -55,8 +59,6 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 import           Hedgehog.Internal.Property
-import qualified System.Directory as IO
-import qualified System.Info as OS
 
 import qualified Testnet.Conf as H
 import           Testnet.Defaults
@@ -65,9 +67,6 @@ import           Testnet.Process.Cli
 import           Testnet.Process.Run
 import           Testnet.Property.Assert
 import           Testnet.Runtime hiding (allNodes)
-
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
-                   WarmValency (..))
 
 
 {- HLINT ignore "Redundant <&>" -}
@@ -392,9 +391,9 @@ shelleyTestnet testnetOptions H.Conf {H.tempAbsPath} = do
   --------------------------------
   -- Launch cluster of three nodes
   H.evalIO $ LBS.writeFile (tempAbsPath' </> "configuration.yaml") $ J.encode defaultShelleyOnlyYamlConfig
-
-  allNodeRuntimes <- forM allNodes
-     $ \node -> startNode (TmpAbsolutePath tempAbsPath') node
+  let spoNodesWithPortNos = L.zip allNodes [3001..]
+  _allNodeRuntimes <- forM spoNodesWithPortNos
+     $ \(node, portNo) -> startNode (TmpAbsolutePath tempAbsPath') node portNo
         [ "run"
         , "--config", tempAbsPath' </> "configuration.yaml"
         , "--topology", tempAbsPath' </> node </> "topology.json"
@@ -426,7 +425,6 @@ shelleyTestnet testnetOptions H.Conf {H.tempAbsPath} = do
     , testnetMagic = testnetMagic
     , poolNodes = [ ]
     , wallets = [ ]
-    , bftNodes = allNodeRuntimes
     , delegators = [ ]
     }
 
