@@ -53,7 +53,7 @@ standardTracer = do
       case stRunning st of
         Just (inChannel, _, _) -> writeChan inChannel msg
         Nothing                -> pure ()
-    output stateRef LoggingContext {} (Left Reset) = liftIO $ do
+    output stateRef LoggingContext {} (Left TCReset) = liftIO $ do
       st <- readIORef stateRef
       case stRunning st of
         Nothing -> when (isNothing $ stRunning st) $
