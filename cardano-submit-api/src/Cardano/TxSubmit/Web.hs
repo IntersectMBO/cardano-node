@@ -19,15 +19,21 @@ import           Cardano.Api (AllegraEra, AnyCardanoEra (AnyCardanoEra),
                    TxInMode (TxInMode),
                    TxValidationErrorInMode (TxValidationEraMismatch, TxValidationErrorInMode),
                    consensusModeOnly, getTxBody, getTxId, submitTxToNodeLocal, toEraInMode)
+
 import           Cardano.Binary (DecoderError (..))
 import           Cardano.BM.Trace (Trace, logInfo)
+import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.TxSubmit.Metrics (TxSubmitMetrics (..))
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig (..), toWarpSettings)
+import qualified Cardano.TxSubmit.Rest.Web as Web
 import           Cardano.TxSubmit.Types (EnvSocketError (..), RawCborDecodeError (..),
                    TxCmdError (TxCmdEraConsensusModeMismatch, TxCmdTxReadError, TxCmdTxSubmitError, TxCmdTxSubmitErrorEraMismatch),
                    TxSubmitApi, TxSubmitApiRecord (..), TxSubmitWebApiError (TxSubmitFail),
                    renderTxCmdError)
 import           Cardano.TxSubmit.Util (logException)
+import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
+import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
+
 import           Control.Applicative (Applicative (pure), (<$>))
 import           Control.Monad (Functor (fmap), Monad (return), (=<<))
 import           Control.Monad.Except (ExceptT, MonadError (throwError), runExceptT)
@@ -35,38 +41,34 @@ import           Control.Monad.IO.Class (MonadIO (liftIO), liftIO)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
                    hoistMaybe, left, newExceptT)
 import           Data.Aeson (ToJSON (..))
+import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (first, second)
+import qualified Data.ByteString as BS
 import           Data.ByteString.Char8 (ByteString)
+import qualified Data.ByteString.Char8 as B8
+import qualified Data.Char as Char
 import           Data.Either (Either (..), partitionEithers)
 import           Data.Function (($), (.))
+import qualified Data.List as L
+import qualified Data.List.NonEmpty as NEL
 import           Data.Maybe (listToMaybe, maybe)
 import           Data.Proxy (Proxy (..))
 import           Data.Semigroup (Semigroup ((<>)))
 import           Data.String (String)
 import           Data.Text (Text)
-import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
-import           Servant (Application, Handler, ServerError (..), err400, throwError)
-import           Servant.API.Generic (toServant)
-import           Servant.Server.Generic (AsServerT)
-import           System.Environment (lookupEnv)
-import           System.IO (IO)
-import           Text.Show (Show (show))
-
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.TxSubmit.Rest.Web as Web
-import qualified Data.Aeson as Aeson
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as B8
-import qualified Data.Char as Char
-import qualified Data.List as L
-import qualified Data.List.NonEmpty as NEL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.IO as T
-import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
-import qualified Servant
+import           System.Environment (lookupEnv)
 import qualified System.IO as IO
+import           System.IO (IO)
 import qualified System.Metrics.Prometheus.Metric.Gauge as Gauge
+import           Text.Show (Show (show))
+
+import qualified Servant
+import           Servant (Application, Handler, ServerError (..), err400, throwError)
+import           Servant.API.Generic (toServant)
+import           Servant.Server.Generic (AsServerT)
 
 runTxSubmitServer
   :: Trace IO Text
@@ -120,6 +122,7 @@ readByteStringTx = firstExceptT TxCmdTxReadError . hoistEither . deserialiseAnyO
   , FromSomeType (AsTx AsMaryEra)    (InAnyCardanoEra MaryEra)
   , FromSomeType (AsTx AsAlonzoEra)  (InAnyCardanoEra AlonzoEra)
   , FromSomeType (AsTx AsBabbageEra) (InAnyCardanoEra BabbageEra)
+  , FromSomeType (AsTx AsConwayEra)  (InAnyCardanoEra ConwayEra)
   ]
 
 txSubmitPost
