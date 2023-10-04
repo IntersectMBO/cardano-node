@@ -86,7 +86,6 @@ library
                         Testnet.Process.Cli
                         Testnet.Process.Run
                         Testnet.Runtime
-                        Testnet.Topology
 
   other-modules:        Parsers.Cardano
                         Parsers.Help

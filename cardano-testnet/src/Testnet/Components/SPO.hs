@@ -179,9 +179,8 @@ registerSingleSpo
          --   3. FilePath: Stake pool cold verification key
          --   4. FilePath: Stake pool VRF signing key
          --   5. FilePath: Stake pool VRF verification key
-registerSingleSpo identifier tempAbsPath cTestnetOptions execConfig (fundingInput, fundingSigninKey, changeAddr) = GHC.withFrozenCallStack $ do
-  let tempAbsPath' = unTmpAbsPath tempAbsPath
-      testnetMag = cardanoTestnetMagic cTestnetOptions
+registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') cTestnetOptions execConfig (fundingInput, fundingSigninKey, changeAddr) = GHC.withFrozenCallStack $ do
+  let testnetMag = cardanoTestnetMagic cTestnetOptions
       eraFlag= convertToEraFlag $ cardanoNodeEra cTestnetOptions
 
   workDir <- H.note tempAbsPath'
@@ -263,7 +262,7 @@ registerSingleSpo identifier tempAbsPath cTestnetOptions execConfig (fundingInpu
   -- Create pledger registration certificate
 
   createStakeKeyRegistrationCertificate
-    tempAbsP
+    tap
     (cardanoNodeEra cTestnetOptions)
     poolOwnerstakeVkeyFp
     (workDir </> "pledger.regcert")
@@ -306,7 +305,7 @@ registerSingleSpo identifier tempAbsPath cTestnetOptions execConfig (fundingInpu
   -- Check the pledger/owner stake key was registered
   delegsAndRewards <-
     checkStakeKeyRegistered
-      tempAbsP
+      tap
       execConfig
       cTestnetOptions
       poolownerstakeaddr
@@ -319,7 +318,7 @@ registerSingleSpo identifier tempAbsPath cTestnetOptions execConfig (fundingInpu
   let currentRegistedPoolsJson = workDir </> "current-registered.pools.json"
 
   poolId <- checkStakePoolRegistered
-              tempAbsP
+              tap
               execConfig
               poolColdVkeyFp
               cTestnetOptions

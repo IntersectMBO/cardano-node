@@ -50,7 +50,6 @@ import qualified Testnet.Property.Utils as H
 import           Testnet.Property.Utils
 import           Testnet.Runtime
 import           Testnet.Start.Byron
-import           Testnet.Topology
 
 {- HLINT ignore "Redundant <&>" -}
 
