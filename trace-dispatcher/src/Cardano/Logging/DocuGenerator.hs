@@ -17,7 +17,6 @@ module Cardano.Logging.DocuGenerator (
   , addFiltered
   , addLimiter
   , addSilent
-
   , addDocumentedNamespace
 
   , DocuResult
@@ -26,16 +25,20 @@ module Cardano.Logging.DocuGenerator (
 
 import           Prelude hiding (lines, unlines)
 
+import qualified Data.Aeson.Encode.Pretty as AE
+import qualified Data.ByteString.Lazy as BS
 import           Data.IORef (modifyIORef, newIORef, readIORef)
 import           Data.List (groupBy, intersperse, nub, sortBy)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Text (Text, lines, split, toLower, unlines)
+import           Data.Text.Encoding (decodeUtf8)
 import           Data.Text.Internal.Builder (toLazyText)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder (Builder, fromString, fromText, singleton)
 import           Data.Time (getZonedTime)
 
+import           Cardano.Logging.ConfigurationParser ()
 import           Cardano.Logging.Types
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as TR
@@ -428,8 +431,15 @@ docuResultsToText dt@DocTracer {..} configuration = do
       header4  = fromText "\n## Datapoints\n\n"
       contentD = mconcat $ intersperse (fromText "\n\n")
                               (map (unpackDocu . snd) datapointBuilders)
-      config  = fromString $ "\n\nConfiguration: " <> show configuration <> "\n\n"
+      config  = fromText $ "\n\n##Configuration: \n```\n"
+                            <> decodeUtf8 (BS.toStrict $
+                                            AE.encodePretty configuration)
+                            <> "\n```\n"
       numbers = fromString $  show (length dtBuilderList) <> " log messages." <> "\n\n"
+      legend  = fromString $  "\9443 - This is the root of a tracer\n"
+                           <> "\9442 - This is the root of a tracer that is silent because of the current configuration\n"
+                           <> "\9436 - This is the root of a tracer, that provides metrics"
+                           <> "\n\n"
       ts      = fromString $ "Generated at " <> show time <> ".\n"
   pure $ toStrict $ toLazyText (
          header
@@ -443,6 +453,7 @@ docuResultsToText dt@DocTracer {..} configuration = do
       <> contentD
       <> config
       <> numbers
+      <> legend
       <> ts)
 
 
@@ -451,6 +462,7 @@ generateTOC dt traces metrics datapoints =
        generateTOCTraces
     <> generateTOCMetrics
     <> generateTOCDatapoints
+    <> generateTOCRest
   where
     generateTOCTraces =
       fromText "### [Trace Messages](#trace-messages)\n\n"
@@ -464,6 +476,10 @@ generateTOC dt traces metrics datapoints =
       fromText "### [Datapoints](#datapoints)\n\n"
       <> mconcat (reverse (fst (foldl (namespaceToToc Nothing) ([], []) datapoints)))
       <> fromText "\n"
+    generateTOCRest =
+         fromText "### [Configuration](#configuration)\n\n"
+      <> fromText "\n"
+
 
     namespaceToToc :: Maybe DocTracer -> ([Builder], [Text]) -> [Text]-> ([Builder], [Text])
     namespaceToToc condDocTracer (builders, context) ns =
@@ -524,7 +540,6 @@ generateTOC dt traces metrics datapoints =
     splitToNS :: [Text] -> [Text]
     splitToNS [sym] = split (== '.') sym
     splitToNS other = other
-
 
     getSymbolsOf :: [Text] -> DocTracer -> Text
     getSymbolsOf ns DocTracer {..} =
