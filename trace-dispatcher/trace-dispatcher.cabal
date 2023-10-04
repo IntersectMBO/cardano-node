@@ -26,6 +26,7 @@ library
   exposed-modules:    Cardano.Logging
                       Cardano.Logging.Configuration
                       Cardano.Logging.ConfigurationParser
+                      Cardano.Logging.Consistency
                       Cardano.Logging.DocuGenerator
                       Cardano.Logging.Formatter
                       Cardano.Logging.Forwarding
@@ -46,6 +47,7 @@ library
   default-extensions:   OverloadedStrings
   build-depends:        base >=4.12 && <5
                       , aeson >= 2.1.0.0
+                      , aeson-pretty
                       , async
                       , bytestring
                       , cborg
