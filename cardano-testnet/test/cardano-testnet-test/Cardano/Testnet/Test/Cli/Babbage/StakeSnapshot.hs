@@ -63,7 +63,7 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \
   TestnetRuntime
     { testnetMagic
     , poolNodes
-    } <- testnet options conf
+    } <- cardanoTestnet options conf
 
   poolNode1 <- H.headM poolNodes
 

@@ -58,15 +58,19 @@ import           Testnet.Start.Types
 {- HLINT ignore "Use let" -}
 
 
-
+-- | There are certain conditions that need to be met in order to run
+-- a valid node cluster.
+testnetMinimumConfigurationRequirements :: CardanoTestnetOptions -> H.Integration ()
+testnetMinimumConfigurationRequirements cTestnetOpts = do
+  when (length (cardanoNodes cTestnetOpts) < 2) $ do
+     H.noteShow_ ("Need at least two nodes to run a cluster" :: String)
+     H.noteShow_ cTestnetOpts
+     H.assert False
 
 data ForkPoint
   = AtVersion Int
   | AtEpoch Int
   deriving (Show, Eq, Read)
-
-
-
 
 
 -- | For an unknown reason, CLI commands are a lot slower on Windows than on Linux and
@@ -77,6 +81,7 @@ startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
 cardanoTestnet :: CardanoTestnetOptions -> Conf -> H.Integration TestnetRuntime
 cardanoTestnet testnetOptions Conf {tempAbsPath} = do
+  testnetMinimumConfigurationRequirements testnetOptions
   void $ H.note OS.os
   currentTime <- H.noteShowIO DTC.getCurrentTime
   let tempAbsPath' = unTmpAbsPath tempAbsPath

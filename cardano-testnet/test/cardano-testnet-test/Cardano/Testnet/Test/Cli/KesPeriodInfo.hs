@@ -66,7 +66,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   sbe <- case cardanoEraStyle era of
            ShelleyBasedEra era' -> return era'
 
-  runTime@TestnetRuntime { testnetMagic } <- testnet cTestnetOptions conf
+  runTime@TestnetRuntime { testnetMagic } <- cardanoTestnet cTestnetOptions conf
 
   execConfig <- H.headM (poolSprockets runTime) >>= H.mkExecConfig tempBaseAbsPath
 

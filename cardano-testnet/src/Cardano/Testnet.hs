@@ -4,7 +4,7 @@ module Cardano.Testnet (
   -- * Testnets
 
   -- ** Start a testnet
-  testnet,
+  cardanoTestnet,
 
   -- ** Testnet options
   CardanoTestnetOptions(..),
@@ -35,7 +35,6 @@ module Cardano.Testnet (
   ) where
 
 import           Testnet.Filepath
-import           Testnet.Options
 import           Testnet.Process.Run (procChairman)
 import           Testnet.Property.Utils
 import           Testnet.Runtime
