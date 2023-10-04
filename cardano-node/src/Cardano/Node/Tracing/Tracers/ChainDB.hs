@@ -487,18 +487,18 @@ instance ( LogFormatting (Header blk)
   forMachine dtal (ChainDB.PipeliningEvent ev') =
     forMachine dtal ev'
 
-  asMetrics (ChainDB.SwitchedToAFork _warnings newTipInfo _oldChain newChain) =
+  asMetrics (ChainDB.SwitchedToAFork _warnings selChangedInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
-          chainInformation newTipInfo newChain 0
+          chainInformation selChangedInfo newChain 0
     in  [ DoubleM "ChainDB.Density" (fromRational density)
         , IntM    "ChainDB.SlotNum" (fromIntegral slots)
         , IntM    "ChainDB.BlockNum" (fromIntegral blocks)
         , IntM    "ChainDB.SlotInEpoch" (fromIntegral slotInEpoch)
         , IntM    "ChainDB.Epoch" (fromIntegral (unEpochNo epoch))
         ]
-  asMetrics (ChainDB.AddedToCurrentChain _warnings newTipInfo _oldChain newChain) =
+  asMetrics (ChainDB.AddedToCurrentChain _warnings selChangedInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
-          chainInformation newTipInfo newChain 0
+          chainInformation selChangedInfo newChain 0
     in  [ DoubleM "ChainDB.Density" (fromRational density)
         , IntM    "ChainDB.SlotNum" (fromIntegral slots)
         , IntM    "ChainDB.BlockNum" (fromIntegral blocks)
@@ -2013,16 +2013,16 @@ data ChainInformation = ChainInformation
 
 chainInformation
   :: forall blk. HasHeader (Header blk)
-  => ChainDB.NewTipInfo blk
+  => ChainDB.SelectionChangedInfo blk
   -> AF.AnchoredFragment (Header blk)
   -> Int64
   -> ChainInformation
-chainInformation newTipInfo frag blocksUncoupledDelta = ChainInformation
+chainInformation selChangedInfo frag blocksUncoupledDelta = ChainInformation
     { slots = unSlotNo $ fromWithOrigin 0 (AF.headSlot frag)
     , blocks = unBlockNo $ fromWithOrigin (BlockNo 1) (AF.headBlockNo frag)
     , density = fragmentChainDensity frag
-    , epoch = ChainDB.newTipEpoch newTipInfo
-    , slotInEpoch = ChainDB.newTipSlotInEpoch newTipInfo
+    , epoch = ChainDB.newTipEpoch selChangedInfo
+    , slotInEpoch = ChainDB.newTipSlotInEpoch selChangedInfo
     , blocksUncoupledDelta = blocksUncoupledDelta
     }
 

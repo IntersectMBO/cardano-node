@@ -240,7 +240,7 @@ traceNodeStateChainDB _scp tr ev =
         _ -> return ()
     ChainDB.TraceAddBlockEvent ev' ->
       case ev' of
-        ChainDB.AddedToCurrentChain _ (ChainDB.NewTipInfo currentTip ntEpoch sInEpoch _) _ _ -> do
+        ChainDB.AddedToCurrentChain _ (ChainDB.SelectionChangedInfo currentTip ntEpoch sInEpoch _ _ _) _ _ -> do
           -- The slot of the latest block consumed (our progress).
           let RP.RealPoint ourSlotSinceSystemStart _ = currentTip
           -- The slot corresponding to the latest wall-clock time (our target).
