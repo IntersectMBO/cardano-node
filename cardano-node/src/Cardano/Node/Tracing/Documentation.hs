@@ -37,8 +37,7 @@ import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.Diffusion ()
--- import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (ForgeThreadStats,
---                    forgeThreadStats, ForgingStats)
+import           Cardano.Node.Tracing.Tracers.ForgingThreadStats(ForgeThreadStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
@@ -280,13 +279,13 @@ docTracers configFileName outputFileName _ _ _ = do
                   remotePeer
                   (BlockFetch.TraceFetchClientState (Header blk))))
 
-    -- TODO Yup
-    -- blockFetchClientMetricsTr <- do
-    --         foldMTraceM calculateBlockFetchClientMetrics initialClientMetrics
-    --             (metricsFormatter ""
-    --               (mkMetricsTracer mbTrEKG))
-    -- clientMetricsDoc <- documentTracer (blockFetchClientMetricsTr ::
-    --    Trace IO ClientMetrics)
+    blockFetchClientMetricsTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["BlockFetch", "Client"]
+
+    configureTracers configReflection trConfig [blockFetchClientMetricsTr]
+    blockFetchClientMetricsDoc <- documentTracer (blockFetchClientMetricsTr ::
+        Trace IO ClientMetrics)
 
     blockFetchServerTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -341,14 +340,13 @@ docTracers configFileName outputFileName _ _ _ = do
     forgeTrDoc <- documentTracer (forgeTr ::
       Trace IO (ForgeTracerType blk))
 
-    -- TODO YUP
-    -- forgeTr' <-  mkCardanoTracer'
-    --             trBase trForward mbTrEKG
-    --             ["Forge", "ThreadStats"]
-    --             forgeThreadStats
-    -- configureTracers configReflection trConfig [forgeTr']
-    -- forgeThreadStatsTrDoc <- documentTracer' forgeThreadStats (forgeTr' ::
-    --   Trace IO (ForgeTracerType blk))
+
+    forgeTr' <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Forge", "ThreadStats"]
+    configureTracers configReflection trConfig [forgeTr']
+    forgeThreadStatsTrDoc <- documentTracer (forgeTr' ::
+      Trace IO ForgeThreadStats)
 
     blockchainTimeTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -661,6 +659,14 @@ docTracers configFileName outputFileName _ _ _ = do
     dtAcceptPolicyTrDoc <- documentTracer (dtAcceptPolicyTr ::
       Trace IO NtN.AcceptConnectionsPolicyTrace)
 
+    internalTr <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Reflection"]
+    configureTracers configReflection trConfig [internalTr]
+    internalTrDoc <- documentTracer (internalTr ::
+      Trace IO TraceDispatcherMessage)
+
+
     let bl =   nodeInfoDpDoc
             <> nodeStartupInfoDpDoc
             <> stateTrDoc
@@ -676,6 +682,7 @@ docTracers configFileName outputFileName _ _ _ = do
             <> chainSyncServerBlockTrDoc
             <> blockFetchDecisionTrDoc
             <> blockFetchClientTrDoc
+            <> blockFetchClientMetricsDoc
             <> blockFetchServerTrDoc
             <> forgeKESInfoTrDoc
             <> txInboundTrDoc
@@ -683,7 +690,7 @@ docTracers configFileName outputFileName _ _ _ = do
             <> localTxSubmissionServerTrDoc
             <> mempoolTrDoc
             <> forgeTrDoc
---            <> forgeThreadStatsTrDoc
+            <> forgeThreadStatsTrDoc
             <> blockchainTimeTrDoc
 -- NodeToClient
             <> keepAliveClientTrDoc
@@ -727,6 +734,8 @@ docTracers configFileName outputFileName _ _ _ = do
             <> dtErrorPolicyTrDoc
             <> dtLocalErrorPolicyTrDoc
             <> dtAcceptPolicyTrDoc
+-- Internal tracer
+            <> internalTrDoc
 
     res <- docuResultsToText bl trConfig
     T.writeFile outputFileName res

@@ -968,31 +968,31 @@ instance MetaTrace (ChainDB.TraceInitChainSelEvent blk) where
 
   severityFor (Namespace _ ["InitalChainSelected"]) _ = Just Info
   severityFor (Namespace _ ["StartedInitChainSelection"]) _ = Just Info
-  severityFor (Namespace out ("InitChainSelValidation" : tl))
+  severityFor (Namespace out ("Validation" : tl))
                             (Just (ChainDB.InitChainSelValidation ev')) =
     severityFor (Namespace out tl) (Just ev')
-  severityFor (Namespace out ("InitChainSelValidation" : tl)) Nothing =
+  severityFor (Namespace out ("Validation" : tl)) Nothing =
     severityFor (Namespace out tl ::
       Namespace (ChainDB.TraceValidationEvent blk)) Nothing
   severityFor _ _ = Nothing
 
-  privacyFor (Namespace out ("InitChainSelValidation" : tl))
+  privacyFor (Namespace out ("Validation" : tl))
               (Just (ChainDB.InitChainSelValidation ev')) =
     privacyFor (Namespace out tl) (Just ev')
-  privacyFor (Namespace out ("InitChainSelValidation" : tl)) Nothing =
+  privacyFor (Namespace out ("Validation" : tl)) Nothing =
     privacyFor (Namespace out tl ::
       Namespace (ChainDB.TraceValidationEvent blk)) Nothing
   privacyFor _ _ = Just Public
 
-  detailsFor (Namespace out ("InitChainSelValidation" : tl))
+  detailsFor (Namespace out ("Validation" : tl))
               (Just (ChainDB.InitChainSelValidation ev')) =
     detailsFor (Namespace out tl) (Just ev')
-  detailsFor (Namespace out ("InitChainSelValidation" : tl)) Nothing =
+  detailsFor (Namespace out ("Validation" : tl)) Nothing =
     detailsFor (Namespace out tl ::
       Namespace (ChainDB.TraceValidationEvent blk)) Nothing
   detailsFor _ _ = Just DNormal
 
-  metricsDocFor (Namespace out ("InitChainSelValidation" : tl)) =
+  metricsDocFor (Namespace out ("Validation" : tl)) =
     metricsDocFor (Namespace out tl :: Namespace (ChainDB.TraceValidationEvent blk))
   metricsDocFor _ = []
 
@@ -1002,7 +1002,7 @@ instance MetaTrace (ChainDB.TraceInitChainSelEvent blk) where
     [ "A garbage collection for the given 'SlotNo' was scheduled to happen"
     , " at the given time."
     ]
-  documentFor (Namespace o ("InitChainSelValidation" : tl)) =
+  documentFor (Namespace o ("Validation" : tl)) =
      documentFor (Namespace o tl :: Namespace (ChainDB.TraceValidationEvent blk))
   documentFor _ = Nothing
 
