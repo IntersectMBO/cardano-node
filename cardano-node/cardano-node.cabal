@@ -196,7 +196,7 @@ library
                       , strict-stm
                       , text >= 2.0
                       , time
-                      , trace-dispatcher ^>= 2.2
+                      , trace-dispatcher ^>= 2.3
                       , trace-forward ^>= 2.2
                       , trace-resources ^>= 0.2.0.2
                       , tracer-transformers
