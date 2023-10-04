@@ -33,8 +33,8 @@ import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch (..),
                    OneEraCannotForge (..), OneEraEnvelopeErr (..), OneEraForgeStateInfo (..),
                    OneEraForgeStateUpdateError (..), OneEraLedgerError (..),
-                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraValidationErr (..),
-                   mkEraMismatch)
+                   OneEraLedgerUpdate (..), OneEraLedgerWarning (..), OneEraSelectView (..),
+                   OneEraValidationErr (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Ouroboros.Consensus.HardFork.History
                    (EraParams (eraEpochSize, eraSafeZone, eraSlotLength))
@@ -43,7 +43,7 @@ import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerUpdate, LedgerWarning)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
-import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
+import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
@@ -346,3 +346,21 @@ instance All (LogFormatting `Compose` WrapForgeStateUpdateError) xs => LogFormat
 
 instance LogFormatting (ForgeStateUpdateError blk) => LogFormatting (WrapForgeStateUpdateError blk) where
     forMachine dtal = forMachine dtal . unwrapForgeStateUpdateError
+
+--
+-- instances for HardForkSelectView
+--
+
+instance All (LogFormatting `Compose` WrapSelectView) xs => LogFormatting (HardForkSelectView xs) where
+    -- elide BlockNo as it is already contained in every per-era SelectView
+    forMachine dtal = forMachine dtal . dropBlockNo . getHardForkSelectView
+
+instance All (LogFormatting `Compose` WrapSelectView) xs => LogFormatting (OneEraSelectView xs) where
+    forMachine dtal =
+          hcollapse
+        . hcmap (Proxy @(LogFormatting `Compose` WrapSelectView))
+                (K . forMachine dtal)
+        . getOneEraSelectView
+
+instance LogFormatting (SelectView (BlockProtocol blk)) => LogFormatting (WrapSelectView blk) where
+    forMachine dtal = forMachine dtal . unwrapSelectView
