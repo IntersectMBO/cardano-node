@@ -79,7 +79,6 @@ library
                         Testnet.Components.SPO
                         Testnet.Defaults
                         Testnet.Filepath
-                        Testnet.Options
                         Testnet.Property.Assert
                         Testnet.Property.Checks
                         Testnet.Property.Run
