@@ -12,17 +12,17 @@ RUN git clone https://github.com/input-output-hk/libsodium && cd libsodium && gi
 ENV LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" \
     PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
 RUN echo "Building tags/$VERSION..." 
+RUN sed -i 's/HSOpenSSL >=/HsOpenSSL ==/g' cardano-node/cabal.project
 RUN touch cabal.project.local
 COPY . .
-RUN  cd cardano-node \
-    && cabal update \
+RUN cabal update \
     && cabal configure --with-compiler=ghc-8.10.7 \
     && echo "package cardano-crypto-praos" >>  cabal.project.local \
     && echo "  flags: -external-libsodium-vrf" >>  cabal.project.local \
     && cabal build all \
     && mkdir -p /root/.local/bin/ \
-    && cp -p dist-newstyle/build/x86_64-linux/ghc-8.10.7/cardano-node-*/x/cardano-node/build/cardano-node/cardano-node /root/.local/bin/ \
-    && cp -p dist-newstyle/build/x86_64-linux/ghc-8.10.7/cardano-cli-*/x/cardano-cli/build/cardano-cli/cardano-cli /root/.local/bin/
+    && cp -p cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.10.7/cardano-node-*/x/cardano-node/build/cardano-node/cardano-node /root/.local/bin/ \
+    && cp -p cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.10.7/cardano-cli-*/x/cardano-cli/build/cardano-cli/cardano-cli /root/.local/bin/
 
 FROM debian:stable-slim
 COPY --from=build /root/.local/bin/ /bin/
