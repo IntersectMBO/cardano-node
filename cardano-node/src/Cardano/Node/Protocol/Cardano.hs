@@ -32,8 +32,8 @@ import           Cardano.Api
 import           Cardano.Api.Byron as Byron
 import qualified Cardano.Chain.Update as Update
 
+import qualified Cardano.Ledger.Api.Transition as Ledger
 import           Cardano.Ledger.BaseTypes (natVersion)
-import           Cardano.Ledger.Shelley.Translation (emptyFromByronTranslationContext)
 import qualified Cardano.Node.Protocol.Alonzo as Alonzo
 import qualified Cardano.Node.Protocol.Byron as Byron
 import qualified Cardano.Node.Protocol.Conway as Conway
@@ -169,7 +169,6 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
         }
       , paramsShelleyBased =
         Consensus.ProtocolParamsShelleyBased {
-          shelleyBasedGenesis           = shelleyGenesis,
           shelleyBasedInitialNonce      = Shelley.genesisHashToPraosNonce
                                             shelleyGenesisHash,
           shelleyBasedLeaderCredentials = shelleyLeaderCredentials
@@ -250,10 +249,14 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
         -- The remaining arguments specify the parameters needed to transition between two eras
-      , transitionParamsByronToShelley =
-        Consensus.ProtocolTransitionParamsByronToShelley {
-          transitionByronToShelleyTranslationContext = emptyFromByronTranslationContext,
-          transitionByronToShelleyTrigger =
+      , ledgerTransitionConfig =
+          Ledger.mkLatestTransitionConfig
+            shelleyGenesis
+            alonzoGenesis
+            conwayGenesis
+      , hardForkTriggers =
+        Consensus.CardanoHardForkTriggers' {
+          triggerHardForkShelley =
             -- What will trigger the Byron -> Shelley hard fork?
             case npcTestShelleyHardForkAtEpoch of
 
@@ -280,53 +283,31 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                -- Alternatively, for testing we can transition at a specific epoch.
                --
                Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
-        }
-      , transitionParamsShelleyToAllegra =
-        Consensus.ProtocolTransitionParamsIntraShelley {
-          transitionIntraShelleyTranslationContext = (),
-          transitionIntraShelleyTrigger =
+        , triggerHardForkAllegra =
             case npcTestAllegraHardForkAtEpoch of
                Nothing -> Consensus.TriggerHardForkAtVersion
                             (maybe 3 fromIntegral npcTestAllegraHardForkAtVersion)
                Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
-        }
-      , transitionParamsAllegraToMary =
-        Consensus.ProtocolTransitionParamsIntraShelley {
-          transitionIntraShelleyTranslationContext = (),
-          transitionIntraShelleyTrigger =
+        , triggerHardForkMary =
             case npcTestMaryHardForkAtEpoch of
                Nothing -> Consensus.TriggerHardForkAtVersion
                             (maybe 4 fromIntegral npcTestMaryHardForkAtVersion)
                Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
-        }
-      , transitionParamsMaryToAlonzo =
-        Consensus.ProtocolTransitionParamsIntraShelley {
-          transitionIntraShelleyTranslationContext = alonzoGenesis,
-          transitionIntraShelleyTrigger =
+        , triggerHardForkAlonzo =
             case npcTestAlonzoHardForkAtEpoch of
                Nothing -> Consensus.TriggerHardForkAtVersion
                             (maybe 5 fromIntegral npcTestAlonzoHardForkAtVersion)
                Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
-        }
-      , transitionParamsAlonzoToBabbage =
-        Consensus.ProtocolTransitionParamsIntraShelley {
-          transitionIntraShelleyTranslationContext = (),
-          transitionIntraShelleyTrigger =
+        , triggerHardForkBabbage =
              case npcTestBabbageHardForkAtEpoch of
                 Nothing -> Consensus.TriggerHardForkAtVersion
                              (maybe 7 fromIntegral npcTestBabbageHardForkAtVersion)
                 Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
-
-        }
-      , transitionParamsBabbageToConway =
-        Consensus.ProtocolTransitionParamsIntraShelley {
-          transitionIntraShelleyTranslationContext = conwayGenesis,
-          transitionIntraShelleyTrigger =
+        , triggerHardForkConway =
              case npcTestConwayHardForkAtEpoch of
                 Nothing -> Consensus.TriggerHardForkAtVersion
                              (maybe 9 fromIntegral npcTestConwayHardForkAtVersion)
                 Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
-
         }
       }
 

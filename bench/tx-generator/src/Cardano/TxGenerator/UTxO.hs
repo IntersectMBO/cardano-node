@@ -65,7 +65,7 @@ mkUTxOScript networkId (script, txOutDatum) witness value
                        (PaymentCredentialByScript $ hashScript script')
                        NoStakeAddress
 
-  mkTxOut v = case scriptDataSupportedInEra (cardanoEra @era) of
+  mkTxOut v = case forEraMaybeEon (cardanoEra @era) of
     Nothing -> error "mkUtxOScript: scriptDataSupportedInEra==Nothing"
     Just tag -> TxOut
                   plutusScriptAddr

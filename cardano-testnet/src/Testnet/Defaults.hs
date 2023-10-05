@@ -123,7 +123,7 @@ defaultAlonzoGenesis = do
 
 
 defaultConwayGenesis :: ConwayGenesis StandardCrypto
-defaultConwayGenesis = ConwayGenesis { cgUpgradePParams = DefaultClass.def }
+defaultConwayGenesis = DefaultClass.def
 
 
 

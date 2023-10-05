@@ -78,6 +78,7 @@ import           Cardano.Node.Tracing.Render (renderMissingRedeemers, renderScri
                    renderScriptIntegrityHash, renderScriptPurpose)
 import           Data.Aeson (Value (..), object)
 import qualified Data.Aeson as Aeson
+import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
@@ -333,6 +334,11 @@ instance
   toObject verb (Conway.ConwayCertsFailure f) = toObject verb f
   toObject verb (Conway.ConwayGovFailure f) = toObject verb f
   toObject verb (Conway.ConwayWdrlNotDelegatedToDRep f) = toObject verb f
+  toObject _    (Conway.ConwayTreasuryValueMismatch actual inTx) =
+    mconcat [ "kind" .= String "ConwayTreasuryValueMismatch"
+            , "actual" .= actual
+            , "submittedInTx" .= inTx
+            ]
 
 
 instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) where
@@ -354,15 +360,22 @@ instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) whe
             , "rewardAccounts" .= toJSON rewardAcnts
             , "expectedNetworkId" .= toJSON network
             ]
-  toObject _ (Conway.NewCommitteeSizeTooSmall committeeSize minCommitteeSize) =
-    mconcat [ "kind" .= String "NewCommitteeSizeTooSmall"
-            , "committeeSize" .= committeeSize
-            , "minCommitteeSize" .= minCommitteeSize
-            ]
   toObject _ (Conway.ProposalDepositIncorrect deposit expectedDeposit) =
     mconcat [ "kind" .= String "ProposalDepositIncorrect"
             , "deposit" .= deposit
             , "expectedDeposit" .= expectedDeposit
+            ]
+  toObject _ (Conway.DisallowedVoters govActionIdToVoter) =
+    mconcat [ "kind" .= String "DisallowedVoters"
+            , "govActionIdToVoter" .= Map.toList govActionIdToVoter
+            ]
+  toObject _ (Conway.ConflictingCommitteeUpdate creds) =
+    mconcat [ "kind" .= String "ConflictingCommitteeUpdate"
+            , "credentials" .= creds
+            ]
+  toObject _ (Conway.ExpirationEpochTooSmall credsToEpoch) =
+    mconcat [ "kind" .= String "ExpirationEpochTooSmall"
+            , "credentialsToEpoch" .= credsToEpoch
             ]
 
 instance
