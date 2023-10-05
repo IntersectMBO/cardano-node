@@ -47,7 +47,7 @@ library
                       , cardano-ledger-shelley
                       , cardano-node
                       , containers
-                      , data-default-class
+                      , data-default-class 
                       , directory
                       , exceptions
                       , filepath
@@ -56,7 +56,6 @@ library
                       , mtl
                       , optparse-applicative-fork
                       , ouroboros-network ^>= 0.9.1
-                      , ouroboros-network-api
                       , process
                       , resourcet
                       , safe-exceptions
@@ -74,14 +73,16 @@ library
   hs-source-dirs:       src
   exposed-modules:      Cardano.Testnet
                         Parsers.Run
-                        Testnet.Start.Babbage
                         Testnet.Start.Byron
-                        Testnet.Start.Conway
+                        Testnet.Start.Types
                         Testnet.Conf
+                        Testnet.Components.Configuration
+                        Testnet.Components.SPO
                         Testnet.Defaults
                         Testnet.Filepath
                         Testnet.Options
                         Testnet.Property.Assert
+                        Testnet.Property.Checks
                         Testnet.Property.Run
                         Testnet.Property.Utils
                         Testnet.Process.Cli
@@ -89,15 +90,10 @@ library
                         Testnet.Runtime
                         Testnet.Topology
 
-  other-modules:        Parsers.Babbage
-                        Parsers.Byron
-                        Parsers.Cardano
-                        Parsers.Conway
+  other-modules:        Parsers.Cardano
                         Parsers.Help
-                        Parsers.Shelley
                         Parsers.Version
                         Testnet.Start.Cardano
-                        Testnet.Start.Shelley
                         Paths_cardano_testnet
 
   autogen-modules:      Paths_cardano_testnet
@@ -134,7 +130,7 @@ test-suite cardano-testnet-golden
   build-depends:        aeson
                       , aeson-pretty
                       , bytestring
-                      , cardano-api
+                      , cardano-api 
                       , cardano-crypto-class
                       , cardano-testnet
                       , exceptions

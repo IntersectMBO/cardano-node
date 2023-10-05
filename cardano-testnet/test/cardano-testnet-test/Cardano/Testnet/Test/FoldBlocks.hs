@@ -2,13 +2,19 @@
 
 module Cardano.Testnet.Test.FoldBlocks where
 
+import           Cardano.Api hiding (cardanoEra)
+import qualified Cardano.Api as C
+
+import           Cardano.Testnet as TN
+
+import           Prelude
+
 import qualified Control.Concurrent as IO
 import           Control.Concurrent.Async (async, link)
 import           Control.Exception (Exception, throw)
 import           Control.Monad (forever)
 import           Control.Monad.Trans.Except (runExceptT)
 import qualified Data.Text as TS
-import           Prelude
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
@@ -16,10 +22,6 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as HE
 import qualified Hedgehog.Extras.Test as HE
 import qualified Hedgehog.Extras.Test.Base as H
-
-import           Cardano.Api (File (..))
-import qualified Cardano.Api as C
-import           Cardano.Testnet as TN
 
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
@@ -40,18 +42,19 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
   conf <- HE.noteShowM $ TN.mkConf (tempAbsBasePath' <> "/")
 
   let tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
-      options = CardanoOnlyTestnetOptions $ cardanoDefaultTestnetOptions
-        -- NB! The `activeSlotsCoeff` value is very important for
-        -- chain extension for the two-node/one-pool testnet that
-        -- `defaultTestnetOptions` define. The default 0.2 often fails
-        -- to extend the chain in a reasonable time (< 90s, e.g as the
-        -- deadline is defined in Testnet.Start.Cardano).
-        { cardanoActiveSlotsCoeff = 0.9 }
+      era = BabbageEra
+      options = cardanoDefaultTestnetOptions
+                          { cardanoNodes = cardanoDefaultTestnetNodeOptions
+                          , cardanoEpochLength = 1000
+                          , cardanoSlotLength = 0.02
+                          , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+                          }
+
   runtime <- testnet options conf
 
   -- Get socketPath
   socketPathAbs <- do
-    socketPath' <- HE.sprocketArgumentName <$> HE.headM (nodeSprocket <$> bftNodes runtime)
+    socketPath' <- HE.sprocketArgumentName <$> HE.headM (nodeSprocket . poolRuntime <$>  poolNodes runtime)
     H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
 
   configFile <- H.noteShow $ tempAbsPath' </> "configuration.yaml"

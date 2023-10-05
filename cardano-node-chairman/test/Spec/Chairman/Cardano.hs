@@ -4,11 +4,11 @@
 
 module Spec.Chairman.Cardano where
 
-import           Spec.Chairman.Chairman (chairmanOver)
+import qualified Cardano.Testnet as H
 
 import qualified Hedgehog as H
 
-import qualified Cardano.Testnet as H
+import           Spec.Chairman.Chairman (chairmanOver)
 import qualified Testnet.Property.Utils as H
 
 -- TODO: Conway broken in conway
@@ -16,6 +16,6 @@ hprop_chairman :: H.Property
 hprop_chairman = H.integrationRetryWorkspace 2 "cardano-chairman" $ \tempAbsPath' -> do
   conf <- H.mkConf tempAbsPath'
 
-  allNodes <- fmap H.nodeName . H.allNodes <$> H.testnet (H.CardanoOnlyTestnetOptions H.cardanoDefaultTestnetOptions) conf
+  allNodes <- fmap H.nodeName . H.allNodes <$> H.testnet H.cardanoDefaultTestnetOptions conf
 
   chairmanOver 120 50 conf allNodes

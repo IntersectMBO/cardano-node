@@ -13,21 +13,21 @@ import           Data.Maybe
 import           Data.Semigroup
 import           GHC.Enum
 import           Options.Applicative
+import qualified Options.Applicative as OA
 import           System.IO (IO)
-import           Testnet.Cardano
-import           Testnet.Run (runTestnet)
 import           Text.Read
 import           Text.Show
 
-import qualified Options.Applicative as OA
+import           Testnet.Cardano
+import           Testnet.Run (runTestnet)
 
 data CardanoOptions = CardanoOptions
   { maybeTestnetMagic :: Maybe Int
-  , testnetOptions :: TestnetOptions
+  , testnetOptions :: CardanoTestnetOptions
   } deriving (Eq, Show)
 
-optsTestnet :: Parser TestnetOptions
-optsTestnet = TestnetOptions
+optsTestnet :: Parser CardanoTestnetOptions
+optsTestnet = CardanoTestnetOptions
   <$> OA.option auto
       (   OA.long "num-bft-nodes"
       <>  OA.help "Number of BFT nodes"

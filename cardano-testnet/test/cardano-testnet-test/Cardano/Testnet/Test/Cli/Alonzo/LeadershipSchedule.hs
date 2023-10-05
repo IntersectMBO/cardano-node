@@ -14,6 +14,16 @@ module Cardano.Testnet.Test.Cli.Alonzo.LeadershipSchedule
   ( hprop_leadershipSchedule
   ) where
 
+import           Cardano.Api (AlonzoEra, DelegationsAndRewards, SerialiseAddress (serialiseAddress),
+                   UTxO (UTxO), mergeDelegsAndRewards)
+import qualified Cardano.Api as Api
+import           Cardano.Api.Shelley (PoolId)
+
+import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (mEpoch))
+import           Cardano.Testnet
+
+import           Prelude
+
 import           Control.Monad (void)
 import qualified Data.Aeson.Types as J
 import           Data.List ((\\))
@@ -25,24 +35,16 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Time.Clock as DTC
 import           GHC.Stack (callStack)
+import           System.FilePath ((</>))
+import qualified System.Info as SYS
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
-import           Prelude
-import           System.FilePath ((</>))
-import qualified System.Info as SYS
+
 import qualified Testnet.Process.Run as H
-
-import           Cardano.Api (AlonzoEra, DelegationsAndRewards, SerialiseAddress (serialiseAddress),
-                   UTxO (UTxO), mergeDelegsAndRewards)
-import qualified Cardano.Api as Api
-import           Cardano.Api.Shelley (PoolId)
-import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (mEpoch))
-
-import           Cardano.Testnet
 import           Testnet.Process.Run
 import           Testnet.Property.Assert
 import           Testnet.Property.Utils
@@ -55,7 +57,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
   let
     tempAbsPath' = unTmpAbsPath tempAbsPath
     tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-    fastTestnetOptions = CardanoOnlyTestnetOptions cardanoDefaultTestnetOptions
+    fastTestnetOptions = cardanoDefaultTestnetOptions
       { cardanoEpochLength = 500
       , cardanoSlotLength = 0.01
       , cardanoActiveSlotsCoeff = 0.1
@@ -68,7 +70,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
 
   poolNode1 <- H.headM poolNodes
 
-  execConfig <- H.headM (bftSprockets tr) >>= H.mkExecConfig tempBaseAbsPath
+  execConfig <- H.headM (poolSprockets tr) >>= H.mkExecConfig tempBaseAbsPath
 
   -- First we note all the relevant files
   work <- H.note tempAbsPath'

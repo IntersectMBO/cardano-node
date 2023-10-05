@@ -15,6 +15,11 @@ module Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
   ( hprop_stakeSnapshot
   ) where
 
+import           Cardano.Api
+
+import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (..))
+import           Cardano.Testnet
+
 import           Prelude
 
 import           Control.Monad (void)
@@ -28,13 +33,11 @@ import           GHC.Stack (callStack)
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
-import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (..))
-import           Cardano.Testnet
-
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
+
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run
 import qualified Testnet.Property.Utils as H
@@ -49,14 +52,18 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \
 
   let
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    testnetOptions = BabbageOnlyTestnetOptions $ babbageDefaultTestnetOptions
-      { babbageNodeLoggingFormat = NodeLoggingFormatAsJson
-      }
+    era = BabbageEra
+    options = cardanoDefaultTestnetOptions
+                        { cardanoNodes = cardanoDefaultTestnetNodeOptions
+                        , cardanoEpochLength = 1000
+                        , cardanoSlotLength = 0.02
+                        , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+                        }
 
   TestnetRuntime
     { testnetMagic
     , poolNodes
-    } <- testnet testnetOptions conf
+    } <- testnet options conf
 
   poolNode1 <- H.headM poolNodes
 

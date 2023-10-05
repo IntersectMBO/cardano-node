@@ -26,18 +26,21 @@ module Testnet.Process.Cli
   , cliByronSigningKeyAddress
   ) where
 
+import           Cardano.Api (ByronAddr, ByronKeyLegacy, PaymentKey, StakeKey, bounded)
+import           Cardano.Api.Shelley (KesKey, StakePoolKey, VrfKey)
+
+import           Control.Monad.Catch (MonadCatch)
+import           Control.Monad.IO.Class (MonadIO)
+import           GHC.Stack (HasCallStack)
+import qualified GHC.Stack as GHC
 import           Options.Applicative hiding (command)
 import qualified Options.Applicative as Opt
 import           System.FilePath.Posix
 
+import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H (writeFile)
 
-import           Cardano.Api (ByronAddr, ByronKeyLegacy, PaymentKey, StakeKey, bounded)
-import           Cardano.Api.Shelley (KesKey, StakePoolKey, VrfKey)
-
-import           GHC.Stack (HasCallStack)
-import qualified GHC.Stack as GHC
 import           Testnet.Process.Run
 
 data KeyNames = KeyNames
@@ -48,40 +51,40 @@ data KeyNames = KeyNames
 type KeyGen a = (File (VKey a), File (SKey a))
 
 cliAddressKeyGen :: ()
-  => HasCallStack
+  => (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => TmpDir
   -> KeyNames
-  -> H.Integration (KeyGen PaymentKey)
+  -> m (KeyGen PaymentKey)
 cliAddressKeyGen = GHC.withFrozenCallStack $ shelleyKeyGen "address" "key-gen"
 
 cliStakeAddressKeyGen :: ()
-  => HasCallStack
+  => (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => TmpDir
   -> KeyNames
-  -> H.Integration (KeyGen StakeKey)
+  -> m (KeyGen StakeKey)
 cliStakeAddressKeyGen = GHC.withFrozenCallStack $ shelleyKeyGen "stake-address" "key-gen"
 
 cliNodeKeyGenVrf :: ()
-  => HasCallStack
+  => (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => TmpDir
   -> KeyNames
-  -> H.Integration (KeyGen VrfKey)
+  -> m (KeyGen VrfKey)
 cliNodeKeyGenVrf = GHC.withFrozenCallStack $ shelleyKeyGen "node" "key-gen-VRF"
 
 cliNodeKeyGenKes :: ()
-  => HasCallStack
+  => (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => TmpDir
   -> KeyNames
-  -> H.Integration (KeyGen KesKey)
+  -> m (KeyGen KesKey)
 cliNodeKeyGenKes = GHC.withFrozenCallStack $ shelleyKeyGen "node" "key-gen-KES"
 
 shelleyKeyGen :: ()
-  => HasCallStack
+  => (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => String
   -> String
   -> TmpDir
   -> KeyNames
-  -> H.Integration (KeyGen x)
+  -> m (KeyGen x)
 shelleyKeyGen command subCommand tmpDir keyNames =
   GHC.withFrozenCallStack $ do
     let
