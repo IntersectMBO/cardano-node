@@ -4,6 +4,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
 
@@ -39,7 +40,7 @@ import           System.FilePath (takeDirectory, (</>))
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
-import           Cardano.Node.Configuration.NodeAddress (SocketPath)
+import           Cardano.Node.Configuration.NodeAddress (SocketPath, PortNumber)
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Types (Protocol (..))
@@ -148,6 +149,9 @@ data NodeConfiguration
 
          -- Enable Peer Sharing
        , ncPeerSharing :: PeerSharing
+
+         -- Ledger Events
+       , ncLedgerEventHandlerPort :: !(Maybe PortNumber)
        } deriving (Eq, Show)
 
 
@@ -208,6 +212,9 @@ data PartialNodeConfiguration
 
          -- Peer Sharing
        , pncPeerSharing :: !(Last PeerSharing)
+
+         -- Ledger Events
+       , pncLedgerEventHandlerPort :: !(Last PortNumber)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -304,6 +311,8 @@ instance FromJSON PartialNodeConfiguration where
       -- DISABLED BY DEFAULT
       pncPeerSharing <- Last <$> v .:? "PeerSharing" .!= Just NoPeerSharing
 
+      pncLedgerEventHandlerPort <- Last . fmap (fromIntegral @Int) <$> v .:? "LedgerEventHandler"
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
@@ -336,6 +345,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncTargetNumberOfActiveBigLedgerPeers
            , pncEnableP2P
            , pncPeerSharing
+           , pncLedgerEventHandlerPort
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -510,6 +520,7 @@ defaultPartialNodeConfiguration =
     , pncTargetNumberOfActiveBigLedgerPeers      = Last (Just 5)
     , pncEnableP2P                      = Last (Just DisabledP2PMode)
     , pncPeerSharing                    = Last (Just NoPeerSharing)
+    , pncLedgerEventHandlerPort         = Last Nothing
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -614,6 +625,7 @@ makeNodeConfiguration pnc = do
                  EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
                  DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
              , ncPeerSharing
+             , ncLedgerEventHandlerPort = getLast $ pncLedgerEventHandlerPort pnc
              }
 
 ncProtocol :: NodeConfiguration -> Protocol

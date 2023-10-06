@@ -68,6 +68,7 @@ library
                         Cardano.Node.Configuration.TopologyP2P
                         Cardano.Node.Handlers.Shutdown
                         Cardano.Node.Handlers.TopLevel
+                        Cardano.Node.LedgerEvent
                         Cardano.Node.Orphans
                         Cardano.Node.Parsers
                         Cardano.Node.Pretty
@@ -145,6 +146,7 @@ library
                       , cardano-ledger-allegra
                       , cardano-ledger-api
                       , cardano-ledger-babbage
+                      , cardano-ledger-binary
                       , cardano-ledger-byron
                       , cardano-ledger-conway
                       , cardano-ledger-core
@@ -190,6 +192,7 @@ library
                       , safe-exceptions
                       , scientific
                       , si-timers
+                      , small-steps
                       , sop-core
                       , stm
                       , strict-sop-core
@@ -237,11 +240,14 @@ test-suite cardano-node-test
   build-depends:        base
                       , aeson
                       , bytestring
+                      , base16-bytestring
                       , cardano-crypto-class
                       , cardano-api
                       , cardano-ledger-core
                       , cardano-node
                       , cardano-slotting
+                      , cddl
+                      , containers
                       , directory
                       , filepath
                       , hedgehog
@@ -261,10 +267,13 @@ test-suite cardano-node-test
                       , vector
                       , yaml
 
+  extra-libraries:      cddl
+
   other-modules:        Test.Cardano.Config.Mainnet
                         Test.Cardano.Node.FilePermissions
                         Test.Cardano.Node.Gen
                         Test.Cardano.Node.Json
+                        Test.Cardano.Node.LedgerEvent
                         Test.Cardano.Node.POM
                         Test.Cardano.Tracing.NewTracing.Consistency
                         Test.Cardano.Tracing.OrphanInstances.HardFork

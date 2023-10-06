@@ -21,7 +21,7 @@ import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
 import           Cardano.Node.Queries (ConvertTxId)
 import           Cardano.Node.Tracing.Render (renderHeaderHash, renderTxIdForDetails)
 
-import           Ouroboros.Consensus.Block (ConvertRawHash, GetHeader, StandardHash, getHeader)
+import           Ouroboros.Consensus.Block (ConvertRawHash, StandardHash, getHeader)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxId, HasTxs,
                    LedgerSupportsMempool, extractTxs, txId)
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
@@ -36,7 +36,6 @@ import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 --------------------------------------------------------------------------------
 
 instance ( ConvertTxId blk
-         , GetHeader blk
          , HasTxId (GenTx blk)
          , SerialiseNodeToNodeConstraints blk
          , HasTxs blk

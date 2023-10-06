@@ -12,6 +12,7 @@ import qualified Test.Cardano.Config.Mainnet
 import qualified Test.Cardano.Node.FilePermissions
 #endif
 import qualified Test.Cardano.Node.Json
+import qualified Test.Cardano.Node.LedgerEvent
 import qualified Test.Cardano.Node.POM
 import qualified Test.Cardano.Tracing.OrphanInstances.HardFork
 import qualified Test.Cardano.Tracing.NewTracing.Consistency
@@ -33,6 +34,7 @@ main = do
 #endif
       [ Test.Cardano.Config.Mainnet.tests
       , Test.Cardano.Node.Json.tests
+      , Test.Cardano.Node.LedgerEvent.tests
       , Test.Cardano.Node.POM.tests
       , Test.Cardano.Tracing.OrphanInstances.HardFork.tests
       , Test.Cardano.Tracing.NewTracing.Consistency.tests

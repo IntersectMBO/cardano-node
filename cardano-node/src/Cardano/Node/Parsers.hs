@@ -79,6 +79,9 @@ nodeRunParser = do
 
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
 
+  -- Ledger Events
+  ledgerEventHandlerPort <- lastOption parseLedgerEventHandlerPort
+
   pure $ PartialNodeConfiguration
            { pncSocketConfig =
                Last . Just $ SocketConfig
@@ -124,6 +127,7 @@ nodeRunParser = do
            , pncTargetNumberOfActiveBigLedgerPeers = mempty
            , pncEnableP2P = mempty
            , pncPeerSharing = mempty
+           , pncLedgerEventHandlerPort = ledgerEventHandlerPort
            }
 
 parseSocketPath :: Text -> Parser SocketPath
@@ -133,6 +137,16 @@ parseSocketPath helpMessage =
     , help (toS helpMessage)
     , completer (bashCompleter "file")
     , metavar "FILEPATH"
+    ]
+
+parseLedgerEventHandlerPort :: Parser PortNumber
+parseLedgerEventHandlerPort =
+  option (fromIntegral @Int <$> auto) $ mconcat
+    [ long "ledger-event-handler"
+    , help "A (TCP) socket to connect to for handling ledger events. Events are \
+           \pushed through the socket as the node receives them. Setting up a \
+           \will also cause the node to await for a client to connect."
+    , metavar "TCP/PORT"
     ]
 
 parseTracerSocketMode :: Parser (SocketPath, ForwarderMode)

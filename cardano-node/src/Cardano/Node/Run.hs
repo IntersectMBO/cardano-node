@@ -38,6 +38,9 @@ import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT, runExceptT)
 import           Control.Monad.Trans.Except.Extra (left)
 import           "contra-tracer" Control.Tracer
+import           Cardano.Ledger.Binary (serialize')
+import           System.IO (withFile, IOMode(..))
+import qualified Data.ByteString as BS
 import           Data.Either (partitionEithers)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -79,6 +82,7 @@ import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), SomeNetworkP2PMode (..),
                    defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP)
+import           Cardano.Node.LedgerEvent (withLedgerEventsServerStream)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.API
 import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
@@ -88,12 +92,18 @@ import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
+import           Ouroboros.Consensus.Ledger.Basics (LedgerEventHandler(..), LedgerState,
+                   discardEvent)
+import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNodeArgs (..),
                    StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraHash(..),
+                   OneEraLedgerEvent(..))
+import           Ouroboros.Consensus.TypeFamilyWrappers (unwrapLedgerEvent)
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
 import qualified Ouroboros.Network.Diffusion.P2P as P2P
@@ -169,9 +179,16 @@ runNode cmdPc = do
               let ProtocolInfo { pInfoConfig } = fst $ Api.protocolInfo @IO runP
               in getNetworkMagic $ Consensus.configBlock pInfoConfig
 
-    case p of
-      SomeConsensusProtocol blockType runP ->
-        handleNodeWithTracers cmdPc nc p networkMagic blockType runP
+    case (p, ncLedgerEventHandlerPort nc) of
+      (SomeConsensusProtocol blockType@Api.CardanoBlockType runP, Just port) ->
+        withLedgerEventsServerStream (fromIntegral port) $ \ledgerEventHandler ->
+          handleNodeWithTracers
+            ledgerEventHandler
+            cmdPc nc p networkMagic blockType runP
+      (SomeConsensusProtocol blockType runP, _noGivenPort) ->
+        handleNodeWithTracers
+          discardEvent
+          cmdPc nc p networkMagic blockType runP
 
 -- | Workaround to ensure that the main thread throws an async exception on
 -- receiving a SIGTERM signal.
@@ -195,14 +212,15 @@ handleNodeWithTracers
   :: ( TraceConstraints blk
      , Api.Protocol IO blk
      )
-  => PartialNodeConfiguration
+  => LedgerEventHandler IO (ExtLedgerState blk) blk
+  -> PartialNodeConfiguration
   -> NodeConfiguration
   -> SomeConsensusProtocol
   -> Api.NetworkMagic
   -> Api.BlockType blk
   -> Api.ProtocolInfoArgs blk
   -> IO ()
-handleNodeWithTracers cmdPc nc p networkMagic blockType runP = do
+handleNodeWithTracers handleLedgerEvent cmdPc nc p networkMagic blockType runP = do
   -- This IORef contains node kernel structure which holds node kernel.
   -- Used for ledger queries and peer connection status.
   nodeKernelData <- mkNodeKernelData
@@ -226,7 +244,7 @@ handleNodeWithTracers cmdPc nc p networkMagic blockType runP = do
           mapM_ (traceWith $ startupTracer tracers) startupInfo
           traceNodeStartupInfo (nodeStartupInfoTracer tracers) startupInfo
 
-          handleSimpleNode blockType runP p2pMode tracers nc
+          handleSimpleNode handleLedgerEvent blockType runP p2pMode tracers nc
             (\nk -> do
                 setNodeKernel nodeKernelData nk
                 traceWith (nodeStateTracer tracers) NodeKernelOnline)
@@ -265,7 +283,7 @@ handleNodeWithTracers cmdPc nc p networkMagic blockType runP = do
 
           -- We ignore peer logging thread if it dies, but it will be killed
           -- when 'handleSimpleNode' terminates.
-          handleSimpleNode blockType runP p2pMode tracers nc
+          handleSimpleNode handleLedgerEvent blockType runP p2pMode tracers nc
             (\nk -> do
                 setNodeKernel nodeKernelData nk
                 traceWith (nodeStateTracer tracers) NodeKernelOnline)
@@ -332,7 +350,8 @@ handlePeersListSimple tr nodeKern = forever $ do
 
 handleSimpleNode
   :: forall blk p2p . Api.Protocol IO blk
-  => Api.BlockType blk
+  => LedgerEventHandler IO (ExtLedgerState blk) blk
+  -> Api.BlockType blk
   -> Api.ProtocolInfoArgs blk
   -> NetworkP2PMode p2p
   -> Tracers RemoteConnectionId LocalConnectionId blk p2p
@@ -342,7 +361,7 @@ handleSimpleNode
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
+handleSimpleNode handleLedgerEvent blockType runP p2pMode tracers nc onKernel = do
   logStartupWarnings
 
   traceWith (startupTracer tracers)
@@ -405,11 +424,12 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
 
   withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $
     let nodeArgs = RunNodeArgs
-          { rnTraceConsensus = consensusTracers tracers
-          , rnTraceNTN       = nodeToNodeTracers tracers
-          , rnTraceNTC       = nodeToClientTracers tracers
-          , rnProtocolInfo   = pInfo
-          , rnNodeKernelHook = \registry nodeKernel -> do
+          { rnTraceConsensus    = consensusTracers tracers
+          , rnTraceNTN          = nodeToNodeTracers tracers
+          , rnTraceNTC          = nodeToClientTracers tracers
+          , rnProtocolInfo      = pInfo
+          , rnHandleLedgerEvent = handleLedgerEvent
+          , rnNodeKernelHook    = \registry nodeKernel -> do
               -- set the initial block forging
               blockForging <- snd (Api.protocolInfo runP)
 
@@ -422,8 +442,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 registry
                 (Node.getChainDB nodeKernel)
               onKernel nodeKernel
-          , rnEnableP2P      = p2pMode
-          , rnPeerSharing    = ncPeerSharing nc
+          , rnEnableP2P         = p2pMode
+          , rnPeerSharing       = ncPeerSharing nc
           }
     in case p2pMode of
       EnabledP2PMode -> do
