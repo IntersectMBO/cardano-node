@@ -1,9 +1,0 @@
-steps:
-  - label: 'Docker Image'
-    command:
-      - ".buildkite/release-docker-push.sh"
-    agents:
-      queue: core-tech
-      system: x86_64-linux
-    soft_fail:
-      - exit_status: '*'
