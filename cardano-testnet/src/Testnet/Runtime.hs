@@ -43,9 +43,11 @@ import           Prelude
 import           Control.Monad
 import           Control.Monad.Error.Class
 import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except
+import           Control.Monad.Trans.Except.Extra
+import           Control.Monad.Trans.Resource
 import qualified Data.Aeson as A
-import qualified Data.List as L
 import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime)
 import           GHC.Generics (Generic)
@@ -58,12 +60,11 @@ import qualified System.Process as IO
 import qualified Hedgehog as H
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
-import qualified Hedgehog.Extras.Test.Process as H
 
+
+import           Control.Exception (IOException)
 import           Testnet.Filepath
-import qualified Testnet.Process.Run as H
+import           Testnet.Process.Run
 import           Testnet.Start.Types
 
 data TestnetRuntime = TestnetRuntime
@@ -172,6 +173,11 @@ readNodeLoggingFormat = \case
 allNodes :: TestnetRuntime -> [NodeRuntime]
 allNodes tr = fmap poolRuntime (poolNodes tr)
 
+data NodeStartFailure
+  = ProcessRelatedFailure ProcessError
+  | ExecutableRelatedFailure ExecutableError
+  | FileRelatedFailure IOException
+
 -- TODO: We probably want a check that this node has the necessary config files to run and
 -- if it doesn't we fail hard.
 -- | Start a node, creating file handles, sockets and temp-dirs.
@@ -184,44 +190,45 @@ startNode
   -- ^ Node port
   -> [String]
   -- ^ The command --socket-path will be added automatically.
-  -> H.Integration NodeRuntime
+  -> ExceptT NodeStartFailure (ResourceT IO) NodeRuntime
 startNode tp@(TmpAbsolutePath _tempAbsPath) node port nodeCmd = GHC.withFrozenCallStack $ do
   let tempBaseAbsPath = makeTmpBaseAbsPath tp
       socketDir = makeSocketDir tp
       logDir = makeLogDir tp
 
-  H.createDirectoryIfMissing_ logDir
-  H.createSubdirectoryIfMissing_ tempBaseAbsPath socketDir
+  --H.createDirectoryIfMissing_ logDir
+  --H.createSubdirectoryIfMissing_ tempBaseAbsPath socketDir
 
-  nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
-  nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
-  sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
+  let nodeStdoutFile = node <> ".stdout.log"
+      nodeStderrFile = node <> ".stderr.log"
+      sprocket = Sprocket tempBaseAbsPath (socketDir </> node)
 
-  hNodeStdout <- H.openFile nodeStdoutFile IO.WriteMode
-  hNodeStderr <- H.openFile nodeStderrFile IO.WriteMode
+  hNodeStdout <- handleIOExceptT FileRelatedFailure $ IO.openFile nodeStdoutFile IO.WriteMode
+  hNodeStderr <- handleIOExceptT FileRelatedFailure $ IO.openFile  nodeStderrFile IO.WriteMode
 
-  H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
+   -- H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
 
   let portString = show port
 
-  createProcessNode
-    <- H.procNode $ mconcat
-                    [ nodeCmd
-                    , [ "--socket-path", IO.sprocketArgumentName sprocket
-                      , "--port", portString
-                      ]
-                    ]
+  nodeProcess
+    <- firstExceptT ExecutableRelatedFailure
+         $ hoistExceptT lift $ procNode $ mconcat
+                       [ nodeCmd
+                       , [ "--socket-path", IO.sprocketArgumentName sprocket
+                         , "--port", portString
+                         ]
+                       ]
 
 
   (Just stdIn, _, _, hProcess, _)
-    <- H.createProcess
-         $ createProcessNode
-            { IO.std_in = IO.CreatePipe, IO.std_out = IO.UseHandle hNodeStdout
-            , IO.std_err = IO.UseHandle hNodeStderr
-            , IO.cwd = Just tempBaseAbsPath
-            }
+    <- firstExceptT ProcessRelatedFailure $ initiateProcess
+          $ nodeProcess
+             { IO.std_in = IO.CreatePipe, IO.std_out = IO.UseHandle hNodeStdout
+             , IO.std_err = IO.UseHandle hNodeStderr
+             , IO.cwd = Just tempBaseAbsPath
+             }
 
-  H.noteShowM_ $ H.getPid hProcess
+ -- H.noteShowM_ $ H.getPid hProcess
 
   -- The node process can fail on startup, e.g while
   -- parsing the configuration yaml file. If we don't fail
@@ -233,3 +240,6 @@ startNode tp@(TmpAbsolutePath _tempAbsPath) node port nodeCmd = GHC.withFrozenCa
   --   H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
 
   return $ NodeRuntime node sprocket stdIn nodeStdoutFile nodeStderrFile hProcess
+
+
+

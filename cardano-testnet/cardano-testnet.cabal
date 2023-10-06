@@ -67,6 +67,7 @@ library
                       , text
                       , time
                       , transformers
+                      , transformers-except
                       , unordered-containers
                       , vector
 

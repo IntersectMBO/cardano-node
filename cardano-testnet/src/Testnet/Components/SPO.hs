@@ -179,7 +179,8 @@ registerSingleSpo
          --   3. FilePath: Stake pool cold verification key
          --   4. FilePath: Stake pool VRF signing key
          --   5. FilePath: Stake pool VRF verification key
-registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') cTestnetOptions execConfig (fundingInput, fundingSigninKey, changeAddr) = GHC.withFrozenCallStack $ do
+registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') cTestnetOptions execConfig
+                  (fundingInput, fundingSigninKey, changeAddr) = GHC.withFrozenCallStack $ do
   let testnetMag = cardanoTestnetMagic cTestnetOptions
       eraFlag= convertToEraFlag $ cardanoNodeEra cTestnetOptions
 

@@ -326,6 +326,9 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
     ]
   let spoNodesWithPortNos = L.zip spoNodes [3001..]
   poolNodes <- forM (L.zip spoNodesWithPortNos poolKeys) $ \((node, port),key) -> do
+    -- TODO: Left off here. You need to transform your ExceptT stack to
+    -- ReaderT IntegrationState (ResourceT IO). Run exceptT, propagate any errors
+    -- via PropertyT Monad. If none then tranform into ReaderT IntegrationState (ResourceT IO)
     runtime <- startNode (TmpAbsolutePath tempAbsPath') node port
         [ "run"
         , "--config", tempAbsPath' </> "configuration.yaml"
