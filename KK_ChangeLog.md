@@ -1,3 +1,6 @@
+There is no reason to run this version on a BP.
+Don't run it on a relay which has a local client that sends TXs to it.
+
 8.1.2 with the following changes:
 
 - Don't attempt to insert TXs that already are in the mempool. This provides an exceptional
