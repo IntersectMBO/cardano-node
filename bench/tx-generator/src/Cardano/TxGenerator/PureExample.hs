@@ -39,7 +39,7 @@ demo' parametersFile = do
       demoEnv = TxEnvironment {
           txEnvNetworkId = Mainnet
         , txEnvProtocolParams = protocolParameters
-        , txEnvFee = TxFeeExplicit TxFeesExplicitInBabbageEra 100000
+        , txEnvFee = TxFeeExplicit ShelleyBasedEraBabbage 100000
         , txEnvMetadata = TxMetadataNone
         }
 

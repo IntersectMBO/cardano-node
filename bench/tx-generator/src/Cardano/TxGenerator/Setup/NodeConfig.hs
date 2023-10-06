@@ -11,10 +11,12 @@ module Cardano.TxGenerator.Setup.NodeConfig
 import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Bifunctor (first)
 import           Data.Monoid
+import           Lens.Micro ((^.))
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
 
 import           Cardano.Api (BlockType (..), ProtocolInfoArgs (..))
+import qualified Cardano.Ledger.Api.Transition as Ledger
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Handlers.Shutdown (ShutdownConfig (..))
 import           Cardano.Node.Protocol.Cardano
@@ -30,13 +32,10 @@ import           Cardano.TxGenerator.Types
 -- as this guarantees proper error handling when trying to create a non-Cardano protocol.
 getGenesis :: SomeConsensusProtocol -> ShelleyGenesis
 getGenesis (SomeConsensusProtocol CardanoBlockType proto)
-    = genesis
+    = transCfg ^. Ledger.tcShelleyGenesisL
   where
     ProtocolInfoArgsCardano Consensus.CardanoProtocolParams
-      { Consensus.paramsShelleyBased =
-          Consensus.ProtocolParamsShelleyBased
-            { Consensus.shelleyBasedGenesis = genesis
-            }
+      { Consensus.ledgerTransitionConfig = transCfg
       } = proto
 
 -- | extract the path to genesis file from a NodeConfiguration for Cardano protocol
