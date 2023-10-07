@@ -41,7 +41,7 @@ library
                       , bytestring
                       , cardano-api ^>= 8.25
                       , cardano-binary
-                      , cardano-cli ^>= 8.11
+                      , cardano-cli ^>= 8.12
                       , cardano-crypto-class ^>= 2.1.2
                       , cardano-ledger-byron ^>= 1.0
                       , formatting
