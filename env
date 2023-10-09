@@ -1,0 +1,1050 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC2034,SC2086,SC2230,SC2009,SC2206,SC2062,SC2059,SC2229,SC2154,SC2162,SC2120
+
+######################################
+# User Variables - Change as desired #
+# Leave as is if unsure              #
+######################################
+
+NODE_NAME="Cardano Node"                  # Change your node's name prefix here, keep at or below 19 characters!
+REFRESH_RATE=2                            # How often (in seconds) to refresh the view (additional time for processing and output may slow it down)
+LEGACY_MODE=false                         # (true|false) If enabled unicode box-drawing characters will be replaced by standard ASCII characters
+RETRIES=3                                 # How many attempts to connect to running Cardano node before erroring out and quitting
+PEER_LIST_CNT=6                           # Number of peers to show on each in/out page in peer analysis view
+THEME="dark"                              # dark  = suited for terminals with a dark background
+                                          # light = suited for terminals with a bright background
+ENABLE_IP_GEOLOCATION="Y"                 # Enable IP geolocation on outgoing and incoming connections using ip-api.com
+
+CNODEBIN="/bin/cardano-node"             # Override automatic detection of cardano-node executable
+CCLI="/bin/cardano-cli"                  # Override automatic detection of cardano-cli executable
+#CNCLI="${HOME}/.cargo/bin/cncli"                       # Override automatic detection of executable (https://github.com/AndrewWestberg/cncli)
+#CNODE_HOME="/opt/cardano/cnode"                        # Override default CNODE_HOME path (defaults to /opt/cardano/cnode)
+CNODE_PORT=$PORT                                        # Set node port
+CONFIG="/home/cardano/cardano-configurations/network/$NETWORK/cardano-node/config.json"               # Override automatic detection of node config path
+SOCKET="/home/cardano/ipc/node.socket"            # Override automatic detection of path to socket
+TOPOLOGY="/home/cardano/cardano-configurations/network/$NETWORK/cardano-node/topology.json"           # Override default topology.json path
+#LOG_DIR="${CNODE_HOME}/logs"                           # Folder where your logs will be sent to (must pre-exist)
+DB_DIR="/home/cardano/data/db"                              # Folder to store the cardano-node blockchain db
+#UPDATE_CHECK="Y"                                       # Check for updates to scripts, it will still be prompted before proceeding (Y|N).
+#TMP_DIR="/tmp/cnode"                                   # Folder to hold temporary files in the various scripts, each script might create additional subfolders
+#USE_EKG="Y"                                            # Use EKG metrics from the node instead of Prometheus. Prometheus metrics yield slightly better performance but can be unresponsive at times (default EKG)
+#EKG_HOST=127.0.0.1                                     # Set node EKG host IP
+#EKG_PORT=12788                                         # Override automatic detection of node EKG port
+#PROM_HOST=127.0.0.1                                    # Set node Prometheus host IP
+#PROM_PORT=12798                                        # Override automatic detection of node Prometheus port
+#EKG_TIMEOUT=3                                          # Maximum time in seconds that you allow EKG request to take before aborting (node metrics)
+#CURL_TIMEOUT=10                                        # Maximum time in seconds that you allow curl file download to take before aborting (GitHub update process)
+#BLOCKLOG_DIR="${CNODE_HOME}/guild-db/blocklog"         # Override default directory used to store block data for core node
+#BLOCKLOG_TZ="UTC"                                      # TimeZone to use when displaying blocklog - https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+#SHELLEY_TRANS_EPOCH=208                                # Override automatic detection of shelley epoch start, e.g 208 for mainnet
+#TG_BOT_TOKEN=""                                        # Uncomment and set to enable telegramSend function. To create your own BOT-token and Chat-Id follow guide at:
+#TG_CHAT_ID=""                                          # https://cardano-community.github.io/guild-operators/Scripts/sendalerts
+#TIMEOUT_LEDGER_STATE=300                               # Timeout in seconds for querying and dumping ledger-state
+#IP_VERSION=4                                           # The IP version to use for push and fetch, valid options: 4 | 6 | mix (Default: 4)
+#ENABLE_KOIOS=Y                                         # (Y|N) Enable KOIOS API. If disabled, local node queries will be used instead with increased system resource requirements (default Y)
+#KOIOS_API="https://api.koios.rest/api/v0/"             # Koios API for blockchain queries instead of local cli lookup.
+                                                        # Leave commented for automatic network detection between MainNet, TestNet and Guild network.
+                                                        # https://www.koios.rest/
+#DBSYNC_QUERY_FOLDER="${CNODE_HOME}/files/dbsync/queries" # [advanced feature] Folder containing DB-Sync chain analysis queries
+
+#WALLET_FOLDER="${CNODE_HOME}/priv/wallet"              # Root folder for Wallets
+#POOL_FOLDER="${CNODE_HOME}/priv/pool"                  # Root folder for Pools
+                                                        # Each wallet and pool has a friendly name and subfolder containing all related keys, certificates, ...
+#POOL_NAME=""                                           # Set the pool's name to run node as a core node (the name, NOT the ticker, ie folder name)
+
+#WALLET_PAY_VK_FILENAME="payment.vkey"                  # Standardized names for all wallet related files
+#WALLET_PAY_SK_FILENAME="payment.skey"
+#WALLET_HW_PAY_SK_FILENAME="payment.hwsfile"
+#WALLET_PAY_ADDR_FILENAME="payment.addr"
+#WALLET_BASE_ADDR_FILENAME="base.addr"
+#WALLET_STAKE_VK_FILENAME="stake.vkey"
+#WALLET_STAKE_SK_FILENAME="stake.skey"
+#WALLET_HW_STAKE_SK_FILENAME="stake.hwsfile"
+#WALLET_STAKE_ADDR_FILENAME="reward.addr"
+#WALLET_STAKE_CERT_FILENAME="stake.cert"
+#WALLET_STAKE_DEREG_FILENAME="stake.dereg"
+#WALLET_DELEGCERT_FILENAME="delegation.cert"
+
+#POOL_ID_FILENAME="pool.id"                             # Standardized names for all pool related files
+#POOL_HOTKEY_VK_FILENAME="hot.vkey"
+#POOL_HOTKEY_SK_FILENAME="hot.skey"
+#POOL_COLDKEY_VK_FILENAME="cold.vkey"
+#POOL_COLDKEY_SK_FILENAME="cold.skey"
+#POOL_OPCERT_COUNTER_FILENAME="cold.counter"
+#POOL_OPCERT_FILENAME="op.cert"
+#POOL_VRF_VK_FILENAME="vrf.vkey"
+#POOL_VRF_SK_FILENAME="vrf.skey"
+#POOL_CONFIG_FILENAME="pool.config"
+#POOL_REGCERT_FILENAME="pool.cert"
+#POOL_CURRENT_KES_START="kes.start"
+#POOL_DEREGCERT_FILENAME="pool.dereg"
+
+#ASSET_FOLDER="${CNODE_HOME}/priv/asset"                # Root folder for Multi-Assets containing minted assets and subfolders for Policy IDs
+#ASSET_POLICY_VK_FILENAME="policy.vkey"                 # Standardized names for all multi-asset related files
+#ASSET_POLICY_SK_FILENAME="policy.skey"
+#ASSET_POLICY_SCRIPT_FILENAME="policy.script"           # File extension '.script' mandatory
+#ASSET_POLICY_ID_FILENAME="policy.id"
+
+######################################
+# Do NOT modify code below           #
+######################################
+
+# Description : Check if provided file exists
+#             : $1 = File (with path) to check
+is_file() {
+  local file=$1
+  [[ -f $file ]]
+}
+
+# Description : Check if provided directory exists
+#             : $1 = Directory (with path) to check
+is_dir() {
+  local dir=$1
+  [[ -d $dir ]]
+}
+
+# Description : Check higher of two versions
+#             : $1=minimal_needed_version
+#             : $2=current_node_version
+versionCheck()
+{
+  printf '%s\n%s' "${1//v/}" "${2//v/}" | sort -C -V
+}
+
+# Description : Exit with error message
+#             : $1 = Error message we'd like to display before exiting (function will pre-fix 'ERROR: ' to the argument)
+err_exit() {
+  printf "${FG_RED}ERROR${NC}: ${1}\n" >&2
+  echo -e "Exiting...\n" >&2
+  pushd -0 >/dev/null && dirs -c
+  exit 1
+}
+
+# Description : Query user for yes or no answer
+getAnswer() {
+  getAnswerAny answer "$* (yes/no)"
+  while : ; do
+    case $answer in
+      [Yy]*) return 0 ;;
+      [Nn]*) return 1 ;;
+      *) getAnswerAny answer "Please enter 'yes' or 'no' to continue"
+    esac
+  done
+}
+
+# Description : Query user for any question
+#             : $1 = the name of the variable to save users response into
+#             : $2 = what to ask user to input
+getAnswerAny() {
+  var_name=$1
+  shift
+  printf "%b: ${FG_GREEN}" "$*"
+  read -r ${var_name} </dev/tty
+  printf "${NC}"
+}
+
+# Description : Check and apply delta updates using different combinations to retain custom config
+#             : $1 = name of script to update
+#             : $2 = [Y|N] ignore question and auto update
+#             : $3 = [Y|N] do a complete file comparision
+#             : $4 = [Y|N] wait to acknowledge update
+#             : $5 = optional alternative scripts folder instead of default 'cnode-helper-scripts'
+# return code : 0 = no update
+#             : 1 = update applied
+#             : 2 = update failed
+checkUpdate() {
+  dname="$(dirname "${1}")"
+  fname="$(basename "${1}")"
+  [[ "${UPDATE_CHECK}" != "Y" ]] && return 0
+
+  if [[ ${OFFLINE_MODE} = N && ${BRANCH} != master && ${BRANCH} != alpha ]]; then
+    if ! curl -s -f -m ${CURL_TIMEOUT} "https://api.github.com/repos/cardano-community/guild-operators/branches" | jq -e ".[] | select(.name == \"${BRANCH}\")" &>/dev/null ; then
+      echo -e "WARN!! The folder was configured against ${BRANCH} branch - which does not exist anymore, falling back to alpha branch"
+      # alpha because if someone was testing something against a custom branch, it would likely be merged to alpha first. Production systems should not be using custom branch anyways
+      BRANCH=alpha
+      echo "${BRANCH}" > "${CNODE_HOME}"/scripts/.env_branch
+    fi
+  fi
+  [[ -n $5 ]] && URL="${URL_RAW}/scripts/$5" || URL="${URL_RAW}/scripts/cnode-helper-scripts"
+  URL_DOCS="${URL_RAW}/docs/Scripts"
+  if curl -s -f -m ${CURL_TIMEOUT} -o "${dname}/${fname}".tmp "${URL}/${fname}" 2>/dev/null; then
+
+    # replace default CNODE with custom name if needed
+    [[ ${CNODE_VNAME} != cnode ]] && sed -e "s@/opt/cardano/[c]node@/opt/cardano/${CNODE_VNAME}@g" -e "s@[C]NODE_HOME@${CNODE_VNAME_UPPERCASE}_HOME@g" -i "${dname}/${fname}".tmp
+
+    # make sure script exist, else just rename
+    [[ ! -f "${dname}/${fname}" ]] && mv -f "${dname}/${fname}".tmp "${dname}/${fname}" && chmod +x "${dname}/${fname}" && return 0
+
+    OLD_STATIC=$(awk '/#!/{x=1}/^# Do NOT modify/{exit} x' "${dname}/${fname}")
+    OLD_TEMPL=$(awk '/^# Do NOT modify/,0' "${dname}/${fname}")
+    GIT_STATIC=$(awk '/#!/{x=1}/^# Do NOT modify/{exit} x' "${dname}/${fname}".tmp)
+    GIT_TEMPL=$(awk '/^# Do NOT modify/,0' "${dname}/${fname}".tmp)
+    NEW_STATIC=$(checkUserVariables "${OLD_STATIC}" "${GIT_STATIC}")
+    if [[ ($3 = Y && "$(sha256sum "${dname}/${fname}" | cut -d' ' -f1)" != "$(sha256sum "${dname}/${fname}.tmp" | cut -d' ' -f1)") || "$(echo ${OLD_STATIC} | sha256sum)" != "$(echo ${NEW_STATIC} | sha256sum)" || "$(echo ${OLD_TEMPL} | sha256sum)" != "$(echo ${GIT_TEMPL} | sha256sum)" ]]; then
+      update_msg="\nScript update(s) detected, do you want to download the latest version?"
+      if [[ ${fname} = cntools.library || ${fname} = gLiveView.sh ]]; then
+        if [[ ${fname} = cntools.library ]]; then
+          CUR_MAJOR_VERSION=$(grep -r ^CNTOOLS_MAJOR_VERSION= "${dname}/${fname}" |sed -e "s#.*=##")
+          CUR_MINOR_VERSION=$(grep -r ^CNTOOLS_MINOR_VERSION= "${dname}/${fname}" |sed -e "s#.*=##")
+          CUR_PATCH_VERSION=$(grep -r ^CNTOOLS_PATCH_VERSION= "${dname}/${fname}" |sed -e "s#.*=##")
+          CUR_VERSION="${CUR_MAJOR_VERSION}.${CUR_MINOR_VERSION}.${CUR_PATCH_VERSION}"
+          GIT_MAJOR_VERSION=$(grep -r ^CNTOOLS_MAJOR_VERSION= "${dname}/${fname}".tmp |sed -e "s#.*=##")
+          GIT_MINOR_VERSION=$(grep -r ^CNTOOLS_MINOR_VERSION= "${dname}/${fname}".tmp |sed -e "s#.*=##")
+          GIT_PATCH_VERSION=$(grep -r ^CNTOOLS_PATCH_VERSION= "${dname}/${fname}".tmp |sed -e "s#.*=##")
+          GIT_VERSION="${GIT_MAJOR_VERSION}.${GIT_MINOR_VERSION}.${GIT_PATCH_VERSION}"
+        else
+          CUR_VERSION=$(grep -r ^GLV_VERSION= "${dname}/${fname}" | cut -d'=' -f2)
+          GIT_VERSION=$(grep -r ^GLV_VERSION= "${dname}/${fname}".tmp | cut -d'=' -f2)
+        fi
+        if ! versionCheck ${GIT_VERSION} ${CUR_VERSION}; then
+          [[ ${fname} = cntools.library ]] && script_name="CNTools" || script_name="Guild LiveView"
+          update_msg="\nA new version of ${script_name} is available."
+          update_msg="${update_msg}\nInstalled Version : ${FG_LGRAY}${CUR_VERSION}${NC}"
+          update_msg="${update_msg}\nAvailable Version : ${FG_GREEN}${GIT_VERSION}${NC}"
+          echo -e "${update_msg}"
+          update_msg="\nDo you want to download the latest version?"
+        fi
+      fi
+      if [[ $2 = Y ]] || { [[ -t 1 ]] && getAnswer "${update_msg}"; }; then
+        if [[ $3 != Y ]] && grep -q "# Do NOT modify" "${dname}/${fname}"; then
+          printf '%s\n%s\n' "${NEW_STATIC}" "${GIT_TEMPL}" > "${dname}/${fname}".tmp
+        fi
+        cp "${dname}/${fname}" "${dname}/${fname}_bkp$(date +%s)"
+        mv -f "${dname}/${fname}".tmp "${dname}/${fname}"
+        [[ ! "${fname}" == "env" ]] && chmod +x "${dname}/${fname}"
+        echo -e "\n${FG_YELLOW}${fname}${NC} update successfully applied!"
+        [[ -t 1 && $4 != N ]] && waitToProceed && clear
+        return 1
+      fi
+    fi
+  else
+    # curl failed, return error code 2
+    return 2
+  fi
+  rm -f "${dname}/${fname}".tmp
+  return 0
+}
+
+# Description : Check that old script User Variables section contain all current settings from GitHub.
+#             : Prints final result to stdout
+#             : $1 = Old/Current script User Variables
+#             : $2 = User Variables section from GitHub
+checkUserVariables() {
+  tmp_old_static=$(sed '/PGREST_API/d' <<< "$1") # remove old PGREST_API variable, replaced by KOIOS_API
+  tmp_head=$(head -n -2 <<< "$tmp_old_static")
+  tmp_tail=$(tail -n -2 <<< "$1")
+  while IFS= read -r line; do
+    if [[ ${line} =~ ^\#*[[:space:]]*([[:alnum:]_]+\=) ]]; then
+      unset hasVariable
+      regex="^\#*[[:space:]]*${BASH_REMATCH[1]}"
+      while IFS= read -r line2; do
+        [[ ${line2} =~ ${regex} ]] && hasVariable=true && break
+      done <<< "${tmp_head}"
+      [[ -z ${hasVariable} ]] && tmp_head=$(printf '%s\n%s\n' "${tmp_head}" "${line}")
+    fi
+  done <<< "$2"
+  printf '%s\n%s\n' "${tmp_head}" "${tmp_tail}"
+}
+
+# Description : Check if command is available
+#             : $1 = executable to validate
+cmdAvailable() {
+  if ! command -v "$1" &>/dev/null; then
+    printf "${FG_RED}ERROR${NC}: need '$1' (command not found)\nplease install with your packet manager of choice(apt/yum etc..) and relaunch CNTools\nhttps://command-not-found.com/$1" 1>&2
+    return 1
+  fi
+  return 0
+}
+
+# Description : wait for user keypress to continue
+# Parameters  : message  >  [optional]: override default 'press any key to return to home menu' message
+waitToProceed() {
+  IFS=';' read -sdR -p $'\E[6n' ROW COL
+  createDistanceToBottom $(( $# + 1 ))
+  ESC=$(printf "\033")
+  echo
+  if [[ $# -eq 0 || -z $1 ]]; then
+    echo "press any key to proceed .."
+  else
+    printf '%b\n' "$@"
+  fi
+  read -rsn1 key # get 1 character
+  if [[ $key == "$ESC" ]]; then
+    read -rsn2 key # read 2 more chars
+  fi
+  tput cup ${ROW#*[} 0
+  tput ed
+}
+
+# Description : join bash array as a string with provided delimiter
+# Parameters  : $1 = delimiter, $2 = array to join
+joinArray() {
+  local IFS="$1"
+  shift
+  echo "$*"
+}
+
+# Description : Generate asset id according to CIP-14 standard
+#               https://github.com/cardano-foundation/CIPs/pull/64
+#             : $1 = hex-encoded policy ID
+#             : $2 = ASCII formatted asset name
+getAssetIDBech32() {
+  { ! cmdAvailable "bech32" || ! cmdAvailable "b2sum"; } && return 1
+  printf "$(echo -n $1 | sed 's/../\\x&/g')%s" "$2" | b2sum -l 160 -b | cut -d' ' -f 1 | bech32 asset
+}
+
+# Description : Convert a normal 1 byte ASCII string to hex (alnum chars)
+#             : $1 = ASCII string to convert
+asciiToHex() {
+  local ascwrd=$1
+  [[ -z ${ascwrd} ]] && return
+  for ((i=0;i<${#ascwrd};i++)); do
+    printf %02x \'${ascwrd:$i:1}
+  done
+}
+
+# Description : Convert a hex string to normal 1 byte ASCII string (alnum chars)
+#             : $1 = hex string to convert
+hexToAscii() {
+  local hexstr=$1
+  local hexcnt=${#hexstr}
+  [[ -z ${hexstr} ]] && return
+  (( hexcnt % 2 != 0 )) && return
+  for ((i=0;i<${#hexstr};i=i+2)); do
+    printf "\x${hexstr:$i:2}"
+  done
+}
+
+# Description : Helper function to validate that input is a number
+#             : $1 = number
+isNumber() {
+  [[ -z $1 ]] && return 1
+  [[ $1 =~ ^[0-9]+$ ]] && return 0 || return 1
+}
+
+# Description : Validate decimal number
+#             : $1 = decimal number to validate
+validateDecimalNbr() {
+  re_decimal_nbr='^([0-9]+)?([.][0-9]+)?$'
+  [[ $1 =~ ${re_decimal_nbr} ]] && return 0 || return 1
+}
+
+# Description : Pretty print Lovelace value
+#             : $1 = Amount in Lovelace
+formatLovelace() {
+  if isNumber $1; then
+    [[ $1 -eq 0 ]] && echo 0 && return
+    [[ $1 -le 999999 ]] && printf '0.%06d' "$1" && return
+    printf '%s.%s' "$(sed ':a;s/\B[0-9]\{3\}\>/,&/;ta' <<< ${1::-6})" "${1: -6}"
+  else
+    printf "${FG_RED}ERROR${NC}: must be a valid integer number" 1>&2
+    return 1
+  fi
+}
+
+# Description : Pretty print Ada/Token value
+#             : $1 = Amount as Integer
+formatAsset() {
+  if isNumber $1; then
+    sed ':a;s/\B[0-9]\{3\}\>/,&/;ta' <<< $1
+  else
+    printf "${FG_RED}ERROR${NC}: must be a valid integer number" 1>&2
+    return 1
+  fi
+}
+
+# Description : Convert number in Ada to Lovelace
+#             : $1 = Amount in Ada, decimal number accepted (using dot)
+AdaToLovelace() {
+  [[ -z $1 ]] && return 1
+  if validateDecimalNbr $1; then
+    echo "$1 * 1000000 / 1" | bc # /1 is to remove decimals from bc command
+  else
+    printf "${FG_RED}ERROR${NC}: must be a valid integer or decimal number" 1>&2
+    return 1
+  fi
+}
+
+# Description : Convert number as percent to fraction
+#             : $1 = number to be converted in range 0-100
+pctToFraction() {
+  if validateDecimalNbr $1; then
+    if [[ $(bc <<< "$1 >= 0") -eq 0 || $(bc <<< "$1 <= 100" ) -eq 0 ]]; then
+      printf "${FG_RED}ERROR${NC}: must be a number between 0-100" 1>&2
+      return 1
+    elif [[ $(bc <<< "$1 == 0") -eq 1 ]]; then echo 0 # special case not properly handled by below code
+    else
+      echo "x=$1 / 100; if(x<1) print 0; x" | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//'
+    fi
+  else
+    printf "${FG_RED}ERROR${NC}: must be a valid integer or decimal number" 1>&2
+    return 1
+  fi
+}
+
+# Description : Convert fraction number to precent
+#             : $1 = number to be converted
+fractionToPCT() {
+  if validateDecimalNbr $1; then
+    if (( $(bc <<<"$1 > 0") )); then
+      echo "x=$1 * 100; if(x<1) print 0; x" | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//'
+    else
+      echo 0
+    fi
+  else
+    printf "${FG_RED}ERROR${NC}: must be a valid decimal number" 1>&2
+    return 1
+  fi
+}
+
+# Description : Helper function to validate IPv4 address
+#             : $1 = IP
+isValidIPv4() {
+  local ip=$1
+  [[ -z ${ip} ]] && return 1
+  if [[ ${ip} =~ ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$ || ${ip} =~ ^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$ ]]; then
+    return 0
+  fi
+  return 1
+}
+
+# Description : Get password from user on STDIN
+#             : populates ${password} variable, make sure to unset variable when done
+#             : $1 = Minimum password length
+#             : $2 = The string 'confirm' to force user to provide password twice for confirmation (optional)
+getPassword() {
+  while true; do
+    readPassword "Enter password (length >= 8)"
+    password=${read_password} && unset read_password
+    if [ ${#password} -lt $1 ]; then
+      echo
+      echo -e "${FG_RED}ERROR${NC}: password length too short, please use a minimum of $1 characters."
+      echo
+      echo "Press q to abort or any other key to retry"
+      read -rsn 1 abort
+      [[ ${abort} = "q" ]] && unset password && return 1
+      echo
+      continue
+    fi
+    if [[ $2 = "confirm" ]]; then
+      echo && readPassword "Confirm password"
+      check_password=${read_password} && unset read_password
+      if [[ "${password}" != "${check_password}" ]]; then
+        echo
+        echo -e "${FG_RED}ERROR${NC}: password missmatch!"
+        echo
+        echo "Press q to abort or any other key to retry"
+        read -rsn 1 abort
+        [[ ${abort} = "q" ]] && unset password && unset check_password && return 1
+        echo
+      else
+        echo && unset check_password && return 0
+      fi
+    else
+      echo && return 0
+    fi
+  done
+}
+readPassword() {
+  read_password=""
+  prompt="$1: "
+  while IFS= read -p "${prompt}" -r -s -n 1 char; do
+    if [[ ${char} == $'\0' ]]; then break; fi
+    if [[ ${char} == $'\b' ]]; then
+      [[ ${#read_password} -gt 0 ]] && printf "\033[1D\033[0K" && read_password=${read_password%?}
+      prompt=''
+    else
+      prompt='*'
+      read_password+="${char}"
+    fi
+  done
+}
+
+# Description : Helper function to validate IPv6 address, works for normal IPv6 addresses, not dual incl IPv4
+#             : $1 = IP
+isValidIPv6() {
+  local ip=$1
+  [[ -z ${ip} ]] && return 1
+  ipv6_regex="^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$"
+  [[ ${ip} =~ ${ipv6_regex} ]] && return 0
+  return 1
+}
+
+# Description : Helper function to validate if IP address is in a private range
+#             : $1 = IP
+isPrivateIP() {
+  local ip=$1
+  [[ -z ${ip} ]] && return 1
+  private_ip_regex="^(127\.|0?10\.|172\.0?1[6-9]\.|172\.0?2[0-9]\.|172\.0?3[0-2]\.|192\.168\.|169\.254\.|::1|[fF][cCdD][0-9a-fA-F]{2}:|[fF][eE][89aAbB][0-9a-fA-F]:)"
+  [[ ${ip} =~ ${private_ip_regex} ]] && return 0
+  return 1
+}
+
+# Description : Print blank rows and reset cursor position
+#             : $1 = number of rows
+createDistanceToBottom() {
+  printf "%0.s\n" $(seq $1)
+  printf "\033[$1A"
+}
+
+# Description : Query cardano-node for current metrics
+getNodeMetrics() {
+  CNODE_PID=$(pgrep -fn "$(basename ${CNODEBIN}).*.--port ${CNODE_PORT}") # Define again - as node could be restarted since last attempt of sourcing env
+  [[ -n ${CNODE_PID} ]] && uptimes=$(ps -p ${CNODE_PID} -o etimes=) || uptimes=0
+  if [[ ${USE_EKG} = 'Y' ]]; then
+    node_metrics=$(curl -s -m ${EKG_TIMEOUT} -H 'Accept: application/json' "http://${EKG_HOST}:${EKG_PORT}/" 2>/dev/null)
+    node_metrics_tsv=$(jq -r '[
+    .cardano.node.metrics.blockNum.int.val //0,
+    .cardano.node.metrics.epoch.int.val //0,
+    .cardano.node.metrics.slotInEpoch.int.val //0,
+    .cardano.node.metrics.slotNum.int.val //0,
+    .cardano.node.metrics.density.real.val //"-",
+    .cardano.node.metrics.txsProcessedNum.int.val //0,
+    .cardano.node.metrics.txsInMempool.int.val //0,
+    .cardano.node.metrics.mempoolBytes.int.val //0,
+    .cardano.node.metrics.currentKESPeriod.int.val //0,
+    .cardano.node.metrics.remainingKESPeriods.int.val //0,
+    .cardano.node.metrics.Forge["node-is-leader"].int.val //0,
+    .cardano.node.metrics.Forge.adopted.int.val //0,
+    .cardano.node.metrics.Forge["didnt-adopt"].int.val //0,
+    .cardano.node.metrics.Forge["forge-about-to-lead"].int.val //0,
+    .cardano.node.metrics.slotsMissedNum.int.val //0,
+    .cardano.node.metrics.RTS.gcLiveBytes.int.val //0,
+    .cardano.node.metrics.RTS.gcHeapBytes.int.val //0,
+    .cardano.node.metrics.RTS.gcMinorNum.int.val //0,
+    .cardano.node.metrics.RTS.gcMajorNum.int.val //0,
+    .cardano.node.metrics.forks.int.val //0,
+    .cardano.node.metrics.blockfetchclient.blockdelay.s.val //0,
+    .cardano.node.metrics.served.block.count.int.val //0,
+    .cardano.node.metrics.blockfetchclient.lateblocks.val //0,
+    .cardano.node.metrics.blockfetchclient.blockdelay.cdfOne.val //0,
+    .cardano.node.metrics.blockfetchclient.blockdelay.cdfThree.val //0,
+    .cardano.node.metrics.blockfetchclient.blockdelay.cdfFive.val //0,
+    .cardano.node.metrics.peerSelection.cold.val //0,
+    .cardano.node.metrics.peerSelection.warm.val //0,
+    .cardano.node.metrics.peerSelection.hot.val //0,
+    .cardano.node.metrics.connectionManager.incomingConns.val //0,
+    .cardano.node.metrics.connectionManager.outgoingConns.val //0,
+    .cardano.node.metrics.connectionManager.unidirectionalConns.val //0,
+    .cardano.node.metrics.connectionManager.duplexConns.val //0,
+    .cardano.node.metrics.connectionManager.prunableConns.val //0
+    ] | @tsv' <<< "${node_metrics}")
+    read -ra node_metrics_arr <<< ${node_metrics_tsv}
+    blocknum=${node_metrics_arr[0]}; epochnum=${node_metrics_arr[1]}; slot_in_epoch=${node_metrics_arr[2]}; slotnum=${node_metrics_arr[3]}
+    [[ ${node_metrics_arr[4]} != '-' ]] && density=$(bc <<< "scale=3;$(printf '%3.5f' "${node_metrics_arr[4]}")*100/1") || density=0.0
+    tx_processed=${node_metrics_arr[5]}; mempool_tx=${node_metrics_arr[6]}; mempool_bytes=${node_metrics_arr[7]}
+    kesperiod=${node_metrics_arr[8]}; remaining_kes_periods=${node_metrics_arr[9]}
+    isleader=${node_metrics_arr[10]}; adopted=${node_metrics_arr[11]}; didntadopt=${node_metrics_arr[12]}; about_to_lead=${node_metrics_arr[13]}
+    missed_slots=${node_metrics_arr[14]}
+    mem_live=${node_metrics_arr[15]}; mem_heap=${node_metrics_arr[16]}
+    gc_minor=${node_metrics_arr[17]}; gc_major=${node_metrics_arr[18]}
+    forks=${node_metrics_arr[19]}
+    block_delay=${node_metrics_arr[20]}; blocks_served=${node_metrics_arr[21]}; blocks_late=${node_metrics_arr[22]};
+    printf -v blocks_w1s "%.6f" "${node_metrics_arr[23]}"
+    printf -v blocks_w3s "%.6f" "${node_metrics_arr[24]}"
+    printf -v blocks_w5s "%.6f" "${node_metrics_arr[25]}"
+    peers_cold=${node_metrics_arr[26]}; peers_warm=${node_metrics_arr[27]}; peers_hot=${node_metrics_arr[28]}
+    conn_incoming=${node_metrics_arr[29]}; conn_outgoing=${node_metrics_arr[30]}
+    conn_uni_dir=${node_metrics_arr[31]}; conn_bi_dir=${node_metrics_arr[32]}; conn_duplex=${node_metrics_arr[33]}
+  else
+    node_metrics=$(curl -s -m ${EKG_TIMEOUT} "http://${PROM_HOST}:${PROM_PORT}/metrics" 2>/dev/null)
+    [[ ${node_metrics} =~ cardano_node_metrics_blockNum_int[[:space:]]([^[:space:]]*) ]] && blocknum=${BASH_REMATCH[1]} || blocknum=0
+    [[ ${node_metrics} =~ cardano_node_metrics_epoch_int[[:space:]]([^[:space:]]*) ]] && epochnum=${BASH_REMATCH[1]} || epochnum=0
+    [[ ${node_metrics} =~ cardano_node_metrics_slotInEpoch_int[[:space:]]([^[:space:]]*) ]] && slot_in_epoch=${BASH_REMATCH[1]} || slot_in_epoch=0
+    [[ ${node_metrics} =~ cardano_node_metrics_slotNum_int[[:space:]]([^[:space:]]*) ]] && slotnum=${BASH_REMATCH[1]} || slotnum=0
+    [[ ${node_metrics} =~ cardano_node_metrics_density_real[[:space:]]([^[:space:]]*) ]] && density=$(bc <<< "scale=3;$(printf '%3.5f' "${BASH_REMATCH[1]}")*100/1") || density=0.0
+    [[ ${node_metrics} =~ cardano_node_metrics_txsProcessedNum_int[[:space:]]([^[:space:]]*) ]] && tx_processed=${BASH_REMATCH[1]} || tx_processed=0
+    [[ ${node_metrics} =~ cardano_node_metrics_txsInMempool_int[[:space:]]([^[:space:]]*) ]] && mempool_tx=${BASH_REMATCH[1]} || mempool_tx=0
+    [[ ${node_metrics} =~ cardano_node_metrics_mempoolBytes_int[[:space:]]([^[:space:]]*) ]] && mempool_bytes=${BASH_REMATCH[1]} || mempool_bytes=0
+    [[ ${node_metrics} =~ cardano_node_metrics_currentKESPeriod_int[[:space:]]([^[:space:]]*) ]] && kesperiod=${BASH_REMATCH[1]} || kesperiod=0
+    [[ ${node_metrics} =~ cardano_node_metrics_remainingKESPeriods_int[[:space:]]([^[:space:]]*) ]] && remaining_kes_periods=${BASH_REMATCH[1]} || remaining_kes_periods=0
+    [[ ${node_metrics} =~ cardano_node_metrics_Forge_node_is_leader_int[[:space:]]([^[:space:]]*) ]] && isleader=${BASH_REMATCH[1]} || isleader=0
+    [[ ${node_metrics} =~ cardano_node_metrics_Forge_adopted_int[[:space:]]([^[:space:]]*) ]] && adopted=${BASH_REMATCH[1]} || adopted=0
+    [[ ${node_metrics} =~ cardano_node_metrics_Forge_didnt_adopt_int[[:space:]]([^[:space:]]*) ]] && didntadopt=${BASH_REMATCH[1]} || didntadopt=0
+    [[ ${node_metrics} =~ cardano_node_metrics_Forge_forge_about_to_lead_int[[:space:]]([^[:space:]]*) ]] && about_to_lead=${BASH_REMATCH[1]} || about_to_lead=0
+    [[ ${node_metrics} =~ cardano_node_metrics_slotsMissedNum_int[[:space:]]([^[:space:]]*) ]] && missed_slots=${BASH_REMATCH[1]} || missed_slots=0
+    [[ ${node_metrics} =~ cardano_node_metrics_RTS_gcLiveBytes_int[[:space:]]([^[:space:]]*) ]] && mem_live=${BASH_REMATCH[1]} || mem_live=0
+    [[ ${node_metrics} =~ cardano_node_metrics_RTS_gcHeapBytes_int[[:space:]]([^[:space:]]*) ]] && mem_heap=${BASH_REMATCH[1]} || mem_heap=0
+    [[ ${node_metrics} =~ cardano_node_metrics_RTS_gcMinorNum_int[[:space:]]([^[:space:]]*) ]] && gc_minor=${BASH_REMATCH[1]} || gc_minor=0
+    [[ ${node_metrics} =~ cardano_node_metrics_RTS_gcMajorNum_int[[:space:]]([^[:space:]]*) ]] && gc_major=${BASH_REMATCH[1]} || gc_major=0
+    [[ ${node_metrics} =~ cardano_node_metrics_forks_int[[:space:]]([^[:space:]]*) ]] && forks=${BASH_REMATCH[1]} || forks=0
+    [[ ${node_metrics} =~ cardano_node_metrics_blockfetchclient_blockdelay_s[[:space:]]([^[:space:]]*) ]] && block_delay=${BASH_REMATCH[1]} || block_delay=0
+    [[ ${node_metrics} =~ cardano_node_metrics_served_block_count_int[[:space:]]([^[:space:]]*) ]] && blocks_served=${BASH_REMATCH[1]} || block_served=0
+    [[ ${node_metrics} =~ cardano_node_metrics_blockfetchclient_lateblocks[[:space:]]([^[:space:]]*) ]] && blocks_late=${BASH_REMATCH[1]} || blocks_late=0
+    [[ ${node_metrics} =~ cardano_node_metrics_blockfetchclient_blockdelay_cdfOne[[:space:]]([^[:space:]]*) ]] && printf -v blocks_w1s "%.6f" ${BASH_REMATCH[1]} || blocks_w1s=0
+    [[ ${node_metrics} =~ cardano_node_metrics_blockfetchclient_blockdelay_cdfThree[[:space:]]([^[:space:]]*) ]] && printf -v blocks_w3s "%.6f" ${BASH_REMATCH[1]} || blocks_w3s=0
+    [[ ${node_metrics} =~ cardano_node_metrics_blockfetchclient_blockdelay_cdfFive[[:space:]]([^[:space:]]*) ]] && printf -v blocks_w5s "%.6f" ${BASH_REMATCH[1]} || blocks_w5s=0
+    [[ ${node_metrics} =~ cardano_node_metrics_peerSelection_cold[[:space:]]([^[:space:]]*) ]] && peers_cold=${BASH_REMATCH[1]} || peers_cold=0
+    [[ ${node_metrics} =~ cardano_node_metrics_peerSelection_warm[[:space:]]([^[:space:]]*) ]] && peers_warm=${BASH_REMATCH[1]} || peers_warm=0
+    [[ ${node_metrics} =~ cardano_node_metrics_peerSelection_hot[[:space:]]([^[:space:]]*) ]] && peers_hot=${BASH_REMATCH[1]} || peers_hot=0
+    [[ ${node_metrics} =~ cardano_node_metrics_connectionManager_incomingConns[[:space:]]([^[:space:]]*) ]] && conn_incoming=${BASH_REMATCH[1]} || conn_incoming=0
+    [[ ${node_metrics} =~ cardano_node_metrics_connectionManager_outgoingConns[[:space:]]([^[:space:]]*) ]] && conn_outgoing=${BASH_REMATCH[1]} || conn_outgoing=0
+    [[ ${node_metrics} =~ cardano_node_metrics_connectionManager_unidirectionalConns[[:space:]]([^[:space:]]*) ]] && conn_uni_dir=${BASH_REMATCH[1]} || conn_uni_dir=0
+    [[ ${node_metrics} =~ cardano_node_metrics_connectionManager_duplexConns[[:space:]]([^[:space:]]*) ]] && conn_bi_dir=${BASH_REMATCH[1]} || conn_bi_dir=0
+    [[ ${node_metrics} =~ cardano_node_metrics_connectionManager_prunableConns[[:space:]]([^[:space:]]*) ]] && conn_duplex=${BASH_REMATCH[1]} || conn_duplex=0
+  fi
+}
+
+# Description : Get shelley transition epoch for non-predefined networks
+getShelleyTransitionEpoch() {
+  [[ ${SHELLEY_TRANS_EPOCH} -ge 0 ]] && return 0
+  calc_slot=0
+  byron_epochs=${epochnum}
+  shelley_epochs=0
+  while [[ ${byron_epochs} -ge 0 ]]; do
+    calc_slot=$(( (byron_epochs * BYRON_EPOCH_LENGTH) + (shelley_epochs * EPOCH_LENGTH) + slot_in_epoch ))
+    [[ ${calc_slot} -eq ${slotnum} ]] && break
+    ((byron_epochs--))
+    ((shelley_epochs++))
+  done
+  if [[ ${calc_slot} -ne ${slotnum} || ${shelley_epochs} -eq 0 ]]; then
+    SHELLEY_TRANS_EPOCH=-1
+    return 1
+  else
+    SHELLEY_TRANS_EPOCH=${byron_epochs}
+    return 0
+  fi
+}
+
+# Description : Offline calculation of current epoch based on genesis file
+getEpoch() {
+  current_time_sec=$(printf '%(%s)T\n' -1)
+  [[ ${SHELLEY_TRANS_EPOCH} -eq -1 ]] && echo 0 && return
+  byron_end_time=$(( BYRON_GENESIS_START_SEC + ((SHELLEY_TRANS_EPOCH * BYRON_EPOCH_LENGTH * BYRON_SLOT_LENGTH) / 1000) ))
+  echo $(( SHELLEY_TRANS_EPOCH + ( (current_time_sec - byron_end_time) / SLOT_LENGTH / EPOCH_LENGTH ) ))
+}
+
+# Description : Offline calculation of start timestamp of input epoch, current if empty.
+getEpochStart() {
+  [[ -z $1 ]] && epoch_no=$(getEpoch) || epoch_no=$1
+  byron_end_time=$(( BYRON_GENESIS_START_SEC + ((SHELLEY_TRANS_EPOCH * BYRON_EPOCH_LENGTH * BYRON_SLOT_LENGTH) / 1000) ))
+  shelley_slots=$(( (epoch_no - SHELLEY_TRANS_EPOCH) * EPOCH_LENGTH ))
+  if [[ ${shelley_slots} -ge 0 ]]; then
+    echo $(( byron_end_time + shelley_slots ))
+  else
+    echo $(( BYRON_GENESIS_START_SEC + ((epoch_no * BYRON_EPOCH_LENGTH * BYRON_SLOT_LENGTH) / 1000) ))
+  fi
+}
+
+# Description : Offline calculation of current epoch based on provided slot number
+getEpochFromSlot() {
+  echo $(( SHELLEY_TRANS_EPOCH + (($1 - (SHELLEY_TRANS_EPOCH * BYRON_EPOCH_LENGTH)) / EPOCH_LENGTH) ))
+}
+
+# Description : Offline calculation of current slot in epoch based on provided slot number and epoch
+getSlotInEpochFromSlot() {
+  echo $(( $1 - ((SHELLEY_TRANS_EPOCH * BYRON_EPOCH_LENGTH) + (($2 - SHELLEY_TRANS_EPOCH) * EPOCH_LENGTH)) ))
+}
+
+# Description : Offline calculation of date based on provided slot number
+#             : $1 = slot, $2 = (optional) printf date format, $3 = (optional) timezone name, example: UTC, CET etc.
+getDateFromSlot() {
+  byron_slots=$(( SHELLEY_TRANS_EPOCH * BYRON_EPOCH_LENGTH ))
+  [[ -n $2 ]] && date_fmt="$2" || date_fmt='%(%FT%T%z)T'
+  [[ -n $3 ]] && date_tz="$3" || date_tz="$(printf '%(%Z)T')"
+  TZ=${date_tz} printf -v date_from_slot "${date_fmt}" $(( ((byron_slots * BYRON_SLOT_LENGTH) / 1000) + (($1-byron_slots) * SLOT_LENGTH) + SHELLEY_GENESIS_START_SEC ))
+  [[ -n $2 ]] && echo "${date_from_slot}" || echo "${date_from_slot%??}:${date_from_slot: -2}"
+}
+
+# Description : Offline calculation of time in seconds until next epoch
+timeUntilNextEpoch() {
+  current_time_sec=$(printf '%(%s)T\n' -1)
+  [[ ${SHELLEY_TRANS_EPOCH} -eq -1 ]] && echo 0 && return
+  echo $(( ((SHELLEY_TRANS_EPOCH * BYRON_SLOT_LENGTH * BYRON_EPOCH_LENGTH) / 1000) + (($(getEpoch) + 1 - SHELLEY_TRANS_EPOCH) * SLOT_LENGTH * EPOCH_LENGTH) - current_time_sec + BYRON_GENESIS_START_SEC ))
+}
+
+# Description : Calculation of days, hours, minutes and seconds from time in seconds
+timeLeft() {
+  local T=$1
+  local D=$((T/60/60/24))
+  local H=$((T/60/60%24))
+  local M=$((T/60%60))
+  local S=$((T%60))
+  (( D > 0 )) && printf '%dd ' $D
+  printf '%02d:%02d:%02d' $H $M $S
+}
+
+# Description : Get calculated slot number tip
+getSlotTipRef() {
+  current_time_sec=$(printf '%(%s)T\n' -1)
+  [[ ${SHELLEY_TRANS_EPOCH} -eq -1 ]] && echo 0 && return
+  byron_slots=$(( SHELLEY_TRANS_EPOCH * BYRON_EPOCH_LENGTH ))
+  byron_end_time=$(( BYRON_GENESIS_START_SEC + ((SHELLEY_TRANS_EPOCH * BYRON_EPOCH_LENGTH * BYRON_SLOT_LENGTH) / 1000) ))
+  if [[ ${current_time_sec} -lt ${byron_end_time} ]]; then # In Byron phase
+    echo $(( ((current_time_sec - BYRON_GENESIS_START_SEC)*1000) / BYRON_SLOT_LENGTH ))
+  else # In Shelley phase
+    echo $(( byron_slots + (( current_time_sec - byron_end_time ) / SLOT_LENGTH ) ))
+  fi
+}
+
+# Description : Offline calculation of current KES period based on reference tip
+getCurrentKESperiod() {
+  tip_ref=$(getSlotTipRef)
+  echo $(( tip_ref / SLOTS_PER_KES_PERIOD ))
+}
+
+# Description: Calculate KES expiration based on node metrics with manual pool KES start period as fallback
+# Note       : Its assumed getNodeMetrics() has been run before calling this function
+#            : $1 = (optional) Pools KES start period, fallback method to node metrics
+kesExpiration() {
+  unset kes_expiration expiration_time_sec expiration_time_sec_diff
+  if [[ -z ${remaining_kes_periods} ]]; then
+    if [[ $# -ne 1 ]] || ! isNumber $1; then return 1; fi
+    current_kes_period_ref=$(getCurrentKESperiod)
+    remaining_kes_periods=$(( MAX_KES_EVOLUTIONS - ( current_kes_period_ref - $1 ) ))
+  else
+    tip_ref=$(getSlotTipRef)
+  fi
+  current_time_sec=$(printf '%(%s)T\n' -1)
+  expiration_time_sec=$(( current_time_sec - ( SLOT_LENGTH * (tip_ref % SLOTS_PER_KES_PERIOD) ) + ( SLOT_LENGTH * SLOTS_PER_KES_PERIOD * remaining_kes_periods ) ))
+  expiration_time_sec_diff=$(( expiration_time_sec - current_time_sec ))
+  printf -v kes_expiration '%(%F %T %Z)T' ${expiration_time_sec}
+}
+
+# Description : Calculate expected interval between blocks
+slotInterval() {
+  if [[ -z ${DECENTRALISATION} || $(echo "${DECENTRALISATION} < 0.5" | bc) -eq 1 ]]; then d=0.5; else d=${DECENTRALISATION}; fi
+  echo "(${SLOT_LENGTH} / ${ACTIVE_SLOTS_COEFF} / ${d}) + 0.5" | bc -l | awk '{printf "%.0f\n", $1}'
+}
+
+# Description : Identify current era and set variables accordingly
+getEraIdentifier() {
+    if ${CCLI} query protocol-parameters --byron-era ${NETWORK_IDENTIFIER} &>/dev/null; then ERA_IDENTIFIER="--byron-era"
+  elif ${CCLI} query protocol-parameters --shelley-era ${NETWORK_IDENTIFIER} &>/dev/null; then ERA_IDENTIFIER="--shelley-era"
+  elif ${CCLI} query protocol-parameters --allegra-era ${NETWORK_IDENTIFIER} &>/dev/null; then ERA_IDENTIFIER="--allegra-era"
+  elif ${CCLI} query protocol-parameters --mary-era ${NETWORK_IDENTIFIER} &>/dev/null; then ERA_IDENTIFIER="--mary-era"
+  #Alonzo era disabled for now until hw support is fully implemented
+  #elif ${CCLI} query protocol-parameters --alonzo-era ${NETWORK_IDENTIFIER} &>/dev/null; then ERA_IDENTIFIER="--alonzo-era"
+  else
+    ERA_IDENTIFIER="--mary-era"
+    [[ ${OFFLINE_MODE} = "N" ]] && return 1
+  fi
+  return 0
+}
+
+[[ ${0} != '-bash' ]] && PARENT=$(dirname $0) || PARENT="$(pwd)" # If sourcing at terminal, $0 would be "-bash" , which is invalid. Thus, fallback to present working directory
+
+OFFLINE_MODE='N'
+[[ $1 = "offline" ]] && OFFLINE_MODE='Y'
+[[ $(basename $0 2>/dev/null) = "cnode.sh" ]] && OFFLINE_MODE='Y' # for backwards compatibility
+[[ $(basename $0 2>/dev/null) = "topologyUpdater.sh" ]] && OFFLINE_MODE='Y' # for backwards compatibility
+
+[[ -f "${PARENT}"/.env_branch ]] && BRANCH=$(cat "${PARENT}"/.env_branch) || BRANCH=master
+
+URL_RAW="https://raw.githubusercontent.com/cardano-community/guild-operators/${BRANCH}"
+DB_SCRIPTS_URL="${URL_RAW}/scripts/grest-helper-scripts/db-scripts"
+export LC_ALL=C.UTF-8
+
+# special mapping of coreutils gdate to date for MacOS
+if [[ $(uname) == Darwin ]]; then
+   date () { gdate "$@"; }
+fi
+
+[[ -z ${CURL_TIMEOUT} ]] && CURL_TIMEOUT=10
+
+telegramSend() {
+  if [[ -z "${TG_BOT_TOKEN}" ]] || [[ -z "${TG_CHAT_ID}" ]]; then
+    echo "Warn: to use the telegramSend function you must first set the bot and chat id in the env file"
+  else
+    TG_URL="https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage?parse_mode=Markdown"
+    TGAUE=$(curl -s -X POST $TG_URL -d chat_id=${TG_CHAT_ID} -d text="${HOSTNAME} $1");
+  fi
+}
+
+set_default_vars() {
+  [[ -z "${CNODE_HOME}" ]] && CNODE_HOME=/opt/cardano/cnode
+  CNODE_NAME="$(basename ${CNODE_HOME})"
+  CNODE_VNAME=$(tr '[:upper:]' '[:lower:]' <<< ${CNODE_NAME//_HOME/})
+  CNODE_VNAME_UPPERCASE=$(tr '[:lower:]' '[:upper:]' <<< ${CNODE_VNAME})
+  [[ -z "${CNODE_PORT}" ]] && CNODE_PORT=6000
+  [[ -z ${UPDATE_CHECK} ]] && UPDATE_CHECK="Y"
+  [[ -z ${TOPOLOGY} ]] && TOPOLOGY="${CNODE_HOME}/files/topology.json"
+  [[ -n ${CNODE_TOPOLOGY} ]] && TOPOLOGY="${CNODE_TOPOLOGY}" # compatibility with older topologyUpdater
+  [[ -z ${LOG_DIR} ]] && LOG_DIR="${CNODE_HOME}/logs"
+  [[ -n ${CNODE_LOG_DIR} ]] && LOG_DIR="${CNODE_LOG_DIR}" # compatibility with older topologyUpdater
+  [[ -z ${DB_DIR} ]] && DB_DIR="${CNODE_HOME}/db"
+  [[ -z ${TMP_DIR} ]] && TMP_DIR="/tmp/$(basename "${CNODE_HOME}")"
+  if ! mkdir -p "${TMP_DIR}" 2>/dev/null; then echo "ERROR: Failed to create directory for temporary files, please set TMP_DIR to a valid folder in 'env', current folder: ${TMP_DIR}" && exit 1; fi
+  [[ -z ${TIMEOUT_LEDGER_STATE} ]] && TIMEOUT_LEDGER_STATE=300
+  [[ -z ${ENABLE_KOIOS} ]] && ENABLE_KOIOS="Y"
+  [[ -z ${DBSYNC_QUERY_FOLDER} ]] && DBSYNC_QUERY_FOLDER="${CNODE_HOME}/files/dbsync/queries"
+  [[ -z ${WALLET_FOLDER} ]] && WALLET_FOLDER="${CNODE_HOME}/priv/wallet"
+  [[ -z ${POOL_FOLDER} ]] && POOL_FOLDER="${CNODE_HOME}/priv/pool"
+  [[ -z ${POOL_NAME} ]] && POOL_NAME="CHANGE_ME"
+  [[ -z ${POOL_DIR} ]] && POOL_DIR="${POOL_FOLDER}/${POOL_NAME}"
+  [[ -z ${WALLET_PAY_VK_FILENAME} ]] && WALLET_PAY_VK_FILENAME="payment.vkey"
+  [[ -z ${WALLET_PAY_SK_FILENAME} ]] && WALLET_PAY_SK_FILENAME="payment.skey"
+  [[ -z ${WALLET_HW_PAY_SK_FILENAME} ]] && WALLET_HW_PAY_SK_FILENAME="payment.hwsfile"
+  [[ -z ${WALLET_PAY_ADDR_FILENAME} ]] && WALLET_PAY_ADDR_FILENAME="payment.addr"
+  [[ -z ${WALLET_BASE_ADDR_FILENAME} ]] && WALLET_BASE_ADDR_FILENAME="base.addr"
+  [[ -z ${WALLET_STAKE_VK_FILENAME} ]] && WALLET_STAKE_VK_FILENAME="stake.vkey"
+  [[ -z ${WALLET_STAKE_SK_FILENAME} ]] && WALLET_STAKE_SK_FILENAME="stake.skey"
+  [[ -z ${WALLET_HW_STAKE_SK_FILENAME} ]] && WALLET_HW_STAKE_SK_FILENAME="stake.hwsfile"
+  [[ -z ${WALLET_STAKE_ADDR_FILENAME} ]] && WALLET_STAKE_ADDR_FILENAME="reward.addr"
+  [[ -z ${WALLET_STAKE_CERT_FILENAME} ]] && WALLET_STAKE_CERT_FILENAME="stake.cert"
+  [[ -z ${WALLET_STAKE_DEREG_FILENAME} ]] && WALLET_STAKE_DEREG_FILENAME="stake.dereg"
+  [[ -z ${WALLET_DELEGCERT_FILENAME} ]] && WALLET_DELEGCERT_FILENAME="delegation.cert"
+  [[ -z ${POOL_ID_FILENAME} ]] && POOL_ID_FILENAME="pool.id"
+  [[ -z ${POOL_HOTKEY_VK_FILENAME} ]] && POOL_HOTKEY_VK_FILENAME="hot.vkey"
+  [[ -z ${POOL_HOTKEY_SK_FILENAME} ]] && POOL_HOTKEY_SK_FILENAME="hot.skey"
+  [[ -z ${POOL_COLDKEY_VK_FILENAME} ]] && POOL_COLDKEY_VK_FILENAME="cold.vkey"
+  [[ -z ${POOL_COLDKEY_SK_FILENAME} ]] && POOL_COLDKEY_SK_FILENAME="cold.skey"
+  [[ -z ${POOL_OPCERT_COUNTER_FILENAME} ]] && POOL_OPCERT_COUNTER_FILENAME="cold.counter"
+  [[ -z ${POOL_OPCERT_FILENAME} ]] && POOL_OPCERT_FILENAME="op.cert"
+  [[ -z ${POOL_VRF_VK_FILENAME} ]] && POOL_VRF_VK_FILENAME="vrf.vkey"
+  [[ -z ${POOL_VRF_SK_FILENAME} ]] && POOL_VRF_SK_FILENAME="vrf.skey"
+  [[ -z ${POOL_CONFIG_FILENAME} ]] && POOL_CONFIG_FILENAME="pool.config"
+  [[ -z ${POOL_REGCERT_FILENAME} ]] && POOL_REGCERT_FILENAME="pool.cert"
+  [[ -z ${POOL_CURRENT_KES_START} ]] && POOL_CURRENT_KES_START="kes.start"
+  [[ -z ${POOL_DEREGCERT_FILENAME} ]] && POOL_DEREGCERT_FILENAME="pool.dereg"
+  [[ -z ${ASSET_FOLDER} ]] && ASSET_FOLDER="${CNODE_HOME}/priv/asset"
+  [[ -z ${ASSET_POLICY_VK_FILENAME} ]] && ASSET_POLICY_VK_FILENAME="policy.vkey"
+  [[ -z ${ASSET_POLICY_SK_FILENAME} ]] && ASSET_POLICY_SK_FILENAME="policy.skey"
+  [[ -z ${ASSET_POLICY_SCRIPT_FILENAME} ]] && ASSET_POLICY_SCRIPT_FILENAME="policy.script"
+  [[ -z ${ASSET_POLICY_ID_FILENAME} ]] && ASSET_POLICY_ID_FILENAME="policy.id"
+  FG_BLACK='\e[30m'
+  FG_RED='\e[31m'
+  FG_GREEN='\e[32m'
+  FG_YELLOW='\e[33m'
+  FG_BLUE='\e[34m'
+  FG_MAGENTA='\e[35m'
+  FG_CYAN='\e[36m'
+  FG_LGRAY='\e[37m'
+  FG_DGRAY='\e[90m'
+  FG_LBLUE='\e[94m'
+  FG_WHITE='\e[97m'
+  STANDOUT='\e[7m'
+  BOLD='\e[1m'
+  NC='\e[0m'
+}
+
+set_default_vars
+
+[[ -z "${CCLI}" ]] && CCLI=$(command -v cardano-cli)
+if [[ -z "${CCLI}" ]]; then
+  if [[ -f "${HOME}/.cabal/bin/cardano-cli" ]]; then
+    export PATH="${HOME}/.cabal/bin":$PATH
+    CCLI=$(command -v cardano-cli)
+  else
+    echo "You do not have a cardano-cli binary available in \$PATH."
+    return 1
+  fi
+fi
+
+[[ -z "${CNODEBIN}" ]] && CNODEBIN=$(command -v cardano-node)
+if [[ -z "${CNODEBIN}" ]]; then
+  if [[ -f "$(dirname ${CCLI})"/cardano-node ]]; then
+    CCLIPARENT="$(dirname ${CCLI})" && export PATH="${CCLIPARENT}":$PATH
+    CNODEBIN="$(dirname ${CCLI})"/cardano-node
+  elif [[ -f "${HOME}/.cabal/bin/cardano-node" ]]; then
+    export PATH="${HOME}/.cabal/bin":$PATH
+    CNODEBIN=$(command -v cardano-node)
+  elif [[ ${OFFLINE_MODE} = "Y" ]]; then
+    echo "You do not have a cardano-node binary available in \$PATH."
+    return 1
+  fi
+fi
+
+if [[ -z "${CNCLI}" ]]; then
+  CNCLI=$(command -v cncli) || CNCLI="${HOME}/.cargo/bin/cncli"
+fi
+
+[[ -f /usr/local/lib/libsodium.so ]] && export LD_LIBRARY_PATH=/usr/local/lib:"${LD_LIBRARY_PATH}" && PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:"${PKG_CONFIG_PATH}"
+
+if [[ -z "${SOCKET}" ]]; then
+  if [[ "$(ps -ef | grep "$(basename ${CNODEBIN}).*.port ${CNODE_PORT}" | grep -v grep)" =~ --socket-path[[:space:]]([^[:space:]]+) ]]; then
+    export CARDANO_NODE_SOCKET_PATH="${BASH_REMATCH[1]}"
+  elif [[ ${OFFLINE_MODE} = "Y" ]]; then
+    export CARDANO_NODE_SOCKET_PATH="${CNODE_HOME}/sockets/node0.socket"
+  else
+    echo "Node socket not set in env file and automatic detection failed! [source: $(basename $0 2>/dev/null)]"
+    return 1
+  fi
+else
+  export CARDANO_NODE_SOCKET_PATH="${SOCKET}"
+fi
+export SOCKET="${CARDANO_NODE_SOCKET_PATH}" # For compatibility with those who havn't yet upgraded cnode.sh
+
+if [[ -z "${CONFIG}" ]]; then
+  if [[ "$(ps -ef | grep "$(basename ${CNODEBIN}).*.port ${CNODE_PORT}" | grep -v grep)" =~ --config[[:space:]]([^[:space:]]+) ]]; then
+    CONFIG=${BASH_REMATCH[1]}
+  elif [[ -f "${CNODE_HOME}/files/config.json" ]]; then
+    CONFIG="${CNODE_HOME}/files/config.json"
+  else
+    echo "Node config not set in env file and automatic detection failed!"
+    return 1
+  fi
+fi
+
+if command -v "ss" &>/dev/null; then
+  use_lsof='N'
+elif command -v "lsof" &>/dev/null; then
+  use_lsof='Y'
+else
+  echo -e "'ss' and fallback 'lsof' commands are missing, please install using latest prereqs.sh script or with your packet manager of choice.\nhttps://command-not-found.com/ss can be used to check package name to install.\n"
+  return 1
+fi
+
+if ! command -v "jq" &>/dev/null; then
+  echo -e "'jq' command is missing, please install using latest prereqs.sh script of with your packet manager of choice.\nhttps://command-not-found.com/ss can be used to check package name to install.\n"
+  return 1
+fi
+
+read -ra CONFIG_CONTENTS <<<"$(jq -r '[ .AlonzoGenesisFile, .ByronGenesisFile, .ShelleyGenesisFile, .Protocol, .TraceChainDb]| @tsv' "${CONFIG}" 2>/dev/null)"
+if [[ -z "${CONFIG_CONTENTS[4]}" ]]; then
+  echo "Could not find TraceChainDb when attempting to parse ${CONFIG} file in JSON format, please double-check the syntax of your config, or simply download it from guild-operators repository!"
+  return 1
+else
+  ALONZO_GENESIS_JSON="${CONFIG_CONTENTS[0]}"
+  BYRON_GENESIS_JSON="${CONFIG_CONTENTS[1]}"
+  GENESIS_JSON="${CONFIG_CONTENTS[2]}"
+  # if relative path is used, assume same parent dir as config
+  [[ ! ${ALONZO_GENESIS_JSON} =~ ^/ ]] && ALONZO_GENESIS_JSON="$(dirname "${CONFIG}")/${ALONZO_GENESIS_JSON}"
+  [[ ! ${BYRON_GENESIS_JSON} =~ ^/ ]] && BYRON_GENESIS_JSON="$(dirname "${CONFIG}")/${BYRON_GENESIS_JSON}"
+  [[ ! ${GENESIS_JSON} =~ ^/ ]] && GENESIS_JSON="$(dirname "${CONFIG}")/${GENESIS_JSON}"
+  # if genesis files not found, exit with rc 1
+  [[ ! -f "${ALONZO_GENESIS_JSON}" ]] && echo "Byron genesis file not found: ${ALONZO_GENESIS_JSON}" && return 1
+  [[ ! -f "${BYRON_GENESIS_JSON}" ]] && echo "Byron genesis file not found: ${BYRON_GENESIS_JSON}" && return 1
+  [[ ! -f "${GENESIS_JSON}" ]] && echo "Shelley genesis file not found: ${GENESIS_JSON}" && return 1
+  PROTOCOL="${CONFIG_CONTENTS[3]}"
+fi
+
+[[ -z ${EKG_TIMEOUT} ]] && EKG_TIMEOUT=3
+[[ -z ${EKG_HOST} ]] && EKG_HOST=127.0.0.1
+if [[ ${EKG_HOST} =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+  IFS='.' read -ra EKG_OCTETS <<< ${EKG_HOST}
+  if ! [[ ${EKG_OCTETS[0]} -le 255 && ${EKG_OCTETS[1]} -le 255 && ${EKG_OCTETS[2]} -le 255 && ${EKG_OCTETS[3]} -le 255 ]]; then
+    echo "Not a valid IP range set for EKG host, please check env file for value of EKG_HOST (currently it is ${EKG_HOST} )!"
+    return 1
+  fi
+else
+  echo "Not a valid IP format set for EKG host, please check env file!"
+  return 1
+fi
+
+if [[ -z ${EKG_PORT} ]]; then
+  if ! EKG_PORT=$(jq -er '.hasEKG | if .|type=="array" then .[1] else . end' "${CONFIG}" 2>/dev/null); then
+    if [[ ${OFFLINE_MODE} = "N" ]]; then
+      echo "Could not get 'hasEKG' port in ${CONFIG}"
+      return 1
+    fi
+  fi
+elif [[ ! ${EKG_PORT} =~ ^[0-9]+$ ]]; then
+  echo "Please set a valid EKG port number in env file! Current value is ${EKG_PORT} !"
+  return 1
+fi
+
+if [[ -z ${PROM_HOST} ]]; then PROM_HOST=$(jq -er '.hasPrometheus[0]' "${CONFIG}" 2>/dev/null) || PROM_HOST=127.0.0.1; fi
+
+if [[ ${PROM_HOST} =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+  IFS='.' read -ra PROM_OCTETS <<< ${PROM_HOST}
+  if ! [[ ${PROM_OCTETS[0]} -le 255 && ${PROM_OCTETS[1]} -le 255 && ${PROM_OCTETS[2]} -le 255 && ${PROM_OCTETS[3]} -le 255 ]]; then
+    echo "Not a valid IP range set for Prometheus host, please check env file for value of PROM_HOST (currently it is set to ${PROM_HOST} )!"
+    return 1
+  fi
+else
+  echo "Not a valid IP format set for Prometheus host, please check env file!"
+  return 1
+fi
+if [[ -z ${PROM_PORT} ]]; then
+  if ! PROM_PORT=$(jq -er '.hasPrometheus[1]' "${CONFIG}" 2>/dev/null); then
+    if [[ ${OFFLINE_MODE} = "N" ]]; then
+      echo "Could not get 'hasPrometheus' port in ${CONFIG}"
+      return 1
+    fi
+  fi
+elif [[ ! ${PROM_PORT} =~ ^[0-9]+$ ]]; then
+  echo "Please set a valid Prometheus port number in env file! Current value is ${PROM_PORT} !"
+  return 1
+fi
+
+[[ -z ${BLOCKLOG_DIR} ]] && BLOCKLOG_DIR="${CNODE_HOME}/guild-db/blocklog"
+BLOCKLOG_DB="${BLOCKLOG_DIR}/blocklog.db"
+[[ -z ${BLOCKLOG_TZ} ]] && BLOCKLOG_TZ="UTC"
+[[ -z ${CNODE_PORT} ]] && CNODE_PORT=6000
+[[ -z "${IP_VERSION}" ]] && IP_VERSION=4
+IP_VERSION=$(tr '[:upper:]' '[:lower:]' <<< "${IP_VERSION}")
+[[ -z ${USE_EKG} ]] && USE_EKG='Y'
+CNODE_PID=$(pgrep -fn "$(basename ${CNODEBIN}).*.--port ${CNODE_PORT}")
+
+if [[ -n "${CNODE_PID}" ]]; then
+  if [[ "${USE_EKG}" == "N" ]]; then
+    if { [[ "${use_lsof}" != 'Y' && -z "$(ss -lnpt | grep "pid=${CNODE_PID}," | awk -v port=":${PROM_PORT}" '$4 ~ port {print $4}')" ]]; } || { [[ "${use_lsof}" == 'Y' && -z "$(lsof -Pnl -i4 +M | grep LISTEN | awk -v pid="${CNODE_PID}" -v port=":${PROM_PORT}" '$2 == pid && $9 ~ port {print $9}')" ]]; }; then
+      echo "ERROR: You specified ${PROM_PORT} as your Prometheus port, but it looks like the cardano-node (PID: ${CNODE_PID} ) is not listening on this port. Please update the config or kill the conflicting process first."
+      return 1
+    fi
+  else
+    if { [[ "${use_lsof}" != 'Y' && -z "$(ss -lnpt | grep "pid=${CNODE_PID}," | awk -v port=":${EKG_PORT}" '$4 ~ port {print $4}')" ]]; } || { [[ "${use_lsof}" == 'Y' && -z "$(lsof -Pnl -i4 +M | grep LISTEN | awk -v pid="${CNODE_PID}" -v port=":${EKG_PORT}" '$2 == pid && $9 ~ port {print $9}')" ]]; }; then
+      echo "ERROR: You specified ${EKG_PORT} as your EKG port, but it looks like the cardano-node (PID: ${CNODE_PID} ) is not listening on this port. Please update the config or kill the conflicting process first."
+      return 1
+    fi
+  fi
+fi
+
+node_version="$(${CCLI} version | head -1 | cut -d' ' -f2)"
+if ! versionCheck "1.32.1" "${node_version}"; then
+  echo -e "\nGuild scripts has now been upgraded to support cardano-node 1.32.1 or higher (${node_version} found).\nPlease update cardano-node (note that you should ideally update your config too) or use tagged branches for older node version.\n\n"
+  return 1
+fi
+
+read_genesis() {
+  read -ra SHGENESIS <<< "$(jq -r '[ .networkMagic, .systemStart, .epochLength, .slotLength, .activeSlotsCoeff, .slotsPerKESPeriod, .maxKESEvolutions ] |@tsv' < ${GENESIS_JSON})"
+  read -ra BYGENESIS <<< "$(jq -r '[ .startTime, .protocolConsts.k, .blockVersionData.slotDuration ] |@tsv' < ${BYRON_GENESIS_JSON})"
+  NWMAGIC=${SHGENESIS[0]}
+  SHELLEY_GENESIS_START_SEC=$(date --date="${SHGENESIS[1]}" +%s)
+  EPOCH_LENGTH=${SHGENESIS[2]}
+  SLOT_LENGTH=${SHGENESIS[3]}
+  ACTIVE_SLOTS_COEFF=${SHGENESIS[4]}
+  SLOTS_PER_KES_PERIOD=${SHGENESIS[5]}
+  MAX_KES_EVOLUTIONS=${SHGENESIS[6]}
+  BYRON_GENESIS_START_SEC=${BYGENESIS[0]}
+  BYRON_K=${BYGENESIS[1]}
+  BYRON_SLOT_LENGTH=${BYGENESIS[2]}
+  BYRON_EPOCH_LENGTH=$(( 10 * BYRON_K ))
+}
+
+read_genesis
+
+[[ ${NWMAGIC} == "764824073" ]] && NETWORK_IDENTIFIER="--mainnet" || NETWORK_IDENTIFIER="--testnet-magic ${NWMAGIC}"
+case ${NWMAGIC} in
+  764824073) 
+    NETWORK_NAME="Mainnet"
+    SHELLEY_TRANS_EPOCH=208
+    [[ -z ${KOIOS_API} ]] && KOIOS_API="https://api.koios.rest/api/v0" ;;
+  1097911063) 
+    NETWORK_NAME="Testnet"
+    SHELLEY_TRANS_EPOCH=74
+    [[ -z ${KOIOS_API} ]] && KOIOS_API="https://testnet.koios.rest/api/v0" ;;
+  633343913) 
+    NETWORK_NAME="Staging"
+    SHELLEY_TRANS_EPOCH=208 ;;
+  141) 
+    NETWORK_NAME="Guild"
+    SHELLEY_TRANS_EPOCH=2
+    [[ -z ${KOIOS_API} ]] && KOIOS_API="https://guild.koios.rest/api/v0" ;;
+  *) 
+    NETWORK_NAME="Custom"
+    [[ -z ${SHELLEY_TRANS_EPOCH} ]] && SHELLEY_TRANS_EPOCH=0
+esac
+
+test_koios() {
+  # make sure KOIOS_API is reachable, else fall back to cli
+  [[ ${ENABLE_KOIOS} = 'Y' && -n ${KOIOS_API} && $(curl -Isf -m 5 ${KOIOS_API}/tip | head -1) = *"200 OK"* ]] || unset KOIOS_API
+}
+
+[[ ${OFFLINE_MODE} = "N" && ${SHELLEY_TRANS_EPOCH} -eq -1 ]] && getNodeMetrics && getShelleyTransitionEpoch
+
+# Return code 2 is used for scripts that want to source env but not fail due to a starting node
+
+if [[ ${OFFLINE_MODE} = "N" && ! -S ${CARDANO_NODE_SOCKET_PATH} ]]; then
+  echo -e "${FG_RED}Looks like cardano-node is running with socket-path as ${FG_LBLUE}${CARDANO_NODE_SOCKET_PATH}${FG_RED}, but the actual socket file does not exist."
+  echo -e "This could occur if the node hasnt completed startup or if a second instance of node startup was attempted!"
+  echo -e "If this does not resolve automatically in a few minutes, you might want to restart your node and try again.${NC}"
+  return 2
+fi
+
+if [[ ${OFFLINE_MODE} = "N" ]] && ! PROT_PARAMS="$(${CCLI} query protocol-parameters ${NETWORK_IDENTIFIER} 2>&1)"; then echo -e "${FG_RED}Failed to query protocol-parameters from node, not yet fully started?${NC}" && return 2; fi
+
+if ! DECENTRALISATION=$(jq -er .decentralization <<< ${PROT_PARAMS} 2>/dev/null); then DECENTRALISATION=0.5; fi
+
+return 0
