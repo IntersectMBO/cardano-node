@@ -42,8 +42,6 @@ RUN chmod 755 gLiveView.sh
 RUN mkdir /home/cardano/bin
 RUN mv gLiveView.sh /home/cardano/bin/gLiveView
 RUN apt-get install lsof procps bc -y
-RUN ls -ltr 
-RUN find / -name env
 COPY env /home/cardano/bin/env
 RUN chown cardano /home/cardano/bin
 RUN echo "export PATH=$PATH:/home/cardano/bin" >> /root/.bashrc
