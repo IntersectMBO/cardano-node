@@ -121,7 +121,6 @@ library
                       , generic-monoid
                       , ghc-prim
                       , io-classes
-                      , iproute
                       , mtl
                       , network
                       , network-mux
