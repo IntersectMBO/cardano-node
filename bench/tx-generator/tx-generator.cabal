@@ -249,6 +249,7 @@ test-suite tx-generator-monad-test
                       , bytestring
                       , cardano-api
                       , cardano-cli
+                      , cardano-ledger-api
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-node

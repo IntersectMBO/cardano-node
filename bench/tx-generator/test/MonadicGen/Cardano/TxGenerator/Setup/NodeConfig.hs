@@ -8,13 +8,15 @@ module MonadicGen.Cardano.TxGenerator.Setup.NodeConfig
        (module MonadicGen.Cardano.TxGenerator.Setup.NodeConfig)
        where
 
+import qualified Control.Applicative as Appl (Const(Const), getConst)
 import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Bifunctor (first)
 import           Data.Monoid
 
-import           Ouroboros.Consensus.Cardano (ProtocolParamsShelleyBased (..))
+import           Ouroboros.Consensus.Cardano as Consensus (ProtocolParams (CardanoProtocolParams), ledgerTransitionConfig)
 
 import           Cardano.Api (BlockType (..), ProtocolInfoArgs (..))
+import qualified Cardano.Ledger.Api.Transition as Ledger (tcShelleyGenesisL)
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Handlers.Shutdown (ShutdownConfig (..))
 import           Cardano.Node.Protocol.Cardano
@@ -30,12 +32,11 @@ import           MonadicGen.Cardano.TxGenerator.Types
 -- as this guarantees proper error handling when trying to create a non-Cardano protocol.
 getGenesis :: SomeConsensusProtocol -> ShelleyGenesis
 getGenesis (SomeConsensusProtocol CardanoBlockType proto)
-    = genesis
+    = Appl.getConst $ Ledger.tcShelleyGenesisL Appl.Const transCfg
   where
-    ProtocolInfoArgsCardano
-      _
-      ProtocolParamsShelleyBased{shelleyBasedGenesis = genesis}
-      _ _ _ _ _ _ _ _ _ _ _ _ = proto
+    ProtocolInfoArgsCardano Consensus.CardanoProtocolParams
+      { Consensus.ledgerTransitionConfig = transCfg
+      } = proto
 
 -- | extract the path to genesis file from a NodeConfiguration for Cardano protocol
 getGenesisPath :: NodeConfiguration -> Maybe GenesisFile
