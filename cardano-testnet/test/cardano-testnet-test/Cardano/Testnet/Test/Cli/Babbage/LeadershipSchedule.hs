@@ -27,6 +27,8 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad (void)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
@@ -38,6 +40,7 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
 import           GHC.Stack (callStack)
+import qualified GHC.Stack as GHC
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
@@ -280,7 +283,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
 
   yamlBs <- createConfigYaml tempAbsPath (cardanoNodeEra cTestnetOptions)
   H.lbsWriteFile (work </> "configuration.yaml") yamlBs
-  runtime <- startNode (TmpAbsolutePath tempAbsPath') "test-spo" 3005
+  eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath tempAbsPath') "test-spo" 3005
         [ "run"
         , "--config", work </> "configuration.yaml"
         , "--topology", topologyFile
@@ -289,8 +292,10 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
         , "--shelley-vrf-key", vrfSkey
         , "--shelley-operational-certificate", testSpoOperationalCertFp
         ]
+  testPoolStdOutFp <- case eRuntime of
+                       Left e -> H.failMessage GHC.callStack $ "Failed to start node: " <> show e
+                       Right runtime -> return $ nodeStdout runtime
   threadDelay 5_000000
-  let testPoolStdOutFp = nodeStdout runtime
 
 
   tipDeadline <- H.noteShowM $ DTC.addUTCTime 210 <$> H.noteShowIO DTC.getCurrentTime

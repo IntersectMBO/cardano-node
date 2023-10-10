@@ -19,13 +19,17 @@ import           Cardano.Testnet.Test.Misc
 
 import           Prelude
 
-import           Control.Monad (void)
+import           Control.Monad
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
+import           Data.Either
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           GHC.Stack (callStack)
+import qualified GHC.Stack as GHC
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
@@ -266,7 +270,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
 
   yamlBs <- createConfigYaml tempAbsPath (cardanoNodeEra cTestnetOptions)
   H.lbsWriteFile (work </> "configuration.yaml") yamlBs
-  _runtime <- startNode (TmpAbsolutePath tempAbsPath') "test-spo" 3005
+  eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath tempAbsPath') "test-spo" 3005
         [ "run"
         , "--config", work </> "configuration.yaml"
         , "--topology", topologyFile
@@ -275,6 +279,11 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
         , "--shelley-vrf-key", testSpoVrfSKey
         , "--shelley-operational-certificate", testSpoOperationalCertFp
         ]
+  unless (isRight eRuntime) $ do
+    H.failMessage GHC.callStack
+      $ mconcat [ "Failed to start node: "
+                , show (fromLeft (error "hprop_kes_period_info: Should be impossible") eRuntime)
+                ]
 
   threadDelay 5_000000
 

@@ -17,17 +17,20 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Except
 import           Data.Aeson
 import           Data.Aeson.Types
 import           Data.Bifunctor
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Either (isRight)
-import           Data.Functor ((<&>))
 import qualified Data.List as L
 import           Data.Maybe
 import qualified Data.Time.Clock as DTC
 import           GHC.IO.Exception (ExitCode (ExitFailure, ExitSuccess))
 import           GHC.Stack (callStack)
+import qualified GHC.Stack as GHC
 import qualified System.Exit as IO
 import           System.FilePath ((</>))
 import qualified System.IO as IO
@@ -45,14 +48,14 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 
 import           Testnet.Defaults
-import           Testnet.Process.Run (execCli_, procNode)
+import           Testnet.Process.Run
 import qualified Testnet.Property.Utils as H
 import           Testnet.Property.Utils
 import           Testnet.Runtime
 import           Testnet.Start.Byron
 
 {- HLINT ignore "Redundant <&>" -}
-
+-- TODO: Use cardanoTestnet in hprop_shutdown
 hprop_shutdown :: Property
 hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> do
   conf <- H.noteShowM $ mkConf tempAbsBasePath'
@@ -129,47 +132,49 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
     $ encode defaultMainnetTopology
 
   -- Run cardano-node with pipe as stdin.  Use 0 file descriptor as shutdown-ipc
-  (mStdin, _mStdout, _mStderr, pHandle, _releaseKey) <- H.createProcess =<<
-    ( procNode
-      [ "run"
-      , "--config", tempAbsPath' </> "configuration.yaml"
-      , "--topology", tempAbsPath' </> "mainnet-topology.json"
-      , "--database-path", tempAbsPath' </> "db"
-      , "--socket-path", IO.sprocketArgumentName sprocket
-      , "--host-addr", "127.0.0.1"
-      , "--port", show @Int port
-      , "--shutdown-ipc", "0"
-      ] <&>
-      ( \cp -> cp
-        { IO.std_in = IO.CreatePipe
-        , IO.std_out = IO.UseHandle hNodeStdout
-        , IO.std_err = IO.UseHandle hNodeStderr
-        , IO.cwd = Just tempBaseAbsPath'
-        }
-      )
-    )
 
-  H.threadDelay $ 10 * 1000000
+  eRes <- liftIO . runExceptT $ procNode
+                         [ "run"
+                         , "--config", tempAbsPath' </> "configuration.yaml"
+                         , "--topology", tempAbsPath' </> "mainnet-topology.json"
+                         , "--database-path", tempAbsPath' </> "db"
+                         , "--socket-path", IO.sprocketArgumentName sprocket
+                         , "--host-addr", "127.0.0.1"
+                         , "--port", show @Int port
+                         , "--shutdown-ipc", "0"
+                         ]
+  res <- H.evalEither eRes
+  let process = res { IO.std_in = IO.CreatePipe
+                    , IO.std_out = IO.UseHandle hNodeStdout
+                    , IO.std_err = IO.UseHandle hNodeStderr
+                    , IO.cwd = Just tempBaseAbsPath'
+                    }
 
-  mExitCodeRunning <- H.evalIO $ IO.getProcessExitCode pHandle
+  eProcess <- lift $ lift $ runExceptT $ initiateProcess process
+  case eProcess of
+    Left e -> H.failMessage GHC.callStack $ mconcat ["Failed to initiate node process: ", show e]
+    Right (mStdin, _mStdout, _mStderr, pHandle, _releaseKey) -> do
+      H.threadDelay $ 10 * 1000000
 
-  when (isJust mExitCodeRunning) $ do
-    H.evalIO $ IO.hClose hNodeStdout
-    H.evalIO $ IO.hClose hNodeStderr
-    H.cat nodeStdoutFile
-    H.cat nodeStderrFile
+      mExitCodeRunning <- H.evalIO $ IO.getProcessExitCode pHandle
 
-  mExitCodeRunning === Nothing
+      when (isJust mExitCodeRunning) $ do
+        H.evalIO $ IO.hClose hNodeStdout
+        H.evalIO $ IO.hClose hNodeStderr
+        H.cat nodeStdoutFile
+        H.cat nodeStderrFile
 
-  forM_ mStdin $ \hStdin -> H.evalIO $ IO.hClose hStdin
+      mExitCodeRunning === Nothing
 
-  H.threadDelay $ 2 * 1000000
+      forM_ mStdin $ \hStdin -> H.evalIO $ IO.hClose hStdin
 
-  mExitCode <- H.evalIO $ IO.getProcessExitCode pHandle
+      H.threadDelay $ 2 * 1000000
 
-  mExitCode === Just IO.ExitSuccess
+      mExitCode <- H.evalIO $ IO.getProcessExitCode pHandle
 
-  return ()
+      mExitCode === Just IO.ExitSuccess
+
+      return ()
 
 hprop_shutdownOnSlotSynced :: Property
 hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> do

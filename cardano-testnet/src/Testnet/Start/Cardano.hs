@@ -23,19 +23,24 @@ import           Cardano.Api hiding (cardanoEra)
 import           Prelude hiding (lines)
 
 import           Control.Monad
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
 import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Either
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
+import qualified GHC.Stack as GHC
 import           System.FilePath.Posix ((</>))
 import qualified System.Info as OS
 
 import qualified Hedgehog as H
+import           Hedgehog.Extras (failMessage)
 import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Stock.Time as DTC
@@ -324,66 +329,69 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
         ]
       ]
     ]
+  nodeStdoutFiles <- forM spoNodes $ \node -> do
+                      H.noteTempFile (makeLogDir $ TmpAbsolutePath tempAbsPath') $ node <> ".stdout.log"
+
   let spoNodesWithPortNos = L.zip spoNodes [3001..]
-  poolNodes <- forM (L.zip spoNodesWithPortNos poolKeys) $ \((node, port),key) -> do
-    -- TODO: Left off here. You need to transform your ExceptT stack to
-    -- ReaderT IntegrationState (ResourceT IO). Run exceptT, propagate any errors
-    -- via PropertyT Monad. If none then tranform into ReaderT IntegrationState (ResourceT IO)
-    runtime <- startNode (TmpAbsolutePath tempAbsPath') node port
-        [ "run"
-        , "--config", tempAbsPath' </> "configuration.yaml"
-        , "--topology", tempAbsPath' </> node </> "topology.json"
-        , "--database-path", tempAbsPath' </> node </> "db"
-        , "--shelley-kes-key", tempAbsPath' </> node </> "kes.skey"
-        , "--shelley-vrf-key", tempAbsPath' </> node </> "vrf.skey"
-        , "--byron-delegation-certificate", tempAbsPath' </> node </> "byron-delegation.cert"
-        , "--byron-signing-key", tempAbsPath' </> node </> "byron-delegate.key"
-        , "--shelley-operational-certificate", tempAbsPath' </> node </> "opcert.cert"
+  ePoolNodes <- forM (L.zip spoNodesWithPortNos poolKeys) $ \((node, port),key) -> do
+    eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath tempAbsPath') node port
+                                [ "run"
+                                , "--config", tempAbsPath' </> "configuration.yaml"
+                                , "--topology", tempAbsPath' </> node </> "topology.json"
+                                , "--database-path", tempAbsPath' </> node </> "db"
+                                , "--shelley-kes-key", tempAbsPath' </> node </> "kes.skey"
+                                , "--shelley-vrf-key", tempAbsPath' </> node </> "vrf.skey"
+                                , "--byron-delegation-certificate", tempAbsPath' </> node </> "byron-delegation.cert"
+                                , "--byron-signing-key", tempAbsPath' </> node </> "byron-delegate.key"
+                                , "--shelley-operational-certificate", tempAbsPath' </> node </> "opcert.cert"
+                                ]
+    return $ flip PoolNode key <$> eRuntime
+
+  if any isLeft ePoolNodes
+  then failMessage GHC.callStack $ show $ map show $ lefts ePoolNodes
+  else do
+    let (_ , poolNodes) = partitionEithers ePoolNodes
+    now <- H.noteShowIO DTC.getCurrentTime
+    deadline <- H.noteShow $ DTC.addUTCTime 30 now
+
+    forM_ nodeStdoutFiles $ \nodeStdoutFile -> do
+      H.assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile
+
+    H.noteShowIO_ DTC.getCurrentTime
+
+    forM_ wallets $ \wallet -> do
+      H.cat $ paymentSKey $ paymentKeyInfoPair wallet
+      H.cat $ paymentVKey $ paymentKeyInfoPair wallet
+
+    let runtime = TestnetRuntime
+          { configurationFile
+          , shelleyGenesisFile = genesisShelleyDir </> "genesis.json"
+          , testnetMagic
+          , poolNodes
+          , wallets = wallets
+          , delegators = []
+          }
+
+    let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
+
+    execConfig <- H.headM (poolSprockets runtime) >>= H.mkExecConfig tempBaseAbsPath
+
+    forM_ wallets $ \wallet -> do
+      H.cat $ paymentSKey $ paymentKeyInfoPair wallet
+      H.cat $ paymentVKey $ paymentKeyInfoPair wallet
+
+      utxos <- execCli' execConfig
+        [ "query", "utxo"
+        , "--address", Text.unpack $ paymentKeyInfoAddr wallet
+        , "--cardano-mode"
+        , "--testnet-magic", show @Int testnetMagic
         ]
-    return $ PoolNode runtime key
 
-  now <- H.noteShowIO DTC.getCurrentTime
-  deadline <- H.noteShow $ DTC.addUTCTime 90 now
+      H.note_ utxos
 
-  forM_ spoNodes $ \node -> do
-    nodeStdoutFile <- H.noteTempFile (makeLogDir $ TmpAbsolutePath tempAbsPath') $ node <> ".stdout.log"
-    H.assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile
+    stakePoolsFp <- H.note $ tempAbsPath' </> "current-stake-pools.json"
 
-  H.noteShowIO_ DTC.getCurrentTime
+    prop_spos_in_ledger_state stakePoolsFp testnetOptions execConfig
 
-  forM_ wallets $ \wallet -> do
-    H.cat $ paymentSKey $ paymentKeyInfoPair wallet
-    H.cat $ paymentVKey $ paymentKeyInfoPair wallet
-
-  let runtime = TestnetRuntime
-        { configurationFile
-        , shelleyGenesisFile = genesisShelleyDir </> "genesis.json"
-        , testnetMagic
-        , poolNodes
-        , wallets = wallets
-        , delegators = []
-        }
-
-  let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-
-  execConfig <- H.headM (poolSprockets runtime) >>= H.mkExecConfig tempBaseAbsPath
-
-  forM_ wallets $ \wallet -> do
-    H.cat $ paymentSKey $ paymentKeyInfoPair wallet
-    H.cat $ paymentVKey $ paymentKeyInfoPair wallet
-
-    utxos <- execCli' execConfig
-      [ "query", "utxo"
-      , "--address", Text.unpack $ paymentKeyInfoAddr wallet
-      , "--cardano-mode"
-      , "--testnet-magic", show @Int testnetMagic
-      ]
-
-    H.note_ utxos
-
-  stakePoolsFp <- H.note $ tempAbsPath' </> "current-stake-pools.json"
-
-  prop_spos_in_ledger_state stakePoolsFp testnetOptions execConfig
-
-  pure runtime
+    pure runtime
 
