@@ -31,4 +31,3 @@ jobs:
           push: true
           file: Dockerfile.submitapi
           tags: emurgornd/cardano-submit-api:latest,emurgornd/cardano-node:${{ github.ref_name }}
-		  
