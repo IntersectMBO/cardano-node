@@ -218,6 +218,9 @@ TraceLocalTxSubmissionServer: False
 # Trace mempool.
 TraceMempool: True
 
+# Trace the backing store operations.
+TraceBackingStore: False
+
 # Trace Mux Events.
 TraceMux: False
 

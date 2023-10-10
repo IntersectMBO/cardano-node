@@ -92,6 +92,7 @@ import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNodeArgs (..)
                    StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
+import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.Diffusion as Diffusion
@@ -122,6 +123,10 @@ import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Tracing.Tracers
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
+
+import           Cardano.Node.Configuration.LedgerDB
+import           Ouroboros.Consensus.Storage.LedgerDB.BackingStore
+import           Ouroboros.Consensus.Storage.LedgerDB.BackingStore.Impl.LMDB (LMDBLimits (..))
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -424,6 +429,10 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               onKernel nodeKernel
           , rnEnableP2P      = p2pMode
           , rnPeerSharing    = ncPeerSharing nc
+          , rnBackingStoreSelector = case ncLedgerDBBackend nc of
+              LMDB newLimit -> LMDBBackingStore $
+                maybe id (\y x -> x { lmdbMapSize = toBytes y }) newLimit defaultLMDBLimits
+              InMemory      -> InMemoryBackingStore
           }
     in case p2pMode of
       EnabledP2PMode -> do
@@ -471,7 +480,6 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
               , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride      = ncValidateDB nc
-              , srnSnapshotInterval             = ncSnapshotInterval nc
               , srnDatabasePath                 = dbPath
               , srnDiffusionArguments           = diffusionArguments
               , srnDiffusionArgumentsExtra      = diffusionArgumentsExtra
@@ -479,7 +487,11 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnDiffusionTracersExtra        = diffusionTracersExtra tracers
               , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
               , srnTraceChainDB                 = chainDBTracer tracers
+              , srnTraceBackingStore           = Consensus.backingStoreTracer $ consensusTracers tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
+              , srnSnapshotInterval             = ncSnapshotInterval nc
+              , srnFlushFrequency               = ncFlushFrequency nc
+              , srnQueryBatchSize               = ncQueryBatchSize nc
               }
       DisabledP2PMode -> do
         nt <- TopologyNonP2P.readTopologyFileOrError nc
@@ -520,7 +532,6 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               { srnBfcMaxConcurrencyBulkSync   = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
               , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride     = ncValidateDB nc
-              , srnSnapshotInterval            = ncSnapshotInterval nc
               , srnDatabasePath                = dbPath
               , srnDiffusionArguments          = diffusionArguments
               , srnDiffusionArgumentsExtra     = mkNonP2PArguments ipProducers dnsProducers
@@ -528,7 +539,11 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnDiffusionTracersExtra       = diffusionTracersExtra tracers
               , srnEnableInDevelopmentVersions = ncExperimentalProtocolsEnabled nc
               , srnTraceChainDB                = chainDBTracer tracers
+              , srnTraceBackingStore           = Consensus.backingStoreTracer $ consensusTracers tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
+              , srnSnapshotInterval            = ncSnapshotInterval nc
+              , srnFlushFrequency              = ncFlushFrequency nc
+              , srnQueryBatchSize              = ncQueryBatchSize nc
               }
  where
   logStartupWarnings :: IO ()

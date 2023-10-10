@@ -280,6 +280,11 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Mempool"]
     configureTracers configReflection trConfig [mempoolTr]
 
+    !backingStoreTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["BackingStore"]
+    configureTracers configReflection trConfig [mempoolTr]
+
     !forgeTr    <- mkCardanoTracer'
                 trBase trForward mbTrEKG
                 ["Forge", "Loop"]
@@ -332,6 +337,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith localTxSubmissionServerTr
       , Consensus.mempoolTracer = Tracer $
           traceWith mempoolTr
+      , Consensus.backingStoreTracer = Tracer $
+          traceWith backingStoreTr
       , Consensus.forgeTracer =
            Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith (contramap Left forgeTr) x)
            <>
