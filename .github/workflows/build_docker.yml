@@ -19,15 +19,16 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push Cardano node blockproducer
+      - name: Build and push Cardano Node 
         uses: docker/build-push-action@v4
         with:
           push: true
-          file: Dockerfile.blockproducer
-          tags: emurgornd/cardano-node-block-producer:latest,emurgornd/cardano-node-block-producer:${{ github.ref_name }}
-      - name: Build and push Cardano node relay
+          file: Dockerfile.node
+          tags: emurgornd/cardano-node:latest,emurgornd/cardano-node:${{ github.ref_name }}
+      - name: Build and push Cardano Submit API
         uses: docker/build-push-action@v4
         with:
           push: true
-          file: Dockerfile.relay
-          tags: emurgornd/cardano-node-relay:latest,emurgornd/cardano-node-relay:${{ github.ref_name }}
+          file: Dockerfile.submitapi
+          tags: emurgornd/cardano-submit-api:latest,emurgornd/cardano-node:${{ github.ref_name }}
+		  
