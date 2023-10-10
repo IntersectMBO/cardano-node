@@ -18,7 +18,7 @@ import           Ouroboros.Network.Block (pointSlot, unSlotNo)
 import           Ouroboros.Network.Point (withOrigin)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB.Impl as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 
 data ReplayBlockStats = ReplayBlockStats
   { rpsDisplay      :: Bool
