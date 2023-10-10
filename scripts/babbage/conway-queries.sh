@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# This scripts uses set -x to show in terminal the commands executed by the script.
+# The "exec 2>" below this comment helps the user to differenciate between the commands and its outputs by changing the color
+# of the set -x output (the commands).
+
 exec 2> >(while IFS= read -r line; do echo -e "\e[34m${line}\e[0m" >&2; done)
 
 # Unofficial bash strict mode.

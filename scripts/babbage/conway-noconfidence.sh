@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# This script is to be run after clitestmaster.sh
-# Wait for the change to the constitution action to be enacted before running this script
+# This scripts uses set -x to show in terminal the commands executed by the script.
+# The "exec 2>" below this comment helps the user to differenciate between the commands and its outputs by changing the color
+# of the set -x output (the commands).
 
 exec 2> >(while IFS= read -r line; do echo -e "\e[34m${line}\e[0m" >&2; done)
 
@@ -44,41 +45,45 @@ mkdir -p "$CC_DIR"
 
 # --------------
 
-wget https://tinyurl.com/3wrwb2as -O "${ROOT}/govActionJustification.txt"
+wget https://tinyurl.com/3wrwb2as -O "${TRANSACTIONS_DIR}/govActionJustification.txt"
 
+previousId="$($CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.ratify.prevGovActionIds.pgaCommittee.txId')"
+previousIx="$($CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.ratify.prevGovActionIds.pgaCommittee.govActionIx')"
 
 $CARDANO_CLI conway governance action create-no-confidence \
---testnet \
---governance-action-deposit 0 \
---stake-verification-key-file "${UTXO_DIR}/stake1.vkey" \
---proposal-url https://tinyurl.com/3wrwb2as \
---proposal-file "${ROOT}/govActionJustification.txt" \
---out-file "${TRANSACTIONS_DIR}/no-confidence.action"
+  --testnet \
+  --governance-action-deposit 0 \
+  --governance-action-tx-id "${previousId}" \
+  --governance-action-index "${previousIx}" \
+  --stake-verification-key-file "${UTXO_DIR}/stake1.vkey" \
+  --proposal-url https://tinyurl.com/3wrwb2as \
+  --proposal-file "${TRANSACTIONS_DIR}/govActionJustification.txt" \
+  --out-file "${TRANSACTIONS_DIR}/no-confidence.action"
 
 $CARDANO_CLI conway transaction build \
---testnet-magic $NETWORK_MAGIC \
---tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
---change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
---proposal-file "${TRANSACTIONS_DIR}/no-confidence.action" \
---witness-override 2 \
---out-file "${TRANSACTIONS_DIR}/no-confidence-tx.raw"
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
+  --proposal-file "${TRANSACTIONS_DIR}/no-confidence.action" \
+  --witness-override 2 \
+  --out-file "${TRANSACTIONS_DIR}/no-confidence-tx.raw"
 
 $CARDANO_CLI conway transaction sign \
---testnet-magic $NETWORK_MAGIC \
---tx-body-file "${TRANSACTIONS_DIR}/no-confidence-tx.raw" \
---signing-key-file "${UTXO_DIR}/payment1.skey" \
---signing-key-file "${UTXO_DIR}/stake1.skey" \
---out-file "${TRANSACTIONS_DIR}/no-confidence-tx.signed"
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-body-file "${TRANSACTIONS_DIR}/no-confidence-tx.raw" \
+  --signing-key-file "${UTXO_DIR}/payment1.skey" \
+  --signing-key-file "${UTXO_DIR}/stake1.skey" \
+  --out-file "${TRANSACTIONS_DIR}/no-confidence-tx.signed"
 
 $CARDANO_CLI conway transaction submit \
---testnet-magic $NETWORK_MAGIC \
---tx-file "${TRANSACTIONS_DIR}/no-confidence-tx.signed"
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-file "${TRANSACTIONS_DIR}/no-confidence-tx.signed"
 
 sleep 5
 
 # LETS FIND THE ACTION ID
 
-IDIX="$($CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovActionsState | keys_unsorted[0]')"
+IDIX="$($CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovSnapshots.psGovActionStates | keys[0]')" # This assumes this is the only governance action in transit
 ID="${IDIX%#*}"  # This removes everything from the last # to the end
 IX="${IDIX##*#}"   # This removes everything up to and including $ID
 
@@ -117,7 +122,7 @@ for i in {1..3}; do
     --testnet-magic $NETWORK_MAGIC \
     --tx-file "${TRANSACTIONS_DIR}/${ID}-drep${i}-tx.signed"
 
-  sleep 3
+  sleep 5
 done
 
 ### ----------––––––––
@@ -153,6 +158,6 @@ for i in {1..3}; do
     --testnet-magic $NETWORK_MAGIC \
     --tx-file "${TRANSACTIONS_DIR}/${ID}-spo${i}-tx.signed"
 
-  sleep 3
+  sleep 5
 
 done

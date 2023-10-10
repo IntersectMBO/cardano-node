@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# This scripts uses set -x to show in terminal the commands executed by the script.
+# The "exec 2>" below this comment helps the user to differenciate between the commands and its outputs by changing the color
+# of the set -x output (the commands).
+
 exec 2> >(while IFS= read -r line; do echo -e "\e[34m${line}\e[0m" >&2; done)
 
 # Unofficial bash strict mode.
@@ -39,34 +43,34 @@ mkdir -p "$TRANSACTIONS_DIR"
 wget https://tinyurl.com/2p8fjbnf -O "${ROOT}/govActionJustification.txt"
 
 $CARDANO_CLI conway governance action create-info --testnet \
---governance-action-deposit 0 \
---stake-verification-key-file "${UTXO_DIR}/stake1.vkey" \
---proposal-url https://tinyurl.com/2p8fjbnf \
---proposal-file "${ROOT}/govActionJustification.txt" \
---out-file ${TRANSACTIONS_DIR}/info.action
+  --governance-action-deposit 0 \
+  --stake-verification-key-file "${UTXO_DIR}/stake1.vkey" \
+  --proposal-url https://tinyurl.com/2p8fjbnf \
+  --proposal-file "${ROOT}/govActionJustification.txt" \
+  --out-file ${TRANSACTIONS_DIR}/info.action
 
 $CARDANO_CLI conway transaction build \
---testnet-magic $NETWORK_MAGIC \
---tx-in "$(cardano-cli query utxo --address $(cat "${UTXO_DIR}/payment1.addr") --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
---change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
---proposal-file "${TRANSACTIONS_DIR}/info.action" \
---witness-override 2 \
---out-file "${TRANSACTIONS_DIR}/info-tx.raw"
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-in "$(cardano-cli query utxo --address $(cat "${UTXO_DIR}/payment1.addr") --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
+  --proposal-file "${TRANSACTIONS_DIR}/info.action" \
+  --witness-override 2 \
+  --out-file "${TRANSACTIONS_DIR}/info-tx.raw"
 
 $CARDANO_CLI conway transaction sign \
---testnet-magic $NETWORK_MAGIC \
---tx-body-file "${TRANSACTIONS_DIR}/info-tx.raw" \
---signing-key-file "${UTXO_DIR}/payment1.skey" \
---signing-key-file "${UTXO_DIR}/stake1.skey" \
---out-file "${TRANSACTIONS_DIR}/info-tx.signed"
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-body-file "${TRANSACTIONS_DIR}/info-tx.raw" \
+  --signing-key-file "${UTXO_DIR}/payment1.skey" \
+  --signing-key-file "${UTXO_DIR}/stake1.skey" \
+  --out-file "${TRANSACTIONS_DIR}/info-tx.signed"
 
 $CARDANO_CLI conway transaction submit \
---testnet-magic $NETWORK_MAGIC \
---tx-file "${TRANSACTIONS_DIR}/info-tx.signed"
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-file "${TRANSACTIONS_DIR}/info-tx.signed"
 
 sleep 5
 
-IDIX="$(cardano-cli conway query ledger-state --testnet-magic 42 | jq -r '.stateBefore.esLState.utxoState.ppups.gov.curGovActionsState | keys[0]')"
+IDIX="$($CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovSnapshots.psGovActionStates | keys[0]')"
 ID="${IDIX%#*}"  # This removes everything from the last # to the end
 IX="${IDIX##*#}"   # This removes everything up to and including $ID
 
@@ -76,30 +80,30 @@ IX="${IDIX##*#}"   # This removes everything up to and including $ID
 
 for i in {1..3}; do
   $CARDANO_CLI conway governance vote create \
-  --yes \
-  --governance-action-tx-id "${ID}" \
-  --governance-action-index "${IX}" \
-  --drep-verification-key-file "${DREP_DIR}/drep${i}.vkey" \
-  --out-file "${TRANSACTIONS_DIR}/${ID}-drep${i}.vote"
+    --yes \
+    --governance-action-tx-id "${ID}" \
+    --governance-action-index "${IX}" \
+    --drep-verification-key-file "${DREP_DIR}/drep${i}.vkey" \
+    --out-file "${TRANSACTIONS_DIR}/${ID}-drep${i}.vote"
 
   $CARDANO_CLI conway transaction build \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-in "$(cardano-cli query utxo --address $(cat "${UTXO_DIR}/payment1.addr") --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
-  --vote-file "${TRANSACTIONS_DIR}/${ID}-drep${i}.vote" \
-  --witness-override 2 \
-  --out-file "${TRANSACTIONS_DIR}/${ID}-drep${i}-tx.raw"
+    --testnet-magic $NETWORK_MAGIC \
+    --tx-in "$(cardano-cli query utxo --address $(cat "${UTXO_DIR}/payment1.addr") --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+    --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
+    --vote-file "${TRANSACTIONS_DIR}/${ID}-drep${i}.vote" \
+    --witness-override 2 \
+    --out-file "${TRANSACTIONS_DIR}/${ID}-drep${i}-tx.raw"
 
   $CARDANO_CLI conway transaction sign \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-body-file "${TRANSACTIONS_DIR}/${ID}-drep${i}-tx.raw" \
-  --signing-key-file "${UTXO_DIR}/payment1.skey" \
-  --signing-key-file "${DREP_DIR}/drep${i}.skey" \
-  --out-file "${TRANSACTIONS_DIR}/${ID}-drep${i}-tx.signed"
+    --testnet-magic $NETWORK_MAGIC \
+    --tx-body-file "${TRANSACTIONS_DIR}/${ID}-drep${i}-tx.raw" \
+    --signing-key-file "${UTXO_DIR}/payment1.skey" \
+    --signing-key-file "${DREP_DIR}/drep${i}.skey" \
+    --out-file "${TRANSACTIONS_DIR}/${ID}-drep${i}-tx.signed"
 
   $CARDANO_CLI conway transaction submit \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-file "${TRANSACTIONS_DIR}/${ID}-drep${i}-tx.signed"
+    --testnet-magic $NETWORK_MAGIC \
+    --tx-file "${TRANSACTIONS_DIR}/${ID}-drep${i}-tx.signed"
 sleep 3
 done
 
@@ -109,30 +113,30 @@ done
 
 for i in {1..3}; do
   $CARDANO_CLI conway governance vote create \
-  --yes \
-  --governance-action-tx-id "${ID}" \
-  --governance-action-index "${IX}" \
-  --cold-verification-key-file "${POOL_DIR}/cold${i}.vkey" \
-  --out-file "${POOL_DIR}/${ID}-spo${i}.vote"
+    --yes \
+    --governance-action-tx-id "${ID}" \
+    --governance-action-index "${IX}" \
+    --cold-verification-key-file "${POOL_DIR}/cold${i}.vkey" \
+    --out-file "${POOL_DIR}/${ID}-spo${i}.vote"
 
   $CARDANO_CLI conway transaction build \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-in "$(cardano-cli query utxo --address $(cat "${UTXO_DIR}/payment1.addr") --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
-  --vote-file "${POOL_DIR}/${ID}-spo${i}.vote" \
-  --witness-override 2 \
-  --out-file "${UTXO_DIR}/${ID}-spo${i}-tx.raw"
+    --testnet-magic $NETWORK_MAGIC \
+    --tx-in "$(cardano-cli query utxo --address $(cat "${UTXO_DIR}/payment1.addr") --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+    --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
+    --vote-file "${POOL_DIR}/${ID}-spo${i}.vote" \
+    --witness-override 2 \
+    --out-file "${UTXO_DIR}/${ID}-spo${i}-tx.raw"
 
   $CARDANO_CLI conway transaction sign \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-body-file "${UTXO_DIR}/${ID}-spo${i}-tx.raw" \
-  --signing-key-file "${UTXO_DIR}/payment1.skey" \
-  --signing-key-file "${POOL_DIR}/cold${i}.skey" \
-  --out-file "${UTXO_DIR}/${ID}-spo${i}-tx.signed"
+    --testnet-magic $NETWORK_MAGIC \
+    --tx-body-file "${UTXO_DIR}/${ID}-spo${i}-tx.raw" \
+    --signing-key-file "${UTXO_DIR}/payment1.skey" \
+    --signing-key-file "${POOL_DIR}/cold${i}.skey" \
+    --out-file "${UTXO_DIR}/${ID}-spo${i}-tx.signed"
 
   $CARDANO_CLI conway transaction submit \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-file "${UTXO_DIR}/${ID}-spo${i}-tx.signed"
+    --testnet-magic $NETWORK_MAGIC \
+    --tx-file "${UTXO_DIR}/${ID}-spo${i}-tx.signed"
 
   sleep 3
 done

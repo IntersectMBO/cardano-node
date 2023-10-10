@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# This scripts uses set -x to show in terminal the commands executed by the script.
+# The "exec 2>" below this comment helps the user to differenciate between the commands and its outputs by changing the color
+# of the set -x output (the commands).
+
 exec 2> >(while IFS= read -r line; do echo -e "\e[34m${line}\e[0m" >&2; done)
 
 # Unofficial bash strict mode.
@@ -98,7 +102,7 @@ $CARDANO_CLI conway transaction submit \
 
 sleep 3
 
-IDIX="$(cardano-cli query ledger-state --testnet-magic 42 | jq -r '.stateBefore.esLState.utxoState.ppups.gov.curGovActionsState | keys[0]')"
+IDIX="$($CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovSnapshots.psGovActionStates | keys[0]')"
 ID="${IDIX%#*}"  # This removes everything from the last # to the end
 IX="${IDIX##*#}"   # This removes everything up to and including $ID
 
