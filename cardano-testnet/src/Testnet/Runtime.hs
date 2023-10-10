@@ -51,6 +51,7 @@ import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           Control.Monad.Trans.Resource
 import qualified Data.Aeson as A
+import qualified Data.List as List
 import           Data.Maybe
 import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime)
@@ -182,6 +183,8 @@ data NodeStartFailure
   | ExecutableRelatedFailure ExecutableError
   | FileRelatedFailure IOException
   | NodeExecutableError String
+ -- | NodePortNotOpenError IOException
+  | MaxSprocketLengthExceededError
   deriving Show
 
 -- TODO: We probably want a check that this node has the necessary config files to run and
@@ -197,7 +200,7 @@ startNode
   -> [String]
   -- ^ The command --socket-path will be added automatically.
   -> ExceptT NodeStartFailure (ResourceT IO) NodeRuntime
-startNode tp@(TmpAbsolutePath _tempAbsPath) node port nodeCmd = GHC.withFrozenCallStack $ do
+startNode tp node port nodeCmd = GHC.withFrozenCallStack $ do
   let tempBaseAbsPath = makeTmpBaseAbsPath tp
       socketDir = makeSocketDir tp
       logDir = makeLogDir tp
@@ -212,7 +215,9 @@ startNode tp@(TmpAbsolutePath _tempAbsPath) node port nodeCmd = GHC.withFrozenCa
   hNodeStdout <- handleIOExceptT FileRelatedFailure $ IO.openFile nodeStdoutFile IO.WriteMode
   hNodeStderr <- handleIOExceptT FileRelatedFailure $ IO.openFile nodeStderrFile IO.ReadWriteMode
 
-   -- H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
+
+  unless (List.length (IO.sprocketArgumentName sprocket) <= IO.maxSprocketArgumentNameLength) $
+     left MaxSprocketLengthExceededError
 
   let portString = show port
 
@@ -248,13 +253,17 @@ startNode tp@(TmpAbsolutePath _tempAbsPath) node port nodeCmd = GHC.withFrozenCa
   stdErrContents <- liftIO $ IO.readFile nodeStderrFile
 
   if null stdErrContents
-  then return $ NodeRuntime node sprocket stdIn nodeStdoutFile nodeStderrFile hProcess
+  then do
+
+    -- TODO: Replace with cardano-ping library. However currently
+    -- the library returns errors with printf.
+    -- when (OS.os `List.elem` ["darwin", "linux"]) $ do
+    --   void . handleIOExceptT NodePortNotOpenError
+    --   $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
+
+    return $ NodeRuntime node sprocket stdIn nodeStdoutFile nodeStderrFile hProcess
   else left $ NodeExecutableError stdErrContents
 
-  -- TODO: This is flakey. Hydra error:
-  -- Unable to run finally: Failure Nothing "\9473\9473\9473 Exception (IOException) \9473\9473\9473\nlsof: readCreateProcess: posix_spawnp: illegal operation (Inappropriate ioctl for device)\n" Nothing
-  -- when (OS.os `L.elem` ["darwin", "linux"]) $ do
-  --   H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
 
 
 

@@ -333,10 +333,11 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
                       H.noteTempFile (makeLogDir $ TmpAbsolutePath tempAbsPath') $ node <> ".stdout.log"
 
   let spoNodesWithPortNos = L.zip spoNodes [3001..]
+      nodeConfigFile = tempAbsPath' </> "configuration.yaml"
   ePoolNodes <- forM (L.zip spoNodesWithPortNos poolKeys) $ \((node, port),key) -> do
     eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath tempAbsPath') node port
                                 [ "run"
-                                , "--config", tempAbsPath' </> "configuration.yaml"
+                                , "--config", nodeConfigFile
                                 , "--topology", tempAbsPath' </> node </> "topology.json"
                                 , "--database-path", tempAbsPath' </> node </> "db"
                                 , "--shelley-kes-key", tempAbsPath' </> node </> "kes.skey"
