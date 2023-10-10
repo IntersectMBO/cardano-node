@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Testnet.Runtime
@@ -40,6 +41,8 @@ import           Cardano.Node.Types
 
 import           Prelude
 
+import qualified Control.Concurrent as IO
+import           Control.Exception (IOException)
 import           Control.Monad
 import           Control.Monad.Error.Class
 import           Control.Monad.IO.Class
@@ -48,11 +51,14 @@ import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           Control.Monad.Trans.Resource
 import qualified Data.Aeson as A
+import           Data.Maybe
 import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime)
 import           GHC.Generics (Generic)
+import qualified GHC.IO.Handle as IO
 import           GHC.Stack
 import qualified GHC.Stack as GHC
+import qualified System.Directory as IO
 import           System.FilePath
 import qualified System.IO as IO
 import qualified System.Process as IO
@@ -61,8 +67,6 @@ import qualified Hedgehog as H
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
-
-import           Control.Exception (IOException)
 import           Testnet.Filepath
 import           Testnet.Process.Run
 import           Testnet.Start.Types
@@ -177,6 +181,8 @@ data NodeStartFailure
   = ProcessRelatedFailure ProcessError
   | ExecutableRelatedFailure ExecutableError
   | FileRelatedFailure IOException
+  | NodeExecutableError String
+  deriving Show
 
 -- TODO: We probably want a check that this node has the necessary config files to run and
 -- if it doesn't we fail hard.
@@ -196,15 +202,15 @@ startNode tp@(TmpAbsolutePath _tempAbsPath) node port nodeCmd = GHC.withFrozenCa
       socketDir = makeSocketDir tp
       logDir = makeLogDir tp
 
-  --H.createDirectoryIfMissing_ logDir
-  --H.createSubdirectoryIfMissing_ tempBaseAbsPath socketDir
+  liftIO $ createDirectoryIfMissingNew_ logDir
+  void . liftIO $ createSubdirectoryIfMissingNew tempBaseAbsPath socketDir
 
-  let nodeStdoutFile = node <> ".stdout.log"
-      nodeStderrFile = node <> ".stderr.log"
+  let nodeStdoutFile = logDir </> node <> ".stdout.log"
+      nodeStderrFile = logDir </> node <> ".stderr.log"
       sprocket = Sprocket tempBaseAbsPath (socketDir </> node)
 
   hNodeStdout <- handleIOExceptT FileRelatedFailure $ IO.openFile nodeStdoutFile IO.WriteMode
-  hNodeStderr <- handleIOExceptT FileRelatedFailure $ IO.openFile  nodeStderrFile IO.WriteMode
+  hNodeStderr <- handleIOExceptT FileRelatedFailure $ IO.openFile nodeStderrFile IO.ReadWriteMode
 
    -- H.diff (L.length (IO.sprocketArgumentName sprocket)) (<=) IO.maxSprocketArgumentNameLength
 
@@ -219,7 +225,6 @@ startNode tp@(TmpAbsolutePath _tempAbsPath) node port nodeCmd = GHC.withFrozenCa
                          ]
                        ]
 
-
   (Just stdIn, _, _, hProcess, _)
     <- firstExceptT ProcessRelatedFailure $ initiateProcess
           $ nodeProcess
@@ -228,18 +233,46 @@ startNode tp@(TmpAbsolutePath _tempAbsPath) node port nodeCmd = GHC.withFrozenCa
              , IO.cwd = Just tempBaseAbsPath
              }
 
- -- H.noteShowM_ $ H.getPid hProcess
+  -- We force the evaluation of initiateProcess so we can be sure that
+  -- the process has started. This allows us to read stderr in order
+  -- to fail early on errors generated from the cardano-node binary.
+  mpid <- liftIO $ IO.getPid hProcess
 
-  -- The node process can fail on startup, e.g while
-  -- parsing the configuration yaml file. If we don't fail
-  -- when stderr is populated, we end up having to wait for the
-  -- timeout to expire before we can see the error.
+  when (isNothing mpid)
+    $ left $ NodeExecutableError $ mconcat ["startNode: ", node, "'s process did not start."]
+
+  -- The process should have started so we wait a short amount of time to allow
+  -- stderr to be populated with any errors from the cardano-node binary.
+  liftIO $ IO.threadDelay 5_000_000
+
+  stdErrContents <- liftIO $ IO.readFile nodeStderrFile
+
+  if null stdErrContents
+  then return $ NodeRuntime node sprocket stdIn nodeStdoutFile nodeStderrFile hProcess
+  else left $ NodeExecutableError stdErrContents
+
   -- TODO: This is flakey. Hydra error:
   -- Unable to run finally: Failure Nothing "\9473\9473\9473 Exception (IOException) \9473\9473\9473\nlsof: readCreateProcess: posix_spawnp: illegal operation (Inappropriate ioctl for device)\n" Nothing
   -- when (OS.os `L.elem` ["darwin", "linux"]) $ do
   --   H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
 
-  return $ NodeRuntime node sprocket stdIn nodeStdoutFile nodeStderrFile hProcess
 
 
+createDirectoryIfMissingNew :: HasCallStack => FilePath -> IO FilePath
+createDirectoryIfMissingNew directory = GHC.withFrozenCallStack $ do
+  IO.createDirectoryIfMissing True directory
+  pure directory
 
+createDirectoryIfMissingNew_ :: HasCallStack => FilePath -> IO ()
+createDirectoryIfMissingNew_ directory = GHC.withFrozenCallStack $
+  void $ createDirectoryIfMissingNew directory
+
+
+createSubdirectoryIfMissingNew :: ()
+  => HasCallStack
+  => FilePath
+  -> FilePath
+  -> IO FilePath
+createSubdirectoryIfMissingNew parent subdirectory = GHC.withFrozenCallStack $ do
+  IO.createDirectoryIfMissing True $ parent </> subdirectory
+  pure subdirectory
