@@ -49,7 +49,7 @@ import           Cardano.Tracing.Config
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.Config (FlushFrequency (..),
+import           Ouroboros.Consensus.Storage.LedgerDB (FlushFrequency (..),
                    QueryBatchSize (..), SnapshotInterval (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))

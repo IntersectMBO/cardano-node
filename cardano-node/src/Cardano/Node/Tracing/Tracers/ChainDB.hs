@@ -44,10 +44,9 @@ import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (chunkN
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.BackingStore as BS
-import           Ouroboros.Consensus.Storage.LedgerDB.DbChangelog.Update
+import           Ouroboros.Consensus.Storage.LedgerDB.DbChangelog
                    (UpdateLedgerDbTraceEvent (..))
-import qualified Ouroboros.Consensus.Storage.LedgerDB.DbChangelog.Update as LedgerDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB.Impl as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.DbChangelog as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Util.Enclose

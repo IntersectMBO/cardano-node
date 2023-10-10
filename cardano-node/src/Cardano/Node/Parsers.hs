@@ -27,7 +27,7 @@ import           Text.Read (readMaybe)
 
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.Config (FlushFrequency (..),
+import           Ouroboros.Consensus.Storage.LedgerDB (FlushFrequency (..),
                    QueryBatchSize (..), SnapshotInterval (..))
 
 import           Cardano.Logging.Types
