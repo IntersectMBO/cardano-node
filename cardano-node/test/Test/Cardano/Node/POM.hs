@@ -17,7 +17,7 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
                    partialTraceSelectionToEither)
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.Config
+import           Ouroboros.Consensus.Storage.LedgerDB
                    (FlushFrequency (DefaultFlushFrequency), QueryBatchSize (DefaultQueryBatchSize),
                    SnapshotInterval (..))
 import           Ouroboros.Network.Block (SlotNo (..))

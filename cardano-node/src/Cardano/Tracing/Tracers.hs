@@ -112,8 +112,9 @@ import           Ouroboros.Network.NodeToClient (LocalAddress)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB.DbChangelog.Update as LedgerDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB.Impl as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
+import           Ouroboros.Consensus.Storage.LedgerDB.BackingStore (BackingStoreTraceByBackend)
+import qualified Ouroboros.Consensus.Storage.LedgerDB.DbChangelog as LedgerDB
 
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.HasIssuer (BlockIssuerVerificationKeyHash (..), HasIssuer (..))
@@ -139,7 +140,6 @@ import qualified Control.Concurrent.STM as STM
 
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.Aeson.KeyMap as KeyMap
-import Ouroboros.Consensus.Storage.LedgerDB.BackingStore.Init (BackingStoreTraceByBackend)
 
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 -- needs different instances on ghc8 and on ghc9

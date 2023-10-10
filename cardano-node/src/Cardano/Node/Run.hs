@@ -125,8 +125,8 @@ import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
 
 import           Cardano.Node.Configuration.LedgerDB
-import           Ouroboros.Consensus.Storage.LedgerDB.BackingStore.Init
-import           Ouroboros.Consensus.Storage.LedgerDB.BackingStore.LMDB (LMDBLimits (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.BackingStore
+import           Ouroboros.Consensus.Storage.LedgerDB.BackingStore.Impl.LMDB (LMDBLimits (..))
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}

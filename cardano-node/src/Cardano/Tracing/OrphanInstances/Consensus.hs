@@ -71,9 +71,8 @@ import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkN
                    chunkNoToInt)
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.BackingStore as BS
-import           Ouroboros.Consensus.Storage.LedgerDB.DbChangelog.Update (PushGoal (..),
+import           Ouroboros.Consensus.Storage.LedgerDB.DbChangelog (PushGoal (..),
                    PushStart (..), Pushing (..), UpdateLedgerDbTraceEvent (..))
-import qualified Ouroboros.Consensus.Storage.LedgerDB.Impl as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 
