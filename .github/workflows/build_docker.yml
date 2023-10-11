@@ -42,4 +42,4 @@ jobs:
         with:
           push: true
           file: Dockerfile.relay
-          tags: emurgornd/cardano-node-relay:latest,emurgornd/cardano-node-relay:${{ github.ref_name }}    
+          tags: emurgornd/cardano-node-relay:latest,emurgornd/cardano-node-relay:${{ github.ref_name }}
