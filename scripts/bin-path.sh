@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
+#
+# Find the path to the built executable in the cabal plan. For example:
+#
+# ./scripts/bin-path.sh cardano-node
+#
+# Must be executed from the repository root
 
-# Find the path to the built executable in the cabal plan.
+if [[ -z "$1" ]]
+then
+  echo "This script expects exactly one argument: the name of the executable whose path is searched for."
+  echo "For example pass \"cardano-node\""
+  exit 1
+fi
+
+[[ -e "scripts" ]] || { echo "This script must be executed from the repository's root (i.e. execute ./scripts/bin-path.sh)"; exit 1; }
 
 exe="$1"
 
