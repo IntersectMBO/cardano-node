@@ -124,6 +124,7 @@ source-repository-package
   type: git
   location: https://github.com/karknu/ouroboros-consensus.git
   tag: 75339df357e74a7b514af72ca713d13fe6912af2
+  --sha256: sha256-jcUEC3isZLbcROoYe3R+SMThZuoDD2s5plQUXLes8Yw=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-diffusion
@@ -132,6 +133,7 @@ source-repository-package
   type: git
   location: https://github.com/karknu/ouroboros-network.git
   tag: 06eaf130374374e9098f9629231590a1546fd172
+  --sha256: sha256-Fl6lR8zRq1DH7bQ/lPMRSMS5E3hg1f2UIUNRCyEtc+k=
   subdir:
     ouroboros-network-framework
     ouroboros-network-protocols
