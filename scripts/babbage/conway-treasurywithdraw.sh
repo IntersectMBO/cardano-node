@@ -36,7 +36,7 @@ NETWORK_MAGIC=42
 ROOT=example
 DREP_DIR=example/dreps
 UTXO_DIR=example/utxo-keys
-POOL_DIR=example/pools
+CC_DIR=example/cc
 TRANSACTIONS_DIR=example/transactions
 
 mkdir -p "$TRANSACTIONS_DIR"
