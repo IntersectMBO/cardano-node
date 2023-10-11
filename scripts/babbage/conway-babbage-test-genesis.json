@@ -22,7 +22,7 @@
   "govActionLifetime": 2,
   "govActionDeposit": 0,
   "dRepDeposit": 0,
-  "dRepActivity": 0,
+  "dRepActivity": 200,
   "constitution": {
     "anchor": {
       "url": "",
