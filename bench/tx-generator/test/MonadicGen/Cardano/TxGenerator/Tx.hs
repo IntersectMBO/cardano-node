@@ -13,7 +13,7 @@ import           Data.Function ((&))
 import           Data.Maybe (mapMaybe)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters)
+import           Cardano.Api.Shelley (LedgerProtocolParameters)
 
 import           MonadicGen.Cardano.TxGenerator.Fund
 import           MonadicGen.Cardano.TxGenerator.Types
@@ -160,12 +160,12 @@ sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
 genTx :: forall era. ()
   => IsShelleyBasedEra era
   => CardanoEra era
-  -> ProtocolParameters
+  -> LedgerProtocolParameters era
   -> (TxInsCollateral era, [Fund])
   -> TxFee era
   -> TxMetadataInEra era
   -> TxGenerator era
-genTx _era protocolParameters (collateral, collFunds) fee metadata inFunds outputs
+genTx _era ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
   = bimap
       ApiError
       (\b -> (signShelleyTransaction b $ map WitnessPaymentKey allKeys, getTxId b))
@@ -177,18 +177,9 @@ genTx _era protocolParameters (collateral, collFunds) fee metadata inFunds outpu
     & setTxInsCollateral collateral
     & setTxOuts outputs
     & setTxFee fee
-    & setTxValidityRange (TxValidityNoLowerBound, upperBound)
+    & setTxValidityRange (TxValidityNoLowerBound, defaultTxValidityUpperBound)
     & setTxMetadata metadata
-    & setTxProtocolParams (BuildTxWith (Just protocolParameters))
-
-  upperBound :: TxValidityUpperBound era
-  upperBound = case shelleyBasedEra @era of
-    ShelleyBasedEraShelley -> TxValidityUpperBound ValidityUpperBoundInShelleyEra $ SlotNo maxBound
-    ShelleyBasedEraAllegra -> TxValidityNoUpperBound ValidityNoUpperBoundInAllegraEra
-    ShelleyBasedEraMary    -> TxValidityNoUpperBound ValidityNoUpperBoundInMaryEra
-    ShelleyBasedEraAlonzo  -> TxValidityNoUpperBound ValidityNoUpperBoundInAlonzoEra
-    ShelleyBasedEraBabbage -> TxValidityNoUpperBound ValidityNoUpperBoundInBabbageEra
-    ShelleyBasedEraConway  -> TxValidityNoUpperBound ValidityNoUpperBoundInConwayEra
+    & setTxProtocolParams (BuildTxWith (Just ledgerParameters))
 
 
 txSizeInBytes :: forall era. IsShelleyBasedEra era =>

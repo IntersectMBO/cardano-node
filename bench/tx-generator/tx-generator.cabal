@@ -243,22 +243,55 @@ test-suite tx-generator-monad-test
   main-is:              MonadicMain.hs
   type:                 exitcode-stdio-1.0
 
+  default-extensions:   OverloadedStrings
+  default-language:     Haskell2010
+
   build-depends:        aeson
+                      , aeson-pretty
+                      , attoparsec
                       , base >= 4.12
                       , base16-bytestring
                       , bytestring
                       , cardano-api
                       , cardano-cli
+                      , cardano-data
+                      , cardano-git-rev
+                      , cardano-ledger-alonzo
                       , cardano-ledger-api
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-node
+                      , cardano-prelude
+                      , cborg
+                      , containers
+                      , contra-tracer
+                      , dlist
+                      , extra
+                      , io-classes
+                      , mtl
+                      , network
+                      , network-mux
+                      , optparse-applicative-fork
                       , ouroboros-consensus
                       , ouroboros-consensus-cardano
                       , ouroboros-consensus-diffusion
+                      , ouroboros-network
                       , ouroboros-network-api
+                      , ouroboros-network-framework
                       , ouroboros-network-protocols
+                      , plutus-ledger-api
+                      , random
+                      , serialise
+                      , stm
+                      , strict-stm
+                      , streaming
+                      , text
+                      , time
+                      , trace-dispatcher
+                      , trace-forward
                       , transformers
+                      , transformers-except
+                      , yaml
   other-modules:      MonadicGen.Cardano.Benchmarking.Command
                       MonadicGen.Cardano.Benchmarking.Compiler
                       MonadicGen.Cardano.Benchmarking.GeneratorTx

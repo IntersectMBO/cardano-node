@@ -65,24 +65,24 @@ includeChange fee spend have = case compare changeValue 0 of
 -- | `mkTxFee` reinterprets the `Either` returned by
 -- `txFeesExplicitInEra` with `TxFee` constructors.
 mkTxFee :: forall era. IsCardanoEra era => Lovelace -> TxFee era
-mkTxFee f = either
+mkTxFee f = caseByronOrShelleyBasedEra
   TxFeeImplicit
   (`TxFeeExplicit` f)
-  (txFeesExplicitInEra (cardanoEra @era))
+  (cardanoEra @era)
 
 -- | `mkTxValidityUpperBound` rules out needing the
 -- `TxValidityNoUpperBound` with the constraint of `IsShelleyBasedEra`.
 mkTxValidityUpperBound :: forall era. IsShelleyBasedEra era => SlotNo -> TxValidityUpperBound era
 mkTxValidityUpperBound =
-  TxValidityUpperBound (fromJust $ validityUpperBoundSupportedInEra (cardanoEra @era))
+  inEonForEra undefined TxValidityUpperBound (cardanoEra @era)
 
 -- | `mkTxOutValueAdaOnly` reinterprets the `Either` returned by
 -- `multiAssetSupportedInEra` with `TxOutValue` constructors.
 mkTxOutValueAdaOnly :: forall era . IsShelleyBasedEra era => Lovelace -> TxOutValue era
-mkTxOutValueAdaOnly l = either
+mkTxOutValueAdaOnly l = caseByronToAllegraOrMaryEraOnwards
   (`TxOutAdaOnly` l)
   (\p -> TxOutValue p $ lovelaceToValue l)
-  (multiAssetSupportedInEra (cardanoEra @era))
+  (cardanoEra @era)
 
 -- | `mkTxInModeCardano` never uses the `TxInByronSpecial` constructor
 -- because its type enforces it being a Shelley-based era.
