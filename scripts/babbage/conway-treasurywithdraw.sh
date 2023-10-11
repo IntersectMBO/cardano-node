@@ -211,40 +211,38 @@ done
 
 $CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovSnapshots.psGovActionStates'
 
-### ----------
-# SPO VOTES
-### ----------
+### ----------––––––––
+# CC VOTES
+### ----------––––––––
 
-for i in {1..3}; do
+for i in {1..2}; do
   $CARDANO_CLI conway governance vote create \
     --yes \
     --governance-action-tx-id "${ID}" \
     --governance-action-index "${IX}" \
-    --cold-verification-key-file "${POOL_DIR}/cold${i}.vkey" \
-    --out-file "${POOL_DIR}/${ID}-spo${i}.vote"
-
-  cat "${POOL_DIR}/${ID}-spo${i}.vote"
+    --cc-hot-verification-key-file "${CC_DIR}/hot${i}-cc.vkey" \
+    --out-file "${TRANSACTIONS_DIR}/cc${i}.vote"
 
   $CARDANO_CLI conway transaction build \
     --testnet-magic $NETWORK_MAGIC \
-    --tx-in "$(cardano-cli query utxo --address $(cat "${UTXO_DIR}/payment1.addr") --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+    --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
     --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
-    --vote-file "${POOL_DIR}/${ID}-spo${i}.vote" \
+    --vote-file "${TRANSACTIONS_DIR}/cc${i}.vote" \
     --witness-override 2 \
-    --out-file "${UTXO_DIR}/${ID}-spo${i}-tx.raw"
+    --out-file "${TRANSACTIONS_DIR}/cc${i}-vote-tx.raw"
 
   $CARDANO_CLI conway transaction sign \
     --testnet-magic $NETWORK_MAGIC \
-    --tx-body-file "${UTXO_DIR}/${ID}-spo${i}-tx.raw" \
+    --tx-body-file "${TRANSACTIONS_DIR}/cc${i}-vote-tx.raw" \
     --signing-key-file "${UTXO_DIR}/payment1.skey" \
-    --signing-key-file "${POOL_DIR}/cold${i}.skey" \
-    --out-file "${UTXO_DIR}/${ID}-spo${i}-tx.signed"
+    --signing-key-file "${CC_DIR}/hot${i}-cc.skey" \
+    --out-file "${TRANSACTIONS_DIR}/cc${i}-vote-tx.signed"
 
   $CARDANO_CLI conway transaction submit \
     --testnet-magic $NETWORK_MAGIC \
-    --tx-file "${UTXO_DIR}/${ID}-spo${i}-tx.signed"
+    --tx-file "${TRANSACTIONS_DIR}/cc${i}-vote-tx.signed"
 
-sleep 5
+  sleep 5
 
 done
 
