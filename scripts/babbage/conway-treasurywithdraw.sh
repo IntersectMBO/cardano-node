@@ -215,7 +215,7 @@ $CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.
 # CC VOTES
 ### ----------––––––––
 
-for i in {1..2}; do
+for i in {1..3}; do
   $CARDANO_CLI conway governance vote create \
     --yes \
     --governance-action-tx-id "${ID}" \
