@@ -115,7 +115,8 @@ limitFrequency thresholdFrequency limiterName ltracer vtracer = do
           if normaSpendReward + frBudget >= budgetLimit
             then do  -- start limiting
               traceWith
-                (setSeverity Info (withLoggingContext lc ltracer))
+                (appendPrefixNames ["Reflection"]
+                                   (setSeverity Info (withLoggingContext lc ltracer)))
                 (StartLimiting limiterName)
               pure fs  { frMessage     = Just message
                        , frLastTime    = timeNow
@@ -133,7 +134,8 @@ limitFrequency thresholdFrequency limiterName ltracer vtracer = do
            if normaSpendReward + frBudget <= (- budgetLimit)
             then do -- stop limiting
               traceWith
-                (setSeverity Info (withLoggingContext lc ltracer))
+                (appendPrefixNames  ["Reflection"]
+                                    (setSeverity Info (withLoggingContext lc ltracer)))
                 (StopLimiting limiterName nSuppressed)
               pure fs  { frMessage     = Just message
                        , frLastTime    = timeNow
@@ -147,8 +149,9 @@ limitFrequency thresholdFrequency limiterName ltracer vtracer = do
                 newFrLastRem <- if lastReminder > reminderPeriod
                                   then do
                                     traceWith
-                                      (setSeverity Info
-                                        (withLoggingContext lc ltracer))
+                                      (appendPrefixNames ["Reflection"]
+                                        (setSeverity Info
+                                          (withLoggingContext lc ltracer)))
                                       (RememberLimiting limiterName nSuppressed)
                                     pure timeNow
                                   else pure frLastRem

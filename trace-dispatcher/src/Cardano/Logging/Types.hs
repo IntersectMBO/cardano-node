@@ -463,13 +463,13 @@ emptyTraceConfig = TraceConfig {
 -- Control and Documentation
 
 -- | When configuring a net of tracers, it should be run with Config on all
--- entry points first, and then with Optimize. When reconfiguring it needs to
--- run Reset followed by Config followed by Optimize
+-- entry points first, and then with TCOptimize. When reconfiguring it needs to
+-- run TCReset followed by Config followed by TCOptimize
 data TraceControl where
-    Reset       :: TraceControl
-    Config      :: TraceConfig -> TraceControl
-    Optimize    :: ConfigReflection -> TraceControl
-    TCDocument  :: Int -> DocCollector -> TraceControl
+    TCReset       :: TraceControl
+    TCConfig      :: TraceConfig -> TraceControl
+    TCOptimize    :: ConfigReflection -> TraceControl
+    TCDocument    :: Int -> DocCollector -> TraceControl
 
 newtype DocCollector = DocCollector (IORef (Map Int LogDoc))
 

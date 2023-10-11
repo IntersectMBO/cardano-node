@@ -120,15 +120,15 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerPrefix hook = do
         process lc cont = do
           when (isNothing (lcPrivacy lc)) $
                   traceWith
-                    internalTr
+                    (appendPrefixNames ["Reflection"] internalTr)
                     (UnknownNamespace (lcNSPrefix lc) (lcNSInner lc) UKFPrivacy)
           when (isNothing (lcSeverity lc)) $
                   traceWith
-                    internalTr
+                    (appendPrefixNames ["Reflection"] internalTr)
                     (UnknownNamespace (lcNSPrefix lc) (lcNSInner lc) UKFSeverity)
           when (isNothing (lcDetails lc)) $
                   traceWith
-                    internalTr
+                    (appendPrefixNames ["Reflection"] internalTr)
                     (UnknownNamespace (lcNSPrefix lc) (lcNSInner lc) UKFDetails)
           T.traceWith tr (lc, cont)
 
