@@ -1,6 +1,6 @@
 {
     "txFeePerByte": 44,
-    "minUTxOValue": null,
+    "minUTxOValue": 0,
     "decentralization": 0,
     "utxoCostPerWord": 34482,
     "stakePoolDeposit": 500000000,

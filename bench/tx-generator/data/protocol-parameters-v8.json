@@ -367,7 +367,7 @@
   "maxTxSize": 16384,
   "maxValueSize": 5000,
   "minPoolCost": 340000000,
-  "minUTxOValue": null,
+  "minUTxOValue": 0,
   "monetaryExpansion": 0.003,
   "poolPledgeInfluence": 0.3,
   "poolRetireMaxEpoch": 18,
