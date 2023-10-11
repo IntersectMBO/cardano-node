@@ -203,7 +203,7 @@ for i in {1..3}; do
     --testnet-magic $NETWORK_MAGIC \
     --tx-file "${UTXO_DIR}/${ID}-drep${i}-tx.signed"
 
-sleep 3
+sleep 5
 
 done
 
