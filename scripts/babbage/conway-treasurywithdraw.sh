@@ -165,7 +165,7 @@ sleep 5
 
 $CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovSnapshots.psGovActionStates'
 
-IDIX="$(IDIX="$($CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovSnapshots.psGovActionStates | keys[0]')" # Assumes this is the only governance action in transit
+IDIX="$($CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovSnapshots.psGovActionStates | keys[0]')" # Assumes this is the only governance action in transit
 ID="${IDIX%#*}"  # This removes everything from the last # to the end
 IX="${IDIX##*#}"   # This removes everything up to and including $ID
 
