@@ -35,12 +35,11 @@ import qualified Data.Text as Text (unpack)
 import           Prelude
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..),
-                   ProtocolParameters, ShelleyLedgerEra,
-                   convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
+import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
+                   ShelleyLedgerEra, convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
                    protocolParamPrices)
 
-import           Cardano.Logging hiding(LocalSocket)
+import           Cardano.Logging hiding (LocalSocket)
 
 import qualified Cardano.Ledger.Core as Ledger
 
@@ -187,7 +186,7 @@ queryRemoteProtocolParameters = do
         res <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) (QueryInEra eraInMode query)
         case res of
           Right (Right pp) -> do
-            let pp' = fromLedgerPParams shelleyEra pp 
+            let pp' = fromLedgerPParams shelleyEra pp
                 pparamsFile = "protocol-parameters-queried.json"
             liftIO $ BSL.writeFile pparamsFile $ prettyPrintOrdered pp'
             traceDebug $ "queryRemoteProtocolParameters : query result saved in: " ++ pparamsFile
@@ -296,7 +295,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   protocolParameters <- getProtocolParameters
   case convertToLedgerProtocolParameters (shelleyBasedEra @era) protocolParameters of
     Left err -> throwE (Env.TxGenError (ApiError err))
-    Right ledgerParameters -> 
+    Right ledgerParameters ->
       case generator of
         SecureGenesis wallet genesisKeyName destKeyName -> do
           genesis  <- getEnvGenesis
