@@ -317,9 +317,9 @@ instance LogFormatting MuxTrace where
             { tcpi_snd_mss, tcpi_rcv_mss, tcpi_lost, tcpi_retrans
             , tcpi_rtt, tcpi_rttvar, tcpi_snd_cwnd }
             len) =
-      sformat ("TCPInfo rtt % int % " rttvar " % ínt % " cwnd " % int %
-               " smss " % int % " rmss " % int % " lost " % int %
-               " retrans " % int % " len " %int)
+      sformat ("TCPInfo rtt % int % " rttvar " % ínt % " cwnd " % int % "
+               smss " % int % " rmss " % int % " lost " % int % "
+               retrans " % int % " len " %int")
               (fromIntegral tcpi_rtt :: Word) (fromIntegral tcpi_rttvar :: Word)
               (fromIntegral tcpi_snd_cwnd :: Word) (fromIntegral tcpi_snd_mss :: Word)
               (fromIntegral tcpi_rcv_mss :: Word) (fromIntegral tcpi_lost :: Word)

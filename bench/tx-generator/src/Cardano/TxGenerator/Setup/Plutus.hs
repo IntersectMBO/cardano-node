@@ -33,7 +33,7 @@ import           Cardano.TxGenerator.Types
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
 #else
-import           Control.Exception (SomeException(..), try)
+import           Control.Exception (SomeException (..), try)
 import           Paths_tx_generator
 #endif
 
@@ -41,13 +41,14 @@ type ProtocolVersion = (Int, Int)
 
 
 readPlutusScript :: Either String FilePath -> IO (Either TxGenError ScriptInAnyLang)
-readPlutusScript (Left s)
 #ifdef WITH_LIBRARY
+readPlutusScript (Left s)
   = pure
   $ maybe (Left . TxGenError $ "readPlutusScript: " ++ s ++ " not found.")
           Right
           (findPlutusScript s)
 #else
+readPlutusScript (Left s)
   = try (getDataFileName $ "scripts-fallback/" ++ s ++ ".plutus") >>= either
       (\(SomeException e) -> pure $ Left $ TxGenError $ show e)
       (readPlutusScript . Right)

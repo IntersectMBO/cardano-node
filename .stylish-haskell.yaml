@@ -73,6 +73,7 @@ newline: native
 language_extensions:
   - BangPatterns
   - ConstraintKinds
+  - CPP
   - DataKinds
   - DefaultSignatures
   - DeriveDataTypeable
@@ -86,8 +87,10 @@ language_extensions:
   - LambdaCase
   - MultiParamTypeClasses
   - MultiWayIf
+  - NamedFieldPuns
   - OverloadedStrings
   - PolyKinds
+  - RankNTypes
   - RecordWildCards
   - ScopedTypeVariables
   - StandaloneDeriving
