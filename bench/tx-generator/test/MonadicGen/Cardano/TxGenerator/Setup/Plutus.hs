@@ -5,7 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | This module provides convenience functions when dealing with Plutus scripts.
-module Cardano.TxGenerator.Setup.Plutus
+module MonadicGen.Cardano.TxGenerator.Setup.Plutus
        ( readPlutusScript
        , preExecutePlutusScript
        )
@@ -28,7 +28,7 @@ import           Cardano.Ledger.Alonzo.TxInfo (exBudgetToExUnits)
 import qualified PlutusLedgerApi.V1 as PlutusV1
 import qualified PlutusLedgerApi.V2 as PlutusV2
 
-import           Cardano.TxGenerator.Types
+import           MonadicGen.Cardano.TxGenerator.Types
 
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
