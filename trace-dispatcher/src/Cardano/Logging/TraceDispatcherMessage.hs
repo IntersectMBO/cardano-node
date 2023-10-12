@@ -115,7 +115,7 @@ instance LogFormatting TraceDispatcherMessage where
   asMetrics TracerInfoConfig {} = []
 
 internalRestriction :: Text
-internalRestriction = "\nThis internal message can't be filtered by the current file"
+internalRestriction = "\nThis internal message can't be filtered by the current configuration"
 
 instance MetaTrace TraceDispatcherMessage where
     namespaceFor StartLimiting {}    = Namespace [] ["StartLimiting"]
@@ -151,13 +151,13 @@ instance MetaTrace TraceDispatcherMessage where
       ] <>  internalRestriction
     documentFor (Namespace _ ["UnknownNamespace"]) = Just $ mconcat
       [ "A value was queried for a namespaces from a tracer,"
-      , "which is unknown. This inicates a bug in the tracer implementation."
+      , "which is unknown. This indicates a bug in the tracer implementation."
       ] <>  internalRestriction
     documentFor (Namespace _ ["TracerInfo"]) = Just $ mconcat
       [ "Writes out tracers with metrics and silent tracers."
       ] <>  internalRestriction
     documentFor (Namespace _ ["MetricsInfo"]) = Just $ mconcat
-      [ "Writes out number of metrics delivered."
+      [ "Writes out numbers for metrics delivered."
       ] <>  internalRestriction
     documentFor (Namespace _ ["TracerConsistencyWarnings"]) = Just $ mconcat
       [ "Tracer consistency check found errors."

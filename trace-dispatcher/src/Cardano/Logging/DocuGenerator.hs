@@ -431,15 +431,14 @@ docuResultsToText dt@DocTracer {..} configuration = do
       header4  = fromText "\n## Datapoints\n\n"
       contentD = mconcat $ intersperse (fromText "\n\n")
                               (map (unpackDocu . snd) datapointBuilders)
-      config  = fromText $ "\n\n##Configuration: \n```\n"
+      config  = fromText $ "\n## Configuration: \n```\n"
                             <> decodeUtf8 (BS.toStrict $
                                             AE.encodePretty configuration)
                             <> "\n```\n"
       numbers = fromString $  show (length dtBuilderList) <> " log messages." <> "\n\n"
-      legend  = fromString $  "\9443 - This is the root of a tracer\n"
-                           <> "\9442 - This is the root of a tracer that is silent because of the current configuration\n"
-                           <> "\9436 - This is the root of a tracer, that provides metrics"
-                           <> "\n\n"
+      legend  = fromString $  "\9443 - This is the root of a tracer\n\n"
+                           <> "\9442 - This is the root of a tracer that is silent because of the current configuration\n\n"
+                           <> "\9436 - This is the root of a tracer, that provides metrics\n\n"
       ts      = fromString $ "Generated at " <> show time <> ".\n"
   pure $ toStrict $ toLazyText (
          header

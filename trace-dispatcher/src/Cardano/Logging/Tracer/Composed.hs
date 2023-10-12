@@ -213,7 +213,7 @@ traceTracerInfo trStdout trForward cr = do
     writeIORef (crNoMetrics cr) Set.empty
     writeIORef (crAllTracers cr) Set.empty
 
--- A basic ttracer just for metrics
+-- A basic tracer just for metrics
 mkMetricsTracer :: Maybe (Trace IO FormattedMessage) -> Trace IO FormattedMessage
 mkMetricsTracer mbTrEkg = case mbTrEkg of
                           Nothing -> Trace T.nullTracer

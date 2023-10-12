@@ -26,8 +26,7 @@ import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.Diffusion ()
--- import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (ForgeThreadStats,
---                    forgeThreadStats, ForgingStats)
+
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
@@ -156,8 +155,6 @@ getAllNamespaces =
                                                       remotePeer
                                                       (BlockFetch.TraceFetchClientState (Header blk)))])
 
-    -- TODO Yup
-    -- blockFetchClientMetricsTr <- do
         blockFetchServerNS = map (nsGetComplete . nsReplacePrefix ["BlockFetch", "Server"])
                     (allNamespaces :: [Namespace (TraceBlockFetchServerEvent blk)])
 
