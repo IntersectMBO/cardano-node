@@ -8,12 +8,13 @@ module MonadicGen.Cardano.TxGenerator.Setup.NodeConfig
        (module MonadicGen.Cardano.TxGenerator.Setup.NodeConfig)
        where
 
-import qualified Control.Applicative as Appl (Const(Const), getConst)
+import           Control.Applicative (Const (Const), getConst)
 import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Bifunctor (first)
 import           Data.Monoid
 
-import           Ouroboros.Consensus.Cardano as Consensus (ProtocolParams (CardanoProtocolParams), ledgerTransitionConfig)
+import           Ouroboros.Consensus.Cardano as Consensus (ProtocolParams (CardanoProtocolParams),
+                   ledgerTransitionConfig)
 
 import           Cardano.Api (BlockType (..), ProtocolInfoArgs (..))
 import qualified Cardano.Ledger.Api.Transition as Ledger (tcShelleyGenesisL)
@@ -32,7 +33,7 @@ import           MonadicGen.Cardano.TxGenerator.Types
 -- as this guarantees proper error handling when trying to create a non-Cardano protocol.
 getGenesis :: SomeConsensusProtocol -> ShelleyGenesis
 getGenesis (SomeConsensusProtocol CardanoBlockType proto)
-    = Appl.getConst $ Ledger.tcShelleyGenesisL Appl.Const transCfg
+    = getConst $ Ledger.tcShelleyGenesisL Const transCfg
   where
     ProtocolInfoArgsCardano Consensus.CardanoProtocolParams
       { Consensus.ledgerTransitionConfig = transCfg
