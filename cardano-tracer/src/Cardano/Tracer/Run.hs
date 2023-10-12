@@ -32,12 +32,14 @@ runCardanoTracer TracerParams{tracerConfig, stateDir, logSeverity} = do
   tr <- mkTracerTracer $ SeverityF logSeverity
   traceWith tr $ TracerParamsAre tracerConfig stateDir logSeverity
 
-  config <- readTracerConfig tracerConfig
+  config <- noRTView <$> readTracerConfig tracerConfig
   traceWith tr $ TracerConfigIs config
 
   brake <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
   doRunCardanoTracer config stateDir tr brake dpRequestors
+  where
+    noRTView cfg = cfg{ hasRTView = Nothing }
 
 -- | Runs all internal services of the tracer.
 doRunCardanoTracer
