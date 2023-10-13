@@ -26,13 +26,11 @@ module Cardano.Logging.DocuGenerator (
 import           Prelude hiding (lines, unlines)
 
 import qualified Data.Aeson.Encode.Pretty as AE
-import qualified Data.ByteString.Lazy as BS
 import           Data.IORef (modifyIORef, newIORef, readIORef)
 import           Data.List (groupBy, intersperse, nub, sortBy)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Text (Text, lines, split, toLower, unlines)
-import           Data.Text.Encoding (decodeUtf8)
 import           Data.Text.Internal.Builder (toLazyText)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder (Builder, fromString, fromText, singleton)
@@ -44,6 +42,15 @@ import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as TR
 
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
+
+utf16CircledT :: Text
+utf16CircledT = "\9443"
+
+utf16CircledS :: Text
+utf16CircledS = "\9442"
+
+utf16CircledM :: Text
+utf16CircledM = "\9436"
 
 -- | Convenience function for adding a namespace prefix to a documented
 addDocumentedNamespace  :: [Text] -> Documented a -> Documented a
@@ -431,14 +438,16 @@ docuResultsToText dt@DocTracer {..} configuration = do
       header4  = fromText "\n## Datapoints\n\n"
       contentD = mconcat $ intersperse (fromText "\n\n")
                               (map (unpackDocu . snd) datapointBuilders)
-      config  = fromText $ "\n## Configuration: \n```\n"
-                            <> decodeUtf8 (BS.toStrict $
-                                            AE.encodePretty configuration)
-                            <> "\n```\n"
-      numbers = fromString $  show (length dtBuilderList) <> " log messages." <> "\n\n"
-      legend  = fromString $  "\9443 - This is the root of a tracer\n\n"
-                           <> "\9442 - This is the root of a tracer that is silent because of the current configuration\n\n"
-                           <> "\9436 - This is the root of a tracer, that provides metrics\n\n"
+      config  = fromText "\n## Configuration: \n```\n"
+                        <> AE.encodePrettyToTextBuilder configuration
+                        <> fromText "\n```\n"
+      numbers = fromString $  show (length traceBuilders) <> " log messages, " <> "\n" <>
+                              show (length metricsBuilders) <> " metrics," <> "\n" <>
+                              show (length datapointBuilders) <> " datapoints." <> "\n\n"
+
+      legend  = fromText $ utf16CircledT <> "- This is the root of a tracer\n\n" <>
+                           utf16CircledS <> "- This is the root of a tracer that is silent because of the current configuration\n\n" <>
+                           utf16CircledM <> "- This is the root of a tracer, that provides metrics\n\n"
       ts      = fromString $ "Generated at " <> show time <> ".\n"
   pure $ toStrict $ toLazyText (
          header
@@ -547,8 +556,8 @@ generateTOC dt traces metrics datapoints =
             then
               let isSilent  = elem ns dtSilent
                   noMetrics = elem ns dtNoMetrics
-              in "\9443" <> if isSilent then "\9442" else ""
-                      <> if noMetrics then "" else "\9436"
+              in utf16CircledT <> if isSilent then utf16CircledS else ""
+                      <> if noMetrics then "" else utf16CircledM
             else ""
 
     commonPrefixLength :: Eq a => [a] -> [a] -> Int

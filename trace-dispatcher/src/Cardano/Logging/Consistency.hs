@@ -13,13 +13,21 @@ import qualified Data.Text as T
 import           Cardano.Logging.ConfigurationParser
 import           Cardano.Logging.Types
 
--- | Warniings as a list of text
+-- | Warnings as a list of text
 type NSWarnings = [T.Text]
 
   -- | A data structure for the lookup of namespaces as nested maps
 newtype NSLookup = NSLookup (Map.Map T.Text NSLookup)
   deriving Show
 
+
+-- | Checks if all namespaces in this configuration are legal.
+--   Legal in this case means that it can be found by a hierarchcical
+--   lookup in all namespaces.
+--   Warns as well if namespaces in all namespaces are not unique,
+--   Warns as well if namespaces in all namespaces are ending in the
+--   middle of another namespace.
+--   TODO TRACING: add more checks from documentation
 checkTraceConfiguration ::
      FilePath
   -> TraceConfig
@@ -28,7 +36,6 @@ checkTraceConfiguration ::
 checkTraceConfiguration configFileName defaultTraceConfig allNamespaces' = do
     trConfig <- readConfigurationWithDefault configFileName defaultTraceConfig
     pure $ checkTraceConfiguration' trConfig allNamespaces'
-
 
 checkTraceConfiguration' ::
      TraceConfig
@@ -42,8 +49,8 @@ checkTraceConfiguration' trConfig allNamespaces' =
                            map ("Config namespace error: " <>) configWarnings
     in allWarnings
 
--- | Check if a single namespace is legal. Returns just a warning test,
--- if this is not the case
+-- | Check if a single namespace is legal. Legal in this case means that
+--   it can be found by a hierarchcical lookup in all namespaces
 checkNamespace :: NSLookup -> [T.Text] -> Maybe T.Text
 checkNamespace nsLookup ns = go nsLookup ns
   where
@@ -54,9 +61,9 @@ checkNamespace nsLookup ns = go nsLookup ns
                                                         <> T.intercalate "." ns)
                                       Just l2 -> go l2 nstl
 
--- | Builds a namespace lookup structure from a list of namespaces
--- Warns if namespaces are not unique, and if a namespace is a subnamespace
--- of other namespaces
+-- | Warns if namespaces in all namespaces are not unique,
+--   Warns as well if namespaces in all namespaces are ending in the
+--   middle of another namespace.
 asNSLookup :: [[T.Text]] -> (NSLookup, NSWarnings)
 asNSLookup = foldl' (fillLookup []) (NSLookup Map.empty, [])
   where
