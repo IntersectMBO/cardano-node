@@ -158,7 +158,7 @@ withSeverity (Trace tr) = Trace $
     T.contramap
       (\case
         (lc, Right e) -> process lc (Right e)
-        (lc, Left c@(Config _)) -> process lc (Left c)
+        (lc, Left c@(TCConfig _)) -> process lc (Left c)
         (lc, Left d@(TCDocument _ _)) -> process lc (Left d)
         (lc, Left e) -> (lc, Left e))
       tr
@@ -212,7 +212,7 @@ withPrivacy (Trace tr) = Trace $
     T.contramap
       (\case
         (lc, Right e) -> process lc (Right e)
-        (lc, Left c@(Config _)) -> process lc (Left c)
+        (lc, Left c@(TCConfig _)) -> process lc (Left c)
         (lc, Left d@(TCDocument _ _)) -> process lc (Left d)
         (lc, Left e) -> (lc, Left e))
       tr
@@ -243,7 +243,7 @@ withDetails (Trace tr) = Trace $
   T.contramap
       (\case
         (lc, Right e) -> process lc (Right e)
-        (lc, Left c@(Config _)) -> process lc (Left c)
+        (lc, Left c@(TCConfig _)) -> process lc (Left c)
         (lc, Left d@(TCDocument _ _)) -> process lc (Left d)
         (lc, Left e) -> (lc, Left e))
       tr
