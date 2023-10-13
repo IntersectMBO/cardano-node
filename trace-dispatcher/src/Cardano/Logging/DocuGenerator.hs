@@ -44,13 +44,13 @@ import qualified Control.Tracer as TR
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
 
 utf16CircledT :: Text
-utf16CircledT = "\9443"
+utf16CircledT = "\x24E3"
 
 utf16CircledS :: Text
-utf16CircledS = "\9442"
+utf16CircledS = "\x24E2"
 
 utf16CircledM :: Text
-utf16CircledM = "\9436"
+utf16CircledM = "\x24DC"
 
 -- | Convenience function for adding a namespace prefix to a documented
 addDocumentedNamespace  :: [Text] -> Documented a -> Documented a
