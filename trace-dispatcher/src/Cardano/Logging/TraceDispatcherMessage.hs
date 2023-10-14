@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Cardano.Logging.TraceDispatcherMessage
   (
     UnknownNamespaceKind (..)
@@ -112,7 +114,8 @@ instance LogFormatting TraceDispatcherMessage where
   asMetrics TracerConsistencyWarnings {}     = []
   asMetrics TracerInfoConfig {} = []
 
-
+internalRestriction :: Text
+internalRestriction = "\nThis internal message can't be filtered by the current configuration"
 
 instance MetaTrace TraceDispatcherMessage where
     namespaceFor StartLimiting {}    = Namespace [] ["StartLimiting"]
@@ -136,33 +139,32 @@ instance MetaTrace TraceDispatcherMessage where
     severityFor (Namespace _ ["TracerConfigInfo"]) _       = Just Notice
     severityFor _ _                                  = Nothing
 
-
-    documentFor (Namespace _ ["StartLimiting"])    = Just
-      "This message indicates the start of frequency limiting"
+    documentFor (Namespace _ ["StartLimiting"])    = Just $
+      "This message indicates the start of frequency limiting" <> internalRestriction
     documentFor (Namespace _ ["StopLimiting"])     = Just $ mconcat
       [ "This message indicates the stop of frequency limiting,"
       , " and gives the number of messages that has been suppressed"
-      ]
+      ] <>  internalRestriction
     documentFor (Namespace _ ["RememberLimiting"]) = Just $ mconcat
       [ "^ This message remembers of ongoing frequency limiting,"
       , " and gives the number of messages that has been suppressed"
-      ]
+      ] <>  internalRestriction
     documentFor (Namespace _ ["UnknownNamespace"]) = Just $ mconcat
       [ "A value was queried for a namespaces from a tracer,"
-      , "which is unknown. This inicates a bug in the tracer implementation."
-      ]
+      , "which is unknown. This indicates a bug in the tracer implementation."
+      ] <>  internalRestriction
     documentFor (Namespace _ ["TracerInfo"]) = Just $ mconcat
       [ "Writes out tracers with metrics and silent tracers."
-      ]
+      ] <>  internalRestriction
     documentFor (Namespace _ ["MetricsInfo"]) = Just $ mconcat
-      [ "Writes out number of metrics delivered."
-      ]
+      [ "Writes out numbers for metrics delivered."
+      ] <>  internalRestriction
     documentFor (Namespace _ ["TracerConsistencyWarnings"]) = Just $ mconcat
       [ "Tracer consistency check found errors."
-      ]
+      ] <>  internalRestriction
     documentFor (Namespace _ ["TracerConfigInfo"]) = Just $ mconcat
       [ "Trace the tracer configuration which is effectively used."
-      ]
+      ] <>  internalRestriction
     documentFor _ = Nothing
 
     allNamespaces = [

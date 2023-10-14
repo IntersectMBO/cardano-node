@@ -52,9 +52,9 @@ configureTracers :: forall a m.
   -> m ()
 configureTracers cr config tracers = do
     mapM_ (\t -> do
-            configureTrace Reset t
-            configureAllTrace (Config config) t
-            configureTrace (Optimize cr) t)
+            configureTrace TCReset t
+            configureAllTrace (TCConfig config) t
+            configureTrace (TCOptimize cr) t)
           tracers
   where
     configureTrace control (Trace tr) =
@@ -85,18 +85,18 @@ maybeSilent selectorFunc prefixNames isMetrics (Trace tr) = do
       if silence == Just True
         then pure ()
         else T.traceWith tr (lc, Right a)
-    mkTrace ref (lc, Left (Config c)) = do
+    mkTrace ref (lc, Left (TCConfig c)) = do
       silence <- liftIO $ readIORef ref
       case silence of
         Nothing -> do
           let val = selectorFunc c (Namespace prefixNames [] :: Namespace a)
           liftIO $ writeIORef ref (Just val)
         Just _ -> pure ()
-      T.traceWith tr (lc, Left (Config c))
-    mkTrace ref (lc, Left Reset) = do
+      T.traceWith tr (lc, Left (TCConfig c))
+    mkTrace ref (lc, Left TCReset) = do
       liftIO $ writeIORef ref Nothing
-      T.traceWith tr (lc,  Left Reset)
-    mkTrace ref (lc, Left (Optimize cr)) = do
+      T.traceWith tr (lc,  Left TCReset)
+    mkTrace ref (lc, Left (TCOptimize cr)) = do
       silence <- liftIO $ readIORef ref
       case silence of
         Just True -> liftIO $ if isMetrics
@@ -104,7 +104,7 @@ maybeSilent selectorFunc prefixNames isMetrics (Trace tr) = do
                                 else modifyIORef (crSilent cr) (Set.insert prefixNames)
         _         -> pure ()
       liftIO $ modifyIORef (crAllTracers cr) (Set.insert prefixNames)
-      T.traceWith tr (lc,  Left (Optimize cr))
+      T.traceWith tr (lc,  Left (TCOptimize cr))
     mkTrace ref (lc, Left c@TCDocument {}) = do
       silence <- liftIO $ readIORef ref
       unless isMetrics
@@ -171,12 +171,12 @@ withNamespaceConfig name extract withConfig tr = do
                   T.traceWith (unpackTrace tt) (lc, Right a)
         Left (_cmap, Nothing) -> pure ()
         -- This can happen during reconfiguration, so we don't throw an error any more
-    mkTrace ref (lc, Left Reset) = do
+    mkTrace ref (lc, Left TCReset) = do
       liftIO $ writeIORef ref (Left (Map.empty, Nothing))
       tt <- withConfig Nothing tr
-      T.traceWith (unpackTrace tt) (lc, Left Reset)
+      T.traceWith (unpackTrace tt) (lc, Left TCReset)
 
-    mkTrace ref (lc, Left (Config c)) = do
+    mkTrace ref (lc, Left (TCConfig c)) = do
       let nst = lcNSPrefix lc ++ lcNSInner lc
       !val <- extract c (Namespace (lcNSPrefix lc) (lcNSInner lc))
       eitherConf <- liftIO $ readIORef ref
@@ -188,13 +188,13 @@ withNamespaceConfig name extract withConfig tr = do
                   $ writeIORef ref (Left (Map.insert nst val cmap, Nothing))
               Trace tt <- withConfig (Just val) tr
               -- trace ("config dict " ++ show (Map.insert nst val cmap)) $
-              T.traceWith tt (lc, Left (Config c))
+              T.traceWith tt (lc, Left (TCConfig c))
             Just v  -> do
               if v == val
                 then do
                   Trace tt <- withConfig (Just val) tr
                   -- trace ("config val" ++ show val) $
-                  T.traceWith tt (lc, Left (Config c))
+                  T.traceWith tt (lc, Left (TCConfig c))
                 else error $ "Inconsistent trace configuration with context "
                                   ++ show nst
         Right _val -> error $ "Trace not reset before reconfiguration (1)"
@@ -202,7 +202,7 @@ withNamespaceConfig name extract withConfig tr = do
         Left (_cmap, Just _v) -> error $ "Trace not reset before reconfiguration (2)"
                             ++ show nst
 
-    mkTrace ref (lc, Left (Optimize cr)) = do
+    mkTrace ref (lc, Left (TCOptimize cr)) = do
       eitherConf <- liftIO $ readIORef ref
       let nst = lcNSPrefix lc ++ lcNSInner lc
       case eitherConf of
@@ -214,7 +214,7 @@ withNamespaceConfig name extract withConfig tr = do
                         liftIO $ writeIORef ref $ Right val
                         Trace tt <- withConfig (Just val) tr
                         -- trace ("optimize one value " ++ show nst ++ " val " ++ show val) $
-                        T.traceWith tt (lc, Left (Optimize cr))
+                        T.traceWith tt (lc, Left (TCOptimize cr))
             _      -> let decidingDict =
                             foldl
                               (\acc e -> Map.insertWith (+) e (1 :: Int) acc)
@@ -228,7 +228,7 @@ withNamespaceConfig name extract withConfig tr = do
                         liftIO $ writeIORef ref (Left (newmap, Just mostCommon))
                         Trace tt <- withConfig Nothing tr
                         -- trace ("optimize dict " ++ show nst ++ " dict " ++ show newmap ++ " common " ++ show mostCommon) $
-                        T.traceWith tt (lc, Left (Optimize cr))
+                        T.traceWith tt (lc, Left (TCOptimize cr))
         Right _val -> error $ "Trace not reset before reconfiguration (3)"
                             ++ show nst
         Left (_cmap, Just _v) ->

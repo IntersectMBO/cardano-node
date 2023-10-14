@@ -55,6 +55,8 @@ instance AE.ToJSON ConfigRepresentation where
     , "TraceOptionResourceFrequency"  .= traceOptionResourceFrequency
     ]
 
+type OptionsRepresentation = Map.Map Text ConfigOptionRep
+
 -- | In the external configuration representation for configuration files
 -- all options for a namespace are part of a record
 data ConfigOptionRep = ConfigOptionRep
@@ -81,8 +83,6 @@ instance AE.ToJSON ConfigOptionRep where
             . consMay "detail" detail
             . consMay "backends" backends
             . consMay "maxFrequency" maxFrequency
-
-type OptionsRepresentation = Map.Map Text ConfigOptionRep
 
 instance AE.ToJSON TraceConfig where
   toJSON tc = toJSON (configToRepresentation tc)

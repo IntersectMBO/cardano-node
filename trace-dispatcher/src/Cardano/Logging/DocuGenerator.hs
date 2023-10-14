@@ -17,7 +17,6 @@ module Cardano.Logging.DocuGenerator (
   , addFiltered
   , addLimiter
   , addSilent
-
   , addDocumentedNamespace
 
   , DocuResult
@@ -26,6 +25,7 @@ module Cardano.Logging.DocuGenerator (
 
 import           Prelude hiding (lines, unlines)
 
+import qualified Data.Aeson.Encode.Pretty as AE
 import           Data.IORef (modifyIORef, newIORef, readIORef)
 import           Data.List (groupBy, intersperse, nub, sortBy)
 import qualified Data.Map.Strict as Map
@@ -36,11 +36,21 @@ import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder (Builder, fromString, fromText, singleton)
 import           Data.Time (getZonedTime)
 
+import           Cardano.Logging.ConfigurationParser ()
 import           Cardano.Logging.Types
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as TR
 
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
+
+utf16CircledT :: Text
+utf16CircledT = "\x24E3"
+
+utf16CircledS :: Text
+utf16CircledS = "\x24E2"
+
+utf16CircledM :: Text
+utf16CircledM = "\x24DC"
 
 -- | Convenience function for adding a namespace prefix to a documented
 addDocumentedNamespace  :: [Text] -> Documented a -> Documented a
@@ -428,8 +438,16 @@ docuResultsToText dt@DocTracer {..} configuration = do
       header4  = fromText "\n## Datapoints\n\n"
       contentD = mconcat $ intersperse (fromText "\n\n")
                               (map (unpackDocu . snd) datapointBuilders)
-      config  = fromString $ "\n\nConfiguration: " <> show configuration <> "\n\n"
-      numbers = fromString $  show (length dtBuilderList) <> " log messages." <> "\n\n"
+      config  = fromText "\n## Configuration: \n```\n"
+                        <> AE.encodePrettyToTextBuilder configuration
+                        <> fromText "\n```\n"
+      numbers = fromString $  show (length traceBuilders) <> " log messages, " <> "\n" <>
+                              show (length metricsBuilders) <> " metrics," <> "\n" <>
+                              show (length datapointBuilders) <> " datapoints." <> "\n\n"
+
+      legend  = fromText $ utf16CircledT <> "- This is the root of a tracer\n\n" <>
+                           utf16CircledS <> "- This is the root of a tracer that is silent because of the current configuration\n\n" <>
+                           utf16CircledM <> "- This is the root of a tracer, that provides metrics\n\n"
       ts      = fromString $ "Generated at " <> show time <> ".\n"
   pure $ toStrict $ toLazyText (
          header
@@ -443,6 +461,7 @@ docuResultsToText dt@DocTracer {..} configuration = do
       <> contentD
       <> config
       <> numbers
+      <> legend
       <> ts)
 
 
@@ -451,6 +470,7 @@ generateTOC dt traces metrics datapoints =
        generateTOCTraces
     <> generateTOCMetrics
     <> generateTOCDatapoints
+    <> generateTOCRest
   where
     generateTOCTraces =
       fromText "### [Trace Messages](#trace-messages)\n\n"
@@ -464,6 +484,10 @@ generateTOC dt traces metrics datapoints =
       fromText "### [Datapoints](#datapoints)\n\n"
       <> mconcat (reverse (fst (foldl (namespaceToToc Nothing) ([], []) datapoints)))
       <> fromText "\n"
+    generateTOCRest =
+         fromText "### [Configuration](#configuration)\n\n"
+      <> fromText "\n"
+
 
     namespaceToToc :: Maybe DocTracer -> ([Builder], [Text]) -> [Text]-> ([Builder], [Text])
     namespaceToToc condDocTracer (builders, context) ns =
@@ -525,7 +549,6 @@ generateTOC dt traces metrics datapoints =
     splitToNS [sym] = split (== '.') sym
     splitToNS other = other
 
-
     getSymbolsOf :: [Text] -> DocTracer -> Text
     getSymbolsOf ns DocTracer {..} =
       let isTracer' = elem ns dtTracerNames
@@ -533,8 +556,8 @@ generateTOC dt traces metrics datapoints =
             then
               let isSilent  = elem ns dtSilent
                   noMetrics = elem ns dtNoMetrics
-              in "\9443" <> if isSilent then "\9442" else ""
-                      <> if noMetrics then "" else "\9436"
+              in utf16CircledT <> if isSilent then utf16CircledS else ""
+                      <> if noMetrics then "" else utf16CircledM
             else ""
 
     commonPrefixLength :: Eq a => [a] -> [a] -> Int

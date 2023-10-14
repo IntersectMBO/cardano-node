@@ -383,7 +383,7 @@ instance MetaTrace  (StartupTrace blk) where
   documentFor (Namespace [] ["ShelleyBased"]) = Just $ mconcat
     [ "bisEra is the current era, e.g. \"Shelley\", \"Allegra\", \"Mary\" "
     , "or \"Alonzo\". "
-    , "\n_bisSystemStartTime_: TODO JNF "
+    , "\n_bisSystemStartTime_: "
     , "\n_bisSlotLength_: gives the length of a slot as time interval. "
     , "\n_bisEpochLength_: gives the number of slots which forms an epoch. "
     , "\n_bisSlotsPerKESPeriod_: gives the slots per KES period."

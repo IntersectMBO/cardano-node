@@ -21,7 +21,7 @@ import           Control.Monad (unless)
 import           Data.Proxy (Proxy (..))
 
 import           Cardano.Logging
-import           Cardano.Node.Tracing.Consistency (checkConfiguration')
+import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration')
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
@@ -165,7 +165,7 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
 
     traceTracerInfo trBase trForward configReflection
 
-    let warnings = checkConfiguration' trConfig
+    let warnings = checkNodeTraceConfiguration' trConfig
     unless (null warnings) $
       traceConfigWarnings trBase trForward warnings
 

@@ -39,9 +39,7 @@ TurnOnLogging: True
 # Use old tracing as standard for now
 UseTraceDispatcher: True
 
-TraceOptions:
-  "":
-    severity: Notice
+TraceOptions: {}
 
 TraceOptionPeerFrequency: 3000
 

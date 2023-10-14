@@ -31,7 +31,7 @@ forwardTracer forwardSink =
     -> m ()
   output sink LoggingContext {} (Right (FormattedForwarder lo)) = liftIO $
     writeToSink sink lo
-  output _sink LoggingContext {} (Left Reset) = liftIO $ do
+  output _sink LoggingContext {} (Left TCReset) = liftIO $ do
     pure ()
   output _sink lk (Left c@TCDocument {}) =
     docIt Forwarder (lk, Left c)

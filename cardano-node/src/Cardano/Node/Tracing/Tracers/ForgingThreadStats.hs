@@ -64,9 +64,27 @@ instance LogFormatting ForgeThreadStats where
     , IntM "Forge.NodeIsLeaderNum"    (fromIntegral ftsNodeIsLeaderNum)
     , IntM "Forge.BlocksForgedNum"    (fromIntegral ftsBlocksForgedNum)
     , IntM "Forge.SlotsMissed"        (fromIntegral ftsSlotsMissedNum)
-    , IntM "Forge.LastSlot"           (fromIntegral ftsLastSlot)
     ]
 
+instance MetaTrace ForgeThreadStats where
+    namespaceFor ForgeThreadStats {} = Namespace [] ["ForgeThreadStats"]
+
+    severityFor _ _ = Just Info
+
+    documentFor _ = Just ""
+
+    metricsDocFor _ =
+      [("Forge.NodeCannotForgeNum",
+        "How many times was this node unable to forge [a block]?")
+      ,("Forge.NodeIsLeaderNum",
+        "How many times was this node slot leader?")
+      ,("Forge.BlocksForgedNum",
+        "How many blocks did this node forge?")
+      ,("Forge.SlotsMissed",
+        "How many slots did this node miss?")
+      ]
+
+    allNamespaces = [Namespace [] ["ForgeThreadStats"]]
 
 emptyForgeThreadStats :: ForgeThreadStats
 emptyForgeThreadStats = ForgeThreadStats 0 0 0 0 0
@@ -120,13 +138,13 @@ instance MetaTrace ForgingStats where
 
     metricsDocFor _ =
       [("Forge.NodeCannotForgeNum",
-        "How many times this node could not forge?")
+        "How many times was this node unable to forge [a block]?")
       ,("Forge.NodeIsLeaderNum",
-        "How many times this node was leader?")
+        "How many times was this node slot leader?")
       ,("Forge.BlocksForgedNum",
-        "How many blocks did forge in this node?")
+        "How many blocks did this node forge?")
       ,("Forge.SlotsMissed",
-        "How many slots were missed in this node?")
+        "How many slots did this node miss?")
       ,("Forge.LastSlot",
         "")
       ]
