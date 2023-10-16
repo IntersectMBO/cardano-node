@@ -120,7 +120,6 @@ library
                       , generic-monoid
                       , ghc-prim
                       , io-classes
-                      , microlens
                       , mtl
                       , network
                       , network-mux

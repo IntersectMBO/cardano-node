@@ -346,6 +346,23 @@ instance LogFormatting ClientMetrics where
              else msgs
       else []
 
+instance MetaTrace ClientMetrics where
+  namespaceFor _ = Namespace [] ["ClientMetrics"]
+  severityFor _ _ = Just Info
+  documentFor _ = Just ""
+
+  metricsDocFor (Namespace _ ["ClientMetrics"]) =
+      [ ("Blockfetch.Client.Blockdelay", "")
+      , ("Blockfetch.Client.Blockdelay.cdfOne", "")
+      , ("Blockfetch.Client.Blockdelay.cdfThree", "")
+      , ("Blockfetch.Client.Blockdelay.cdfFive", "")
+      ]
+  metricsDocFor _ = []
+
+  allNamespaces = [
+          Namespace [] ["ClientMetrics"]
+        ]
+
 initialClientMetrics :: ClientMetrics
 initialClientMetrics =
     ClientMetrics

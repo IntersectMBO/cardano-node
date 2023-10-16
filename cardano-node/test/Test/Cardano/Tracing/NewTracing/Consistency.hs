@@ -9,7 +9,7 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H.Base
 import           Hedgehog.Internal.Property (PropertyName (PropertyName))
 
-import           Cardano.Node.Tracing.Consistency (checkConfiguration)
+import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration)
 
 tests :: IO Bool
 tests = H.checkSequential
@@ -32,7 +32,7 @@ goldenTestJSON :: [Text] -> FilePath -> Property
 goldenTestJSON expectedOutcome goldenFileBaseName =
     H.withTests 1 $ H.withShrinks 0 $ H.property $ do
       goldenFp    <- H.Base.note $ addPrefix goldenFileBaseName
-      actualValue <- liftIO $ checkConfiguration goldenFp
+      actualValue <- liftIO $ checkNodeTraceConfiguration goldenFp
       actualValue H.=== expectedOutcome
 
 
