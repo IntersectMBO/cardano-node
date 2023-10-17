@@ -331,15 +331,18 @@ withLimitersFromConfig tri tr = do
     getLimiter stateRef config ns =
       case getLimiterSpec config ns of
         Nothing -> pure Nothing
-        Just (name, frequency) -> do
-          state <- liftIO $ readIORef stateRef
-          case Map.lookup name state of
-            Just limiter -> pure $ Just limiter
-            Nothing -> do
-              limiterTrace <- limitFrequency frequency name tri tr
-              let limiter = Limiter name frequency limiterTrace
-              liftIO $ writeIORef stateRef (Map.insert name limiter state)
-              pure $ Just limiter
+        Just (name, frequency) ->
+          if frequency == 0
+            then pure Nothing
+            else do
+              state <- liftIO $ readIORef stateRef
+              case Map.lookup name state of
+                Just limiter -> pure $ Just limiter
+                Nothing -> do
+                  limiterTrace <- limitFrequency frequency name tri tr
+                  let limiter = Limiter name frequency limiterTrace
+                  liftIO $ writeIORef stateRef (Map.insert name limiter state)
+                  pure $ Just limiter
 
     withLimiter ::
          Maybe (Maybe (Limiter m a))
