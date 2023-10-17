@@ -12,7 +12,7 @@ where
 import Cardano.Api (type CardanoEra (..), AnyCardanoEra (..))
 import Cardano.Benchmarking.Compiler (CompileError (..), compileToScript, runCompiler)
 import Cardano.Benchmarking.Script.Types (Action (..))
-import Cardano.CLI.Types.Legacy (File (..))
+import Cardano.CLI.Types.Common (File (..))
 import Cardano.Node.Configuration.NodeAddress (NodeAddress'(..), NodeHostIPv4Address (..))
 import Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..))
 -- import Cardano.TxGenerator.Types (NumberOfInputsPerTx, NumberOfOutputsPerTx)

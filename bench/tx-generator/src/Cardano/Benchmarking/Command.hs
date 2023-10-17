@@ -60,7 +60,7 @@ runCommand = withIOManager $ \iocp -> do
       case compileOptions o of
         Right script -> BSL.putStr $ prettyPrint script
         err -> handleError err
-    Selftest genFile outFile -> runSelftest genFile iocp outFile >>= handleError
+    Selftest genFile outFile -> runSelftest iocp genFile outFile >>= handleError
     VersionCmd -> runVersionCommand
   where
   handleError :: Show a => Either a b -> IO ()
