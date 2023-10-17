@@ -25,8 +25,8 @@ import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 import           Cardano.Node.Types (AdjustFilePaths (..))
 
 import           Cardano.Api (AnyCardanoEra, Lovelace, mapFile)
-import           MonadicGen.Cardano.TxGenerator.Internal.Orphans ()
-import           MonadicGen.Cardano.TxGenerator.Types
+import           Cardano.TxGenerator.Internal.Orphans ()
+import           Cardano.TxGenerator.Types
 
 
 data NixServiceOptions = NixServiceOptions {
