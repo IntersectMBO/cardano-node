@@ -38,7 +38,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoEpochLength :: Int
   , cardanoSlotLength :: Double
   , cardanoTestnetMagic :: Int
-  , cardanoActiveSlotsCoeff :: Double
+  , cardanoActiveSlotsCoeff :: Double -- TODO: Remove me, no longer relevant
   , cardanoMaxSupply :: Word64 -- ^ The amount of ADA you are starting your testnet with
   , cardanoEnableP2P :: Bool
   , cardanoNodeLoggingFormat :: NodeLoggingFormat

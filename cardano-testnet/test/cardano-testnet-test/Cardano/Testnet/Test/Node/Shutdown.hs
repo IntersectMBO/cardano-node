@@ -124,7 +124,7 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
                                  $ mconcat [ byronGenesisHash
                                            , shelleyGenesisHash
                                            , alonzoGenesisHash
-                                           , defaultYamlHardforkViaConfig (AnyCardanoEra BabbageEra)]
+                                           , defaultYamlHardforkViaConfig (AnyCardanoEra BabbageEra)] -- TODO: This should not be hardcoded
 
   H.evalIO $ LBS.writeFile (tempAbsPath' </> "configuration.yaml") finalYamlConfig
 
