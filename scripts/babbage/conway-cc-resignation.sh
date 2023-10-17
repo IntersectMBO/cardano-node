@@ -30,10 +30,7 @@ sprocket() {
 
 CARDANO_CLI="${CARDANO_CLI:-cardano-cli}"
 NETWORK_MAGIC=42
-ROOT=example
-DREP_DIR=example/dreps
 UTXO_DIR=example/utxo-keys
-POOL_DIR=example/pools
 TRANSACTIONS_DIR=example/transactions
 CC_DIR=example/cc
 
@@ -92,5 +89,5 @@ $CARDANO_CLI conway transaction sign \
 $CARDANO_CLI conway transaction submit \
   --testnet-magic $NETWORK_MAGIC \
   --tx-file "${TRANSACTIONS_DIR}/authorization1-tx.signed"
-done
+
 # ^ this should show an error ConwayCommitteeHasPreviouslyResigned

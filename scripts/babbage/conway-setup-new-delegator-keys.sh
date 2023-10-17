@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# mkfiles.sh 
+# Run this script after mkfiles.sh
 # This scripts uses set -x to show in terminal the commands executed by the script. Remove or comment set -x to disable this behavior
 # The "exec 2>" below this comment helps the user to differenciate between the commands and its outputs by changing the color
 # of the set -x output (the commands).
@@ -31,8 +31,6 @@ sprocket() {
 
 CARDANO_CLI="${CARDANO_CLI:-cardano-cli}"
 NETWORK_MAGIC=42
-ROOT=example
-DREP_DIR=example/dreps
 UTXO_DIR=example/utxo-keys
 POOL_DIR=example/pools
 TRANSACTIONS_DIR=example/transactions
@@ -103,13 +101,13 @@ $CARDANO_CLI conway transaction submit \
   --testnet-magic $NETWORK_MAGIC \
   --tx-file "${TRANSACTIONS_DIR}/tx.signed"
 
-sleep 3
+sleep 5
 
 # SHOW THE UTXO DISTRIBUTION
 
 $CARDANO_CLI conway query utxo --whole-utxo --testnet-magic $NETWORK_MAGIC
 
-sleep 3
+sleep 5
 
 # REGISTER STAKE ADDRESSES
 
@@ -118,55 +116,61 @@ for i in {1..3}; do
     --stake-verification-key-file "${UTXO_DIR}/stake${i}.vkey" \
     --key-reg-deposit-amt 0 \
     --out-file "${TRANSACTIONS_DIR}/stake${i}reg.cert"
-
-  $CARDANO_CLI conway transaction build \
-    --testnet-magic $NETWORK_MAGIC \
-    --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment${i}.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-    --change-address "$(cat ${UTXO_DIR}/payment${i}.addr)" \
-    --certificate-file "${TRANSACTIONS_DIR}/stake${i}reg.cert" \
-    --witness-override 2 \
-    --out-file "${TRANSACTIONS_DIR}/reg-stake-tx${i}.raw"
-
-  $CARDANO_CLI conway transaction sign --testnet-magic $NETWORK_MAGIC \
-    --tx-body-file "${TRANSACTIONS_DIR}/reg-stake-tx${i}.raw" \
-    --signing-key-file "${UTXO_DIR}/payment${i}.skey" \
-    --signing-key-file "${UTXO_DIR}/stake${i}.skey" \
-    --out-file "${TRANSACTIONS_DIR}/reg-stake-tx${i}.signed"
-
-  $CARDANO_CLI conway transaction submit \
-    --testnet-magic $NETWORK_MAGIC \
-    --tx-file "${TRANSACTIONS_DIR}/reg-stake-tx${i}.signed"
-
-  sleep 3
 done
 
+$CARDANO_CLI conway transaction build \
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
+  --certificate-file "${TRANSACTIONS_DIR}/stake1reg.cert" \
+  --certificate-file "${TRANSACTIONS_DIR}/stake2reg.cert" \
+  --certificate-file "${TRANSACTIONS_DIR}/stake3reg.cert" \
+  --witness-override 4 \
+  --out-file "${TRANSACTIONS_DIR}/reg-stake-tx.raw"
+
+$CARDANO_CLI conway transaction sign --testnet-magic $NETWORK_MAGIC \
+  --tx-body-file "${TRANSACTIONS_DIR}/reg-stake-tx.raw" \
+  --signing-key-file "${UTXO_DIR}/payment1.skey" \
+  --signing-key-file "${UTXO_DIR}/stake1.skey" \
+  --signing-key-file "${UTXO_DIR}/stake2.skey" \
+  --signing-key-file "${UTXO_DIR}/stake3.skey" \
+  --out-file "${TRANSACTIONS_DIR}/reg-stake-tx.signed"
+
+$CARDANO_CLI conway transaction submit \
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-file "${TRANSACTIONS_DIR}/reg-stake-tx.signed"
+
+sleep 5
 
 # DELEGATE STAKE KEYS TO POOLS
 
-for i in {1..2}; do
+for i in {1..3}; do
   $CARDANO_CLI conway stake-address stake-delegation-certificate \
     --stake-verification-key-file "${UTXO_DIR}/stake${i}.vkey" \
     --stake-pool-verification-key-file "${POOL_DIR}/cold${i}.vkey" \
     --out-file "${TRANSACTIONS_DIR}/stake${i}-pool-deleg.cert"
-
-  $CARDANO_CLI conway transaction build \
-    --testnet-magic $NETWORK_MAGIC \
-    --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment${i}.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-    --change-address "$(cat ${UTXO_DIR}/payment"${i}".addr)" \
-    --certificate-file "${TRANSACTIONS_DIR}/stake${i}-pool-deleg.cert" \
-    --witness-override 2 \
-    --out-file "${TRANSACTIONS_DIR}/stake-delegate-tx${i}.raw"
-
-  $CARDANO_CLI conway transaction sign --testnet-magic $NETWORK_MAGIC \
-    --tx-body-file "${TRANSACTIONS_DIR}/stake-delegate-tx${i}.raw" \
-    --signing-key-file "${UTXO_DIR}/payment${i}.skey" \
-    --signing-key-file "${UTXO_DIR}/stake${i}.skey" \
-    --out-file "${TRANSACTIONS_DIR}/stake-delegate-tx${i}.signed"
-
-  $CARDANO_CLI conway transaction submit \
-    --testnet-magic $NETWORK_MAGIC \
-    --tx-file "${TRANSACTIONS_DIR}/stake-delegate-tx${i}.signed"
-
-  sleep 3
 done
 
+$CARDANO_CLI conway transaction build \
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
+  --certificate-file "${TRANSACTIONS_DIR}/stake1-pool-deleg.cert" \
+  --certificate-file "${TRANSACTIONS_DIR}/stake2-pool-deleg.cert" \
+  --certificate-file "${TRANSACTIONS_DIR}/stake3-pool-deleg.cert" \
+  --witness-override 4 \
+  --out-file "${TRANSACTIONS_DIR}/stake-delegation-tx.raw"
+
+$CARDANO_CLI conway transaction sign --testnet-magic $NETWORK_MAGIC \
+  --tx-body-file "${TRANSACTIONS_DIR}/stake-delegation-tx.raw" \
+  --signing-key-file "${UTXO_DIR}/payment1.skey" \
+  --signing-key-file "${UTXO_DIR}/stake1.skey" \
+  --signing-key-file "${UTXO_DIR}/stake2.skey" \
+  --signing-key-file "${UTXO_DIR}/stake3.skey" \
+  --out-file "${TRANSACTIONS_DIR}/stake-delegation-tx.raw"
+
+$CARDANO_CLI conway transaction submit \
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-file "${TRANSACTIONS_DIR}/stake-delegation-tx.raw"
+
+sleep 5

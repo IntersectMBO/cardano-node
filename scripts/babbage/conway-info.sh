@@ -37,6 +37,7 @@ DREP_DIR=example/dreps
 UTXO_DIR=example/utxo-keys
 POOL_DIR=example/pools
 TRANSACTIONS_DIR=example/transactions
+CC_DIR=example/cc
 
 mkdir -p "$TRANSACTIONS_DIR"
 
@@ -84,28 +85,33 @@ for i in {1..3}; do
     --governance-action-tx-id "${ID}" \
     --governance-action-index "${IX}" \
     --drep-verification-key-file "${DREP_DIR}/drep${i}.vkey" \
-    --out-file "${TRANSACTIONS_DIR}/${ID}-drep${i}.vote"
-
-  $CARDANO_CLI conway transaction build \
-    --testnet-magic $NETWORK_MAGIC \
-    --tx-in "$(cardano-cli query utxo --address $(cat "${UTXO_DIR}/payment1.addr") --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-    --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
-    --vote-file "${TRANSACTIONS_DIR}/${ID}-drep${i}.vote" \
-    --witness-override 2 \
-    --out-file "${TRANSACTIONS_DIR}/${ID}-drep${i}-tx.raw"
-
-  $CARDANO_CLI conway transaction sign \
-    --testnet-magic $NETWORK_MAGIC \
-    --tx-body-file "${TRANSACTIONS_DIR}/${ID}-drep${i}-tx.raw" \
-    --signing-key-file "${UTXO_DIR}/payment1.skey" \
-    --signing-key-file "${DREP_DIR}/drep${i}.skey" \
-    --out-file "${TRANSACTIONS_DIR}/${ID}-drep${i}-tx.signed"
-
-  $CARDANO_CLI conway transaction submit \
-    --testnet-magic $NETWORK_MAGIC \
-    --tx-file "${TRANSACTIONS_DIR}/${ID}-drep${i}-tx.signed"
-sleep 3
+    --out-file "${TRANSACTIONS_DIR}/info-drep${i}.vote"
 done
+
+$CARDANO_CLI conway transaction build \
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
+  --vote-file "${TRANSACTIONS_DIR}/info-drep1.vote" \
+  --vote-file "${TRANSACTIONS_DIR}/info-drep2.vote" \
+  --vote-file "${TRANSACTIONS_DIR}/info-drep3.vote" \
+  --witness-override 4 \
+  --out-file "${TRANSACTIONS_DIR}/info-drep-votes-tx.raw"
+
+$CARDANO_CLI conway transaction sign \
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-body-file "${TRANSACTIONS_DIR}/info-drep-votes-tx.raw" \
+  --signing-key-file "${UTXO_DIR}/payment1.skey" \
+  --signing-key-file "${DREP_DIR}/drep1.skey" \
+  --signing-key-file "${DREP_DIR}/drep2.skey" \
+  --signing-key-file "${DREP_DIR}/drep3.skey" \
+  --out-file "${TRANSACTIONS_DIR}/info-drep-votes-tx.signed"
+
+$CARDANO_CLI conway transaction submit \
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-file "${TRANSACTIONS_DIR}/info-drep-votes-tx.signed"
+
+sleep 5
 
 ### ----------
 # SPO VOTES
@@ -117,50 +123,88 @@ for i in {1..3}; do
     --governance-action-tx-id "${ID}" \
     --governance-action-index "${IX}" \
     --cold-verification-key-file "${POOL_DIR}/cold${i}.vkey" \
-    --out-file "${POOL_DIR}/${ID}-spo${i}.vote"
+    --out-file "${TRANSACTIONS_DIR}/info-spo${i}.vote"
+done
 
-  $CARDANO_CLI conway transaction build \
-    --testnet-magic $NETWORK_MAGIC \
-    --tx-in "$(cardano-cli query utxo --address $(cat "${UTXO_DIR}/payment1.addr") --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-    --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
-    --vote-file "${POOL_DIR}/${ID}-spo${i}.vote" \
-    --witness-override 2 \
-    --out-file "${UTXO_DIR}/${ID}-spo${i}-tx.raw"
+$CARDANO_CLI conway transaction build \
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
+  --vote-file "${TRANSACTIONS_DIR}/info-spo1.vote" \
+  --vote-file "${TRANSACTIONS_DIR}/info-spo2.vote" \
+  --vote-file "${TRANSACTIONS_DIR}/info-spo3.vote" \
+  --witness-override 4 \
+  --out-file "${TRANSACTIONS_DIR}/info-spo-votes-tx.raw"
+
+$CARDANO_CLI conway transaction sign \
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-body-file "${TRANSACTIONS_DIR}/info-spo-votes-tx.raw" \
+  --signing-key-file "${UTXO_DIR}/payment1.skey" \
+  --signing-key-file "${POOL_DIR}/cold1.skey" \
+  --signing-key-file "${POOL_DIR}/cold2.skey" \
+  --signing-key-file "${POOL_DIR}/cold3.skey" \
+  --out-file "${TRANSACTIONS_DIR}/info-spo-votes-tx.signed"
+
+$CARDANO_CLI conway transaction submit \
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-file "${TRANSACTIONS_DIR}/info-spo-votes-tx.signed"
+
+sleep 5
+
+
+### ----------––––––––
+# CC VOTES
+### ----------––––––––
+
+for i in {1..3}; do
+  $CARDANO_CLI conway governance vote create \
+    --yes \
+    --governance-action-tx-id "${ID}" \
+    --governance-action-index "${IX}" \
+    --cc-hot-verification-key-file "${CC_DIR}/hot${i}-cc.vkey" \
+    --out-file "${TRANSACTIONS_DIR}/info-cc${i}.vote"
+done
+
+$CARDANO_CLI conway transaction build \
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
+  --vote-file "${TRANSACTIONS_DIR}/info-cc1.vote" \
+  --vote-file "${TRANSACTIONS_DIR}/info-cc2.vote" \
+  --vote-file "${TRANSACTIONS_DIR}/info-cc3.vote" \
+  --witness-override 4 \
+  --out-file "${TRANSACTIONS_DIR}/info-cc-votes-tx.raw"
 
   $CARDANO_CLI conway transaction sign \
     --testnet-magic $NETWORK_MAGIC \
-    --tx-body-file "${UTXO_DIR}/${ID}-spo${i}-tx.raw" \
+    --tx-body-file "${TRANSACTIONS_DIR}/info-cc-votes-tx.raw" \
     --signing-key-file "${UTXO_DIR}/payment1.skey" \
-    --signing-key-file "${POOL_DIR}/cold${i}.skey" \
-    --out-file "${UTXO_DIR}/${ID}-spo${i}-tx.signed"
+    --signing-key-file "${CC_DIR}/hot1-cc.skey" \
+    --signing-key-file "${CC_DIR}/hot2-cc.skey" \
+    --signing-key-file "${CC_DIR}/hot3-cc.skey" \
+    --out-file "${TRANSACTIONS_DIR}/info-cc-votes-tx.signed"
 
   $CARDANO_CLI conway transaction submit \
     --testnet-magic $NETWORK_MAGIC \
-    --tx-file "${UTXO_DIR}/${ID}-spo${i}-tx.signed"
+    --tx-file "${TRANSACTIONS_DIR}/info-cc-votes-tx.signed"
 
-  sleep 3
-done
+  sleep 5
 
-$CARDANO_CLI conway governance query gov-state --testnet-magic $NETWORK_MAGIC | jq -r '.gov.curGovActionsState'
-
-expiresAfter=$(cardano-cli conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovActionsState[].expiresAfter')
+expiresAfter=$($CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovSnapshots.psGovActionStates[] | .expiresAfter')
 
 echo "THIS INFO GOVERNANCE ACTION EXPIRES AFTER EPOCH ${expiresAfter}; SINCE INFO ACTIONS ARE NOT REALLY ENACTED BY LEDGER, AFTER IT EXPIRES IT IS REMOVED"
 echo "IT WILL BE REMOVED ON EPOCH $(($expiresAfter + 1 ))"
 
+tip=$(cardano-cli query tip --testnet-magic 42 | jq .)
+current_epoch=$(echo $tip | jq .epoch)
+slots_to_epoch_end=$(echo $tip | jq .slotsToEpochEnd)
 
-check_epoch() {
-  while true; do
-    currentEpoch=$($CARDANO_CLI conway query tip --testnet-magic $NETWORK_MAGIC | jq .epoch)
+sleep $((60 * (expiresAfter - current_epoch) + slots_to_epoch_end / 10))
 
-    if [ "$currentEpoch" -gt $(($expiresAfter + 1)) ]; then
-      $CARDANO_CLI conway governance query gov-state --testnet-magic $NETWORK_MAGIC | jq -r '.gov.curGovActionsState'
-      break
-    else
-      sleep 30  # Sleep when the epoch hasn't changed
-    fi
-  done
-}
+$CARDANO_CLI conway governance query gov-state --testnet-magic $NETWORK_MAGIC | jq -r '.gov.curGovSnapshots.psGovActionStates'
 
-# Call the function to check the epoch
-check_epoch
+echo "After one more epoch the info action is removed from the state"
+
+sleep 65
+
+$CARDANO_CLI conway governance query gov-state --testnet-magic $NETWORK_MAGIC | jq -r '.gov.curGovSnapshots.psGovActionStates'
