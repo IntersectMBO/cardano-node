@@ -12,6 +12,7 @@ let
     (removeLegacyTracingOptions cfg)
   {
     UseTraceDispatcher   = true;
+    TraceOptionResourceFrequency = 1000;
 
   ## Please see the generated tracing configuration reference at:
   ##

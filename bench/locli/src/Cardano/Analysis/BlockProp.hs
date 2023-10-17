@@ -600,7 +600,8 @@ blockProp run@Run{genesis} Chain{..} = do
 
    each, earliest :: [NominalDiffTime] -> [NominalDiffTime]
    each = identity
-   earliest = (:[]) . minimum
+   earliest [] = []
+   earliest xs = [minimum xs]
 
    observerCDF :: [BlockEvents]
                -> (BlockObservation -> SMaybe NominalDiffTime)
