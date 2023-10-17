@@ -8,7 +8,7 @@ module Testnet.Start.Byron
   ( createByronGenesis
   , createByronUpdateProposal
   , createByronUpdateProposalVote
-  , byronDefaultTestnetOptions
+  , byronDefaultGenesisOptions
   ) where
 
 import           Control.Monad.Catch (MonadCatch)
@@ -21,35 +21,20 @@ import           Hedgehog.Internal.Property (MonadTest)
 
 import           Testnet.Process.Run
 
-
-{- HLINT ignore "Reduce duplication" -}
-{- HLINT ignore "Redundant <&>" -}
-{- HLINT ignore "Redundant flip" -}
-{- HLINT ignore "Use head" -}
-
--- TODO: Remove me and replace with a type that is more specific to genesis creation.
-data CardanoTestnetOptions = CardanoTestnetOptions
-  { numBftNodes :: Int
-  , slotDuration :: Int
-  , securityParam :: Int
-  , nPoorAddresses :: Int
-  , testnetMagic :: Int
-  , totalBalance :: Int
-  , enableP2P :: Bool
+data ByronGenesisOptions = ByronGenesisOptions
+  { byronNumBftNodes :: Int
+  , byronSecurityParam :: Int
+  , byronTotalBalance :: Int
   } deriving (Eq, Show)
 
-byronDefaultTestnetOptions :: CardanoTestnetOptions
-byronDefaultTestnetOptions = CardanoTestnetOptions
-  { numBftNodes = 3
-  , slotDuration = 2000
-  , securityParam = 10
-  , testnetMagic = 42
-  , nPoorAddresses = 128
+byronDefaultGenesisOptions :: ByronGenesisOptions
+byronDefaultGenesisOptions = ByronGenesisOptions
+  { byronNumBftNodes = 3
+  , byronSecurityParam = 10
   -- TODO: createByronGenesis should have a check that errors
   -- if totalBalance can be evenly split between numBftNodes
   -- with no remainder. Having a remainder results in rounding errors.
-  , totalBalance = 8000000000000001
-  , enableP2P = False
+  , byronTotalBalance = 8000000000000001
   }
 
 -- TODO: We should not abuse the byron testnet options for genesis creation.
@@ -60,7 +45,7 @@ createByronGenesis
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => Int
   -> UTCTime
-  -> CardanoTestnetOptions
+  -> ByronGenesisOptions
   -> String
   -> String
   -> m ()
@@ -69,10 +54,10 @@ createByronGenesis testnetMagic' startTime testnetOptions pParamFp genOutputDir 
     [ "byron", "genesis", "genesis"
     , "--protocol-magic", show testnetMagic'
     , "--start-time", showUTCTimeSeconds startTime
-    , "--k", show (securityParam testnetOptions)
+    , "--k", show (byronSecurityParam testnetOptions)
     , "--n-poor-addresses", "0"
-    , "--n-delegate-addresses", show @Int (numBftNodes testnetOptions)
-    , "--total-balance", show @Int (totalBalance testnetOptions)
+    , "--n-delegate-addresses", show @Int (byronNumBftNodes testnetOptions)
+    , "--total-balance", show @Int (byronTotalBalance testnetOptions)
     , "--delegate-share", "1"
     , "--avvm-entry-count", "0"
     , "--avvm-entry-balance", "0"

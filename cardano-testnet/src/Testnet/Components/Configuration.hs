@@ -27,8 +27,8 @@ import           System.FilePath.Posix ((</>))
 import           Hedgehog
 
 import           Testnet.Defaults
+import           Testnet.Filepath
 import           Testnet.Property.Utils
-import           Testnet.Runtime
 
 createConfigYaml
   :: (MonadTest m, MonadIO m, HasCallStack)

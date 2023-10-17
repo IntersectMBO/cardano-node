@@ -17,7 +17,8 @@ import qualified Options.Applicative as Opt
 import           Parsers.Cardano
 import           Parsers.Help
 import           Parsers.Version
-import           Testnet.Options
+import           Testnet.Property.Run
+import           Testnet.Start.Cardano
 
 pref :: ParserPrefs
 pref = Opt.prefs $ showHelpOnEmpty <> showHelpOnError
@@ -49,3 +50,6 @@ runTestnetCmd = \case
   Help pPrefs pInfo cmdOpts -> runHelpOptions pPrefs pInfo cmdOpts
 
 
+runCardanoOptions :: CardanoOptions -> IO ()
+runCardanoOptions options =
+  runTestnet $ cardanoTestnet (testnetOptions options)

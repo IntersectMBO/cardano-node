@@ -66,7 +66,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "alonzo-leadership-schedu
   tr@TestnetRuntime
     { testnetMagic
     , poolNodes
-    } <- testnet fastTestnetOptions conf
+    } <- cardanoTestnet fastTestnetOptions conf
 
   poolNode1 <- H.headM poolNodes
 

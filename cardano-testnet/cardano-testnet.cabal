@@ -67,6 +67,7 @@ library
                       , text
                       , time
                       , transformers
+                      , transformers-except
                       , unordered-containers
                       , vector
 
@@ -75,12 +76,10 @@ library
                         Parsers.Run
                         Testnet.Start.Byron
                         Testnet.Start.Types
-                        Testnet.Conf
                         Testnet.Components.Configuration
                         Testnet.Components.SPO
                         Testnet.Defaults
                         Testnet.Filepath
-                        Testnet.Options
                         Testnet.Property.Assert
                         Testnet.Property.Checks
                         Testnet.Property.Run
@@ -88,7 +87,6 @@ library
                         Testnet.Process.Cli
                         Testnet.Process.Run
                         Testnet.Runtime
-                        Testnet.Topology
 
   other-modules:        Parsers.Cardano
                         Parsers.Help
