@@ -212,6 +212,12 @@ start()
     local top_i runs=()
     for ((top_i=0; top_i<$iterations; top_i++))
     do newline
+       if test -n "$cabal_mode" -a -z "$prebuild_done"
+       then workbench-prebuild-executables
+            prebuild_done=t
+       fi
+
+       # manifest generation needs the build plan that is created in the previous step
        progress "manifest" "component versions:"
        local manifest=$(manifest collect-from-checkout  \
                             "$node_source"              \
@@ -219,11 +225,6 @@ start()
                             ${WB_MANIFEST_PACKAGES[*]}
                        )
        manifest render "$manifest"
-
-       if test -n "$cabal_mode" -a -z "$prebuild_done"
-       then workbench-prebuild-executables
-            prebuild_done=t
-       fi
 
        progress "top-level" "profile $(with_color 'yellow' $profile_name), iteration $(with_color 'white' $((top_i+1))) of $(with_color 'yellow' $iterations), identified as:  $(if test -n "$ident"; then echo $(white $ident); else echo $(red UNIDENTIFIED); fi)"
 
