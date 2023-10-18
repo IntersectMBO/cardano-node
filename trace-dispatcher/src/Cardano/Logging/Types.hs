@@ -490,7 +490,7 @@ data LogDoc = LogDoc {
 emptyLogDoc :: Text -> [(Text, Text)] -> LogDoc
 emptyLogDoc d m = LogDoc d (Map.fromList m) [] Nothing Nothing Nothing [] [] [] [] False
 
--- | Type for the functions foldTraceM and foldMTraceM from module
+-- | Type for the functions foldTraceM and foldTraceM from module
 -- Cardano/Logging/Trace
 newtype Folding a b = Folding b
 
