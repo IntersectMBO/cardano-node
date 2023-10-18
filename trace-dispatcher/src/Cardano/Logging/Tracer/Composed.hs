@@ -89,22 +89,24 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerPrefix hook = do
                       Just ekgTrace ->
                         pure (metricsFormatter "" ekgTrace)
 --                      >>= recordMetricsStatistics internalTr
+--                        >>= filterTrace (\(_,v) -> Prelude.null (asMetrics v))
                         >>= maybeSilent hasNoMetrics tracerPrefix True
                         >>= hook
 
     pure (messageTrace <> metricsTrace)
 
   where
+    {-# INLINE addContextAndFilter #-}
     addContextAndFilter :: MetaTrace a => Trace IO a -> IO (Trace IO a)
     addContextAndFilter tr = do
-      tr'  <- withDetailsFromConfig tr
+      tr'  <- withDetailsFromConfig
+                $ withPrivacy
+                  $ withDetails tr
       tr'' <- filterSeverityFromConfig tr'
       pure $ withInnerNames
               $ appendPrefixNames tracerPrefix
                 $ withSeverity
-                  $ withPrivacy
-                    $ withDetails
-                      tr''
+                  tr''
 
     traceNamespaceErrors ::
          Trace IO TraceDispatcherMessage
