@@ -407,7 +407,7 @@ foldTraceM :: MonadUnliftIO m
   -> Trace m (Folding a acc)
   -> m (Trace m a)
 
-foldMTraceM :: MonadUnliftIO m
+foldTraceM :: MonadUnliftIO m
   => (acc -> LoggingContext -> a -> m acc)
   -> acc
   -> Trace m (Folding a acc)

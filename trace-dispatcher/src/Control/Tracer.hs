@@ -73,7 +73,7 @@ module Control.Tracer
     , Contravariant(..)
     ) where
 
-import           Control.Arrow ((|||), (&&&), arr, runKleisli)
+import           Control.Arrow (arr, runKleisli, (&&&), (|||))
 import           Control.Category ((>>>))
 import           Data.Functor.Contravariant (Contravariant (..))
 import           Debug.Trace (traceM)
@@ -180,19 +180,23 @@ traceWith :: Monad m => Tracer m a -> a -> m ()
 traceWith (Tracer tr) = runKleisli (Arrow.runTracerA tr)
 
 -- | Inverse of 'use'.
+{-# INLINE arrow #-}
 arrow :: Arrow.TracerA m a () -> Tracer m a
 arrow = Tracer
 
 -- | Inverse of 'arrow'. Useful when writing arrow tracers which use a
 -- contravariant tracer (the newtype in this module).
+{-# INLINE use #-}
 use :: Tracer m a -> Arrow.TracerA m a ()
 use = runTracer
 
 -- | A tracer which does nothing.
+{-# INLINE nullTracer #-}
 nullTracer :: Monad m => Tracer m a
 nullTracer = Tracer Arrow.squelch
 
 -- | Create a simple contravariant tracer which runs a given side-effect.
+{-# INLINE emit #-}
 emit :: Applicative m => (a -> m ()) -> Tracer m a
 emit f = Tracer (Arrow.emit f)
 
