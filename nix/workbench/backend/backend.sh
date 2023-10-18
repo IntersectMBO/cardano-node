@@ -80,9 +80,17 @@ case "${op}" in
 
     assert-stopped )
         local running_components=($(backend is-running "run/current"))
-        test ${#running_components[*]} -gt 0 &&
-          fatal "backend reports running components ($(blue ${running_components[*]}))$(red . Please stop first:)  $(yellow stop-cluster)" ||
-          true
+
+        if test ${#running_components[*]} -gt 0
+        then
+          newline
+          progress "$(red FATAL)" "backend reports running components (${running_components[*]})"
+          progress "hint"         "  1. if any other local cluster is running on this machine, please use: $(yellow stop-cluster)"
+          progress "hint"         "  2. if any other cardano-node process is active on this machine, please shut it down first"
+          progress "hint"         "$(green any active cluster or node process may significantly impair metrics taken during benchmark)"
+          fatal "aborted due to active components"
+        fi
+        true
         ;;
 
     * ) set +x; usage_backend;; esac

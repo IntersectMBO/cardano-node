@@ -9,10 +9,22 @@ module Testnet.Defaults
   , defaultYamlConfig
   , defaultConwayGenesis
   , defaultYamlHardforkViaConfig
+  , defaultMainnetTopology
   ) where
 
 import           Cardano.Api (AnyCardanoEra (..), CardanoEra (..))
 import qualified Cardano.Api.Shelley as Api
+
+import           Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import           Cardano.Ledger.Alonzo.Scripts
+import           Cardano.Ledger.BaseTypes
+import           Cardano.Ledger.Coin
+import           Cardano.Ledger.Conway.Genesis
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Node.Configuration.Topology
+import           Cardano.Tracing.Config
+
 import           Prelude
 
 import           Data.Aeson (ToJSON (..), Value, (.=))
@@ -27,16 +39,6 @@ import           Data.Ratio
 import           Data.Scientific
 import qualified Data.Vector as Vector
 import           Data.Word
-
-import           Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
-import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import           Cardano.Ledger.Alonzo.Scripts
-import           Cardano.Ledger.BaseTypes
-import           Cardano.Ledger.Coin
-import           Cardano.Ledger.Conway.Genesis
-import           Cardano.Ledger.Crypto (StandardCrypto)
-
-import           Cardano.Tracing.Config
 
 
 instance Api.Error AlonzoGenesisError where
@@ -398,3 +400,12 @@ defaultByronProtocolParamsJsonValue =
     , "updateProposalThd" .= toJSON @String "100000000000000"
     , "updateVoteThd" .= toJSON @String "1000000000000"
     ]
+
+defaultMainnetTopology :: NetworkTopology
+defaultMainnetTopology =
+  let single = RemoteAddress
+         { raAddress  = "relays-new.cardano-mainnet.iohk.io"
+         , raPort     = 3001
+         , raValency  = 2
+         }
+  in RealNodeTopology [single]

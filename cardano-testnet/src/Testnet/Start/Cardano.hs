@@ -23,19 +23,24 @@ import           Cardano.Api hiding (cardanoEra)
 import           Prelude hiding (lines)
 
 import           Control.Monad
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
 import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Either
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Text as Text
 import qualified Data.Time.Clock as DTC
+import qualified GHC.Stack as GHC
 import           System.FilePath.Posix ((</>))
 import qualified System.Info as OS
 
 import qualified Hedgehog as H
+import           Hedgehog.Extras (failMessage)
 import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Stock.Time as DTC
@@ -43,7 +48,6 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
 import           Testnet.Components.Configuration
-import qualified Testnet.Conf as H
 import           Testnet.Defaults
 import           Testnet.Filepath
 import qualified Testnet.Process.Run as H
@@ -59,15 +63,19 @@ import           Testnet.Start.Types
 {- HLINT ignore "Use let" -}
 
 
-
+-- | There are certain conditions that need to be met in order to run
+-- a valid node cluster.
+testnetMinimumConfigurationRequirements :: CardanoTestnetOptions -> H.Integration ()
+testnetMinimumConfigurationRequirements cTestnetOpts = do
+  when (length (cardanoNodes cTestnetOpts) < 2) $ do
+     H.noteShow_ ("Need at least two nodes to run a cluster" :: String)
+     H.noteShow_ cTestnetOpts
+     H.assert False
 
 data ForkPoint
   = AtVersion Int
   | AtEpoch Int
   deriving (Show, Eq, Read)
-
-
-
 
 
 -- | For an unknown reason, CLI commands are a lot slower on Windows than on Linux and
@@ -76,8 +84,9 @@ startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
 
-cardanoTestnet :: CardanoTestnetOptions -> H.Conf -> H.Integration TestnetRuntime
-cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
+cardanoTestnet :: CardanoTestnetOptions -> Conf -> H.Integration TestnetRuntime
+cardanoTestnet testnetOptions Conf {tempAbsPath} = do
+  testnetMinimumConfigurationRequirements testnetOptions
   void $ H.note OS.os
   currentTime <- H.noteShowIO DTC.getCurrentTime
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -94,7 +103,7 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
   Byron.createByronGenesis
     testnetMagic
     startTime
-    Byron.byronDefaultTestnetOptions
+    Byron.byronDefaultGenesisOptions
     (tempAbsPath' </> "byron.genesis.spec.json")
     (tempAbsPath' </> "byron-gen-command")
   -- Because in Conway the overlay schedule and decentralization parameter
@@ -320,63 +329,70 @@ cardanoTestnet testnetOptions H.Conf {H.tempAbsPath} = do
         ]
       ]
     ]
+  nodeStdoutFiles <- forM spoNodes $ \node -> do
+                      H.noteTempFile (makeLogDir $ TmpAbsolutePath tempAbsPath') $ node <> ".stdout.log"
+
   let spoNodesWithPortNos = L.zip spoNodes [3001..]
-  poolNodes <- forM (L.zip spoNodesWithPortNos poolKeys) $ \((node, port),key) -> do
-    runtime <- startNode (TmpAbsolutePath tempAbsPath') node port
-        [ "run"
-        , "--config", tempAbsPath' </> "configuration.yaml"
-        , "--topology", tempAbsPath' </> node </> "topology.json"
-        , "--database-path", tempAbsPath' </> node </> "db"
-        , "--shelley-kes-key", tempAbsPath' </> node </> "kes.skey"
-        , "--shelley-vrf-key", tempAbsPath' </> node </> "vrf.skey"
-        , "--byron-delegation-certificate", tempAbsPath' </> node </> "byron-delegation.cert"
-        , "--byron-signing-key", tempAbsPath' </> node </> "byron-delegate.key"
-        , "--shelley-operational-certificate", tempAbsPath' </> node </> "opcert.cert"
+      nodeConfigFile = tempAbsPath' </> "configuration.yaml"
+  ePoolNodes <- forM (L.zip spoNodesWithPortNos poolKeys) $ \((node, port),key) -> do
+    eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath tempAbsPath') node port
+                                [ "run"
+                                , "--config", nodeConfigFile
+                                , "--topology", tempAbsPath' </> node </> "topology.json"
+                                , "--database-path", tempAbsPath' </> node </> "db"
+                                , "--shelley-kes-key", tempAbsPath' </> node </> "kes.skey"
+                                , "--shelley-vrf-key", tempAbsPath' </> node </> "vrf.skey"
+                                , "--byron-delegation-certificate", tempAbsPath' </> node </> "byron-delegation.cert"
+                                , "--byron-signing-key", tempAbsPath' </> node </> "byron-delegate.key"
+                                , "--shelley-operational-certificate", tempAbsPath' </> node </> "opcert.cert"
+                                ]
+    return $ flip PoolNode key <$> eRuntime
+
+  if any isLeft ePoolNodes
+  then failMessage GHC.callStack $ show $ map show $ lefts ePoolNodes
+  else do
+    let (_ , poolNodes) = partitionEithers ePoolNodes
+    now <- H.noteShowIO DTC.getCurrentTime
+    deadline <- H.noteShow $ DTC.addUTCTime 30 now
+
+    forM_ nodeStdoutFiles $ \nodeStdoutFile -> do
+      H.assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile
+
+    H.noteShowIO_ DTC.getCurrentTime
+
+    forM_ wallets $ \wallet -> do
+      H.cat $ paymentSKey $ paymentKeyInfoPair wallet
+      H.cat $ paymentVKey $ paymentKeyInfoPair wallet
+
+    let runtime = TestnetRuntime
+          { configurationFile
+          , shelleyGenesisFile = genesisShelleyDir </> "genesis.json"
+          , testnetMagic
+          , poolNodes
+          , wallets = wallets
+          , delegators = []
+          }
+
+    let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
+
+    execConfig <- H.headM (poolSprockets runtime) >>= H.mkExecConfig tempBaseAbsPath
+
+    forM_ wallets $ \wallet -> do
+      H.cat $ paymentSKey $ paymentKeyInfoPair wallet
+      H.cat $ paymentVKey $ paymentKeyInfoPair wallet
+
+      utxos <- execCli' execConfig
+        [ "query", "utxo"
+        , "--address", Text.unpack $ paymentKeyInfoAddr wallet
+        , "--cardano-mode"
+        , "--testnet-magic", show @Int testnetMagic
         ]
-    return $ PoolNode runtime key
 
-  now <- H.noteShowIO DTC.getCurrentTime
-  deadline <- H.noteShow $ DTC.addUTCTime 90 now
+      H.note_ utxos
 
-  forM_ spoNodes $ \node -> do
-    nodeStdoutFile <- H.noteTempFile (makeLogDir $ TmpAbsolutePath tempAbsPath') $ node <> ".stdout.log"
-    H.assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile
+    stakePoolsFp <- H.note $ tempAbsPath' </> "current-stake-pools.json"
 
-  H.noteShowIO_ DTC.getCurrentTime
+    prop_spos_in_ledger_state stakePoolsFp testnetOptions execConfig
 
-  forM_ wallets $ \wallet -> do
-    H.cat $ paymentSKey $ paymentKeyInfoPair wallet
-    H.cat $ paymentVKey $ paymentKeyInfoPair wallet
-
-  let runtime = TestnetRuntime
-        { configurationFile
-        , shelleyGenesisFile = genesisShelleyDir </> "genesis.json"
-        , testnetMagic
-        , poolNodes
-        , wallets = wallets
-        , delegators = []
-        }
-
-  let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-
-  execConfig <- H.headM (poolSprockets runtime) >>= H.mkExecConfig tempBaseAbsPath
-
-  forM_ wallets $ \wallet -> do
-    H.cat $ paymentSKey $ paymentKeyInfoPair wallet
-    H.cat $ paymentVKey $ paymentKeyInfoPair wallet
-
-    utxos <- execCli' execConfig
-      [ "query", "utxo"
-      , "--address", Text.unpack $ paymentKeyInfoAddr wallet
-      , "--cardano-mode"
-      , "--testnet-magic", show @Int testnetMagic
-      ]
-
-    H.note_ utxos
-
-  stakePoolsFp <- H.note $ tempAbsPath' </> "current-stake-pools.json"
-
-  prop_spos_in_ledger_state stakePoolsFp testnetOptions execConfig
-
-  pure runtime
+    pure runtime
 

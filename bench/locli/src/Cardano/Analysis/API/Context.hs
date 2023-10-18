@@ -75,8 +75,8 @@ data PlutusParams
 instance FromJSON PlutusParams where
   parseJSON = withObject "PlutusParams" $ \v ->
     PlutusParams
-      <$> v .: "type"
-      <*> v .: "script"
+      <$> v .:? "type"    .!= ""
+      <*> v .:? "script"  .!= ""
 
 instance ToJSON PlutusParams where
   toJSON PlutusParams{..} =
@@ -96,7 +96,15 @@ data GeneratorProfile
   , plutusAutoMode   :: Maybe Bool            -- legacy format
   , plutus           :: Maybe PlutusParams
   }
-  deriving (Eq, Generic, Show, FromJSON, ToJSON, NFData)
+  deriving (Eq, Generic, Show, ToJSON, NFData)
+
+instance FromJSON GeneratorProfile where
+  parseJSON o = cleanup <$> AE.genericParseJSON AE.defaultOptions o
+    where
+      cleanup g = case g of
+        GeneratorProfile{plutus = Just PlutusParams{..}}
+          | T.null ppType || T.null ppScript -> g {plutus = Nothing}
+        _ -> g
 
 plutusLoopScript :: GeneratorProfile -> Maybe Text
 plutusLoopScript GeneratorProfile{plutusMode, plutusAutoMode, plutus}

@@ -27,15 +27,15 @@ import           Hedgehog (Property)
 import qualified Hedgehog as H
 import           Hedgehog.Extras.Stock.OS (isWin32)
 import qualified Hedgehog.Extras.Test.Base as H
-
 import           Test.Tasty.ExpectedFailure (wrapTest)
 import qualified Test.Tasty.Hedgehog as H
 import           Test.Tasty.Providers (testPassed)
 import           Test.Tasty.Runners (Result (resultShortDescription), TestTree)
-import qualified Testnet.Conf as H
-import qualified Testnet.Property.Utils as H
 
-runTestnet :: (H.Conf -> H.Integration a) -> IO ()
+import qualified Testnet.Property.Utils as H
+import           Testnet.Start.Types
+
+runTestnet :: (Conf -> H.Integration a) -> IO ()
 runTestnet tn = do
   tvRunning <- STM.newTVarIO False
 
@@ -60,9 +60,9 @@ runTestnet tn = do
       IO.exitFailure
 
 
-testnetProperty :: (H.Conf -> H.Integration ()) -> H.Property
+testnetProperty :: (Conf -> H.Integration ()) -> H.Property
 testnetProperty tn = H.integrationWorkspace "testnet" $ \workspaceDir -> do
-  conf <- H.mkConf workspaceDir
+  conf <- mkConf workspaceDir
 
   -- Fork a thread to keep alive indefinitely any resources allocated by testnet.
   void . H.evalM . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000

@@ -66,30 +66,6 @@ data TextRef
   deriving Generic
   deriving anyclass NFData
 
-{-# NOINLINE lookupTextRef #-}
-lookupTextRef :: Int -> Text
-lookupTextRef ref = Map.findWithDefault Text.empty ref dict
-  where
-    dict    = Map.fromList [(hash t, t) | t <- concat [allKeys, kinds, legacy]]
-    kinds   = map ("Cardano.Node." <>) allKeys
-    legacy  = map ("cardano.node." <>)
-      [ "BlockFetchClient"
-      , "BlockFetchServer"
-      , "ChainDB"
-      , "ChainSyncClient"
-      , "ChainSyncHeaderServer"
-      , "DnsSubscription"
-      , "Forge"
-      , "IpSubscription"
-      , "LeadershipCheck"
-      , "Mempool"
-      , "resources"
-      , "TxInbound"
-      ]
-    allKeys =
-      concatMap Map.keys [fst3 interpreters, snd3 interpreters, thd3 interpreters]
-      & filter (not . Text.null)
-
 toTextRef :: Text -> TextRef
 toTextRef t = let h = hash t in if Text.null (lookupTextRef h) then TextLit t else TextRef h
 
@@ -556,3 +532,80 @@ parsePartialResourceStates =
       rFsWr       <- o .:? "FsWr"       <&> fromMaybe 0
       rThreads    <- o .:  "Threads"
       pure Resources{..}
+
+{-# NOINLINE lookupTextRef #-}
+lookupTextRef :: Int -> Text
+lookupTextRef ref = Map.findWithDefault Text.empty ref dict
+  where
+    dict    = Map.fromList [(hash t, t) | t <- concat [allKeys, kinds, legacy, newTr]]
+    kinds   = map ("Cardano.Node." <>) allKeys
+    allKeys = concatMap Map.keys [fst3 interpreters, snd3 interpreters, thd3 interpreters]
+              & filter (not . Text.null)
+
+    -- common string parses from legacy tracing with no known interpreter
+    legacy = map ("cardano.node." <>)
+      [ "BlockFetchClient"
+      , "BlockFetchServer"
+      , "ChainDB"
+      , "ChainSyncClient"
+      , "ChainSyncHeaderServer"
+      , "DnsSubscription"
+      , "Forge"
+      , "IpSubscription"
+      , "LeadershipCheck"
+      , "Mempool"
+      , "resources"
+      , "TxInbound"
+      ]
+
+    -- common string parses from new tracing with no known interpreter
+    newTr =
+      [ "AcknowledgedFetchRequest"
+      , "AddedFetchRequest"
+      , "BlockFetch.Client.AcknowledgedFetchRequest"
+      , "BlockFetch.Client.AddedFetchRequest"
+      , "BlockFetch.Client.CompletedFetchBatch"
+      , "BlockFetch.Client.StartedFetchBatch"
+      , "BlockFetch.Remote.Receive.BatchDone"
+      , "BlockFetch.Remote.Receive.Block"
+      , "BlockFetch.Remote.Receive.StartBatch"
+      , "BlockFetchServer"
+      , "ChainDB.AddBlockEvent.AddBlockValidation.UpdateLedgerDb"
+      , "ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate"
+      , "ChainDB.AddBlockEvent.AddedBlockToQueue"
+      , "ChainDB.AddBlockEvent.AddedBlockToVolatileDB"
+      , "ChainDB.AddBlockEvent.ChangingSelection"
+      , "ChainDB.AddBlockEvent.IgnoreBlockAlreadyInVolatileDB"
+      , "ChainDB.AddBlockEvent.PipeliningEvent.OutdatedTentativeHeader"
+      , "ChainDB.AddBlockEvent.PipeliningEvent.SetTentativeHeader"
+      , "ChainDB.AddBlockEvent.PoppedBlockFromQueue"
+      , "ChainDB.AddBlockEvent.TryAddToCurrentChain"
+      , "ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB"
+      , "ChainDB.FollowerEvent.NewFollower"
+      , "ChainDB.GCEvent.ScheduledGC"
+      , "ChainDB.IteratorEvent.StreamFromVolatileDB"
+      , "ChainSyncServer.Update"
+      , "CompletedFetchBatch"
+      , "CopiedBlockToImmutableDB"
+      , "DownloadedHeader"
+      , "Forge.ForgingStats"
+      , "ForgingStats"
+      , "IgnoreBlockAlreadyInVolatileDB"
+      , "Net.Handshake.Local.Receive.ProposeVersions"
+      , "Net.Handshake.Local.Send.AcceptVersion"
+      , "OutdatedTentativeHeader"
+      , "Recv"
+      , "ResourceStats"
+      , "SetTentativeHeader"
+      , "StartedFetchBatch"
+      , "StateQueryServer.Receive.Query"
+      , "StateQueryServer.Receive.Release"
+      , "StreamFromVolatileDB"
+      , "TraceAddBlockEvent.ChangingSelection"
+      , "TraceAddBlockEvent.PoppedBlockFromQueue"
+      , "TraceTxInboundCanRequestMoreTxs"
+      , "TraceTxInboundCannotRequestMoreTxs"
+      , "TxSubmission.TxInbound.CanRequestMoreTxs"
+      , "TxSubmission.TxInbound.CannotRequestMoreTxs"
+      , "UpdateLedgerDbTraceEvent.StartedPushingBlockToTheLedgerDb"
+      ]

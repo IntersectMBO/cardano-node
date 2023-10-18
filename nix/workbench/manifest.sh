@@ -73,14 +73,21 @@ case "${op}" in
         if test -z "$node_rev"
         then node_rev=$(manifest_git_head_commit "$dir"); fi
 
-        # TODO put this back
+        # TODO put this back when we support localisations
         #, "cardano-node-package-localisations": (. | split("\n") | unique | map(select(. != "")))
         # where . is the output of manifest_cabal_package_localisations "$dir"
 
-        # If we don't have a local plan, it will just use the one that nix would build.
-        local local_plan_path="$real_dir/dist-newstyle/cache/plan.json"
-        if [[ ! -f "$local_plan_path" ]]; then
-          local_plan_path=$WB_NIX_PLAN
+        # If WB_MODE_CABAL is "t", the workbench configured to use a local cabal build, therefore
+        # we fetch the plan from cabal's dist-newstyle directory.
+        # Otherwise, the workbench is using a nix build, and the location of plan.json is
+        # provided by $WB_NIX_PLAN.
+        # It is important to distinguish these two cases because there could be a stray
+        # dist-newstyle directory.
+        local plan_path
+        if [[ ${WB_MODE_CABAL:-f} == t ]]; then
+            plan_path="$real_dir/dist-newstyle/cache/plan.json"
+        else
+            plan_path=$WB_NIX_PLAN
         fi
 
         for pkg in ${pkgnames[*]}; do echo \"$pkg\"; done |
@@ -123,7 +130,7 @@ case "${op}" in
           --arg     node_branch   $(manifest_local_repo_branch       "$dir") \
           --arg     node_status   $(manifest_git_checkout_state_desc "$dir") \
           --arg     pkgs          $(manifest_git_checkout_state_desc "$dir") \
-          --argfile plan          $local_plan_path                           \
+          --argfile plan          $plan_path                                 \
           --argfile chap          $WB_CHAP_PACKAGES
         ;;
 
