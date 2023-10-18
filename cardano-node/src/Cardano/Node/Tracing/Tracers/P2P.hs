@@ -214,6 +214,9 @@ instance MetaTrace TracePublicRootPeers where
 --------------------------------------------------------------------------------
 
 instance LogFormatting (TracePeerSelection SockAddr) where
+  forMachine _dtal (TraceKnownInboundConnection _ _) =
+    mconcat [ "kind" .= String "KnownInboundConnection"
+             ]
   forMachine _dtal (TraceLocalRootPeersChanged lrp lrp') =
     mconcat [ "kind" .= String "LocalRootPeersChanged"
              , "previous" .= toJSON lrp
@@ -382,6 +385,8 @@ instance LogFormatting (TracePeerSelection SockAddr) where
   forHuman = pack . show
 
 instance MetaTrace (TracePeerSelection SockAddr) where
+    namespaceFor TraceKnownInboundConnection {} =
+      Namespace [] ["KnownInboundConnection"]
     namespaceFor TraceLocalRootPeersChanged {} =
       Namespace [] ["LocalRootPeersChanged"]
     namespaceFor TraceTargetsChanged {}        =

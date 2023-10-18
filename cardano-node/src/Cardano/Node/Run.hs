@@ -452,6 +452,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
               , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
               , srnTraceChainDB                 = chainDBTracer tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
+              , srnChainSyncIdleTimeout         = ncChainSyncIdleTimeout nc
               }
       DisabledP2PMode -> do
 #ifdef UNIX
@@ -492,6 +493,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
               , srnEnableInDevelopmentVersions = ncExperimentalProtocolsEnabled nc
               , srnTraceChainDB                = chainDBTracer tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
+              , srnChainSyncIdleTimeout         = ncChainSyncIdleTimeout nc
               }
  where
   logStartupWarnings :: IO ()

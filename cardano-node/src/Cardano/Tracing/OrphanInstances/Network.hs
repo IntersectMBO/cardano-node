@@ -395,6 +395,7 @@ instance HasPrivacyAnnotation (TracePeerSelection addr)
 instance HasSeverityAnnotation (TracePeerSelection addr) where
   getSeverityAnnotation ev =
     case ev of
+      TraceKnownInboundConnection {} -> Debug
       TraceLocalRootPeersChanged {} -> Notice
       TraceTargetsChanged        {} -> Notice
       TracePublicRootsRequest    {} -> Info
@@ -1452,6 +1453,9 @@ instance ToJSON addr => ToJSON (PeerSharingResult addr) where
   toJSON PeerSharingNotRegisteredYet = String "PeerSharingNotRegisteredYet"
 
 instance ToObject (TracePeerSelection SockAddr) where
+  toObject _verb (TraceKnownInboundConnection _ _) =
+    mconcat [ "kind" .= String "KnownInboundConnection"
+             ]
   toObject _verb (TraceLocalRootPeersChanged lrp lrp') =
     mconcat [ "kind" .= String "LocalRootPeersChanged"
              , "previous" .= toJSON lrp

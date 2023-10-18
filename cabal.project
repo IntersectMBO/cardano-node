@@ -123,7 +123,7 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/karknu/ouroboros-consensus.git
-  tag: 75339df357e74a7b514af72ca713d13fe6912af2
+  tag: 2862b92a94c76b6d05fd17a613c82e4b477e3c90
   subdir:
     ouroboros-consensus
     ouroboros-consensus-diffusion
@@ -131,7 +131,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/karknu/ouroboros-network.git
-  tag: 06eaf130374374e9098f9629231590a1546fd172
+  tag: 5525f2f6c1fa12443e1e3bd20a4afd1d655e3b9b
   subdir:
     ouroboros-network-framework
     ouroboros-network-protocols
+    ouroboros-network

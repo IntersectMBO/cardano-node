@@ -130,6 +130,10 @@ data NodeConfiguration
          --
        , ncTimeWaitTimeout       :: DiffTime
 
+         -- | Wait for the ChainSync server before disconnecting
+         -- idle clients. A config value of 0 means no timeout.
+       , ncChainSyncIdleTimeout  :: Maybe DiffTime
+
          -- | Node AcceptedConnectionsLimit
        , ncAcceptedConnectionsLimit :: !AcceptedConnectionsLimit
 
@@ -184,6 +188,7 @@ data PartialNodeConfiguration
          -- Network timeouts
        , pncProtocolIdleTimeout   :: !(Last DiffTime)
        , pncTimeWaitTimeout       :: !(Last DiffTime)
+       , pncChainSyncIdleTimeout  :: !(Last DiffTime)
 
          -- AcceptedConnectionsLimit
        , pncAcceptedConnectionsLimit :: !(Last AcceptedConnectionsLimit)
@@ -268,6 +273,7 @@ instance FromJSON PartialNodeConfiguration where
       -- Network timeouts
       pncProtocolIdleTimeout   <- Last <$> v .:? "ProtocolIdleTimeout"
       pncTimeWaitTimeout       <- Last <$> v .:? "TimeWaitTimeout"
+      pncChainSyncIdleTimeout  <- Last <$> v .:? "ChainSyncIdleTimeout"
 
 
       -- AcceptedConnectionsLimit
@@ -313,6 +319,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncMaybeMempoolCapacityOverride
            , pncProtocolIdleTimeout
            , pncTimeWaitTimeout
+           , pncChainSyncIdleTimeout
            , pncAcceptedConnectionsLimit
            , pncTargetNumberOfRootPeers
            , pncTargetNumberOfKnownPeers
@@ -481,6 +488,7 @@ defaultPartialNodeConfiguration =
     , pncMaybeMempoolCapacityOverride = mempty
     , pncProtocolIdleTimeout   = Last (Just 5)
     , pncTimeWaitTimeout       = Last (Just 60)
+    , pncChainSyncIdleTimeout  = Last (Just 3673)
     , pncAcceptedConnectionsLimit =
         Last
       $ Just
@@ -514,6 +522,7 @@ makeNodeConfiguration pnc = do
   snapshotInterval <- lastToEither "Missing SnapshotInterval" $ pncSnapshotInterval pnc
   shutdownConfig <- lastToEither "Missing ShutdownConfig" $ pncShutdownConfig pnc
   socketConfig <- lastToEither "Missing SocketConfig" $ pncSocketConfig pnc
+  chainsyncIdle <- lastToEither "Missing ChainSyncIdleTimeout" $ pncChainSyncIdleTimeout pnc
 
   ncTargetNumberOfRootPeers <-
     lastToEither "Missing TargetNumberOfRootPeers"
@@ -576,6 +585,8 @@ makeNodeConfiguration pnc = do
              , ncMaybeMempoolCapacityOverride = getLast $ pncMaybeMempoolCapacityOverride pnc
              , ncProtocolIdleTimeout
              , ncTimeWaitTimeout
+             , ncChainSyncIdleTimeout = if chainsyncIdle == 0 then Nothing
+                                                              else Just chainsyncIdle
              , ncAcceptedConnectionsLimit
              , ncTargetNumberOfRootPeers
              , ncTargetNumberOfKnownPeers
