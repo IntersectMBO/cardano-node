@@ -159,7 +159,7 @@ forgeThreadStats :: Trace IO ForgingStats
   -> IO (Trace IO (ForgeTracerType blk))
 forgeThreadStats tr =
   let tr' = contramap unfold tr
-  in foldMCondTraceM calculateThreadStats emptyForgingStats
+  in foldCondTraceM calculateThreadStats emptyForgingStats
       (\case
           Left Consensus.TraceStartLeadershipCheck{} -> True
           Left _ -> False
