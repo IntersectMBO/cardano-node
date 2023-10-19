@@ -20,6 +20,11 @@ common project-config
   default-language:     Haskell2010
   build-depends:        base >= 4.14 && < 5
 
+  default-extensions:   BlockArguments
+                      , CPP
+                      , ImportQualifiedPost
+                      , ScopedTypeVariables
+
   ghc-options:          -Wall
                         -Wcompat
                         -Wincomplete-record-updates
@@ -182,6 +187,9 @@ executable cardano-tracer
 
   other-modules:        Paths_cardano_tracer
   autogen-modules:      Paths_cardano_tracer
+
+  default-extensions:   BlockArguments
+                      , ScopedTypeVariables
 
   build-depends:        cardano-tracer
                       , optparse-applicative
