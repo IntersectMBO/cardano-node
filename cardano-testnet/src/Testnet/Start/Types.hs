@@ -11,7 +11,7 @@ module Testnet.Start.Types
 
   , NodeLoggingFormat(..)
   , Conf(..)
-  , YamlFilePath(..)
+  , NodeConfigurationYaml(..)
   , mkConf
   ) where
 
@@ -58,27 +58,27 @@ cardanoDefaultTestnetOptions = CardanoTestnetOptions
   }
 
 -- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)
-newtype TestnetNodeOptions
-  = SpoTestnetNodeOptions [String]
+data TestnetNodeOptions
+  = SpoTestnetNodeOptions (Maybe NodeConfigurationYaml) [String]
     -- ^ These arguments will be appended to the default set of CLI options when
     -- starting the node.
   deriving (Eq, Show)
 
 extraSpoNodeCliArgs :: TestnetNodeOptions -> [String]
-extraSpoNodeCliArgs (SpoTestnetNodeOptions args) = args
+extraSpoNodeCliArgs (SpoTestnetNodeOptions _ args) = args
 
 
 cardanoDefaultTestnetNodeOptions :: [TestnetNodeOptions]
 cardanoDefaultTestnetNodeOptions =
-  [ SpoTestnetNodeOptions []
-  , SpoTestnetNodeOptions []
-  , SpoTestnetNodeOptions []
+  [ SpoTestnetNodeOptions Nothing []
+  , SpoTestnetNodeOptions Nothing []
+  , SpoTestnetNodeOptions Nothing []
   ]
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
 
 
-newtype YamlFilePath = YamlFilePath
+newtype NodeConfigurationYaml = NodeConfigurationYaml
   { unYamlFilePath :: FilePath
   } deriving (Eq, Show)
 
