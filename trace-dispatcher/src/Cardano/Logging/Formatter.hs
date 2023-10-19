@@ -34,25 +34,22 @@ import           Network.HostName
 
 
 encodingToText :: AE.Encoding -> Text
-encodingToText = toStrict . decodeUtf8 . AE.encodingToLazyByteString
 {-# INLINE encodingToText#-}
+encodingToText = toStrict . decodeUtf8 . AE.encodingToLazyByteString
 
 -- | Format this trace as metrics
 metricsFormatter
   :: forall a m . (LogFormatting a, MonadIO m)
-  => Text
-  -> Trace m FormattedMessage
+  => Trace m FormattedMessage
   -> Trace m a
-metricsFormatter application (Trace tr) = Trace $
+metricsFormatter (Trace tr) = Trace $
     T.contramap
       (\ case
         (lc, Right v) ->
           let metrics = asMetrics v
-          in (lc { lcNSPrefix = application : lcNSPrefix lc}
-                 , Right (FormattedMetrics metrics))
+          in (lc, Right (FormattedMetrics metrics))
         (lc, Left ctrl) ->
-             (lc { lcNSPrefix = application : lcNSPrefix lc}
-                 , Left ctrl))
+             (lc, Left ctrl))
       tr
 
 
@@ -154,7 +151,7 @@ machineFormatter' condApplication (Trace tr) = Trace $
                                   Just app -> app : pfNamespace v
                                   Nothing -> pfNamespace v)
                 machineObj = AE.pairs $
-                                  "at"       .= pfTimestamp v
+                                   "at"      .= pfTimestamp v
                                 <> "ns"      .= ns'
                                 <> "data"    .= pfForMachine v
                                 <> "sev"     .= fromMaybe Info (lcSeverity lc)
