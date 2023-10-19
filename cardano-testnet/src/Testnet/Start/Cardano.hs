@@ -107,16 +107,16 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
     H.lbsWriteFile (tempAbsPath' </> "byron.genesis.spec.json")
       . J.encode $ defaultByronProtocolParamsJsonValue
 
-    -- stuff
+    -- Because in Conway the overlay schedule and decentralization parameter
+    -- are deprecated, we must use the "create-staked" cli command to create
+    -- SPOs in the ShelleyGenesis
     Byron.createByronGenesis
       testnetMagic
       startTime
       Byron.byronDefaultGenesisOptions
       (tempAbsPath' </> "byron.genesis.spec.json")
       (tempAbsPath' </> "byron-gen-command")
-    -- Because in Conway the overlay schedule and decentralization parameter
-    -- are deprecated, we must use the "create-staked" cli command to create
-    -- SPOs in the ShelleyGenesis
+
 
     alonzoConwayTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> "genesis.alonzo.spec.json"
     gen <- H.evalEither $ first displayError defaultAlonzoGenesis

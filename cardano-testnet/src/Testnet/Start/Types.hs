@@ -38,7 +38,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoEpochLength :: Int
   , cardanoSlotLength :: Double
   , cardanoTestnetMagic :: Int
-  , cardanoActiveSlotsCoeff :: Double -- TODO: Remove me, no longer relevant
+  , cardanoActiveSlotsCoeff :: Double
   , cardanoMaxSupply :: Word64 -- ^ The amount of ADA you are starting your testnet with
   , cardanoEnableP2P :: Bool
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
@@ -48,10 +48,10 @@ cardanoDefaultTestnetOptions :: CardanoTestnetOptions
 cardanoDefaultTestnetOptions = CardanoTestnetOptions
   { cardanoNodes = cardanoDefaultTestnetNodeOptions
   , cardanoNodeEra = AnyCardanoEra BabbageEra
-  , cardanoEpochLength = 1500
-  , cardanoSlotLength = 0.2
+  , cardanoEpochLength = 500
+  , cardanoSlotLength = 0.1
   , cardanoTestnetMagic = 42
-  , cardanoActiveSlotsCoeff = 0.2
+  , cardanoActiveSlotsCoeff = 0.1
   , cardanoMaxSupply = 10020000000
   , cardanoEnableP2P = False
   , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson

@@ -98,22 +98,20 @@ createSPOGenesisAndFiles testnetOptions startTime (TmpAbsolutePath tempAbsPath')
 
   -- TODO: Remove this rewrite.
  -- 50 second epochs
+ -- Epoch length should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"
   H.rewriteJsonFile createStakedInitialGenesisFile $ J.rewriteObject
-      ( HM.insert "slotLength"             (toJSON @Double 0.1)
-      . HM.insert "activeSlotsCoeff"       (toJSON @Double 0.1)
-      . HM.insert "securityParam"          (toJSON @Int 5)    -- TODO: USE config p arameter
-      . HM.insert "epochLength"            (toJSON @Int 500)  -- Should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"
-      . HM.insert "maxLovelaceSupply"      (toJSON @Int 1000000000000)
-      . flip HM.adjust "protocolParams"
-        ( J.rewriteObject
-          ( flip HM.adjust "protocolVersion"
-            ( J.rewriteObject ( HM.insert "major" (toJSON @Int 8)))
-          )
-        )
+      ( HM.insert "securityParam"          (toJSON @Int 5)    -- TODO: USE config p arameter
+      . HM.adjust
+          (J.rewriteObject
+              $ HM.adjust
+                (J.rewriteObject (HM.insert "major" (toJSON @Int 8)))
+                "protocolVersion"
+          )   "protocolParams"
       . HM.insert "rho"                    (toJSON @Double 0.1)
       . HM.insert "tau"                    (toJSON @Double 0.1)
       . HM.insert "updateQuorum"           (toJSON @Int 2)
       )
+
   execCli_
     [ "genesis", "create-staked"
     , "--genesis-dir", tempAbsPath'
