@@ -118,6 +118,7 @@ nsReplaceInner i (Namespace o _) =  Namespace o i
 nsPrependInner :: Text -> Namespace a -> Namespace b
 nsPrependInner t (Namespace o i) =  Namespace o (t : i)
 
+{-# INLINE nsCast #-}
 nsCast :: Namespace a -> Namespace b
 nsCast (Namespace o i) =  Namespace o i
 

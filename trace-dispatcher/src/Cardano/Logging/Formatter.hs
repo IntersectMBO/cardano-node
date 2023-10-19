@@ -19,13 +19,12 @@ import qualified Control.Tracer as T
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Encoding as AE
-import qualified Data.ByteString.Lazy as BS
 import           Data.Functor.Contravariant
 import           Data.Maybe (fromMaybe)
 import           Data.Text (Text, intercalate, pack, stripPrefix)
-import           Data.Text.Encoding (decodeUtf8)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder as TB
+import           Data.Text.Lazy.Encoding (decodeUtf8)
 import           Data.Time (UTCTime, defaultTimeLocale, formatTime, getCurrentTime)
 
 import           Cardano.Logging.Types
@@ -33,6 +32,10 @@ import           Control.Concurrent (myThreadId)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Network.HostName
 
+
+encodingToText :: AE.Encoding -> Text
+encodingToText = toStrict . decodeUtf8 . AE.encodingToLazyByteString
+{-# INLINE encodingToText#-}
 
 -- | Format this trace as metrics
 metricsFormatter
@@ -116,9 +119,7 @@ forwardFormatter' condApplication (Trace tr) = Trace $
                                 <> "sev"     .= fromMaybe Info (lcSeverity lc)
                                 <> "thread"  .= pfThreadId v
                                 <> "host"    .= pfHostname v
-                forMachine' = decodeUtf8
-                                $ BS.toStrict
-                                   $ AE.encodingToLazyByteString machineObj
+                forMachine' = encodingToText machineObj
                 to = TraceObject {
                     toHuman     = pfForHuman v
                   , toMachine   = forMachine'
@@ -159,9 +160,7 @@ machineFormatter' condApplication (Trace tr) = Trace $
                                 <> "sev"     .= fromMaybe Info (lcSeverity lc)
                                 <> "thread"  .= pfThreadId v
                                 <> "host"    .= pfHostname v
-                forMachine' = decodeUtf8
-                                 $ BS.toStrict
-                                   $ AE.encodingToLazyByteString machineObj
+                forMachine' = encodingToText machineObj
             in (lc, Right (FormattedMachine forMachine'))
       (lc, Left ctrl) ->
         (lc { lcNSPrefix = case condApplication of
@@ -200,10 +199,7 @@ humanFormatter' withColor condApplication (Trace tr) =
                               <> fromText (pfThreadId v)
                               <> fromText ") "
                   forHuman' = fromMaybe
-                                (decodeUtf8
-                                  $ BS.toStrict
-                                    $ AE.encodingToLazyByteString
-                                        $ AE.pairs ("data" .= pfForMachine v))
+                                (encodingToText (AE.pairs ("data" .= pfForMachine v)))
                                 (pfForHuman v)
                   forHuman'' = toStrict
                                 $ toLazyText

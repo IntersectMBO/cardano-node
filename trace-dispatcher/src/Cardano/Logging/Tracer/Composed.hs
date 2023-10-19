@@ -59,7 +59,8 @@ mkCardanoTracer trStdout trForward mbTrEkg tracerPrefix =
 -- | Adds the possibility to add special tracers via the hook function
 mkCardanoTracer' :: forall evt evt1.
      ( LogFormatting evt1
-     , MetaTrace evt1)
+     , MetaTrace evt1
+     )
   => Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
