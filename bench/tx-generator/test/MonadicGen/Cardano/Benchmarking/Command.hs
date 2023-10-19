@@ -32,7 +32,7 @@ data Command
   = Json FilePath
   | JsonHL FilePath (Maybe FilePath) (Maybe FilePath)
   | Compile FilePath
-  | Selftest FilePath
+  | Selftest (Maybe FilePath)
   | VersionCmd
 
 runCommand :: IO ()
@@ -60,7 +60,7 @@ runCommand = withIOManager $ \iocp -> do
       case compileOptions o of
         Right script -> BSL.putStr $ prettyPrint script
         err -> handleError err
-    Selftest outFile -> runSelftest iocp (Just outFile) >>= handleError
+    Selftest outFile -> runSelftest iocp outFile >>= handleError
     VersionCmd -> runVersionCommand
   where
   handleError :: Show a => Either a b -> IO ()
@@ -103,7 +103,7 @@ commandParser
   compileCmd :: Parser Command
   compileCmd = Compile <$> filePath "benchmarking options"
 
-  selfTestCmd = Selftest <$> filePath "output file"
+  selfTestCmd = Selftest <$> optional (filePath "output file")
 
   nodeConfigOpt :: Parser (Maybe FilePath)
   nodeConfigOpt = option (Just <$> str)
