@@ -90,7 +90,6 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerPrefix hook = do
                       Just ekgTrace ->
                         pure (metricsFormatter ekgTrace)
 --                      >>= recordMetricsStatistics internalTr
---                        >>= filterTrace (\(_,v) -> Prelude.null (asMetrics v))
                         >>= maybeSilent hasNoMetrics tracerPrefix True
                         >>= hook
 
@@ -104,10 +103,8 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerPrefix hook = do
                 $ withPrivacy
                   $ withDetails tr
       tr'' <- filterSeverityFromConfig tr'
-      pure $ withInnerNames
-              $ appendPrefixNames tracerPrefix
-                $ withSeverity
-                  tr''
+      pure $ withNames tracerPrefix
+             $ withSeverity tr''
 
     traceNamespaceErrors ::
          Trace IO TraceDispatcherMessage
