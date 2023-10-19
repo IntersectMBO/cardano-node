@@ -273,6 +273,10 @@ def all_profile_variants:
     ) as $for_30blk
   |
     ({}
+     | .node.shutdown_on_block_synced   = 45
+    ) as $for_45blk
+  |
+    ({}
      | .node.shutdown_on_slot_synced    = 900
     ) as $for_900slot
   ##
@@ -809,6 +813,16 @@ def all_profile_variants:
     }
   , $tracebench_base * $with_rtview *
     { name: "trace-bench-rtview"
+    }
+
+  ## Full variants: 45 blocks
+  , $tracebench_base * $for_45blk *
+    { name: "trace-full"
+    , desc: "6 low-footprint nodes in a torus topology, 5 minutes runtime"
+    }
+  , $tracebench_base * $for_45blk * $with_rtview *
+    { name: "trace-full-rtview"
+    , desc: "6 low-footprint nodes in a torus topology, 5 minutes runtime"
     }
 
   ## Epoch transition test: 1.5 epochs, 15mins runtime
