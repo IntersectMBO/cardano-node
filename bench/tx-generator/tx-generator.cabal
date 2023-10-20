@@ -291,6 +291,7 @@ test-suite tx-generator-monad-test
                       , trace-forward
                       , transformers
                       , transformers-except
+                      , tx-generator
                       , yaml
   other-modules:      MonadicGen.Cardano.Benchmarking.Command
                       MonadicGen.Cardano.Benchmarking.Compiler
@@ -328,7 +329,7 @@ test-suite tx-generator-monad-test
                       MonadicGen.Cardano.TxGenerator.UTxO
                       MonadicGen.Cardano.TxGenerator.Utils
                       Paths_tx_generator
-autogen-modules:      Paths_tx_generator
+  autogen-modules:    Paths_tx_generator
 
 benchmark tx-generator-bench
   import:               project-config
