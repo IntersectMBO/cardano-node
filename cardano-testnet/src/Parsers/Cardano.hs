@@ -1,6 +1,5 @@
 module Parsers.Cardano
-  ( CardanoOptions(..)
-  , cmdCardano
+  ( cmdCardano
   ) where
 
 import           Cardano.CLI.Environment
@@ -17,14 +16,13 @@ import           Testnet.Process.Cli
 import           Testnet.Property.Utils
 import           Testnet.Runtime (readNodeLoggingFormat)
 import           Testnet.Start.Cardano
+import           Testnet.Start.Types
 
-newtype CardanoOptions = CardanoOptions
-  { testnetOptions :: CardanoTestnetOptions
-  } deriving (Eq, Show)
 
 optsTestnet :: EnvCli -> Parser CardanoTestnetOptions
 optsTestnet envCli = CardanoTestnetOptions
-  <$> pNumBftAndSpoNodes
+  -- TODO <$> (OA.many pSpo <|> pNumSpoNodes)
+  <$> pNumSpoNodes
   <*> pLegacyCardanoEra envCli
   <*> OA.option auto
       (   OA.long "epoch-length"
@@ -64,19 +62,41 @@ optsTestnet envCli = CardanoTestnetOptions
       <>  OA.value (cardanoNodeLoggingFormat cardanoDefaultTestnetOptions)
       )
 
-pNumBftAndSpoNodes :: Parser [TestnetNodeOptions]
-pNumBftAndSpoNodes =
+pNumSpoNodes :: Parser [TestnetNodeOptions]
+pNumSpoNodes =
   OA.option
-    ((`L.replicate` SpoTestnetNodeOptions []) <$> auto)
-    (   OA.long "num-pool-nodes"
-    <>  OA.help "Number of pool nodes"
-    <>  OA.metavar "COUNT"
-    <>  OA.showDefault
-    <>  OA.value (cardanoNodes cardanoDefaultTestnetOptions)
+     ((`L.replicate` SpoTestnetNodeOptions Nothing []) <$> auto)
+     (   OA.long "num-pool-nodes"
+     <>  OA.help "Number of pool nodes. Note this uses a default node configuration for all nodes."
+     <>  OA.metavar "COUNT"
+     <>  OA.showDefault
+     <>  OA.value (cardanoNodes cardanoDefaultTestnetOptions)
+     )
+
+
+_pSpo :: Parser TestnetNodeOptions
+_pSpo =
+  SpoTestnetNodeOptions . Just
+    <$> parseNodeConfigFile
+    <*> pure [] -- TODO: Consider adding support for extra args
+
+parseNodeConfigFile :: Parser NodeConfigurationYaml
+parseNodeConfigFile = NodeConfigurationYaml <$>
+  strOption
+    (mconcat
+       [ long "configuration-file"
+       , metavar "NODE-CONFIGURATION"
+       , help helpText
+       , completer (bashCompleter "file")
+       ]
     )
+ where
+   helpText = unwords
+               [ "Configuration file for the cardano-node(s)."
+               , "Specify a configuration file per node you want to have in the cluster."
+               , "Or use num-pool-nodes to use cardano-testnet's default configuration."
+               ]
 
-optsCardano :: EnvCli -> Parser CardanoOptions
-optsCardano envCli = CardanoOptions <$> optsTestnet envCli
 
-cmdCardano :: EnvCli -> Mod CommandFields CardanoOptions
-cmdCardano envCli = command' "cardano" "Start a testnet in any era" (optsCardano envCli)
+cmdCardano :: EnvCli -> Mod CommandFields CardanoTestnetOptions
+cmdCardano envCli = command' "cardano" "Start a testnet in any era" (optsTestnet envCli)

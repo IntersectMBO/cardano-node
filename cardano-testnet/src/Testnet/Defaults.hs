@@ -8,6 +8,7 @@ module Testnet.Defaults
   , defaultByronProtocolParamsJsonValue
   , defaultYamlConfig
   , defaultConwayGenesis
+  , defaultShelleyGenesis
   , defaultYamlHardforkViaConfig
   , defaultMainnetTopology
   ) where
@@ -22,6 +23,7 @@ import           Cardano.Ledger.BaseTypes
 import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Conway.Genesis
 import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Tracing.Config
 
@@ -37,8 +39,11 @@ import qualified Data.Map.Strict as Map
 import           Data.Proxy
 import           Data.Ratio
 import           Data.Scientific
+import           Data.Time (UTCTime)
 import qualified Data.Vector as Vector
 import           Data.Word
+
+import           Testnet.Start.Types
 
 
 instance Api.Error AlonzoGenesisError where
@@ -400,6 +405,23 @@ defaultByronProtocolParamsJsonValue =
     , "updateProposalThd" .= toJSON @String "100000000000000"
     , "updateVoteThd" .= toJSON @String "1000000000000"
     ]
+
+defaultShelleyGenesis
+  :: UTCTime
+  -> CardanoTestnetOptions
+  -> Api.ShelleyGenesis StandardCrypto
+defaultShelleyGenesis startTime testnetOptions =
+  let testnetMagic = cardanoTestnetMagic testnetOptions
+      slotLength = cardanoSlotLength testnetOptions
+      epochLength = cardanoEpochLength testnetOptions
+      maxLovelaceLovelaceSupply = cardanoMaxSupply testnetOptions
+  in Api.shelleyGenesisDefaults
+        { Api.sgNetworkMagic = fromIntegral testnetMagic
+        , Api.sgSlotLength = secondsToNominalDiffTimeMicro $ realToFrac slotLength
+        , Api.sgEpochLength = EpochSize $ fromIntegral epochLength
+        , Api.sgMaxLovelaceSupply = maxLovelaceLovelaceSupply
+        , Api.sgSystemStart = startTime
+        }
 
 defaultMainnetTopology :: NetworkTopology
 defaultMainnetTopology =
