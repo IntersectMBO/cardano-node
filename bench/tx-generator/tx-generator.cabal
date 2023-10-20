@@ -292,6 +292,7 @@ test-suite tx-generator-monad-test
                       , transformers
                       , transformers-except
                       , tx-generator
+                      , unix
                       , yaml
   other-modules:      MonadicGen.Cardano.Benchmarking.Command
                       MonadicGen.Cardano.Benchmarking.Compiler
