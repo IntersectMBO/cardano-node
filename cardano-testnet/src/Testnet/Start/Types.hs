@@ -11,7 +11,7 @@ module Testnet.Start.Types
 
   , NodeLoggingFormat(..)
   , Conf(..)
-  , YamlFilePath(..)
+  , NodeConfigurationYaml(..)
   , mkConf
   ) where
 
@@ -48,37 +48,37 @@ cardanoDefaultTestnetOptions :: CardanoTestnetOptions
 cardanoDefaultTestnetOptions = CardanoTestnetOptions
   { cardanoNodes = cardanoDefaultTestnetNodeOptions
   , cardanoNodeEra = AnyCardanoEra BabbageEra
-  , cardanoEpochLength = 1500
-  , cardanoSlotLength = 0.2
+  , cardanoEpochLength = 500
+  , cardanoSlotLength = 0.1
   , cardanoTestnetMagic = 42
-  , cardanoActiveSlotsCoeff = 0.2
+  , cardanoActiveSlotsCoeff = 0.1
   , cardanoMaxSupply = 10020000000
   , cardanoEnableP2P = False
   , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
   }
 
 -- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)
-newtype TestnetNodeOptions
-  = SpoTestnetNodeOptions [String]
+data TestnetNodeOptions
+  = SpoTestnetNodeOptions (Maybe NodeConfigurationYaml) [String]
     -- ^ These arguments will be appended to the default set of CLI options when
     -- starting the node.
   deriving (Eq, Show)
 
 extraSpoNodeCliArgs :: TestnetNodeOptions -> [String]
-extraSpoNodeCliArgs (SpoTestnetNodeOptions args) = args
+extraSpoNodeCliArgs (SpoTestnetNodeOptions _ args) = args
 
 
 cardanoDefaultTestnetNodeOptions :: [TestnetNodeOptions]
 cardanoDefaultTestnetNodeOptions =
-  [ SpoTestnetNodeOptions []
-  , SpoTestnetNodeOptions []
-  , SpoTestnetNodeOptions []
+  [ SpoTestnetNodeOptions Nothing []
+  , SpoTestnetNodeOptions Nothing []
+  , SpoTestnetNodeOptions Nothing []
   ]
 
 data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
 
 
-newtype YamlFilePath = YamlFilePath
+newtype NodeConfigurationYaml = NodeConfigurationYaml
   { unYamlFilePath :: FilePath
   } deriving (Eq, Show)
 

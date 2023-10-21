@@ -15,7 +15,7 @@ module Cardano.Testnet (
   -- * Configuration
   Conf(..),
   TmpAbsolutePath(..),
-  YamlFilePath(..),
+  NodeConfigurationYaml(..),
   mkConf,
   makeLogDir,
   makeSocketDir,

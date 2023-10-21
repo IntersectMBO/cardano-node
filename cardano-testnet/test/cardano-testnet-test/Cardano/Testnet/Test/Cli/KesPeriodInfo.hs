@@ -61,8 +61,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
       era = BabbageEra
       cTestnetOptions = cardanoDefaultTestnetOptions
                           { cardanoNodes = cardanoDefaultTestnetNodeOptions
-                          , cardanoEpochLength = 1_000
-                          , cardanoSlotLength = 0.02
+                          , cardanoSlotLength = 0.1
                           , cardanoActiveSlotsCoeff = 0.1
                           , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                           }

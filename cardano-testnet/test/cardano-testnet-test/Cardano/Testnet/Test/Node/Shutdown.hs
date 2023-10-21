@@ -124,7 +124,7 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
                                  $ mconcat [ byronGenesisHash
                                            , shelleyGenesisHash
                                            , alonzoGenesisHash
-                                           , defaultYamlHardforkViaConfig (AnyCardanoEra BabbageEra)]
+                                           , defaultYamlHardforkViaConfig (AnyCardanoEra BabbageEra)] -- TODO: This should not be hardcoded
 
   H.evalIO $ LBS.writeFile (tempAbsPath' </> "configuration.yaml") finalYamlConfig
 
@@ -188,9 +188,9 @@ hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-syn
         { cardanoEpochLength = 300
         , cardanoSlotLength = slotLen
         , cardanoNodes =
-          [ SpoTestnetNodeOptions ["--shutdown-on-slot-synced", show maxSlot]
-          , SpoTestnetNodeOptions []
-          , SpoTestnetNodeOptions []
+          [ SpoTestnetNodeOptions Nothing ["--shutdown-on-slot-synced", show maxSlot]
+          , SpoTestnetNodeOptions Nothing []
+          , SpoTestnetNodeOptions Nothing []
           ]
         }
   testnetRuntime <- cardanoTestnet fastTestnetOptions conf
