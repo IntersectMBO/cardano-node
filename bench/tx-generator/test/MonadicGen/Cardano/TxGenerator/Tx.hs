@@ -1,7 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module  MonadicGen.Cardano.TxGenerator.Tx
         (module MonadicGen.Cardano.TxGenerator.Tx)
