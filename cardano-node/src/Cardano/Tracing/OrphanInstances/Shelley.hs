@@ -427,8 +427,8 @@ instance
     mconcat [ "kind" .= String "MissingRequiredSigners"
              , "txins" .= Set.toList txins
              ]
-  toObject _ (NonOutputSupplimentaryDatums disallowed acceptable) =
-    mconcat [ "kind" .= String "NonOutputSupplimentaryDatums"
+  toObject _ (NotAllowedSupplementalDatums disallowed acceptable) =
+    mconcat [ "kind" .= String "NotAllowedSupplementalDatums"
              , "disallowed" .= Set.toList disallowed
              , "acceptable" .= Set.toList acceptable
              ]
