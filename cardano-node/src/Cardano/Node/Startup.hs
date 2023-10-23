@@ -54,6 +54,7 @@ import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Cardano.Git.Rev (gitRev)
 import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency, WarmValency)
 import           Paths_cardano_node (version)
+import Legacy.Cardano.Node (convLedgerConfig)
 
 data StartupTrace blk =
   -- | Log startup information.
@@ -239,7 +240,16 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
                    , getSystemStartShelley cfgBabbage
                    , getSystemStartShelley cfgConway
                    ]
-      Api.LegacyCardanoBlockType -> undefined -- TODO
+      Api.LegacyCardanoBlockType ->
+        let CardanoLedgerConfig _ cfgShelley cfgAllegra cfgMary cfgAlonzo cfgBabbage cfgConway = convLedgerConfig $ configLedger cfg
+        in minimum [ getSystemStartByron
+                   , getSystemStartShelley cfgShelley
+                   , getSystemStartShelley cfgAllegra
+                   , getSystemStartShelley cfgMary
+                   , getSystemStartShelley cfgAlonzo
+                   , getSystemStartShelley cfgBabbage
+                   , getSystemStartShelley cfgConway
+                   ]
 
   getSystemStartByron = WCT.getSystemStart . getSystemStart . configBlock $ cfg
   getSystemStartShelley = sgSystemStart . shelleyLedgerGenesis . shelleyLedgerConfig
