@@ -380,6 +380,10 @@ instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) whe
     mconcat [ "kind" .= String "ExpirationEpochTooSmall"
             , "credentialsToEpoch" .= credsToEpoch
             ]
+  toObject _ (Conway.InvalidPrevGovActionIdsInProposals proposals) =
+    mconcat [ "kind" .= String "InvalidPrevGovActionIdsInProposals"
+            , "proposals" .= proposals
+            ]
 
 instance
   ( Core.Crypto (Consensus.EraCrypto era)

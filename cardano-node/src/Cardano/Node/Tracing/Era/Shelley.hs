@@ -1139,6 +1139,10 @@ instance
     mconcat [ "kind" .= String "ExpirationEpochTooSmall"
             , "credentialsToEpoch" .= credsToEpoch
             ]
+  forMachine _ (Conway.InvalidPrevGovActionIdsInProposals proposals) =
+    mconcat [ "kind" .= String "InvalidPrevGovActionIdsInProposals"
+            , "proposals" .= proposals
+            ]
 
 instance
   ( Consensus.ShelleyBasedEra era
