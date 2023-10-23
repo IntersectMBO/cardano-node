@@ -101,15 +101,16 @@ preExecutePlutusV1 ::
 preExecutePlutusV1 protocolVersion_ (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer costModel
   = fst $ runWriter $ runExceptT go       -- for now, we discard warnings (:: PlutusCore.Evaluation.Machine.CostModelInterface.CostModelApplyWarn)
   where
-    protocolVersion = uncurry PlutusV1.ProtocolVersion protocolVersion_
+    protocolVersion = PlutusV1.MajorProtocolVersion (fst protocolVersion_)
     go
       = do
       evaluationContext <- firstExceptT PlutusError $
         PlutusV1.mkEvaluationContext (flattenCostModel costModel)
 
+      deserialisedScript <- firstExceptT PlutusError $ PlutusV1.deserialiseScript protocolVersion script
       exBudget <- firstExceptT PlutusError $
         hoistEither $
-          snd $ PlutusV1.evaluateScriptCounting protocolVersion PlutusV1.Verbose evaluationContext script
+          snd $ PlutusV1.evaluateScriptCounting protocolVersion PlutusV1.Verbose evaluationContext deserialisedScript
             [ toPlutusData datum
             , toPlutusData (getScriptData redeemer)
             , PlutusV1.toData dummyContext
@@ -146,18 +147,20 @@ preExecutePlutusV2 ::
   -> ScriptRedeemer
   -> CostModel
   -> Either TxGenError ExecutionUnits
-preExecutePlutusV2 protocolVersion_ (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer costModel
+preExecutePlutusV2 (major, _minor) (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer costModel
   = fst $ runWriter $ runExceptT go       -- for now, we discard warnings (:: PlutusCore.Evaluation.Machine.CostModelInterface.CostModelApplyWarn)
   where
-    protocolVersion = uncurry PlutusV2.ProtocolVersion protocolVersion_
+    protocolVersion = PlutusV2.MajorProtocolVersion major
     go
       = do
       evaluationContext <- firstExceptT PlutusError $
         PlutusV2.mkEvaluationContext (flattenCostModel costModel)
 
+      deserialisedScript <- firstExceptT PlutusError $ PlutusV2.deserialiseScript protocolVersion script
+
       exBudget <- firstExceptT PlutusError $
         hoistEither $
-          snd $ PlutusV2.evaluateScriptCounting protocolVersion PlutusV2.Verbose evaluationContext script
+          snd $ PlutusV2.evaluateScriptCounting protocolVersion PlutusV2.Verbose evaluationContext deserialisedScript
             [ toPlutusData datum
             , toPlutusData (getScriptData redeemer)
             , PlutusV2.toData dummyContext
