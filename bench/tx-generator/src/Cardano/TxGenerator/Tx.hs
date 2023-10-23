@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module  Cardano.TxGenerator.Tx
         (module Cardano.TxGenerator.Tx)
@@ -167,16 +168,16 @@ genTx :: forall era. ()
 genTx _era ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
   = bimap
       ApiError
-      (\b -> (signShelleyTransaction b $ map WitnessPaymentKey allKeys, getTxId b))
-      (createAndValidateTransactionBody txBodyContent)
+      (\b -> (signShelleyTransaction (shelleyBasedEra @era) b $ map WitnessPaymentKey allKeys, getTxId b))
+      (createAndValidateTransactionBody (cardanoEra @era) txBodyContent)
  where
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
-  txBodyContent = defaultTxBodyContent
+  txBodyContent = defaultTxBodyContent (cardanoEra @era)
     & setTxIns (map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds)
     & setTxInsCollateral collateral
     & setTxOuts outputs
     & setTxFee fee
-    & setTxValidityRange (TxValidityNoLowerBound, defaultTxValidityUpperBound)
+    & setTxValidityRange (TxValidityNoLowerBound, defaultTxValidityUpperBound (cardanoEra @era))
     & setTxMetadata metadata
     & setTxProtocolParams (BuildTxWith (Just ledgerParameters))
 

@@ -34,6 +34,7 @@ liftAnyEra f x = case x of
 keyAddress :: forall era. IsShelleyBasedEra era => NetworkId -> SigningKey PaymentKey -> AddressInEra era
 keyAddress networkId k
   = makeShelleyAddressInEra
+      (shelleyBasedEra @era)
       networkId
       (PaymentCredentialByKey $ verificationKeyHash $ getVerificationKey k)
       NoStakeAddress
