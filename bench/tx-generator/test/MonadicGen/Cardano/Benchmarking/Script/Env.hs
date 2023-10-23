@@ -30,8 +30,10 @@ module MonadicGen.Cardano.Benchmarking.Script.Env (
         , Error(..)
         , runActionM
         , runActionMEnv
+        , liftToAction
         , liftTxGenError
         , liftIOSafe
+        , withTxGenError
         , askIOManager
         , traceDebug
         , traceError
@@ -71,14 +73,14 @@ import           Prelude
 
 import           Cardano.Api (File (..), SocketPath)
 
-import           MonadicGen.Cardano.Benchmarking.GeneratorTx
-import qualified MonadicGen.Cardano.Benchmarking.LogTypes as Tracer
-import           MonadicGen.Cardano.Benchmarking.OuroborosImports (NetworkId, PaymentKey, ShelleyGenesis,
-                   SigningKey)
-import           MonadicGen.Cardano.Benchmarking.Script.Types
-import           MonadicGen.Cardano.Benchmarking.Wallet
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
+import           MonadicGen.Cardano.Benchmarking.GeneratorTx
+import qualified MonadicGen.Cardano.Benchmarking.LogTypes as Tracer
+import           MonadicGen.Cardano.Benchmarking.OuroborosImports (NetworkId, PaymentKey,
+                   ShelleyGenesis, SigningKey)
+import           MonadicGen.Cardano.Benchmarking.Script.Types
+import           MonadicGen.Cardano.Benchmarking.Wallet
 import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           MonadicGen.Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
@@ -88,7 +90,7 @@ import           MonadicGen.Cardano.TxGenerator.Types (TxGenError (..))
 -- | The 'Env' type represents the state maintained while executing
 -- a series of actions. The 'Maybe' types are largely to represent
 -- as-of-yet unset values.
-data Env = Env { -- | 'MonadicGen.Cardano.Api.ProtocolParameters' is ultimately
+data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
                  -- wrapped by 'ProtocolParameterMode' which itself is
                  -- a sort of custom 'Maybe'.
                  protoParams :: Maybe ProtocolParameterMode
@@ -140,13 +142,24 @@ runActionMEnv env action iom = RWS.runRWST (runExceptT action) iom env
 -- and some arbitrary errors are potentially encountered at the next
 -- layer. The layers correspond to "MonadicGen.Cardano.Benchmarking.Script.Core"
 -- for the outermost and "MonadicGen.Cardano.Benchmarking.Set.Plutus" for the
--- middle, and the innermost to "Cardano.Api.Error".
+-- middle, and the innermost to "MonadicGen.Cardano.Api.Error".
 data Error where
   TxGenError  :: !TxGenError -> Error
   UserError   :: !String     -> Error
   WalletError :: !String     -> Error
 
 deriving instance Show Error
+
+-- | This abbreviates access to the fully-qualified constructor name
+-- for `MonadicGen.Cardano.Benchmarking.Script.Env.TxGenError` and the repetitive
+-- usage of `withExceptT` with that as its first argument.
+withTxGenError :: Monad m => ExceptT TxGenError m a -> ExceptT Error m a
+withTxGenError = withExceptT MonadicGen.Cardano.Benchmarking.Script.Env.TxGenError
+
+-- | This injects an `IO` action using `Either` as hand-rolled
+-- exceptions into the `ActionM` monad.
+liftToAction :: IO (Either TxGenError a) -> ActionM a
+liftToAction = withTxGenError . ExceptT . liftIO
 
 -- | This throws a `TxGenError` in the `ActionM` monad.
 liftTxGenError :: TxGenError -> ActionM a

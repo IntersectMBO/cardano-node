@@ -13,8 +13,7 @@ import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Bifunctor (first)
 import           Data.Monoid
 
-import           Ouroboros.Consensus.Cardano as Consensus (ProtocolParams (CardanoProtocolParams),
-                   ledgerTransitionConfig)
+import qualified Ouroboros.Consensus.Cardano as Consensus
 
 import           Cardano.Api (BlockType (..), ProtocolInfoArgs (..))
 import qualified Cardano.Ledger.Api.Transition as Ledger (tcShelleyGenesisL)

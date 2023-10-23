@@ -3,8 +3,8 @@
 Module      : MonadicGen.Cardano.Benchmarking.Script.Action
 Description : Convert an 'Action' to a monadic 'ActionM'.
 
-This is just exporting 'action', and 'liftToAction' is tough
-to use because of the risk of circular imports.
+This is just exporting 'action' in order to avoid circular
+module dependencies.
 -}
 
 module MonadicGen.Cardano.Benchmarking.Script.Action
@@ -16,7 +16,6 @@ module MonadicGen.Cardano.Benchmarking.Script.Action
 import qualified Data.Text as Text (unpack)
 
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Except.Extra
 
 import           MonadicGen.Cardano.Benchmarking.OuroborosImports as Core (protocolToNetworkId)
 import           MonadicGen.Cardano.Benchmarking.Script.Core
@@ -24,7 +23,6 @@ import           MonadicGen.Cardano.Benchmarking.Script.Env
 import           MonadicGen.Cardano.Benchmarking.Script.Types
 import           MonadicGen.Cardano.Benchmarking.Tracer
 import           MonadicGen.Cardano.TxGenerator.Setup.NodeConfig
-import           MonadicGen.Cardano.TxGenerator.Types (TxGenError)
 
 
 -- | 'action' has as its sole callers
@@ -52,12 +50,6 @@ action a = case a of
   WaitForEra era -> waitForEra era
   LogMsg txt -> traceDebug $ Text.unpack txt
   Reserved options -> reserved options
-
--- | 'liftToAction' first lifts from IO, then converts an 'Either'
--- to an 'Control.Monad.Trans.Except.ExceptT' and then transforms
--- the error type to 'MonadicGen.Cardano.Benchmarking.Script.Env.Error'.
-liftToAction :: IO (Either TxGenError a) -> ActionM a
-liftToAction = firstExceptT TxGenError . newExceptT . liftIO
 
 -- | 'startProtocol' sets up the protocol for the transaction
 -- generator from the first argument, @configFile@ and optionally

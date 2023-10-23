@@ -48,7 +48,7 @@ runCommand = withIOManager $ \iocp -> do
       opts <- parseJSONFile fromJSON file
       finalOpts <- mangleTracerConfig cardanoTracerOverwrite <$> mangleNodeConfig nodeConfigOverwrite opts
 
-      Prelude.putStrLn $ 
+      Prelude.putStrLn $
           "--> initial options:\n" ++ show opts ++
         "\n--> final options:\n" ++ show finalOpts
 

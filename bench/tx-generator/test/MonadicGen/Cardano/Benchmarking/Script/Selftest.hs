@@ -34,9 +34,9 @@ import           Paths_tx_generator
 -- | 'runSelftest' is the interface to actually run the self-test.
 -- @iom@ is the IO manager from "Ouroboros.Network.IOManager".
 -- @outFile@ is the file to output to;
--- 'MonadicGen.Cardano.Benchmarking.Script.Core.evalGenerator' returns a
+-- 'Cardano.Benchmarking.Script.Core.evalGenerator' returns a
 -- transaction 'Streaming.Stream' that
--- 'MonadicGen.Cardano.Benchmarking.Script.Core.submitInEra'
+-- 'Cardano.Benchmarking.Script.Core.submitInEra'
 -- does 'show' and 'writeFile' on.
 runSelftest :: IOManager -> Maybe FilePath -> IO (Either Script.Error ())
 runSelftest iom outFile = do

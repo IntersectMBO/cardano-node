@@ -17,7 +17,8 @@ import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           MonadicGen.Cardano.Benchmarking.Script.Action
 import           MonadicGen.Cardano.Benchmarking.Script.Aeson (parseScriptFileAeson)
-import           MonadicGen.Cardano.Benchmarking.Script.Core (setProtocolParameters, traceTxGeneratorVersion)
+import           MonadicGen.Cardano.Benchmarking.Script.Core (setProtocolParameters,
+                   traceTxGeneratorVersion)
 import           MonadicGen.Cardano.Benchmarking.Script.Env
 import           MonadicGen.Cardano.Benchmarking.Script.Types
 import           MonadicGen.Cardano.Benchmarking.Tracer

@@ -1,9 +1,7 @@
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans -Wno-unticked-promoted-constructors -Wno-all-missed-specialisations #-}
 
@@ -18,11 +16,10 @@ import           Prelude
 import           Codec.Serialise (DeserialiseFailure)
 import           Control.Concurrent.Class.MonadSTM.Strict (newTVarIO)
 import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
-import           Data.Foldable (fold)
 import           Data.ByteString.Lazy (ByteString)
+import           Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy (..))
-import           Data.Void (Void)
 import           Network.Socket (AddrInfo (..))
 import           System.Random (newStdGen)
 
@@ -42,21 +39,22 @@ import           Ouroboros.Network.DeltaQ (defaultGSV)
 import           Ouroboros.Network.Driver (runPeer, runPeerWithLimits)
 import           Ouroboros.Network.KeepAlive
 import           Ouroboros.Network.Magic
-import           Ouroboros.Network.Mux (MiniProtocolCb (..), OuroborosApplication (..), OuroborosBundle,
-                   RunMiniProtocol (..), MuxMode (..))
+import           Ouroboros.Network.Mux (MiniProtocolCb (..), OuroborosApplication (..),
+                   OuroborosBundle, RunMiniProtocol (..))
 import           Ouroboros.Network.NodeToClient (IOManager, chainSyncPeerNull)
-import           Ouroboros.Network.NodeToNode (micConnectionId, remoteAddress, MinimalInitiatorContext, ResponderContext (..), NetworkConnectTracers (..))
+import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
+import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..), decodeRemoteAddress,
+                   encodeRemoteAddress)
 import           Ouroboros.Network.Protocol.BlockFetch.Client (BlockFetchClient (..),
                    blockFetchClientPeer)
 import           Ouroboros.Network.Protocol.Handshake.Version (simpleSingletonVersions)
 import           Ouroboros.Network.Protocol.KeepAlive.Client hiding (SendMsgDone)
 import           Ouroboros.Network.Protocol.KeepAlive.Codec
-import           Ouroboros.Network.Protocol.TxSubmission2.Client (TxSubmissionClient,
-                   txSubmissionClientPeer)
-import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..), encodeRemoteAddress, decodeRemoteAddress)
 import           Ouroboros.Network.Protocol.PeerSharing.Client (PeerSharingClient (..),
                    peerSharingClientPeer)
+import           Ouroboros.Network.Protocol.TxSubmission2.Client (TxSubmissionClient,
+                   txSubmissionClientPeer)
 
 import           Ouroboros.Network.Snocket (socketSnocket)
 
@@ -105,13 +103,6 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
                 ByteString ByteString ByteString ByteString ByteString ByteString
                 ByteString
   myCodecs  = defaultCodecs codecConfig blkN2nVer encodeRemoteAddress decodeRemoteAddress n2nVer
-  peerMultiplex :: NtN.Versions NodeToNodeVersion
-                                NtN.NodeToNodeVersionData
-                                (OuroborosApplication
-                                  'InitiatorMode
-                                  (MinimalInitiatorContext NtN.RemoteAddress)
-                                  (ResponderContext NtN.RemoteAddress)
-                                  ByteString IO () Void)
   peerMultiplex =
     simpleSingletonVersions
       n2nVer
@@ -124,27 +115,27 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
       mkApp $
       NtN.nodeToNodeProtocols NtN.defaultMiniProtocolParameters
         NtN.NodeToNodeProtocols
-          { NtN.chainSyncProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \ctx channel ->
+          { NtN.chainSyncProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
                                       runPeer
                                         mempty
                                         (cChainSyncCodec myCodecs)
                                         channel
                                         chainSyncPeerNull
-          , NtN.blockFetchProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \ctx channel ->
+          , NtN.blockFetchProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
                                        runPeer
                                          mempty
                                          (cBlockFetchCodec myCodecs)
                                          channel
                                          (blockFetchClientPeer blockFetchClientNull)
           , NtN.keepAliveProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \ctx channel ->
-                                        kaClient n2nVer (remoteAddress $ micConnectionId ctx) channel
-          , NtN.txSubmissionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \ctx channel ->
+                                       kaClient n2nVer (NtN.remoteAddress $ NtN.micConnectionId ctx) channel
+          , NtN.txSubmissionProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
                                          runPeer
                                            submissionTracer
                                            (cTxSubmission2Codec myCodecs)
                                            channel
                                            (txSubmissionClientPeer myTxSubClient)
-          , NtN.peerSharingProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \ctx channel ->
+          , NtN.peerSharingProtocol = InitiatorProtocolOnly $ MiniProtocolCb $ \_ctx channel ->
                                          runPeer
                                            mempty
                                            (cPeerSharingCodec myCodecs)

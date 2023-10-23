@@ -48,8 +48,8 @@ import           Data.Text (Text)
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           MonadicGen.Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
+import           MonadicGen.Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 
 import           MonadicGen.Cardano.TxGenerator.Types
 
@@ -75,9 +75,9 @@ data Action where
   InitWallet         :: !String -> Action
   -- | 'StartProtocol' sets state variables for protocol and genesis,
   -- but via 'MonadicGen.Cardano.TxGenerator.Setup.NodeConfig.mkNodeConfig' and
-  -- 'Cardano.Node.Protocol.mkConsensusProtocol'. The first unravels
+  -- 'MonadicGen.Cardano.Node.Protocol.mkConsensusProtocol'. The first unravels
   -- to reading wide a variety of config files in
-  -- 'Cardano.Node.Configuration.POM.makeNodeConfiguration' and The
+  -- 'MonadicGen.Cardano.Node.Configuration.POM.makeNodeConfiguration' and The
   -- second unravels to reading genesis content in helper functions
   -- spread across eras.
   StartProtocol      :: !FilePath -> !(Maybe FilePath) -> Action
@@ -85,7 +85,7 @@ data Action where
   -- 'MonadicGen.Cardano.Benchmarking.Script.delay'.
   Delay              :: !Double -> Action
   -- | 'ReadSigningKey' translates to a 'readFileTextEnvelopeAnyOf' from
-  -- "Cardano.Api.SerialiseTextEnvelope" on the signing key file and then
+  -- "MonadicGen.Cardano.Api.SerialiseTextEnvelope" on the signing key file and then
   -- drops it into a state variable via
   -- 'MonadicGen.Cardano.Benchmarking.Script.Env.setEnvKeys'.
   ReadSigningKey     :: !String -> !(SigningKeyFile In) -> Action

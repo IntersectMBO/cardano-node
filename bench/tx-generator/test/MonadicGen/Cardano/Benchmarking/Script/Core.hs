@@ -34,12 +34,10 @@ import qualified Data.Text as Text (unpack)
 import           Prelude
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..),
-                   ProtocolParameters, ShelleyLedgerEra,
-                   convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
+import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
+                   ShelleyLedgerEra, convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
                    protocolParamPrices)
 
-import           Cardano.Logging hiding (LocalSocket)
 import qualified Cardano.Ledger.Core as Ledger
 
 import           MonadicGen.Cardano.TxGenerator.Fund as Fund
@@ -51,7 +49,8 @@ import qualified MonadicGen.Cardano.TxGenerator.Utils as Utils
 import           MonadicGen.Cardano.TxGenerator.UTxO
 
 import           MonadicGen.Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
-import qualified MonadicGen.Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
+import qualified MonadicGen.Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark,
+                   walletBenchmark)
 import           MonadicGen.Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
                    benchmarkConnectTxSubmit)
 import           MonadicGen.Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
@@ -59,15 +58,16 @@ import qualified MonadicGen.Cardano.TxGenerator.Genesis as Genesis
 import           MonadicGen.Cardano.TxGenerator.PlutusContext
 import           MonadicGen.Cardano.TxGenerator.Setup.SigningKey
 
-import           MonadicGen.Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
-                   makeLocalConnectInfo, protocolToCodecConfig)
+import           MonadicGen.Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx,
+                   SigningKeyFile, makeLocalConnectInfo, protocolToCodecConfig)
 
-import           MonadicGen.Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..), btConnect_, btN2N_,
-                   btSubmission2_, btTxSubmit_)
+import           MonadicGen.Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..),
+                   btConnect_, btN2N_, btSubmission2_, btTxSubmit_)
 import           MonadicGen.Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           MonadicGen.Cardano.Benchmarking.Wallet as Wallet
 
-import           MonadicGen.Cardano.Benchmarking.Script.Aeson (prettyPrintOrdered, readProtocolParametersFile)
+import           MonadicGen.Cardano.Benchmarking.Script.Aeson (prettyPrintOrdered,
+                   readProtocolParametersFile)
 import           MonadicGen.Cardano.Benchmarking.Script.Env hiding (Error (TxGenError))
 import qualified MonadicGen.Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
 import           MonadicGen.Cardano.Benchmarking.Script.Types
@@ -292,9 +292,10 @@ evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> TxGenTxParams
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   networkId <- getEnvNetworkId
   protocolParameters <- getProtocolParameters
+
   case convertToLedgerProtocolParameters (shelleyBasedEra @era) protocolParameters of
     Left err -> throwE (Env.TxGenError (ApiError err))
-    Right ledgerParameters -> 
+    Right ledgerParameters ->
       case generator of
         SecureGenesis wallet genesisKeyName destKeyName -> do
           genesis  <- getEnvGenesis
@@ -321,11 +322,11 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           (toUTxOChange, addressChange) <- interpretPayMode payModeChange
           traceDebug $ "split change address : " ++ addressChange
           let
-            fundSource = walletSource wallet 1
-            inToOut = Utils.includeChange fee coins
+            inToOut = return . Utils.includeChange fee coins
             txGenerator = genTx (cardanoEra @era) ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
-            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+          inputFunds <- liftToAction $ walletSource wallet 1
+          sourceToStore <- withTxGenError . sourceToStoreTransactionNew txGenerator inputFunds inToOut $ mangleWithChange (liftIOCreateAndStore toUTxOChange) (liftIOCreateAndStore toUTxO)
+          return . Streaming.effect . pure . Streaming.yield $ Right sourceToStore
 
         -- The 'SplitN' case's call chain is somewhat elaborate.
         -- The division is done in 'Utils.inputsToOutputsWithFee'
@@ -337,11 +338,11 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           (toUTxO, addressOut) <- interpretPayMode payMode
           traceDebug $ "SplitN output address : " ++ addressOut
           let
-            fundSource = walletSource wallet 1
-            inToOut = Utils.inputsToOutputsWithFee fee count
+            inToOut = withExceptT TxGenError . Utils.inputsToOutputsWithFee fee count
             txGenerator = genTx (cardanoEra @era) ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
-            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+          inputFunds <- liftToAction $ walletSource wallet 1
+          sourceToStore <- withTxGenError $ sourceToStoreTransactionNew txGenerator inputFunds inToOut (mangle . repeat $ liftIOCreateAndStore toUTxO)
+          return . Streaming.effect . pure . Streaming.yield $ Right sourceToStore
 
         NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
           wallet <- getEnvWallets walletName
@@ -349,25 +350,27 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           (toUTxO, addressOut) <- interpretPayMode payMode
           traceDebug $ "NtoM output address : " ++ addressOut
           let
-            fundSource = walletSource wallet inputs
-            inToOut = Utils.inputsToOutputsWithFee fee outputs
+            inToOut = withExceptT TxGenError . Utils.inputsToOutputsWithFee fee outputs
             txGenerator = genTx (cardanoEra @era) ledgerParameters collaterals feeInEra (toMetadata metadataSize)
-            sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
+            previewCatcher err = do
+              traceDebug $ "Error creating Tx preview: " ++ show err
+              throwE err
+          inputFunds <- liftToAction $ walletSource wallet inputs
+          sourceToStore <- withTxGenError $ sourceToStoreTransactionNew txGenerator inputFunds inToOut (mangle . repeat $ liftIOCreateAndStore toUTxO)
 
           fundPreview <- liftIO $ walletPreview wallet inputs
-          case sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO) of
-            Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
-            Right tx -> do
-              let txSize = txSizeInBytes tx
-              traceDebug $ "Projected Tx size in bytes: " ++ show txSize
-              summary_ <- getEnvSummary
-              forM_ summary_ $ \summary -> do
-                let summary' = summary {projectedTxSize = Just txSize}
-                setEnvSummary summary'
-                traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
-              dumpBudgetSummaryIfExisting
+          preview <- withTxGenError (sourceTransactionPreview txGenerator fundPreview inToOut (mangle . repeat $ liftIOCreateAndStore toUTxO))
+                       `catchE` previewCatcher
+          let txSize = txSizeInBytes preview
+          traceDebug $ "Projected Tx size in bytes: " ++ show txSize
+          summary_ <- getEnvSummary
+          forM_ summary_ $ \summary -> do
+            let summary' = summary {projectedTxSize = Just txSize}
+            setEnvSummary summary'
+            traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
+          dumpBudgetSummaryIfExisting
 
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+          return . Streaming.effect . pure . Streaming.yield $ Right sourceToStore
 
         Sequence l -> do
           gList <- forM l $ \g -> evalGenerator g txParams era
@@ -383,8 +386,12 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
 
         OneOf _l -> error "todo: implement Quickcheck style oneOf generator"
 
-      where
-        feeInEra = Utils.mkTxFee fee
+  where
+    feeInEra = Utils.mkTxFee fee
+    -- 'liftIOCreateAndStore' is supposed to be some indication that 'liftIO'
+    -- is applied to a 'CreateAndStore'.
+    -- This could be golfed as @((liftIO .) .)@ but it's unreadable.
+    liftIOCreateAndStore cas = second (\f x y -> liftIO (f x y)) . cas
 
 selectCollateralFunds :: forall era. IsShelleyBasedEra era
   => Maybe String
@@ -408,6 +415,8 @@ dumpToFileIO filePath tx = appendFile filePath ('\n' : show tx)
 initWallet :: String -> ActionM ()
 initWallet name = liftIO Wallet.initWallet >>= setEnvWallets name
 
+-- The inner monad being 'IO' creates some programming overhead above.
+-- Something like 'MonadIO' would be helpful, but the typing is tricky.
 interpretPayMode :: forall era. IsShelleyBasedEra era => PayMode -> ActionM (CreateAndStore IO era, String)
 interpretPayMode payMode = do
   networkId <- getEnvNetworkId

@@ -6,7 +6,9 @@ module  MonadicGen.Cardano.TxGenerator.Tx
         (module MonadicGen.Cardano.TxGenerator.Tx)
         where
 
-import           Data.Bifunctor (bimap, second)
+import           Control.Monad.Trans (lift)
+import           Control.Monad.Trans.Except (ExceptT, except)
+import           Data.Bifunctor (bimap)
 import qualified Data.ByteString as BS (length)
 import           Data.Function ((&))
 import           Data.Maybe (mapMaybe)
@@ -34,7 +36,7 @@ type CreateAndStoreList m era split = split -> ([TxOut CtxTx era], TxId -> m ())
 
 
 -- TODO: 'sourceToStoreTransaction' et al need to be broken up
--- for the sake of maintainability and use the Error monad.
+-- for the sake of maintainability.
 
 -- | 'sourceToStoreTransaction' builds a transaction out of several
 -- arguments. "MonadicGen.Cardano.Benchmarking.Script.PureExample" is the sole caller.
@@ -54,30 +56,22 @@ type CreateAndStoreList m era split = split -> ([TxOut CtxTx era], TxId -> m ())
 sourceToStoreTransaction ::
      Monad m
   => TxGenerator era
-  -> FundSource m
-  -> ([Lovelace] -> split)
+  -> [Fund]
+  -> ([Lovelace] -> ExceptT TxGenError m split)
   -> ToUTxOList era split
   -> FundToStoreList m                --inline to ToUTxOList
-  -> m (Either TxGenError (Tx era))
-sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore =
-  fundSource >>= either (return . Left) go
- where
-  go inputFunds = do
-    let
-      -- 'getFundLovelace' unwraps the 'TxOutValue' in a fund field
-      -- so it's all just 'Lovelace' instead of a coproduct
-      -- maintaining distinctions.
-      outValues = inToOut $ map getFundLovelace inputFunds
-      (outputs, toFunds) = mkTxOut outValues
-    case txGenerator inputFunds outputs of
-        Left err -> return $ Left err
-        Right (tx, txId) -> do
-          fundToStore $ toFunds txId
-          return $ Right tx
+  -> ExceptT TxGenError m (Tx era)
+sourceToStoreTransaction txGenerator inputFunds inToOut mkTxOut fundToStore = do
+  -- 'getFundLovelace' unwraps the 'TxOutValue' in a fund field so it's
+  -- all just 'Lovelace' instead of a copruduct maintaining distinctions.
+  (outputs, toFunds) <- fmap mkTxOut . inToOut $ map getFundLovelace inputFunds
+  (tx, txId) <- except $ txGenerator inputFunds outputs
+  lift . fundToStore $ toFunds txId
+  return tx
 
 -- | 'sourceToStoreTransactionNew' builds a new transaction out of
--- several things. 'MonadicGen.Cardano.Benchmarking.Script.Core.evalGenerator'
--- in "MonadicGen.Cardano.Benchmarking.Script.Core" is the sole caller.
+-- several things. 'MonadicGen.Cardano.Benchmarking.Script.Core.evalGenerator' in
+-- "MonadicGen.Cardano.Benchmarking.Script.Core" is the sole caller.
 -- @txGenerator@ is just 'genTx' partially applied in every use.
 -- @inputFunds@ for this is a list of 'Lovelace' with some extra
 -- fields to throw away and coproducts maintaining distinctions that
@@ -91,59 +85,48 @@ sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore =
 sourceToStoreTransactionNew ::
      Monad m
   => TxGenerator era
-  -> FundSource m
-  -> ([Lovelace] -> split)
+  -> [Fund]
+  -> ([Lovelace] -> ExceptT TxGenError m split)
   -> CreateAndStoreList m era split
-  -> m (Either TxGenError (Tx era))
-sourceToStoreTransactionNew txGenerator fundSource valueSplitter toStore =
-  fundSource >>= either (return . Left) go
- where
-  go inputFunds = do
-    let
-      split = valueSplitter $ map getFundLovelace inputFunds
-      (outputs, storeAction) = toStore split
-    case txGenerator inputFunds outputs of
-        Left err -> return $ Left err
-        Right (tx, txId) -> do
-          storeAction txId
-          return $ Right tx
+  -> ExceptT TxGenError m (Tx era)
+sourceToStoreTransactionNew txGenerator inputFunds valueSplitter toStore = do
+  (outputs, storeAction) <- fmap toStore . valueSplitter $ map getFundLovelace inputFunds
+  (tx, txId) <- except $ txGenerator inputFunds outputs
+  lift $ storeAction txId
+  return tx
 
 -- | 'sourceTransactionPreview' is only used at one point in
 -- 'MonadicGen.Cardano.Benchmarking.Script.Core.evalGenerator' within
 -- "MonadicGen.Cardano.Benchmarking.Script.Core" to generate a hopefully pure
 -- transaction to examine.
--- This only constructs a preview of a transaction not intended
--- to be submitted. Funds remain unchanged by dint of a different
--- method of wallet access.
--- @txGenerator@ is the same 'genTx' partial application passed
--- to other functions here.
+-- This only constructs a preview of a transaction not intended to be
+-- submitted. Funds remain unchanged by dint of a different method
+-- of wallet access.
+-- @txGenerator@ is the same 'genTx' partial application passed to other
+-- functions here.
 -- @inputFunds@ for this is a list of 'Lovelace' with some extra
 -- fields to throw away and coproducts maintaining distinctions that
--- don't matter to these functions. This is the only argument that
--- differs -- from 'sourceToStoreTransactionNew', being drawn from
--- a use of 'MonadicGen.Cardano.Benchmarking.Wallet.walletPreview'.
--- @valueSplitter@ is just
--- 'MonadicGen.Cardano.TxGenerator.Utils.inputsToOutputsWithFee'
--- at the sole use, with the same variable for monad lifting
--- etc. as the other companion functions.
+-- don't matter to these functions. This is the only argument that differs
+-- from 'sourceToStoreTransactionNew', being drawn from a use of
+-- 'MonadicGen.Cardano.Benchmarking.Wallet.walletPreview'.
+-- @valueSplitter@ is just 'MonadicGen.Cardano.TxGenerator.Utils.inputsToOutputsWithFee'
+-- at the sole use, with the same variable for monad lifting etc. as
+-- the other companion functions.
 -- @toStore@ is just a partial application of
--- 'MonadicGen.Cardano.Benchmarking.Wallet.mangle' at the sole use, with the
--- same expression involving the same function returned as a
--- product of 'MonadicGen.Cardano.Benchmarking.Wallet.createAndStore' as the
--- nearby invocation of 'sourceToStoreTransactionNew' in
--- "MonadicGen.Cardano.Benchmarking.Script.Core".
+-- 'MonadicGen.Cardano.Benchmarking.Wallet.mangle' at the sole use, with the same
+-- expression involving the same function returned as a product of
+-- 'MonadicGen.Cardano.Benchmarking.Wallet.createAndStore' as the nearby invocation
+-- of 'sourceToStoreTransactionNew' in "MonadicGen.Cardano.Benchmarking.Script.Core".
 sourceTransactionPreview ::
-     TxGenerator era
+  Monad m
+  => TxGenerator era
   -> [Fund]
-  -> ([Lovelace] -> split)
+  -> ([Lovelace] -> ExceptT TxGenError m split)
   -> CreateAndStoreList m era split
-  -> Either TxGenError (Tx era)
-sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
-  second fst $
-    txGenerator inputFunds outputs
- where
-  split         = valueSplitter $ map getFundLovelace inputFunds
-  (outputs, _)  = toStore split
+  -> ExceptT TxGenError m (Tx era)
+sourceTransactionPreview txGenerator inputFunds valueSplitter toStore = do
+  (outputs, _) <- fmap toStore . valueSplitter $ map getFundLovelace inputFunds
+  fmap fst . except $ txGenerator inputFunds outputs
 
 -- | 'genTx' seems to mostly be a wrapper for
 -- 'Cardano.Api.TxBody.createAndValidateTransactionBody', which uses
@@ -165,12 +148,13 @@ genTx :: forall era. ()
   -> TxMetadataInEra era
   -> TxGenerator era
 genTx _era ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
-  = bimap
-      ApiError
-      (\b -> (signShelleyTransaction b $ map WitnessPaymentKey allKeys, getTxId b))
-      (createAndValidateTransactionBody txBodyContent)
+  -- This use of 'Data.Bifunctor.bimap` lifts the error type to 'Env.Error'
+  -- at the same time as it adds a signature to the transaction body and
+  -- fetches the transaction ID from it too.
+  = ApiError `bimap` (\b -> (signShelleyTransaction b allKeys, getTxId b))
+        $ createAndValidateTransactionBody txBodyContent
  where
-  allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
+  allKeys = mapMaybe (fmap WitnessPaymentKey . getFundKey) $ inFunds ++ collFunds
   txBodyContent = defaultTxBodyContent
     & setTxIns (map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds)
     & setTxInsCollateral collateral
@@ -179,7 +163,6 @@ genTx _era ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
     & setTxValidityRange (TxValidityNoLowerBound, defaultTxValidityUpperBound)
     & setTxMetadata metadata
     & setTxProtocolParams (BuildTxWith (Just ledgerParameters))
-
 
 txSizeInBytes :: forall era. IsShelleyBasedEra era =>
      Tx era

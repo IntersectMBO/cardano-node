@@ -125,7 +125,7 @@ mangle :: Monad m => [ CreateAndStore m era ] -> CreateAndStoreList m era [ Love
 mangle fkts values
   = (outs, \txId -> mapM_ (\f -> f txId) fs)
   where
-    (outs, fs) = unzip $ map worker $ zip3 fkts values [TxIx 0 ..]
-    worker (toUTxO, value, idx)
+    (outs, fs) = unzip $ zipWith3 worker fkts values [TxIx 0 ..]
+    worker toUTxO value idx
       = let (o, f ) = toUTxO value
          in  (o, f idx)
