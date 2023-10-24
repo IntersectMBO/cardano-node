@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -22,13 +23,14 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley.API as Shelley
 
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock, Header (..))
-import           Ouroboros.Consensus.HardFork.Combinator (HardForkBlock, Header (..),
+import           Ouroboros.Consensus.HardFork.Combinator (HardForkBlock,
                    OneEraHeader (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Block (Header (..), ShelleyBlock)
 
 import           Ouroboros.Consensus.Shelley.Protocol.Abstract
 
 import Legacy.LegacyBlock
+import Data.Coerce (coerce)
 
 -- | Block issuer verification key hash.
 data BlockIssuerVerificationKeyHash
@@ -72,8 +74,8 @@ instance
       -- We don't support a "block issuer" key role in @cardano-api@, so we'll
       -- just convert it to a stake pool key.
       toStakePoolKey
-        :: Shelley.VKey 'Shelley.BlockIssuer era
-        -> Shelley.VKey 'Shelley.StakePool era
+        :: Shelley.VKey 'Shelley.BlockIssuer era'
+        -> Shelley.VKey 'Shelley.StakePool era'
       toStakePoolKey vk = Shelley.VKey (Shelley.unVKey vk)
 
       issuer = pHeaderIssuer (shelleyHeaderRaw shelleyBlkHdr)
@@ -85,5 +87,5 @@ instance All HasIssuer xs => HasIssuer (HardForkBlock xs) where
       . getOneEraHeader
       . getHardForkHeader
 
-instance HasIssuer (LegacyBlock blk) where
-  getIssuerVerificationKeyHash = undefined
+instance HasIssuer blk => HasIssuer (LegacyBlock blk) where
+  getIssuerVerificationKeyHash = getIssuerVerificationKeyHash @blk . coerce
