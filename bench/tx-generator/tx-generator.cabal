@@ -240,8 +240,9 @@ test-suite tx-generator-test
 test-suite tx-generator-monad-test
   import:               project-config
   hs-source-dirs:       test
-  main-is:              MonadicMain.hs
   type:                 exitcode-stdio-1.0
+  main-is:              MonadicMain.hs
+  ghc-options:          -main-is MonadicMain.main
 
   default-extensions:   OverloadedStrings
   default-language:     Haskell2010
@@ -251,6 +252,7 @@ test-suite tx-generator-monad-test
                       , attoparsec
                       , base >= 4.12
                       , base16-bytestring
+                      , bimap
                       , bytestring
                       , cardano-api
                       , cardano-cli
@@ -265,6 +267,7 @@ test-suite tx-generator-monad-test
                       , cborg
                       , containers
                       , contra-tracer
+                      , cryptonite
                       , dlist
                       , extra
                       , io-classes

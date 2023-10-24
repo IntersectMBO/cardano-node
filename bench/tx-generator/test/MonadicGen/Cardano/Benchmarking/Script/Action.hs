@@ -33,7 +33,7 @@ import           MonadicGen.Cardano.TxGenerator.Setup.NodeConfig
 -- which execute the specified actions when evaluated. It passes all
 -- the cases' fields to functions with very similar names to the
 -- constructors.
-action :: Action -> ActionM ()
+action :: Monoid w => Action -> ActionM' w ()
 action a = case a of
   SetNetworkId val -> setEnvNetworkId val
   SetSocketPath val -> setEnvSocketPath val
@@ -54,7 +54,7 @@ action a = case a of
 -- | 'startProtocol' sets up the protocol for the transaction
 -- generator from the first argument, @configFile@ and optionally
 -- traces to the second, @tracerSocket@.
-startProtocol :: FilePath -> Maybe FilePath -> ActionM ()
+startProtocol :: Monoid w => FilePath -> Maybe FilePath -> ActionM' w ()
 startProtocol configFile tracerSocket = do
   nodeConfig <- liftToAction $ mkNodeConfig configFile
   protocol <-  liftToAction $ mkConsensusProtocol nodeConfig
