@@ -56,3 +56,13 @@ package bitvec
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
+
+-- optimize block context acquisition
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-consensus
+  tag: ea76c4662743e129bf56d206fd212e2fe45685c9
+  --sha256: 16cv8jjs42ij1rxakdpgdrjlqqs4pwll10n75kx6ri0gcpqljw4w
+  subdir:
+   ouroboros-consensus
+   ouroboros-consensus-diffusion
