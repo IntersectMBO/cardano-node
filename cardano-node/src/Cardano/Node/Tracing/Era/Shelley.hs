@@ -165,10 +165,6 @@ instance LogFormatting (Conway.ConwayDelegPredFailure era) where
       , "amount" .= String (textShow credential)
       , "error" .= String "DRep already registered for the stake key"
       ]
-    Conway.WrongCertificateTypeDELEG ->
-      [ "kind" .= String "WrongCertificateTypeDELEG"
-      , "error" .= String "Wrong certificate type"
-      ]
 
 instance
   ( ShelleyCompatible protocol era

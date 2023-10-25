@@ -212,10 +212,6 @@ instance ToObject (Conway.ConwayDelegPredFailure era) where
       , "amount" .= String (textShow credential)
       , "error" .= String "DRep already registered for the stake key"
       ]
-    Conway.WrongCertificateTypeDELEG ->
-      [ "kind" .= String "WrongCertificateTypeDELEG"
-      , "error" .= String "Wrong certificate type"
-      ]
 
 instance ToObject (Set (Credential 'Staking StandardCrypto)) where
   toObject _verb creds =
