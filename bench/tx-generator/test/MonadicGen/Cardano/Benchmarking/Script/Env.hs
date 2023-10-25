@@ -29,6 +29,7 @@ module MonadicGen.Cardano.Benchmarking.Script.Env (
         ActionM
         , ActionM'
         , Error(..)
+        , emptyEnv
         , runActionM
         , runActionM'
         , runActionMEnv

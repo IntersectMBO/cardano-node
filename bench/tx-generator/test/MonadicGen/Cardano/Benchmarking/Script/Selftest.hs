@@ -46,9 +46,9 @@ runSelftest iom outFile = do
     fullScript = do
         setBenchTracers initNullTracers
         forM_ (testScript protocolFile submitMode) action
-  runActionM fullScript iom >>= \case
-    (Right a  , _ ,  ()) -> return $ Right a
-    (Left err , _  , ()) -> return $ Left err
+  runActionM' fullScript iom >>= \case
+    (Right a  , _ ,  _) -> return $ Right a
+    (Left err , _  , _) -> return $ Left err
 
 -- | 'printJSON' prints out the list of actions using Aeson.
 -- It has no callers within @cardano-node@.

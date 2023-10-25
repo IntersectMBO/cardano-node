@@ -18,11 +18,14 @@
 module MonadicGen.Cardano.Benchmarking.Script.Core
 where
 
+import           Control.Arrow ((|||))
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
+import           Control.Monad.Trans.RWS ()
+import           Control.Monad.Writer (tell)
 import           "contra-tracer" Control.Tracer (nullTracer)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
@@ -73,10 +76,15 @@ import qualified MonadicGen.Cardano.Benchmarking.Script.Env as Env (Error (TxGen
 import           MonadicGen.Cardano.Benchmarking.Script.Types
 import           MonadicGen.Cardano.Benchmarking.Version as Version
 
-liftCoreWithEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM (Either TxGenError x)
+data TxListElem = forall era. IsShelleyBasedEra era => TxListElem (Tx era)
+
+instance Show TxListElem where
+  show (TxListElem tx) = show tx
+
+liftCoreWithEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM' [TxListElem] (Either TxGenError x)
 liftCoreWithEra era coreCall = withEra era ( liftIO . runExceptT . coreCall)
 
-withEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ActionM' w x) -> ActionM' w x
+withEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ActionM' [TxListElem] x) -> ActionM' [TxListElem] x
 withEra era action = do
   case era of
     AnyCardanoEra ConwayEra  -> action AsConwayEra
@@ -95,25 +103,25 @@ setProtocolParameters s = case s of
     protocolParameters <- liftIO $ readProtocolParametersFile file
     setProtoParamMode $ ProtocolParameterLocal protocolParameters
 
-readSigningKey :: Monoid w => String -> SigningKeyFile In -> ActionM' w ()
+readSigningKey :: String -> SigningKeyFile In -> ActionM' [TxListElem] ()
 readSigningKey name filePath =
   liftIO (readSigningKeyFile filePath) >>= \case
     Left err -> liftTxGenError err
     Right key -> setEnvKeys name key
 
-defineSigningKey :: Monoid w => String -> SigningKey PaymentKey -> ActionM' w ()
+defineSigningKey :: String -> SigningKey PaymentKey -> ActionM' [TxListElem] ()
 defineSigningKey = setEnvKeys
 
-addFund :: forall w . Monoid w => AnyCardanoEra -> String -> TxIn -> Lovelace -> String -> ActionM' w ()
+addFund :: AnyCardanoEra -> String -> TxIn -> Lovelace -> String -> ActionM' [TxListElem] ()
 addFund era wallet txIn lovelace keyName = do
   fundKey  <- getEnvKeys keyName
   let
-    mkOutValue :: forall era . IsShelleyBasedEra era => AsType era -> ActionM' w (InAnyCardanoEra TxOutValue)
+    mkOutValue :: forall era . IsShelleyBasedEra era => AsType era -> ActionM' [TxListElem] (InAnyCardanoEra TxOutValue)
     mkOutValue _ = return $ InAnyCardanoEra (cardanoEra @era) (lovelaceToTxOutValue lovelace)
   outValue <- withEra era mkOutValue
   addFundToWallet wallet txIn outValue fundKey
 
-addFundToWallet :: Monoid w => String -> TxIn -> InAnyCardanoEra TxOutValue -> SigningKey PaymentKey -> ActionM' w ()
+addFundToWallet :: String -> TxIn -> InAnyCardanoEra TxOutValue -> SigningKey PaymentKey -> ActionM' [TxListElem] ()
 addFundToWallet wallet txIn outVal skey = do
   walletRef <- getEnvWallets wallet
   liftIO (walletRefInsertFund walletRef (FundQueue.Fund $ mkFund outVal))
@@ -125,13 +133,13 @@ addFundToWallet wallet txIn outVal skey = do
          , _fundSigningKey = Just skey
          }
 
-getLocalSubmitTx :: Monoid w => ActionM' w LocalSubmitTx
+getLocalSubmitTx :: ActionM' [TxListElem] LocalSubmitTx
 getLocalSubmitTx = submitTxToNodeLocal <$> getLocalConnectInfo
 
-delay :: Monoid w => Double -> ActionM' w ()
+delay :: Double -> ActionM' [TxListElem] ()
 delay t = liftIO $ threadDelay $ floor $ 1_000_000 * t
 
-waitBenchmarkCore :: Monoid w => AsyncBenchmarkControl -> ActionM' w ()
+waitBenchmarkCore :: AsyncBenchmarkControl -> ActionM' [TxListElem] ()
 waitBenchmarkCore ctl = do
   tracers  <- getBenchTracers
   _ <- liftIO $ runExceptT $ GeneratorTx.waitBenchmark (btTxSubmit_ tracers) ctl
@@ -150,10 +158,10 @@ getConnectClient = do
                        nullTracer -- (btSubmission2_ tracers)
                        (protocolToCodecConfig protocol)
                        networkMagic
-waitBenchmark :: Monoid w => String -> ActionM' w ()
+waitBenchmark :: String -> ActionM' [TxListElem] ()
 waitBenchmark n = getEnvThreads n >>= waitBenchmarkCore
 
-cancelBenchmark :: Monoid w => String -> ActionM' w ()
+cancelBenchmark :: String -> ActionM' [TxListElem] ()
 cancelBenchmark n = do
   ctl@(_, _ , _ , shutdownAction) <- getEnvThreads n
   liftIO shutdownAction
@@ -171,7 +179,7 @@ queryEra = do
     Right era -> return era
     Left err -> liftTxGenError $ TxGenError $ show err
 
-queryRemoteProtocolParameters :: forall w . Monoid w => ActionM' w ProtocolParameters
+queryRemoteProtocolParameters :: forall w. Monoid w => ActionM' w ProtocolParameters
 queryRemoteProtocolParameters = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
@@ -207,7 +215,7 @@ getProtocolParameters = do
     ProtocolParameterQuery -> queryRemoteProtocolParameters
     ProtocolParameterLocal parameters -> return parameters
 
-waitForEra :: Monoid w => AnyCardanoEra -> ActionM' w ()
+waitForEra :: AnyCardanoEra -> ActionM' [TxListElem] ()
 waitForEra era = do
   currentEra <- queryEra
   if currentEra == era
@@ -217,7 +225,7 @@ waitForEra era = do
       liftIO $ threadDelay 1_000_000
       waitForEra era
 
-localSubmitTx :: Monoid w => TxInMode CardanoMode -> ActionM' w (SubmitResult (TxValidationErrorInMode CardanoMode))
+localSubmitTx :: TxInMode CardanoMode -> ActionM' [TxListElem] (SubmitResult (TxValidationErrorInMode CardanoMode))
 localSubmitTx tx = do
   submit <- getLocalSubmitTx
   ret <- liftIO $ submit tx
@@ -240,10 +248,10 @@ toMetadata (Just payloadSize) = case mkMetadata payloadSize of
   Right m -> m
   Left err -> error err
 
-submitAction :: Monoid w => AnyCardanoEra -> SubmitMode -> Generator -> TxGenTxParams -> ActionM' w ()
+submitAction :: AnyCardanoEra -> SubmitMode -> Generator -> TxGenTxParams -> ActionM' [TxListElem] ()
 submitAction era submitMode generator txParams = withEra era $ submitInEra submitMode generator txParams
 
-submitInEra :: forall w era. (Monoid w, IsShelleyBasedEra era) => SubmitMode -> Generator -> TxGenTxParams -> AsType era -> ActionM' w ()
+submitInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Generator -> TxGenTxParams -> AsType era -> ActionM' [TxListElem] ()
 submitInEra submitMode generator txParams era = do
   txStream <- evalGenerator generator txParams era
   case submitMode of
@@ -258,7 +266,7 @@ submitInEra submitMode generator txParams era = do
   showTx (Left err) = error $ show err
   showTx (Right tx) = '\n' : show tx
    -- todo: use Streaming.run
-  submitAll :: (Tx era -> ActionM' w ()) -> TxStream IO era -> ActionM' w ()
+  submitAll :: (Tx era -> ActionM' [TxListElem] ()) -> TxStream IO era -> ActionM' [TxListElem] ()
   submitAll callback stream = do
     step <- liftIO $ Streaming.inspect stream
     case step of
@@ -288,7 +296,7 @@ benchmarkTxStream txStream targetNodes threadName tps txCount era = do
     Left err -> liftTxGenError err
     Right ctl -> setEnvThreads threadName ctl
 
-evalGenerator :: forall w era. (Monoid w, IsShelleyBasedEra era) => Generator -> TxGenTxParams -> AsType era -> ActionM' w (TxStream IO era)
+evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM' [TxListElem] (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   networkId <- getEnvNetworkId
   protocolParameters <- getProtocolParameters
@@ -308,6 +316,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
             gen = do
               walletRefInsertFund destWallet fund
               return $ Right tx
+          tell [TxListElem tx]
           return $ Streaming.effect (Streaming.yield <$> gen)
 
         -- 'Split' combines regular payments and payments for change.
@@ -326,6 +335,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
             txGenerator = genTx (cardanoEra @era) ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
           inputFunds <- liftToAction $ walletSource wallet 1
           sourceToStore <- withTxGenError . sourceToStoreTransactionNew txGenerator inputFunds inToOut $ mangleWithChange (liftIOCreateAndStore toUTxOChange) (liftIOCreateAndStore toUTxO)
+          tell [TxListElem sourceToStore]
           return . Streaming.effect . pure . Streaming.yield $ Right sourceToStore
 
         -- The 'SplitN' case's call chain is somewhat elaborate.
@@ -342,6 +352,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
             txGenerator = genTx (cardanoEra @era) ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
           inputFunds <- liftToAction $ walletSource wallet 1
           sourceToStore <- withTxGenError $ sourceToStoreTransactionNew txGenerator inputFunds inToOut (mangle . repeat $ liftIOCreateAndStore toUTxO)
+          tell [TxListElem sourceToStore]
           return . Streaming.effect . pure . Streaming.yield $ Right sourceToStore
 
         NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
@@ -357,6 +368,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
               throwE err
           inputFunds <- liftToAction $ walletSource wallet inputs
           sourceToStore <- withTxGenError $ sourceToStoreTransactionNew txGenerator inputFunds inToOut (mangle . repeat $ liftIOCreateAndStore toUTxO)
+          tell [TxListElem sourceToStore]
 
           fundPreview <- liftIO $ walletPreview wallet inputs
           preview <- withTxGenError (sourceTransactionPreview txGenerator fundPreview inToOut (mangle . repeat $ liftIOCreateAndStore toUTxO))
@@ -393,9 +405,9 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
     -- This could be golfed as @((liftIO .) .)@ but it's unreadable.
     liftIOCreateAndStore cas = second (\f x y -> liftIO (f x y)) . cas
 
-selectCollateralFunds :: forall w era. (Monoid w, IsShelleyBasedEra era)
+selectCollateralFunds :: forall era. IsShelleyBasedEra era
   => Maybe String
-  -> ActionM' w (TxInsCollateral era, [FundQueue.Fund])
+  -> ActionM' [TxListElem] (TxInsCollateral era, [FundQueue.Fund])
 selectCollateralFunds Nothing = return (TxInsCollateralNone, [])
 selectCollateralFunds (Just walletName) = do
   cw <- getEnvWallets walletName
@@ -406,7 +418,7 @@ selectCollateralFunds (Just walletName) = do
       Nothing -> throwE $ WalletError $ "selectCollateralFunds: collateral: era not supported :" ++ show (cardanoEra @era)
       Just p -> return (TxInsCollateral p $  map getFundTxIn collateralFunds, collateralFunds)
 
-dumpToFile :: FilePath -> TxInMode CardanoMode -> ActionM ()
+dumpToFile :: Monoid w => FilePath -> TxInMode CardanoMode -> ActionM' w ()
 dumpToFile filePath tx = liftIO $ dumpToFileIO filePath tx
 
 dumpToFileIO :: FilePath -> TxInMode CardanoMode -> IO ()
@@ -547,7 +559,7 @@ dumpBudgetSummaryIfExisting
   where
     summaryFile = "plutus-budget-summary.json"
 
-traceTxGeneratorVersion :: ActionM ()
+traceTxGeneratorVersion :: Monoid w => ActionM' w ()
 traceTxGeneratorVersion = traceBenchTxSubmit TraceTxGeneratorVersion Version.txGeneratorVersion
 
 {-

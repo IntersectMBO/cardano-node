@@ -17,7 +17,7 @@ import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           MonadicGen.Cardano.Benchmarking.Script.Action
 import           MonadicGen.Cardano.Benchmarking.Script.Aeson (parseScriptFileAeson)
-import           MonadicGen.Cardano.Benchmarking.Script.Core (setProtocolParameters,
+import           MonadicGen.Cardano.Benchmarking.Script.Core (TxListElem, setProtocolParameters,
                    traceTxGeneratorVersion)
 import           MonadicGen.Cardano.Benchmarking.Script.Env
 import           MonadicGen.Cardano.Benchmarking.Script.Types
@@ -26,24 +26,24 @@ import           MonadicGen.Cardano.Benchmarking.Tracer
 type Script = [Action]
 
 runScript :: Script -> IOManager -> IO (Either Error ())
-runScript script iom = runActionM execScript iom >>= \case
-  (Right a  , s ,  ()) -> do
+runScript script iom = runActionM' execScript iom >>= \case
+  (Right a  , s ,  _) -> do
     cleanup s shutDownLogging
     threadDelay 10_000_000
     return $ Right a
-  (Left err , s  , ()) -> do
+  (Left err , s  , _) -> do
     cleanup s (traceError (show err) >> shutDownLogging)
     threadDelay 10_000_000
     return $ Left err
  where
-  cleanup s a = void $ runActionMEnv s a iom
+  cleanup s a = void $ runActionMEnv' s a iom
   execScript = do
     liftIO (initTxGenTracers Nothing) >>= setBenchTracers
     traceTxGeneratorVersion
     setProtocolParameters QueryLocalNode
     forM_ script action
 
-shutDownLogging :: ActionM ()
+shutDownLogging :: ActionM' [TxListElem] ()
 shutDownLogging = do
   traceError "QRT Last Message. LoggingLayer going to shutdown. 73 . . . ."
   liftIO $ threadDelay (200 * 1_000)

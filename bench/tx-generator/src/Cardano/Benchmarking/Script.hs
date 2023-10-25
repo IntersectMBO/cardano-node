@@ -18,7 +18,7 @@ import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (parseScriptFileAeson)
-import           Cardano.Benchmarking.Script.Core (setProtocolParameters)
+import           Cardano.Benchmarking.Script.Core (TxListElem, setProtocolParameters)
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Types
 
@@ -31,21 +31,21 @@ runScript script iom = do
   threadDelay $ 150 * 1_000
   return result
   where
-    go = runActionM execScript iom >>= \case
-      (Right a  , s ,  ()) -> do
+    go = runActionM' execScript iom >>= \case
+      (Right a  , s ,  _) -> do
         cleanup s shutDownLogging
         return $ Right a
-      (Left err , s  , ()) -> do
+      (Left err , s  , _) -> do
         cleanup s (traceError (show err) >> shutDownLogging)
         return $ Left err
       where
-        cleanup s a = void $ runActionMEnv s a iom
+        cleanup s a = void $ runActionMEnv' s a iom
 
         execScript = do
           setProtocolParameters QueryLocalNode
           forM_ script action
 
-shutDownLogging :: ActionM ()
+shutDownLogging :: ActionM' [TxListElem] ()
 shutDownLogging = do
   traceError "QRT Last Message. LoggingLayer going to shutdown. 73 . . . ."
   liftIO $ threadDelay $ 350 * 1_000

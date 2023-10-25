@@ -33,7 +33,7 @@ import           MonadicGen.Cardano.TxGenerator.Setup.NodeConfig
 -- which execute the specified actions when evaluated. It passes all
 -- the cases' fields to functions with very similar names to the
 -- constructors.
-action :: Monoid w => Action -> ActionM' w ()
+action :: Action -> ActionM' [TxListElem] ()
 action a = case a of
   SetNetworkId val -> setEnvNetworkId val
   SetSocketPath val -> setEnvSocketPath val

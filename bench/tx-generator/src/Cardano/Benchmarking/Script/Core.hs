@@ -3,6 +3,7 @@
 
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -20,11 +21,14 @@ where
 
 import           "contra-tracer" Control.Tracer (Tracer (..))
 
+import           Control.Arrow ((|||))
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
+import           Control.Monad.Trans.RWS ()
+import           Control.Monad.Writer (tell)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
 
@@ -74,10 +78,25 @@ import qualified Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Version as Version
 
-liftCoreWithEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM (Either TxGenError x)
-liftCoreWithEra era coreCall = withEra era ( liftIO . runExceptT . coreCall)
+data TxListElem = forall era. IsShelleyBasedEra era => TxListElem (Tx era)
 
-withEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ActionM' w x) -> ActionM' w x
+instance Show TxListElem where
+  show (TxListElem tx) = show tx
+
+-- liftCoreWithEra :: forall x era. IsShelleyBasedEra era => AnyCardanoEra -> (forall era'. IsShelleyBasedEra era' => AsType era' -> ExceptT TxGenError IO x) -> ActionM' [TxListElem] (Either TxGenError x)
+liftCoreWithEra :: forall x w. Monoid w => AnyCardanoEra -> (forall era'. IsShelleyBasedEra era' => AsType era' -> ExceptT TxGenError IO x) -> ActionM' w (Either TxGenError x)
+liftCoreWithEra era coreCall = -- withEra era ( (liftIO :: forall s t. IO t -> ActionM' [s] t) . runExceptT . coreCall)
+  case era of
+    AnyCardanoEra ConwayEra  -> liftIO . runExceptT $ coreCall AsConwayEra
+    AnyCardanoEra BabbageEra -> liftIO . runExceptT $ coreCall AsBabbageEra
+    AnyCardanoEra AlonzoEra  -> liftIO . runExceptT $ coreCall AsAlonzoEra
+    AnyCardanoEra MaryEra    -> liftIO . runExceptT $ coreCall AsMaryEra
+    AnyCardanoEra AllegraEra -> liftIO . runExceptT $ coreCall AsAllegraEra
+    AnyCardanoEra ShelleyEra -> liftIO . runExceptT $ coreCall AsShelleyEra
+    AnyCardanoEra ByronEra   -> error "byron not supported"
+
+{-
+withEra :: forall x w. Monoid w => AnyCardanoEra -> (forall era'. IsShelleyBasedEra era' => AsType era' -> ActionM' [Tx era'] x) -> ActionM' w x
 withEra era action = do
   case era of
     AnyCardanoEra ConwayEra  -> action AsConwayEra
@@ -87,6 +106,7 @@ withEra era action = do
     AnyCardanoEra AllegraEra -> action AsAllegraEra
     AnyCardanoEra ShelleyEra -> action AsShelleyEra
     AnyCardanoEra ByronEra   -> error "byron not supported"
+-}
 
 setProtocolParameters :: Monoid w => ProtocolParametersSource -> ActionM' w ()
 setProtocolParameters s = case s of
@@ -105,13 +125,21 @@ readSigningKey name filePath =
 defineSigningKey :: Monoid w => String -> SigningKey PaymentKey -> ActionM' w ()
 defineSigningKey = setEnvKeys
 
-addFund :: forall w . Monoid w => AnyCardanoEra -> String -> TxIn -> Lovelace -> String -> ActionM' w ()
+addFund :: AnyCardanoEra -> String -> TxIn -> Lovelace -> String -> ActionM' [TxListElem] ()
 addFund era wallet txIn lovelace keyName = do
   fundKey  <- getEnvKeys keyName
   let
-    mkOutValue :: forall era . IsShelleyBasedEra era => AsType era -> ActionM' w (InAnyCardanoEra TxOutValue)
-    mkOutValue _ = return $ InAnyCardanoEra (cardanoEra @era) (lovelaceToTxOutValue lovelace)
-  outValue <- withEra era mkOutValue
+    mkOutValue :: forall w era'. (Monoid w, IsShelleyBasedEra era') => AsType era' -> ActionM' w (InAnyCardanoEra TxOutValue)
+    mkOutValue _ = return $ InAnyCardanoEra (cardanoEra @era') (lovelaceToTxOutValue lovelace)
+  -- outValue <- withEra era mkOutValue
+  outValue <- case era of
+                AnyCardanoEra ConwayEra  -> mkOutValue AsConwayEra
+                AnyCardanoEra BabbageEra -> mkOutValue AsBabbageEra
+                AnyCardanoEra AlonzoEra  -> mkOutValue AsAlonzoEra
+                AnyCardanoEra MaryEra    -> mkOutValue AsMaryEra
+                AnyCardanoEra AllegraEra -> mkOutValue AsAllegraEra
+                AnyCardanoEra ShelleyEra -> mkOutValue AsShelleyEra
+                AnyCardanoEra ByronEra   -> error "byron not supported"
   addFundToWallet wallet txIn outValue fundKey
 
 addFundToWallet :: Monoid w => String -> TxIn -> InAnyCardanoEra TxOutValue -> SigningKey PaymentKey -> ActionM' w ()
@@ -241,10 +269,18 @@ toMetadata (Just payloadSize) = case mkMetadata payloadSize of
   Right m -> m
   Left err -> error err
 
-submitAction :: Monoid w => AnyCardanoEra -> SubmitMode -> Generator -> TxGenTxParams -> ActionM' w ()
-submitAction era submitMode generator txParams = withEra era $ submitInEra submitMode generator txParams
+submitAction :: AnyCardanoEra -> SubmitMode -> Generator -> TxGenTxParams -> ActionM' [TxListElem] ()
+submitAction era submitMode generator txParams = -- withEra era $ submitInEra submitMode generator txParams
+  case era of
+    AnyCardanoEra ConwayEra  -> submitInEra submitMode generator txParams AsConwayEra
+    AnyCardanoEra BabbageEra -> submitInEra submitMode generator txParams AsBabbageEra
+    AnyCardanoEra AlonzoEra  -> submitInEra submitMode generator txParams AsAlonzoEra
+    AnyCardanoEra MaryEra    -> submitInEra submitMode generator txParams AsMaryEra
+    AnyCardanoEra AllegraEra -> submitInEra submitMode generator txParams AsAllegraEra
+    AnyCardanoEra ShelleyEra -> submitInEra submitMode generator txParams AsShelleyEra
+    AnyCardanoEra ByronEra   -> error "byron not supported"
 
-submitInEra :: forall w era. (Monoid w, IsShelleyBasedEra era) => SubmitMode -> Generator -> TxGenTxParams -> AsType era -> ActionM' w ()
+submitInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Generator -> TxGenTxParams -> AsType era -> ActionM' [TxListElem] ()
 submitInEra submitMode generator txParams era = do
   txStream <- evalGenerator generator txParams era
   case submitMode of
@@ -258,15 +294,15 @@ submitInEra submitMode generator txParams era = do
   forceTx (Left err) = error $ show err
   showTx (Left err) = error $ show err
   showTx (Right tx) = '\n' : show tx
-   -- todo: use Streaming.run
-  submitAll :: (Tx era -> ActionM' w ()) -> TxStream IO era -> ActionM' w ()
+  -- todo: use Streaming.run
+  -- submitAll :: (Tx era -> ActionM' [TxListElem] ()) -> TxStream IO era -> ActionM' [TxListElem] ()
   submitAll callback stream = do
     step <- liftIO $ Streaming.inspect stream
     case step of
       (Left ()) -> return ()
       (Right (Left err :> _rest)) -> liftTxGenError $ TxGenError $ show err
       (Right (Right tx :> rest)) -> do
-        callback tx
+        _ <- callback tx
         submitAll callback rest
 
 benchmarkTxStream :: forall w era. (Monoid w, IsShelleyBasedEra era)
@@ -289,7 +325,7 @@ benchmarkTxStream txStream targetNodes threadName tps txCount era = do
     Left err -> liftTxGenError err
     Right ctl -> setEnvThreads threadName ctl
 
-evalGenerator :: forall w era. (Monoid w, IsShelleyBasedEra era) => Generator -> TxGenTxParams -> AsType era -> ActionM' w (TxStream IO era)
+evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM' [TxListElem] (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   networkId <- getEnvNetworkId
   protocolParameters <- getProtocolParameters
@@ -304,6 +340,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           genesisKey  <- getEnvKeys genesisKeyName
           (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither $
             Genesis.genesisSecureInitialFund networkId genesis genesisKey destKey txParams
+          lift $ tell [TxListElem tx]
           let
             gen = do
               walletRefInsertFund destWallet fund
@@ -326,7 +363,9 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
             inToOut = Utils.includeChange fee coins
             txGenerator = genTx (cardanoEra @era) ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
             sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+          etx <- liftIO sourceToStore
+          const (pure ()) ||| lift . tell . (:[]) . TxListElem $ etx
+          return $ Streaming.effect (Streaming.yield <$> pure etx)
 
         -- The 'SplitN' case's call chain is somewhat elaborate.
         -- The division is done in 'Utils.inputsToOutputsWithFee'
@@ -342,7 +381,9 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
             inToOut = Utils.inputsToOutputsWithFee fee count
             txGenerator = genTx (cardanoEra @era) ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
             sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+          etx <- liftIO sourceToStore
+          const (pure ()) ||| lift . tell . (:[]) . TxListElem $ etx
+          return $ Streaming.effect (Streaming.yield <$> pure etx)
 
         NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
           wallet <- getEnvWallets walletName
@@ -368,7 +409,9 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
                 traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
               dumpBudgetSummaryIfExisting
 
-          return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+          etx <- liftIO sourceToStore
+          const (pure ()) ||| lift . tell . (:[]) . TxListElem $ etx
+          return $ Streaming.effect (Streaming.yield <$> pure etx)
 
         Sequence l -> do
           gList <- forM l $ \g -> evalGenerator g txParams era
@@ -539,7 +582,7 @@ dumpBudgetSummaryIfExisting
   where
     summaryFile = "plutus-budget-summary.json"
 
-traceTxGeneratorVersion :: ActionM ()
+traceTxGeneratorVersion :: Monoid w => ActionM' w ()
 traceTxGeneratorVersion = traceBenchTxSubmit TraceTxGeneratorVersion Version.txGeneratorVersion
 
 {-
