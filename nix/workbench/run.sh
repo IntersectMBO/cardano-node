@@ -533,6 +533,9 @@ EOF
 
         ## 8. deploy genesis
         progress "run | genesis" "deploying.."
+echo "---------- SLEEP START ----------"
+sleep 180
+echo "----------  SLEEP END  ----------"
         backend deploy-genesis "$dir"
 
         ## 9. everything needed to start-[tracers|nodes|generator] should be
