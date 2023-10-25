@@ -59,7 +59,7 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Client (ClientStIdle (
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (BlockingReplyList (..),
                                                                 TokBlockingStyle (..), TxSizeInBytes)
 
-import           Cardano.Api
+import           Cardano.Api hiding (Active)
 import           Cardano.Api.Shelley (fromShelleyTxId, toConsensusGenTx)
 
 import           Cardano.Logging
