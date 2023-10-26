@@ -121,7 +121,8 @@ dummyTxSizeInEra metadata = case createAndValidateTransactionBody (cardanoEra @e
         )
       ]
     & setTxFee (mkTxFee 0)
-    & setTxValidityRange (TxValidityNoLowerBound, mkTxValidityUpperBound 0)
+    & setTxValidityLowerBound TxValidityNoLowerBound
+    & setTxValidityUpperBound (mkTxValidityUpperBound 0)
     & setTxMetadata metadata
 
 dummyTxSize :: forall era . IsShelleyBasedEra era => AsType era -> Maybe TxMetadata -> Int

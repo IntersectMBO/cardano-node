@@ -74,8 +74,8 @@ mkTxFee f = caseByronOrShelleyBasedEra
 -- | `mkTxValidityUpperBound` rules out needing the
 -- `TxValidityNoUpperBound` with the constraint of `IsShelleyBasedEra`.
 mkTxValidityUpperBound :: forall era. IsShelleyBasedEra era => SlotNo -> TxValidityUpperBound era
-mkTxValidityUpperBound =
-  TxValidityUpperBound (fromJust $ forEraMaybeEon (cardanoEra @era))
+mkTxValidityUpperBound slotNo =
+  TxValidityUpperBound (fromJust $ forEraMaybeEon (cardanoEra @era)) (Just slotNo)
 
 -- | `mkTxOutValueAdaOnly` reinterprets the `Either` returned by
 -- `multiAssetSupportedInEra` with `TxOutValue` constructors.
