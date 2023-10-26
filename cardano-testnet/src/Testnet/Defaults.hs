@@ -206,29 +206,25 @@ defaultYamlHardforkViaConfig era =
       ByronEra -> []
       ShelleyEra ->
         map (uncurry KeyMapAeson.singleton)
-          [ ("ExperimentalHardForksEnabled", Aeson.Bool True)
-          , ("ExperimentalProtocolsEnabled", Aeson.Bool True)
+          [ ("ExperimentalProtocolsEnabled", Aeson.Bool True)
           , ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
           ]
       AllegraEra ->
         map (uncurry KeyMapAeson.singleton)
-          [ ("ExperimentalHardForksEnabled", Aeson.Bool True)
-          , ("ExperimentalProtocolsEnabled", Aeson.Bool True)
+          [ ("ExperimentalProtocolsEnabled", Aeson.Bool True)
           , ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
           , ("TestAllegraHardForkAtEpoch", Aeson.Number 0)
           ]
       MaryEra ->
         map (uncurry KeyMapAeson.singleton)
-          [ ("ExperimentalHardForksEnabled", Aeson.Bool True)
-          , ("ExperimentalProtocolsEnabled", Aeson.Bool True)
+          [ ("ExperimentalProtocolsEnabled", Aeson.Bool True)
           , ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
           , ("TestAllegraHardForkAtEpoch", Aeson.Number 0)
           , ("TestMaryHardForkAtEpoch", Aeson.Number 0)
           ]
       AlonzoEra ->
         map (uncurry KeyMapAeson.singleton)
-          [ ("ExperimentalHardForksEnabled", Aeson.Bool True)
-          , ("ExperimentalProtocolsEnabled", Aeson.Bool True)
+          [ ("ExperimentalProtocolsEnabled", Aeson.Bool True)
           , ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
           , ("TestAllegraHardForkAtEpoch", Aeson.Number 0)
           , ("TestMaryHardForkAtEpoch", Aeson.Number 0)
@@ -236,8 +232,7 @@ defaultYamlHardforkViaConfig era =
           ]
       BabbageEra ->
         map (uncurry KeyMapAeson.singleton)
-          [ ("ExperimentalHardForksEnabled", Aeson.Bool True)
-          , ("ExperimentalProtocolsEnabled", Aeson.Bool True)
+          [ ("ExperimentalProtocolsEnabled", Aeson.Bool True)
           , ("TestShelleyHardForkAtEpoch", Aeson.Number 0)
           , ("TestAllegraHardForkAtEpoch", Aeson.Number 0)
           , ("TestMaryHardForkAtEpoch", Aeson.Number 0)

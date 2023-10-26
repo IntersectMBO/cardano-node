@@ -5,7 +5,6 @@
     "EnableLogMetrics": false,
     "EnableLogging": true,
     "EnableP2P": false,
-    "ExperimentalHardForksEnabled": true,
     "ExperimentalProtocolsEnabled": true,
     "LastKnownBlockVersion-Alt": 0,
     "LastKnownBlockVersion-Major": 5,
