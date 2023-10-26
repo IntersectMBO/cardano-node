@@ -137,7 +137,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.25
+                      , cardano-api ^>= 8.29
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev
@@ -176,8 +176,8 @@ library
                       , network-mux >= 0.4
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-consensus ^>= 0.12
-                      , ouroboros-consensus-cardano ^>= 0.10
+                      , ouroboros-consensus ^>= 0.13
+                      , ouroboros-consensus-cardano ^>= 0.11
                       , ouroboros-consensus-diffusion ^>= 0.8
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api
