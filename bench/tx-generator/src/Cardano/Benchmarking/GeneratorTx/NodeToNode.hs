@@ -1,5 +1,5 @@
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -20,8 +20,8 @@ import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Codec.Serialise (DeserialiseFailure)
 import           Control.Concurrent.Class.MonadSTM.Strict (newTVarIO)
 import           Control.Monad.Class.MonadTimer (MonadTimer, threadDelay)
-import           Data.Foldable (fold)
 import           Data.ByteString.Lazy (ByteString)
+import           Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy (..))
 import           Data.Void (Void)
@@ -37,28 +37,29 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 
-import           Ouroboros.Network.Context
 import           Ouroboros.Network.Channel (Channel (..))
+import           Ouroboros.Network.Context
 import           Ouroboros.Network.ControlMessage (continueForever)
 import           Ouroboros.Network.DeltaQ (defaultGSV)
 import           Ouroboros.Network.Driver (runPeer, runPeerWithLimits)
 import           Ouroboros.Network.KeepAlive
 import           Ouroboros.Network.Magic
-import           Ouroboros.Network.Mux (MiniProtocolCb (..), OuroborosApplication (..), OuroborosBundle,
-                   RunMiniProtocol (..), MuxMode (..))
+import           Ouroboros.Network.Mux (MiniProtocolCb (..), MuxMode (..),
+                   OuroborosApplication (..), OuroborosBundle, RunMiniProtocol (..))
 import           Ouroboros.Network.NodeToClient (IOManager, chainSyncPeerNull)
 import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
+import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..), decodeRemoteAddress,
+                   encodeRemoteAddress)
 import           Ouroboros.Network.Protocol.BlockFetch.Client (BlockFetchClient (..),
                    blockFetchClientPeer)
 import           Ouroboros.Network.Protocol.Handshake.Version (simpleSingletonVersions)
 import           Ouroboros.Network.Protocol.KeepAlive.Client hiding (SendMsgDone)
 import           Ouroboros.Network.Protocol.KeepAlive.Codec
-import           Ouroboros.Network.Protocol.TxSubmission2.Client (TxSubmissionClient,
-                   txSubmissionClientPeer)
-import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..), encodeRemoteAddress, decodeRemoteAddress)
 import           Ouroboros.Network.Protocol.PeerSharing.Client (PeerSharingClient (..),
                    peerSharingClientPeer)
+import           Ouroboros.Network.Protocol.TxSubmission2.Client (TxSubmissionClient,
+                   txSubmissionClientPeer)
 
 import           Ouroboros.Network.Snocket (socketSnocket)
 
