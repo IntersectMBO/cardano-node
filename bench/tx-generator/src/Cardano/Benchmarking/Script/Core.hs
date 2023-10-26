@@ -365,7 +365,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
             sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
           etx <- liftIO sourceToStore
           const (pure ()) ||| lift . tell . (:[]) . TxListElem $ etx
-          return $ Streaming.effect (Streaming.yield <$> pure etx)
+          return . Streaming.effect . pure $ Streaming.yield etx
 
         -- The 'SplitN' case's call chain is somewhat elaborate.
         -- The division is done in 'Utils.inputsToOutputsWithFee'
@@ -383,7 +383,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
             sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
           etx <- liftIO sourceToStore
           const (pure ()) ||| lift . tell . (:[]) . TxListElem $ etx
-          return $ Streaming.effect (Streaming.yield <$> pure etx)
+          return . Streaming.effect . pure $ Streaming.yield etx
 
         NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
           wallet <- getEnvWallets walletName
@@ -411,7 +411,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
 
           etx <- liftIO sourceToStore
           const (pure ()) ||| lift . tell . (:[]) . TxListElem $ etx
-          return $ Streaming.effect (Streaming.yield <$> pure etx)
+          return . Streaming.effect . pure $ Streaming.yield etx
 
         Sequence l -> do
           gList <- forM l $ \g -> evalGenerator g txParams era
