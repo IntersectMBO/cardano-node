@@ -139,15 +139,11 @@ run RunOpts
 
   return ()
  where
-  getConsensusMode :: SecurityParam -> NodeProtocolConfiguration -> AnyConsensusModeParams
+  getConsensusMode :: SecurityParam -> NodeProtocolConfiguration -> ConsensusModeParams CardanoMode
   getConsensusMode (SecurityParam k) ncProtocolConfig =
     case ncProtocolConfig of
-      NodeProtocolConfigurationByron{} ->
-        AnyConsensusModeParams $ ByronModeParams $ EpochSlots k
-      NodeProtocolConfigurationShelley{} ->
-        AnyConsensusModeParams ShelleyModeParams
       NodeProtocolConfigurationCardano{} ->
-        AnyConsensusModeParams $ CardanoModeParams $ EpochSlots k
+        CardanoModeParams $ EpochSlots k
 
   getProtocolConfiguration
     :: PartialNodeConfiguration

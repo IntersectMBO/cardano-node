@@ -257,21 +257,17 @@ instance FromJSON PartialNodeConfiguration where
                              else return $ Last $ Just PartialTracingOff
 
       -- Protocol parameters
-      protocol <-  v .:? "Protocol" .!= ByronProtocol
+      protocol <-  v .:? "Protocol" .!= CardanoProtocol
       pncProtocolConfig <-
         case protocol of
-          ByronProtocol ->
-            Last . Just . NodeProtocolConfigurationByron <$> parseByronProtocol v
-
-          ShelleyProtocol ->
-            Last . Just . NodeProtocolConfigurationShelley <$> parseShelleyProtocol v
-
           CardanoProtocol ->
-            Last . Just  <$> (NodeProtocolConfigurationCardano <$> parseByronProtocol v
-                                                               <*> parseShelleyProtocol v
-                                                               <*> parseAlonzoProtocol v
-                                                               <*> parseConwayProtocol v
-                                                               <*> parseHardForkProtocol v)
+            fmap (Last . Just) $
+              NodeProtocolConfigurationCardano
+                <$> parseByronProtocol v
+                <*> parseShelleyProtocol v
+                <*> parseAlonzoProtocol v
+                <*> parseConwayProtocol v
+                <*> parseHardForkProtocol v
       pncMaybeMempoolCapacityOverride <- Last <$> parseMempoolCapacityBytesOverride v
 
       -- Network timeouts
@@ -619,16 +615,14 @@ makeNodeConfiguration pnc = do
 ncProtocol :: NodeConfiguration -> Protocol
 ncProtocol nc =
   case ncProtocolConfig nc of
-    NodeProtocolConfigurationByron{}   -> ByronProtocol
-    NodeProtocolConfigurationShelley{} -> ShelleyProtocol
+    -- NodeProtocolConfigurationByron{}   -> ByronProtocol -- jky delete me
+    -- NodeProtocolConfigurationShelley{} -> ShelleyProtocol -- jky delete me
     NodeProtocolConfigurationCardano{} -> CardanoProtocol
 
 pncProtocol :: PartialNodeConfiguration -> Either Text Protocol
 pncProtocol pnc =
   case pncProtocolConfig pnc of
     Last Nothing -> Left "Node protocol configuration not found"
-    Last (Just NodeProtocolConfigurationByron{})   -> Right ByronProtocol
-    Last (Just NodeProtocolConfigurationShelley{}) -> Right ShelleyProtocol
     Last (Just NodeProtocolConfigurationCardano{}) -> Right CardanoProtocol
 
 parseNodeConfigurationFP :: Maybe ConfigYamlFilePath -> IO PartialNodeConfiguration

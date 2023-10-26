@@ -9,6 +9,7 @@ import           Data.Monoid (Last (..))
 import           Data.Text (Text)
 import           Data.Time.Clock (secondsToDiffTime)
 
+import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
@@ -44,15 +45,72 @@ prop_sanityCheck_POM =
       Left err -> failWith Nothing $ "Partial Options Monoid sanity check failure: " <> err
       Right config -> config === expectedConfig
 
+testNodeByronProtocolConfiguration :: NodeByronProtocolConfiguration
+testNodeByronProtocolConfiguration =
+  NodeByronProtocolConfiguration
+    { npcByronGenesisFile                   = GenesisFile "dummmy-genesis-file"
+    , npcByronGenesisFileHash               = Nothing
+    , npcByronReqNetworkMagic               = RequiresNoMagic
+    , npcByronPbftSignatureThresh           = Nothing
+    , npcByronSupportedProtocolVersionMajor = 0
+    , npcByronSupportedProtocolVersionMinor = 0
+    , npcByronSupportedProtocolVersionAlt   = 0
+    }
+
+testNodeShelleyProtocolConfiguration :: NodeShelleyProtocolConfiguration
+testNodeShelleyProtocolConfiguration =
+  NodeShelleyProtocolConfiguration
+    { npcShelleyGenesisFile     = GenesisFile "dummmy-genesis-file"
+    , npcShelleyGenesisFileHash = Nothing
+    }
+
+testNodeAlonzoProtocolConfiguration :: NodeAlonzoProtocolConfiguration
+testNodeAlonzoProtocolConfiguration =
+  NodeAlonzoProtocolConfiguration
+    { npcAlonzoGenesisFile      = GenesisFile "dummmy-genesis-file"
+    , npcAlonzoGenesisFileHash  = Nothing
+    }
+
+testNodeConwayProtocolConfiguration :: NodeConwayProtocolConfiguration
+testNodeConwayProtocolConfiguration =
+  NodeConwayProtocolConfiguration
+    { npcConwayGenesisFile      = GenesisFile "dummmy-genesis-file"
+    , npcConwayGenesisFileHash  = Nothing
+    }
+
+testNodeHardForkProtocolConfiguration :: NodeHardForkProtocolConfiguration
+testNodeHardForkProtocolConfiguration =
+  NodeHardForkProtocolConfiguration
+    { npcExperimentalHardForksEnabled = True
+    , npcTestShelleyHardForkAtEpoch   = Nothing
+    , npcTestShelleyHardForkAtVersion = Nothing
+    , npcTestAllegraHardForkAtEpoch   = Nothing
+    , npcTestAllegraHardForkAtVersion = Nothing
+    , npcTestMaryHardForkAtEpoch      = Nothing
+    , npcTestMaryHardForkAtVersion    = Nothing
+    , npcTestAlonzoHardForkAtEpoch    = Nothing
+    , npcTestAlonzoHardForkAtVersion  = Nothing
+    , npcTestBabbageHardForkAtEpoch   = Nothing
+    , npcTestBabbageHardForkAtVersion = Nothing
+    , npcTestConwayHardForkAtEpoch    = Nothing
+    , npcTestConwayHardForkAtVersion  = Nothing
+    }
+
+testNodeProtocolConfiguration :: NodeProtocolConfiguration
+testNodeProtocolConfiguration =
+  NodeProtocolConfigurationCardano
+    testNodeByronProtocolConfiguration
+    testNodeShelleyProtocolConfiguration
+    testNodeAlonzoProtocolConfiguration
+    testNodeConwayProtocolConfiguration
+    testNodeHardForkProtocolConfiguration
+
 -- | Example partial configuration theoretically created from a
 -- config yaml file.
 testPartialYamlConfig :: PartialNodeConfiguration
 testPartialYamlConfig =
   PartialNodeConfiguration
-    { pncProtocolConfig = Last . Just
-                        . NodeProtocolConfigurationShelley
-                        $ NodeShelleyProtocolConfiguration
-                            (GenesisFile "dummmy-genesis-file") Nothing
+    { pncProtocolConfig = Last $ Just testNodeProtocolConfiguration
     , pncSocketConfig = Last . Just $ SocketConfig (Last Nothing) mempty mempty mempty
     , pncShutdownConfig = Last Nothing
     , pncStartAsNonProducingNode = Last $ Just False
@@ -137,9 +195,7 @@ eExpectedConfig = do
     , ncDatabaseFile = DbFile "mainnet/db/"
     , ncProtocolFiles = ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
     , ncValidateDB = True
-    , ncProtocolConfig = NodeProtocolConfigurationShelley
-                           $ NodeShelleyProtocolConfiguration
-                             (GenesisFile "dummmy-genesis-file") Nothing
+    , ncProtocolConfig = testNodeProtocolConfiguration
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncSnapshotInterval = RequestedSnapshotInterval $ secondsToDiffTime 100
     , ncExperimentalProtocolsEnabled = True

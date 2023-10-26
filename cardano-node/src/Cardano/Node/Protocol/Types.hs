@@ -24,14 +24,10 @@ import           GHC.Generics (Generic)
 import           NoThunks.Class (NoThunks)
 
 
-data Protocol = ByronProtocol
-              | ShelleyProtocol
-              | CardanoProtocol
+data Protocol = CardanoProtocol
   deriving (Eq, Generic)
 
 instance Show Protocol where
-  show ByronProtocol = "Byron"
-  show ShelleyProtocol = "Shelley"
   show CardanoProtocol = "Byron; Shelley"
 
 deriving instance NFData Protocol
@@ -40,18 +36,8 @@ deriving instance NoThunks Protocol
 instance FromJSON Protocol where
   parseJSON =
     withText "Protocol" $ \str -> case str of
-
-      -- The new names
-      "Byron" -> pure ByronProtocol
-      "Shelley" -> pure ShelleyProtocol
       "Cardano" -> pure CardanoProtocol
-
-      -- The old names
-      "RealPBFT" -> pure ByronProtocol
-      "TPraos" -> pure ShelleyProtocol
-
-      _ -> fail $ "Parsing of Protocol failed. "
-                <> show str <> " is not a valid protocol"
+      _ -> fail $ "Parsing of Protocol failed. " <> show str <> " is not a valid protocol"
 
 data SomeConsensusProtocol where
 

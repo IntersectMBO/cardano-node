@@ -145,19 +145,9 @@ getStartTime
   => FilePath -> TestnetRuntime -> m UTCTime
 getStartTime tempRootPath TestnetRuntime{configurationFile} = withFrozenCallStack $ H.evalEither <=< H.evalIO . runExceptT $ do
   byronGenesisFile <-
-    decodeNodeConfiguration configurationFile >>=
-      \case
-        NodeProtocolConfigurationCardano NodeByronProtocolConfiguration{npcByronGenesisFile} _ _ _ _ ->
-          pure $ unGenesisFile npcByronGenesisFile
-        NodeProtocolConfigurationByron NodeByronProtocolConfiguration{npcByronGenesisFile} ->
-          pure $ unGenesisFile npcByronGenesisFile
-        unsupported ->
-          throwError $ unwords
-            [ "cannot find byron configuration path in"
-            , configurationFile
-            , "- found instead:"
-            , show unsupported
-            ]
+    decodeNodeConfiguration configurationFile >>= \case
+      NodeProtocolConfigurationCardano NodeByronProtocolConfiguration{npcByronGenesisFile} _ _ _ _ ->
+        pure $ unGenesisFile npcByronGenesisFile
   let byronGenesisFilePath = tempRootPath </> byronGenesisFile
   G.gdStartTime . G.configGenesisData <$> decodeGenesisFile byronGenesisFilePath
   where
