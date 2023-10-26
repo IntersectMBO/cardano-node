@@ -130,7 +130,8 @@ mkGenesisTransaction key ttl fee txins txouts
     & setTxIns (zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending)
     & setTxOuts txouts
     & setTxFee (mkTxFee fee)
-    & setTxValidityRange (TxValidityNoLowerBound, mkTxValidityUpperBound ttl)
+    & setTxValidityLowerBound TxValidityNoLowerBound
+    & setTxValidityUpperBound (mkTxValidityUpperBound ttl)
 
 castKey :: SigningKey PaymentKey -> SigningKey GenesisUTxOKey
 castKey (PaymentSigningKey skey) = GenesisUTxOSigningKey skey

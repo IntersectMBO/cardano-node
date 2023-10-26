@@ -177,7 +177,8 @@ genTx _era ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
     & setTxInsCollateral collateral
     & setTxOuts outputs
     & setTxFee fee
-    & setTxValidityRange (TxValidityNoLowerBound, defaultTxValidityUpperBound (cardanoEra @era))
+    & setTxValidityLowerBound TxValidityNoLowerBound
+    & setTxValidityUpperBound (defaultTxValidityUpperBound (cardanoEra @era))
     & setTxMetadata metadata
     & setTxProtocolParams (BuildTxWith (Just ledgerParameters))
 
