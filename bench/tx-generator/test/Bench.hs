@@ -2,9 +2,9 @@
 {-# LANGUAGE Trustworthy #-}
 module Main (main) where
 
-import           Prelude
-import           Criterion.Main
 import           Cardano.Benchmarking.Script.Selftest
+import           Criterion.Main
+import           Prelude
 
 main :: IO ()
 main = defaultMain [
