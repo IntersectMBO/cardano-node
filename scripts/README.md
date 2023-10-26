@@ -2,14 +2,10 @@
 
 The `scripts` directory consists of the following directories:
 - [benchmarking](#benchmarking)
-- [buildkite](#buildkite)
 - [lite](#lite)
 - [shelley-from-scratch](#shelley-from-scratch)
 - [byron-to-alonzo](#byron-to-alonzo)
 - [plutus](#plutus)
-
-#### buildkite
-Contains scripts relevant to IOHK's CI.
 
 #### lite
 Contains scripts that can start various clusters and intended to be as simple as possible. Note that using the shelley only era testnet clusters breaks compatibility with some cli commands.
