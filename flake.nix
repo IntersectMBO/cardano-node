@@ -176,16 +176,6 @@
 
         exes = (collectExes project) // {
           inherit (pkgs) cabalProjectRegenerate checkCabalProject;
-          "dockerImages/push" = import ./.buildkite/docker-build-push.nix {
-            hostPkgs = import hostNixpkgs { inherit system; };
-            inherit (pkgs) dockerImage submitApiDockerImage;
-          };
-          "dockerImage/node/load" = pkgs.writeShellScript "load-docker-image" ''
-            docker load -i ${pkgs.dockerImage} $@
-          '';
-          "dockerImage/submit-api/load" = pkgs.writeShellScript "load-submit-docker-image" ''
-            docker load -i ${pkgs.submitApiDockerImage} $@
-          '';
         } // flattenTree (pkgs.scripts // {
           # `tests` are the test suites which have been built.
           inherit (project) tests;
