@@ -9,7 +9,7 @@ module Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1Loop (script) where
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
 
-import           Cardano.Api (PlutusScript, PlutusScriptV2, Script(..), toScriptInAnyLang)
+import           Cardano.Api (PlutusScript, PlutusScriptV2, Script (..), toScriptInAnyLang)
 import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptVersion (..))
 import           Cardano.Benchmarking.ScriptAPI
 import qualified Data.ByteString.Short as SBS

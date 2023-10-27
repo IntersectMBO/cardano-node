@@ -1,10 +1,10 @@
 {-# LANGUAGE RecordWildCards #-}
 
-import Cardano.Benchmarking.PlutusScripts (findPlutusScript, encodePlutusScript)
+import           Cardano.Benchmarking.PlutusScripts (encodePlutusScript, findPlutusScript)
 import qualified Data.ByteString.Lazy as LBS (hPut)
-import Options.Applicative
-import System.Exit (die)
-import System.IO (IOMode(..), openFile, stdout)
+import           Options.Applicative
+import           System.Exit (die)
+import           System.IO (IOMode (..), openFile, stdout)
 
 data Options = Options
    { optOut :: Maybe FilePath

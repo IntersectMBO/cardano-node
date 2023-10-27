@@ -13,15 +13,15 @@ import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
 import           Prelude as Haskell (String, (.), (<$>))
 
-import           Cardano.Api (PlutusScriptV2, toScriptInAnyLang, Script(..))
+import           Cardano.Api (PlutusScriptV2, Script (..), toScriptInAnyLang)
 import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptVersion (..))
 import qualified Data.ByteString.Short as SBS
 import qualified PlutusLedgerApi.V2 as PlutusV2
 import qualified PlutusTx
 import           PlutusTx.Prelude as Plutus hiding (Semigroup (..), (.), (<$>))
 
-import           Cardano.Benchmarking.ScriptAPI
 import           Cardano.Benchmarking.PlutusScripts.CustomCallTypes
+import           Cardano.Benchmarking.ScriptAPI
 
 script :: PlutusBenchScript
 script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV2 scriptSerialized))

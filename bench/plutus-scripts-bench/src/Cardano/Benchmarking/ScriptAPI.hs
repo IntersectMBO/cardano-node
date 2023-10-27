@@ -8,11 +8,11 @@ module Cardano.Benchmarking.ScriptAPI
   , prepareScriptName
   ) where
 
-import           Prelude as Haskell (String, ($))
+import           Cardano.Api (ScriptInAnyLang)
 import           Data.Char (isUpper)
 import           Data.Maybe (fromMaybe)
+import           Prelude as Haskell (String, ($))
 import           System.FilePath (splitExtension, stripExtension, takeFileName)
-import           Cardano.Api (ScriptInAnyLang)
 
 data PlutusBenchScript
   = PlutusBenchScript
