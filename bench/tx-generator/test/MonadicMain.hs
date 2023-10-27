@@ -19,7 +19,7 @@ import           Control.Monad.Trans.Except (runExceptT)
 import           Control.Monad.Trans.RWS.Strict (runRWST)
 import qualified Crypto.Hash as Hash (Digest, SHA256, hash)
 import qualified Data.ByteString.Char8 as ByteString (pack, readFile, unpack)
-import qualified Data.List as List (and)
+import qualified Data.List as List (and, intersperse)
 import qualified MonadicGen.Cardano.Benchmarking.Script.Action as M (action)
 import qualified MonadicGen.Cardano.Benchmarking.Script.Core as M (TxListElem (..))
 import qualified MonadicGen.Cardano.Benchmarking.Script.Env as M (emptyEnv, runActionM',
@@ -107,20 +107,21 @@ main = do
               M.setBenchTracers M.initNullTracers
               mapM_ M.action monadicActions
   putStrLn $ "|" ++ replicate 78 '-' ++ "|"
-  let nrLines = 3
+  let nrLines = 10
+      nrTxs = 10
   putStrLn "current txs"
-  mapM_ putStrLn . take 10 $ map (take (nrLines * 80) . show) w
-  putStrLn $ "|" ++ replicate 78 '-' ++ "|"
+  mapM_ putStrLn . List.intersperse (replicate 80 '-')
+                 . take nrTxs
+                 $ map (take (nrLines * 80) . show) w'
+  putStrLn $ "|" ++ replicate 78 '=' ++ "|"
   putStrLn "monadic txs"
-  mapM_ putStrLn . take 10 $ map (take (nrLines * 80) . show) w'
+  mapM_ putStrLn . List.intersperse (replicate 80 '-')
+                 . take nrTxs
+                 $ map (take (nrLines * 80) . show) w'
   putStrLn $ "|" ++ replicate 78 '-' ++ "|"
   checks <- zipWithM step w w'
-  if List.and checks
-    then
-      putStrLn "tx match checks failed"
-    else
-      putStrLn "tx match checks succeeded"
-  pure () where
+  putStrLn $ "tx match checks "
+                 ++ if List.and checks then "failed" else "succeeded" where
     step :: C.TxListElem -> M.TxListElem -> IO Bool
     C.TxListElem (tx :: Api.IsCardanoEra era => Api.Tx era)
             `step` M.TxListElem (tx' :: Api.IsCardanoEra era' => Api.Tx era')
