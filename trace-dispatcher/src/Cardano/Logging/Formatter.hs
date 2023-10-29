@@ -27,6 +27,7 @@ import           Data.Text.Lazy.Builder as TB
 import           Data.Text.Lazy.Encoding (decodeUtf8)
 import           Data.Time (UTCTime, defaultTimeLocale, formatTime, getCurrentTime)
 
+import           Cardano.Logging.Trace (contramapM)
 import           Cardano.Logging.Types
 import           Control.Concurrent (myThreadId)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
@@ -63,8 +64,8 @@ preFormatted ::
   -> m (Trace m a)
 preFormatted backends' (Trace tr) = do
   hostname <- liftIO getHostName
-  pure $ Trace $ T.arrow $ T.emit $
-    \ case
+  contramapM (Trace tr)
+    (\case
       (lc, Right msg) -> do
         time     <- liftIO getCurrentTime
         threadId <- liftIO myThreadId
@@ -81,18 +82,18 @@ preFormatted backends' (Trace tr) = do
                                   txt -> Just txt
                           else Nothing
             machineFormatted = forMachine details msg
-        T.traceWith tr (lc, Right (PreFormatted
-                            { pfMessage = msg
-                            , pfForHuman = condForHuman
-                            , pfForMachine = machineFormatted
-                            , pfTimestamp = timeFormatted timestamp
-                            , pfTime = timestamp
-                            , pfNamespace = lcNSPrefix lc ++ lcNSInner lc
-                            , pfHostname = hostname
-                            , pfThreadId = threadText
-                            }))
+        pure (lc, Right (PreFormatted
+                          { pfMessage = msg
+                          , pfForHuman = condForHuman
+                          , pfForMachine = machineFormatted
+                          , pfTimestamp = timeFormatted timestamp
+                          , pfTime = timestamp
+                          , pfNamespace = lcNSPrefix lc ++ lcNSInner lc
+                          , pfHostname = hostname
+                          , pfThreadId = threadText
+                          }))
       (lc, Left ctrl) ->
-        T.traceWith tr (lc, Left ctrl)
+        pure (lc, Left ctrl))
 
 -- | Format this trace as TraceObject for the trace forwarder
 forwardFormatter'
