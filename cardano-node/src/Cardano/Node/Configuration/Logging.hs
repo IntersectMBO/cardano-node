@@ -93,9 +93,9 @@ import           Cardano.Node.Types
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Cardano.Tracing.Config (TraceOptions (..))
 import           Cardano.Tracing.OrphanInstances.Common ()
-import           Legacy.Cardano ()
 import           Paths_cardano_node (version)
-import Legacy.Cardano.Node
+
+import           Legacy.Cardano.Block
 
 --------------------------------
 -- Layer
@@ -354,8 +354,10 @@ nodeBasicInfo nc (SomeConsensusProtocol whichP pForInfo) nodeStartTime' = do
                ++ getGenesisValues "Babbage" cfgBabbage
                ++ getGenesisValues "Conway"  cfgConway
           Api.LegacyCardanoBlockType ->
-            let CardanoLedgerConfig cfgByron cfgShelley cfgAllegra cfgMary cfgAlonzo
-                                    cfgBabbage cfgConway = convLedgerConfig $ Consensus.configLedger cfg
+            let LegacyCardanoLedgerConfig (
+                    CardanoLedgerConfig cfgByron cfgShelley cfgAllegra cfgMary cfgAlonzo
+                                        cfgBabbage cfgConway
+                  ) = Consensus.configLedger cfg
             in getGenesisValuesByron cfg cfgByron
                ++ getGenesisValues "Shelley" cfgShelley
                ++ getGenesisValues "Allegra" cfgAllegra

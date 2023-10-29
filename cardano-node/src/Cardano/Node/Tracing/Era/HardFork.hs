@@ -44,7 +44,8 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
-import Legacy.LegacyBlock
+
+import           Ouroboros.Consensus.Legacy.Block
 
 --
 -- instances for Header HardForkBlock

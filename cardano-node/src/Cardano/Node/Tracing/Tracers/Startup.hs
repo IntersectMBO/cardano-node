@@ -60,8 +60,8 @@ import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (SomeConsensusProtocol (..))
 import           Cardano.Node.Startup
 import           Cardano.Node.Types (UseLedger (..))
-import Legacy.Cardano.Node (convLedgerConfig)
 
+import           Legacy.Cardano.Block
 
 getStartupInfo
   :: NodeConfiguration
@@ -99,8 +99,10 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
                , getGenesisValues "Conway"  cfgConway
                ]
           Api.LegacyCardanoBlockType ->
-            let CardanoLedgerConfig cfgByron cfgShelley cfgAllegra cfgMary cfgAlonzo
-                                    cfgBabbage cfgConway = convLedgerConfig $ Consensus.configLedger cfg
+            let LegacyCardanoLedgerConfig (
+                    CardanoLedgerConfig cfgByron cfgShelley cfgAllegra cfgMary cfgAlonzo
+                                        cfgBabbage cfgConway
+                  ) = Consensus.configLedger cfg
             in [ getGenesisValuesByron cfg cfgByron
                , getGenesisValues "Shelley" cfgShelley
                , getGenesisValues "Allegra" cfgAllegra

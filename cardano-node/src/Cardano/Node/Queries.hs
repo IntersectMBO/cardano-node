@@ -65,7 +65,6 @@ import qualified Ouroboros.Consensus.Byron.Ledger.Ledger as Byron
 import           Ouroboros.Consensus.Byron.Ledger.Mempool (TxId (..))
 import qualified Ouroboros.Consensus.Cardano as Cardano
 import qualified Ouroboros.Consensus.Cardano.Block as Cardano
-import qualified Legacy.Cardano as Cardano
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..),
                    OneEraForgeStateUpdateError (..))
@@ -86,7 +85,8 @@ import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
 import           Ouroboros.Network.NodeToNode (RemoteAddress, RemoteConnectionId)
 
-import Legacy.LegacyBlock
+import qualified Legacy.Cardano as Cardano
+import           Ouroboros.Consensus.Legacy.Block
 
 --
 -- * TxId -> ByteString projection

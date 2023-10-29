@@ -29,8 +29,8 @@ import           Ouroboros.Consensus.Shelley.Ledger.Block (Header (..), ShelleyB
 
 import           Ouroboros.Consensus.Shelley.Protocol.Abstract
 
-import Legacy.LegacyBlock
-import Data.Coerce (coerce)
+import           Data.Coerce (coerce)
+import           Ouroboros.Consensus.Legacy.Block
 
 -- | Block issuer verification key hash.
 data BlockIssuerVerificationKeyHash
