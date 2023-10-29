@@ -155,9 +155,8 @@ instance MetaTrace TracerTrace where
       ]
 
 stderrShowTracer :: Trace IO TracerTrace
-stderrShowTracer =
-  Trace $ T.arrow $ T.emit $
-    either (const $ pure ()) (Sys.hPrint Sys.stderr) . snd
+stderrShowTracer = contramapM'
+    (either (const $ pure ()) (Sys.hPrint Sys.stderr) . snd)
 
 stderrTracer :: Trace IO FormattedMessage
 stderrTracer =
