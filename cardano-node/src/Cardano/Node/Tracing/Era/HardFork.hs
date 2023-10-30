@@ -353,7 +353,7 @@ instance LogFormatting (ForgeStateUpdateError blk) => LogFormatting (WrapForgeSt
 
 instance All (LogFormatting `Compose` WrapSelectView) xs => LogFormatting (HardForkSelectView xs) where
     -- elide BlockNo as it is already contained in every per-era SelectView
-    forMachine dtal = forMachine dtal . dropBlockNo . getHardForkSelectView
+    forMachine = const $ forMachine DMinimal
 
 instance All (LogFormatting `Compose` WrapSelectView) xs => LogFormatting (OneEraSelectView xs) where
     forMachine dtal =
