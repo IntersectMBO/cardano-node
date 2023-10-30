@@ -254,6 +254,8 @@ submitAction era submitMode generator txParams = withEra era $ submitInEra submi
 submitInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Generator -> TxGenTxParams -> AsType era -> ActionM' [TxListElem] ()
 submitInEra submitMode generator txParams era = do
   txStream <- evalGenerator generator txParams era
+  flip Streaming.mapM_ (Streaming.hoistUnexposed liftIO txStream)
+        $ const (pure ()) ||| lift . tell . (:[]) . TxListElem
   case submitMode of
     NodeToNode _ -> error "NodeToNode deprecated: ToDo: remove"
     Benchmark nodes threadName tpsRate txCount -> benchmarkTxStream txStream nodes threadName tpsRate txCount era
@@ -316,7 +318,6 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
             gen = do
               walletRefInsertFund destWallet fund
               return $ Right tx
-          tell [TxListElem tx]
           return $ Streaming.effect (Streaming.yield <$> gen)
 
         -- 'Split' combines regular payments and payments for change.
@@ -335,7 +336,6 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
             txGenerator = genTx (cardanoEra @era) ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
           inputFunds <- liftToAction $ walletSource wallet 1
           sourceToStore <- withTxGenError . sourceToStoreTransactionNew txGenerator inputFunds inToOut $ mangleWithChange (liftIOCreateAndStore toUTxOChange) (liftIOCreateAndStore toUTxO)
-          tell [TxListElem sourceToStore]
           return . Streaming.effect . pure . Streaming.yield $ Right sourceToStore
 
         -- The 'SplitN' case's call chain is somewhat elaborate.
@@ -352,7 +352,6 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
             txGenerator = genTx (cardanoEra @era) ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
           inputFunds <- liftToAction $ walletSource wallet 1
           sourceToStore <- withTxGenError $ sourceToStoreTransactionNew txGenerator inputFunds inToOut (mangle . repeat $ liftIOCreateAndStore toUTxO)
-          tell [TxListElem sourceToStore]
           return . Streaming.effect . pure . Streaming.yield $ Right sourceToStore
 
         NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
@@ -368,7 +367,6 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
               throwE err
           inputFunds <- liftToAction $ walletSource wallet inputs
           sourceToStore <- withTxGenError $ sourceToStoreTransactionNew txGenerator inputFunds inToOut (mangle . repeat $ liftIOCreateAndStore toUTxO)
-          tell [TxListElem sourceToStore]
 
           fundPreview <- liftIO $ walletPreview wallet inputs
           preview <- withTxGenError (sourceTransactionPreview txGenerator fundPreview inToOut (mangle . repeat $ liftIOCreateAndStore toUTxO))

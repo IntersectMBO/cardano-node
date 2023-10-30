@@ -27,8 +27,7 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
-import           Control.Monad.Trans.RWS ()
-import           Control.Monad.Writer (tell)
+import           Control.Monad.Trans.RWS.Strict (tell)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
 
@@ -83,9 +82,8 @@ data TxListElem = forall era. IsShelleyBasedEra era => TxListElem (Tx era)
 instance Show TxListElem where
   show (TxListElem tx) = show tx
 
--- liftCoreWithEra :: forall x era. IsShelleyBasedEra era => AnyCardanoEra -> (forall era'. IsShelleyBasedEra era' => AsType era' -> ExceptT TxGenError IO x) -> ActionM' [TxListElem] (Either TxGenError x)
 liftCoreWithEra :: forall x w. Monoid w => AnyCardanoEra -> (forall era'. IsShelleyBasedEra era' => AsType era' -> ExceptT TxGenError IO x) -> ActionM' w (Either TxGenError x)
-liftCoreWithEra era coreCall = -- withEra era ( (liftIO :: forall s t. IO t -> ActionM' [s] t) . runExceptT . coreCall)
+liftCoreWithEra era coreCall =
   case era of
     AnyCardanoEra ConwayEra  -> liftIO . runExceptT $ coreCall AsConwayEra
     AnyCardanoEra BabbageEra -> liftIO . runExceptT $ coreCall AsBabbageEra
@@ -131,7 +129,6 @@ addFund era wallet txIn lovelace keyName = do
   let
     mkOutValue :: forall w era'. (Monoid w, IsShelleyBasedEra era') => AsType era' -> ActionM' w (InAnyCardanoEra TxOutValue)
     mkOutValue _ = return $ InAnyCardanoEra (cardanoEra @era') (lovelaceToTxOutValue lovelace)
-  -- outValue <- withEra era mkOutValue
   outValue <- case era of
                 AnyCardanoEra ConwayEra  -> mkOutValue AsConwayEra
                 AnyCardanoEra BabbageEra -> mkOutValue AsBabbageEra
@@ -270,7 +267,7 @@ toMetadata (Just payloadSize) = case mkMetadata payloadSize of
   Left err -> error err
 
 submitAction :: AnyCardanoEra -> SubmitMode -> Generator -> TxGenTxParams -> ActionM' [TxListElem] ()
-submitAction era submitMode generator txParams = -- withEra era $ submitInEra submitMode generator txParams
+submitAction era submitMode generator txParams =
   case era of
     AnyCardanoEra ConwayEra  -> submitInEra submitMode generator txParams AsConwayEra
     AnyCardanoEra BabbageEra -> submitInEra submitMode generator txParams AsBabbageEra
@@ -283,6 +280,8 @@ submitAction era submitMode generator txParams = -- withEra era $ submitInEra su
 submitInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Generator -> TxGenTxParams -> AsType era -> ActionM' [TxListElem] ()
 submitInEra submitMode generator txParams era = do
   txStream <- evalGenerator generator txParams era
+  flip Streaming.mapM_ (Streaming.hoistUnexposed liftIO txStream)
+        $ const (pure ()) ||| lift . tell . (:[]) . TxListElem
   case submitMode of
     NodeToNode _ -> error "NodeToNode deprecated: ToDo: remove"
     Benchmark nodes threadName tpsRate txCount -> benchmarkTxStream txStream nodes threadName tpsRate txCount era
@@ -340,7 +339,6 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           genesisKey  <- getEnvKeys genesisKeyName
           (tx, fund) <- firstExceptT Env.TxGenError $ hoistEither $
             Genesis.genesisSecureInitialFund networkId genesis genesisKey destKey txParams
-          lift $ tell [TxListElem tx]
           let
             gen = do
               walletRefInsertFund destWallet fund
@@ -364,7 +362,6 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
             txGenerator = genTx (cardanoEra @era) ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
             sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
           etx <- liftIO sourceToStore
-          const (pure ()) ||| lift . tell . (:[]) . TxListElem $ etx
           return . Streaming.effect . pure $ Streaming.yield etx
 
         -- The 'SplitN' case's call chain is somewhat elaborate.
@@ -382,7 +379,6 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
             txGenerator = genTx (cardanoEra @era) ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
             sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
           etx <- liftIO sourceToStore
-          const (pure ()) ||| lift . tell . (:[]) . TxListElem $ etx
           return . Streaming.effect . pure $ Streaming.yield etx
 
         NtoM walletName payMode inputs outputs metadataSize collateralWallet -> do
@@ -410,7 +406,6 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
               dumpBudgetSummaryIfExisting
 
           etx <- liftIO sourceToStore
-          const (pure ()) ||| lift . tell . (:[]) . TxListElem $ etx
           return . Streaming.effect . pure $ Streaming.yield etx
 
         Sequence l -> do
