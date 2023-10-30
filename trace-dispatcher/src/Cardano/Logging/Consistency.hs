@@ -16,7 +16,7 @@ import           Cardano.Logging.Types
 -- | Warnings as a list of text
 type NSWarnings = [T.Text]
 
-  -- | A data structure for the lookup of namespaces as nested maps
+-- | A data structure for the lookup of namespaces as nested maps
 newtype NSLookup = NSLookup (Map.Map T.Text NSLookup)
   deriving Show
 
