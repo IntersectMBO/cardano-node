@@ -40,6 +40,7 @@ sumFieldsReport =
   [ "date.systemStart", "time.systemStart", "sumAnalysisTime"
   , "ident"
   , "batch"
+  , "ghc_version"
   ] ++ (FieldName <$> manifestPackages) ++
   [ "era"
   , "delegators", "utxo"
@@ -78,6 +79,10 @@ instance (KnownCDF f) => TimelineFields (Summary f)  where
    <> fScalar   "batch"                Wno Id  (IText $ batch.sumMeta)
       "Run batch"
       ""
+
+   <> fScalar   "ghc_version"          Wno Id  (IText $ node_ghc_version.sumMeta)
+      "GHC version"
+      "GHC version used to build cardano-node"
 
    <> manifestFields
 

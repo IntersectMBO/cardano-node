@@ -470,6 +470,8 @@ EOF
             fail "Mode no longer supported:  operation without profile/ directory."
         fi
 
+        local ghc_version=$(get_node_ghc_version)
+
         progress "run | topology" \
                  "$(white $(jq -r .composition.topology "$dir"/profile.json))"
         ln -s "$profile_data"/topology.json        "$dir"
@@ -500,6 +502,7 @@ EOF
             --arg       run              "$run"
             --arg       batch            "$batch"
             --arg       profile_name     "$profile_name"
+            --arg       ghc_version      "$ghc_version"
             --argjson   timing           "$timing"
             --slurpfile profile_content  "$dir"/profile.json
             --argjson   manifest         "$manifest"
@@ -509,6 +512,7 @@ EOF
              { tag:              $run
              , batch:            $batch
              , profile:          $profile_name
+             , node_ghc_version: $ghc_version
              , timing:           $timing
              , manifest:         $manifest
              , profile_overlay:  $profile_content[0].overlay
@@ -1052,4 +1056,23 @@ run_ls_sets_cmd() {
           find -L . -mindepth 3 -maxdepth 3 -type f -name meta.json -exec dirname \{\} \; |
           cut -d/ -f2 |
           sort -u || true'
+}
+
+get_node_ghc_version(){
+    local node_executable
+
+    if [[ $WB_BACKEND == nomad* ]]
+    then
+       node_executable=$(jq --raw-output '.containerPkgs."cardano-node"."nix-store-path"' $WB_BACKEND_DATA/container-specs.json)
+       node_executable="$node_executable/bin/cardano-node"
+    else
+       node_executable=cardano-node
+    fi
+
+    if [[ -x $node_executable ]]
+    then
+        $node_executable +RTS --info | grep 'GHC version' | grep -E -o "([0-9]{1,2}[\.]){2}[0-9]{1,2}"
+    else
+        echo "unknown"
+    fi
 }
