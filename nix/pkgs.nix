@@ -83,7 +83,9 @@ in with final;
   };
 
   haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" rec {
-    src = haskell-nix.sources."hls-2.3";
+    src = {
+      ghc8107 = haskell-nix.sources."hls-2.2";
+    }.${compiler-nix-name} or haskell-nix.sources."hls-2.3";
     cabalProject = builtins.readFile (src + "/cabal.project");
     sha256map."https://github.com/pepeiborra/ekg-json"."7a0af7a8fd38045fd15fb13445bdcc7085325460" = "sha256-fVwKxGgM0S4Kv/4egVAAiAjV7QB5PBqMVMCfsv7otIQ=";
   };
