@@ -54,12 +54,14 @@ let
     { name, i, kind, port, isProducer, ... }@nodeSpec:
     {
       inherit isProducer port;
+      inherit (profile.node) rts_flags_override;
 
       nodeId         = i;
       databasePath   = "db";
       socketPath     = "node.socket";
       topology       = "topology.json";
       nodeConfigFile = "config.json";
+
 
       ## Combine:
       ##   0. baseNodeConfig (coming cardanoLib's testnet environ)

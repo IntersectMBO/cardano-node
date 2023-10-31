@@ -593,11 +593,17 @@ in {
         description = ''Extra CLI args for 'cardano-node'.'';
       };
 
+      rts_flags_override = mkOption {
+        type = types.listOf types.str;
+        default = [];
+        description = ''RTS flags override from profile content.'';
+      };
+
       rtsArgs = mkOption {
         type = types.listOf types.str;
         default = [ "-N2" "-I0" "-A16m" "-qg" "-qb" "--disable-delayed-os-memory-return" ];
-        apply = args: if (args != [] || cfg.profilingArgs != []) then
-          ["+RTS"] ++ cfg.profilingArgs ++ args ++ ["-RTS"]
+        apply = args: if (args != [] || cfg.profilingArgs != [] || cfg.rts_flags_override != []) then
+          ["+RTS"] ++ cfg.profilingArgs ++ args ++ cfg.rts_flags_override ++ ["-RTS"]
           else [];
         description = ''Extra CLI args for 'cardano-node', to be surrounded by "+RTS"/"-RTS"'';
       };
