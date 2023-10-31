@@ -20,9 +20,9 @@ let
     {
       src = ../.;
       name = "cardano-node";
-      compiler-nix-name = lib.mkDefault "ghc8107";
+      compiler-nix-name = lib.mkDefault "ghc963";
       # extra-compilers
-      flake.variants = lib.genAttrs ["ghc927"] (x: {compiler-nix-name = x;});
+      flake.variants = lib.genAttrs ["ghc928" "ghc8107"] (x: {compiler-nix-name = x;});
       cabalProjectLocal = ''
         repository cardano-haskell-packages-local
           url: file:${CHaP}
@@ -117,6 +117,33 @@ let
             packages.cardano-ledger-babbage.components.library.doHaddock = false;
             packages.cardano-ledger-conway.components.library.doHaddock = false;
             packages.cardano-protocol-tpraos.components.library.doHaddock = false;
+          })
+          ({ lib, pkgs, ...}: lib.mkIf (pkgs.stdenv.hostPlatform.isWindows) {
+            # Remvoe this once mingwx is mapped to null in haskell.nix (haskell.nix#2032), and we bumped _past_ that.
+            # we need to plugin in pthreads as force overrides https://github.com/input-output-hk/haskell.nix/blob/9823e12d5b6e66150ddeea146aea682f44ee4d44/overlays/windows.nix#L109.
+            packages.unix-time.components.library.libs = lib.mkForce [ pkgs.windows.mingw_w64_pthreads ];
+
+            # This fix seems fairly fishy; but somehow it's required to make this work :confused_parrot:
+            packages.unix-compat.postPatch = ''
+              sed -i 's/msvcrt//g' unix-compat.cabal
+            '';
+            packages.unix-time.postPatch = ''
+              sed -i 's/mingwex//g' unix-time.cabal
+            '';
+            # For these two packages the custom setups fail, as we end up with multiple instances of
+            # lib:Cabal. Likely a haskell.nix bug.
+            packages.entropy.package.buildType = lib.mkForce "Simple";
+            packages.HsOpenSSL.package.buildType = lib.mkForce "Simple";
+            #packages.plutus-core.components.library.preBuild = ''
+            #  export ISERV_ARGS="-v +RTS -Dl"
+            #  export PROXY_ARGS=-v
+            #'';
+          })
+          ({ lib, pkgs, config, ... }: lib.mkIf (builtins.compareVersions config.compiler.version "9.4" >= 0) {
+            # lib:ghc is a bit annoying in that it comes with it's own build-type:Custom, and then tries
+            # to call out to all kinds of silly tools that GHC doesn't really provide.
+            # For this reason, we try to get away without re-installing lib:ghc for now.
+            reinstallableLibGhc = false;
           })
           ({ lib, pkgs, ... }: {
             # Needed for the CLI tests.
@@ -270,13 +297,14 @@ let
             # <no location info>: error: ghc: ghc-iserv terminated (-11)
             packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
           })
-          ({ lib, ... }: {
+          ({ lib, ... }@args: {
             options.packages = lib.mkOption {
               type = lib.types.attrsOf (lib.types.submodule (
                 { config, lib, ... }:
                 lib.mkIf config.package.isLocal
                 {
-                  configureFlags = [ "--ghc-option=-Werror"];
+                  configureFlags = [ "--ghc-option=-Werror"]
+                    ++ lib.optional (args.config.compiler.version == "8.10.7") "--ghc-option=-Wwarn=unused-packages";
                 }
               ));
             };
@@ -365,10 +393,13 @@ project.appendOverlays (with haskellLib.projectOverlays; [
       };
       eventlogged = final.appendModule
         {
-          modules = [{
+          # From 9.2+
+          # on the commandline: error: [-Wdeprecated-flags, Werror=deprecated-flags]
+          #     -eventlog is deprecated: the eventlog is now enabled in all runtime system ways
+          modules = [({ lib, pkgs, config, ... }: lib.mkIf (builtins.compareVersions config.compiler.version "9.2" < 0) {
             packages = final.pkgs.lib.genAttrs [ "cardano-node" ]
               (name: { configureFlags = [ "--ghc-option=-eventlog" ]; });
-          }];
+          })];
         };
       # add passthru and gitrev to hsPkgs:
       hsPkgs = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))

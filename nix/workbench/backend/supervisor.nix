@@ -16,7 +16,7 @@ let
       cabal-install
       ghcid
       haskellBuildUtils
-      cabal-plan
+      pkgs.cabal-plan
     ])
   ## Workbench's main script is called directly in dev mode.
   ++ lib.optionals (!useCabalRun)

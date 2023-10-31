@@ -10,7 +10,9 @@ module Cardano.Git.Rev
 import           Data.Text (Text)
 import qualified Data.Text as T
 
+#if !defined(arm_HOST_ARCH)
 import           Cardano.Git.RevFromGit (gitRevFromGit)
+#endif
 import           GHC.Foreign (peekCStringLen)
 import           Foreign.C.String (CString)
 import           System.IO (utf8)

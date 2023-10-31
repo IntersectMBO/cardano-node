@@ -110,8 +110,8 @@ in project.shellFor {
     jq
     weeder
     nix
-    pkgconfig
-    profiteur
+    (pkgs.pkg-config or pkgconfig)
+    pkgs.profiteur
     profiterole
     ghc-prof-flamegraph
     sqlite-interactive
