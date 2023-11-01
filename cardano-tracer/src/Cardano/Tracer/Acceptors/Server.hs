@@ -1,3 +1,5 @@
+
+
 {-# LANGUAGE DataKinds #-}
 
 module Cardano.Tracer.Acceptors.Server
@@ -11,7 +13,7 @@ import           Cardano.Tracer.Acceptors.Utils (notifyAboutNodeDisconnected,
                    prepareDataPointRequestor, prepareMetricsStores, removeDisconnectedNode)
 import qualified Cardano.Tracer.Configuration as TC
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Logs.TraceObjects (traceObjectsHandler)
+import           Cardano.Tracer.Handlers.Logs.TraceObjects (deregisterNodeId, traceObjectsHandler)
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Utils (connIdToNodeId)
 import           Ouroboros.Network.Context (MinimalInitiatorContext (..), ResponderContext (..))
@@ -79,6 +81,7 @@ runAcceptorsServer tracerEnv p (ekgConfig, tfConfig, dpfConfig) = withIOManager 
       | (protocol, num) <- protocolsWithNums
       ]
   errorHandler connId = do
+    deregisterNodeId tracerEnv (connIdToNodeId connId)
     removeDisconnectedNode tracerEnv connId
     notifyAboutNodeDisconnected tracerEnv connId
 

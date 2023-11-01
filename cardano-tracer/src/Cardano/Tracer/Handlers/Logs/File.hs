@@ -11,16 +11,17 @@ import           Cardano.Tracer.Handlers.Logs.Utils
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils (nl)
 
-import           Control.Concurrent.Extra (Lock, withLock)
+import           Control.Concurrent.Extra (Lock)
+import           Control.Concurrent.MVar (readMVar)
 import           Control.Monad (unless)
-import           Control.Monad.Extra (ifM)
-import qualified Data.ByteString as BS
-import           Data.Maybe (fromMaybe)
+import qualified Data.ByteString.Char8 as BS8
+import qualified Data.Map as Map
+import           Data.Maybe (fromJust, fromMaybe)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import           System.Directory (createDirectoryIfMissing, doesDirectoryExist, makeAbsolute)
-import           System.Directory.Extra (listFiles)
+import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
+import           System.IO (hFlush)
 
 -- | Append the list of 'TraceObject's to the latest log via symbolic link.
 --
@@ -29,23 +30,41 @@ import           System.FilePath ((</>))
 -- the symbolic link will be switched to the new log file and writing can
 -- be interrupted. To prevent it, we use 'Lock'.
 writeTraceObjectsToFile
-  :: NodeName
+  :: HandleRegistry
+  -> LoggingParams
+  -> NodeName
   -> Lock
-  -> FilePath
-  -> LogFormat
   -> [TraceObject]
   -> IO ()
-writeTraceObjectsToFile nodeName currentLogLock rootDir format traceObjects = do
-  rootDirAbs <- makeAbsolute rootDir
-  let converter = case format of
-                    ForHuman   -> traceTextForHuman
-                    ForMachine -> traceTextForMachine
-  let itemsToWrite = map converter traceObjects
-  unless (null itemsToWrite) $ do
-    pathToCurrentLog <- getPathToCurrentlog nodeName rootDirAbs format
-    let preparedLine = TE.encodeUtf8 $ T.append nl (T.intercalate nl itemsToWrite)
-    withLock currentLogLock $
-      BS.appendFile pathToCurrentLog preparedLine
+writeTraceObjectsToFile registry@(Registry registryMVar) loggingParams@LoggingParams{logRoot, logFormat} nodeName currentLogLock traceObjects = do
+  let converter :: TraceObject -> T.Text
+      converter = case logFormat of
+        ForHuman   -> traceTextForHuman
+        ForMachine -> traceTextForMachine
+
+      itemsToWrite :: [T.Text]
+      itemsToWrite = map converter traceObjects
+
+      preparedLines :: BS8.ByteString
+      preparedLines = TE.encodeUtf8 (nl `T.append` T.intercalate nl itemsToWrite)
+
+  unless (null itemsToWrite) do
+    readMVar registryMVar >>= \handleMap -> do
+      case Map.lookup (nodeName, loggingParams) handleMap of
+        Nothing -> do
+          rootDirAbs <- makeAbsolute logRoot
+
+          let subDirForLogs :: FilePath
+              subDirForLogs = rootDirAbs </> T.unpack nodeName
+
+          createEmptyLogRotation currentLogLock nodeName loggingParams registry subDirForLogs logFormat
+          handles <- readMVar registryMVar
+          let handle = fst (fromJust (Map.lookup (nodeName, loggingParams) handles))
+          BS8.hPutStr handle preparedLines
+          hFlush handle
+        Just (handle, _filePath) -> do
+          BS8.hPutStr handle preparedLines
+          hFlush handle
 
 -- | Returns the path to the current log. Prepares the structure for the log files if needed:
 --
@@ -58,29 +77,24 @@ writeTraceObjectsToFile nodeName currentLogLock rootDir format traceObjects = do
 --     /subDirForNodeN
 --       logs from node N
 --
-getPathToCurrentlog
-  :: NodeName
-  -> FilePath
-  -> LogFormat
-  -> IO FilePath
-getPathToCurrentlog nodeName rootDirAbs format =
-  ifM (doesDirectoryExist subDirForLogs)
-    getPathToCurrentLogIfExists
-    prepareLogsStructure
- where
-  subDirForLogs = rootDirAbs </> T.unpack nodeName
-
-  getPathToCurrentLogIfExists = do
-    logsWeNeed <- filter (isItLog format) <$> listFiles subDirForLogs
-    if null logsWeNeed
-      then createEmptyLog subDirForLogs format
-      -- We can sort the logs by timestamp, the biggest one is the latest one.
-      else return $ subDirForLogs </> maximum logsWeNeed
-
-  prepareLogsStructure = do
-    -- The root directory (as a parent for subDirForLogs) will be created as well if needed.
-    createDirectoryIfMissing True subDirForLogs
-    createEmptyLog subDirForLogs format
+-- getPathToCurrentlog
+--   :: Lock
+--   -> NodeName
+--   -> HandleRegistry
+--   -> FilePath
+--   -> LogFormat
+--   -> IO FilePath
+-- getPathToCurrentlog currentLogLock nodeName reg@(Registry registry) rootDirAbs format = do
+--   readMVar registry >>= \handles ->
+--     case Map.lookup nodeName handles of
+--       Nothing -> do
+--         createEmptyLogRotation currentLogLock nodeName reg subDirForLogs format
+--         handles <- readMVar registry
+--         pure $ snd (fromJust (Map.lookup nodeName handles))
+--       Just (_handle, filePath) ->
+--         pure filePath
+--  where
+--   subDirForLogs = rootDirAbs </> T.unpack nodeName
 
 traceTextForHuman :: TraceObject -> T.Text
 traceTextForHuman TraceObject{toHuman, toMachine} =
@@ -88,4 +102,3 @@ traceTextForHuman TraceObject{toHuman, toMachine} =
 
 traceTextForMachine :: TraceObject -> T.Text
 traceTextForMachine TraceObject{toMachine} = toMachine
-

@@ -7,11 +7,15 @@ module Cardano.Tracer.Test.Utils
 import           Cardano.Tracer.Test.TestSetup
 
 import           Data.Functor.Identity
+import           Data.Vector (Vector)
+import qualified Data.Vector as Vector
+import           Data.Vector.Algorithms.Merge
 import           System.Directory.Extra (listDirectories)
 import           System.FilePath (dropDrive, dropExtension)
 import           System.Info.Extra (isMac, isWindows)
 import           System.IO.Extra (newTempDirWithin)
 
+import qualified Test.QuickCheck as QuickCheck
 import           Test.Tasty.QuickCheck
 
 unI :: Identity a -> a
@@ -48,3 +52,14 @@ replaceExtension new f = dropExtension f <> "." <> new
 
 isDirectoryEmpty :: FilePath -> IO Bool
 isDirectoryEmpty = fmap null . listDirectories
+
+vectorOf :: Gen a -> Gen (Vector a)
+vectorOf gen = sized \n -> do
+  len <- chooseInt (0, n)
+  sizedVectorOf len gen
+
+sizedVectorOf :: Int -> Gen a -> Gen (Vector a)
+sizedVectorOf n a = Vector.fromListN n <$> QuickCheck.vectorOf n a
+
+vectorSort :: Ord a => Vector a -> Vector a
+vectorSort = Vector.modify sort

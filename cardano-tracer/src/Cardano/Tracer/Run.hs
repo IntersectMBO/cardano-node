@@ -83,6 +83,8 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
 
   (reforwardTraceObject,_trDataPoint) <- initReForwarder config tr
 
+  registry <- newRegistry
+
   -- Environment for all following functions.
   let tracerEnv =
         TracerEnv
@@ -103,6 +105,7 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
           , teRTViewStateDir        = rtViewStateDir
           , teTracer                = tr
           , teReforwardTraceObjects = reforwardTraceObject
+          , teRegistry              = registry
           }
 
   -- Specify what should be done before 'cardano-tracer' stops.
