@@ -1,5 +1,4 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.Tracer.Handlers.Logs.Rotator
@@ -8,47 +7,63 @@ module Cardano.Tracer.Handlers.Logs.Rotator
 
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Logs.Utils (createEmptyLogRotation, getTimeStampFromLog,
+import           Cardano.Tracer.Handlers.Logs.Utils (createOrUpdateEmptyLog, getTimeStampFromLog,
                    isItLog)
 import           Cardano.Tracer.MetaTrace
-import           Cardano.Tracer.Utils (showProblemIfAny)
+import           Cardano.Tracer.Types (HandleRegistry, NodeName)
+import           Cardano.Tracer.Utils (showProblemIfAny, readRegistry)
 
 import           Control.Concurrent.Async (forConcurrently_)
 import           Control.Concurrent.Extra (Lock)
 import           Control.Monad (forM_, forever, unless, when)
 import           Control.Monad.Extra (whenJust, whenM)
+import           Data.Foldable (for_)
 import           Data.List (nub, sort)
 import           Data.List.Extra (dropEnd)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map as Map
+import qualified Data.Text as Text
 import           Data.Time (diffUTCTime, getCurrentTime)
-import           Data.Word (Word16, Word32, Word64)
-import           System.Directory (doesDirectoryExist, getFileSize, makeAbsolute, removeFile)
+import           Data.Word (Word32, Word64)
+import           System.Directory (doesDirectoryExist, makeAbsolute, removeFile)
 import           System.Directory.Extra (listDirectories, listFiles)
-import           System.FilePath (takeDirectory, (</>))
+import           System.FilePath (takeFileName, (</>))
+import           System.IO (Handle, hTell)
 import           System.Time.Extra (sleep)
 
 -- | Runs rotation mechanism for the log files.
 runLogsRotator :: TracerEnv -> IO ()
-runLogsRotator TracerEnv{teConfig, teCurrentLogLock, teTracer} =
-  whenJust (rotation teConfig) $ \rotParams -> do
+runLogsRotator TracerEnv
+  { teConfig = TracerConfig{rotation, verbosity, logging}
+  , teCurrentLogLock
+  , teTracer
+  , teRegistry
+  } = do
+  whenJust rotation \rotParams -> do
     traceWith teTracer TracerStartedLogRotator
-    launchRotator loggingParamsForFiles rotParams (verbosity teConfig) teCurrentLogLock
+    launchRotator loggingParamsForFiles rotParams verbosity teRegistry teCurrentLogLock
  where
-  loggingParamsForFiles = nub . NE.filter filesOnly $ logging teConfig
+  loggingParamsForFiles :: [LoggingParams]
+  loggingParamsForFiles = nub (NE.filter filesOnly logging)
+
+  filesOnly :: LoggingParams -> Bool
   filesOnly LoggingParams{logMode} = logMode == FileMode
 
 launchRotator
   :: [LoggingParams]
   -> RotationParams
   -> Maybe Verbosity
+  -> HandleRegistry
   -> Lock
   -> IO ()
-launchRotator [] _ _ _ = return ()
+launchRotator [] _ _ _ _ = return ()
 launchRotator loggingParamsForFiles
-              rotParams@RotationParams{rpFrequencySecs} verb currentLogLock = forever $ do
-  showProblemIfAny verb $
-    forM_ loggingParamsForFiles $ checkRootDir currentLogLock rotParams
-  sleep $ fromIntegral rpFrequencySecs
+              rotParams@RotationParams{rpFrequencySecs} verb registry currentLogLock =
+  forever do
+    showProblemIfAny verb do
+      forM_ loggingParamsForFiles \loggingParam -> do
+        checkRootDir currentLogLock registry rotParams loggingParam
+    sleep $ fromIntegral rpFrequencySecs
 
 -- | All the logs with 'TraceObject's received from particular node
 --   will be stored in a separate subdirectory in the root directory.
@@ -58,69 +73,88 @@ launchRotator loggingParamsForFiles
 --   this symbolic link is switched to it.
 checkRootDir
   :: Lock
+  -> HandleRegistry
   -> RotationParams
   -> LoggingParams
   -> IO ()
-checkRootDir currentLogLock rotParams LoggingParams{logRoot, logFormat} = do
+checkRootDir currentLogLock registry rotParams loggingParams@LoggingParams{logRoot, logFormat} = do
   logRootAbs <- makeAbsolute logRoot
-  whenM (doesDirectoryExist logRootAbs) $
-    listDirectories logRootAbs >>= \case
-      [] ->
-        -- There are no nodes' subdirs yet (or they were deleted),
-        -- so no rotation can be performed for now.
-        return ()
-      logsSubDirs -> do
-        let fullPathsToSubDirs = map (logRootAbs </>) logsSubDirs
-        forConcurrently_ fullPathsToSubDirs $
-          checkLogs currentLogLock rotParams logFormat
+  whenM (doesDirectoryExist logRootAbs) do
+    logsSubDirs <- listDirectories logRootAbs
+
+    handles <- readRegistry registry
+
+    -- There are no nodes' subdirs yet (or they were deleted), or they
+    -- don't contain files with open handles so no rotation can be
+    -- performed for now.
+    forConcurrently_ logsSubDirs \logSubDir -> do
+
+      let nodeName :: NodeName
+          nodeName = Text.pack (takeFileName logSubDir)
+
+      for_ @Maybe (Map.lookup (nodeName, loggingParams) handles) \(handle, filePath) -> let
+        nodeName' :: NodeName
+        nodeName' = Text.pack filePath
+        in
+        checkLogs currentLogLock handle nodeName' loggingParams registry rotParams logFormat (logRootAbs </> logSubDir)
 
 -- | We check the log files:
 --   1. If there are too big log files.
 --   2. If there are too old log files.
 checkLogs
   :: Lock
+  -> Handle
+  -> NodeName
+  -> LoggingParams
+  -> HandleRegistry
   -> RotationParams
   -> LogFormat
   -> FilePath
   -> IO ()
-checkLogs currentLogLock
-          RotationParams{rpLogLimitBytes, rpMaxAgeHours, rpKeepFilesNum} format subDirForLogs = do
+checkLogs currentLogLock handle nodeName loggingParams registry
+          RotationParams{rpLogLimitBytes, rpMaxAgeMinutes, rpKeepFilesNum} format subDirForLogs = do
+
   logs <- map (subDirForLogs </>) . filter (isItLog format) <$> listFiles subDirForLogs
-  unless (null logs) $ do
+  unless (null logs) do
     -- Since logs' names contain timestamps, we can sort them: the maximum one is the latest log,
     -- and this is the current log (i.e. the log we're writing 'TraceObject's in).
     let fromOldestToNewest = sort logs
         -- Usage of partial function 'last' is safe here (we already checked the list isn't empty).
-        currentLog = last fromOldestToNewest
         -- Only previous logs should be checked if they are outdated.
         allOtherLogs = dropEnd 1 fromOldestToNewest
-    checkIfCurrentLogIsFull currentLogLock currentLog format rpLogLimitBytes
-    checkIfThereAreOldLogs allOtherLogs rpMaxAgeHours rpKeepFilesNum
+    checkIfCurrentLogIsFull currentLogLock handle nodeName loggingParams registry format rpLogLimitBytes subDirForLogs
+    checkIfThereAreOldLogs allOtherLogs rpMaxAgeMinutes rpKeepFilesNum
 
 -- | If the current log file is full (it's size is too big), the new log will be created.
 checkIfCurrentLogIsFull
   :: Lock
-  -> FilePath
+  -> Handle
+  -> NodeName
+  -> LoggingParams
+  -> HandleRegistry
   -> LogFormat
   -> Word64
+  -> FilePath
   -> IO ()
-checkIfCurrentLogIsFull currentLogLock pathToCurrentLog format maxSizeInBytes =
-  whenM logIsFull $
-    createEmptyLogRotation currentLogLock (takeDirectory pathToCurrentLog) format
+checkIfCurrentLogIsFull currentLogLock handle nodeName loggingParams registry format maxSizeInBytes subDirForLogs =
+  whenM logIsFull do
+    createOrUpdateEmptyLog currentLogLock nodeName loggingParams registry subDirForLogs format
+
  where
+  logIsFull :: IO Bool
   logIsFull = do
-    size <- getFileSize pathToCurrentLog
+    size <- hTell handle
     return $! fromIntegral size >= maxSizeInBytes
 
 -- | If there are too old log files - they will be removed.
 --   Please note that some number of log files can be kept in any case.
 checkIfThereAreOldLogs
   :: [FilePath]
-  -> Word16
+  -> Word64
   -> Word32
   -> IO ()
 checkIfThereAreOldLogs [] _ _ = return ()
-checkIfThereAreOldLogs fromOldestToNewest maxAgeInHours keepFilesNum = do
+checkIfThereAreOldLogs fromOldestToNewest maxAgeInMinutes keepFilesNum = do
   -- N ('keepFilesNum') newest files have to be kept in any case.
   let logsWeHaveToCheck = dropEnd (fromIntegral keepFilesNum) fromOldestToNewest
   unless (null logsWeHaveToCheck) $
@@ -140,5 +174,5 @@ checkIfThereAreOldLogs fromOldestToNewest maxAgeInHours keepFilesNum = do
         -- Something is wrong with log's name, continue.
         checkOldLogs otherLogs now'
 
-  maxAgeInSecs = fromIntegral maxAgeInHours * 3600
+  maxAgeInSecs = fromIntegral maxAgeInMinutes * 60
   toSeconds age = fromEnum age `div` 1000000000000

@@ -1,6 +1,8 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -8,7 +10,6 @@
 #if __GLASGOW_HASKELL__ >= 908
 {-# OPTIONS_GHC -Wno-x-partial #-}
 #endif
-
 
 module Cardano.Tracer.Test.ForwardingStressTest.Script
   ( TestSetup(..)
@@ -23,15 +24,20 @@ import           Cardano.Tracer.Test.ForwardingStressTest.Messages
 import           Cardano.Tracer.Test.ForwardingStressTest.Types
 import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
+import qualified Cardano.Tracer.Test.Utils as Utils
 
-import           Control.Concurrent (ThreadId, forkFinally, threadDelay)
-import           Control.Concurrent.MVar
-import           Control.Exception.Base (SomeException, throw)
+import           Control.Concurrent (threadDelay)
+import           Control.Concurrent.Async (forConcurrently_)
 import           Control.Monad (when)
+import           Data.Aeson
+import qualified Data.Aeson.KeyMap as KeyMap
+import           Data.ByteString.Lazy.Char8 (ByteString, pack)
+import           Data.Either (partitionEithers)
 import           Data.IORef
-import           Data.List (sort)
+import           Data.List (nub)
 import           Data.Map.Strict (fromList)
-import           Data.Maybe
+import           Data.Vector (Vector)
+import qualified Data.Vector as Vector
 import           System.FilePath.Glob
 
 import           Test.QuickCheck
@@ -52,98 +58,118 @@ simpleTestConfig = emptyTraceConfig {
 --   The duration of the test is given by time in seconds
 runScriptForwarding ::
      TestSetup Identity
-  -> IORef Int
+  -> IORef [Int]
+  -> IORef (Vector Message)
   -> IO (Trace IO Message)
   -> Property
-runScriptForwarding TestSetup{..} msgCounter tracerGetter = do
-      let generator :: Gen [Script] = vectorOf (unI tsThreads) $
-            case unI tsMessages of
-              Nothing -> scale (* 500) arbitrary
-              Just numMsg -> Script <$> vectorOf numMsg arbitrary
-      forAll generator (\ (scripts :: [Script])
-        -> ioProperty $ do
-          tr <- tracerGetter
-          confState <- emptyConfigReflection
-          configureTracers confState simpleTestConfig [tr]
-          let scripts' = map (\ (Script sc) -> Script (sort sc))  scripts
-              scripts'' = zipWith (\ (Script sc) ind -> Script (
-                            withMessageIds (unI tsThreads) ind sc)) scripts' [0..]
-              scripts''' = map (\ (Script sc) -> Script
-                              $ map (withTimeFactor (unI tsTime)) sc) scripts''
+runScriptForwarding TestSetup{..} msgCountersRef msgsRef tracerGetter = do
+  let generator :: Gen (Vector Script)
+      generator = Utils.sizedVectorOf (unI tsThreads)
+        case unI tsMessages of
+          Nothing -> scale (* 500) arbitrary
+          Just numMsg -> Script <$> Utils.sizedVectorOf numMsg arbitrary
+  forAll generator \(scripts :: Vector Script) -> ioProperty do
+      tr <- tracerGetter
+      confState <- emptyConfigReflection
+      configureTracers confState simpleTestConfig [tr]
 
+      let scripts' = Vector.map (\(Script sc) -> Script (Utils.vectorSort sc)) scripts
 
-          -- putStrLn ("runTest " ++ show scripts)
-          children :: MVar [MVar (Either SomeException ())] <- newMVar []
-          mapM_ (\sc -> forkChild children (playIt sc tr 0.0)) scripts'''
-          res <- waitForChildren children []
-          let resErr = mapMaybe
-                      (\case
-                              Right _ -> Nothing
-                              Left err -> Just err) res
-          threadDelay 500000 --wait 0,5 seconds
-          if not (null resErr)
-            then throw (head resErr)
-            else        -- Oracle
-              let numMsg = sum (map (\ (Script sc) -> length sc) scripts''')
-              in if numMsg > 0 then do
-                -- TODO mutiple files
-                let logfileGlobPattern = unI tsWorkDir <> "/logs/*sock@*/node-*.json"
-                logs <- glob logfileGlobPattern
-                logFile <- case logs of
-                             []    -> fail $ "No files match the logfile glob pattern: " <> logfileGlobPattern
-                             _:_:_ -> fail $ "More than one file matches the logfile glob pattern: " <> logfileGlobPattern
-                             x:_ -> pure x
-                contents <- readFile logFile
-                let lineLength = length (lines contents)
-                totalNumMsg <- atomicModifyIORef msgCounter (\ac ->
-                  let nc = ac + numMsg
-                  in (nc, nc))
-                pure (totalNumMsg == lineLength - 1)
-              else do
-                pure True
+          scripts'' = Vector.map (\(ind, Script sc) -> Script (withMessageIds (unI tsThreads) ind sc)) (Vector.indexed scripts')
 
-        )
+          scripts''' = Vector.map (\(Script sc) -> Script
+                          $ Vector.map (withTimeFactor (unI tsTime)) sc) scripts''
 
-forkChild :: MVar [MVar (Either SomeException ())] -> IO () -> IO ThreadId
-forkChild children io = do
-   mvar <- newEmptyMVar
-   childs <- takeMVar children
-   putMVar children (mvar:childs)
-   forkFinally io (putMVar mvar)
+      let messages :: Vector Message
+          messages = Vector.concatMap scriptMessages scripts'''
 
-waitForChildren :: MVar [MVar (Either SomeException ())]
-  -> [Either SomeException ()]
-  -> IO [Either SomeException ()]
-waitForChildren children accum = do
- cs <- takeMVar children
- case cs of
-   []   -> pure accum
-   m:ms -> do
-      putMVar children ms
-      res <- takeMVar m
-      waitForChildren children (res : accum)
+      threadDelay 0_500_000 --wait 0,5 seconds
+      forConcurrently_ scripts''' do
+        playIt tr 0.0
 
+      let numMsg = sum (fmap (\ (Script sc) -> length sc) scripts''')
+      if numMsg > 0 then do
+        -- TODO mutiple files
+        let logfileGlobPattern = unI tsWorkDir <> "/logs/*sock@*/node-*.json"
+        logs <- glob logfileGlobPattern
+        logFile <- case logs of
+                     []    -> fail $ "No files match the logfile glob pattern: " <> logfileGlobPattern
+                     _:_:_ -> fail $ "More than one file matches the logfile glob pattern: " <> logfileGlobPattern
+                     x:_ -> pure x
 
--- | Play the current script in one thread
--- The time is in milliseconds
-playIt :: Script -> Trace IO Message -> Double -> IO ()
-playIt (Script []) _tr _d = pure ()
-playIt (Script (ScriptedMessage d1 m1 : rest)) tr d = do
-  when (d < d1) $ threadDelay (round ((d1 - d) * 1000000))
-    -- this is in microseconds
-  traceWith tr m1
-  playIt (Script rest) tr d1
+        contents <- readFile logFile
+
+        let prs :: ByteString -> Either String Message
+            prs ""  = Left "empty line"
+            prs str =
+              case decode @Object str of
+                Nothing -> Left "no decode"
+                Just a ->
+                  case KeyMap.lookup "data" a of
+                  Nothing -> Left "no data"
+                  Just deita ->
+                    case fromJSON @Message deita of
+                      Data.Aeson.Error str' -> Left str'
+                      Data.Aeson.Success a' -> Right a'
+
+        let lineLength = length (lines contents)
+
+        totalNumMsg :: [Int]
+          <- atomicModifyIORef msgCountersRef \case
+            []       -> let newLen = [numMsg]                  in (newLen, newLen)
+            len:lens -> let newlen = (len + numMsg) : len:lens in (newlen, newlen)
+
+        let parsedLines :: [Either String Message]
+            parsedLines = map (prs . pack) (lines contents)
+
+            failures       :: [String]
+            parsedMessages :: [Message]
+            (failures, parsedMessages) = partitionEithers parsedLines
+
+        case nub failures of
+          [] -> pure ()
+          ["empty line"] -> pure ()
+          _ -> error ".."
+
+        totalMsgs :: Vector Message <- atomicModifyIORef msgsRef (\ac ->
+          let nc = ac <> messages
+          in (nc, nc))
+
+        pure $ conjoin
+          [ counterexample ("Number of messages (" ++ show (head totalNumMsg) ++ ") does not match log file " ++ logFile ++ " length: " ++ show (lineLength - 1)) do
+              head totalNumMsg === (lineLength - 1)
+          , counterexample "Messages do not match the Messages do not match." do
+              Utils.vectorSort (Vector.fromList parsedMessages) === Utils.vectorSort totalMsgs
+          ]
+      else
+        pure (property True)
+
+playIt :: Trace IO Message -> Double -> Script -> IO ()
+playIt tr d (Script script) =
+  case Vector.uncons script of
+    Nothing -> pure ()
+    Just (ScriptedMessage d1 m1, rest) -> do
+      when (d < d1) do
+        threadDelay (round ((d1 - d) * 1_000_000))
+        -- this is in microseconds
+      traceWith tr m1
+      playIt tr d1 (Script rest)
 
 -- | Adds a message id to every message.
 -- MessageId gives the id to start with.
 -- Returns a tuple with the messages with ids and
 -- the successor of the last used messageId
-withMessageIds :: Int -> MessageID -> [ScriptedMessage] -> [ScriptedMessage]
-withMessageIds numThreads mid sMsgs = go mid sMsgs []
-  where
-    go _mid' [] acc = reverse acc
-    go mid' (ScriptedMessage time msg : tl) acc =
-      go (mid' + numThreads) tl (ScriptedMessage time (setMessageID msg mid') : acc)
+withMessageIds :: Int -> MessageID -> Vector ScriptedMessage -> Vector ScriptedMessage
+withMessageIds numThreads mid sMsgs = Vector.zipWith f sMsgs idVec where
+
+  f :: ScriptedMessage -> Int -> ScriptedMessage
+  f (ScriptedMessage time msg) mid' = ScriptedMessage time (setMessageID msg mid')
+
+  idVec :: Vector Int
+  idVec = Vector.iterateN len (+ numThreads) mid
+
+  len :: Int
+  len = Vector.length sMsgs
 
 withTimeFactor :: Double -> ScriptedMessage -> ScriptedMessage
 withTimeFactor factor (ScriptedMessage time msg) =
