@@ -5,26 +5,33 @@ module Cardano.Tracer.Handlers.RTView.Update.EKG
   ( updateEKGMetrics
   ) where
 
-import           Control.Concurrent.STM.TVar (readTVarIO)
-import           Control.Monad (forM_, unless)
-import           Data.List (partition, sort)
-import qualified Data.Map.Strict as M
-import           Data.Text (intercalate, isPrefixOf)
-import           Graphics.UI.Threepenny.Core (UI, liftIO)
+import Control.Concurrent.STM.TVar (readTVarIO)
+import Control.Monad (forM_, unless)
+import Data.List (partition, sort)
+import Data.Map.Strict qualified as M
+import Data.Text (intercalate, isPrefixOf)
+import Graphics.UI.Threepenny.Core (UI, liftIO)
 
-import           Cardano.Logging (showT)
+import Cardano.Logging (showT)
 
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Metrics.Utils
-import           Cardano.Tracer.Handlers.RTView.UI.Utils
-import           Cardano.Tracer.Types
+import Cardano.Tracer.Utils (stmMapToList)
+import Cardano.Tracer.Environment
+import Cardano.Tracer.Handlers.Metrics.Utils
+import Cardano.Tracer.Handlers.RTView.UI.Utils
+import Cardano.Tracer.Types
+
+import Control.Concurrent.STM
+import StmContainers.Map qualified as STM.Map
+import ListT qualified
 
 updateEKGMetrics :: TracerEnv -> UI ()
 updateEKGMetrics TracerEnv{teAcceptedMetrics} = do
-  allMetrics <- liftIO $ readTVarIO teAcceptedMetrics
-  forM_ (M.toList allMetrics) $ \(NodeId anId, (ekgStore, _)) -> do
+  allMetrics <- liftIO do
+    atomically do
+      stmMapToList teAcceptedMetrics
+  forM_ allMetrics \(NodeId anId, (ekgStore, _)) -> do
     metrics <- liftIO $ getListOfMetrics ekgStore
-    unless (null metrics) $ do
+    unless (null metrics) do
       setTextValue (anId <> "__node-ekg-metrics-num") (showT $ length metrics)
       let sortedMetrics = sort metrics
           (rtsGCPredefinedMetrics, otherMetrics) = partition rtsGCPredefined sortedMetrics

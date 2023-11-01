@@ -13,42 +13,49 @@ module Cardano.Tracer.Handlers.RTView.Update.Historical
   , runHistoricalUpdater
   ) where
 
-import           Control.Concurrent.Async (forConcurrently_)
-import           Control.Concurrent.STM (atomically)
-import           Control.Concurrent.STM.TVar (modifyTVar', readTVar, readTVarIO)
-import           Control.Exception.Extra (ignore, try_)
-import           Control.Monad (forM, forM_, forever)
-import           Control.Monad.Extra (ifM, whenJust)
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Csv as CSV
-import           Data.List (find, isInfixOf)
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as M
-import           Data.Maybe (catMaybes)
-import           Data.Set (Set)
-import qualified Data.Set as S
-import qualified Data.Text as T
-import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
-import qualified Data.Vector as V
-import           System.Directory (createDirectoryIfMissing, doesDirectoryExist, doesFileExist)
-import           System.Directory.Extra (listFiles)
-import           System.FilePath (takeBaseName, (</>))
-import           System.Time.Extra (sleep)
-import           Text.Read (readMaybe)
+import Control.Concurrent.Async (forConcurrently_)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TVar (modifyTVar', readTVar, readTVarIO)
+import Control.Exception.Extra (ignore, try_)
+import Control.Monad (forM, forM_, forever)
+import Control.Monad.Extra (ifM, whenJust)
+import Data.ByteString.Lazy qualified as BSL
+import Data.Csv qualified as CSV
+import Data.List (find, isInfixOf)
+import Data.Map.Strict (Map)
+import Data.Map.Strict as M
+import Data.Maybe (catMaybes)
+import Data.Set (Set)
+import Data.Set qualified as S
+import Data.Text qualified as T
+import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
+import Data.Vector qualified as V
+import System.Directory (createDirectoryIfMissing, doesDirectoryExist, doesFileExist)
+import System.Directory.Extra (listFiles)
+import System.FilePath (takeBaseName, (</>))
+import System.Time.Extra (sleep)
+import Text.Read (readMaybe)
 
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Metrics.Utils
-import           Cardano.Tracer.Handlers.RTView.State.Historical
-import           Cardano.Tracer.Handlers.RTView.State.Last
-import           Cardano.Tracer.Handlers.RTView.System
-import           Cardano.Tracer.Handlers.RTView.Update.Chain
-import           Cardano.Tracer.Handlers.RTView.Update.Leadership
-import           Cardano.Tracer.Handlers.RTView.Update.Resources
-import           Cardano.Tracer.Handlers.RTView.Update.Transactions
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
-import           Cardano.Tracer.Handlers.RTView.Utils
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
+import Cardano.Tracer.Environment
+import Cardano.Tracer.Handlers.Metrics.Utils
+import Cardano.Tracer.Handlers.RTView.State.Historical
+import Cardano.Tracer.Handlers.RTView.State.Last
+import Cardano.Tracer.Handlers.RTView.System
+import Cardano.Tracer.Handlers.RTView.Update.Chain
+import Cardano.Tracer.Handlers.RTView.Update.Leadership
+import Cardano.Tracer.Handlers.RTView.Update.Resources
+import Cardano.Tracer.Handlers.RTView.Update.Transactions
+import Cardano.Tracer.Handlers.RTView.Update.Utils
+import Cardano.Tracer.Handlers.RTView.Utils
+import Cardano.Tracer.Types
+import Cardano.Tracer.Utils
+import Cardano.Tracer.Utils qualified as STM.Set
+
+import Control.Concurrent.STM
+import ListT qualified 
+import StmContainers.Set   qualified as STM.Set
+import StmContainers.Bimap qualified as STM.Bimap
+import StmContainers.Map   qualified as STM.Map
 
 -- | A lot of information received from the node is useful as historical data.
 --   It means that such an information should be displayed on time charts,
@@ -69,7 +76,7 @@ runHistoricalUpdater
 runHistoricalUpdater tracerEnv lastResources = forever $ do
   sleep 1.0 -- TODO: should it be configured?
   now <- systemToUTCTime <$> getSystemTime
-  forAcceptedMetrics_ tracerEnv $ \(nodeId, (ekgStore, _)) ->
+  forAcceptedMetrics_ tracerEnv $ \nodeId (ekgStore, _) ->
     forMM_ (getListOfMetrics ekgStore) $ \(metricName, metricValue) -> do
       updateTransactionsHistory nodeId teTxHistory metricName metricValue now
       updateResourcesHistory nodeId teResourcesHistory lastResources metricName metricValue now
@@ -89,7 +96,8 @@ runHistoricalBackup tracerEnv@TracerEnv{teRTViewPageOpened} = forever $ do
 
 backupAllHistory :: TracerEnv -> IO ()
 backupAllHistory tracerEnv@TracerEnv{teConnectedNodes} = do
-  connected <- S.toList <$> readTVarIO teConnectedNodes
+  connected <- atomically do 
+    STM.Set.toList teConnectedNodes
   nodesIdsWithNames <- getNodesIdsWithNames tracerEnv connected
   backupDir <- getPathToBackupDir tracerEnv
   (cHistory, rHistory, tHistory) <- atomically $ (,,)
@@ -175,8 +183,8 @@ getAllHistoryFromBackup
   -> DataName
   -> IO [(NodeId, [HistoricalPoint])]
 getAllHistoryFromBackup tracerEnv@TracerEnv{teConnectedNodes} dataName = do
-  connected <- S.toList <$> readTVarIO teConnectedNodes
-  nodesIdsWithNames <- getNodesIdsWithNames tracerEnv connected
+  connected <- atomically do fromSTMSet teConnectedNodes
+  nodesIdsWithNames <- getNodesIdsWithNames tracerEnv (S.toList connected)
   backupDir <- getPathToBackupDir tracerEnv
   forM nodesIdsWithNames $ \(nodeId, nodeName) -> do
     let nodeSubdir = backupDir </> T.unpack nodeName
@@ -202,8 +210,10 @@ getAllHistoryFromBackup tracerEnv@TracerEnv{teConnectedNodes} dataName = do
 getLastHistoryFromBackupsAll
   :: TracerEnv
   -> IO [(NodeId, [(DataName, [HistoricalPoint])])]
-getLastHistoryFromBackupsAll tracerEnv@TracerEnv{teConnectedNodes} =
-  getLastHistoryFromBackups' tracerEnv . S.toList =<< readTVarIO teConnectedNodes
+getLastHistoryFromBackupsAll tracerEnv@TracerEnv{teConnectedNodes} = do
+  as <- atomically do
+      fromSTMSet teConnectedNodes
+  getLastHistoryFromBackups' tracerEnv (S.toList as)
 
 getLastHistoryFromBackups
   :: TracerEnv
@@ -245,7 +255,7 @@ getLastHistoryFromBackups' tracerEnv nodeIds = do
                 -- Ok, take the points for the last 6 hours from now.
                 let sixHoursInS = 21600
                     !firstTSWeNeed = utc2s now - sixHoursInS
-                    pointsWeNeed = filter (\(ts, _) -> ts >= firstTSWeNeed) $ V.toList pointsV
+                    pointsWeNeed = Prelude.filter (\(ts, _) -> ts >= firstTSWeNeed) $ V.toList pointsV
                 return $ Just (dataName, pointsWeNeed)
 
 getNodesIdsWithNames

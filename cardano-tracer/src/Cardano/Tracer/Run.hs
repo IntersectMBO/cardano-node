@@ -11,8 +11,6 @@ import Control.Concurrent.Extra (newLock)
 import Control.Concurrent.STM.TVar (newTVarIO)
 import Data.Foldable (for_)
 
-import Data.Functor.Contravariant
-
 import Cardano.Logging.Resources
 import Cardano.Tracer.Acceptors.Run
 import Cardano.Tracer.CLI
@@ -28,11 +26,10 @@ import Cardano.Tracer.MetaTrace
 import Cardano.Tracer.Types
 import Cardano.Tracer.Utils
 
-import Control.Applicative
-import Control.Monad
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (async)
--- import Cardano.Node.Tracing.Tracers.Resources (startResourceTracer)
+import Control.Applicative
+import Control.Monad
 
 -- | Top-level run function, called by 'cardano-tracer' app.
 runCardanoTracer :: TracerParams -> IO ()

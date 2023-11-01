@@ -10,21 +10,25 @@ module Cardano.Tracer.Handlers.RTView.Update.Utils
   , nullTime
   ) where
 
-import           Control.Concurrent.Extra (Lock, withLock)
-import           Control.Concurrent.STM.TVar (readTVarIO)
-import           Data.Aeson (FromJSON, decode')
-import qualified Data.Map.Strict as M
-import           Data.Text (Text)
-import           Data.Text.Read (decimal)
-import           Data.Time.Calendar (Day (..))
-import           Data.Time.Clock (UTCTime (..))
-import           Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
-import           Data.Word (Word64)
+import Control.Concurrent.Extra (Lock, withLock)
+import Control.Concurrent.STM.TVar (readTVarIO)
+import Data.Aeson (FromJSON, decode')
+import Data.Map.Strict qualified as M
+import Data.Text (Text)
+import Data.Text.Read (decimal)
+import Data.Time.Calendar (Day (..))
+import Data.Time.Clock (UTCTime (..))
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
+import Data.Word (Word64)
 
-import           Trace.Forward.Protocol.DataPoint.Type (DataPointName)
-import           Trace.Forward.Utils.DataPoint (askForDataPoints)
+import Trace.Forward.Protocol.DataPoint.Type (DataPointName)
+import Trace.Forward.Utils.DataPoint (askForDataPoints)
 
-import           Cardano.Tracer.Types
+import Cardano.Tracer.Types
+
+import Control.Concurrent.STM
+import StmContainers.Set qualified as STM.Set
+import StmContainers.Map qualified as STM.Map
 
 -- | There is a different information the node can provide us by explicit request.
 --   This is a structured data about internal state of the node (for example, its
@@ -41,11 +45,11 @@ askDataPoint
   -> NodeId
   -> DataPointName
   -> IO (Maybe a)
-askDataPoint dpRequestors currentDPLock nodeId dpName = withLock currentDPLock $ do
-  requestors <- readTVarIO dpRequestors
-  case M.lookup nodeId requestors of
-    Nothing -> return Nothing
-    Just dpRequestor ->
+askDataPoint dpRequestors currentDPLock nodeId dpName = withLock currentDPLock do
+  requestor <- atomically do STM.Map.lookup nodeId dpRequestors
+  case requestor of
+    Nothing -> pure Nothing
+    Just dpRequestor -> 
       askForDataPoints dpRequestor [dpName] >>= \case
         [(_, Just rawDPValue)] -> return $ decode' rawDPValue
         _ -> return Nothing
