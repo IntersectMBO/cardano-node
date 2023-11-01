@@ -61,7 +61,8 @@ genesisInitialFunds :: forall era. IsShelleyBasedEra era
   -> ShelleyGenesis
   -> [(AddressInEra era, Lovelace)]
 genesisInitialFunds networkId g
- = [ ( shelleyAddressInEra $ makeShelleyAddress networkId (fromShelleyPaymentCredential pcr) (fromShelleyStakeReference stref)
+ = [ ( shelleyAddressInEra (shelleyBasedEra @era) $
+          makeShelleyAddress networkId (fromShelleyPaymentCredential pcr) (fromShelleyStakeReference stref)
      , fromShelleyLovelace coin
      )
      | (Addr _ pcr stref, coin) <- ListMap.toList $ sgInitialFunds g
@@ -122,14 +123,15 @@ mkGenesisTransaction :: forall era .
 mkGenesisTransaction key ttl fee txins txouts
   = bimap
       ApiError
-      (`signShelleyTransaction` [WitnessGenesisUTxOKey key])
-      (createAndValidateTransactionBody txBodyContent)
+      (\b -> signShelleyTransaction (shelleyBasedEra @era) b [WitnessGenesisUTxOKey key])
+      (createAndValidateTransactionBody (cardanoEra @era) txBodyContent)
  where
-  txBodyContent = defaultTxBodyContent
+  txBodyContent = defaultTxBodyContent (cardanoEra @era)
     & setTxIns (zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending)
     & setTxOuts txouts
     & setTxFee (mkTxFee fee)
-    & setTxValidityRange (TxValidityNoLowerBound, mkTxValidityUpperBound ttl)
+    & setTxValidityLowerBound TxValidityNoLowerBound
+    & setTxValidityUpperBound (mkTxValidityUpperBound ttl)
 
 castKey :: SigningKey PaymentKey -> SigningKey GenesisUTxOKey
 castKey (PaymentSigningKey skey) = GenesisUTxOSigningKey skey

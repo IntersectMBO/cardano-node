@@ -21,6 +21,7 @@ import           Cardano.Api (textShow)
 import qualified Cardano.Api.Shelley as Api
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Crypto.VRF.Class as Crypto
 import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Allegra.Scripts as Allegra
@@ -59,6 +60,7 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Praos as Praos
+import           Ouroboros.Consensus.Protocol.Praos.Common (PraosChainSelectView (..))
 import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
@@ -69,10 +71,12 @@ import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, block
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
+import qualified Data.ByteString.Base16 as B16
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
+import qualified Data.Text.Encoding as Text
 
 {- HLINT ignore "Use :" -}
 
@@ -160,10 +164,6 @@ instance LogFormatting (Conway.ConwayDelegPredFailure era) where
       [ "kind" .= String "DRepAlreadyRegisteredForStakeKeyDELEG"
       , "amount" .= String (textShow credential)
       , "error" .= String "DRep already registered for the stake key"
-      ]
-    Conway.WrongCertificateTypeDELEG ->
-      [ "kind" .= String "WrongCertificateTypeDELEG"
-      , "error" .= String "Wrong certificate type"
       ]
 
 instance
@@ -372,8 +372,8 @@ instance
     mconcat [ "kind" .= String "MissingRequiredSigners"
              , "txins" .= Set.toList txins
              ]
-  forMachine _ (NonOutputSupplimentaryDatums disallowed acceptable) =
-    mconcat [ "kind" .= String "NonOutputSupplimentaryDatums"
+  forMachine _ (NotAllowedSupplementalDatums disallowed acceptable) =
+    mconcat [ "kind" .= String "NotAllowedSupplementalDatums"
              , "disallowed" .= Set.toList disallowed
              , "acceptable" .= Set.toList acceptable
              ]
@@ -1135,6 +1135,10 @@ instance
     mconcat [ "kind" .= String "ExpirationEpochTooSmall"
             , "credentialsToEpoch" .= credsToEpoch
             ]
+  forMachine _ (Conway.InvalidPrevGovActionIdsInProposals proposals) =
+    mconcat [ "kind" .= String "InvalidPrevGovActionIdsInProposals"
+            , "proposals" .= proposals
+            ]
 
 instance
   ( Consensus.ShelleyBasedEra era
@@ -1244,6 +1248,23 @@ instance LogFormatting Praos.PraosEnvelopeError where
                 , "blockSize" .= blockSize
                 ]
 
+instance Ledger.Crypto c => LogFormatting (PraosChainSelectView c) where
+  forMachine _ PraosChainSelectView {
+      csvChainLength
+    , csvSlotNo
+    , csvIssuer
+    , csvIssueNo
+    , csvTieBreakVRF
+    } =
+      mconcat [ "kind" .= String "PraosChainSelectView"
+              , "chainLength" .= csvChainLength
+              , "slotNo" .= csvSlotNo
+              , "issuerHash" .= hashKey csvIssuer
+              , "issueNo" .= csvIssueNo
+              , "tieBreakVRF" .= renderVRF csvTieBreakVRF
+              ]
+    where
+      renderVRF = Text.decodeUtf8 . B16.encode . Crypto.getOutputVRFBytes
 
 --------------------------------------------------------------------------------
 -- Helper functions

@@ -72,7 +72,7 @@ genesisValue :: TxOutValue BabbageEra
 
 (genesisTxIn, genesisValue) =
   ( TxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162" (TxIx 0)
-  , lovelaceToTxOutValue $ Lovelace 90000000000000
+  , lovelaceToTxOutValue BabbageEra $ Lovelace 90000000000000
   )
 
 genesisFund :: Fund

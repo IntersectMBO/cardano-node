@@ -25,11 +25,13 @@ import qualified Data.Text as Text
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Network.Block (blockHash, blockNo, blockSlot)
 
+import           Ouroboros.Consensus.Block.EBB (fromIsEBB)
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock (..),
                    ByronOtherHeaderEnvelopeError (..), TxId (..), byronHeaderRaw)
 import           Ouroboros.Consensus.Byron.Ledger.Inspect (ByronLedgerUpdate (..),
                    ProtocolUpdate (..), UpdateState (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, txId)
+import           Ouroboros.Consensus.Protocol.PBFT (PBftSelectView (..))
 import           Ouroboros.Consensus.Util.Condense (condense)
 
 import           Cardano.Api (textShow)
@@ -212,4 +214,12 @@ instance LogFormatting ByronOtherHeaderEnvelopeError where
     mconcat
       [ "kind" .= String "UnexpectedEBBInSlot"
       , "slot" .= slot
+      ]
+
+instance LogFormatting PBftSelectView where
+  forMachine _dtal (PBftSelectView blkNo isEBB) =
+    mconcat
+      [ "kind" .= String "PBftSelectView"
+      , "blockNo" .= blkNo
+      , "isEBB" .= fromIsEBB isEBB
       ]
