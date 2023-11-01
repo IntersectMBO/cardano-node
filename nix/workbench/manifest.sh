@@ -1,6 +1,8 @@
+#shellcheck shell=bash
+#
 usage_manifest() {
     usage "manifest" "Manifest" <<EOF
-    $(helpcmd collect-from-checkout DIR [NODE_REV=HEAD] [PKGS_TO_MENTION..])
+    $(helpcmd collect-from-checkout DIR "[NODE_REV=HEAD]" "[PKGS_TO_MENTION..]")
       $(blk c collect)           Collect software manifest from the current 'cardano-node' checkout
     $(helpcmd contributions-by-repository)
       $(blk by byrepo)           Show per-repository list of git hashes involved.
@@ -9,9 +11,12 @@ usage_manifest() {
 EOF
 }
 
-## WARNING:  Keep in sync with Cardano.Analysis.API.Context.manifestPackages.
-##    Better yet, move manifest collection _into_ locli.
-##    ..but since the manifest is part of meta.json, that'll cause more thinking.
+# WARNING: Keep in sync with Cardano.Analysis.API.Context.manifestPackages.
+# Better yet, move manifest collection _into_ locli.
+# ..but since the manifest is part of meta.json, that'll cause more thinking.
+#
+# WB_MANIFEST_PACKAGES is defined here and used in ./wb
+# shellcheck disable=SC2034
 WB_MANIFEST_PACKAGES=(
     'cardano-node'
     'ouroboros-consensus'
@@ -30,52 +35,56 @@ case "${op}" in
         local usage="USAGE: wb manifest $0"
 
         jq '
-        def pkg_id: ."pkg-name" + "-" + ."pkg-version";
-        def repo_hash: .url | split("?")[0];
+        def pkg_id:
+          ."pkg-name" + "-" + ."pkg-version"
+          ;
 
-        def distill_package_data:
-            (.url |  split("?")[0] | split("/")) as $url_parts
+        def is_from_chap:
+          ."pkg-src".repo?.uri?
+          | strings
+          | . == "https://input-output-hk.github.io/cardano-haskell-packages" or startswith("file:" + $chappath)
+          ;
+
+        def extract_package_data:
+          (.url | split("?")[0] | split("/")) as $url_parts
           | { pkg_id: pkg_id
             , repository: $url_parts[0:2] | join("/")
             , commit: $url_parts[2]
             }
           ;
 
-        def group_nicely:
-            group_by(.repository)
-          | map({
+        # index chap packages by package-id
+          $chapfile[0]
+        | INDEX(pkg_id) as $chapdata
+
+        # take the packages in the plan that come from chap,
+        # match them with chapdata by package-id
+        # and extract the data
+        | [ JOIN(
+              $chapdata;
+              $planfile[0]."install-plan"[] | select(is_from_chap);
+              pkg_id
+            )
+          | .[1] # metadata from chap
+          | extract_package_data
+          ]
+        | group_by(.repository)
+        | map({
             repository: .[0].repository,
-            contributions: map({key: .pkg_id, value: .commit}) | from_entries
+            contributions: INDEX(.pkg_id) | map_values(.commit)
           })
-          ;
+        ' --null-input \
+          --slurpfile planfile "$WB_NIX_PLAN" \
+          --slurpfile chapfile "$WB_CHAP_PATH/foliage/packages.json" \
+          --arg       chappath "$WB_CHAP_PATH"
 
-        # key chap packages by package id, so we can match them easily in the next step
-          $chap
-        | map({ key: pkg_id, value: distill_package_data })
-        | from_entries as $package_origin
-
-        | $plan."install-plan"
-        | map(select(."pkg-src".repo.uri == "https://input-output-hk.github.io/cardano-haskell-packages"))
-        | unique_by(pkg_id)
-        | map($package_origin[pkg_id])
-        | group_nicely[]
-        ' --null-input                              \
-          --argfile plan          $WB_NIX_PLAN      \
-          --argfile chap          $WB_CHAP_PACKAGES
         ;;
+
     collect-from-checkout | collect | c )
         local usage="USAGE: wb manifest $op CARDANO-NODE-CHECKOUT NODE-REV [PACKAGE...]"
         local dir=${1:?$usage}; shift
         local node_rev=${1:-}; shift || true
         local real_dir=$(realpath "$dir")
-        local pkgnames=($*)
-
-        if test -z "$node_rev"
-        then node_rev=$(manifest_git_head_commit "$dir"); fi
-
-        # TODO put this back when we support localisations
-        #, "cardano-node-package-localisations": (. | split("\n") | unique | map(select(. != "")))
-        # where . is the output of manifest_cabal_package_localisations "$dir"
 
         # If WB_MODE_CABAL is "t", the workbench configured to use a local cabal build, therefore
         # we fetch the plan from cabal's dist-newstyle directory.
@@ -90,55 +99,79 @@ case "${op}" in
             plan_path=$WB_NIX_PLAN
         fi
 
-        for pkg in ${pkgnames[*]}; do echo \"$pkg\"; done |
-        jq --slurp '
+        if test -z "$node_rev"
+        then node_rev=$(manifest_git_head_commit "$dir"); fi
+
+        jq '
         def pkg_id:
           ."pkg-name" + "-" + ."pkg-version"
           ;
 
-        def pkg_commit:
-          .url |  split("?")[0] | split("/")[2]
+        def commit_from_chap($chap_data):
+            $chap_data[pkg_id]
+          # parse the commit from the url
+          | .url
+          | strings
+          | split("?")[0]
+          | split("/")[2]
           ;
 
-        # key chap packages by package id, so we can match them easily in the next step
-        .
-        # | debug
-        | (map({ key: ., value: true }) | from_entries) as $pkgs
-        | $chap
-        | map({ key: pkg_id, value: pkg_commit })
-        | from_entries as $chap_data
+        def commit_from_srp:
+          ."pkg-src"."source-repo".tag
+          ;
 
-        # map each package in the plan to chap data (if present)
-        | $plan."install-plan"
-        | map({ key: ."pkg-name"
-              , value: { name: ."pkg-name"
-                       , version: ."pkg-version"
-                       , commit: $chap_data[pkg_id]
-                       }
-              })
-        | from_entries as $full_package_data
-        | $full_package_data
-        | map_values (select(.name | in($pkgs))) as $package_data
+        # index chap packages by package-id
+          $chapfile[0]
+        | INDEX(pkg_id) as $chap_data
 
-        # assemble the manifest
-        | $package_data *
-          { "cardano-node": { commit: $node_rev
+        # index the plan by package name
+        | $planfile[0]."install-plan"
+        | INDEX(."pkg-name") as $plan
+
+        # take the list of packages from the command line
+        | $ARGS.positional
+        # find them in the plan
+        | JOIN($plan; .)
+        # produce the desired data
+        | map(
+            .[1] # the plan entry
+            | { name: ."pkg-name"
+              , version: ."pkg-version"
+              , commit: (
+                  # if a package is pre-existing we cannot tell where it came from
+                  # to simplify, we take the following approach:
+                  # - if it is from a source-repo use that
+                  # - otherwise see if it matches any package on chap
+                  # - otherwise return null
+                  # Note: in case a package exists on both hackage and chap, this
+                  # will always report the commit from chap
+                  commit_from_srp // commit_from_chap($chap_data) // null
+                )
+              }
+          )
+        # index again by package name
+        | INDEX(.name)
+        # add cardano-node data
+        * { "cardano-node": { commit: $node_rev
                             , branch: $node_branch
                             , status: $node_status
                             } }
-        ' --arg     node_rev      $node_rev                                  \
-          --arg     node_branch   $(manifest_local_repo_branch       "$dir") \
-          --arg     node_status   $(manifest_git_checkout_state_desc "$dir") \
-          --arg     pkgs          $(manifest_git_checkout_state_desc "$dir") \
-          --argfile plan          $plan_path                                 \
-          --argfile chap          $WB_CHAP_PACKAGES
+        ' --null-input \
+          --arg       node_rev      "$node_rev" \
+          --arg       node_branch   "$(manifest_local_repo_branch       "$dir")" \
+          --arg       node_status   "$(manifest_git_checkout_state_desc "$dir")" \
+          --arg       pkgs          "$(manifest_git_checkout_state_desc "$dir")" \
+          --slurpfile planfile      "$plan_path" \
+          --slurpfile chapfile      "$WB_CHAP_PATH/foliage/packages.json" \
+          --args                    "$@"
         ;;
 
     render )
         local usage="USAGE: wb manifest $0 MANIFEST-JSON-VALUE"
         local json=${1:?$usage}
 
-        jq 'include "lib";
+        jq '
+        include "lib";
 
         def unwords: join(" ");
         def unlines: join("\n");

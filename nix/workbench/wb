@@ -222,7 +222,7 @@ start()
        local manifest=$(manifest collect-from-checkout  \
                             "$node_source"              \
                             "$node_rev"                 \
-                            ${WB_MANIFEST_PACKAGES[*]}
+                            "${WB_MANIFEST_PACKAGES[@]}"
                        )
        manifest render "$manifest"
 
