@@ -13,45 +13,50 @@ module Cardano.Tracer.Handlers.RTView.Update.Nodes
   , updateNodesUptime
   ) where
 
-import           Control.Concurrent.STM (atomically)
-import           Control.Concurrent.STM.TVar
-import           Control.Monad (forM_, unless, void, when)
-import           Control.Monad.Extra (whenJust, whenJustM, whenM)
-import           Data.List (find)
-import           Data.List.NonEmpty (NonEmpty)
-import qualified Data.Map.Strict as M
-import           Data.Maybe (fromMaybe)
-import           Data.Set (Set, (\\))
-import qualified Data.Set as S
-import qualified Data.Text as T
-import           Data.Text.Read (decimal, double)
-import           Data.Time.Calendar (diffDays)
-import           Data.Time.Clock (UTCTime, addUTCTime, diffUTCTime, utctDay)
-import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
-import           Data.Time.Format (defaultTimeLocale, formatTime)
-import           Data.Word (Word64)
-import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core
-import           Text.Printf (printf)
-import           Text.Read (readMaybe)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TVar
+import Control.Monad (forM_, unless, void, when)
+import Control.Monad.Extra (whenJust, whenJustM, whenM)
+import Data.List (find)
+import Data.List.NonEmpty (NonEmpty)
+import Data.Map.Strict qualified as M
+import Data.Maybe (fromMaybe)
+import Data.Set (Set, (\\))
+import Data.Set qualified as S
+import Data.Text qualified as T
+import Data.Text.Read (decimal, double)
+import Data.Time.Calendar (diffDays)
+import Data.Time.Clock (UTCTime, addUTCTime, diffUTCTime, utctDay)
+import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
+import Data.Time.Format (defaultTimeLocale, formatTime)
+import Data.Word (Word64)
+import Graphics.UI.Threepenny qualified as UI
+import Graphics.UI.Threepenny.Core
+import Text.Printf (printf)
+import Text.Read (readMaybe)
 
-import           Cardano.Logging (showT)
+import Cardano.Logging (showT)
 
-import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Metrics.Utils
-import           Cardano.Tracer.Handlers.RTView.State.Displayed
-import           Cardano.Tracer.Handlers.RTView.State.EraSettings
-import           Cardano.Tracer.Handlers.RTView.UI.Charts
-import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
-import           Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes
-import           Cardano.Tracer.Handlers.RTView.UI.Types
-import           Cardano.Tracer.Handlers.RTView.UI.Utils
-import           Cardano.Tracer.Handlers.RTView.Update.NodeInfo
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
-import           Cardano.Tracer.Handlers.RTView.Utils
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
+import Cardano.Tracer.Configuration
+import Cardano.Tracer.Environment
+import Cardano.Tracer.Handlers.Metrics.Utils
+import Cardano.Tracer.Handlers.RTView.State.Displayed
+import Cardano.Tracer.Handlers.RTView.State.EraSettings
+import Cardano.Tracer.Handlers.RTView.UI.Charts
+import Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
+import Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes
+import Cardano.Tracer.Handlers.RTView.UI.Types
+import Cardano.Tracer.Handlers.RTView.UI.Utils
+import Cardano.Tracer.Handlers.RTView.Update.NodeInfo
+import Cardano.Tracer.Handlers.RTView.Update.Utils
+import Cardano.Tracer.Handlers.RTView.Utils
+import Cardano.Tracer.Types
+import Cardano.Tracer.Utils
+
+import ListT qualified 
+import StmContainers.Map   qualified as STM.Map
+import StmContainers.Set   qualified as STM.Set
+import StmContainers.Bimap qualified as STM.Bimap
 
 updateNodesUI
   :: TracerEnv
@@ -65,12 +70,15 @@ updateNodesUI
 updateNodesUI tracerEnv@TracerEnv{teConnectedNodes, teAcceptedMetrics}
               displayedElements nodesEraSettings loggingConfig colors
               datasetIndices noNodesProgressTimer = do
-  (connected, displayedEls) <- liftIO . atomically $ (,)
-    <$> readTVar teConnectedNodes
-    <*> readTVar displayedElements
-  -- Check connected/disconnected nodes since previous UI's update.
-  let displayed = S.fromList $ M.keys displayedEls
-  when (connected /= displayed) $ do
+  (connected, displayedEls) <- liftIO $ atomically $ liftA2 (,)
+    do fromSTMSet teConnectedNodes
+    do readTVar displayedElements
+
+  let -- Check connected/disconnected nodes since previous UI's update.
+      displayed :: Set NodeId
+      displayed = S.fromList $ M.keys displayedEls
+
+  when (connected /= displayed) do
     let disconnected   = displayed \\ connected -- In 'displayed' but not in 'connected'.
         newlyConnected = connected \\ displayed -- In 'connected' but not in 'displayed'.
     deleteColumnsForDisconnected connected disconnected
@@ -194,7 +202,7 @@ doAddLiveViewNodesForConnected
 doAddLiveViewNodesForConnected tracerEnv connected = do
   window <- askWindow
   whenJustM (UI.getElementById window "logs-live-view-nodes-checkboxes") $ \el ->
-    forM_ connected $ \nodeId@(NodeId anId) -> do
+    forM_ connected \nodeId@(NodeId anId) -> do
       nodeName  <- liftIO $ askNodeName tracerEnv nodeId
       nodeColor <- liftIO $ getSavedColorForNode tracerEnv nodeName
 
@@ -250,9 +258,11 @@ setBlockReplayProgress
   -> AcceptedMetrics
   -> UI ()
 setBlockReplayProgress connected acceptedMetrics = do
-  allMetrics <- liftIO $ readTVarIO acceptedMetrics
-  forM_ connected $ \nodeId ->
-    whenJust (M.lookup nodeId allMetrics) $ \(ekgStore, _) -> do
+  -- TODO: The variable should only be read once! At the "top-level"
+  forM_ connected \nodeId -> do
+    mallMetrics <- liftIO $ atomically do
+        STM.Map.lookup nodeId acceptedMetrics
+    whenJust mallMetrics \(ekgStore, _) -> do
       metrics <- liftIO $ getListOfMetrics ekgStore
       whenJust (lookup "ChainDB.BlockReplayProgress" metrics) $ \metricValue ->
         updateBlockReplayProgress nodeId metricValue
@@ -272,10 +282,13 @@ setProducerMode
   -> AcceptedMetrics
   -> UI ()
 setProducerMode connected acceptedMetrics = do
-  allMetrics <- liftIO $ readTVarIO acceptedMetrics
-  forM_ connected $ \nodeId@(NodeId anId) ->
-    whenJust (M.lookup nodeId allMetrics) $ \(ekgStore, _) ->
-      forMM_ (liftIO $ getListOfMetrics ekgStore) $ \(mName, _) ->
+  -- allMetrics <- liftIO $ readTVarIO acceptedMetrics
+  -- TODO: The variable should only be read once! At the "top-level"
+  forM_ connected \nodeId@(NodeId anId) -> do
+    mallMetrics <- liftIO $ atomically do
+      STM.Map.lookup nodeId acceptedMetrics
+    whenJust mallMetrics \(ekgStore, _) ->
+      forMM_ (liftIO $ getListOfMetrics ekgStore) \(mName, _) ->
         case mName of
           "Forge.NodeIsLeader"    -> showProducerMode anId
           "Forge.NodeIsLeaderNum" -> showProducerMode anId
@@ -293,11 +306,14 @@ setLeadershipStats
   -> AcceptedMetrics
   -> UI ()
 setLeadershipStats connected displayed acceptedMetrics = do
-  allMetrics <- liftIO $ readTVarIO acceptedMetrics
-  forM_ connected $ \nodeId@(NodeId anId) ->
-    whenJust (M.lookup nodeId allMetrics) $ \(ekgStore, _) -> do
+  -- allMetrics <- liftIO $ readTVarIO acceptedMetrics
+  -- TODO: The variable should only be read once! At the "top-level"
+  forM_ connected \ nodeId@(NodeId anId) -> do
+    mallMetrics <- liftIO $ atomically do
+      STM.Map.lookup nodeId acceptedMetrics
+    whenJust mallMetrics \(ekgStore, _) -> do
       metrics <- liftIO $ getListOfMetrics ekgStore
-      forM_ metrics $ \(mName, mValue) ->
+      forM_ metrics \(mName, mValue) ->
         case mName of
           -- How many times this node was a leader.
           "Forge.NodeIsLeaderNum"    -> setDisplayedValue nodeId displayed (anId <> "__node-leadership") mValue
@@ -317,26 +333,28 @@ setEraEpochInfo
   -> UI ()
 setEraEpochInfo connected displayed acceptedMetrics nodesEraSettings = do
   allSettings <- liftIO $ readTVarIO nodesEraSettings
-  allMetrics <- liftIO $ readTVarIO acceptedMetrics
+  -- allMetrics <- liftIO $ readTVarIO acceptedMetrics
+  -- TODO: The variable should only be read once! At the "top-level"
   forM_ connected $ \nodeId@(NodeId anId) -> do
-    epochS <-
-      case M.lookup nodeId allMetrics of
-        Just (ekgStore, _) -> do
-          metrics <- liftIO $ getListOfMetrics ekgStore
-          return $ fromMaybe "" $ lookup "ChainDB.Epoch" metrics
-        Nothing -> return ""
-    unless (T.null epochS) $
+    mallMetrics <- liftIO $ atomically do
+      STM.Map.lookup nodeId acceptedMetrics
+    epochS <- case mallMetrics of
+      Just (ekgStore, _) -> do
+        metrics <- liftIO $ getListOfMetrics ekgStore
+        return $ fromMaybe "" $ lookup "ChainDB.Epoch" metrics
+      Nothing -> return ""
+    unless (T.null epochS) do
       setDisplayedValue nodeId displayed (anId <> "__node-epoch-num") epochS
 
-    whenJust (M.lookup nodeId allSettings) $ \settings -> do
+    whenJust (M.lookup nodeId allSettings) \settings -> do
       setDisplayedValue nodeId displayed (anId <> "__node-era") $ esEra settings
       updateEpochInfo settings nodeId epochS
-      updateEpochSlotProgress settings nodeId allMetrics
+      updateEpochSlotProgress settings nodeId mallMetrics
  where
   updateEpochInfo settings (NodeId anId) epochS =
-    unless (T.null epochS) $ do
+    unless (T.null epochS) do
       let epochNum = readInt epochS 0
-      whenJust (getEndOfCurrentEpoch settings epochNum) $ \(start, end) -> do
+      whenJust (getEndOfCurrentEpoch settings epochNum) \(start, end) -> do
         now <- systemToUTCTime <$> liftIO getSystemTime
         if start < now && now < end
           then do
@@ -375,8 +393,8 @@ setEraEpochInfo connected displayed acceptedMetrics nodesEraSettings = do
           !dateOfEpochEnd = dateOfEpochStart + fromIntegral epochLengthInS
       in Just (s2utc dateOfEpochStart, s2utc dateOfEpochEnd)
 
-  updateEpochSlotProgress EraSettings{esEpochLength} nodeId@(NodeId anId) allMetrics =
-    whenJust (M.lookup nodeId allMetrics) $ \(ekgStore, _) -> do
+  updateEpochSlotProgress EraSettings{esEpochLength} (NodeId anId) mallMetrics =
+    whenJust mallMetrics $ \(ekgStore, _) -> do
       metrics <- liftIO $ getListOfMetrics ekgStore
       whenJust (lookup "ChainDB.SlotInEpoch" metrics) $ \slotInEpochS ->
         case decimal slotInEpochS of

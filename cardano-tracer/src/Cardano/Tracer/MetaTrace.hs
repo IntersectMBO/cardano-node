@@ -14,6 +14,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE InstanceSigs #-}
+
 module Cardano.Tracer.MetaTrace
   ( module Cardano.Tracer.MetaTrace
   , Trace, SeverityF (..), SeverityS (..)
@@ -29,9 +32,9 @@ import qualified Data.Text as T
 import           GHC.Generics
 import qualified System.IO as Sys
 
-import           Cardano.Logging
+import Cardano.Logging
 
-import           Cardano.Tracer.Configuration
+import Cardano.Tracer.Configuration
 
 import           Cardano.Logging.Resources
 
@@ -123,6 +126,25 @@ instance ToJSON TracerTrace where
         ("kind" .= ("TracerResource" :: Text)
       <> "Resource" .= ttResource)
   toJSON = AE.genericToJSON jsonEncodingOptions
+<<<<<<< HEAD
+=======
+
+-- {"ConfigPath":"config.json","MinLogSeverity":null,"StateDir":null,"kind":"TracerParamsAre}"
+
+
+--   toJSON = AE.genericToJSON jsonEncodingOptions
+--   toEncoding = AE.genericToEncoding jsonEncodingOptions
+-- instance ToJSON TracerTrace where
+--   toJSON = AE.genericToJSON jsonEncodingOptions
+
+-- instance ToJSON Person where
+--     -- this generates a Value
+--     toJSON (Person name age) =
+--         object ["name" .= name, "age" .= age]
+
+--     -- this encodes directly to a bytestring Builder
+--     toEncoding (Person name age) =
+>>>>>>> 7cd24553f (cardano-tracer: Add stm-containers.)
 
 jsonEncodingOptions :: AE.Options
 jsonEncodingOptions = AE.defaultOptions

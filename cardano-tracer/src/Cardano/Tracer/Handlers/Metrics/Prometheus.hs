@@ -7,32 +7,38 @@ module Cardano.Tracer.Handlers.Metrics.Prometheus
   ( runPrometheusServer
   ) where
 
-import           Prelude hiding (head)
+import Prelude hiding (head)
 
-import           Control.Concurrent.STM.TVar (readTVarIO)
-import           Control.Monad (forever)
-import           Control.Monad.IO.Class (liftIO)
-import qualified Data.Bimap as BM
-import           Data.Functor ((<&>))
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Map.Strict as M
-import           Data.String (IsString (..))
-import           Data.Text (Text)
-import qualified Data.Text as T
-import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import           Snap.Blaze (blaze)
-import           Snap.Core (Snap, getRequest, route, rqParams, writeText)
-import           Snap.Http.Server (Config, ConfigLog (..), defaultConfig, setAccessLog, setBind,
-                   setErrorLog, setPort, simpleHttpServe)
-import           System.Metrics (Sample, Value (..), sampleAll)
-import           System.Time.Extra (sleep)
-import           Text.Blaze.Html5 hiding (map)
-import           Text.Blaze.Html5.Attributes hiding (title)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TVar (readTVarIO)
+import Control.Monad (forever)
+import Control.Monad.IO.Class (liftIO)
+import Data.Bimap qualified as BM
+import Data.Functor ((<&>))
+import Data.HashMap.Strict qualified as HM
+import Data.Map.Strict qualified as M
+import Data.String (IsString (..))
+import Data.Text (Text)
+import Data.Text qualified as T
+import Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import Snap.Blaze (blaze)
+import Snap.Core (Snap, getRequest, route, rqParams, writeText)
+import Snap.Http.Server (Config, ConfigLog (..), defaultConfig, setAccessLog, setBind,
+                         setErrorLog, setPort, simpleHttpServe)
+import System.Metrics (Sample, Value (..), sampleAll)
+import System.Time.Extra (sleep)
+import Text.Blaze.Html5 hiding (map)
+import Text.Blaze.Html5.Attributes hiding (title)
 
-import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
+import Cardano.Tracer.Configuration
+import Cardano.Tracer.Environment
+import Cardano.Tracer.Types
+import Cardano.Tracer.Utils
+
+import ListT qualified 
+import StmContainers.Map   qualified as STM.Map
+import StmContainers.Set   qualified as STM.Set
+import StmContainers.Bimap qualified as STM.Bimap
 
 -- | Runs simple HTTP server that listens host and port and returns
 --   the list of currently connected nodes in such a format:
@@ -57,7 +63,7 @@ runPrometheusServer
   :: TracerEnv
   -> Endpoint
   -> IO ()
-runPrometheusServer tracerEnv (Endpoint host port) = forever $ do
+runPrometheusServer tracerEnv (Endpoint host port) = forever do
   -- Pause to prevent collision between "Listening"-notifications from servers.
   sleep 0.1
   -- If everything is okay, the function 'simpleHttpServe' never returns.
@@ -79,12 +85,25 @@ runPrometheusServer tracerEnv (Endpoint host port) = forever $ do
     . setErrorLog ConfigNoLog
     $ defaultConfig
 
+  -- renderListOfConnectedNodes :: Snap ()
+  -- renderListOfConnectedNodes = do
+  --   nIdsWithNames <- liftIO $ readTVarIO teConnectedNodesNames
+  --   if BM.null nIdsWithNames
+  --     then writeText "There are no connected nodes yet."
+  --     else blaze . mkPage . map mkHref $ BM.toList nIdsWithNames
+
   renderListOfConnectedNodes :: Snap ()
   renderListOfConnectedNodes = do
-    nIdsWithNames <- liftIO $ readTVarIO teConnectedNodesNames
-    if BM.null nIdsWithNames
-      then writeText "There are no connected nodes yet."
-      else blaze . mkPage . map mkHref $ BM.toList nIdsWithNames
+    -- TODO: duplicate atomically
+    noNodes <- liftIO $ atomically do
+      STM.Bimap.null teConnectedNodesNames
+    if noNodes 
+    then writeText "There are no connected nodes yet."
+    else do
+      nodes <- liftIO $ atomically do
+        ListT.toList $ STM.Bimap.listT teConnectedNodesNames
+      
+      blaze $ mkPage $ map mkHref nodes
 
   mkHref (_, nodeName) =
     a ! href (fromString $ "http://" <> host <> ":" <> show port <> "/" <> nodeName')
@@ -115,14 +134,15 @@ getMetricsFromNode
   -> NodeId
   -> AcceptedMetrics
   -> IO Text
-getMetricsFromNode tracerEnv nodeId acceptedMetrics =
-  readTVarIO acceptedMetrics >>=
-    (\case
-        Nothing ->
-          return "No such a node!"
-        Just (ekgStore, _) ->
-          sampleAll ekgStore <&> renderListOfMetrics . getListOfMetrics
-    ) . M.lookup nodeId
+getMetricsFromNode tracerEnv nodeId acceptedMetrics = do
+  mmetricScores <- atomically do
+    STM.Map.lookup nodeId acceptedMetrics
+  case mmetricScores of
+    Nothing -> 
+      return "No such a node!"
+    Just (ekgStore, _) ->
+      sampleAll ekgStore <&> renderListOfMetrics . getListOfMetrics
+
  where
   getListOfMetrics :: Sample -> MetricsList
   getListOfMetrics =

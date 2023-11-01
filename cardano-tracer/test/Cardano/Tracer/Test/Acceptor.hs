@@ -8,6 +8,7 @@ module Cardano.Tracer.Test.Acceptor
 
 import           Control.Concurrent.Async.Extra (sequenceConcurrently)
 import           Control.Concurrent.Extra (newLock)
+import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (newTVarIO, readTVarIO)
 import           Control.Monad (forM_, forever, void)
 import qualified Data.ByteString.Lazy as LBS
@@ -25,6 +26,11 @@ import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 import           Trace.Forward.Utils.DataPoint
+
+import ListT qualified 
+import StmContainers.Map   qualified as STM.Map
+import StmContainers.Set   qualified as STM.Set
+import StmContainers.Bimap qualified as STM.Bimap
 
 data AcceptorsMode = Initiator | Responder
 
@@ -104,7 +110,7 @@ runDataPointsPrinter
   -> IO ()
 runDataPointsPrinter dpName dpRequestors = forever $ do
   sleep 1.0
-  dpReqs <- M.toList <$> readTVarIO dpRequestors
+  dpReqs <- atomically $ ListT.toList (STM.Map.listT dpRequestors)
   forM_ dpReqs $ \(_, dpReq) -> do
     dpValues <- askForDataPoints dpReq [T.pack dpName]
     forM_ dpValues $ \(dpName', dpValue) ->

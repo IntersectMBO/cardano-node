@@ -25,6 +25,9 @@ common project-config
                       , ImportQualifiedPost
                       , InstanceSigs
                       , ScopedTypeVariables
+                      , DerivingStrategies
+                      , GeneralizedNewtypeDeriving
+                      , TypeApplications
 
   ghc-options:          -Wall
                         -Wcompat
@@ -35,6 +38,7 @@ common project-config
                         -Wpartial-fields
                         -Wredundant-constraints
                         -Wunused-packages
+                        -w
 
 library
   import:               project-config
@@ -150,6 +154,8 @@ library
                       , ekg-forward ^>= 0.4
                       , extra
                       , filepath
+                      , hashable
+                      , list-t
                       , mime-mail
                       , optparse-applicative
                       , ouroboros-network ^>= 0.11
@@ -161,6 +167,7 @@ library
                       , snap-core
                       , snap-server
                       , stm
+                      , stm-containers
                       , string-qq
                       , text
                       , threepenny-gui
@@ -263,11 +270,13 @@ library demo-acceptor-lib
                       , extra
                       , filepath
                       , generic-data
+                      , list-t
                       , optparse-applicative-fork
                       , ouroboros-network-api
                       , stm
-                      , text
+                      , stm-containers
                       , tasty-quickcheck
+                      , text
                       , trace-forward
 
 executable demo-acceptor
