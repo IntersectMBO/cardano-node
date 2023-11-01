@@ -29,6 +29,11 @@ module Cardano.Tracer.Utils
   , nl
   , runInLoop
   , showProblemIfAny
+  , fromSTMSetIO
+  , fromSTMMap
+  , fromSTMSet
+  , toList
+  , stmMapToList
   ) where
 
 #if MIN_VERSION_base(4,18,0)
@@ -67,6 +72,12 @@ import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Types
+
+import ListT qualified
+import Control.Concurrent.STM
+import StmContainers.Set   qualified as STM.Set
+import StmContainers.Bimap qualified as STM.Bimap
+import StmContainers.Map   qualified as STM.Map
 
 -- | Run monadic action in a loop. If there's an exception,
 --   it will re-run the action again, after pause that grows.
@@ -131,16 +142,16 @@ connIdToNodeId ConnectionId{remoteAddress} = NodeId preparedAddress
     $ show remoteAddress
 
 initConnectedNodes :: IO ConnectedNodes
-initConnectedNodes = newTVarIO S.empty
+initConnectedNodes = STM.Set.newIO
 
 initConnectedNodesNames :: IO ConnectedNodesNames
-initConnectedNodesNames = newTVarIO BM.empty
+initConnectedNodesNames = STM.Bimap.newIO
 
 initAcceptedMetrics :: IO AcceptedMetrics
-initAcceptedMetrics = newTVarIO M.empty
+initAcceptedMetrics = STM.Map.newIO
 
 initDataPointRequestors :: IO DataPointRequestors
-initDataPointRequestors = newTVarIO M.empty
+initDataPointRequestors = STM.Map.newIO
 
 initProtocolsBrake :: IO ProtocolsBrake
 initProtocolsBrake = newTVarIO False
@@ -159,17 +170,19 @@ askNodeNameRaw
   -> NodeId
   -> IO NodeName
 askNodeNameRaw connectedNodesNames dpRequestors currentDPLock nodeId@(NodeId anId) = do
-  nodesNames <- readTVarIO connectedNodesNames
-  case BM.lookup nodeId nodesNames of
+  mnodesNames <- atomically do
+    STM.Bimap.lookupLeft nodeId connectedNodesNames
+  case mnodesNames of
     Just nodeName -> return nodeName
     Nothing -> do
       -- There is no name yet, so we have to ask for 'NodeInfo' datapoint to get the name.
       nodeName <-
         askDataPoint dpRequestors currentDPLock nodeId "NodeInfo" >>= \case
           Nothing -> return anId
-          Just NodeInfo{niName} -> return $ if T.null niName then anId else niName
+          Just NodeInfo{niName} -> return if T.null niName then anId else niName
       -- Store it in for the future using.
-      atomically . modifyTVar' connectedNodesNames $ BM.insert nodeId nodeName
+      atomically do
+        STM.Bimap.insertRight nodeId nodeName connectedNodesNames
       return nodeName
 
 askNodeId
@@ -177,15 +190,14 @@ askNodeId
   -> NodeName
   -> IO (Maybe NodeId)
 askNodeId TracerEnv{teConnectedNodesNames} nodeName = do
-  nodesNames <- readTVarIO teConnectedNodesNames
-  return $! if nodeName `BM.memberR` nodesNames
-              then Just $ nodesNames !> nodeName
-              else Nothing
+  atomically do
+    STM.Bimap.lookupRight nodeName teConnectedNodesNames
 
 -- | Stop the protocols. As a result, 'MsgDone' will be sent and interaction
 --   between acceptor's part and forwarder's part will be finished.
 applyBrake :: ProtocolsBrake -> IO ()
-applyBrake stopProtocols = atomically $ modifyTVar' stopProtocols . const $ True
+applyBrake stopProtocols = atomically do
+  modifyTVar' stopProtocols \_ -> True
 
 -- | Like 'liftM2', but for monadic function.
 lift2M :: Monad m => (a -> b -> m c) -> m a -> m b -> m c
@@ -213,7 +225,7 @@ nl = "\r\n"
 beforeProgramStops :: IO () -> IO ()
 beforeProgramStops action = do
   mainThreadIdWk <- mkWeakThreadId =<< myThreadId
-  forM_ signals $ \sig ->
+  forM_ signals \sig ->
     S.installHandler sig . const $ do
       putStrLn " Program is stopping, please wait..."
       hFlush stdout
@@ -225,3 +237,18 @@ beforeProgramStops action = do
     , S.sigINT
     , S.sigTERM
     ]
+
+fromSTMSet :: Ord a => STM.Set.Set a -> STM (S.Set a)
+fromSTMSet set = S.fromList <$> ListT.toList (STM.Set.listT set)
+
+toList :: Ord a => STM.Set.Set a -> STM [a]
+toList set = ListT.toList (STM.Set.listT set)
+
+fromSTMMap :: Ord k => STM.Map.Map k a -> STM (M.Map k a)
+fromSTMMap set = M.fromList <$> ListT.toList (STM.Map.listT set)
+
+stmMapToList :: Ord k => STM.Map.Map k a -> STM [(k, a)]
+stmMapToList set = ListT.toList (STM.Map.listT set)
+
+fromSTMSetIO :: Ord a => STM.Set.Set a -> IO (S.Set a)
+fromSTMSetIO = atomically . fromSTMSet
