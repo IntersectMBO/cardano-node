@@ -49,6 +49,7 @@ let
           haskell-language-server
           cabal
           git
+          glibcLocalesUtf8
         ];
 
         withHoogle = true;
