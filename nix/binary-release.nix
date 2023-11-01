@@ -24,7 +24,11 @@ in pkgs.runCommand name {
   mkdir -p $out release
   cd release
 
-  cp -n --remove-destination -v ${pkgs.lib.concatMapStringsSep " " (exe: "${exe}/bin/*") exes} ./
+  # note: on windows, we have all the .dlls in the same /bin folder. Thus we will
+  #       get the same dlls for each executable multiple times. So we cannot really
+  #       use `-n` here, which would warn that we "skipped" some duplicates; and
+  #       exit with 1. `-u` on the otherhand will just update as needed.
+  cp -u --remove-destination -v ${pkgs.lib.concatMapStringsSep " " (exe: "${exe}/bin/*") exes} ./
   mkdir -p configuration
   cp -Rv ${../configuration}/* ./configuration/
   chmod -R +w .

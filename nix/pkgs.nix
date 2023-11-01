@@ -66,25 +66,42 @@ in with final;
 
   cabal = haskell-nix.cabal-install.${compiler-nix-name};
 
-  hlint = haskell-nix.tool compiler-nix-name "hlint" {
-    version = {ghc8107 = "3.4.1";}.${compiler-nix-name} or "3.5";
-    index-state = "2023-01-20T05:50:56Z";
-  };
+  # TODO Use `compiler-nix-name` here instead of `"ghc928"`
+  # and fix the resulting `hlint` 3.6.1 warnings.
+  hlint = haskell-nix.tool "ghc928" "hlint" ({config, ...}: {
+    version = {
+      ghc8107 = "3.4.1";
+      ghc927 = "3.5";
+      ghc928 = "3.5";
+    }.${config.compiler-nix-name} or "3.6.1";
+    index-state = "2023-08-05T00:00:00Z";
+  });
 
   ghcid = haskell-nix.tool compiler-nix-name "ghcid" {
     version = "0.8.7";
-    index-state = "2023-01-20T05:50:56Z";
+    index-state = "2023-08-05T00:00:00Z";
   };
 
   haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" rec {
-    src = haskell-nix.sources."hls-1.10";
+    src = {
+      ghc8107 = haskell-nix.sources."hls-2.2";
+    }.${compiler-nix-name} or haskell-nix.sources."hls-2.3";
     cabalProject = builtins.readFile (src + "/cabal.project");
     sha256map."https://github.com/pepeiborra/ekg-json"."7a0af7a8fd38045fd15fb13445bdcc7085325460" = "sha256-fVwKxGgM0S4Kv/4egVAAiAjV7QB5PBqMVMCfsv7otIQ=";
   };
 
   haskellBuildUtils = prev.haskellBuildUtils.override {
     inherit compiler-nix-name;
-    index-state = "2023-01-20T05:50:56Z";
+    index-state = "2023-08-05T00:00:00Z";
+  };
+
+  profiteur = haskell-nix.tool compiler-nix-name "profiteur" {
+    cabalProjectLocal = ''
+      allow-newer: pofiteur:base, ghc-prof:base
+    '';
+  };
+
+  cabal-plan = haskell-nix.tool compiler-nix-name "cabal-plan" {
   };
 
   cardanolib-py = callPackage ./cardanolib-py { };
