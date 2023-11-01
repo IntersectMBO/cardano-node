@@ -315,7 +315,7 @@ data FormattedMessage =
 data PreFormatted a = PreFormatted {
     pfMessage    :: a
   , pfForHuman   :: Maybe Text
-  , pfForMachine :: AE.Object
+  , pfForMachine :: Text
   , pfNamespace  :: [Text]
   , pfTimestamp  :: Text
   , pfTime       :: UTCTime

@@ -315,9 +315,9 @@ contramapMCond (Trace tr) mFunc =
 contramapM' :: Monad m
   => ((LoggingContext, Either TraceControl a)
       -> m ())
-  -> m (Trace m a)
+  -> Trace m a
 contramapM' rFunc =
-  pure $ Trace $ T.Tracer $ T.emit rFunc
+  Trace $ T.Tracer $ T.emit rFunc
 
 -- | Folds the monadic cata function with acc over a.
 -- Uses an IORef to store the state
@@ -370,7 +370,7 @@ routingTrace
   :: forall m a. Monad m
   => (a -> m (Trace m a))
   -> Trace m a
-  -> m (Trace m a)
+  -> Trace m a
 routingTrace rf rc = contramapM'
     (\case
       (lc, Right a) -> do
