@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -13,6 +14,7 @@ module Main (main) where
 
 import           Control.Arrow
 import           Control.Monad
+import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           Data.Aeson (FromJSON, eitherDecodeFileStrict', encode)
@@ -60,6 +62,7 @@ import           Paths_tx_generator
 data CommandLine = CommandLine {
       runPath           :: FilePath
     , nixServiceJson    :: FilePath
+    , protoParamPath    :: FilePath
     }
     deriving Show
 
@@ -107,28 +110,56 @@ main
     case setup of
       Left err -> die (show err)
       Right (nixService, _nc, genesis, sigKey) -> do
-        putStrLn $ "* Did I manage to extract a genesis fund?\n--> " ++ show (checkFund genesis sigKey)
+        putStrLn $ "* Did I manage to extract a genesis fund?\n--> " ++ checkFund nixService genesis sigKey
         putStrLn "* Can I pre-execute a plutus script?"
         let plutus = _nix_plutus nixService
         case plutusType <$> plutus of
-          Just LimitSaturationLoop  -> checkPlutusLoop plutus
-          Just BenchCustomCall      -> checkPlutusBuiltin
-          _                         -> pure ()
+          Just LimitSaturationLoop  -> checkPlutusLoop protoParamPath plutus
+          Just BenchCustomCall      -> checkPlutusBuiltin protoParamPath
+          _                         -> putStrLn $ "plutusType "
+                                                   ++ show plutus
+                                                   ++ " unrecognised"
         exitSuccess
 
-checkFund ::
-     ShelleyGenesis
-  -> SigningKey PaymentKey
-  -> Maybe (AddressInEra BabbageEra, Lovelace)
-checkFund = genesisInitialFundForKey Mainnet
+-- The type annotations within patterns or expressions that would be
+-- the alternatives would make lines exceed 80 columns, so these
+-- helper functions move them out-of-line, with an extra helper to
+-- avoid repeating the failure message.
+showFundCore :: IsShelleyBasedEra era => Maybe (AddressInEra era, Lovelace) -> String
+showFundCore = maybe "fund check failed" show
 
-checkPlutusBuiltin ::
-     IO ()
+showBabbage :: Maybe (AddressInEra BabbageEra, Lovelace) -> String
+showBabbage = ("Babbage: " ++) . showFundCore
+
+showConway :: Maybe (AddressInEra ConwayEra, Lovelace) -> String
+showConway = ("Conway: " ++) . showFundCore
+
+checkFund ::
+     NixServiceOptions
+  -> ShelleyGenesis
+  -> SigningKey PaymentKey
+  -> String
+checkFund nixService shelleyGenesis signingKey
+  | AnyCardanoEra BabbageEra <- _nix_era nixService
+  = showBabbage $ checkFundCore shelleyGenesis signingKey
+  | AnyCardanoEra ConwayEra <- _nix_era nixService
+  = showConway $ checkFundCore shelleyGenesis signingKey
+  | otherwise
+  = "ApiTest: unrecognized era"
+
+checkFundCore ::
+  IsShelleyBasedEra era
+  => ShelleyGenesis
+  -> SigningKey PaymentKey
+  -> Maybe (AddressInEra era, Lovelace)
+checkFundCore = genesisInitialFundForKey Mainnet
+
+checkPlutusBuiltin :: FilePath -> IO ()
 #ifndef WITH_LIBRARY
-checkPlutusBuiltin
+checkPlutusBuiltin _protoParamFile
   = putStrLn "* checkPlutusBuiltin: skipped - no library available"
 #else
-checkPlutusBuiltin
+checkPlutusBuiltin protoParamFile
   = do
     let script = case findPlutusScript "CustomCall.hs" of
                     Just x -> x
@@ -137,7 +168,9 @@ checkPlutusBuiltin
     putStrLn "* serialisation of built-in Plutus script:"
     BSL.putStrLn $ encodePlutusScript script
 
-    protocolParameters <- readProtocolParametersOrDie
+    putStrLn "* reading protocol parameters"
+    protocolParameters <- readProtocolParametersOrDie protoParamFile
+    putStrLn "* done reading protocol parameters"
     forM_ bArgs $ \bArg -> do
       let apiData = unsafeHashableScriptData $ toApiData bArg
       putStrLn $ "* executing with mode: " ++ show (fst bArg)
@@ -159,13 +192,14 @@ checkPlutusBuiltin
 #endif
 
 checkPlutusLoop ::
-     Maybe TxGenPlutusParams
+     FilePath
+  -> Maybe TxGenPlutusParams
   -> IO ()
-checkPlutusLoop (Just PlutusOn{..})
+checkPlutusLoop protoParamFile (Just PlutusOn{..})
   = do
     script <- either (die . show) pure =<< readPlutusScript plutusScript
     putStrLn $ "--> Read plutus script: " ++ (id ||| id) plutusScript
-    protocolParameters <- readProtocolParametersOrDie
+    protocolParameters <- readProtocolParametersOrDie protoParamFile
 
     let count = 1_792        -- arbitrary counter for a loop script; should respect mainnet limits
 
@@ -216,7 +250,7 @@ checkPlutusLoop (Just PlutusOn{..})
           Right file -> let redeemerPath = (<.> ".redeemer.json") $ dropExtension $ takeFileName file
                         in getDataFileName $ "data" </> redeemerPath
           Left _ -> getDataFileName "data/loop.redeemer.json"
-checkPlutusLoop _
+checkPlutusLoop _ _
   = putStrLn "--> No plutus script defined."
 
 
@@ -227,10 +261,10 @@ checkPlutusLoop _
 readFileJson :: FromJSON a => FilePath -> ExceptT TxGenError IO a
 readFileJson f = handleIOExceptT (TxGenError . show) (eitherDecodeFileStrict' f) >>= firstExceptT TxGenError . hoistEither
 
-readProtocolParametersOrDie :: IO ProtocolParameters
-readProtocolParametersOrDie
+readProtocolParametersOrDie :: FilePath -> IO ProtocolParameters
+readProtocolParametersOrDie filePath
   = do
-    parametersFile <- getDataFileName "data/protocol-parameters-v8.json"
+    parametersFile <- getDataFileName filePath
     either die pure =<< eitherDecodeFileStrict' parametersFile
 
 
@@ -254,7 +288,15 @@ parserCommandLine
   = CommandLine
       <$> parseRunPath
       <*> parseJsonLocation
+      <*> parseParamPath
   where
+    parseParamPath = strOption
+        ( long "param"
+            <> metavar "PARAM"
+            <> help "Path to protocol parameter file"
+            <> completer (bashCompleter "file")
+            <> value "data/protocol-parameters-v8.json"
+        )
     parseRunPath = strOption
         ( long "run"
             <> metavar "PATH"
