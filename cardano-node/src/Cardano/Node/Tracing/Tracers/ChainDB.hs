@@ -36,7 +36,7 @@ import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
 import           Ouroboros.Consensus.Ledger.Extended (ExtValidationError (..))
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent (..))
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
-import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
+import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.ImmutableDB as ImmDB
@@ -76,6 +76,7 @@ withAddedToCurrentChainEmptyLimited tr = do
 instance (  LogFormatting (Header blk)
           , LogFormatting (LedgerEvent blk)
           , LogFormatting (RealPoint blk)
+          , LogFormatting (SelectView (BlockProtocol blk))
           , ConvertRawHash blk
           , ConvertRawHash (Header blk)
           , LedgerSupportsProtocol blk
@@ -372,6 +373,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
 instance ( LogFormatting (Header blk)
          , LogFormatting (LedgerEvent blk)
          , LogFormatting (RealPoint blk)
+         , LogFormatting (SelectView (BlockProtocol blk))
          , ConvertRawHash blk
          , ConvertRawHash (Header blk)
          , LedgerSupportsProtocol blk
@@ -456,19 +458,27 @@ instance ( LogFormatting (Header blk)
   forMachine dtal (ChainDB.ChangingSelection pt) =
       mconcat [ "kind" .= String "TraceAddBlockEvent.ChangingSelection"
                , "block" .= forMachine dtal pt ]
-  forMachine dtal (ChainDB.AddedToCurrentChain events _ base extended) =
+  forMachine dtal (ChainDB.AddedToCurrentChain events selChangedInfo base extended) =
       mconcat $
                [ "kind" .=  String "AddedToCurrentChain"
                , "newtip" .= renderPointForDetails dtal (AF.headPoint extended)
+               , "newTipSelectView" .= forMachine dtal (ChainDB.newTipSelectView selChangedInfo)
+               ]
+            ++ [ "oldTipSelectView" .= forMachine dtal oldTipSelectView
+               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
                ]
             ++ [ "headers" .= toJSON (forMachine dtal `map` addedHdrsNewChain base extended)
                | dtal == DDetailed ]
             ++ [ "events" .= toJSON (map (forMachine dtal) events)
                | not (null events) ]
-  forMachine dtal (ChainDB.SwitchedToAFork events _ old new) =
+  forMachine dtal (ChainDB.SwitchedToAFork events selChangedInfo old new) =
       mconcat $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= renderPointForDetails dtal (AF.headPoint new)
+               , "newTipSelectView" .= forMachine dtal (ChainDB.newTipSelectView selChangedInfo)
+               ]
+            ++ [ "oldTipSelectView" .= forMachine dtal oldTipSelectView
+               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
                ]
             ++ [ "headers" .= toJSON (forMachine dtal `map` addedHdrsNewChain old new)
                | dtal == DDetailed ]
@@ -487,18 +497,18 @@ instance ( LogFormatting (Header blk)
   forMachine dtal (ChainDB.PipeliningEvent ev') =
     forMachine dtal ev'
 
-  asMetrics (ChainDB.SwitchedToAFork _warnings newTipInfo _oldChain newChain) =
+  asMetrics (ChainDB.SwitchedToAFork _warnings selChangedInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
-          chainInformation newTipInfo newChain 0
+          chainInformation selChangedInfo newChain 0
     in  [ DoubleM "ChainDB.Density" (fromRational density)
         , IntM    "ChainDB.SlotNum" (fromIntegral slots)
         , IntM    "ChainDB.BlockNum" (fromIntegral blocks)
         , IntM    "ChainDB.SlotInEpoch" (fromIntegral slotInEpoch)
         , IntM    "ChainDB.Epoch" (fromIntegral (unEpochNo epoch))
         ]
-  asMetrics (ChainDB.AddedToCurrentChain _warnings newTipInfo _oldChain newChain) =
+  asMetrics (ChainDB.AddedToCurrentChain _warnings selChangedInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
-          chainInformation newTipInfo newChain 0
+          chainInformation selChangedInfo newChain 0
     in  [ DoubleM "ChainDB.Density" (fromRational density)
         , IntM    "ChainDB.SlotNum" (fromIntegral slots)
         , IntM    "ChainDB.BlockNum" (fromIntegral blocks)
@@ -2013,16 +2023,16 @@ data ChainInformation = ChainInformation
 
 chainInformation
   :: forall blk. HasHeader (Header blk)
-  => ChainDB.NewTipInfo blk
+  => ChainDB.SelectionChangedInfo blk
   -> AF.AnchoredFragment (Header blk)
   -> Int64
   -> ChainInformation
-chainInformation newTipInfo frag blocksUncoupledDelta = ChainInformation
+chainInformation selChangedInfo frag blocksUncoupledDelta = ChainInformation
     { slots = unSlotNo $ fromWithOrigin 0 (AF.headSlot frag)
     , blocks = unBlockNo $ fromWithOrigin (BlockNo 1) (AF.headBlockNo frag)
     , density = fragmentChainDensity frag
-    , epoch = ChainDB.newTipEpoch newTipInfo
-    , slotInEpoch = ChainDB.newTipSlotInEpoch newTipInfo
+    , epoch = ChainDB.newTipEpoch selChangedInfo
+    , slotInEpoch = ChainDB.newTipSlotInEpoch selChangedInfo
     , blocksUncoupledDelta = blocksUncoupledDelta
     }
 

@@ -47,7 +47,7 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TokBlockingStyle (..))
 
-import           Cardano.Api
+import           Cardano.Api hiding (Active)
 import           Cardano.TxGenerator.Types (TPSRate, TxGenError)
 
 import           Cardano.Benchmarking.LogTypes

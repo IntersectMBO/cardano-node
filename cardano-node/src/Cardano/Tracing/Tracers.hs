@@ -86,7 +86,7 @@ import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import           Ouroboros.Consensus.Node (NetworkP2PMode (..))
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
-import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
+import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Util.Enclose
 
@@ -513,6 +513,7 @@ teeTraceChainTip
      , InspectLedger blk
      , ToObject (Header blk)
      , ToObject (LedgerEvent blk)
+     , ToObject (SelectView (BlockProtocol blk))
      )
   => BlockConfig blk
   -> ForgingStats
@@ -536,6 +537,7 @@ teeTraceChainTipElide
      , InspectLedger blk
      , ToObject (Header blk)
      , ToObject (LedgerEvent blk)
+     , ToObject (SelectView (BlockProtocol blk))
      )
   => TracingVerbosity
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
@@ -567,12 +569,12 @@ traceChainMetrics (Just _ekgDirect) tForks _blockConfig _fStats tr = do
     chainTipInformation :: ChainDB.TraceEvent blk -> Maybe ChainInformation
     chainTipInformation = \case
       ChainDB.TraceAddBlockEvent ev -> case ev of
-        ChainDB.SwitchedToAFork _warnings newTipInfo oldChain newChain ->
+        ChainDB.SwitchedToAFork _warnings selChangedInfo oldChain newChain ->
           let fork = not $ AF.withinFragmentBounds (AF.headPoint oldChain)
                               newChain in
-          Just $ chainInformation newTipInfo fork oldChain newChain 0
-        ChainDB.AddedToCurrentChain _warnings newTipInfo oldChain newChain ->
-          Just $ chainInformation newTipInfo False oldChain newChain 0
+          Just $ chainInformation selChangedInfo fork oldChain newChain 0
+        ChainDB.AddedToCurrentChain _warnings selChangedInfo oldChain newChain ->
+          Just $ chainInformation selChangedInfo False oldChain newChain 0
         _ -> Nothing
       _ -> Nothing
 
@@ -1533,21 +1535,21 @@ chainInformation
   => HasHeader (Header blk)
   => HasIssuer blk
   => ConvertRawHash blk
-  => ChainDB.NewTipInfo blk
+  => ChainDB.SelectionChangedInfo blk
   -> Bool
   -> AF.AnchoredFragment (Header blk) -- ^ Old fragment.
   -> AF.AnchoredFragment (Header blk) -- ^ New fragment.
   -> Int64
   -> ChainInformation
-chainInformation newTipInfo fork oldFrag frag blocksUncoupledDelta = ChainInformation
+chainInformation selChangedInfo fork oldFrag frag blocksUncoupledDelta = ChainInformation
     { slots = unSlotNo $ fromWithOrigin 0 (AF.headSlot frag)
     , blocks = unBlockNo $ fromWithOrigin (BlockNo 1) (AF.headBlockNo frag)
     , density = fragmentChainDensity frag
-    , epoch = ChainDB.newTipEpoch newTipInfo
-    , slotInEpoch = ChainDB.newTipSlotInEpoch newTipInfo
+    , epoch = ChainDB.newTipEpoch selChangedInfo
+    , slotInEpoch = ChainDB.newTipSlotInEpoch selChangedInfo
     , blocksUncoupledDelta = blocksUncoupledDelta
     , fork = fork
-    , tipBlockHash = renderHeaderHash (Proxy @blk) $ realPointHash (ChainDB.newTipPoint newTipInfo)
+    , tipBlockHash = renderHeaderHash (Proxy @blk) $ realPointHash (ChainDB.newTipPoint selChangedInfo)
     , tipBlockParentHash = renderChainHash (Text.decodeLatin1 . B16.encode . toRawHash (Proxy @blk)) $ AF.headHash oldFrag
     , tipBlockIssuerVerificationKeyHash = tipIssuerVkHash
     }

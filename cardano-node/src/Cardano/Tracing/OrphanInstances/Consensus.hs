@@ -469,7 +469,8 @@ instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
          , InspectLedger blk
          , ToObject (Header blk)
-         , ToObject (LedgerEvent blk))
+         , ToObject (LedgerEvent blk)
+         , ToObject (SelectView (BlockProtocol blk)))
       => Transformable Text IO (ChainDB.TraceEvent blk) where
   trTransformer = trStructuredText
 
@@ -862,7 +863,8 @@ instance (ToObject (LedgerUpdate blk), ToObject (LedgerWarning blk))
 instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
          , ToObject (Header blk)
-         , ToObject (LedgerEvent blk))
+         , ToObject (LedgerEvent blk)
+         , ToObject (SelectView (BlockProtocol blk)))
       => ToObject (ChainDB.TraceEvent blk) where
   toObject verb (ChainDB.TraceAddBlockEvent ev) = case ev of
     ChainDB.IgnoreBlockOlderThanK pt ->
@@ -902,23 +904,31 @@ instance ( ConvertRawHash blk
     ChainDB.ChangingSelection pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.ChangingSelection"
                , "block" .= toObject verb pt ]
-    ChainDB.AddedToCurrentChain events _ base extended ->
+    ChainDB.AddedToCurrentChain events selChangedInfo base extended ->
       mconcat $
                [ "kind" .= String "TraceAddBlockEvent.AddedToCurrentChain"
                , "newtip" .= renderPointForVerbosity verb (AF.headPoint extended)
                , "chainLengthDelta" .= extended `chainLengthΔ` base
+               , "newTipSelectView" .= toObject verb (ChainDB.newTipSelectView selChangedInfo)
+               ]
+            ++ [ "oldTipSelectView" .= toObject verb oldTipSelectView
+               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain base extended)
                | verb == MaximalVerbosity ]
             ++ [ "events" .= toJSON (map (toObject verb) events)
                | not (null events) ]
-    ChainDB.SwitchedToAFork events _ old new ->
+    ChainDB.SwitchedToAFork events selChangedInfo old new ->
       mconcat $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= renderPointForVerbosity verb (AF.headPoint new)
                , "chainLengthDelta" .= new `chainLengthΔ` old
                -- Check that the SwitchedToAFork event was triggered by a proper fork.
                , "realFork" .= not (AF.withinFragmentBounds (AF.headPoint old) new)
+               , "newTipSelectView" .= toObject verb (ChainDB.newTipSelectView selChangedInfo)
+               ]
+            ++ [ "oldTipSelectView" .= toObject verb oldTipSelectView
+               | Just oldTipSelectView <- [ChainDB.oldTipSelectView selChangedInfo]
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain old new)
                | verb == MaximalVerbosity ]
