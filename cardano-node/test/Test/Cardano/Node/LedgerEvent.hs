@@ -21,15 +21,20 @@ import           Data.String (IsString(..))
 import           Data.Text (Text)
 import           Hedgehog (Property, discover, footnote)
 import qualified Hedgehog
+import qualified Hedgehog.Internal.Property as Hedgehog
+import qualified Hedgehog.Extras.Test.Process as Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
+import           System.FilePath ((</>))
 import           System.IO.Unsafe (unsafePerformIO)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 
 specification :: Text
 specification =
-  unsafePerformIO $ TIO.readFile "./ledger_events.cddl"
+  unsafePerformIO $ do
+    base <- either (fail . show) pure . fst =<< Hedgehog.runTestT Hedgehog.getProjectBase
+    TIO.readFile $ base </> "cardano-node/test-data/ledger_events.cddl"
 {-# NOINLINE specification #-}
 
 prop_roundtrip_LedgerEvent_CBOR :: Property

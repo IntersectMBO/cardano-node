@@ -225,7 +225,9 @@ let
               packages.cardano-node.components.tests.cardano-node-test.preCheck =
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
-                  filteredProjectBase = incl ../. mainnetConfigFiles;
+                  filteredProjectBase = incl ../. (mainnetConfigFiles ++ [
+                    "cardano-node/test-data/ledger_events.cddl"
+                  ]);
                 in
                 ''
                   export CARDANO_NODE_SRC=${filteredProjectBase}
