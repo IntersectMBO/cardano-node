@@ -183,7 +183,7 @@ library
                       , ouroboros-network-api
                       , ouroboros-network ^>= 0.9.1
                       , ouroboros-network-framework
-                      , ouroboros-network-protocols
+                      , ouroboros-network-protocols < 0.5.3.0
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
