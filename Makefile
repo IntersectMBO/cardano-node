@@ -91,12 +91,14 @@ PROFILES_FORGE_STRESS_RTS := forge-stress-pre-rtsA4m forge-stress-pre-rtsA64m fo
 PROFILES_CHAINSYNC        := chainsync-early-byron  chainsync-early-byron-notracer  chainsync-early-byron-oldtracing
 PROFILES_CHAINSYNC        += chainsync-early-alonzo chainsync-early-alonzo-notracer chainsync-early-alonzo-oldtracing chainsync-early-alonzo-p2p
 PROFILES_VENDOR           := dish dish-plutus dish-10M dish-10M-plutus
-# "qa" and "perf" namespaces for cardano world (world.dev.cardano.org) Nomad
-# Not all local profiles are compatible (yet) with a cloud run
+# Cardano World (world.dev.cardano.org) Nomad cluster's "qa" class nodes
 # Cloud version of "default", "ci-test" and "ci-bench"
-PROFILES_CW_QA            := default-cw-qa ci-test-cw-qa ci-bench-cw-qa
-# The 52+explorer profile
-PROFILES_CW_PERF          := default-cw-perf ci-test-cw-perf ci-bench-cw-perf cw-perf-value
+# Not all local profiles are compatible or tested (yet) with a cloud runs
+PROFILES_NOMAD_CW_QA      := default-nomadcwqa ci-test-nomadcwqa ci-bench-nomadcwqa oldtracing-nomadcwqa ci-test-oldtracing-nomadcwqa ci-bench-oldtracing-nomadcwqa
+# The dedicated P&T Nomad cluster on AWS
+# Cloud version of "default", "ci-test" and "ci-bench" plus value (52+explorer)
+# Not all local profiles are compatible or tested (yet) with a cloud runs
+PROFILES_NOMAD_PERF       := default-nomadperf ci-test-nomadperf ci-bench-nomadperf value-nomadperf oldtracing-nomadperf ci-test-oldtracing-nomadperf ci-bench-oldtracing-nomadperf value-oldtracing-nomadperf
 
 LOCAL_PROFILES += $(PROFILES_BASE)
 LOCAL_PROFILES += $(PROFILES_FAST)
@@ -112,7 +114,7 @@ LOCAL_PROFILES += $(PROFILES_FORGE_STRESS_PRE)
 LOCAL_PROFILES += $(PROFILES_FORGE_STRESS_RTS)
 LOCAL_PROFILES += $(PROFILES_CHAINSYNC)
 LOCAL_PROFILES += $(PROFILES_VENDOR)
-CLOUD_PROFILES += $(PROFILES_CW_QA) $(PROFILES_CW_PERF)
+CLOUD_PROFILES += $(PROFILES_NOMAD_CW_QA) $(PROFILES_NOMAD_PERF)
 
 ## Note:  to enable a shell for a profile, just add its name (one of names from 'make ps') to SHELL_PROFILES
 

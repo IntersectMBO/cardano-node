@@ -243,38 +243,71 @@ git_repo_commit_description() {
     } || echo "unknown-not-a-git-repo"
 }
 
-# Wait for any job to fail or all to be OK!
-wait_fail_any () {
-  local processes=("$@")
-  # There are any processes left?
-  if test -n "${processes[*]:-}"
+# Waits for all jobs to finish independent of their exit status!
+# Returns the first error code obtained if any one fails.
+wait_all () {
+  wait_internal 0 "false" "$@"
+}
+
+# Waits for any job to fail or all to be OK!
+# All processes are killed as soon as one fails!
+# Returns the first error code obtained if any one fails.
+wait_kill_em_all () {
+  # We are scanning the scene in the city tonite ... searching, seek and destroy
+  wait_internal 0 "true" "$@"
+}
+
+# Returns 0/success if no process fails, else returns the first error code
+# obtained that is not zero.
+wait_internal () {
+  # The initial status for recursion, on first call it should always be zero!
+  local initial_exit_status=${1}; shift
+  # Should all processes be killed as soon as one fails? Else waits for all
+  # processes to finish independent of their exit status.
+  local kill_em_all=${1}; shift
+  # Array of processes IDs or a jobs specifications.
+  # If ID is a job specification, waits for all processes in that job's pipeline
+  local processes_ids=("$@")
+  # Are there any processes left to wait for ?
+  if test -n "${processes_ids[*]:-}"
   then
     local wait_exit_status
-    local exited_process
-    wait -n -p exited_process "${processes[@]}"
+    local exited_process_id
+    # Wait for a single job from the list of processes and returns its exit
+    # status and the process or job identifier of the job for which the exit
+    # status is returned is assigned to the variable provided by `-p VAR`.
+    wait -n -p exited_process_id "${processes_ids[@]}"
     wait_exit_status=$?
-    # New array without the exited process
-    local processes_p=()
-    for p in "${processes[@]}"
+    # Only if the exit status to return is still zero we care about the
+    # new exit status.
+    if test "${initial_exit_status}" -eq 0
+    then
+      initial_exit_status="${wait_exit_status}"
+    fi
+    # Create a wew array without the newly exited process.
+    local processes_ids_p=()
+    for p in "${processes_ids[@]}"
     do
-      if test "${p}" != "${exited_process}"
+      if test "${p}" != "${exited_process_id}"
       then
-        processes_p+=("${p}")
+        processes_ids_p+=("${p}")
       fi
     done
-    # Something else to wait for?
-    if test -n "${processes_p[*]:-}"
+    # Are there still any processes left to wait for ?
+    if test -n "${processes_ids_p[*]:-}"
     then
       # Keep waiting or kill 'em all ?'
-      if test "${wait_exit_status}" -eq 0
+      if ! test "${wait_exit_status}" -eq 0 && test "${kill_em_all}" = "true"
       then
-        wait_fail_any "${processes_p[@]}"
-      else
         kill "${processes_p[@]}" 2>/dev/null || true
         return "${wait_exit_status}"
+      else
+        # Recursion, wiiiiiiiii!
+        wait_internal \
+          "${initial_exit_status}" "${kill_em_all}" "${processes_ids_p[@]}"
       fi
     else
-      return "${wait_exit_status}"
+      return "${initial_exit_status}"
     fi
   else
     return 0

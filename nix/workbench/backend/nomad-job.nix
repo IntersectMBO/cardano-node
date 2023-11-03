@@ -16,17 +16,22 @@
 
 let
 
-  # Task's (Container or chroot) defaults:
+  # Filesystem
   #
-  ## Default values below are stored in the job's "meta" stanza to be able to
-  ## overrided them with 'jq' from a workbench shell. These values in "meta"
-  ## are used to programatically create a "template" with "env = true;" so they
-  ## are automagically reachable as envars inside the Task's entrypoint and
-  ## 'supervisord' programs.
-  ## Values go: Nix (defaults) -> meta -> template -> envars
+  # Nomad creates a working directory for each allocation on a client. This
+  # directory can be found in the Nomad data_dir at ./alloc/«alloc_id». The
+  # allocation working directory is where Nomad creates task directories and
+  # directories shared between tasks, write logs for tasks, and downloads
+  # artifacts or templates.
+  # https://developer.hashicorp.com/nomad/docs/concepts/filesystem
   #
-  ## See ./oci-images.nix for further details if using the `podman` driver.
-  ## For the `exec` driver almost everything is here.
+  # For example:
+  ## - Driver "exec" ("chroot" isolation):
+  ## - - NOMAD_ALLOC_DIR=/alloc
+  ## - - NOMAD_TASK_DIR=/local
+  ## - Driver "raw_exec" ("none" isolation):
+  ## - - NOMAD_ALLOC_DIR=DATA-DIR/alloc/XXXXXXXX/alloc
+  ## - - NOMAD_TASK_DIR=DATA-DIR/alloc/XXXXXXXX/TASK-NAME/local
   #
   # Templates are rendered into the task working directory. Drivers without
   # filesystem isolation (such as raw_exec) or drivers that build a chroot in
@@ -38,20 +43,28 @@ let
   ## - https://developer.hashicorp.com/nomad/docs/job-specification/template#template-destinations
   ## - https://developer.hashicorp.com/nomad/docs/runtime/environment#task-directories
   ## - https://developer.hashicorp.com/nomad/docs/concepts/filesystem
-  task_workdir = if execTaskDriver
-    # A `work_dir` stanza is comming (?):
-    # https://github.com/hashicorp/nomad/pull/10984
-    # TODO: Try with ''${NOMAD_TASK_DIR}'' in both!
-    then "/local"
-    # This value must also be used inside the `podman` `config` stanza.
-    else "/local"
-  ;
-  # Usually "*/local/run/current"
-  task_statedir = "${task_workdir}${if stateDir == "" then "" else ("/" + stateDir)}";
+
+  # Task's filesystem / working directory (maybe container or chroot) defaults:
+  #
+  # When using the isolated fork task driver ("exec")
+  ## Default values below are stored in the job's "meta" stanza to be able to
+  ## overrided them with 'jq' from a workbench shell. These values in "meta"
+  ## are used to programatically create a "template" with "env = true;" so they
+  ## are automagically reachable as envars inside the Task's entrypoint and
+  ## 'supervisord' programs.
+  ## Values go: Nix (defaults) -> meta -> template -> envars
+  #
+  ## See ./oci-images.nix for further details if using the `podman` driver.
+  ## For the `exec` driver almost everything is here.
+  #
+
   # A symlink to the supervisord nix-installed inside the OCI image/chroot.
-  # We need to be able to `nomad exec supervisorctl ...` , for these the path
+  # We need to be able to `nomad exec supervisorctl ...` , for this the path
   # of the installed supervisor binaries is needed.
-  task_supervisor_nix = "${task_statedir}/supervisor/nix-store";
+  task_supervisor_nix = "${stateDir}/supervisor/nix-store";
+  # Location of the supervisord config file inside the container.
+  # This file can be mounted as a volume or created as a template.
+  task_supervisord_conf = "${stateDir}/supervisor/supervisord.conf";
   # The URL to the listening inet or socket of the supervisord server:
   # The problem is that if we use "127.0.0.1:9001" as parameter (without the
   # "http" part) the container returns:
@@ -63,11 +76,8 @@ let
   # the container I get (from journald):
   # Nov 02 11:44:36 hostname cluster-18f3852f-e067-6394-8159-66a7b8da2ecc[1088457]: Error: Cannot open an HTTP server: socket.error reported -2
   # Nov 02 11:44:36 hostname cluster-18f3852f-e067-6394-8159-66a7b8da2ecc[1088457]: For help, use /nix/store/izqhlj5i1x9ldyn43d02kcy4mafmj3ci-python3.9-supervisor-4.2.4/bin/supervisord -h
-  unixHttpServerPort = "/tmp/supervisor.sock";
+  unixHttpServerPort = "/tmp/supervisor-{{ env \"NOMAD_TASK_NAME\" }}.sock";
   task_supervisord_url = "unix://${unixHttpServerPort}";
-  # Location of the supervisord config file inside the container.
-  # This file can be mounted as a volume or created as a template.
-  task_supervisord_conf = "${task_statedir}/supervisor/supervisord.conf";
   task_supervisord_loglevel = "info";
 
   entrypoint =
@@ -76,20 +86,36 @@ let
       supervisor = containerSpecs.containerPkgs.supervisor.nix-store-path;
     in escapeTemplate
       ''
-      # Store the entrypoint's envars in a file for debugging purposes.
-      ${coreutils}/bin/env > /local/entrypoint.env
+      # Store entrypoint's envars and "uname" in a file for debugging purposes.
+      ${coreutils}/bin/env               > "''${NOMAD_TASK_DIR}"/entrypoint.env
+      ${coreutils}/bin/uname -a          > "''${NOMAD_TASK_DIR}"/entrypoint.uname
+      ${coreutils}/bin/cat /proc/cpuinfo > "''${NOMAD_TASK_DIR}"/entrypoint.cpuinfo
+      # Directories map to use when `nomad fs` and `nomad alloc exec`
+      SUPERVISOR_NIX="''${NOMAD_TASK_DIR}/${task_supervisor_nix}"
+      SUPERVISOR_CONF="''${NOMAD_TASK_DIR}/${task_supervisord_conf}"
+      echo \
+        "{                                                                     \
+            \"nomad\": {                                                       \
+              \"alloc\": \"''${NOMAD_ALLOC_DIR}\"                              \
+            , \"task\":  \"''${NOMAD_TASK_DIR}\"                               \
+          }                                                                    \
+          , \"workbench\":  {                                                  \
+              \"state\": \"''${NOMAD_TASK_DIR}/${stateDir}\"                   \
+          }                                                                    \
+          , \"supervisor\": {                                                  \
+              \"nix\":    \"''${SUPERVISOR_NIX}\"                              \
+            , \"config\": \"''${SUPERVISOR_CONF}\"                             \
+            , \"socket\": \"${unixHttpServerPort}\"                            \
+            , \"url\": \"${task_supervisord_url}\"                             \
+          }                                                                    \
+        }" \
+      > "''${NOMAD_TASK_DIR}"/entrypoint.dirs
 
       # Only needed for "exec" ?
       if test "''${TASK_DRIVER}" = "exec"
       then
-        cd "''${TASK_WORKDIR}"
+        cd "''${NOMAD_TASK_DIR}"
       fi
-
-      # The SUPERVISOR_NIX variable must be set
-      [ -z "''${SUPERVISOR_NIX:-}" ] && echo "SUPERVISOR_NIX env var must be set -- aborting" && exit 1
-
-      # The SUPERVISORD_CONFIG variable must be set
-      [ -z "''${SUPERVISORD_CONFIG:-}" ] && echo "SUPERVISORD_CONFIG env var must be set -- aborting" && exit 1
 
       # Create a symlink to 'supervisor' Nix Store folder so we can call it from
       # 'ssh' or 'nomad exec' without having it in PATH or knowing the currently
@@ -107,9 +133,9 @@ let
       LOGLEVEL="''${SUPERVISORD_LOGLEVEL:-info}"
 
       # Start `supervisord` on the foreground.
-      # Avoid buffer related problems with stdout and stderr disabling buffering
+      # Make sure it never runs in unbuffered mode:
       # https://docs.python.org/3/using/cmdline.html#envvar-PYTHONUNBUFFERED
-      PYTHONUNBUFFERED=TRUE ${supervisor}/bin/supervisord --nodaemon --configuration "''${SUPERVISORD_CONFIG}" --loglevel="''${LOGLEVEL}"
+      PYTHONUNBUFFERED="" ${supervisor}/bin/supervisord --nodaemon --configuration "''${SUPERVISOR_CONF}" --loglevel="''${LOGLEVEL}"
       ''
   ;
 
@@ -178,7 +204,7 @@ let
     # multiple times to define additional constraints.
     # Cloud runs set the distinct hosts constraint here but local runs can't
     # because we are only starting one Nomad client.
-    constraint = null;
+    constraint = null; # Values are appended inside the workbench (bash).
 
     # The reschedule stanza specifies the group's rescheduling strategy. If
     # specified at the job level, the configuration will apply to all groups
@@ -199,12 +225,8 @@ let
     # Specifies a key-value map that annotates with user-defined metadata.
     meta = {
       # Only top level "KEY=STRING" are allowed, no child objects/attributes!
+      WORKBENCH_STATEDIR = stateDir;
       TASK_DRIVER = if execTaskDriver then "exec" else "podman";
-      TASK_WORKDIR = task_workdir;
-      TASK_STATEDIR = task_statedir;
-      SUPERVISOR_NIX = task_supervisor_nix;
-      SUPERVISORD_URL = task_supervisord_url;
-      SUPERVISORD_CONFIG = task_supervisord_conf;
       SUPERVISORD_LOGLEVEL = task_supervisord_loglevel;
       ONE_TRACER_PER_NODE = oneTracerPerNode;
     };
@@ -271,12 +293,12 @@ let
         constraint = {
           attribute = "\${node.class}";
           operator = "=";
-          # For cloud benchmarking, dedicated static machines in the "perf"
-          # class are used. We mimic that for local/test runs.
+          # Cloud jobs can run in the dedicated P&T Nomad cluster on AWS or in
+          # Cardano World Nomad cluster's "qa" class nodes.
           # This default is just a precaution, like the top level namespace,
-          # because there are also available "qa" Class nodes but usage of these
-          # must be limited to short test and "infra" Class nodes are used for
-          # HA jobs and must be avoided entirely.
+          # because "qa" Class nodes usage must be limited to short test and
+          # "infra" Class nodes, that are used for HA jobs, must be avoided
+          # entirely.
           value = "perf";
         };
 
@@ -410,9 +432,9 @@ let
           };
 
           # Sensible defaults to run cloud version of "default", "ci-test" and
-          # "ci-bench" in cardano-world qa class Nomad nodes.
-          # For benchmarking dedicated static machines in the "perf" class are
-          # used and this value should be updated accordingly.
+          # "ci-bench" in Cardano World Nomad cluster's "qa" class nodes.
+          # For benchmarking the dedicated P&T Nomad cluster on AWS is used and
+          # this value should be updated accordingly.
           resources = {
             # Task can only ask for 'cpu' or 'cores' resource but not both.
             cores = 2;       # cpu = 512;
@@ -448,10 +470,10 @@ let
             # address of an AWS EC2 instance set this to
             # ${attr.unique.platform.aws.public-ipv4}.
             address =
-              # When using Cardano World (nomad.world.dev.cardano.org) "perf"
-              # class nodes we use public IPs/routing, all the other cloud runs
-              # are behind a VPC/firewall. Local runs just use 12.0.0.1.
-              if lib.strings.hasInfix "cw-perf" profileData.profileName
+              # When using the dedicated P&T Nomad cluster on AWS we use public
+              # IPs/routing, all the other cloud runs are behind a VPC/firewall.
+              # Local runs just use 12.0.0.1.
+              if lib.strings.hasInfix "-nomadperf" profileData.profileName
               then "\${attr.unique.platform.aws.public-ipv4}"
               else ""
             ;
@@ -511,11 +533,7 @@ let
               # https://developer.hashicorp.com/nomad/docs/runtime/environment
               data = ''
                 TASK_DRIVER="{{ env "NOMAD_META_TASK_DRIVER" }}"
-                TASK_WORKDIR="{{ env "NOMAD_META_TASK_WORKDIR" }}"
-                TASK_STATEDIR="{{ env "NOMAD_META_TASK_STATEDIR" }}"
-                SUPERVISOR_NIX="{{ env "NOMAD_META_SUPERVISOR_NIX" }}"
-                SUPERVISORD_URL="{{ env "NOMAD_META_SUPERVISORD_URL" }}"
-                SUPERVISORD_CONFIG="{{ env "NOMAD_META_SUPERVISORD_CONFIG" }}"
+                WORKBENCH_STATEDIR="{{ env "NOMAD_META_WORKBENCH_STATEDIR" }}"
                 SUPERVISORD_LOGLEVEL="{{ env "NOMAD_META_SUPERVISORD_LOGLEVEL" }}"
               '';
               # Specifies the behavior Nomad should take if the rendered
@@ -529,7 +547,7 @@ let
             ## Make the profile.json file available (mainly for healthchecks)
             {
               env = false;
-              destination = "${task_statedir}/profile.json";
+              destination = "local/${stateDir}/profile.json";
               data = escapeTemplate (__readFile
                 profileData.JSON.outPath);
               change_mode = "noop";
@@ -538,7 +556,7 @@ let
             ## Make the node-specs.json file available (mainly for healthchecks)
             {
               env = false;
-              destination = "${task_statedir}/node-specs.json";
+              destination = "local/${stateDir}/node-specs.json";
               data = escapeTemplate (__readFile
                 profileData.node-specs.JSON.outPath);
               change_mode = "noop";
@@ -547,7 +565,7 @@ let
             # entrypoint
             {
               env = false;
-              destination = "${task_workdir}/entrypoint.sh";
+              destination = "local/entrypoint.sh";
               data = entrypoint;
               change_mode = "noop";
               error_on_missing_key = true;
@@ -555,7 +573,7 @@ let
             # Dynamically generated addresses for debugging purposes
             {
               env = false;
-              destination = "${task_workdir}/networking.json";
+              destination = "local/networking.json";
               data = ''
               {
               {{- $first := true -}}
@@ -598,7 +616,7 @@ let
             ## supervisord configuration file.
             {
               env = false;
-              destination = "${task_supervisord_conf}";
+              destination = "local/${task_supervisord_conf}";
               data = escapeTemplate (__readFile (
                 let supervisorConf = import ./supervisor-conf.nix
                   { inherit pkgs lib stateDir;
@@ -630,7 +648,7 @@ let
             ## Tracer start.sh script.
             {
               env = false;
-              destination = "${task_statedir}/tracer/start.sh";
+              destination = "local/${stateDir}/tracer/start.sh";
               data = escapeTemplate
                 profileData.tracer-service.start.value;
               change_mode = "noop";
@@ -640,7 +658,7 @@ let
             ## Tracer configuration file.
             {
               env = false;
-              destination = "${task_statedir}/tracer/config.json";
+              destination = "local/${stateDir}/tracer/config.json";
               data = escapeTemplate (lib.generators.toJSON {}
                 # TODO / FIXME: Ugly config patching!
                 (lib.attrsets.recursiveUpdate
@@ -669,7 +687,7 @@ let
             ## Node start.sh script.
             {
               env = false;
-              destination = "${task_statedir}/${nodeSpec.name}/start.sh";
+              destination = "local/${stateDir}/${nodeSpec.name}/start.sh";
               data = escapeTemplate (
                 let scriptValue = profileData.node-services."${nodeSpec.name}".start.value;
                 in if execTaskDriver
@@ -687,7 +705,7 @@ let
             ## Node configuration file.
             {
               env = false;
-              destination = "${task_statedir}/${nodeSpec.name}/config.json";
+              destination = "local/${stateDir}/${nodeSpec.name}/config.json";
               data = escapeTemplate (lib.generators.toJSON {}
                 profileData.node-services."${nodeSpec.name}".config.value);
               change_mode = "noop";
@@ -696,7 +714,7 @@ let
             ## Node topology file.
             {
               env = false;
-              destination = "${task_statedir}/${nodeSpec.name}/topology.json";
+              destination = "local/${stateDir}/${nodeSpec.name}/topology.json";
               data = escapeTemplate (
                 let topology = profileData.node-services."${nodeSpec.name}".topology;
                 in if execTaskDriver
@@ -713,7 +731,7 @@ let
             ## Generator start.sh script.
             {
               env = false;
-              destination = "${task_statedir}/generator/start.sh";
+              destination = "local/${stateDir}/generator/start.sh";
               data = escapeTemplate
                 profileData.generator-service.start.value;
               change_mode = "noop";
@@ -723,7 +741,7 @@ let
             ## Generator configuration file.
             {
               env = false;
-              destination = "${task_statedir}/generator/run-script.json";
+              destination = "local/${stateDir}/generator/run-script.json";
               data = escapeTemplate (
                 let runScript = profileData.generator-service.config;
                 in if execTaskDriver
@@ -740,7 +758,7 @@ let
             ## healthcheck start.sh script.
             {
               env = false;
-              destination = "${task_statedir}/healthcheck/start.sh";
+              destination = "local/${stateDir}/healthcheck/start.sh";
               data = escapeTemplate
                 profileData.healthcheck-service.start.value;
               change_mode = "noop";
@@ -765,7 +783,7 @@ let
               ## ssh start.sh script.
               {
                 env = false;
-                destination = "${task_statedir}/ssh/start.sh";
+                destination = "local/${stateDir}/ssh/start.sh";
                 data = escapeTemplate ssh-service.start.value;
                 change_mode = "noop";
                 error_on_missing_key = true;
@@ -774,15 +792,15 @@ let
               ## ssh config file.
               {
                 env = false;
-                destination = "${task_statedir}/ssh/sshd_config";
+                destination = "local/${stateDir}/ssh/sshd_config";
                 data = escapeTemplate ssh-service.config.value;
                 change_mode = "noop";
                 error_on_missing_key = true;
                 perms = "744"; # Only for every "start.sh" script. Default: "644"
               }
               # The deployer script must add the templates for the private keys:
-              # - ${task_statedir}/ssh/sshd.id_ed25519
-              # - ${task_statedir}/ssh/nobody.id_ed25519.pub
+              # - local/${stateDir}/ssh/sshd.id_ed25519
+              # - local/${stateDir}/ssh/nobody.id_ed25519.pub
             ]
           ))
           ;
@@ -817,7 +835,7 @@ let
 
                 command = "${containerSpecs.containerPkgs.bashInteractive.nix-store-path}/bin/bash";
 
-                args = ["${task_workdir}/entrypoint.sh"];
+                args = ["local/entrypoint.sh"];
 
                 nix_installables =
                   (lib.attrsets.mapAttrsToList
@@ -839,7 +857,7 @@ let
 
                 command = "${containerSpecs.containerPkgs.bashInteractive.nix-store-path}/bin/bash";
 
-                args = ["${task_workdir}/entrypoint.sh"];
+                args = ["local/entrypoint.sh"];
 
                 # The image to run. Accepted transports are docker (default if
                 # missing), oci-archive and docker-archive. Images reference as
@@ -884,8 +902,7 @@ let
 
                 # The working directory for the container. Defaults to the
                 # default set in the image.
-                #working_dir = ''{{ env "NOMAD_META_TASK_WORKDIR" }}'';
-                working_dir = task_workdir;
+                working_dir = "local/";
 
               };
             }
@@ -1178,15 +1195,20 @@ let
         # Port string from
         ''--port ${toString nodeSpec.port}''
       ]
-      # On cloud deployments to SRE-managed Nomad, that uses AWS, the hosts at
-      # Linux level may not be aware of the EIP public address they have so we
-      # can't bind to the public IP (that we can resolve to using templates).
-      # I prefer being more specific but the "all-weather" alternative is to
-      # bind to 0.0.0.0 instead of the private IP, just in case the Nomad Client
-      # was not started with the correct `-network-interface XX` parameter.
+      # On cloud deployments to SRE-managed / dedicated P&T Nomad cluster, that
+      # uses AWS, the hosts at Linux level may not be aware of the EIP public
+      # address they have so we can't bind to the public IP (that we can resolve
+      # to using templates). The only options available are to bind to the
+      # "all-weather" 0.0.0.0 or use the private IP provided by AWS. We use the
+      # latter in case the Nomad Client was not started with the correct
+      # `-network-interface XX` parameter.
       [
         # Address string to
-        ''--host-addr 0.0.0.0''
+        (
+          if lib.strings.hasInfix "-nomadperf" profileData.profileName
+          then ''--host-addr {{ env "attr.unique.platform.aws.local-ipv4" }}''
+          else ''--host-addr 0.0.0.0''
+        )
         # Alternatives (may not work):
         #''--host-addr {{ env "NOMAD_HOST_IP_${servicePortName}" }}''
         #''--host-addr {{ env "NOMAD_IP_${servicePortName}" }}''

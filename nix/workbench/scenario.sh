@@ -127,6 +127,7 @@ scenario_exit_trap() {
     backend stop-all     "$__scenario_exit_trap_dir"
     backend fetch-logs   "$__scenario_exit_trap_dir"
     backend stop-cluster "$__scenario_exit_trap_dir"
+    msg "scenario:  $(with_color yellow exit trap finished)"
 }
 
 scenario_setup_exit_trap() {
