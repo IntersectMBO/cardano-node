@@ -35,7 +35,6 @@ import qualified Ouroboros.Network.Block as Block
 import           Ouroboros.Network.Protocol.ChainSync.Client
 
 import           Cardano.Api
-import           Cardano.Api.Byron
 import           Cardano.Api.Shelley
 
 -- | The chairman checks for consensus and progress.
@@ -51,17 +50,16 @@ import           Cardano.Api.Shelley
 -- The consensus condition is checked incrementally as well as at the end, so
 -- that failures can be detected as early as possible. The progress condition
 -- is only checked at the end.
-chairmanTest
-  :: Tracer IO String
+chairmanTest :: ()
+  => Tracer IO String
   -> NetworkId
   -> DiffTime
   -> BlockNo
   -> [SocketPath]
-  -> AnyConsensusModeParams
+  -> ConsensusModeParams CardanoMode
   -> SecurityParam
   -> IO ()
-chairmanTest tracer nw runningTime progressThreshold socketPaths
-             (AnyConsensusModeParams cModeParams) secParam = do
+chairmanTest tracer nw runningTime progressThreshold socketPaths cModeParams secParam = do
   traceWith tracer ("Will observe nodes for " ++ show runningTime)
   traceWith tracer ("Will require chain growth of " ++ show progressThreshold)
 
@@ -110,11 +108,11 @@ instance Exception ConsensusFailure where
 -- | For this test we define consensus as follows: for all pairs of chains,
 -- the intersection of each pair is within K blocks of each tip.
 
-consensusCondition
-  :: ConsensusBlockForMode mode ~ blk
+consensusCondition :: ()
+  => ConsensusBlockForMode CardanoMode ~ blk
   => HasHeader (Header blk)
   => ConvertRawHash blk
-  => ConsensusMode mode
+  => ConsensusMode CardanoMode
   -> Map PeerId (AnchoredFragment (Header blk))
   -> SecurityParam
   -> Either ConsensusFailure ConsensusSuccess
@@ -246,9 +244,9 @@ progressCondition minBlockNo (ConsensusSuccess _ tips) = do
    getBlockNo (ChainTip _ _ bNum) = bNum
    getBlockNo ChainTipAtGenesis = 0
 
-runChairman
-  :: forall mode blk. ConsensusBlockForMode mode ~ blk
-  => GetHeader (ConsensusBlockForMode mode)
+runChairman :: forall blk. ()
+  => ConsensusBlockForMode CardanoMode ~ blk
+  => GetHeader (ConsensusBlockForMode CardanoMode)
   => Tracer IO String
   -> NetworkId
   -- ^ Security parameter, if a fork is deeper than it 'runChairman'
@@ -257,7 +255,7 @@ runChairman
   -- ^ Run for this much time.
   -> [SocketPath]
   -- ^ Local socket directory
-  -> ConsensusModeParams mode
+  -> ConsensusModeParams CardanoMode
   -> SecurityParam
   -> IO (Map SocketPath
              (AF.AnchoredSeq
@@ -312,22 +310,22 @@ addBlock sockPath chainsVar blk =
 
 -- | Rollback a single block.  If the rollback point is not found, we simply
 -- error.  It should never happen if the security parameter is set up correctly.
-rollback
-  :: forall mode blk. ConsensusBlockForMode mode ~ blk
+rollback :: forall blk. ()
+  => ConsensusBlockForMode CardanoMode ~ blk
   => HasHeader (Header blk)
   => SocketPath
-  -> StrictTVar IO (Map SocketPath (AnchoredFragment (Header (ConsensusBlockForMode mode))))
-  -> ConsensusMode mode
+  -> StrictTVar IO (Map SocketPath (AnchoredFragment (Header (ConsensusBlockForMode CardanoMode))))
+  -> ConsensusMode CardanoMode
   -> ChainPoint
   -> STM IO ()
 rollback sockPath chainsVar cMode p =
   modifyTVar chainsVar (Map.adjust fn sockPath)
   where
-    p' :: Point (Header (ConsensusBlockForMode mode))
+    p' :: Point (Header (ConsensusBlockForMode CardanoMode))
     p' = coerce $ toConsensusPointInMode cMode p
 
-    fn :: AnchoredFragment (Header (ConsensusBlockForMode mode))
-       -> AnchoredFragment (Header (ConsensusBlockForMode mode))
+    fn :: AnchoredFragment (Header (ConsensusBlockForMode CardanoMode))
+       -> AnchoredFragment (Header (ConsensusBlockForMode CardanoMode))
     fn cf = case AF.rollback p' cf of
       Nothing  -> error "rollback error: rollback beyond chain fragment"
       Just cf' -> cf'
@@ -335,18 +333,18 @@ rollback sockPath chainsVar cMode p =
 -- Chain-Sync client
 type ChairmanTrace' = ConsensusSuccess
 
-type ChainVar mode = StrictTVar IO (Map SocketPath (AnchoredFragment (Header (ConsensusBlockForMode mode))))
+type ChainVar = StrictTVar IO (Map SocketPath (AnchoredFragment (Header (ConsensusBlockForMode CardanoMode))))
 
 -- | 'chainSyncClient which build chain fragment; on every roll forward it will
 -- check if there is consensus on immutable chain.
 chainSyncClient
-  :: forall mode. GetHeader (ConsensusBlockForMode mode)
+  :: GetHeader (ConsensusBlockForMode CardanoMode)
   => Tracer IO ChairmanTrace'
   -> SocketPath
-  -> ChainVar mode
-  -> ConsensusModeParams mode
+  -> ChainVar
+  -> ConsensusModeParams CardanoMode
   -> SecurityParam
-  -> ChainSyncClient (BlockInMode mode) ChainPoint ChainTip IO ()
+  -> ChainSyncClient (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
 chainSyncClient tracer sockPath chainsVar cModeP secParam = ChainSyncClient $ pure $
   -- Notify the core node about the our latest points at which we are
   -- synchronised.  This client is not persistent and thus it just
@@ -359,10 +357,10 @@ chainSyncClient tracer sockPath chainsVar cModeP secParam = ChainSyncClient $ pu
     , recvMsgIntersectNotFound = \  _ -> ChainSyncClient $ pure clientStIdle
     }
   where
-    clientStIdle :: ClientStIdle (BlockInMode mode) ChainPoint ChainTip IO ()
+    clientStIdle :: ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
     clientStIdle = SendMsgRequestNext clientStNext (pure clientStNext)
 
-    clientStNext :: ClientStNext (BlockInMode mode) ChainPoint ChainTip IO ()
+    clientStNext :: ClientStNext (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
     clientStNext = ClientStNext
       { recvMsgRollForward = \blk _tip -> ChainSyncClient $ do
           -- add block & check if there is consensus on immutable chain
@@ -384,33 +382,27 @@ chainSyncClient tracer sockPath chainsVar cModeP secParam = ChainSyncClient $ pu
 -- Helpers
 
 obtainHasHeader
-  :: ConsensusBlockForMode mode ~ blk
-  => ConsensusMode mode
-  -> ((HasHeader (Header blk), ConvertRawHash (ConsensusBlockForMode mode)) => a)
+  :: ConsensusBlockForMode CardanoMode ~ blk
+  => ConsensusMode CardanoMode
+  -> ((HasHeader (Header blk), ConvertRawHash (ConsensusBlockForMode CardanoMode)) => a)
   -> a
-obtainHasHeader ByronMode f = f
-obtainHasHeader ShelleyMode f = f
 obtainHasHeader CardanoMode f = f
 
 obtainGetHeader
-  :: ConsensusMode mode
-  -> ( (GetHeader (ConsensusBlockForMode mode)
+  :: ConsensusMode CardanoMode
+  -> ( (GetHeader (ConsensusBlockForMode CardanoMode)
        ) => a)
   -> a
-obtainGetHeader ByronMode f = f
-obtainGetHeader ShelleyMode f = f
 obtainGetHeader CardanoMode f = f
 
 -- | Check that all nodes agree with each other, within the security parameter.
 checkConsensus
-  :: HasHeader (Header (ConsensusBlockForMode mode))
-  => ConvertRawHash (ConsensusBlockForMode mode)
-  => ConsensusMode mode
-  -> ChainVar mode
+  :: HasHeader (Header (ConsensusBlockForMode CardanoMode))
+  => ConvertRawHash (ConsensusBlockForMode CardanoMode)
+  => ConsensusMode CardanoMode
+  -> ChainVar
   -> SecurityParam
   -> STM IO ConsensusSuccess
 checkConsensus cMode chainsVar secParam = do
   chainsSnapshot <- readTVar chainsVar
   either throwIO return $ consensusCondition cMode  chainsSnapshot secParam
-
-

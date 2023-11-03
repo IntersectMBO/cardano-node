@@ -238,6 +238,7 @@ test-suite cardano-node-test
                       , aeson
                       , bytestring
                       , cardano-crypto-class
+                      , cardano-crypto-wrapper
                       , cardano-api
                       , cardano-ledger-core
                       , cardano-node
