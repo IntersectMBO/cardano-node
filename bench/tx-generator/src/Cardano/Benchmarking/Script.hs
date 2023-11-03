@@ -10,7 +10,7 @@ where
 import           Prelude
 
 import           Control.Concurrent (threadDelay)
-import           Control.Monad
+import           Control.Monad (forM_)
 import           Control.Monad.IO.Class
 import           System.Mem (performGC)
 
@@ -31,21 +31,20 @@ runScript script iom = do
   threadDelay $ 150 * 1_000
   return result
   where
+    cleanup :: Env -> ActionM () IO () -> IO (Either Error (), Env, ())
+    cleanup s a = runActionMEnv s a iom
+    execScript = do
+      setProtocolParameters QueryLocalNode
+      forM_ script action
     go = runActionM execScript iom >>= \case
       (Right a  , s ,  ()) -> do
-        cleanup s shutDownLogging
+        _ <- cleanup s shutDownLogging
         return $ Right a
       (Left err , s  , ()) -> do
-        cleanup s (traceError (show err) >> shutDownLogging)
+        _ <- cleanup s (traceError (show err) >> shutDownLogging)
         return $ Left err
-      where
-        cleanup s a = void $ runActionMEnv s a iom
 
-        execScript = do
-          setProtocolParameters QueryLocalNode
-          forM_ script action
-
-shutDownLogging :: ActionM ()
+shutDownLogging :: (Monoid w, MonadIO m) => ActionM w m ()
 shutDownLogging = do
   traceError "QRT Last Message. LoggingLayer going to shutdown. 73 . . . ."
   liftIO $ threadDelay $ 350 * 1_000

@@ -26,6 +26,7 @@ ran into circular dependency issues during the above transition.
  -}
 module Cardano.Benchmarking.Script.Env (
         ActionM
+        , Env
         , Error(..)
         , runActionM
         , runActionMEnv
@@ -121,14 +122,14 @@ emptyEnv = Env { protoParams = Nothing
 
 -- | This abbreviates an `ExceptT` and `RWST` with particular types
 -- used as parameters.
-type ActionM a = ExceptT Error (RWST IOManager () Env IO) a
+type ActionM w m a = ExceptT Error (RWST IOManager w Env m) a
 
 -- | This runs an `ActionM` starting with an empty `Env`.
-runActionM :: ActionM ret -> IOManager -> IO (Either Error ret, Env, ())
+runActionM :: ActionM w m ret -> IOManager -> m (Either Error ret, Env, w)
 runActionM = runActionMEnv emptyEnv
 
 -- | This runs an `ActionM` starting with the `Env` being passed.
-runActionMEnv :: Env -> ActionM ret -> IOManager -> IO (Either Error ret, Env, ())
+runActionMEnv :: Env -> ActionM w m ret -> IOManager -> m (Either Error ret, Env, w)
 runActionMEnv env action iom = RWS.runRWST (runExceptT action) iom env
 
 -- | 'Error' adds two cases to 'Cardano.TxGenerator.Types.TxGenError'
@@ -149,72 +150,72 @@ data Error where
 deriving instance Show Error
 
 -- | This throws a `TxGenError` in the `ActionM` monad.
-liftTxGenError :: TxGenError -> ActionM a
+liftTxGenError :: (Monoid w, Monad m) => TxGenError -> ActionM w m a
 liftTxGenError = throwE . Cardano.Benchmarking.Script.Env.TxGenError
 
 -- | The safety comes from the invocation of `throwE`
 -- instead of just using the constructor for `ExceptT`
 -- to convert the `Either` to an `ExceptT` monadic value.
-liftIOSafe :: IO (Either TxGenError a) -> ActionM a
+liftIOSafe :: (Monoid w, MonadIO m) => IO (Either TxGenError a) -> ActionM w m a
 liftIOSafe a = liftIO a >>= either liftTxGenError pure
 
 -- | Accessor for the `IOManager` reader monad aspect of the `RWST`.
-askIOManager :: ActionM IOManager
+askIOManager :: (Monoid w, Monad m) => ActionM w m IOManager
 askIOManager = lift RWS.ask
 
 -- | Helper to modify `Env` record fields.
-modifyEnv :: (Env -> Env) -> ActionM ()
+modifyEnv :: (Monoid w, Monad m) => (Env -> Env) -> ActionM w m ()
 modifyEnv = lift . RWS.modify
 
 -- | Write accessor for `protoParams`.
-setProtoParamMode :: ProtocolParameterMode -> ActionM ()
+setProtoParamMode :: (Monoid w, Monad m) => ProtocolParameterMode -> ActionM w m ()
 setProtoParamMode val = modifyEnv (\e -> e { protoParams = Just val })
 
 -- | Write accessor for `benchTracers`.
-setBenchTracers :: Tracer.BenchTracers -> ActionM ()
+setBenchTracers :: (Monoid w, Monad m) => Tracer.BenchTracers -> ActionM w m ()
 setBenchTracers val = modifyEnv (\e -> e { benchTracers = Just val })
 
 -- | Write accessor for `envGenesis`.
-setEnvGenesis :: ShelleyGenesis StandardCrypto -> ActionM ()
+setEnvGenesis :: (Monoid w, Monad m) => ShelleyGenesis StandardCrypto -> ActionM w m ()
 setEnvGenesis val = modifyEnv (\e -> e { envGenesis = Just val })
 
 -- | Write accessor for `envKeys`.
-setEnvKeys :: String -> SigningKey PaymentKey -> ActionM ()
+setEnvKeys :: (Monoid w, Monad m) => String -> SigningKey PaymentKey -> ActionM w m ()
 setEnvKeys key val = modifyEnv (\e -> e { envKeys = Map.insert key val (envKeys e) })
 
 -- | Write accessor for `envProtocol`.
-setEnvProtocol :: SomeConsensusProtocol -> ActionM ()
+setEnvProtocol :: (Monoid w, Monad m) => SomeConsensusProtocol -> ActionM w m ()
 setEnvProtocol val = modifyEnv (\e -> e { envProtocol = Just val })
 
 -- | Write accessor for `envNetworkId`.
-setEnvNetworkId :: NetworkId -> ActionM ()
+setEnvNetworkId :: (Monoid w, Monad m) => NetworkId -> ActionM w m ()
 setEnvNetworkId val = modifyEnv (\e -> e { envNetworkId = Just val })
 
 -- | Write accessor for `envSocketPath`.
-setEnvSocketPath :: FilePath -> ActionM ()
+setEnvSocketPath :: (Monoid w, Monad m) => FilePath -> ActionM w m ()
 setEnvSocketPath val = modifyEnv (\e -> e { envSocketPath = Just val })
 
 -- | Write accessor for `envThreads`.
-setEnvThreads :: String -> AsyncBenchmarkControl -> ActionM ()
+setEnvThreads :: (Monoid w, Monad m) => String -> AsyncBenchmarkControl -> ActionM w m ()
 setEnvThreads key val = modifyEnv (\e -> e { envThreads = Map.insert key val (envThreads e) })
 
 -- | Write accessor for `envWallets`.
-setEnvWallets :: String -> WalletRef -> ActionM ()
+setEnvWallets :: (Monoid w, Monad m) => String -> WalletRef -> ActionM w m ()
 setEnvWallets key val = modifyEnv (\e -> e { envWallets = Map.insert key val (envWallets e) })
 
 -- | Write accessor for `envSummary`.
-setEnvSummary :: PlutusBudgetSummary -> ActionM ()
+setEnvSummary :: (Monoid w, Monad m) => PlutusBudgetSummary -> ActionM w m ()
 setEnvSummary val = modifyEnv (\e -> e { envSummary = Just val })
 
 -- | Read accessor helper for `Maybe` record fields of `Env`.
-getEnvVal :: (Env -> Maybe t) -> String -> ActionM t
+getEnvVal :: (Monoid w, Monad m) => (Env -> Maybe t) -> String -> ActionM w m t
 getEnvVal acc s = do
   lift (RWS.gets acc) >>= \case
     Just x -> return x
     Nothing -> throwE . UserError $ "Unset " ++ s
 
 -- | Read accessor helper for `Map.Map` record fields of `Env`.
-getEnvMap :: (Env -> Map String t) -> String -> ActionM t
+getEnvMap :: (Monoid w, Monad m) => (Env -> Map String t) -> String -> ActionM w m t
 getEnvMap acc key = do
   m <- lift $ RWS.gets acc
   case Map.lookup key m of
@@ -222,55 +223,55 @@ getEnvMap acc key = do
     Nothing -> throwE . UserError $ "Lookup of " ++ key ++ " failed"
 
 -- | Read accessor for `protoParams`.
-getProtoParamMode :: ActionM ProtocolParameterMode
+getProtoParamMode :: (Monoid w, Monad m) => ActionM w m ProtocolParameterMode
 getProtoParamMode = getEnvVal protoParams "ProtocolParameterMode"
 
 -- | Read accessor for `benchTracers`.
-getBenchTracers :: ActionM Tracer.BenchTracers
+getBenchTracers :: (Monoid w, Monad m) => ActionM w m Tracer.BenchTracers
 getBenchTracers = getEnvVal benchTracers "BenchTracers"
 
 -- | Read accessor for `envGenesis`.
-getEnvGenesis :: ActionM (ShelleyGenesis StandardCrypto)
+getEnvGenesis :: (Monoid w, Monad m) => ActionM w m (ShelleyGenesis StandardCrypto)
 getEnvGenesis = getEnvVal envGenesis "Genesis"
 
 -- | Read accessor for `envKeys`.
-getEnvKeys :: String -> ActionM (SigningKey PaymentKey)
+getEnvKeys :: (Monoid w, Monad m) => String -> ActionM w m (SigningKey PaymentKey)
 getEnvKeys = getEnvMap envKeys
 
 -- | Read accessor for `envNetworkId`.
-getEnvNetworkId :: ActionM NetworkId
+getEnvNetworkId :: (Monoid w, Monad m) => ActionM w m NetworkId
 getEnvNetworkId = getEnvVal envNetworkId "Genesis"
 
 -- | Read accessor for `envProtocol`.
-getEnvProtocol :: ActionM SomeConsensusProtocol
+getEnvProtocol :: (Monoid w, Monad m) => ActionM w m SomeConsensusProtocol
 getEnvProtocol = getEnvVal envProtocol "Protocol"
 
 -- | Read accessor for `envSocketPath`.
-getEnvSocketPath :: ActionM SocketPath
+getEnvSocketPath :: (Monoid w, Monad m) => ActionM w m SocketPath
 getEnvSocketPath = File <$> getEnvVal envSocketPath "SocketPath"
 
 -- | Read accessor for `envThreads`.
-getEnvThreads :: String -> ActionM AsyncBenchmarkControl
+getEnvThreads :: (Monoid w, Monad m) => String -> ActionM w m AsyncBenchmarkControl
 getEnvThreads = getEnvMap envThreads
 
 -- | Read accessor for `envWallets`.
-getEnvWallets :: String -> ActionM WalletRef
+getEnvWallets :: (Monoid w, Monad m) => String -> ActionM w m WalletRef
 getEnvWallets = getEnvMap envWallets
 
 -- | Read accessor for `envSummary`.
-getEnvSummary :: ActionM (Maybe PlutusBudgetSummary)
+getEnvSummary :: (Monoid w, Monad m) => ActionM w m (Maybe PlutusBudgetSummary)
 getEnvSummary = lift (RWS.gets envSummary)
 
 -- | Helper to make submissions to the `Tracer.BenchTracers`.
-traceBenchTxSubmit :: (forall txId. x -> Tracer.TraceBenchTxSubmit txId) -> x -> ActionM ()
+traceBenchTxSubmit :: (Monoid w, MonadIO m) => (forall txId. x -> Tracer.TraceBenchTxSubmit txId) -> x -> ActionM w m ()
 traceBenchTxSubmit tag msg = do
   tracers  <- getBenchTracers
   liftIO $ traceWith (Tracer.btTxSubmit_ tracers) $ tag msg
 
 -- | Submit an error message to the `Tracer.BenchTracers`.
-traceError :: String -> ActionM ()
+traceError :: (Monoid w, MonadIO m) => String -> ActionM w m ()
 traceError = traceBenchTxSubmit (Tracer.TraceBenchTxSubError . Text.pack)
 
 -- | Submit a debug message to the `Tracer.BenchTracers`.
-traceDebug :: String -> ActionM ()
+traceDebug :: (Monoid w, MonadIO m) => String -> ActionM w m ()
 traceDebug = traceBenchTxSubmit Tracer.TraceBenchTxSubDebug

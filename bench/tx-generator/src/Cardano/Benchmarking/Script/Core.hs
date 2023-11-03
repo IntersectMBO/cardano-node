@@ -35,12 +35,11 @@ import qualified Data.Text as Text (unpack)
 import           Prelude
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..),
-                   ProtocolParameters, ShelleyLedgerEra,
-                   convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
+import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
+                   ShelleyLedgerEra, convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
                    protocolParamPrices)
 
-import           Cardano.Logging hiding(LocalSocket)
+import           Cardano.Logging hiding (LocalSocket)
 
 import qualified Cardano.Ledger.Core as Ledger
 
@@ -75,10 +74,10 @@ import qualified Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Version as Version
 
-liftCoreWithEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM (Either TxGenError x)
+liftCoreWithEra :: (Monoid w, MonadIO m) => AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM w m (Either TxGenError x)
 liftCoreWithEra era coreCall = withEra era ( liftIO . runExceptT . coreCall)
 
-withEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ActionM x) -> ActionM x
+withEra :: forall w m x. AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ActionM w m x) -> ActionM w m x
 withEra era action = do
   case era of
     AnyCardanoEra ConwayEra  -> action AsConwayEra
@@ -89,7 +88,7 @@ withEra era action = do
     AnyCardanoEra ShelleyEra -> action AsShelleyEra
     AnyCardanoEra ByronEra   -> error "byron not supported"
 
-setProtocolParameters :: ProtocolParametersSource -> ActionM ()
+setProtocolParameters :: (Monoid w, MonadIO m) => ProtocolParametersSource -> ActionM w m ()
 setProtocolParameters s = case s of
   QueryLocalNode -> do
     setProtoParamMode ProtocolParameterQuery
@@ -97,25 +96,25 @@ setProtocolParameters s = case s of
     protocolParameters <- liftIO $ readProtocolParametersFile file
     setProtoParamMode $ ProtocolParameterLocal protocolParameters
 
-readSigningKey :: String -> SigningKeyFile In -> ActionM ()
+readSigningKey :: (Monoid w, MonadIO m) => String -> SigningKeyFile In -> ActionM w m ()
 readSigningKey name filePath =
   liftIO (readSigningKeyFile filePath) >>= \case
     Left err -> liftTxGenError err
     Right key -> setEnvKeys name key
 
-defineSigningKey :: String -> SigningKey PaymentKey -> ActionM ()
+defineSigningKey :: (Monoid w, Monad m) => String -> SigningKey PaymentKey -> ActionM w m ()
 defineSigningKey = setEnvKeys
 
-addFund :: AnyCardanoEra -> String -> TxIn -> Lovelace -> String -> ActionM ()
+addFund :: forall w m. (Monoid w, MonadIO m) => AnyCardanoEra -> String -> TxIn -> Lovelace -> String -> ActionM w m ()
 addFund era wallet txIn lovelace keyName = do
   fundKey  <- getEnvKeys keyName
   let
-    mkOutValue :: forall era. IsShelleyBasedEra era => AsType era -> ActionM (InAnyCardanoEra TxOutValue)
+    mkOutValue :: forall era. IsShelleyBasedEra era => AsType era -> ActionM w m (InAnyCardanoEra TxOutValue)
     mkOutValue _ = return $ InAnyCardanoEra (cardanoEra @era) (lovelaceToTxOutValue (cardanoEra @era) lovelace)
   outValue <- withEra era mkOutValue
   addFundToWallet wallet txIn outValue fundKey
 
-addFundToWallet :: String -> TxIn -> InAnyCardanoEra TxOutValue -> SigningKey PaymentKey -> ActionM ()
+addFundToWallet :: (Monoid w, MonadIO m) => String -> TxIn -> InAnyCardanoEra TxOutValue -> SigningKey PaymentKey -> ActionM w m ()
 addFundToWallet wallet txIn outVal skey = do
   walletRef <- getEnvWallets wallet
   liftIO (walletRefInsertFund walletRef (FundQueue.Fund $ mkFund outVal))
@@ -127,19 +126,19 @@ addFundToWallet wallet txIn outVal skey = do
          , _fundSigningKey = Just skey
          }
 
-getLocalSubmitTx :: ActionM LocalSubmitTx
+getLocalSubmitTx :: (Monoid w, MonadIO m) => ActionM w m LocalSubmitTx
 getLocalSubmitTx = submitTxToNodeLocal <$> getLocalConnectInfo
 
-delay :: Double -> ActionM ()
+delay :: (Monoid w, MonadIO m) => Double -> ActionM w m ()
 delay t = liftIO $ threadDelay $ floor $ 1_000_000 * t
 
-waitBenchmarkCore :: AsyncBenchmarkControl ->  ActionM ()
+waitBenchmarkCore :: (Monoid w, MonadIO m) => AsyncBenchmarkControl ->  ActionM w m ()
 waitBenchmarkCore ctl = do
   tracers  <- getBenchTracers
   _ <- liftIO $ runExceptT $ GeneratorTx.waitBenchmark (btTxSubmit_ tracers) ctl
   return ()
 
-getConnectClient :: ActionM ConnectClient
+getConnectClient :: (Monoid w, MonadFail m) => ActionM w m ConnectClient
 getConnectClient = do
   tracers  <- getBenchTracers
   (Testnet networkMagic) <- getEnvNetworkId
@@ -152,19 +151,20 @@ getConnectClient = do
                        mempty -- (btSubmission2_ tracers)
                        (protocolToCodecConfig protocol)
                        networkMagic
-waitBenchmark :: String -> ActionM ()
+
+waitBenchmark :: (Monoid w, MonadIO m) => String -> ActionM w m ()
 waitBenchmark n = getEnvThreads n >>= waitBenchmarkCore
 
-cancelBenchmark :: String -> ActionM ()
+cancelBenchmark :: (Monoid w, MonadIO m) => String -> ActionM w m ()
 cancelBenchmark n = do
   ctl@(_, _ , _ , shutdownAction) <- getEnvThreads n
   liftIO shutdownAction
   waitBenchmarkCore ctl
 
-getLocalConnectInfo :: ActionM  (LocalNodeConnectInfo CardanoMode)
+getLocalConnectInfo :: (Monoid w, MonadIO m) => ActionM w m  (LocalNodeConnectInfo CardanoMode)
 getLocalConnectInfo = makeLocalConnectInfo <$> getEnvNetworkId <*> getEnvSocketPath
 
-queryEra :: ActionM AnyCardanoEra
+queryEra :: (Monoid w, MonadIO m) => ActionM w m AnyCardanoEra
 queryEra = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
@@ -173,7 +173,7 @@ queryEra = do
     Right era -> return era
     Left err -> liftTxGenError $ TxGenError $ show err
 
-queryRemoteProtocolParameters :: ActionM ProtocolParameters
+queryRemoteProtocolParameters :: forall w m. (Monoid w, MonadIO m) => ActionM w m ProtocolParameters
 queryRemoteProtocolParameters = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
@@ -182,7 +182,7 @@ queryRemoteProtocolParameters = do
     callQuery :: forall era.
                  EraInMode era CardanoMode
               -> QueryInEra era (Ledger.PParams (ShelleyLedgerEra era))
-              -> ActionM ProtocolParameters
+              -> ActionM w m ProtocolParameters
     callQuery eraInMode query@(QueryInShelleyBasedEra shelleyEra _) = do
         res <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) (QueryInEra eraInMode query)
         case res of
@@ -203,13 +203,13 @@ queryRemoteProtocolParameters = do
     AnyCardanoEra BabbageEra -> callQuery BabbageEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraBabbage QueryProtocolParameters
     AnyCardanoEra ConwayEra  -> callQuery ConwayEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraConway QueryProtocolParameters
 
-getProtocolParameters :: ActionM ProtocolParameters
+getProtocolParameters :: (Monoid w, MonadIO m) => ActionM w m ProtocolParameters
 getProtocolParameters = do
   getProtoParamMode  >>= \case
     ProtocolParameterQuery -> queryRemoteProtocolParameters
     ProtocolParameterLocal parameters -> return parameters
 
-waitForEra :: AnyCardanoEra -> ActionM ()
+waitForEra :: (Monoid w, MonadIO m) => AnyCardanoEra -> ActionM w m ()
 waitForEra era = do
   currentEra <- queryEra
   if currentEra == era
@@ -219,7 +219,7 @@ waitForEra era = do
       liftIO $ threadDelay 1_000_000
       waitForEra era
 
-localSubmitTx :: TxInMode CardanoMode -> ActionM (SubmitResult (TxValidationErrorInMode CardanoMode))
+localSubmitTx :: (Monoid w, MonadIO m) => TxInMode CardanoMode -> ActionM w m (SubmitResult (TxValidationErrorInMode CardanoMode))
 localSubmitTx tx = do
   submit <- getLocalSubmitTx
   ret <- liftIO $ submit tx
@@ -242,10 +242,10 @@ toMetadata (Just payloadSize) = case mkMetadata payloadSize of
   Right m -> m
   Left err -> error err
 
-submitAction :: AnyCardanoEra -> SubmitMode -> Generator -> TxGenTxParams -> ActionM ()
+submitAction :: (Monoid w, MonadFail m, MonadIO m) => AnyCardanoEra -> SubmitMode -> Generator -> TxGenTxParams -> ActionM w m ()
 submitAction era submitMode generator txParams = withEra era $ submitInEra submitMode generator txParams
 
-submitInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Generator -> TxGenTxParams -> AsType era -> ActionM ()
+submitInEra :: forall w m era. (Monoid w, MonadFail m, MonadIO m, IsShelleyBasedEra era) => SubmitMode -> Generator -> TxGenTxParams -> AsType era -> ActionM w m ()
 submitInEra submitMode generator txParams era = do
   txStream <- evalGenerator generator txParams era
   case submitMode of
@@ -260,7 +260,7 @@ submitInEra submitMode generator txParams era = do
   showTx (Left err) = error $ show err
   showTx (Right tx) = '\n' : show tx
    -- todo: use Streaming.run
-  submitAll :: (Tx era -> ActionM ()) -> TxStream IO era -> ActionM ()
+  submitAll :: (Tx era -> ActionM w m ()) -> TxStream IO era -> ActionM w m ()
   submitAll callback stream = do
     step <- liftIO $ Streaming.inspect stream
     case step of
@@ -270,14 +270,14 @@ submitInEra submitMode generator txParams era = do
         callback tx
         submitAll callback rest
 
-benchmarkTxStream :: forall era. IsShelleyBasedEra era
+benchmarkTxStream :: forall w m era. (Monoid w, MonadFail m, MonadIO m, IsShelleyBasedEra era)
   => TxStream IO era
   -> TargetNodes
   -> String
   -> TPSRate
   -> NumberOfTxs
   -> AsType era
-  -> ActionM ()
+  -> ActionM w m ()
 benchmarkTxStream txStream targetNodes threadName tps txCount era = do
   tracers  <- getBenchTracers
   connectClient <- getConnectClient
@@ -290,7 +290,7 @@ benchmarkTxStream txStream targetNodes threadName tps txCount era = do
     Left err -> liftTxGenError err
     Right ctl -> setEnvThreads threadName ctl
 
-evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
+evalGenerator :: forall w m era. (Monoid w, MonadIO m, IsShelleyBasedEra era) => Generator -> TxGenTxParams -> AsType era -> ActionM w m (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   networkId <- getEnvNetworkId
   protocolParameters <- getProtocolParameters
@@ -388,9 +388,9 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   where
     feeInEra = Utils.mkTxFee fee
 
-selectCollateralFunds :: forall era. IsShelleyBasedEra era
+selectCollateralFunds :: forall w m era. (Monoid w, MonadIO m, IsShelleyBasedEra era)
   => Maybe String
-  -> ActionM (TxInsCollateral era, [FundQueue.Fund])
+  -> ActionM w m (TxInsCollateral era, [FundQueue.Fund])
 selectCollateralFunds Nothing = return (TxInsCollateralNone, [])
 selectCollateralFunds (Just walletName) = do
   cw <- getEnvWallets walletName
@@ -401,16 +401,16 @@ selectCollateralFunds (Just walletName) = do
       Nothing -> throwE $ WalletError $ "selectCollateralFunds: collateral: era not supported :" ++ show (cardanoEra @era)
       Just p -> return (TxInsCollateral p $  map getFundTxIn collateralFunds, collateralFunds)
 
-dumpToFile :: FilePath -> TxInMode CardanoMode -> ActionM ()
+dumpToFile :: (Monoid w, MonadIO m) => FilePath -> TxInMode CardanoMode -> ActionM w m ()
 dumpToFile filePath tx = liftIO $ dumpToFileIO filePath tx
 
 dumpToFileIO :: FilePath -> TxInMode CardanoMode -> IO ()
 dumpToFileIO filePath tx = appendFile filePath ('\n' : show tx)
 
-initWallet :: String -> ActionM ()
+initWallet :: (Monoid w, MonadIO m) => String -> ActionM w m ()
 initWallet name = liftIO Wallet.initWallet >>= setEnvWallets name
 
-interpretPayMode :: forall era. IsShelleyBasedEra era => PayMode -> ActionM (CreateAndStore IO era, String)
+interpretPayMode :: forall w m era. (Monoid w, MonadIO m, IsShelleyBasedEra era) => PayMode -> ActionM w m (CreateAndStore IO era, String)
 interpretPayMode payMode = do
   networkId <- getEnvNetworkId
   case payMode of
@@ -427,9 +427,9 @@ interpretPayMode payMode = do
           return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
                  , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script') NoStakeAddress )
 
-makePlutusContext :: forall era. IsShelleyBasedEra era
+makePlutusContext :: forall w m era. (Monoid w, MonadIO m, IsShelleyBasedEra era)
   => ScriptSpec
-  -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, Lovelace)
+  -> ActionM w m (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, Lovelace)
 makePlutusContext ScriptSpec{..} = do
   protocolParameters <- getProtocolParameters
   script <- liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
@@ -519,17 +519,18 @@ makePlutusContext ScriptSpec{..} = do
       liftTxGenError $ TxGenError "runPlutusBenchmark: only Plutus scripts supported"
 
 preExecuteScriptAction ::
-     ProtocolParameters
+     (Monoid w, Monad m)
+  => ProtocolParameters
   -> ScriptInAnyLang
   -> ScriptData
   -> ScriptData
-  -> ActionM ExecutionUnits
+  -> ActionM w m ExecutionUnits
 preExecuteScriptAction protocolParameters script scriptData redeemer
   = case Plutus.preExecutePlutusScript protocolParameters script scriptData (unsafeHashableScriptData redeemer) of
       Left err -> throwE $ WalletError ( "makePlutusContext preExecuteScript failed: " ++ show err )
       Right costs -> return costs
 
-dumpBudgetSummaryIfExisting :: ActionM ()
+dumpBudgetSummaryIfExisting :: (Monoid w, MonadIO m) => ActionM w m ()
 dumpBudgetSummaryIfExisting
   = do
     summary_ <- getEnvSummary
@@ -539,7 +540,7 @@ dumpBudgetSummaryIfExisting
   where
     summaryFile = "plutus-budget-summary.json"
 
-traceTxGeneratorVersion :: ActionM ()
+traceTxGeneratorVersion :: (Monoid w, MonadIO m) => ActionM w m ()
 traceTxGeneratorVersion = traceBenchTxSubmit TraceTxGeneratorVersion Version.txGeneratorVersion
 
 {-
@@ -547,6 +548,6 @@ This is for dirty hacking and testing and quick-fixes.
 Its a function that can be called from the JSON scripts
 and for which the JSON encoding is "reserved".
 -}
-reserved :: [String] -> ActionM ()
+reserved :: (Monoid w, Monad m) => [String] -> ActionM w m ()
 reserved _ = do
   throwE $ UserError "no dirty hack is implemented"
