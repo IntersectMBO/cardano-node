@@ -9,15 +9,26 @@ work out some way to arrange this.
 module Cardano.Benchmarking.Script.PureAPI
 where
 
+{-
 import Cardano.Api (type CardanoEra (..), AnyCardanoEra (..))
 import Cardano.Benchmarking.Compiler (CompileError (..), compileToScript, runCompiler)
 import Cardano.Benchmarking.Script.Types (Action (..))
 import Cardano.CLI.Types.Common (File (..))
 import Cardano.Node.Configuration.NodeAddress (NodeAddress'(..), NodeHostIPv4Address (..))
 import Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..))
--- import Cardano.TxGenerator.Types (NumberOfInputsPerTx, NumberOfOutputsPerTx)
+-}
+import           Cardano.Api (AnyCardanoEra (..), type CardanoEra (..))
+import           Cardano.Benchmarking.Compiler (CompileError (..), compileToScript, runCompiler)
+import           Cardano.Benchmarking.Script.Types (Action (..))
+import           Cardano.CLI.Types.Common (File (..))
+import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..),
+                   NodeHostIPv4Address (..))
+import           Cardano.TxGenerator.Setup.NixService (NixServiceOptions (..))
+{-
+import Cardano.TxGenerator.Types (NumberOfInputsPerTx, NumberOfOutputsPerTx)
+-}
 
-import Data.List.NonEmpty (NonEmpty (..))
+import           Data.List.NonEmpty (NonEmpty (..))
 
 -- Cardano.Benchmarking.Command
 -- Cardano.Benchmarking.OuroborosImports

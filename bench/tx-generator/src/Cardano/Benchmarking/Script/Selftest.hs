@@ -42,7 +42,7 @@ import           Paths_tx_generator
 runSelftest :: IOManager -> Maybe FilePath -> Maybe FilePath -> IO (Either Script.Error ())
 runSelftest iom genFile outFile = do
   protocolFile <-  getDataFileName "data/protocol-parameters.json"
-  generator <- pure Nothing `maybe` (liftM (Just . read) . readFile) $ genFile
+  generator <- pure Nothing `maybe` (fmap (Just . read) . readFile) $ genFile
   let
     submitMode = maybe DiscardTX DumpToFile outFile
     fullScript = do
