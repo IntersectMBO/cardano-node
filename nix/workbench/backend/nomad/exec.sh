@@ -13,7 +13,7 @@ backend_nomadexec() {
       # Can be:
       # nomadpodman       (Using podman Task Driver in the cloud is not planned)
       # nomadexec  (Starts Nomad Agents supporting the "nix_installable" stanza)
-      # nomadcloud  (IOG Nomad Agents and Amazon S3 with credentials from Vault)
+      # nomadcloud    (SRE managed Nomad Agents on Amazon S3 (dedicated or not))
       echo 'nomadexec'
     ;;
 
@@ -42,84 +42,97 @@ backend_nomadexec() {
     ;;
 
     allocate-run )
-      allocate-run-nomadexec             "$@"
+      allocate-run-nomadexec                "$@"
       # Does a pre allocation before calling the default/common allocation.
-      backend_nomad allocate-run         "$@"
+      backend_nomad allocate-run            "$@"
     ;;
 
+    # Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
     deploy-genesis )
       # It "overrides" completely `backend_nomad`'s `deploy-genesis`.
-      deploy-genesis-nomadexec           "$@"
+      deploy-genesis-nomadexec              "$@"
+    ;;
+
+    wait-pools-stopped )
+      # It passes the sleep time (in seconds) required argument.
+      # This time is different between local and cloud backends to avoid
+      # unnecesary Nomad specific traffic (~99% happens waiting for node-0, the
+      # first one it waits to stop inside a loop) and at the same time be less
+      # sensitive to network failures.
+      backend_nomad wait-pools-stopped    1 "$@"
+    ;;
+
+    # All or clean up everything!
+    # Called after `scenario.sh` without an exit trap!
+    stop-cluster )
+      # Shared code between Nomad sub-backends that internally only takes care
+      # of the Nomad job.
+      backend_nomad stop-cluster-internal   "$@"
+      # Takes care of any Nomad agents (server and client(s)) that were setup
+      # locally for only this run.
+      backend_nomad stop-cluster-local      "$@"
     ;;
 
     # Generic backend sub-commands, shared code between Nomad sub-backends.
 
     describe-run )
-      backend_nomad describe-run         "$@"
+      backend_nomad describe-run            "$@"
     ;;
 
     is-running )
-      backend_nomad is-running           "$@"
+      backend_nomad is-running              "$@"
     ;;
 
     start-cluster )
-      backend_nomad start-cluster        "$@"
+      backend_nomad start-cluster           "$@"
     ;;
 
     start-tracers )
-      backend_nomad start-tracers        "$@"
+      backend_nomad start-tracers           "$@"
     ;;
 
     start-nodes )
-      backend_nomad start-nodes          "$@"
+      backend_nomad start-nodes             "$@"
     ;;
 
     start-generator )
-      backend_nomad start-generator      "$@"
+      backend_nomad start-generator         "$@"
     ;;
 
     start-healthchecks )
-      backend_nomad start-healthchecks   "$@"
+      backend_nomad start-healthchecks      "$@"
     ;;
 
     start-node )
-      backend_nomad start-node           "$@"
+      backend_nomad start-node              "$@"
     ;;
 
     stop-node )
-      backend_nomad stop-node            "$@"
+      backend_nomad stop-node               "$@"
     ;;
 
     get-node-socket-path )
-      backend_nomad get-node-socket-path "$@"
+      backend_nomad get-node-socket-path    "$@"
     ;;
 
     wait-node )
-      backend_nomad wait-node            "$@"
+      backend_nomad wait-node               "$@"
     ;;
 
     wait-node-stopped )
-      backend_nomad wait-node-stopped    "$@"
-    ;;
-
-    wait-pools-stopped )
-      backend_nomad wait-pools-stopped   "$@"
+      backend_nomad wait-node-stopped       "$@"
     ;;
 
     stop-all )
-      backend_nomad stop-all             "$@"
+      backend_nomad stop-all                "$@"
     ;;
 
     fetch-logs )
-      backend_nomad fetch-logs           "$@"
-    ;;
-
-    stop-cluster )
-      backend_nomad stop-cluster         "$@"
+      backend_nomad fetch-logs              "$@"
     ;;
 
     cleanup-cluster )
-      backend_nomad cleanup-cluster      "$@"
+      backend_nomad cleanup-cluster         "$@"
     ;;
 
     * )
@@ -165,9 +178,10 @@ allocate-run-nomadexec() {
   ## Empty the global namespace. Local runs ignore "${NOMAD_NAMESPACE:-}"
   backend_nomad allocate-run-nomad-job-patch-namespace "${dir}"
   # Will set the /nix/store paths from ".nix-store-path" in container-specs.json
-  backend_nomad allocate-run-nomad-job-patch-nix "${dir}"
+# backend_nomad allocate-run-nomad-job-patch-nix "${dir}"
 }
 
+# Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
 deploy-genesis-nomadexec() {
   local usage="USAGE: wb backend $op RUN-DIR"
   local dir=${1:?$usage}; shift
@@ -185,8 +199,8 @@ deploy-genesis-nomadexec() {
       if test "${nomad_agents_were_already_running}" = "false"
       then
         msg "$(red "Startup of webfs failed, cleaning up ...")"
+        backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
         wb_nomad agents stop "${server_name}" "${client_name}" "exec"
-        backend_nomad stop-nomad-job "${dir}"
       fi
       fatal "Failed to start a local HTTP server"
     fi
@@ -199,8 +213,8 @@ deploy-genesis-nomadexec() {
     if test "${nomad_agents_were_already_running}" = "false"
     then
       msg "$(red "Startup of webfs failed, cleaning up ...")"
+      backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
       wb_nomad agents stop "${server_name}" "${client_name}" "exec"
-      backend_nomad stop-nomad-job "${dir}"
     fi
     fatal "Failed to add genesis file to local HTTP server"
   else
@@ -210,6 +224,9 @@ deploy-genesis-nomadexec() {
   local uri="http://127.0.0.1:12000/${nomad_job_name}.tar.zst"
   if ! backend_nomad deploy-genesis-wget "${dir}" "${uri}"
   then
+    msg "$(red "Deploy of genesis failed, cleaning up ...")"
+    backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
+    wb_nomad agents stop "${server_name}" "${client_name}" "exec"
     fatal "Deploy of genesis \"${uri}\" failed"
   else
     msg "$(green "Genesis \"${uri}\" deployed successfully")"

@@ -123,13 +123,12 @@ newtype GenesisHash = GenesisHash (Crypto.Hash Crypto.Blake2b_256 ByteString)
   deriving newtype (Eq, Show, ToJSON, FromJSON)
 
 data NodeProtocolConfiguration =
-       NodeProtocolConfigurationByron   NodeByronProtocolConfiguration
-     | NodeProtocolConfigurationShelley NodeShelleyProtocolConfiguration
-     | NodeProtocolConfigurationCardano NodeByronProtocolConfiguration
-                                        NodeShelleyProtocolConfiguration
-                                        NodeAlonzoProtocolConfiguration
-                                        NodeConwayProtocolConfiguration
-                                        NodeHardForkProtocolConfiguration
+  NodeProtocolConfigurationCardano
+    NodeByronProtocolConfiguration
+    NodeShelleyProtocolConfiguration
+    NodeAlonzoProtocolConfiguration
+    NodeConwayProtocolConfiguration
+    NodeHardForkProtocolConfiguration
   deriving (Eq, Show)
 
 data NodeShelleyProtocolConfiguration =
@@ -302,19 +301,13 @@ newtype TopologyFile = TopologyFile
   deriving newtype (Show, Eq)
 
 instance AdjustFilePaths NodeProtocolConfiguration where
-
-  adjustFilePaths f (NodeProtocolConfigurationByron pc) =
-    NodeProtocolConfigurationByron (adjustFilePaths f pc)
-
-  adjustFilePaths f (NodeProtocolConfigurationShelley pc) =
-    NodeProtocolConfigurationShelley (adjustFilePaths f pc)
-
   adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pca pcc pch) =
-    NodeProtocolConfigurationCardano (adjustFilePaths f pcb)
-                                     (adjustFilePaths f pcs)
-                                     (adjustFilePaths f pca)
-                                     (adjustFilePaths f pcc)
-                                     pch
+    NodeProtocolConfigurationCardano
+      (adjustFilePaths f pcb)
+      (adjustFilePaths f pcs)
+      (adjustFilePaths f pca)
+      (adjustFilePaths f pcc)
+      pch
 
 instance AdjustFilePaths NodeByronProtocolConfiguration where
   adjustFilePaths f x@NodeByronProtocolConfiguration {

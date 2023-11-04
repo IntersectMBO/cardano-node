@@ -25,6 +25,8 @@ usage_nomad() {
                      Creates a JSON array with all the SRE's perf nodes in a
                      format that can be used to ensure cloud runs are
                      reproducible.
+                     Needed envars (NOMAD_TOKEN, NOMAD_ADDR or NOMAD_NAMESPACE)
+                     must be provided by the user.
 
     $(helpcmd agents start SERVER-NAME CLIENT-NAME TASK-DRIVER-NAME)
                      Start a default 1 server 1 client Nomad cluster.
@@ -337,7 +339,7 @@ wb_nomad() {
               local key_path="${ssh_dir}"/server.id_ed25519
               if ! test -f "${key_path}"
               then
-                ssh-keygen -t ed25519 -f "${key_path}" -C "" -N ""
+                ssh-keygen -t ed25519 -f "${key_path}" -C "" -N "" >/dev/null
               fi
               echo "${key_path}"
             ;;
@@ -346,7 +348,7 @@ wb_nomad() {
               local key_path="${ssh_dir}"/user.id_ed25519
               if ! test -f "${key_path}"
               then
-                ssh-keygen -t ed25519 -f "${key_path}" -C "" -N ""
+                ssh-keygen -t ed25519 -f "${key_path}" -C "" -N "" >/dev/null
               fi
               echo "${key_path}"
             ;;
@@ -362,21 +364,22 @@ wb_nomad() {
           if ! test -f "${file_path}"
           then
 cat > "${file_path}" << EOL
-StrictHostKeyChecking    accept-new
-GlobalKnownHostsFile     $(wb nomad ssh known_hosts)
-UserKnownHostsFile       $(wb nomad ssh known_hosts)
-PasswordAuthentication   no
-PubKeyAuthentication     yes
-PreferredAuthentications publickey
-IdentitiesOnly           yes
-IdentityFile             $(wb nomad ssh key user)
-Compression              yes
-TCPKeepAlive             no
-ServerAliveInterval      15
-ServerAliveCountMax      4
-ControlMaster            auto
-ControlPath              ${ssh_dir}/%h-%p-%r
-ControlPersist           15
+Host *
+  StrictHostKeyChecking    accept-new
+  GlobalKnownHostsFile     $(wb nomad ssh known_hosts)
+  UserKnownHostsFile       $(wb nomad ssh known_hosts)
+  PasswordAuthentication   no
+  PubKeyAuthentication     yes
+  PreferredAuthentications publickey
+  IdentitiesOnly           yes
+  IdentityFile             $(wb nomad ssh key user)
+  Compression              yes
+  TCPKeepAlive             no
+  ServerAliveInterval      15
+  ServerAliveCountMax      4
+  ControlMaster            auto
+  ControlPath              ${ssh_dir}/%h-%p-%r
+  ControlPersist           15
 EOL
           fi
           echo "${file_path}"
@@ -401,12 +404,11 @@ EOL
 ################################################################################
     nodes )
       local usage="USAGE: wb nomad ${op}"
-      local nomad_address="https://nomad.world.dev.cardano.org"
-      local nomad_token
-      nomad_token=$(wb_nomad vault world nomad-token)
-      # Fetch the status of all nodes of class "perf"
+      # Fetch the status of all nodes that are in the "ready" state.
+      # If a node is removed status is "down" and will still show its details.
+      # Not using cardano specific filters anymore (-filter 'NodeClass=="perf"').
       local perf_nodes
-      perf_nodes="$(NOMAD_TOKEN="${nomad_token}" NOMAD_NAMESPACE=perf nomad node status -address="${nomad_address}" -filter 'NodeClass=="perf"' -json)"
+      perf_nodes="$(nomad node status -filter 'Status=="ready"' -json)"
       # Create the base JSON string but without the "attributes" because those
       # are only available when fetching the status of individual nodes.
       local nodes_json
@@ -433,7 +435,7 @@ EOL
       do
         # Fetch the attributes
         local node_attributes
-        node_attributes="$(NOMAD_TOKEN="${nomad_token}" NOMAD_NAMESPACE=perf nomad node status -address="${nomad_address}" -json "${node_id}" | jq .Attributes)"
+        node_attributes="$(nomad node status -json "${node_id}" | jq .Attributes)"
         # Add the attributes of this node to the JSON string
         nodes_json="$( \
             echo "${nodes_json}" \
@@ -446,7 +448,23 @@ EOL
                     .attributes                                                \
                   |=                                                           \
                     {                                                          \
-                      \"os\": {                                                \
+                      \"cpu\": {                                               \
+                         \"arch\": \$attrs[\"cpu.arch\"]                       \
+                       , \"frequency\": \$attrs[\"cpu.frequency\"]             \
+                       , \"modelname\": \$attrs[\"cpu.modelname\"]             \
+                       , \"numcores\": \$attrs[\"cpu.numcores\"]               \
+                       , \"reservablecores\": \$attrs[\"cpu.reservablecores\"] \
+                       , \"totalcompute\": \$attrs[\"cpu.totalcompute\"]       \
+                      }                                                        \
+                    , \"kernel\": {                                            \
+                         \"arch\": \$attrs[\"kernel.arch\"]                    \
+                       , \"name\": \$attrs[\"kernel.name\"]                    \
+                       , \"version\": \$attrs[\"kernel.version\"]              \
+                      }                                                        \
+                    , \"memory\": {                                            \
+                         \"totalbytes\": \$attrs[\"memory.totalbytes\"]        \
+                      }                                                        \
+                    , \"os\": {                                                \
                          \"name\": \$attrs[\"os.name\"]                        \
                        , \"version\": \$attrs[\"os.version\"]                  \
                       }                                                        \
@@ -559,13 +577,20 @@ EOL
           # https://support.hashicorp.com/hc/en-us/articles/360000654467-Removing-Orphaned-Mounts-from-Nomad-Allocation-Directory
           nomad system gc 2>&1 >/dev/null || true
           # Stop client
-          wb_nomad client stop "${client_name}" || true
+            wb_nomad client stop "${client_name}" \
+          ||                                      \
+            msg "$(red "Failed to stop Nomad client \"${client_name}\"")"
+          # Stop driver(s)
           if test "${task_driver}" = "podman"
           then
-            wb_nomad plugin nomad-driver-podman stop || true
+              wb_nomad plugin nomad-driver-podman stop \
+            ||                                         \
+              msg "$(red "Failed to stop nomad-driver-podman")"
           fi
           # Stop server
-          wb_nomad server stop "${server_name}" || true
+            wb_nomad server stop "${server_name}" \
+          ||                                      \
+            msg "$(red "Failed to stop Nomad server \"${server_name}\"")"
         ;;
 ####### agents -> * )###########################################################
         * )
@@ -1430,7 +1455,7 @@ EOF
           local job_file=${1:?$usage}; shift
           local job_name=${1:?$usage}; shift
           # Post a Nomad job without "monitor" (`-detach`) mode!
-          # I don't want to have `nomad` process attached to my terminal,
+          # I don't want to have a `nomad` process attached to my terminal,
           # funny things are happening with the workbench's log output!
           ### -detach
           ### Return immediately instead of entering monitor mode. After job
@@ -1514,7 +1539,7 @@ EOF
             &
           jobs_array+=("$!")
           # Wait for all processes to finish or kill them if at least one fails!
-          wait_fail_any "${jobs_array[@]}" || touch "${job_file}.run/job.error"
+          wait_kill_em_all "${jobs_array[@]}" || touch "${job_file}.run/job.error"
           # Check for every possible error
           local return_code=0
           # Any failed evaluation(s)?
@@ -1623,7 +1648,7 @@ EOF
               jobs_array+=("$!")
             done
             # Wait for all processes to finish or kill them if at least one fails!
-            if ! wait_fail_any "${jobs_array[@]}" || test -f "${job_file}.run/evaluations.error"
+            if ! wait_kill_em_all "${jobs_array[@]}" || test -f "${job_file}.run/evaluations.error"
             then
               "${msgoff}" || msg "$(red "Exiting monitor of Nomad Evaluation(s) [${ids_array[@]}] due to errors")"
               # Send fatal job error signal after printing this error's messages!
@@ -1689,7 +1714,7 @@ EOF
               jobs_array+=("$!")
             done
             # Wait for all processes to finish or kill them if at least one fails!
-            if ! wait_fail_any "${jobs_array[@]}" || test -f "${job_file}.run/allocations.error"
+            if ! wait_kill_em_all "${jobs_array[@]}" || test -f "${job_file}.run/allocations.error"
             then
               "${msgoff}" || msg "$(red "Exiting monitor of Nomad Allocation(s) [${ids_array[@]}] due to errors")"
               # Send fatal job error signal after printing this error's messages!
@@ -1756,7 +1781,7 @@ EOF
               jobs_array+=("$!")
             done
             # Wait for all processes to finish or kill them if at least one fails!
-            if ! wait_fail_any "${jobs_array[@]}" || test -f "${job_file}.run/tasks.error"
+            if ! wait_kill_em_all "${jobs_array[@]}" || test -f "${job_file}.run/tasks.error"
             then
               "${msgoff}" || msg "$(red "Exiting monitor of Nomad Allocation \"${alloc_id}\" Task(s) [${ids_array[@]}] due to errors")"
               # Send fatal job error signal after printing this error's messages!
@@ -2076,7 +2101,7 @@ EOF
           local usage="USAGE:wb nomad ${op} ${subop} JOB-FILE TASK-NAME"
           local job_file=${1:?$usage};  shift
           local task_name=${1:?$usage}; shift
-          jq -r '.ID' "${job_file}.run/task.${task_name}.final.json"
+          jq -r '.ID' "${job_file}".run/task.${task_name}.final.json
         ;;
 ####### job -> stop )###########################################################
         stop )
@@ -2084,7 +2109,268 @@ EOF
           local job_file=${1:?$usage}; shift
           local job_name=${1:?$usage}; shift
           # Do the prune, purge, garbage collect thing!
-          nomad job stop -global -no-shutdown-delay -purge -yes -verbose "${job_name}"
+          nomad job stop -global -no-shutdown-delay -purge -yes -verbose "${job_name}" || msg "$(red "Failed to stop Nomad job")"
+        ;;
+####### job -> node-specs )#####################################################
+        node-specs )
+          # Creates an ex-post "node-specs.json" like file.
+          # It uses Nomad tasks and allocations data plus the files that were
+          # actually deployed, these last ones because parts of them are
+          # dynamically generated using Nomad templates.
+          local usage="USAGE:wb nomad ${op} ${subop} JOB-FILE"
+          local job_file=${1:?$usage}; shift
+          # The nodes/clients file must exists!
+          local clients_file_path="$(dirname "${job_file}")"/clients.json
+          local node_specs_path="$(dirname "${job_file}")"/../node-specs.json
+          # Top object start
+          ##################
+          echo "{"
+          # Grab all the "i" properties from inside each "node-i" object
+          # Why "i" and not "name"? `jq` sorts like this: "node-49", "node-5",
+          # "node-50".
+          local node_specs_is
+          node_specs_is=$(jq --raw-output \
+            'map(.i) | join (" ")' \
+            "${node_specs_path}" \
+          )
+          local first_node="true"
+          for node_i in ${node_specs_is[*]}
+          do
+            # Nomad Job Tasks' names are taken from the `node-specs.json` file.
+            # Task names are of the form "node-0", "node-1", "node-10" (not
+            # "node-04").
+            local task_name
+            task_name=$(jq --raw-output \
+              "map(select(.i == ${node_i})) | .[] | .name" \
+              "${node_specs_path}" \
+            )
+            # Node open "{"
+            ###############
+            # If not the first one ","
+            if test "${first_node}" == "true"
+            then
+              first_node="false"
+              echo "    \"${task_name}\": {"
+            else
+              echo "  , \"${task_name}\": {"
+            fi
+            # Fetch from the allocation data the Nomad Client ID, Name and
+            # Datacenter/region were this Task was deployed.
+            local nomad_client_id
+            nomad_client_id=$(jq --raw-output \
+              .NodeID \
+              "${job_file}".run/task."${task_name}".final.json \
+            )
+            local nomad_client_name
+            nomad_client_name=$(jq --raw-output \
+              .NodeName \
+              "${job_file}".run/task."${task_name}".final.json \
+            )
+            local nomad_client_datacenter
+            nomad_client_datacenter=$(jq --raw-output \
+              ". | map(select(.id == \"${nomad_client_id}\")) | .[0] | .datacenter" \
+              "${clients_file_path}" \
+            )
+            # With the Nomad Client data now fetch AZ and port.
+            local nomad_client_az # Client's AWS AZ were this task was deployed!
+            nomad_client_az=$(jq --raw-output \
+              ". | map(select(.id == \"${nomad_client_id}\")) | .[0] | .attributes.platform.aws.placement[\"availability-zone\"]" \
+              "${clients_file_path}" \
+            )
+            local nomad_task_port # Task's reserved port number!
+            nomad_task_port=$(jq --raw-output \
+              .Resources.Networks[0].ReservedPorts[0].Value \
+              "${job_file}".run/task."${task_name}".final.json \
+            )
+            local nomad_task_ip
+            nomad_task_ip=$(jq --raw-output \
+              ". | map(select(.name == \"${nomad_client_name}\")) | .[0] | .attributes.unique.platform.aws[\"public-ipv4\"]" \
+              "${clients_file_path}" \
+            )
+            # Same data as "node-specs.json".
+            #################################
+            echo "          \"i\":      ${node_i}"
+            echo "        , \"name\":   \"${task_name}\""
+            echo "        , \"region\": \"${nomad_client_datacenter}\""
+            echo "        , \"port\":   ${nomad_task_port}"
+            # Extra Nomad client data.
+            ##########################
+            echo "        , \"nomad-client\": {"
+            echo "              \"id\":   \"${nomad_client_id}\""
+            echo "            , \"name\": \"${nomad_client_name}\""
+            echo "            , \"az\":   \"${nomad_client_az}\""
+            echo "            , \"ip\":   \"${nomad_task_ip}\""
+            echo "        }"
+            # Node close "}"
+            ################
+            echo "  }"
+          done
+          # Top object end
+          ################
+          echo "}"
+        ;;
+####### job -> topology )#######################################################
+        topology )
+          # Creates an ex-post "topology.json" like file.
+          # It uses Nomad tasks and allocations data plus the files that were
+          # actually deployed, these last ones because parts of them are
+          # dynamically generated using Nomad templates.
+          # The "producers" list of each node is re-constructed using the Nomad
+          # services definitions.
+          local usage="USAGE:wb nomad ${op} ${subop} JOB-FILE"
+          local job_file=${1:?$usage}; shift
+          # The nodes/clients file must exists!
+          local clients_file_path="$(dirname "${job_file}")"/clients.json
+          local topology_path="$(dirname "${job_file}")"/../topology.json
+          # Helper, called for "coreNodes" and "relayNodes" separately.
+          topology-node-helper() {
+            local task_name="$1"
+            local node_i="$2"
+            # Fetch from the allocation data the Nomad Client ID and
+            # Datacenter/region were this Task was deployed.
+            local nomad_client_id
+            nomad_client_id=$(jq --raw-output \
+              .NodeID \
+              "${job_file}".run/task."${task_name}".final.json \
+            )
+            local nomad_client_datacenter
+            nomad_client_datacenter=$(jq --raw-output \
+              ". | map(select(.id == \"${nomad_client_id}\")) | .[0] | .datacenter" \
+              "${clients_file_path}" \
+            )
+            # Same data as "topology.json".
+            ###############################
+            echo "             \"name\":   \"${task_name}\""
+            echo "           , \"nodeId\": ${node_i}"
+            echo "           , \"region\": \"${nomad_client_datacenter}\""
+            # producers start
+            #################
+            echo "           , \"producers\": ["
+            local node_topology_file_path
+            node_topology_file_path="$(dirname "${job_file}")"/../"${task_name}"/topology.json
+            # Grab producers from the fetched, after deployment, "topology.json" files
+            local node_producers
+            node_producers=$(jq .Producers "${node_topology_file_path}")
+            local node_producers_keys
+            node_producers_keys=$(echo "${node_producers}" | jq --raw-output 'keys | join (" ")')
+            local node_producer_i=0
+            for node_producer_key in ${node_producers_keys[*]}
+            do
+              # The topology file, as used by the node, is already formated as
+              # {"addr":XX,"port":YY} were the XX and YY values were resolved
+              # using Nomad templates.
+              local producer_addr producer_port
+              producer_addr=$(echo "${node_producers}" | jq -r ".[${node_producer_key}] | .addr")
+              producer_port=$(echo "${node_producers}" | jq -r ".[${node_producer_key}] | .port")
+              # From the public IP and port look for the node that was deployed
+              # with this values by searching thorugh the services definitions.
+              local node_specs_path="$(dirname "${job_file}")"/../node-specs.json
+              local node_specs_names
+              node_specs_names=$(jq --raw-output \
+                'map(.name) | join (" ")' \
+                "${node_specs_path}" \
+              )
+              for node_name in ${node_specs_names[*]}
+              do
+                if jq -e "any(select(.Address == \"${producer_addr}\" and .Port == ${producer_port}))" "$(dirname "${job_file}")"/"${node_name}"/service-info.json >/dev/null
+                then
+                  if test "${node_producer_i}" == "0"
+                  then
+                    echo "                  \"${node_name}\""
+                  else
+                    echo "                , \"${node_name}\""
+                  fi
+                  node_producer_i=$((node_producer_i + 1))
+                fi
+              done
+            done
+            # producers end
+            ###############
+            echo "            ]"
+          }
+          # Top object start
+          ##################
+          echo "{"
+          # coreNodes start
+          #################
+          echo "    \"coreNodes\": ["
+          # Grab all the "nodeId" properties from inside each array's objects
+          # Why "nodeId" and not "name"? `jq` sorts like this: "node-49",
+          # "node-5", "node-50".
+          local coreNodes_is
+          coreNodes_is=$(jq --raw-output \
+            '.coreNodes | map(.nodeId) | join (" ")' \
+            "${topology_path}" \
+          )
+          local first_coreNode="true"
+          for node_i in ${coreNodes_is[*]}
+          do
+            # Nomad Job Tasks' names are taken from the `topology.json` file.
+            # Task names are of the form "node-0", "node-1", "node-10" (not "node-04").
+            local task_name
+            task_name=$(jq --raw-output \
+              ".coreNodes | map(select(.nodeId == ${node_i})) | .[] | .name" \
+              "${topology_path}" \
+            )
+            # Node open "{"
+            ###############
+            # If not the first one ","
+            if test "${first_coreNode}" == "true"
+            then
+              first_coreNode="false"
+              echo "        {"
+            else
+              echo "      , {"
+            fi
+            topology-node-helper "${task_name}" "${node_i}"
+            # Node close "}"
+            ################
+            echo "        }"
+          done
+          # coreNodes end
+          ###############
+          echo "  ]"
+          # relayNodes start
+          ##################
+          echo "  , \"relayNodes\": ["
+          # Grab all the "i" properties from inside each "node-i" object
+          # Why "i" and not name? `jq` sorts like this: "node-49", "node-5", "node-50"
+          local relayNodes_is
+          relayNodes_is=$(jq --raw-output \
+            '.relayNodes | map(.nodeId) | join (" ")' \
+            "${topology_path}" \
+          )
+          local first_relayNode="true"
+          for node_i in ${relayNodes_is[*]}
+          do
+            # Nomad Job Tasks' names are taken from the `topology.json` file.
+            # Task names are of the form "node-0", "node-1", "node-10" (not "node-04").
+            local task_name
+            task_name=$(jq --raw-output \
+              ".relayNodes | map(select(.nodeId == ${node_i})) | .[] | .name" \
+              "${topology_path}" \
+            )
+            # Node open "{"
+            ###############
+            # If not the first one ","
+            if test "${first_relayNode}" == "true"
+            then
+              first_relayNode="false"
+              echo "      {"
+            else
+              echo "    , {"
+            fi
+            topology-node-helper "${task_name}" "${node_i}"
+            # Node close "}"
+            ################
+            echo "      }"
+          done
+          # relayNodes end
+          ################
+          echo "  ]"
+          # Top object end
+          ################
+          echo "}"
         ;;
 ####### job -> * )##############################################################
         * )

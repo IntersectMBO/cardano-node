@@ -27,29 +27,21 @@ mkConsensusProtocol
   -> Maybe ProtocolFilepaths
   -> ExceptT ProtocolInstantiationError IO SomeConsensusProtocol
 mkConsensusProtocol ncProtocolConfig mProtocolFiles =
-    case ncProtocolConfig of
-
-      NodeProtocolConfigurationByron config ->
-        firstExceptT ByronProtocolInstantiationError $
-          mkSomeConsensusProtocolByron config mProtocolFiles
-
-      NodeProtocolConfigurationShelley config ->
-        firstExceptT ShelleyProtocolInstantiationError $
-          mkSomeConsensusProtocolShelley config mProtocolFiles
-
-      NodeProtocolConfigurationCardano byronConfig
-                                       shelleyConfig
-                                       alonzoConfig
-                                       conwayConfig
-                                       hardForkConfig ->
-        firstExceptT CardanoProtocolInstantiationError $
-          mkSomeConsensusProtocolCardano
-            byronConfig
-            shelleyConfig
-            alonzoConfig
-            conwayConfig
-            hardForkConfig
-            mProtocolFiles
+  case ncProtocolConfig of
+    NodeProtocolConfigurationCardano
+        byronConfig
+        shelleyConfig
+        alonzoConfig
+        conwayConfig
+        hardForkConfig ->
+      firstExceptT CardanoProtocolInstantiationError $
+        mkSomeConsensusProtocolCardano
+          byronConfig
+          shelleyConfig
+          alonzoConfig
+          conwayConfig
+          hardForkConfig
+          mProtocolFiles
 
 ------------------------------------------------------------------------------
 -- Errors

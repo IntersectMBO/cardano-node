@@ -25,8 +25,14 @@ let
 
   validateNodeSpecs = { nodeSpecsValue }:
     let
-      # SRE is using these 3 Nomad "datacenters" (how they are called in Nomad)
-      datacenters = [ "eu-central-1" "us-east-2" "ap-southeast-2" ];
+      # There's a region mismatch between the workbench (specifically Haskell
+      # code in cardano-topology) and Cardano World's Nomad cluster that both
+      # use "us-east-2" while our dedicated Nomad cluster is using "us-east-1",
+      # what SRE deployed.
+      # - Cardano World cluster: "eu-central-1", "us-east-2"
+      # - Workbench (Nix level): "eu-central-1", "us-east-2", and "ap-southeast-2"
+      # - Dedicated P&T cluster: "eu-central-1", "us-east-1", and "ap-southeast-2"
+      datacenters = [ "eu-central-1" "us-east-1" "us-east-2" "ap-southeast-2" ];
       regions = lib.attrsets.mapAttrsToList
         (name: value: value.region)
         nodeSpecsValue
