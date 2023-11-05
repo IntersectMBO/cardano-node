@@ -43,7 +43,7 @@ action a = case a of
   SetProtocolParameters p -> setProtocolParameters p
   StartProtocol configFile cardanoTracerSocket -> startProtocol configFile cardanoTracerSocket
   ReadSigningKey name filePath -> readSigningKey name filePath
-  DefineSigningKey name descr -> defineSigningKey name descr
+  DefineSigningKey name descr -> setEnvKeys name descr
   AddFund era wallet txIn lovelace keyName -> addFund era wallet txIn lovelace keyName
   Delay t -> delay t
   Submit era submitMode txParams generator -> submitAction era submitMode generator txParams

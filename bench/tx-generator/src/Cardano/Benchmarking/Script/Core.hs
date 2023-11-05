@@ -15,6 +15,10 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
+{-
+Module      : Cardano.Benchmarking.Script.Core
+Description : Core functions for transaction generation.
+-}
 module Cardano.Benchmarking.Script.Core
 where
 
@@ -74,9 +78,14 @@ import qualified Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Version as Version
 
+-- | 'liftCoreWithEra' lifts a mapping from an era to a value in the
+-- @ExceptT TxGenError IO@ monad to a value in the 'ActionM' monad, given
+-- an era.
 liftCoreWithEra :: (Monoid w, MonadIO m) => AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM w m (Either TxGenError x)
 liftCoreWithEra era coreCall = withEra era ( liftIO . runExceptT . coreCall)
 
+-- | 'withEra' instantiates a mapping from an era to an 'ActionM' into a
+-- concrete 'ActionM', given an era.
 withEra :: forall w m x. AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ActionM w m x) -> ActionM w m x
 withEra era action = do
   case era of
@@ -88,6 +97,8 @@ withEra era action = do
     AnyCardanoEra ShelleyEra -> action AsShelleyEra
     AnyCardanoEra ByronEra   -> error "byron not supported"
 
+-- | 'setProtocolParameters' fetches and sets the protocol parameters,
+-- with the source depending on its argument.
 setProtocolParameters :: (Monoid w, MonadIO m) => ProtocolParametersSource -> ActionM w m ()
 setProtocolParameters s = case s of
   QueryLocalNode -> do
@@ -96,14 +107,13 @@ setProtocolParameters s = case s of
     protocolParameters <- liftIO $ readProtocolParametersFile file
     setProtoParamMode $ ProtocolParameterLocal protocolParameters
 
+-- | 'readSigningKey' fetches and sets the signing key, given a name
+-- for the key and a filepath.
 readSigningKey :: (Monoid w, MonadIO m) => String -> SigningKeyFile In -> ActionM w m ()
 readSigningKey name filePath =
   liftIO (readSigningKeyFile filePath) >>= \case
     Left err -> liftTxGenError err
     Right key -> setEnvKeys name key
-
-defineSigningKey :: (Monoid w, Monad m) => String -> SigningKey PaymentKey -> ActionM w m ()
-defineSigningKey = setEnvKeys
 
 addFund :: forall w m. (Monoid w, MonadIO m) => AnyCardanoEra -> String -> TxIn -> Lovelace -> String -> ActionM w m ()
 addFund era wallet txIn lovelace keyName = do
@@ -129,6 +139,8 @@ addFundToWallet wallet txIn outVal skey = do
 getLocalSubmitTx :: (Monoid w, MonadIO m) => ActionM w m LocalSubmitTx
 getLocalSubmitTx = submitTxToNodeLocal <$> getLocalConnectInfo
 
+-- | 'delay' lifts 'threadDelay' to the 'ActionM' monad, and translates
+-- its argument from seconds to microseconds.
 delay :: (Monoid w, MonadIO m) => Double -> ActionM w m ()
 delay t = liftIO $ threadDelay $ floor $ 1_000_000 * t
 
