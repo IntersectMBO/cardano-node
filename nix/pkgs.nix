@@ -61,9 +61,11 @@ let
 
 in with final;
 {
-  inherit (cardanoNodeProject.args) compiler-nix-name;
+
   inherit workbench workbench-runner;
 
+  # TODO[sgillespie]: Get this from the project
+  compiler-nix-name = "ghc8107";
   cabal = haskell-nix.cabal-install.${compiler-nix-name};
 
   # TODO Use `compiler-nix-name` here instead of `"ghc928"`
