@@ -67,7 +67,7 @@ if impl(ghc >= 9.6)
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: 94db19231307c21ae531f452203a996535c945db
+  tag: 7bb90dfd43e350a14423ddeedb372a51e0369fe6
   --sha256: 10idxgzbvkmnmshpga4l8mj6hv4pxxl7bpgmjsbkjxlgh73p2kqs
   subdir:
    ouroboros-consensus
@@ -81,7 +81,15 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-api
-  tag: 311b77e166b796bea1b315e7c086c69f29015bab
+  tag: 4be11a4540a9c908fbbd2b6c55c891b913ba1036
   --sha256: 15bwrf27jsgxn3pw6mxxdhkbvngcal1zwpyi1bvdh2p4g9mj0rhs
   subdir:
     cardano-api
+
+source-repository-package
+  type: git
+  location: https://github.com/jasagredo/latex-svg
+  tag: 05dc866baadcdd04a23ed1a488440372f97afb70
+  --sha256: 1amaipl1f516m4yh9x02cqsbv50riszmbdjdmvfpw19vspv1szsx
+  subdir:
+    latex-svg-image
