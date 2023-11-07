@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ["9.2.7", "9.6.2"]
+        ghc: ["9.2.8", "9.6.3"]
         cabal: ["3.10.1.0"]
         os: [macos-latest, windows-latest, ubuntu-latest]
 
