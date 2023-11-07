@@ -281,7 +281,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
 
   yamlBs <- createConfigYaml tempAbsPath (cardanoNodeEra cTestnetOptions)
   H.lbsWriteFile (work </> "configuration.yaml") yamlBs
-  eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath tempAbsPath') "test-spo" 3005
+  eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath tempAbsPath') "test-spo" 3005 testnetMagic
         [ "run"
         , "--config", work </> "configuration.yaml"
         , "--topology", topologyFile

@@ -113,7 +113,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
     , "--tx-file", txbodySignedFp
     ]
 
-  H.byDurationM 1 10 "Expected UTxO found" $ do
+  H.byDurationM 1 15 "Expected UTxO found" $ do
     void $ execCli' execConfig
       [ "babbage", "query", "utxo"
       , "--address", Text.unpack $ paymentKeyInfoAddr $ head wallets
