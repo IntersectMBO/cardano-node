@@ -48,6 +48,9 @@ in project.shellFor {
     progress "deployment name"        $WB_DEPLOYMENT_NAME
     progress "params"                 'useCabalRun=${toString backend.useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiling=${toString profiling}'
 
+    # default workbench remote $WB_REMOTE is cardano-ops cluster, bench-1 deployment
+    export WB_REMOTE='{"env":"bench","depl":"bench-1","dir":"runs"}'
+
     ${optionalString
       workbenchDevMode
       ''
