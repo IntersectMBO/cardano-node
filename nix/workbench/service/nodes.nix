@@ -91,6 +91,7 @@ let
                   ExperimentalProtocolsEnabled = true;
                   TurnOnLogMetrics             = true;
                   SnapshotInterval             = 4230;
+                  ChainSyncIdleTimeout         = 0;
 
                   ByronGenesisFile             = "../genesis/byron/genesis.json";
                   ShelleyGenesisFile           = "../genesis/genesis-shelley.json";
