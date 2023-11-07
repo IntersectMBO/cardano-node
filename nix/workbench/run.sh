@@ -77,8 +77,12 @@ else global_rundir=$global_rundir_def
      mkdir "$global_rundir"
 fi
 
+if test -v "WB_REMOTE"
+then remote=$WB_REMOTE
+else remote='{"env":"bench","depl":"bench-1","dir":"runs"}'         # cardano-ops/bench-1 as fallback default
+fi
+
 local sargs=()
-local remote=$WB_REMOTE
 
 run_remote_get_args=()
 while test $# -gt 0
