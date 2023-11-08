@@ -53,7 +53,7 @@ module Cardano.Logging.Types (
 
 
 import           Codec.Serialise (Serialise (..))
-import           Data.Aeson ((.=))
+-- import           Data.Aeson ((.=))
 import qualified Data.Aeson as AE
 import qualified Data.HashMap.Strict as HM
 import           Data.IORef
@@ -509,20 +509,20 @@ instance LogFormatting b => LogFormatting (Folding a b) where
   forHuman (Folding b)     =  forHuman b
   asMetrics (Folding b)    =  asMetrics b
 
-instance LogFormatting Double where
-  forMachine _dtal d = "val" .= AE.String ((pack . show) d)
-  forHuman           = pack . show
-  asMetrics d        = [DoubleM "" d]
+-- instance LogFormatting Double where
+--   forMachine _dtal d = "val" .= AE.String ((pack . show) d)
+--   forHuman           = pack . show
+--   asMetrics d        = [DoubleM "" d]
 
-instance LogFormatting Int where
-  forMachine _dtal i = "val" .= AE.String ((pack . show) i)
-  forHuman           = pack . show
-  asMetrics i        = [IntM "" (fromIntegral i)]
+-- instance LogFormatting Int where
+--   forMachine _dtal i = "val" .= AE.String ((pack . show) i)
+--   forHuman           = pack . show
+--   asMetrics i        = [IntM "" (fromIntegral i)]
 
-instance LogFormatting Integer where
-  forMachine _dtal i = "val" .= AE.String ((pack . show) i)
-  forHuman           = pack . show
-  asMetrics i        = [IntM "" i]
+-- instance LogFormatting Integer where
+--   forMachine _dtal i = "val" .= AE.String ((pack . show) i)
+--   forHuman           = pack . show
+--   asMetrics i        = [IntM "" i]
 
 ---------------------------------------------------------------------------
 -- Instances for 'TraceObject' to forward it using 'trace-forward' library.
