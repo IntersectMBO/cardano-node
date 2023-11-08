@@ -132,20 +132,6 @@
           ];
 
           nonRequiredPaths = [
-            # FIXME: cardano-tracer-test for windows should probably be disabled in haskell.nix config:
-            "windows\\.(.*\\.)?checks\\.cardano-tracer\\.cardano-tracer-test"
-            # FIXME: plutus-scripts-bench (dep of tx-generator) does not compile for windows:
-            "windows\\.(.*\\.)?tx-generator.*"
-            # FIXME: plutus-scripts-bench's gen-plutus does not compile for musl
-            "musl\\.(.*\\.)?tx-generator.*"
-            "musl\\.(.*\\.)?gen-plutus.*"
-            # hlint required status is controled via the github action:
-            "native\\.(.*\\.)?checks/hlint"
-            # system-tests are build and run separately:
-            "native\\.(.*\\.)?system-tests"
-          ] ++ pkgs.lib.optionals (system == "x86_64-darwin") [
-            # FIXME: make variants nonrequired for macos until CI has more capacity for macos builds
-            "native\\.variants\\..*"
           ];
 
           flake = project.flake {};
