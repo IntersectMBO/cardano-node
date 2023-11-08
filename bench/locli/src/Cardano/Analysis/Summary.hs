@@ -30,6 +30,7 @@ data SummaryError
   | SEIncoherentRunEras          [Text]
   | SEIncoherentRunVersions      [Manifest]
   | SEIncoherentRunFilters       [([FilterName], [ChainFilter])]
+  | SEIncoherentCompilerVersions [Text]
   | SECDFError                   CDFError
   deriving Show
 
@@ -96,10 +97,11 @@ summariseMultiSummary sumAnalysisTime centiles xs@(headline:xss) = do
    summariseMetadata :: [Metadata] -> Either SummaryError Metadata
    summariseMetadata [] = Left SEEmptyDataset
    summariseMetadata xs@(headline:_) = do
-     profile         <- allEqOrElse (xs <&> profile)         SEIncoherentRunProfileNames
-     era             <- allEqOrElse (xs <&> era)             SEIncoherentRunEras
-     manifest        <- allEqOrElse (xs <&> manifest)        SEIncoherentRunVersions
-     profile_content <- allEqOrElse (xs <&> profile_content) SEIncoherentRunProfiles
+     profile          <- allEqOrElse (xs <&> profile)          SEIncoherentRunProfileNames
+     era              <- allEqOrElse (xs <&> era)              SEIncoherentRunEras
+     manifest         <- allEqOrElse (xs <&> manifest)         SEIncoherentRunVersions
+     profile_content  <- allEqOrElse (xs <&> profile_content)  SEIncoherentRunProfiles
+     node_ghc_version <- allEqOrElse (xs <&> node_ghc_version) SEIncoherentCompilerVersions
      -- XXX: magic transformation that happens to match
      --      the logic in 'analyse.sh multi-call' on line with "local run="
      pure Metadata { tag   = multiRunTag (Just "variance") xs

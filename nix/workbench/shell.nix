@@ -48,6 +48,11 @@ in project.shellFor {
     progress "deployment name"        $WB_DEPLOYMENT_NAME
     progress "params"                 'useCabalRun=${toString backend.useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiling=${toString profiling}'
 
+    function parse_git_branch() {
+        git branch 2> /dev/null | sed -n -e 's/^\* \(.*\)/(\1)/p'
+    }
+    export PS1="\n\[\033[1;32m\][nix-shell:\w]\[\033[01;36m\]\$(parse_git_branch)\[\033[0m\]\$ "
+
     ${optionalString
       workbenchDevMode
       ''

@@ -739,8 +739,7 @@ call_locli() {
 }
 
 num_jobs="\j"
-num_threads=$({ grep processor /proc/cpuinfo 2>/dev/null || echo -e '\n\n\n';
-              } | wc -l)
+num_threads=$((grep -c processor /proc/cpuinfo 2>/dev/null || systctl -n hw.ncpu 2>/dev/null || echo 0) | awk '{print ($1<6) ? 6 : $1}')
 
 throttle_shell_job_spawns() {
     sleep 0.5s
