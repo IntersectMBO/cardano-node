@@ -164,6 +164,7 @@ let
       systemd.sockets = mkOption {};
       users = mkOption {};
       assertions = mkOption {};
+      environment = mkOption {};
     };
     eval = let
       extra = {

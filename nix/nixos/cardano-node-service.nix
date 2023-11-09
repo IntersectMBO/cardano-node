@@ -11,6 +11,41 @@ let
   suffixDir = base: i: "${base}${optionalString (i != 0) "-${toString i}"}";
   nullOrStr = types.nullOr types.str;
   funcToOr = t: types.either t (types.functionTo t);
+
+  newTopology = i: {
+    localRoots = map (g: {
+      accessPoints = map (e: builtins.removeAttrs e ["valency"]) g.accessPoints;
+      advertise = g.advertise or false;
+      valency = g.valency or (length g.accessPoints);
+    }) (cfg.producers ++ (cfg.instanceProducers i));
+    publicRoots = map (g: {
+      accessPoints = map (e: builtins.removeAttrs e ["valency"]) g.accessPoints;
+      advertise = g.advertise or false;
+    }) (cfg.publicProducers ++ (cfg.instancePublicProducers i));
+  } // optionalAttrs (cfg.usePeersFromLedgerAfterSlot != null) {
+    useLedgerAfterSlot = cfg.usePeersFromLedgerAfterSlot;
+  };
+
+  oldTopology = i: {
+    Producers = concatMap (g: map (a: {
+        addr = a.address;
+        inherit (a) port;
+        valency = a.valency or 1;
+      }) g.accessPoints) (
+      cfg.producers ++ (cfg.instanceProducers i) ++ cfg.publicProducers ++ (cfg.instancePublicProducers i)
+    );
+  };
+
+  selectTopology = i:
+    if cfg.topology != null
+    then cfg.topology
+    else toFile "topology.yaml" (toJSON (if (cfg.useNewTopology) then newTopology i else oldTopology i));
+
+  topology = i:
+    if cfg.useSystemdReload
+    then "/etc/cardano-node/topology-${toString i}.yaml"
+    else selectTopology i;
+
   mkScript = cfg:
     let baseConfig =
           recursiveUpdate
@@ -49,32 +84,6 @@ let
     instanceConfig = recursiveUpdate (baseInstanceConfig i) (cfg.extraNodeInstanceConfig i);
     nodeConfigFile = if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
       else toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON instanceConfig);
-    newTopology = {
-      localRoots = map (g: {
-        accessPoints = map (e: builtins.removeAttrs e ["valency"]) g.accessPoints;
-        advertise = g.advertise or false;
-        valency = g.valency or (length g.accessPoints);
-      }) (cfg.producers ++ (cfg.instanceProducers i));
-      publicRoots = map (g: {
-        accessPoints = map (e: builtins.removeAttrs e ["valency"]) g.accessPoints;
-        advertise = g.advertise or false;
-      }) (cfg.publicProducers ++ (cfg.instancePublicProducers i));
-    } // optionalAttrs (cfg.usePeersFromLedgerAfterSlot != null) {
-      useLedgerAfterSlot = cfg.usePeersFromLedgerAfterSlot;
-    };
-    oldTopology = {
-      Producers = concatMap (g: map (a: {
-          addr = a.address;
-          inherit (a) port;
-          valency = a.valency or 1;
-        }) g.accessPoints) (
-        cfg.producers ++ (cfg.instanceProducers i) ++ cfg.publicProducers ++ (cfg.instancePublicProducers i)
-      );
-    };
-    topology = if cfg.topology != null then cfg.topology else toFile "topology.yaml" (toJSON (
-      if (cfg.useNewTopology) then newTopology
-      else oldTopology
-    ));
     consensusParams = {
       RealPBFT = [
         "${lib.optionalString (cfg.signingKey != null)
@@ -108,7 +117,7 @@ let
       "${cfg.executable} run"
       "--config ${nodeConfigFile}"
       "--database-path ${instanceDbPath}"
-      "--topology ${topology}"
+      "--topology ${topology i}"
     ] ++ lib.optionals (!cfg.systemdSocketActivation) ([
       "--host-addr ${cfg.hostAddr}"
       "--port ${if (cfg.shareIpv4port || cfg.shareIpv6port) then toString cfg.port else toString (cfg.port + i)}"
@@ -143,6 +152,7 @@ in {
           (the blockchain protocols running cardano).
         '';
       };
+
       instances = mkOption {
         type = types.int;
         default = 1;
@@ -511,6 +521,21 @@ in {
         '';
       };
 
+      useSystemdReload = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          If set, systemd will reload cardano-node service units instead of restarting them
+          if only the topology file has changed and p2p is in use.
+
+          Cardano-node topology files will be stored in /etc as:
+            /etc/cardano-node/topology-''${toString i}.yaml
+
+          Enabling this option will also allow direct topology edits for tests when a full
+          service re-deployment is not desired.
+        '';
+      };
+
       nodeConfig = mkOption {
         type = types.attrs // {
           merge = loc: foldl' (res: def: recursiveUpdate res def.value) {};
@@ -642,6 +667,10 @@ in {
         isSystemUser = true;
       };
 
+      environment.etc = mkIf cfg.useSystemdReload (foldl'
+        (acc: i: recursiveUpdate acc {"cardano-node/topology-${toString i}.yaml".source = selectTopology i;}) {}
+      (range 0 (cfg.instances - 1)));
+
       ## TODO:  use http://hackage.haskell.org/package/systemd for:
       ##   1. only declaring success after we perform meaningful init (local state recovery)
       ##   2. heartbeat & watchdog functionality
@@ -655,10 +684,12 @@ in {
         wants = [ "network-online.target" ];
         wantedBy = [ "multi-user.target" ];
         partOf = mkIf (cfg.instances > 1) ["cardano-node.service"];
+        reloadTriggers = mkIf (cfg.useSystemdReload && cfg.useNewTopology) [ (selectTopology i) ];
         script = mkScript cfg i;
         serviceConfig = {
           User = "cardano-node";
           Group = "cardano-node";
+          ExecReload = mkIf (cfg.useSystemdReload && cfg.useNewTopology) "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
           Restart = "always";
           RuntimeDirectory = lib.mkIf (!cfg.systemdSocketActivation)
             (lib.removePrefix runDirBase (runtimeDir i));
