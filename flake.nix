@@ -140,6 +140,7 @@
           );
         in
           with pkgs; lib.recursiveUpdate (removeAttrs flake [ "ciJobs" ]) {
+            # required/nonrequired aggregates
             hydraJobs = callPackages iohkNix.utils.ciJobsAggregates {
               ciJobs = flake.hydraJobs // {
                 # ensure hydra notify:
@@ -149,6 +150,18 @@
             };
 
             packages.default = flake.packages."cardano-node:exe:cardano-node";
+
+            nixosModules = {
+              cardano-node = { pkgs, lib, ... }: {
+                imports = [ ./nix/nixos/cardano-node-service.nix ];
+                services.cardano-node.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
+              };
+
+              cardano-submit-api = { pkgs, lib, ... }: {
+                imports = [ ./nix/nixos/cardano-submit-api-service.nix ];
+                services.cardano-submit-api.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
+              };
+            };
           } // {
           });
 }
