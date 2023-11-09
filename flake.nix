@@ -133,7 +133,11 @@
           nonRequiredPaths = [
           ];
 
-          flake = project.flake {};
+          flake = project.flake (
+            pkgs.lib.optionalAttrs (system == "x86_64-linux") {
+              crossPlatforms = p: [ p.musl64 p.mingwW64 ];
+            }
+          );
         in
           with pkgs; lib.recursiveUpdate (removeAttrs flake [ "ciJobs" ]) {
             hydraJobs = callPackages iohkNix.utils.ciJobsAggregates {
@@ -143,7 +147,8 @@
               };
               nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
             };
-          } // {
+
             packages.default = flake.packages."cardano-node:exe:cardano-node";
+          } // {
           });
 }
