@@ -4,6 +4,8 @@
   nixConfig = {
     extra-substituters = [ "https://cache.iog.io" ];
     extra-trusted-public-keys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
+    allow-import-from-derivation = true;
+    experimental-features = [ "nix-command" "flakes" "fetch-closure" ];
   };
 
   inputs = {
@@ -97,27 +99,24 @@
             inherit system;
             inherit (haskellNix) config;
 
-            overlays = [
-              iohkNix.overlays.crypto
-              haskellNix.overlay
-              iohkNix.overlays.haskell-nix-extra
-              iohkNix.overlays.haskell-nix-crypto
-              iohkNix.overlays.cardano-lib
-              iohkNix.overlays.utils
-              (final: prev: {
-                inherit customConfig nix2container;
-                bench-data-publish = cardano-automation.outputs.packages.${final.system}."bench-data-publish:exe:bench-data-publish";
-                em = import em {
-                  inherit (final) system;
-                  nixpkgsSrcs = nixpkgs.outPath;
-                  nixpkgsRev = nixpkgs.rev;
-                };
-                gitrev = final.customConfig.gitrev or self.rev or "0000000000000000000000000000000000000000";
-                commonLib = nixpkgs.lib
-                  // iohkNix.lib
-                  // final.cardanoLib
-                  // import ./nix/svclib.nix { inherit (final) pkgs; };
-              })
+            overlays =
+              builtins.attrValues iohkNix.overlays ++ [
+                haskellNix.overlay
+
+                (final: prev: {
+                  inherit customConfig nix2container;
+                  bench-data-publish = cardano-automation.outputs.packages.${final.system}."bench-data-publish:exe:bench-data-publish";
+                  em = import em {
+                    inherit (final) system;
+                    nixpkgsSrcs = nixpkgs.outPath;
+                    nixpkgsRev = nixpkgs.rev;
+                  };
+                  gitrev = final.customConfig.gitrev or self.rev or "0000000000000000000000000000000000000000";
+                  commonLib = nixpkgs.lib
+                    // iohkNix.lib
+                    // final.cardanoLib
+                    // import ./nix/svclib.nix { inherit (final) pkgs; };
+                })
 
               (import ./nix/pkgs.nix)
             ] ++ (import ops-lib.outPath {}).overlays;
@@ -145,6 +144,6 @@
               nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
             };
           } // {
+            packages.default = flake.packages."cardano-node:exe:cardano-node";
           });
-
-    }
+}
