@@ -197,13 +197,14 @@ manifestPackages =
 
 data Metadata
   = Metadata
-  { tag             :: Text
-  , batch           :: Text
-  , ident           :: Text
-  , profile         :: Text
-  , era             :: Text
-  , manifest        :: Manifest
-  , profile_content :: AE.KeyMap Value
+  { tag               :: Text
+  , batch             :: Text
+  , ident             :: Text
+  , node_ghc_version  :: Text
+  , profile           :: Text
+  , era               :: Text
+  , manifest          :: Manifest
+  , profile_content   :: AE.KeyMap Value
   }
   deriving (Generic, NFData, Show, ToJSON)
 
@@ -211,20 +212,21 @@ instance FromJSON Metadata where
   parseJSON =
     withObject "Metadata" $ \v -> do
 
-      tag             <- v .: "tag"
-      batch           <- v .: "batch"
-      manifest        <- (v .: "manifest")
+      tag              <- v .: "tag"
+      batch            <- v .: "batch"
+      manifest         <- (v .: "manifest")
                          <|> compatParseManifest v
-      profile         <- v .: "profile"
-      profile_content <- v .: "profile_content"
-      generator       <- profile_content .: "generator"
+      profile          <- v .: "profile"
+      profile_content  <- v .: "profile_content"
+      generator        <- profile_content .: "generator"
 
-      ident           <- (v .:? "ident")
-                          <&> fromMaybe (unVersion . ciVersion $
+      ident            <- (v .:? "ident")
+                         <&> fromMaybe (unVersion . ciVersion $
                                          getComponent "cardano-node" manifest)
-      eraDirect       <- v .:?  "era"
-      eraProfile      <- profile_content .:? "era"
-      eraGenerator    <- generator .:? "era"
+      node_ghc_version <- v .:?  "node_ghc_version" .!= "unknown"
+      eraDirect        <- v .:?  "era"
+      eraProfile       <- profile_content .:? "era"
+      eraGenerator     <- generator .:? "era"
       era <- case eraDirect <|> eraProfile <|> eraGenerator of
         Just x -> pure x
         Nothing -> fail "While parsing run metafile:  missing era specification"

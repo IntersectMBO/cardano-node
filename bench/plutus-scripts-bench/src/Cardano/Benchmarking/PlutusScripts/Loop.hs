@@ -4,6 +4,9 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
+-- PlutusV1 must be compiled using plc 1.0
+{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:target-version=1.0.0 #-}
+
 module Cardano.Benchmarking.PlutusScripts.Loop (script) where
 
 import           Language.Haskell.TH
@@ -14,7 +17,7 @@ import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1, Script(
 import           Cardano.Benchmarking.ScriptAPI
 import qualified Data.ByteString.Short as SBS
 
-import qualified PlutusLedgerApi.V2 as PlutusV2
+import qualified PlutusLedgerApi.V1 as PlutusV1
 import           PlutusTx
 import           PlutusTx.Builtins (unsafeDataAsI)
 import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.), (<$>))
@@ -39,7 +42,7 @@ mkValidator _datum redeemer _txContext
     loop i = if i == 1000000 then () else loop $ pred i
 
 loopScriptShortBs :: SBS.ShortByteString
-loopScriptShortBs = PlutusV2.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
+loopScriptShortBs = PlutusV1.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
 
 scriptSerialized :: PlutusScript PlutusScriptV1
 scriptSerialized = PlutusScriptSerialised loopScriptShortBs

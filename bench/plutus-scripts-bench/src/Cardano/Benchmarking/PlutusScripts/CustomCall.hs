@@ -7,6 +7,9 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
+-- PlutusV2 must be compiled using plc 1.0
+{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:target-version=1.0.0 #-}
+
 module Cardano.Benchmarking.PlutusScripts.CustomCall (script) where
 
 import           Language.Haskell.TH

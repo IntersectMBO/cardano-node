@@ -408,7 +408,7 @@ def all_profile_variants:
     ) as $p2p
   |
   ##
-  ### Definition vocabulary:  RTS config variants
+  ### Definition vocabulary:  RTS config variants, overriding the default
   ##
     ({ extra_desc:                     "RTSflags A4m"
      , suffix:                         "rtsA4m"
@@ -439,6 +439,12 @@ def all_profile_variants:
      }|
      .node.rts_flags_override         = ["-A64m", "-N3"]
     ) as $rts_A64mN3
+  |
+    ({ extra_desc:                     "RTSflags nonmoving GC"
+     , suffix:                         "rtsxn"
+     }|
+     .node.rts_flags_override         = ["-xn"]
+    ) as $rts_xn
   |
   ##
   ### Definition vocabulary:  scenario
@@ -913,7 +919,9 @@ def all_profile_variants:
   , $forge_stress_pre_base * $rts_A64mN3 *
     { name: "forge-stress-pre-rtsA64mN3"
     }
-
+  , $forge_stress_pre_base * $rts_xn *
+    { name: "forge-stress-pre-rtsxn"
+    }
   , $scenario_chainsync * $chaindb_early_byron *
     { name: "chainsync-early-byron"
     }
