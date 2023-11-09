@@ -277,6 +277,10 @@ def all_profile_variants:
     ) as $for_45blk
   |
     ({}
+     | .node.shutdown_on_block_synced   = 900
+    ) as $for_900blk
+  |
+    ({}
      | .node.shutdown_on_slot_synced    = 900
     ) as $for_900slot
   ##
@@ -815,12 +819,12 @@ def all_profile_variants:
     { name: "trace-bench-rtview"
     }
 
-  ## Full variants: 45 blocks
-  , $tracebench_base * $for_45blk *
+  ## Full variants: 900 blocks
+  , $tracebench_base * $for_900blk *
     { name: "trace-full"
     , desc: "6 low-footprint nodes in a torus topology, 5 minutes runtime"
     }
-  , $tracebench_base * $for_45blk * $with_rtview *
+  , $tracebench_base * $for_900blk * $with_rtview *
     { name: "trace-full-rtview"
     , desc: "6 low-footprint nodes in a torus topology, 5 minutes runtime"
     }
