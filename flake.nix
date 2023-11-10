@@ -138,6 +138,10 @@
               crossPlatforms = p: [ p.musl64 p.mingwW64 ];
             }
           );
+
+          nixosTests = import ./nix/nixos/tests {
+            inherit pkgs;
+          };
         in
           with pkgs; lib.recursiveUpdate (removeAttrs flake [ "ciJobs" ]) {
             # required/nonrequired aggregates
@@ -148,6 +152,13 @@
               };
               nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
             };
+
+            apps.default = flake.apps."cardano-node:exe:cardano-node";
+
+            checks = lib.optionalAttrs hostPlatform.isLinux (
+              iohkNix.lib.prefixNamesWith
+                "nixosTests/"
+                (lib.mapAttrs (_: v: v.${system} or v) nixosTests));
 
             packages.default = flake.packages."cardano-node:exe:cardano-node";
 
