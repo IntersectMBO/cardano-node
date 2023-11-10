@@ -166,6 +166,7 @@ library
                       , time
                       , trace-dispatcher
                       , trace-forward
+                      , trace-resources
                       , unordered-containers
                       , vector
                       , yaml
