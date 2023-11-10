@@ -108,10 +108,18 @@ let
       modules =
         [
           ({ lib, pkgs, ... }: {
-            packages.cardano-tracer.package.buildable = with pkgs.stdenv.hostPlatform; lib.mkForce (!isMusl);
-            packages.cardano-node-chairman.components.tests.chairman-tests.buildable = lib.mkForce pkgs.stdenv.hostPlatform.isUnix;
-            packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
-            packages.tx-generator.package.buildable = with pkgs.stdenv.hostPlatform; !isMusl;
+            packages.cardano-node.components.tests.cardano-node-test.buildable =
+              with pkgs.stdenv.hostPlatform; lib.mkForce (!isMusl);
+            packages.cardano-tracer.package.buildable =
+              with pkgs.stdenv.hostPlatform; lib.mkForce (!isMusl);
+            packages.cardano-node-chairman.components.tests.chairman-tests.buildable =
+              lib.mkForce pkgs.stdenv.hostPlatform.isUnix;
+            packages.locli.components.tests.test-locli.buildable =
+              with pkgs.stdenv.hostPlatform; lib.mkForce (!isMusl);
+            packages.plutus-tx-plugin.components.library.platforms =
+              with lib.platforms; [ linux darwin ];
+            packages.tx-generator.package.buildable =
+              with pkgs.stdenv.hostPlatform; !isMusl;
 
             packages.cardano-ledger-alonzo.components.library.doHaddock = false;
             packages.cardano-ledger-babbage.components.library.doHaddock = false;
