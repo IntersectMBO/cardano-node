@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 
 -- | This top-level module is used by 'cardano-tracer' app.
 module Cardano.Tracer.Run
@@ -6,25 +7,29 @@ module Cardano.Tracer.Run
   , runCardanoTracer
   ) where
 
-import           Control.Concurrent.Async.Extra (sequenceConcurrently)
-import           Control.Concurrent.Extra (newLock)
-import           Control.Concurrent.STM.TVar (newTVarIO)
-import           Control.Monad (void)
+import Control.Concurrent.Async.Extra (sequenceConcurrently)
+import Control.Concurrent.Extra (newLock)
+import Control.Concurrent.STM.TVar (newTVarIO)
+import Data.Foldable (for_)
 
-import           Cardano.Tracer.Acceptors.Run
-import           Cardano.Tracer.CLI
-import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Logs.Rotator
-import           Cardano.Tracer.Handlers.Metrics.Servers
-import           Cardano.Tracer.Handlers.ReForwarder
-import           Cardano.Tracer.Handlers.RTView.Run
-import           Cardano.Tracer.Handlers.RTView.State.Historical
-import           Cardano.Tracer.Handlers.RTView.Update.Historical
-import           Cardano.Tracer.MetaTrace
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
+import Cardano.Logging.Resources
+import Cardano.Tracer.Acceptors.Run
+import Cardano.Tracer.CLI
+import Cardano.Tracer.Configuration
+import Cardano.Tracer.Environment
+import Cardano.Tracer.Handlers.Logs.Rotator
+import Cardano.Tracer.Handlers.Metrics.Servers
+import Cardano.Tracer.Handlers.ReForwarder
+import Cardano.Tracer.Handlers.RTView.Run
+import Cardano.Tracer.Handlers.RTView.State.Historical
+import Cardano.Tracer.Handlers.RTView.Update.Historical
+import Cardano.Tracer.MetaTrace
+import Cardano.Tracer.Types
+import Cardano.Tracer.Utils
 
+import Control.Monad
+import Control.Concurrent (threadDelay)
+import Control.Concurrent.Async (async, link)
 
 -- | Top-level run function, called by 'cardano-tracer' app.
 runCardanoTracer :: TracerParams -> IO ()
@@ -34,6 +39,15 @@ runCardanoTracer TracerParams{tracerConfig, stateDir, logSeverity} = do
 
   config <- readTracerConfig tracerConfig
   traceWith tr $ TracerConfigIs config
+
+  for_ (resourceFreq config) \msInterval -> do
+    threadId <- async do
+      forever do
+        mbrs <- readResourceStats
+        for_ mbrs \resourceStat ->
+          traceWith tr (TracerResource resourceStat)
+        threadDelay (1_000 * msInterval) -- Delay in seconds, given microseconds
+    link threadId
 
   brake <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors

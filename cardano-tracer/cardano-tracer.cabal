@@ -23,6 +23,7 @@ common project-config
   default-extensions:   BlockArguments
                       , CPP
                       , ImportQualifiedPost
+                      , InstanceSigs
                       , ScopedTypeVariables
 
   ghc-options:          -Wall
@@ -166,6 +167,7 @@ library
                       , time
                       , trace-dispatcher
                       , trace-forward
+                      , trace-resources
                       , unordered-containers
                       , vector
                       , yaml

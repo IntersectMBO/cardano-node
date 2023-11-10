@@ -110,6 +110,7 @@ main = do
     , verbosity      = Nothing
     , metricsComp    = Nothing
     , hasForwarding  = Nothing
+    , resourceFreq   = Nothing
     }
 
   generate :: Int -> IO [TraceObject]

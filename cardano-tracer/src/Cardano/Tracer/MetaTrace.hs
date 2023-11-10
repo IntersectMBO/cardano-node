@@ -1,17 +1,18 @@
 {-# OPTIONS_GHC -Wno-partial-fields #-}
 
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PackageImports #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE AllowAmbiguousTypes  #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE KindSignatures       #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE PackageImports       #-}
+{-# LANGUAGE RankNTypes           #-}
+{-# LANGUAGE RecordWildCards      #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Tracer.MetaTrace
@@ -20,20 +21,21 @@ module Cardano.Tracer.MetaTrace
   , traceWith
   ) where
 
-import qualified "trace-dispatcher" Control.Tracer as T
-import           Data.Aeson (ToJSON (..))
-import qualified Data.Aeson as AE
-import           Data.Function
-import qualified Data.Map.Strict as Map
-import           Data.Text (Text)
-import qualified Data.Text as T
-import           GHC.Generics
-import qualified System.IO as Sys
+import "trace-dispatcher" Control.Tracer qualified as T
+import Data.Aeson hiding (Error)
+import Data.Aeson qualified as AE
+import Data.Function
+import Data.Map.Strict qualified as Map
+import Data.Text (Text)
+import Data.Text qualified as T
+import GHC.Generics
+import System.IO qualified as Sys
 
-import           Cardano.Logging
+import Cardano.Logging
 
-import           Cardano.Tracer.Configuration
+import Cardano.Tracer.Configuration
 
+import Cardano.Logging.Resources
 
 data TracerTrace
   = TracerParamsAre
@@ -65,11 +67,64 @@ data TracerTrace
   | TracerShutdownComplete
   | TracerError
     { ttError                :: !Text }
+  | TracerResource
+    { ttResource             :: !ResourceStats }
   deriving (Generic, Show)
 
 instance ToJSON TracerTrace where
+  toEncoding :: TracerTrace -> Encoding
+  toEncoding = \case
+    TracerParamsAre{..} -> pairs
+        ("ConfigPath" .= ttConfigPath
+      <> "StateDir" .= ttStateDir
+      <> "MinLogSeverity" .= ttMinLogSeverity
+      <> "kind" .= ("TracerParamsAre" :: Text))
+    TracerConfigIs{..} -> pairs
+        ("Config" .= ttConfig
+      <> "kind" .= ("TracerConfigIs" :: Text))
+    TracerInitStarted -> pairs
+        ("kind" .= ("TracerInitStarted" :: Text))
+    TracerInitEventQueues -> pairs
+        ("kind" .= ("TracerInitEventQueues" :: Text))
+    TracerInitDone -> pairs
+        ("kind" .= ("TracerInitDone" :: Text))
+    TracerStartedLogRotator -> pairs
+        ("kind" .= ("TracerStartedLogRotator" :: Text))
+    TracerStartedPrometheus -> pairs
+        ("kind" .= ("TracerStartedPrometheus" :: Text))
+    TracerStartedAcceptors{..} -> pairs
+        ("kind" .= ("TracerStartedAcceptors" :: Text)
+      <> "AcceptorsAddr" .= ttAcceptorsAddr)
+    TracerStartedRTView -> pairs
+        ("kind" .= ("TracerStartedRTView" :: Text))
+    TracerStartedReforwarder -> pairs
+        ("kind" .= ("TracerStartedReforwarder" :: Text))
+    TracerSockListen{..} -> pairs
+        ("kind" .= ("TracerSockListen" :: Text)
+      <> "ListenAt" .= ttListenAt)
+    TracerSockIncoming{..} -> pairs
+        ("kind" .= ("TracerSockIncoming" :: Text)
+      <> "ConnectionIncomingAt" .= ttConnectionIncomingAt
+      <> "Addr" .= ttAddr)
+    TracerSockConnecting{..} -> pairs
+        ("kind" .= ("TracerSockConnecting" :: Text)
+      <> "ConnectionIncomingAt" .= ttConnectingTo)
+    TracerSockConnected{..} -> pairs
+        ("kind" .= ("TracerSockConnected" :: Text)
+      <> "ConnectedTo" .= ttConnectedTo)
+    TracerShutdownInitiated -> pairs
+        ("kind" .= ("TracerShutdownInitiated" :: Text))
+    TracerShutdownHistBackup -> pairs
+        ("kind" .= ("TracerShutdownHistBackup" :: Text))
+    TracerShutdownComplete -> pairs
+        ("kind" .= ("TracerShutdownComplete" :: Text))
+    TracerError{..} -> pairs
+        ("kind" .= ("TracerError" :: Text)
+      <> "Error" .= ttError)
+    TracerResource{..} -> pairs
+        ("kind" .= ("TracerResource" :: Text)
+      <> "Resource" .= ttResource)
   toJSON = AE.genericToJSON jsonEncodingOptions
-  toEncoding = AE.genericToEncoding jsonEncodingOptions
 
 jsonEncodingOptions :: AE.Options
 jsonEncodingOptions = AE.defaultOptions
@@ -110,6 +165,7 @@ instance MetaTrace TracerTrace where
     namespaceFor TracerShutdownHistBackup = Namespace [] ["ShutdownHistBackup"]
     namespaceFor TracerShutdownComplete = Namespace [] ["ShutdownComplete"]
     namespaceFor TracerError {} = Namespace [] ["Error"]
+    namespaceFor TracerResource {} = Namespace [] ["Resource"]
 
     severityFor (Namespace _ ["ParamsAre"]) _ = Just Warning
     severityFor (Namespace _ ["ConfigIs"]) _ = Just Warning
