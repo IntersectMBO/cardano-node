@@ -118,9 +118,28 @@
                     // import ./nix/svclib.nix { inherit (final) pkgs; };
                 })
 
-              (import ./nix/pkgs.nix)
+                (import ./nix/pkgs.nix)
+
+                (final: prev: {
+                  cardanoNodePackages = mkCardanoNodePackages project;
+                })
             ] ++ (import ops-lib.outPath {}).overlays;
           };
+
+          mkCardanoNodePackages = project:
+            let
+              set-git-rev = import ./nix/set-git-rev.nix { inherit (project) pkgs; };
+            in
+              with project.hsPkgs; project.exes // {
+                inherit (project.pkgs) cardanoLib;
+                # add some executables from other relevant packages
+                inherit (bech32.components.exes) bech32;
+                inherit (ouroboros-consensus-cardano.components.exes)
+                  db-analyser db-synthesizer db-truncater;
+                # add cardano-node and cardano-cli with their git revision stamp
+                cardano-node = set-git-rev project.exes.cardano-node;
+                cardano-cli = set-git-rev cardano-cli.components.exes.cardano-cli;
+              };
 
           project = (import ./nix/haskell.nix {
             inherit (pkgs) haskell-nix;
@@ -139,9 +158,13 @@
             }
           );
 
-          nixosTests = import ./nix/nixos/tests {
-            inherit pkgs;
-          };
+          nixosChecks =
+            pkgs.lib.pipe pkgs [
+              (p: import ./nix/nixos/tests { pkgs = p; })
+              (pkgs.lib.mapAttrs (_: v: v.${system} or v))
+              (iohkNix.lib.prefixNamesWith "nixosTests:")
+            ];
+
         in
           with pkgs; lib.recursiveUpdate (removeAttrs flake [ "ciJobs" ]) {
             # required/nonrequired aggregates
@@ -151,14 +174,13 @@
                 gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
               };
               nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
+            } // {
+              checks = lib.optionalAttrs hostPlatform.isLinux nixosChecks;
             };
 
             apps.default = flake.apps."cardano-node:exe:cardano-node";
 
-            checks = lib.optionalAttrs hostPlatform.isLinux (
-              iohkNix.lib.prefixNamesWith
-                "nixosTests/"
-                (lib.mapAttrs (_: v: v.${system} or v) nixosTests));
+            checks = lib.optionalAttrs hostPlatform.isLinux nixosChecks;
 
             packages.default = flake.packages."cardano-node:exe:cardano-node";
 
