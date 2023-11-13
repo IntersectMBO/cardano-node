@@ -26,6 +26,8 @@ import           Cardano.Benchmarking.Tracer
 import           Cardano.TxGenerator.Setup.NodeConfig
 import           Cardano.TxGenerator.Types (TxGenError)
 
+import           Ouroboros.Network.NodeToClient (IOManager)
+
 
 -- | 'action' has as its sole callers
 -- 'Cardano.Benchmark.Script.runScript' from "Cardano.Benchmark.Script"
@@ -35,7 +37,7 @@ import           Cardano.TxGenerator.Types (TxGenError)
 -- which execute the specified actions when evaluated. It passes all
 -- the cases' fields to functions with very similar names to the
 -- constructors.
-action :: (Monoid w, MonadFail m, MonadIO m) => Action -> ActionM w m ()
+action :: (Monoid w, MonadFail m, MonadIO m) => Action -> ActionM IOManager w m ()
 action a = case a of
   SetNetworkId val -> setEnvNetworkId val
   SetSocketPath val -> setEnvSocketPath val
@@ -56,13 +58,13 @@ action a = case a of
 -- | 'liftToAction' first lifts from IO, then converts an 'Either'
 -- to an 'Control.Monad.Trans.Except.ExceptT' and then transforms
 -- the error type to 'Cardano.Benchmarking.Script.Env.Error'.
-liftToAction :: (Monoid w, MonadIO m) => IO (Either TxGenError a) -> ActionM w m a
+liftToAction :: (Monoid w, MonadIO m) => IO (Either TxGenError a) -> ActionM r w m a
 liftToAction = firstExceptT TxGenError . newExceptT . liftIO
 
 -- | 'startProtocol' sets up the protocol for the transaction
 -- generator from the first argument, @configFile@ and optionally
 -- traces to the second, @tracerSocket@.
-startProtocol :: (Monoid w, MonadIO m) => FilePath -> Maybe FilePath -> ActionM w m ()
+startProtocol :: (HoldsIOM r, Monoid w, MonadIO m) => FilePath -> Maybe FilePath -> ActionM r w m ()
 startProtocol configFile tracerSocket = do
   nodeConfig <- liftToAction $ mkNodeConfig configFile
   protocol <-  liftToAction $ mkConsensusProtocol nodeConfig

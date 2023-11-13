@@ -31,7 +31,7 @@ runScript script iom = do
   threadDelay $ 150 * 1_000
   return result
   where
-    cleanup :: Env -> ActionM () IO () -> IO (Either Error (), Env, ())
+    cleanup :: Env -> ActionM IOManager () IO () -> IO (Either Error (), Env, ())
     cleanup s a = runActionMEnv s a iom
     execScript = do
       setProtocolParameters QueryLocalNode
@@ -44,7 +44,7 @@ runScript script iom = do
         _ <- cleanup s (traceError (show err) >> shutDownLogging)
         return $ Left err
 
-shutDownLogging :: (Monoid w, MonadIO m) => ActionM w m ()
+shutDownLogging :: (Monoid w, MonadIO m) => ActionM r w m ()
 shutDownLogging = do
   traceError "QRT Last Message. LoggingLayer going to shutdown. 73 . . . ."
   liftIO $ threadDelay $ 350 * 1_000
