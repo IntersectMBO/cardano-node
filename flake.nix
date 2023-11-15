@@ -166,6 +166,10 @@
               (iohkNix.lib.prefixNamesWith "nixosTests:")
             ];
 
+          cardano-deployment = pkgs.cardanoLib.mkConfigHtml {
+            inherit (pkgs.cardanoLib.environments) mainnet preview preprod;
+          };
+
         in
           with pkgs; lib.recursiveUpdate (removeAttrs flake [ "ciJobs" ]) (rec {
             # required/nonrequired aggregates
@@ -174,14 +178,21 @@
                 # ensure hydra notify:
                 gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
               } // lib.optionalAttrs (system == "x86_64-linux") nixosChecks;
+
               nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
+            }
+            // lib.optionalAttrs (system == "x86_64-linux") {
+              inherit cardano-deployment;
             };
 
             apps.default = flake.apps."cardano-node:exe:cardano-node";
 
             checks = nixosChecks;
 
-            packages.default = flake.packages."cardano-node:exe:cardano-node";
+            packages = {
+              inherit cardano-deployment;
+              default = flake.packages."cardano-node:exe:cardano-node";
+            };
 
             nixosModules = {
               cardano-node = { pkgs, lib, ... }: {
