@@ -158,6 +158,7 @@
             }
           );
 
+          # TODO[sgillespie]: Make this a first-class hydra job
           nixosChecks =
             pkgs.lib.pipe pkgs [
               (p: import ./nix/nixos/tests { pkgs = p; })
@@ -166,21 +167,19 @@
             ];
 
         in
-          with pkgs; lib.recursiveUpdate (removeAttrs flake [ "ciJobs" ]) {
+          with pkgs; lib.recursiveUpdate (removeAttrs flake [ "ciJobs" ]) (rec {
             # required/nonrequired aggregates
             hydraJobs = callPackages iohkNix.utils.ciJobsAggregates {
               ciJobs = flake.hydraJobs // {
                 # ensure hydra notify:
                 gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
-              };
+              } // lib.optionalAttrs (system == "x86_64-linux") nixosChecks;
               nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
-            } // {
-              checks = lib.optionalAttrs hostPlatform.isLinux nixosChecks;
             };
 
             apps.default = flake.apps."cardano-node:exe:cardano-node";
 
-            checks = lib.optionalAttrs hostPlatform.isLinux nixosChecks;
+            checks = nixosChecks;
 
             packages.default = flake.packages."cardano-node:exe:cardano-node";
 
@@ -196,5 +195,5 @@
               };
             };
           } // {
-          });
+          }));
 }
