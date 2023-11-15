@@ -56,3 +56,22 @@ package bitvec
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-api.git
+  tag: 936e006b3b589088b51c1d4660978dd67e8818b2
+  subdir:
+    cardano-api
+  --sha256: sha256-JhhX5oxzFfoxCo2WL682CjfZVvKraXYnhAMxoiEVbNI=
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-consensus.git
+  tag: 416e33b65b42e5fc16085c19943b5a9c5b1ee285
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-diffusion
+    ouroboros-consensus-protocol
+  --sha256: sha256-1AzYgn10LIE/QZh4WXB0BswWMWFks0A4Vce+K3YI5eA=
