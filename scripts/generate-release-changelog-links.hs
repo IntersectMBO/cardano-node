@@ -1,4 +1,4 @@
-#!/usr/bin/env cabal
+#!/usr/bin/env -S cabal run --verbose=1 --index-state=2023-10-04T00:00:00Z
 {- cabal:
   build-depends:
     base,
@@ -9,7 +9,8 @@
     containers,
     foldl,
     github ^>= 0.28,
-    optparse-applicative,
+    optparse-applicative ^>= 0.18,
+    ansi-wl-pprint >= 1,
     pandoc ^>= 3.1,
     prettyprinter,
     req,
