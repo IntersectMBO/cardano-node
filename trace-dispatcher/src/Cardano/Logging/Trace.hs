@@ -29,6 +29,7 @@ module Cardano.Logging.Trace (
   , foldCondTraceM
   , routingTrace
 
+  , withNames
   , appendPrefixName
   , appendPrefixNames
   , appendInnerName
@@ -146,6 +147,19 @@ withInnerNames (Trace tr) = Trace $
         (lc, Left c)  -> (lc, Left c))
       tr
 
+-- | Sets names for the messages in this trace based on the selector function
+--   and appends the provided names to the context.
+{-# INLINE withNames #-}
+withNames :: forall m a. (Monad m, MetaTrace a) => [Text] -> Trace m a -> Trace m a
+withNames names (Trace tr) = Trace $
+    T.contramap
+      (\case
+        (lc, Right a) -> (lc {lcNSPrefix = names,
+                              lcNSInner  = nsInner (namespaceFor a)}, Right a)
+        (lc, Left c)  -> (lc {lcNSPrefix = names}, Left c))
+      tr
+
+
 -- | Sets severity for the messages in this trace
 setSeverity :: Monad m => SeverityS -> Trace m a -> Trace m a
 setSeverity s (Trace tr) = Trace $
@@ -156,6 +170,7 @@ setSeverity s (Trace tr) = Trace $
       tr
 
 -- | Sets severities for the messages in this trace based on the MetaTrace class
+{-# INLINE withSeverity #-}
 withSeverity :: forall m a. (Monad m, MetaTrace a) => Trace m a -> Trace m a
 withSeverity (Trace tr) = Trace $
     T.contramap
@@ -166,6 +181,7 @@ withSeverity (Trace tr) = Trace $
         (lc, Left e) -> (lc, Left e))
       tr
   where
+    {-# INLINE process #-}
     process lc cont@(Right v) =
       if isJust (lcSeverity lc)
         then (lc,cont)
@@ -299,9 +315,9 @@ contramapMCond (Trace tr) mFunc =
 contramapM' :: Monad m
   => ((LoggingContext, Either TraceControl a)
       -> m ())
-  -> m (Trace m a)
+  -> Trace m a
 contramapM' rFunc =
-  pure $ Trace $ T.Tracer $ T.emit rFunc
+  Trace $ T.Tracer $ T.emit rFunc
 
 -- | Folds the monadic cata function with acc over a.
 -- Uses an IORef to store the state
@@ -354,7 +370,7 @@ routingTrace
   :: forall m a. Monad m
   => (a -> m (Trace m a))
   -> Trace m a
-  -> m (Trace m a)
+  -> Trace m a
 routingTrace rf rc = contramapM'
     (\case
       (lc, Right a) -> do
