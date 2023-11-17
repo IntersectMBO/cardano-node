@@ -313,26 +313,26 @@ data FormattedMessage =
 
 
 data PreFormatted a = PreFormatted {
-    pfMessage    :: ! a
-  , pfForHuman   :: ! (Maybe Text)
-  , pfForMachine :: ! Text
-  , pfNamespace  :: ! [Text]
-  , pfTimestamp  :: ! Text
-  , pfTime       :: ! UTCTime
-  , pfHostname   :: ! HostName
-  , pfThreadId   :: ! Text
+    pfMessage    :: !a
+  , pfForHuman   :: !(Maybe Text)
+  , pfForMachine :: !Text
+  , pfNamespace  :: ![Text]
+  , pfTimestamp  :: !Text
+  , pfTime       :: !UTCTime
+  , pfHostname   :: !HostName
+  , pfThreadId   :: !Text
 }
 
 -- | Used as interface object for ForwarderTracer
 data TraceObject = TraceObject {
-    toHuman     :: ! (Maybe Text)
-  , toMachine   :: ! Text
-  , toNamespace :: ! [Text]
-  , toSeverity  :: ! SeverityS
-  , toDetails   :: ! DetailLevel
-  , toTimestamp :: ! UTCTime
-  , toHostname  :: ! HostName
-  , toThreadId  :: ! Text
+    toHuman     :: !(Maybe Text)
+  , toMachine   :: !Text
+  , toNamespace :: ![Text]
+  , toSeverity  :: !SeverityS
+  , toDetails   :: !DetailLevel
+  , toTimestamp :: !UTCTime
+  , toHostname  :: !HostName
+  , toThreadId  :: !Text
 } deriving (Eq, Show)
 
 -- |
@@ -493,8 +493,7 @@ data LogDoc = LogDoc {
 emptyLogDoc :: Text -> [(Text, Text)] -> LogDoc
 emptyLogDoc d m = LogDoc d (Map.fromList m) [] Nothing Nothing Nothing [] [] [] [] False
 
--- | Type for the functions foldTraceM and foldTraceM from module
--- Cardano/Logging/Trace
+-- | Type for the function foldTraceM from module Cardano/Logging/Trace
 newtype Folding a b = Folding b
 
 unfold :: Folding a b -> b
