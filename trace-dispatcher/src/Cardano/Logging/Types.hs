@@ -53,7 +53,7 @@ module Cardano.Logging.Types (
 
 
 import           Codec.Serialise (Serialise (..))
-import           Data.Aeson ((.=))
+-- import           Data.Aeson ((.=))
 import qualified Data.Aeson as AE
 import qualified Data.HashMap.Strict as HM
 import           Data.IORef
@@ -67,6 +67,8 @@ import           GHC.Generics
 import           Network.HostName (HostName)
 
 import qualified Control.Tracer as T
+
+--
 
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
@@ -118,6 +120,7 @@ nsReplaceInner i (Namespace o _) =  Namespace o i
 nsPrependInner :: Text -> Namespace a -> Namespace b
 nsPrependInner t (Namespace o i) =  Namespace o (t : i)
 
+{-# INLINE nsCast #-}
 nsCast :: Namespace a -> Namespace b
 nsCast (Namespace o i) =  Namespace o i
 
@@ -310,26 +313,26 @@ data FormattedMessage =
 
 
 data PreFormatted a = PreFormatted {
-    pfMessage    :: a
-  , pfForHuman   :: Maybe Text
-  , pfForMachine :: AE.Object
-  , pfNamespace  :: [Text]
-  , pfTimestamp  :: Text
-  , pfTime       :: UTCTime
-  , pfHostname   :: HostName
-  , pfThreadId   :: Text
+    pfMessage    :: ! a
+  , pfForHuman   :: ! (Maybe Text)
+  , pfForMachine :: ! Text
+  , pfNamespace  :: ! [Text]
+  , pfTimestamp  :: ! Text
+  , pfTime       :: ! UTCTime
+  , pfHostname   :: ! HostName
+  , pfThreadId   :: ! Text
 }
 
 -- | Used as interface object for ForwarderTracer
 data TraceObject = TraceObject {
-    toHuman     :: Maybe Text
-  , toMachine   :: Text
-  , toNamespace :: [Text]
-  , toSeverity  :: SeverityS
-  , toDetails   :: DetailLevel
-  , toTimestamp :: UTCTime
-  , toHostname  :: HostName
-  , toThreadId  :: Text
+    toHuman     :: ! (Maybe Text)
+  , toMachine   :: ! Text
+  , toNamespace :: ! [Text]
+  , toSeverity  :: ! SeverityS
+  , toDetails   :: ! DetailLevel
+  , toTimestamp :: ! UTCTime
+  , toHostname  :: ! HostName
+  , toThreadId  :: ! Text
 } deriving (Eq, Show)
 
 -- |
@@ -505,21 +508,6 @@ instance LogFormatting b => LogFormatting (Folding a b) where
   forMachine v (Folding b) =  forMachine v b
   forHuman (Folding b)     =  forHuman b
   asMetrics (Folding b)    =  asMetrics b
-
-instance LogFormatting Double where
-  forMachine _dtal d = "val" .= AE.String ((pack . show) d)
-  forHuman           = pack . show
-  asMetrics d        = [DoubleM "" d]
-
-instance LogFormatting Int where
-  forMachine _dtal i = "val" .= AE.String ((pack . show) i)
-  forHuman           = pack . show
-  asMetrics i        = [IntM "" (fromIntegral i)]
-
-instance LogFormatting Integer where
-  forMachine _dtal i = "val" .= AE.String ((pack . show) i)
-  forHuman           = pack . show
-  asMetrics i        = [IntM "" i]
 
 ---------------------------------------------------------------------------
 -- Instances for 'TraceObject' to forward it using 'trace-forward' library.

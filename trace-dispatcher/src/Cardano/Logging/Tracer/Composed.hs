@@ -59,7 +59,8 @@ mkCardanoTracer trStdout trForward mbTrEkg tracerPrefix =
 -- | Adds the possibility to add special tracers via the hook function
 mkCardanoTracer' :: forall evt evt1.
      ( LogFormatting evt1
-     , MetaTrace evt1)
+     , MetaTrace evt1
+     )
   => Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
@@ -87,9 +88,8 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerPrefix hook = do
     !metricsTrace <- case mbTrEkg of
                       Nothing -> pure $ Trace T.nullTracer
                       Just ekgTrace ->
-                        pure (metricsFormatter "" ekgTrace)
+                        pure (metricsFormatter ekgTrace)
 --                      >>= recordMetricsStatistics internalTr
---                        >>= filterTrace (\(_,v) -> Prelude.null (asMetrics v))
                         >>= maybeSilent hasNoMetrics tracerPrefix True
                         >>= hook
 
@@ -103,10 +103,8 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerPrefix hook = do
                 $ withPrivacy
                   $ withDetails tr
       tr'' <- filterSeverityFromConfig tr'
-      pure $ withInnerNames
-              $ appendPrefixNames tracerPrefix
-                $ withSeverity
-                  tr''
+      pure $ withNames tracerPrefix
+             $ withSeverity tr''
 
     traceNamespaceErrors ::
          Trace IO TraceDispatcherMessage

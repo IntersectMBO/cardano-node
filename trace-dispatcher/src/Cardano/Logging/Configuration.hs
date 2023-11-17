@@ -150,7 +150,7 @@ withNamespaceConfig :: forall m a b c. (MonadIO m, Ord b) =>
   -> m (Trace m a)
 withNamespaceConfig name extract withConfig tr = do
     ref  <- liftIO (newIORef (Left (Map.empty, Nothing)))
-    contramapM' (mapFunc ref)
+    pure $ contramapM' (mapFunc ref)
   where
     mapFunc ref =
       \case
@@ -356,7 +356,7 @@ withLimitersFromConfig tri tr = do
     withLimiter Nothing tr' = pure tr'
     withLimiter (Just Nothing) tr' = pure tr'
     withLimiter (Just (Just (Limiter n d (Trace trli)))) (Trace tr') =
-      contramapM' (mapFunc (Limiter n d (Trace trli)) (Trace tr'))
+      pure $ contramapM' (mapFunc (Limiter n d (Trace trli)) (Trace tr'))
     mapFunc (Limiter n d (Trace trli)) (Trace tr') =
         \case
           (lc, Right v) ->
