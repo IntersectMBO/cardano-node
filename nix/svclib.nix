@@ -240,6 +240,7 @@ let
       systemd.services = mkOption {};
       assertions = [];
       users = mkOption {};
+      environment = mkOption {};
     };
   in pkgs.writeScript "run-${svcName}" ''
     #!${pkgs.runtimeShell}
