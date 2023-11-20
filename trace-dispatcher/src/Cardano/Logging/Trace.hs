@@ -37,7 +37,7 @@ module Cardano.Logging.Trace (
   , withInnerNames
   ) where
 
-import           Control.Monad (join)
+import           Control.Monad (forM_, join)
 import           Control.Monad.IO.Unlift
 import qualified Control.Tracer as T
 import           Data.Maybe (isJust)
@@ -307,9 +307,7 @@ contramapMCond (Trace tr) mFunc =
     where
       rFunc arg = do
         condMes <- mFunc arg
-        case condMes of
-          Nothing -> pure ()
-          Just mes -> T.traceWith tr mes
+        forM_ condMes (T.traceWith tr)
 
 {-# INLINE contramapM' #-}
 contramapM' :: Monad m

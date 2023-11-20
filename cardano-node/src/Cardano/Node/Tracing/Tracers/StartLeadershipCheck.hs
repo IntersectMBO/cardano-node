@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PackageImports #-}
 
 module Cardano.Node.Tracing.Tracers.StartLeadershipCheck
   ( TraceStartLeadershipCheckPlus (..)
