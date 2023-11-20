@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 2.2.1 - Oct 2023
+
+* Updated to `ouroboros-network-api-0.6` and `ouroboros-network-framework-0.10`
+
 ## 2.1.0 - Sep 18 2023
 
 * Updated to `ouroboros-network-api-0.5.1` and `ouroboros-network-framework-0.9.0`.

@@ -2,6 +2,10 @@
 
 ## vNext
 
+## 3.2.0 -- Nov 2023
+
+** Using `cardano-api-8.33` and `cardano-cli-8.15`
+
 ## 8.5.0 -- Oct 2023
 
 * Using `cardano-api-8.25` and `cardano-cli-8.11`
