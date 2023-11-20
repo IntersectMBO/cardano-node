@@ -95,11 +95,12 @@ library
                       , aeson-pretty
                       , async
                       , attoparsec
+                      , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
                       , cardano-api ^>= 8.33
                       , cardano-binary
-                      , cardano-cli ^>= 8.13
+                      , cardano-cli ^>= 8.15
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data
