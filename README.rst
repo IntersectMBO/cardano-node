@@ -418,7 +418,7 @@ Note: When developing locally, for any package you are working on, in **cabal.pr
   package cardano-node
     ghc-options: -Wwarn
     flags: +development
-  
+
 Otherwise GHC might complain about unused packages.
 
 ****
@@ -446,7 +446,7 @@ API Documentation
 The API documentation is published `here <https://input-output-hk.github.io/cardano-node/>`_.
 
 The documentation is built with each push, but is only published from ``master`` branch.  In order to
-test if the documentation is working, build the documentation locally with ``./scripts/haddocs.sh`` and
+test if the documentation is working, build the documentation locally with ``cabal haddock-project --local --output=./haddocks`` and
 open ``haddocks/index.html`` in the browser.
 
 ****
