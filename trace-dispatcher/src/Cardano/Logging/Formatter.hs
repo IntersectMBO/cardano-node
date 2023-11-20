@@ -36,7 +36,7 @@ import           Network.HostName
 
 
 encodingToText :: AE.Encoding -> Text
-{-# INLINE encodingToText#-}
+{-# INLINE encodingToText #-}
 encodingToText = toStrict . decodeUtf8 . AE.encodingToLazyByteString
 
 -- | Format this trace as metrics
