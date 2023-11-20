@@ -23,6 +23,7 @@ module Cardano.Node.Run
 
 import           Cardano.Api (File (..), FileDirection (..))
 import qualified Cardano.Api as Api
+import           Cardano.Api.Pretty
 
 import           Cardano.Prelude (FatalError (..), bool, (:~:) (..))
 
@@ -160,7 +161,7 @@ runNode cmdPc = do
 
     p :: SomeConsensusProtocol <-
       case eitherSomeProtocol of
-        Left err -> putStrLn (Api.displayError err) >> exitFailure
+        Left err -> putStrLn (prettyToString (Api.prettyError err)) >> exitFailure
         Right p  -> pure p
 
     let networkMagic :: Api.NetworkMagic =

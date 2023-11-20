@@ -34,9 +34,6 @@ import qualified Data.List as L
 import qualified Data.List.Extra as L
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
-#if __GLASGOW_HASKELL__ >= 906
-import Data.Type.Equality               (type (~))
-#endif
 
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Common ()
@@ -191,12 +188,12 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
 
   toGenTx :: tx -> GenTx CardanoBlock
   toGenTx tx = case shelleyBasedEra @era of
-    ShelleyBasedEraShelley  -> toConsensusGenTx $ TxInMode tx ShelleyEraInCardanoMode
-    ShelleyBasedEraAllegra  -> toConsensusGenTx $ TxInMode tx AllegraEraInCardanoMode
-    ShelleyBasedEraMary     -> toConsensusGenTx $ TxInMode tx MaryEraInCardanoMode
-    ShelleyBasedEraAlonzo   -> toConsensusGenTx $ TxInMode tx AlonzoEraInCardanoMode
-    ShelleyBasedEraBabbage  -> toConsensusGenTx $ TxInMode tx BabbageEraInCardanoMode
-    ShelleyBasedEraConway   -> toConsensusGenTx $ TxInMode tx ConwayEraInCardanoMode
+    ShelleyBasedEraShelley  -> toConsensusGenTx $ TxInMode ShelleyEra tx
+    ShelleyBasedEraAllegra  -> toConsensusGenTx $ TxInMode AllegraEra tx
+    ShelleyBasedEraMary     -> toConsensusGenTx $ TxInMode MaryEra tx
+    ShelleyBasedEraAlonzo   -> toConsensusGenTx $ TxInMode AlonzoEra tx
+    ShelleyBasedEraBabbage  -> toConsensusGenTx $ TxInMode BabbageEra tx
+    ShelleyBasedEraConway   -> toConsensusGenTx $ TxInMode ConwayEra tx
 
   fromGenTxId :: GenTxId CardanoBlock -> TxId
   fromGenTxId (Block.GenTxIdShelley (Mempool.ShelleyTxId i)) = fromShelleyTxId i

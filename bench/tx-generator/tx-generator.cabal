@@ -97,7 +97,7 @@ library
                       , attoparsec
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.29
+                      , cardano-api ^>= 8.33
                       , cardano-binary
                       , cardano-cli ^>= 8.13
                       , cardano-crypto-class
@@ -138,6 +138,7 @@ library
                       , streaming
                       , strict-stm
                       , cardano-ledger-shelley
+                      , prettyprinter
                       , stm
                       , text
                       , time

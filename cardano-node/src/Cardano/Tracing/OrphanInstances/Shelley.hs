@@ -28,12 +28,12 @@ import qualified Cardano.Crypto.VRF.Class as Crypto
 import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Allegra.Scripts as Allegra
+import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..), AlonzoUtxoPredFailure,
                    AlonzoUtxosPredFailure, AlonzoUtxowPredFailure (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import qualified Cardano.Ledger.Api as Ledger
 import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage

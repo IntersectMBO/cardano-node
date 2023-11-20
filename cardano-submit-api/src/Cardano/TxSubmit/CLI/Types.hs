@@ -4,13 +4,13 @@ module Cardano.TxSubmit.CLI.Types
   , TxSubmitNodeParams (..)
   ) where
 
-import           Cardano.Api (AnyConsensusModeParams, NetworkId (..), SocketPath)
+import           Cardano.Api (ConsensusModeParams, NetworkId (..), SocketPath)
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig)
 
 -- | The product type of all command line arguments
 data TxSubmitNodeParams = TxSubmitNodeParams
   { tspConfigFile :: !ConfigFile
-  , tspProtocol :: !AnyConsensusModeParams
+  , tspProtocol :: !ConsensusModeParams
   , tspNetworkId :: !NetworkId
   , tspSocketPath :: !SocketPath
   , tspWebserverConfig :: !WebserverConfig

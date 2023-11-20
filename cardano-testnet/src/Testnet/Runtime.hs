@@ -30,6 +30,7 @@ module Testnet.Runtime
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 
 import qualified Cardano.Chain.Genesis as G
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
@@ -156,7 +157,7 @@ getStartTime tempRootPath TestnetRuntime{configurationFile} = withFrozenCallStac
       partialNodeCfg <- ExceptT $ A.eitherDecodeFileStrict' file
       fmap ncProtocolConfig . liftEither . makeNodeConfiguration $ defaultPartialNodeConfiguration <> partialNodeCfg
     decodeGenesisFile :: FilePath -> ExceptT String IO G.Config
-    decodeGenesisFile fp = withExceptT displayError $
+    decodeGenesisFile fp = withExceptT (prettyToString . prettyError) $
       Byron.readGenesis (GenesisFile fp) Nothing RequiresNoMagic
 
 readNodeLoggingFormat :: String -> Either String NodeLoggingFormat

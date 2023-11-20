@@ -69,8 +69,8 @@ getFundKey (Fund (InAnyCardanoEra _ a)) = _fundSigningKey a
 -- | Converting a `TxOutValue` to `Lovelace` requires case analysis.
 getFundLovelace :: Fund -> Lovelace
 getFundLovelace (Fund (InAnyCardanoEra _ a)) = case _fundVal a of
-  TxOutAdaOnly _era l -> l
-  TxOutValue _era v -> selectLovelace v
+  TxOutValueByron l -> l
+  TxOutValueShelleyBased era v -> selectLovelace $ Api.fromLedgerValue era v
 
 -- TODO: facilitate casting KeyWitnesses between eras -- Note [Era transitions]
 -- | The `Fund` alternative is checked against `cardanoEra`, but

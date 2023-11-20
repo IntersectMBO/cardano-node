@@ -11,6 +11,7 @@ module Cardano.Testnet.Test.Golden.Util
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 
 import           Control.Monad.Catch
 import           Control.Monad.IO.Class (MonadIO (..))
@@ -122,7 +123,7 @@ checkTextEnvelopeFormat tve reference created = GHC.withFrozenCallStack $ do
                       => Either (FileError TextEnvelopeError) TextEnvelope
                       -> m TextEnvelope
    handleTextEnvelope (Right refTextEnvelope) = return refTextEnvelope
-   handleTextEnvelope (Left fileErr) = failWithCustom GHC.callStack Nothing . displayError $ fileErr
+   handleTextEnvelope (Left fileErr) = failWithCustom GHC.callStack Nothing . prettyToString . prettyError $ fileErr
 
    typeTitleEquivalence :: (MonadTest m, HasCallStack) => TextEnvelope -> TextEnvelope -> m ()
    typeTitleEquivalence (TextEnvelope refType refTitle _)

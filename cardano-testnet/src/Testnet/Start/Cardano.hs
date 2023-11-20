@@ -119,7 +119,7 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
 
 
     alonzoConwayTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> "genesis.alonzo.spec.json"
-    gen <- H.evalEither $ first displayError defaultAlonzoGenesis
+    gen <- H.evalEither $ first prettyError defaultAlonzoGenesis
     H.evalIO $ LBS.writeFile alonzoConwayTestGenesisJsonTargetFile $ Aeson.encode gen
 
     conwayConwayTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> "genesis.conway.spec.json"

@@ -111,7 +111,7 @@ addFund era wallet txIn lovelace keyName = do
   fundKey  <- getEnvKeys keyName
   let
     mkOutValue :: forall era. IsShelleyBasedEra era => AsType era -> ActionM (InAnyCardanoEra TxOutValue)
-    mkOutValue _ = return $ InAnyCardanoEra (cardanoEra @era) (lovelaceToTxOutValue (cardanoEra @era) lovelace)
+    mkOutValue _ = return $ InAnyCardanoEra (cardanoEra @era) (lovelaceToTxOutValue (shelleyBasedEra @era) lovelace)
   outValue <- withEra era mkOutValue
   addFundToWallet wallet txIn outValue fundKey
 
@@ -161,14 +161,14 @@ cancelBenchmark n = do
   liftIO shutdownAction
   waitBenchmarkCore ctl
 
-getLocalConnectInfo :: ActionM  (LocalNodeConnectInfo CardanoMode)
+getLocalConnectInfo :: ActionM LocalNodeConnectInfo
 getLocalConnectInfo = makeLocalConnectInfo <$> getEnvNetworkId <*> getEnvSocketPath
 
 queryEra :: ActionM AnyCardanoEra
 queryEra = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
-  ret <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) $ QueryCurrentEra CardanoModeIsMultiEra
+  ret <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) QueryCurrentEra
   case ret of
     Right era -> return era
     Left err -> liftTxGenError $ TxGenError $ show err
@@ -180,11 +180,10 @@ queryRemoteProtocolParameters = do
   era <- queryEra
   let
     callQuery :: forall era.
-                 EraInMode era CardanoMode
-              -> QueryInEra era (Ledger.PParams (ShelleyLedgerEra era))
+                 QueryInEra era (Ledger.PParams (ShelleyLedgerEra era))
               -> ActionM ProtocolParameters
-    callQuery eraInMode query@(QueryInShelleyBasedEra shelleyEra _) = do
-        res <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) (QueryInEra eraInMode query)
+    callQuery query@(QueryInShelleyBasedEra shelleyEra _) = do
+        res <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) (QueryInEra query)
         case res of
           Right (Right pp) -> do
             let pp' = fromLedgerPParams shelleyEra pp
@@ -196,12 +195,12 @@ queryRemoteProtocolParameters = do
           Left err -> liftTxGenError $ TxGenError $ show err
   case era of
     AnyCardanoEra ByronEra   -> liftTxGenError $ TxGenError "queryRemoteProtocolParameters Byron not supported"
-    AnyCardanoEra ShelleyEra -> callQuery ShelleyEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraShelley QueryProtocolParameters
-    AnyCardanoEra AllegraEra -> callQuery AllegraEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraAllegra QueryProtocolParameters
-    AnyCardanoEra MaryEra    -> callQuery MaryEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraMary    QueryProtocolParameters
-    AnyCardanoEra AlonzoEra  -> callQuery AlonzoEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraAlonzo QueryProtocolParameters
-    AnyCardanoEra BabbageEra -> callQuery BabbageEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraBabbage QueryProtocolParameters
-    AnyCardanoEra ConwayEra  -> callQuery ConwayEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraConway QueryProtocolParameters
+    AnyCardanoEra ShelleyEra -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraShelley QueryProtocolParameters
+    AnyCardanoEra AllegraEra -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraAllegra QueryProtocolParameters
+    AnyCardanoEra MaryEra    -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraMary    QueryProtocolParameters
+    AnyCardanoEra AlonzoEra  -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraAlonzo QueryProtocolParameters
+    AnyCardanoEra BabbageEra -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraBabbage QueryProtocolParameters
+    AnyCardanoEra ConwayEra  -> callQuery $ QueryInShelleyBasedEra ShelleyBasedEraConway QueryProtocolParameters
 
 getProtocolParameters :: ActionM ProtocolParameters
 getProtocolParameters = do
@@ -219,7 +218,7 @@ waitForEra era = do
       liftIO $ threadDelay 1_000_000
       waitForEra era
 
-localSubmitTx :: TxInMode CardanoMode -> ActionM (SubmitResult (TxValidationErrorInMode CardanoMode))
+localSubmitTx :: TxInMode -> ActionM (SubmitResult TxValidationErrorInCardanoMode)
 localSubmitTx tx = do
   submit <- getLocalSubmitTx
   ret <- liftIO $ submit tx
@@ -401,10 +400,10 @@ selectCollateralFunds (Just walletName) = do
       Nothing -> throwE $ WalletError $ "selectCollateralFunds: collateral: era not supported :" ++ show (cardanoEra @era)
       Just p -> return (TxInsCollateral p $  map getFundTxIn collateralFunds, collateralFunds)
 
-dumpToFile :: FilePath -> TxInMode CardanoMode -> ActionM ()
+dumpToFile :: FilePath -> TxInMode -> ActionM ()
 dumpToFile filePath tx = liftIO $ dumpToFileIO filePath tx
 
-dumpToFileIO :: FilePath -> TxInMode CardanoMode -> IO ()
+dumpToFileIO :: FilePath -> TxInMode -> IO ()
 dumpToFileIO filePath tx = appendFile filePath ('\n' : show tx)
 
 initWallet :: String -> ActionM ()

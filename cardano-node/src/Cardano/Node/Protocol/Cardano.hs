@@ -341,15 +341,15 @@ data CardanoProtocolInstantiationError =
   deriving Show
 
 instance Error CardanoProtocolInstantiationError where
-  displayError (CardanoProtocolInstantiationErrorByron err) =
-    displayError err
-  displayError (CardanoProtocolInstantiationShelleyGenesisReadError err) =
-    "Shelley related: " <> displayError err
-  displayError (CardanoProtocolInstantiationAlonzoGenesisReadError err) =
-    "Alonzo related: " <> displayError err
-  displayError (CardanoProtocolInstantiationConwayGenesisReadError err) =
-    "Conway related : " <> displayError err
-  displayError (CardanoProtocolInstantiationPraosLeaderCredentialsError err) =
-    displayError err
-  displayError (CardanoProtocolInstantiationErrorAlonzo err) =
-    displayError err
+  prettyError (CardanoProtocolInstantiationErrorByron err) =
+    prettyError err
+  prettyError (CardanoProtocolInstantiationShelleyGenesisReadError err) =
+    "Shelley related: " <> prettyError err
+  prettyError (CardanoProtocolInstantiationAlonzoGenesisReadError err) =
+    "Alonzo related: " <> prettyError err
+  prettyError (CardanoProtocolInstantiationConwayGenesisReadError err) =
+    "Conway related : " <> prettyError err
+  prettyError (CardanoProtocolInstantiationPraosLeaderCredentialsError err) =
+    prettyError err
+  prettyError (CardanoProtocolInstantiationErrorAlonzo err) =
+    prettyError err

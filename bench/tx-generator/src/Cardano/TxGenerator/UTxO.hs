@@ -34,13 +34,13 @@ mkUTxOVariant networkId key value
     , mkNewFund value
     )
  where
-  mkTxOut v = TxOut (keyAddress @era networkId key) (lovelaceToTxOutValue (cardanoEra @era) v) TxOutDatumNone ReferenceScriptNone
+  mkTxOut v = TxOut (keyAddress @era networkId key) (lovelaceToTxOutValue (shelleyBasedEra @era) v) TxOutDatumNone ReferenceScriptNone
 
   mkNewFund :: Lovelace -> TxIx -> TxId -> Fund
   mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @era) $ FundInEra {
       _fundTxIn = TxIn txId txIx
     , _fundWitness = KeyWitness KeyWitnessForSpending
-    , _fundVal = lovelaceToTxOutValue (cardanoEra @era ) val
+    , _fundVal = lovelaceToTxOutValue (shelleyBasedEra @era ) val
     , _fundSigningKey = Just key
     }
 
@@ -70,7 +70,7 @@ mkUTxOScript networkId (script, txOutDatum) witness value
     Nothing -> error "mkUtxOScript: scriptDataSupportedInEra==Nothing"
     Just tag -> TxOut
                   plutusScriptAddr
-                  (lovelaceToTxOutValue (cardanoEra @era) v)
+                  (lovelaceToTxOutValue (shelleyBasedEra @era) v)
                   (TxOutDatumHash tag $ hashScriptDataBytes $ unsafeHashableScriptData txOutDatum)
                   ReferenceScriptNone
 
@@ -78,6 +78,6 @@ mkUTxOScript networkId (script, txOutDatum) witness value
   mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @era) $ FundInEra {
       _fundTxIn = TxIn txId txIx
     , _fundWitness = witness
-    , _fundVal = lovelaceToTxOutValue (cardanoEra @era) val
+    , _fundVal = lovelaceToTxOutValue (shelleyBasedEra @era) val
     , _fundSigningKey = Nothing
     }

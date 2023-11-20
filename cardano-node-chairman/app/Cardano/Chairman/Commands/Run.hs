@@ -11,6 +11,7 @@ module Cardano.Chairman.Commands.Run
 import           Cardano.Prelude (ConvertText (..))
 
 import qualified Cardano.Api as Api
+import           Cardano.Api.Pretty
 
 import           Control.Monad.Class.MonadTime.SI (DiffTime)
 import           Control.Monad.IO.Class (MonadIO (..))
@@ -116,7 +117,7 @@ run RunOpts
 
   p :: SomeConsensusProtocol <-
     case eitherSomeProtocol of
-      Left err -> putStrLn (displayError err) >> exitFailure
+      Left err -> putStrLn (prettyToString $ prettyError err) >> exitFailure
       Right p  -> pure p
 
   let (k , nId) = case p of
@@ -139,7 +140,7 @@ run RunOpts
 
   return ()
  where
-  getConsensusMode :: SecurityParam -> NodeProtocolConfiguration -> ConsensusModeParams CardanoMode
+  getConsensusMode :: SecurityParam -> NodeProtocolConfiguration -> ConsensusModeParams
   getConsensusMode (SecurityParam k) ncProtocolConfig =
     case ncProtocolConfig of
       NodeProtocolConfigurationCardano{} ->
