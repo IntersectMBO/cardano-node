@@ -170,6 +170,20 @@
             inherit (pkgs.cardanoLib.environments) mainnet preview preprod;
           };
 
+          mkBinaryRelease = project: platform:
+            let
+              exes = mkCardanoNodePackages project;
+            in
+              with pkgs.lib; import ./nix/binary-release.nix {
+                inherit pkgs platform;
+                inherit (exes.cardano-node.identifier) version;
+                exes = collect isDerivation exes;
+              };
+
+          cardano-node-linux = mkBinaryRelease project.projectCross.musl64 "linux";
+          cardano-node-win64 = mkBinaryRelease project.projectCross.mingwW64 "win64";
+          cardano-node-macos = mkBinaryRelease project "macos";
+
         in
           with pkgs; lib.recursiveUpdate (removeAttrs flake [ "ciJobs" ]) (rec {
             # required/nonrequired aggregates
@@ -182,7 +196,11 @@
               nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
             }
             // lib.optionalAttrs (system == "x86_64-linux") {
-              inherit cardano-deployment;
+              inherit cardano-deployment cardano-node-linux cardano-node-win64;
+
+            }
+            // lib.optionalAttrs (system == "x86_64-darwin") {
+              inherit cardano-node-macos;
             };
 
             apps.default = flake.apps."cardano-node:exe:cardano-node";
@@ -192,6 +210,10 @@
             packages = {
               inherit cardano-deployment;
               default = flake.packages."cardano-node:exe:cardano-node";
+            } // lib.optionalAttrs (system == "x86_64-linux") {
+              inherit cardano-node-linux cardano-node-win64;
+            } // lib.optionalAttrs (system == "x86_64-macos") {
+              inherit cardano-node-macos;
             };
 
             nixosModules = {
