@@ -141,6 +141,16 @@
                 cardano-cli = set-git-rev cardano-cli.components.exes.cardano-cli;
               };
 
+          mkBinaryRelease = project: platform:
+            let
+              exes = mkCardanoNodePackages project;
+            in
+              with pkgs.lib; import ./nix/binary-release.nix {
+                inherit pkgs platform;
+                inherit (exes.cardano-node.identifier) version;
+                exes = collect isDerivation exes;
+              };
+
           project = (import ./nix/haskell.nix {
             inherit (pkgs) haskell-nix;
             inherit (std) incl;
@@ -170,19 +180,12 @@
             inherit (pkgs.cardanoLib.environments) mainnet preview preprod;
           };
 
-          mkBinaryRelease = project: platform:
-            let
-              exes = mkCardanoNodePackages project;
-            in
-              with pkgs.lib; import ./nix/binary-release.nix {
-                inherit pkgs platform;
-                inherit (exes.cardano-node.identifier) version;
-                exes = collect isDerivation exes;
-              };
-
           cardano-node-linux = mkBinaryRelease project.projectCross.musl64 "linux";
           cardano-node-win64 = mkBinaryRelease project.projectCross.mingwW64 "win64";
           cardano-node-macos = mkBinaryRelease project "macos";
+          hlint = pkgs.callPackage pkgs.hlintCheck {
+            inherit (project.args) src;
+          };
 
         in
           with pkgs; lib.recursiveUpdate (removeAttrs flake [ "ciJobs" ]) (rec {
@@ -191,21 +194,29 @@
               ciJobs = flake.hydraJobs // {
                 # ensure hydra notify:
                 gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
-              } // lib.optionalAttrs (system == "x86_64-linux") nixosChecks;
+              } // {
+                checks = {
+                  inherit hlint;
+                };
+              };
 
               nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
-            }
-            // lib.optionalAttrs (system == "x86_64-linux") {
+            # Extra hydra jobs
+            } // lib.optionalAttrs (system == "x86_64-linux") {
               inherit cardano-deployment cardano-node-linux cardano-node-win64;
-
-            }
-            // lib.optionalAttrs (system == "x86_64-darwin") {
+            } // lib.optionalAttrs (system == "x86_64-darwin") {
               inherit cardano-node-macos;
-            };
+            } // {
+              checks = {
+                inherit hlint;
+              };
+            } // lib.optionalAttrs (system == "x86_64-linux") nixosChecks;
 
             apps.default = flake.apps."cardano-node:exe:cardano-node";
 
-            checks = nixosChecks;
+            checks = {
+              inherit hlint;
+            } // lib.optionalAttrs (system == "x86_64-linux") nixosChecks;
 
             packages = {
               inherit cardano-deployment;
@@ -227,6 +238,6 @@
                 services.cardano-submit-api.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
               };
             };
-          } // {
-          }));
+          }) // {
+          });
 }
