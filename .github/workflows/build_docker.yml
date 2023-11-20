@@ -43,3 +43,10 @@ jobs:
           push: true
           file: Dockerfile.relay
           tags: emurgornd/cardano-node-relay:latest,emurgornd/cardano-node-relay:${{ github.ref_name }}
+      - name: Build and push Cardano node relay p2p
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          file: Dockerfile.relay-p2p
+          tags: emurgornd/cardano-node-relay-p2p:latest,emurgornd/cardano-node-relay-p2p:${{ github.ref_name }}
+
