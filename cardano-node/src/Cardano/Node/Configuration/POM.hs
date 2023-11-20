@@ -45,6 +45,7 @@ import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config
+import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
@@ -298,7 +299,7 @@ instance FromJSON PartialNodeConfiguration where
 
       -- Peer Sharing
       -- DISABLED BY DEFAULT
-      pncPeerSharing <- Last <$> v .:? "PeerSharing" .!= Just NoPeerSharing
+      pncPeerSharing <- Last <$> v .:? "PeerSharing" .!= Just PeerSharingDisabled
 
       pure PartialNodeConfiguration {
              pncProtocolConfig
@@ -505,7 +506,7 @@ defaultPartialNodeConfiguration =
     , pncTargetNumberOfEstablishedBigLedgerPeers = Last (Just 10)
     , pncTargetNumberOfActiveBigLedgerPeers      = Last (Just 5)
     , pncEnableP2P                      = Last (Just DisabledP2PMode)
-    , pncPeerSharing                    = Last (Just NoPeerSharing)
+    , pncPeerSharing                    = Last (Just PeerSharingDisabled)
     }
 
 lastOption :: Parser a -> Parser (Last a)

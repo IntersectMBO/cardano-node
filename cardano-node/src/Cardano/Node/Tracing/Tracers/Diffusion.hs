@@ -835,6 +835,23 @@ instance LogFormatting TraceLedgerPeers where
       , "target" .= target
       , "numOfBigLedgerPeers" .= numOfBigLedgerPeers
       ]
+  forMachine _dtal (TraceLedgerPeersDomains daps) =
+    mconcat
+      [ "kind" .= String "TraceLedgerPeersDomains"
+      , "domainAccessPoints" .= daps
+      ]
+  forMachine _dtal (TraceLedgerPeersResult dap ips) =
+    mconcat
+      [ "kind" .= String "TraceLedgerPeersResult"
+      , "domainAccessPoint" .= show dap
+      , "ips" .= map show ips
+      ]
+  forMachine _dtal (TraceLedgerPeersFailure dap reason) =
+    mconcat
+      [ "kind" .= String "TraceLedgerPeersFailure"
+      , "domainAccessPoint" .= show dap
+      , "error" .= show reason
+      ]
 
 instance MetaTrace TraceLedgerPeers where
     namespaceFor PickedLedgerPeer {} =
@@ -863,6 +880,12 @@ instance MetaTrace TraceLedgerPeers where
       Namespace [] ["NotEnoughLedgerPeers"]
     namespaceFor NotEnoughBigLedgerPeers {} =
       Namespace [] ["NotEnoughBigLedgerPeers"]
+    namespaceFor TraceLedgerPeersDomains {} =
+      Namespace [] ["TraceLedgerPeersDomains"]
+    namespaceFor TraceLedgerPeersResult {} =
+      Namespace [] ["TraceLedgerPeersResult"]
+    namespaceFor TraceLedgerPeersFailure {} =
+      Namespace [] ["TraceLedgerPeersFailure"]
 
     severityFor (Namespace _ ["PickedPeer"]) _ = Just Debug
     severityFor (Namespace _ ["PickedPeers"]) _ = Just Info
@@ -875,6 +898,9 @@ instance MetaTrace TraceLedgerPeers where
     severityFor (Namespace _ ["FallingBackToPublicRootPeers"]) _ = Just Info
     severityFor (Namespace _ ["NotEnoughLedgerPeers"]) _ = Just Warning
     severityFor (Namespace _ ["NotEnoughBigLedgerPeers"]) _ = Just Warning
+    severityFor (Namespace _ ["TraceLedgerPeersDomains"]) _ = Just Debug
+    severityFor (Namespace _ ["TraceLedgerPeersResult"]) _ = Just Debug
+    severityFor (Namespace _ ["TraceLedgerPeersFailure"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["PickedPeer"]) = Just
@@ -897,6 +923,12 @@ instance MetaTrace TraceLedgerPeers where
       ""
     documentFor (Namespace _ ["FallingBackToPublicRootPeers"]) = Just
       ""
+    documentFor (Namespace _ ["TraceLedgerPeersDomains"]) = Just
+      ""
+    documentFor (Namespace _ ["TraceLedgerPeersResult"]) = Just
+      ""
+    documentFor (Namespace _ ["TraceLedgerPeersFailure"]) = Just
+      ""
     documentFor _ = Nothing
 
     allNamespaces = [
@@ -909,4 +941,7 @@ instance MetaTrace TraceLedgerPeers where
       , Namespace [] ["RequestForPeers"]
       , Namespace [] ["ReusingLedgerState"]
       , Namespace [] ["FallingBackToPublicRootPeers"]
+      , Namespace [] ["TraceLedgerPeersDomains"]
+      , Namespace [] ["TraceLedgerPeersResult"]
+      , Namespace [] ["TraceLedgerPeersFailure"]
       ]

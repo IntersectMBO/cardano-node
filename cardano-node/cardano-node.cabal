@@ -181,9 +181,9 @@ library
                       , ouroboros-consensus-diffusion ^>= 0.8
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api
-                      , ouroboros-network ^>= 0.9.1
+                      , ouroboros-network ^>= 0.10
                       , ouroboros-network-framework
-                      , ouroboros-network-protocols < 0.5.3.0
+                      , ouroboros-network-protocols ^>= 0.6
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues

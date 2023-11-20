@@ -55,7 +55,8 @@ library
                       , hedgehog-extras ^>= 0.4.7.0
                       , mtl
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.9.1
+                      , ouroboros-network ^>= 0.10
+                      , ouroboros-network-api
                       , process
                       , resourcet
                       , safe-exceptions

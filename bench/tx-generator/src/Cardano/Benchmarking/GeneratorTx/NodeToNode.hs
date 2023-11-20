@@ -59,11 +59,8 @@ import           Ouroboros.Network.Protocol.KeepAlive.Client hiding (SendMsgDone
 import           Ouroboros.Network.Protocol.KeepAlive.Codec
 import           Ouroboros.Network.Protocol.TxSubmission2.Client (TxSubmissionClient,
                    txSubmissionClientPeer)
-import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..), encodeRemoteAddress, decodeRemoteAddress)
 import           Ouroboros.Network.Protocol.PeerSharing.Client (PeerSharingClient (..),
                    peerSharingClientPeer)
-import           Ouroboros.Network.Protocol.TxSubmission2.Client (TxSubmissionClient,
-                   txSubmissionClientPeer)
 
 import           Ouroboros.Network.Snocket (socketSnocket)
 
@@ -96,7 +93,7 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
     (addrAddress <$> Nothing)
     (addrAddress remoteAddr)
  where
-  ownPeerSharing = NoPeerSharing
+  ownPeerSharing = PeerSharingDisabled
   mkApp :: OuroborosBundle      mode initiatorCtx responderCtx bs m a b
         -> OuroborosApplication mode initiatorCtx responderCtx bs m a b
   mkApp bundle =

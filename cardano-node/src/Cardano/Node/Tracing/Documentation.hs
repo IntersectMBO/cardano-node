@@ -87,8 +87,10 @@ import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (.
                    PeerSelectionCounters (..), TracePeerSelection (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
-import           Ouroboros.Network.PeerSelection.RootPeersDNS (TraceLocalRootPeers (..),
-                   TracePublicRootPeers (..))
+import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
+                   (TraceLocalRootPeers (..))
+import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers
+                   (TracePublicRootPeers (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch)
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedProtocol (..),
