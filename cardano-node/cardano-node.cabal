@@ -177,8 +177,8 @@ library
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
                       , ouroboros-consensus ^>= 0.13
-                      , ouroboros-consensus-cardano ^>= 0.11
-                      , ouroboros-consensus-diffusion ^>= 0.8
+                      , ouroboros-consensus-cardano ^>= 0.12
+                      , ouroboros-consensus-diffusion ^>= 0.9
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api
                       , ouroboros-network ^>= 0.10

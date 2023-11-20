@@ -42,7 +42,7 @@ import           "contra-tracer" Control.Tracer
 import           Data.Either (partitionEithers)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, mapMaybe)
+import           Data.Maybe (catMaybes, mapMaybe, fromMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Proxy (Proxy (..))
 import           Data.Text (Text, breakOn, pack)
@@ -79,7 +79,8 @@ import           Cardano.Node.Configuration.Logging (LoggingLayer (..), createLo
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), SomeNetworkP2PMode (..),
-                   defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP)
+                   defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP,
+                   TimeoutOverride (..))
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.API
 import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
@@ -90,7 +91,7 @@ import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNodeArgs (..),
-                   StdRunNodeArgs (..))
+                   StdRunNodeArgs (..), stdChainSyncTimeout)
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
@@ -105,6 +106,7 @@ import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
+import           Ouroboros.Network.Protocol.ChainSync.Codec
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                    gatherConfiguredSockets, getSocketOrSocketInfoAddr)
@@ -481,6 +483,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
               , srnTraceChainDB                 = chainDBTracer tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
+              , srnChainSyncTimeout             = customizeChainSyncTimeout
               }
       DisabledP2PMode -> do
         nt <- TopologyNonP2P.readTopologyFileOrError nc
@@ -529,9 +532,22 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnDiffusionTracersExtra       = diffusionTracersExtra tracers
               , srnEnableInDevelopmentVersions = ncExperimentalProtocolsEnabled nc
               , srnTraceChainDB                = chainDBTracer tracers
+              , srnChainSyncTimeout            = customizeChainSyncTimeout
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               }
  where
+
+  customizeChainSyncTimeout :: Maybe (IO ChainSyncTimeout)
+  customizeChainSyncTimeout = case ncChainSyncIdleTimeout nc of
+    NoTimeoutOverride -> Nothing
+    TimeoutOverride t -> Just $ do
+      cst <- stdChainSyncTimeout
+      pure $ case t of
+        0 ->
+          cst { idleTimeout = Nothing }
+        _ ->
+          cst { idleTimeout = Just t }
+
   logStartupWarnings :: IO ()
   logStartupWarnings = do
     (case p2pMode of
