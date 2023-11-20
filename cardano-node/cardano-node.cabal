@@ -13,7 +13,7 @@ license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
 build-type:             Simple
-extra-source-files:     ChangeLog.md
+extra-doc-files:        ChangeLog.md
 
 Flag unexpected_thunks
   Description:          Turn on unexpected thunks checks

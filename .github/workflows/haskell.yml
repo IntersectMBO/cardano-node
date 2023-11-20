@@ -25,19 +25,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ["9.2.7", "9.6.2"]
-        cabal: ["3.10.1.0"]
+        ghc: ["9.2.8", "9.6.3"]
+        cabal: ["3.10.2.0"]
         os: [macos-latest, windows-latest, ubuntu-latest]
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2023-10-04"
-
-      # Modify this value to "invalidate" the secp cache.
-      SECP_CACHE_VERSION: "2022-12-30"
-
-      # current ref from: 27.02.2022
-      SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
+      CABAL_CACHE_VERSION: "2023-11-20-3"
 
     concurrency:
       group: >
@@ -82,7 +76,7 @@ jobs:
     - name: Configure build
       shell: bash
       run: |
-        cp ".github/workflows/cabal.project.local.ci.$(uname -s)" cabal.project.local
+        cp .github/workflows/cabal.project.local.ci cabal.project.local
         echo "# cabal.project.local"
         cat cabal.project.local
 
@@ -177,13 +171,6 @@ jobs:
             echo "Skipping artifact $exe"
           fi
         done
-
-    - name: Save Artifact
-      if: matrix.ghc == '8.10.7'
-      uses: actions/upload-artifact@v1
-      with:
-        name: artifacts-${{ matrix.os }}
-        path: ./artifacts
 
     - name: Delete socket files in chairman tests in preparation for uploading artifacts
       if: ${{ always() }}

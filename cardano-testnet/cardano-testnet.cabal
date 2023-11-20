@@ -13,7 +13,7 @@ license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
 build-type:             Simple
-
+extra-doc-files:        CHANGELOG.md
 
 common project-config
   default-language:     Haskell2010
