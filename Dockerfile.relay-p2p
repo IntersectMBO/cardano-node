@@ -1,0 +1,43 @@
+FROM debian:stable-slim as build
+RUN apt-get update -y \
+    && apt-get install -y automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw5 libtool autoconf libsqlite3-dev m4 ca-certificates gcc libc6-dev curl python3 htop nload \
+    && apt-get clean
+RUN mkdir secp256k1-sources && cd secp256k1-sources && git clone https://github.com/bitcoin-core/secp256k1.git && cd secp256k1 && git reset --hard ac83be33d0956faf6b7f61a60ab524ef7d6a473a && ./autogen.sh && ./configure --prefix=/usr --enable-module-schnorrsig --enable-experimental && make && make check && make install
+RUN git clone https://github.com/input-output-hk/libsodium && cd libsodium && git checkout $(curl -L https://github.com/input-output-hk/iohk-nix/releases/latest/download/INFO | awk '$1 == "debian.libsodium-vrf.deb" { rev = gensub(/.*-(.*)\.deb/, "\\1", "g", $2); print rev }') && ./autogen.sh && ./configure && make && make check && make install
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | BOOTSTRAP_HASKELL_NONINTERACTIVE=1 BOOTSTRAP_HASKELL_GHC_VERSION=8.10.7 BOOTSTRAP_HASKELL_CABAL_VERSION=3.8.1.0 BOOTSTRAP_HASKELL_INSTALL_STACK=1 BOOTSTRAP_HASKELL_INSTALL_HLS=1 BOOTSTRAP_HASKELL_ADJUST_BASHRC=P sh
+
+ENV PATH="/root/.cabal/bin:/root/.ghcup/bin:/root/.local/bin:$PATH"
+RUN git clone https://github.com/supranational/blst && cd blst && git checkout v0.3.10 && ./build.sh && echo cHJlZml4PS91c3IKZXhlY19wcmVmaXg9JHtwcmVmaXh9CmxpYmRpcj0ke2V4ZWNfcHJlZml4fS9saWIKaW5jbHVkZWRpcj0ke3ByZWZpeH0vaW5jbHVkZQoKTmFtZTogbGliYmxzdApEZXNjcmlwdGlvbjogTXVsdGlsaW5ndWFsIEJMUzEyLTM4MSBzaWduYXR1cmUgbGlicmFyeQpVUkw6IGh0dHBzOi8vZ2l0aHViLmNvbS9zdXByYW5hdGlvbmFsL2Jsc3QKVmVyc2lvbjogMC4zLjEwCkNmbGFnczogLUkke2luY2x1ZGVkaXJ9CkxpYnM6IC1MJHtsaWJkaXJ9IC1sYmxzdA== | base64 --decode >> libblst.pc && cp libblst.pc /usr/lib/pkgconfig/ && cp bindings/blst_aux.h bindings/blst.h bindings/blst.hpp  /usr/include/ && cp libblst.a /usr/lib && chmod u=rw,go=r /usr/lib/libblst.a && chmod u=rw,go=r /usr/lib/pkgconfig/libblst.pc && chmod u=rw,go=r /usr/include/blst.h && chmod u=rw,go=r /usr/include/blst.hpp && chmod u=rw,go=r /usr/include/blst_aux.h
+
+ENV LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" \
+    PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
+RUN echo "Building tags/$VERSION..." 
+COPY . .
+RUN cabal update \
+    && cabal configure --with-compiler=ghc-8.10.7 \
+    && echo "package cardano-crypto-praos" >>  cabal.project.local \
+    && echo "  flags: -external-libsodium-vrf" >>  cabal.project.local \
+    && cabal build all \
+    && mkdir -p /root/.local/bin/ \
+    && cp -p dist-newstyle/build/x86_64-linux/ghc-8.10.7/cardano-node-*/x/cardano-node/build/cardano-node/cardano-node /root/.local/bin/
+
+FROM debian:stable-slim
+COPY --from=build /root/.local/bin/ /bin/
+COPY --from=build /usr/local/lib/ /lib/
+RUN apt-get update && apt-get install git  -y
+RUN apt-get -y install libsodium23 libsodium-dev
+RUN apt-get install -y automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw5 libtool autoconf libsqlite3-dev m4 ca-certificates gcc libc6-dev
+RUN mkdir secp256k1-sources && cd secp256k1-sources && git clone https://github.com/bitcoin-core/secp256k1.git && cd secp256k1 && git reset --hard ac83be33d0956faf6b7f61a60ab524ef7d6a473a && ./autogen.sh && ./configure --prefix=/usr --enable-module-schnorrsig --enable-experimental && make && make check && make install
+RUN groupadd -g 1001 cardano
+RUN useradd -rm -d /home/cardano -s /bin/bash -g 1001 -G sudo -u 1001 cardano
+RUN mkdir -p /home/cardano/data/db
+RUN mkdir /home/cardano/ipc
+RUN cd /home/cardano && git clone https://github.com/input-output-hk/cardano-configurations.git
+RUN cd /home/cardano/cardano-configurations/network/mainnet/cardano-node/ && sed -i -e 's/127.0.0.1/0.0.0.0/g' config.json && sed -i '1 a "EnableP2P": true,' config.json && wget https://book.world.dev.cardano.org/environments/mainnet/topology-p2p.json && mv topology-p2p.json topology.json
+RUN chown -R 1001:1001 /home/cardano/ipc 
+RUN chown -R 1001:1001 /home/cardano/data
+RUN chown -R 1001:1001 /home/cardano/cardano-configurations
+USER 1001:1001
+WORKDIR /home/cardano
+ENTRYPOINT cardano-node run --database-path /home/cardano/data/db --topology "$TOPOLOGY_LOCATION" --socket-path /home/cardano/ipc/node.socket --host-addr "$PUBLIC_IP" --port "$PORT" --config /home/cardano/cardano-configurations/network/"$NETWORK"/cardano-node/config.json
