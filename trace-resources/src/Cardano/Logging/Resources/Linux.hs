@@ -8,10 +8,12 @@ module Cardano.Logging.Resources.Linux
 
 import           Cardano.Logging.Resources.Types
 import           Data.Maybe (fromMaybe)
+import           qualified Data.Text as T
+import           qualified Data.Text.IO as T (readFile)
+import           qualified Data.Text.Read as T (decimal)
 import           Data.Word
 import qualified GHC.Stats as GhcStats
 import           System.Posix.Files (fileMode, getFileStatus, intersectFileModes, ownerReadMode)
-import           Text.Read (readMaybe)
 
 -- * Disk IO stats:
 -- /proc/[pid]/io (since kernel 2.6.20)
@@ -146,9 +148,15 @@ readProcList fp = do
     fs <- getFileStatus fp
     if readable fs
     then do
-        cs <- readFile fp
-        return $ map (\s -> fromMaybe 0 (readMaybe s :: Maybe Integer)) (words cs)
+        cs <- T.readFile fp
+        return $ map (fromMaybe 0 . readMaybeText) (T.words cs)
     else
         return []
   where
     readable fs = intersectFileModes (fileMode fs) ownerReadMode == ownerReadMode
+
+readMaybeText :: Integral a => T.Text -> Maybe a
+readMaybeText t =
+  case T.decimal t of
+    Right (v, _)  -> Just v
+    _             -> Nothing

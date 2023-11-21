@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   trace-resources
-version:                0.2.0.2
+version:                0.2.1.0
 synopsis:               Package for tracing resources for linux, mac and windows
 description:            Package for tracing resources for linux, mac and windows.
 category:               Cardano,
@@ -84,3 +84,17 @@ test-suite trace-resources-test
                         -Wredundant-constraints
                         -Wmissing-export-lists
                         -Wno-incomplete-patterns
+
+benchmark bench
+    import:           project-config
+    type:             exitcode-stdio-1.0
+    main-is:          trace-resources-bench.hs
+    hs-source-dirs:   bench
+    build-depends:        base >=4.12 && <5
+                        , criterion
+                        , trace-resources
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages -threaded -rtsopts -O2
+        "-with-rtsopts=-T"
