@@ -163,6 +163,7 @@ readLogObjectStream f okDErr loAnyLimit =
               . Text.fromText
               . LText.pack)
             id)
+    . filter (not . LBS.null)
     . LBS.split (fromIntegral $ fromEnum '\n')
  where
    isDecodeError x = \case
