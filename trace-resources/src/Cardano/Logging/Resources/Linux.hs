@@ -8,9 +8,9 @@ module Cardano.Logging.Resources.Linux
 
 import           Cardano.Logging.Resources.Types
 import           Data.Maybe (fromMaybe)
-import           qualified Data.Text as T
-import           qualified Data.Text.IO as T (readFile)
-import           qualified Data.Text.Read as T (decimal)
+import qualified Data.Text as T
+import qualified Data.Text.IO as T (readFile)
+import qualified Data.Text.Read as T (decimal)
 import           Data.Word
 import qualified GHC.Stats as GhcStats
 import           System.Posix.Files (fileMode, getFileStatus, intersectFileModes, ownerReadMode)
@@ -84,30 +84,21 @@ readProcBlockInOut = do
 --   IpExt: 0 0 20053 8977 2437 23 3163525943 196480057 2426648 1491754 394285 5523 0 3513269 0 217426 0
 --
 readProcNetInOut :: IO (Word64, Word64)
+#ifdef WITH_NETSTAT
+readProcNetInOut = do
+  fields <- T.words . fourthLine . T.lines <$> T.readFile "/proc/self/net/netstat"
+  case -- We're only interested in 'InOctets' & 'OutOctets':
+    fmap readMaybeText . take 2 . drop 7 $ fields of
+      [Just netIn, Just netOut] -> pure (netIn, netOut)
+      _ -> pure (0, 0)
+  where
+    -- Assumption: 'IpExt:' values are on the fourth line of how the kernel displays the buffer
+    fourthLine ls = case drop 3 ls of
+      l:_ -> l
+      _   -> T.empty
+#else
 readProcNetInOut = pure (0, 0)
--- do
---     fields <- words . lastline . lines <$> readFile "/proc/self/net/netstat"
---     case -- We're only interested in 'InOctets' & 'OutOctets':
---       fmap readMaybe . take 2 . drop 7 $ fields of
---         [Just netIn, Just netOut] -> pure (netIn, netOut)
---         _ -> pure (0, 0)
---  where
---    lastline ls | length ls == 4 = last ls -- ensures we read the fourth line
---                | otherwise = []
-
--- readProcNetInOut = do
---     ipexts0 <- words <$> lastline <$> lines <$> readFile (pathProcNet pid)
---     let ipexts1 = map (\i -> readMaybe i :: Maybe Integer) ipexts0
---     return $
---       if length ipexts1 >= 9  -- enough fields available
---       then mkCounters [("IpExt:InOctets", ipexts1 !! 7), ("IpExt:OutOctets", ipexts1 !! 8)]
---       else []
---   where
---     lastline ls | length ls == 4 = last ls -- ensures we read the fourth line
---                 | otherwise = []
---     mkCounters = catMaybes . map (\(n,c) -> mkCounter n c)
---     mkCounter _n Nothing = Nothing
---     mkCounter n (Just i) = Just (Counter NetCounter (pack n) (Bytes $ fromInteger i))
+#endif
 
 -- | TODO we have to expand the |readMemStats| function
 -- to read full data from |proc|
