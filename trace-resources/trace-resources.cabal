@@ -17,6 +17,11 @@ extra-source-files:     include/os-support-darwin.h
 extra-doc-files:        CHANGELOG.md
                         README.md
 
+Flag with-netstat
+    Description: Enable netstat values in Linux resource traces (potentially expensive)
+    Manual: True
+    Default: False
+
 common project-config
   default-language:     Haskell2010
 
@@ -28,6 +33,7 @@ library
                         Cardano.Logging.Resources.Dummy
 
   default-extensions:   OverloadedStrings
+                        CPP
   build-depends:        base >=4.12 && <5
                       , trace-dispatcher
                       , text
@@ -47,6 +53,9 @@ library
                         -Wredundant-constraints
                         -Wmissing-export-lists
                         -Wno-incomplete-patterns
+
+  if flag(with-netstat)
+    CPP-options:        -DWITH_NETSTAT
 
   if os(linux)
     exposed-modules:    Cardano.Logging.Resources.Linux
