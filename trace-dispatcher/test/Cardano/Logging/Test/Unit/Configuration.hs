@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Examples.Configuration (
+module Cardano.Logging.Test.Unit.Configuration (
     testConfig
 ) where
 

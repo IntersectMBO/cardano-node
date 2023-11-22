@@ -6,7 +6,7 @@
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
-module Examples.DataPoint (
+module Cardano.Logging.Test.Unit.DataPoint (
   testDataPoint
 ) where
 

@@ -8,7 +8,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Examples.TestObjects (
+module Cardano.Logging.Test.Unit.TestObjects (
 
     TraceForgeEvent(..)
   , LogBlock(..)

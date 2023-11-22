@@ -1,11 +1,11 @@
-module Examples.FrequencyLimiting (
+module Cardano.Logging.Test.Unit.FrequencyLimiting (
   testLimiting
 ) where
 
 import           Control.Concurrent
 
 import           Cardano.Logging
-import           Examples.TestObjects
+import           Cardano.Logging.Test.Unit.TestObjects
 
 repeated :: Trace IO (TraceForgeEvent LogBlock) -> Int -> Int -> IO ()
 repeated _ 0 _ = pure ()

@@ -1,11 +1,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Examples.Routing (
+module Cardano.Logging.Test.Unit.Routing (
   testRouting
 ) where
 
 import           Cardano.Logging
-import           Examples.TestObjects
+import           Cardano.Logging.Test.Unit.TestObjects
 
 routingTracer1 :: (Monad m)
   => Trace m (TraceForgeEvent LogBlock)

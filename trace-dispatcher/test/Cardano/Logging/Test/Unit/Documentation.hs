@@ -3,7 +3,7 @@
 
 
 
-module Examples.Documentation (
+module Cardano.Logging.Test.Unit.Documentation (
   docTracers
 ) where
 
@@ -11,7 +11,7 @@ import qualified Data.Map as Map
 import qualified Data.Text.IO as T
 
 import           Cardano.Logging
-import           Examples.TestObjects
+import           Cardano.Logging.Test.Unit.TestObjects
 
 docTracers :: IO ()
 docTracers = do

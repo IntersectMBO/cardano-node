@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
-module Examples.EKG (
+module Cardano.Logging.Test.Unit.EKG (
   testEKG
 ) where
 

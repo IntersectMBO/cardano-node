@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 
-module Examples.Aggregation (
+module Cardano.Logging.Test.Unit.Aggregation (
   testAggregation
 ) where
 
