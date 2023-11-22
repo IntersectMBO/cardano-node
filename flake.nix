@@ -168,6 +168,19 @@
             }
           );
 
+          hydraJobs = with pkgs.lib; recursiveUpdate flake.hydraJobs {
+            checks = {
+              inherit hlint;
+            };
+
+            # ensure hydra notify
+            gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
+          } // optionalAttrs (system == "x86_64-linux") ({
+            inherit cardano-deployment cardano-node-linux cardano-node-win64;
+          } // nixosChecks) // optionalAttrs (system == "x86_64-darwin") {
+            inherit cardano-node-macos;
+          };
+
           # TODO[sgillespie]: Make this a first-class hydra job
           nixosChecks =
             pkgs.lib.pipe pkgs [
@@ -189,29 +202,6 @@
 
         in
           with pkgs; lib.recursiveUpdate (removeAttrs flake [ "ciJobs" ]) (rec {
-            # required/nonrequired aggregates
-            hydraJobs = callPackages iohkNix.utils.ciJobsAggregates {
-              ciJobs = flake.hydraJobs // {
-                # ensure hydra notify:
-                gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
-              } // {
-                checks = {
-                  inherit hlint;
-                };
-              };
-
-              nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
-            # Extra hydra jobs
-            } // lib.optionalAttrs (system == "x86_64-linux") {
-              inherit cardano-deployment cardano-node-linux cardano-node-win64;
-            } // lib.optionalAttrs (system == "x86_64-darwin") {
-              inherit cardano-node-macos;
-            } // {
-              checks = {
-                inherit hlint;
-              };
-            } // lib.optionalAttrs (system == "x86_64-linux") nixosChecks;
-
             apps.default = flake.apps."cardano-node:exe:cardano-node";
 
             checks = {
@@ -239,5 +229,10 @@
               };
             };
           }) // {
+            # Completele replace hydraJobs
+            hydraJobs = callPackages iohkNix.utils.ciJobsAggregates {
+              ciJobs = hydraJobs;
+              nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
+            } // hydraJobs;
           });
 }
