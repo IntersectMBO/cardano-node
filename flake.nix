@@ -181,13 +181,28 @@
             inherit cardano-node-macos;
           };
 
-          # TODO[sgillespie]: Make this a first-class hydra job
+          # Generate NixOS tests for each compiler version
           nixosChecks =
-            pkgs.lib.pipe pkgs [
-              (p: import ./nix/nixos/tests { pkgs = p; })
-              (pkgs.lib.mapAttrs (_: v: v.${system} or v))
-              (iohkNix.lib.prefixNamesWith "nixosTests:")
-            ];
+            let
+              # Create an attrset of NixOS tests with the specified prefix-nixosTests-
+              # prefix
+              mkNixosChecks = prefix: pkgs':
+                pkgs.lib.pipe pkgs' [
+                  (p: import ./nix/nixos/tests { pkgs = p; })
+                  (pkgs.lib.mapAttrs (_: v: v.${system} or v))
+                  (iohkNix.lib.prefixNamesWith "${prefix}nixosTests-")
+                ];
+              # Override cardanoNodePackages with the variants' exes
+              mkPkgs = project: project.pkgs.extend (_: _: {
+                cardanoNodePackages = mkCardanoNodePackages project;
+              });
+            in
+              # Generate nixosTests-xyzTest with the default compiler (ghc8107)
+              mkNixosChecks "" pkgs //
+              # Generate ghcXYZ-nixosTests-xyzTest for each compiler
+              pkgs.lib.concatMapAttrs
+                (name: project: mkNixosChecks "${name}-" (mkPkgs project))
+                project.projectVariants;
 
           cardano-deployment = pkgs.cardanoLib.mkConfigHtml {
             inherit (pkgs.cardanoLib.environments) mainnet preview preprod;
