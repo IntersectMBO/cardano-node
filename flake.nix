@@ -88,6 +88,21 @@
     let
       supportedSystems = import ./nix/supported-systems.nix;
       defaultSystem = nixpkgs.lib.head supportedSystems;
+
+      mkCardanoNodePackages = project:
+        let
+          set-git-rev = import ./nix/set-git-rev.nix { inherit (project) pkgs; };
+        in
+          with project.hsPkgs; project.exes // {
+            inherit (project.pkgs) cardanoLib;
+            # add some executables from other relevant packages
+            inherit (bech32.components.exes) bech32;
+            inherit (ouroboros-consensus-cardano.components.exes)
+              db-analyser db-synthesizer db-truncater;
+            # add cardano-node and cardano-cli with their git revision stamp
+            cardano-node = set-git-rev project.exes.cardano-node;
+            cardano-cli = set-git-rev cardano-cli.components.exes.cardano-cli;
+          };
     in
       utils.lib.eachSystem supportedSystems (system:
         let
@@ -125,21 +140,6 @@
                 })
             ] ++ (import ops-lib.outPath {}).overlays;
           };
-
-          mkCardanoNodePackages = project:
-            let
-              set-git-rev = import ./nix/set-git-rev.nix { inherit (project) pkgs; };
-            in
-              with project.hsPkgs; project.exes // {
-                inherit (project.pkgs) cardanoLib;
-                # add some executables from other relevant packages
-                inherit (bech32.components.exes) bech32;
-                inherit (ouroboros-consensus-cardano.components.exes)
-                  db-analyser db-synthesizer db-truncater;
-                # add cardano-node and cardano-cli with their git revision stamp
-                cardano-node = set-git-rev project.exes.cardano-node;
-                cardano-cli = set-git-rev cardano-cli.components.exes.cardano-cli;
-              };
 
           mkBinaryRelease = project: platform:
             let
@@ -202,6 +202,7 @@
 
         in
           with pkgs; lib.recursiveUpdate (removeAttrs flake [ "ciJobs" ]) (rec {
+            inherit project;
             apps.default = flake.apps."cardano-node:exe:cardano-node";
 
             checks = {
@@ -216,23 +217,26 @@
             } // lib.optionalAttrs (system == "x86_64-macos") {
               inherit cardano-node-macos;
             };
-
-            nixosModules = {
-              cardano-node = { pkgs, lib, ... }: {
-                imports = [ ./nix/nixos/cardano-node-service.nix ];
-                services.cardano-node.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
-              };
-
-              cardano-submit-api = { pkgs, lib, ... }: {
-                imports = [ ./nix/nixos/cardano-submit-api-service.nix ];
-                services.cardano-submit-api.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
-              };
-            };
           }) // {
             # Completele replace hydraJobs
             hydraJobs = callPackages iohkNix.utils.ciJobsAggregates {
               ciJobs = hydraJobs;
               nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
             } // hydraJobs;
-          });
+          }) // {
+            # NixOS modules are not system specific
+            nixosModules = {
+              cardano-node = { pkgs, lib, ... }: {
+                imports = [ ./nix/nixos/cardano-node-service.nix ];
+                services.cardano-node.cardanoNodePackages =
+                  lib.mkDefault (mkCardanoNodePackages self.project.${pkgs.system});
+              };
+
+              cardano-submit-api = { pkgs, lib, ... }: {
+                imports = [ ./nix/nixos/cardano-submit-api-service.nix ];
+                services.cardano-submit-api.cardanoNodePackages =
+                  lib.mkDefault (mkCardanoNodePackages self.project.${pkgs.system});
+              };
+            };
+          };
 }
