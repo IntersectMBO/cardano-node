@@ -73,6 +73,8 @@ case "$op" in
         mkdir -p                                              "$gen_dir"
         cp $(jq '."start"'                         -r $gtor)  "$gen_dir"/start.sh
         cp $(jq '."config"'                        -r $gtor)  "$gen_dir"/run-script.json
+        cp $(jq '."plutus-redeemer"'               -r $gtor)  "$gen_dir"/plutus-redeemer.json
+        cp $(jq '."plutus-datum"'                  -r $gtor)  "$gen_dir"/plutus-datum.json
 
         local trac_dir="$dir"/tracer
         mkdir -p                                    "$trac_dir"

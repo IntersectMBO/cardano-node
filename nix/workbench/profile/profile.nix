@@ -172,9 +172,11 @@ let
               generatorService =
                 with generator-service;
                 __toJSON
-                { name           = "generator";
-                  start          = start.JSON;
-                  config         = config.JSON;
+                { name            = "generator";
+                  start           = start.JSON;
+                  config          = config.JSON;
+                  plutus-redeemer = plutus-redeemer.JSON;
+                  plutus-datum    = plutus-datum.JSON;
                 };
               tracerService =
                 with tracer-service;

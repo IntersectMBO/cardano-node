@@ -27,11 +27,17 @@ let
   finaliseGeneratorService =
     profile: svc: recursiveUpdate svc
       ({
-        sigKey         = "../genesis/utxo-keys/utxo1.skey";
-        runScriptFile  = "run-script.json";
+        sigKey              = "../genesis/utxo-keys/utxo1.skey";
+        runScriptFile       = "run-script.json";
         ## path to the config and socket of the locally running node.
-        nodeConfigFile = "../${runningNode}/config.json";
+        nodeConfigFile      = "../${runningNode}/config.json";
         localNodeSocketPath = "../${runningNode}/node.socket";
+        ## Relative paths to use for the Plutus redeemer and datum properties.
+        ## These two properties override the default that is "plutus.redeemer"
+        ## and "plutus.datum" being file paths to the Nix Store that may or may
+        ## exist depending on the workbench's backend requested.
+        plutusRedeemerFile  = "plutus-redeemer.json";
+        plutusDatumFile     = "plutus-datum.json";
       } // optionalAttrs profile.node.tracer {
         tracerSocketPath = "../tracer/tracer.socket";
       } // optionalAttrs backend.useCabalRun {
@@ -129,12 +135,34 @@ let
       };
 
       config = rec {
-        # TODO / FIXME
-        # the string '...' is not allowed to refer to a store path (such as '')
-        # value = service.decideRunScript service;
         value = __fromJSON (__readFile JSON);
         JSON  = jsonFilePretty "generator-run-script.json"
-                (service.decideRunScript service);
+          (service.decideRunScript service);
+      };
+
+      # The Plutus redeemer file is handled as an extra service file to deploy.
+      plutus-redeemer = rec {
+        # Not present on every profile.
+        value = if serviceConfig.plutus == null
+                then null
+                else serviceConfig.plutus.redeemer or null
+        ;
+        # Always creates a file, even if it just contains "null".
+        # Easier to handle if always every service properties is not null.
+        JSON = jsonFilePretty "plutus-redeemer.json" (__toJSON value)
+        ;
+      };
+
+      # The Plutus datum file is handled as an extra service file to deploy.
+      plutus-datum = rec {
+        # Not present on every profile.
+        value = if serviceConfig.plutus == null
+                then null
+                else serviceConfig.plutus.datum or null
+        ;
+        # Always creates a file, even if it just contains "null".
+        # Easier to handle if always every service properties is not null.
+        JSON = jsonFilePretty "plutus-datum.json" (__toJSON value);
       };
     })
     nodeSpecs;

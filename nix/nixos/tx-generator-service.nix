@@ -10,10 +10,31 @@ let
           ## except for having to weave the Either through things
           ## To refer to a plutus script file, do something like:
           ## { Right = pkgs.plutus-scripts + "/generated-plutus-scripts/" + cfg.plutus.script; }
-          script = { Left = cfg.plutus.script; };
-          redeemer = pkgs.writeText "plutus-redeemer.json" (__toJSON cfg.plutus.redeemer);
-          datum    = if cfg.plutus.datum == null then null else
-                     pkgs.writeText "plutus-datum.json"    (__toJSON cfg.plutus.datum);
+          script   = { Left = cfg.plutus.script; };
+          ## For cardano-ops backwards compatibility the redeemer and datum
+          ## files are file paths to the Nix Store UNLESS cfg.plutusRedeemerFile
+          ## and cfg.plutusDatumFile are present (these should be file paths to
+          ## where they are going to be deployed).
+          redeemer = if cfg.plutus.redeemer == null
+                     then null
+                     else if cfg.plutusRedeemerFile == null
+                       # File path to the Nix Store
+                       then pkgs.writeText
+                              "plutus-redeemer.json"
+                              (__toJSON cfg.plutus.redeemer)
+                       # Config supplied file path.
+                       else cfg.plutusRedeemerFile
+                     ;
+          datum    = if cfg.plutus.datum == null
+                     then null
+                     else if cfg.plutusDatumFile == null
+                       # File path to the Nix Store
+                       then pkgs.writeText
+                              "plutus-datum.json"
+                              (__toJSON cfg.plutus.datum)
+                       # Config supplied file path.
+                       else cfg.plutusDatumFile
+                     ;
           inherit (cfg.plutus) limitExecutionMem limitExecutionSteps;
         };
       targetNodes = targetNodesList cfg.targetNodes;
@@ -77,6 +98,10 @@ in pkgs.commonLib.defServiceModule
           datum               = mayOpt attrs "Plutus script datum.";
           redeemer            = mayOpt attrs "Plutus script redeemer.";
         };
+
+        # Overrides the usage of Nix Store paths by default.
+        plutusRedeemerFile = mayOpt str "Plutus redeemer file path.";
+        plutusDatumFile    = mayOpt str "Plutus datum file path.";
 
         debugMode       = opt bool false     "Set debug mode: Redirect benchmarking txs to localhost.";
 

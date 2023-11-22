@@ -751,6 +751,26 @@ let
               change_mode = "noop";
               error_on_missing_key = true;
             }
+            ## Generator Plutus redeemer.
+            {
+              env = false;
+              destination = "local/${stateDir}/generator/plutus-redeemer.json";
+              data = escapeTemplate
+                (__readFile profileData.generator-service.plutus-redeemer.JSON)
+              ;
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
+            ## Generator Plutus datum.
+            {
+              env = false;
+              destination = "local/${stateDir}/generator/plutus-datum.json";
+              data = escapeTemplate
+                (__readFile profileData.generator-service.plutus-datum.JSON)
+              ;
+              change_mode = "noop";
+              error_on_missing_key = true;
+            }
           ])
           ++
           # healthcheck
