@@ -1,6 +1,6 @@
 { pkgs, lib, cardanoLib
 , runCommand
-, runJq, jsonFilePretty
+, runJq
 , runWorkbenchJqOnly,  runWorkbench
 }:
 
@@ -64,6 +64,10 @@ let
       ''
   ;
 
+  jsonFilePretty = name: x: runJq name ''--null-input --sort-keys
+                                         --argjson x '${x}'
+                                       '' "$x";
+
   mkServices = { profile, nodeSpecs, topologyFiles, backend, profiling }:
     rec {
       inherit
@@ -72,7 +76,7 @@ let
           {
             inherit backend profile nodeSpecs;
             inherit topologyFiles profiling;
-            inherit runJq runWorkbench;
+            inherit runJq runWorkbench jsonFilePretty;
             baseNodeConfig = cardanoLib.environments.testnet.nodeConfig;
           })
         node-services;
@@ -92,7 +96,7 @@ let
           ../service/tracer.nix
           {
             inherit backend profile nodeSpecs;
-            inherit runJq;
+            inherit runJq jsonFilePretty;
           })
         tracer-service;
 

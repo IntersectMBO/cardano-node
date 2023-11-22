@@ -38,17 +38,6 @@ let
         executable     = "tx-generator";
       });
 
-  finaliseGeneratorConfig =
-    cfg: recursiveUpdate cfg
-      ({
-        AlonzoGenesisFile    = "../genesis/genesis.alonzo.json";
-        ShelleyGenesisFile   = "../genesis/genesis-shelley.json";
-        ByronGenesisFile     = "../genesis/byron/genesis.json";
-        ConwayGenesisFile    = "../genesis/genesis.conway.json";
-      } // optionalAttrs backend.useCabalRun {
-        executable           = "tx-generator";
-      });
-
   ##
   ## generatorServiceConfig :: Map NodeId NodeSpec -> ServiceConfig
   ##
@@ -94,31 +83,32 @@ let
   ##
   generatorServiceConfigService =
     serviceConfig:
-    let
-    systemdCompat.options = {
-      systemd.services = mkOption {};
-      systemd.sockets = mkOption {};
-      users = mkOption {};
-      assertions = mkOption {};
-      environment = mkOption {};
-    };
-    eval = let
-      extra = {
-        services.tx-generator = {
-          enable = true;
-        } // serviceConfig;
-      };
-    in evalModules {
-      prefix = [];
-      modules = import ../../nixos/module-list.nix
-                ++ [ (import ../../nixos/tx-generator-service.nix pkgs)
-                     systemdCompat extra
-                     { config._module.args = { inherit pkgs; }; }
-                   ]
-                ++ [ backend.service-modules.generator or {} ];
-      # args = { inherit pkgs; };
-    };
-    in eval.config.services.tx-generator;
+      let
+        systemdCompat.options = {
+          systemd.services = mkOption {};
+          systemd.sockets = mkOption {};
+          users = mkOption {};
+          assertions = mkOption {};
+          environment = mkOption {};
+        };
+        eval =
+          let
+            extra = {
+              services.tx-generator = {enable = true;} // serviceConfig;
+            };
+          in evalModules {
+            prefix = [];
+            modules =    import ../../nixos/module-list.nix
+                      ++ [
+                            (import ../../nixos/tx-generator-service.nix pkgs)
+                              systemdCompat extra
+                              {config._module.args = {inherit pkgs;};}
+                         ]
+                      ++ [ backend.service-modules.generator or {} ]
+                      ;
+            # args = { inherit pkgs; };
+          };
+      in eval.config.services.tx-generator;
 
   ##
   ## generator-service :: (ServiceConfig, Service, NodeConfig, Script)
