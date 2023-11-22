@@ -51,7 +51,7 @@ genesisSecureInitialFund networkId genesis srcKey destKey TxGenTxParams{txParamF
       Just (_, lovelace)  ->
         let
           txOutValue :: TxOutValue era
-          txOutValue = mkTxOutValueAdaOnly $ lovelace - txParamFee
+          txOutValue = lovelaceToTxOutValue (shelleyBasedEra @era) $ lovelace - txParamFee
         in genesisExpenditure networkId srcKey destAddr txOutValue txParamFee txParamTTL destKey
   where
     destAddr = keyAddress @era networkId destKey

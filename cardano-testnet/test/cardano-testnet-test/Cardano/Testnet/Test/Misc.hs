@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Cardano.Testnet.Test.Misc where
 
 import           Prelude
@@ -5,6 +6,7 @@ import           Prelude
 import           Data.List (isInfixOf)
 import qualified GHC.Stack as GHC
 
+import           Cardano.Api.Pretty
 import           Cardano.CLI.EraBased.Run.Query (renderOpCertIntervalInformation)
 import           Cardano.CLI.Types.Common
 import           Cardano.CLI.Types.Output
@@ -20,15 +22,15 @@ prop_op_cert_valid_kes_period opCertFp output =
     case qKesOpCertIntervalInformation output of
       OpCertWithinInterval{} -> success
       info@OpCertStartingKesPeriodIsInTheFuture{} ->
-        failMessage GHC.callStack
+        failMessage GHC.callStack . prettyToString
           $ "Expected OpCertWithinInterval but got: OpCertStartingKesPeriodIsInTheFuture\n"
           <> renderOpCertIntervalInformation opCertFp info
       info@OpCertExpired{} ->
-        failMessage GHC.callStack
+        failMessage GHC.callStack . prettyToString
           $ "Expected OpCertWithinInterval but got: OpCertExpired\n"
           <> renderOpCertIntervalInformation opCertFp info
       info@OpCertSomeOtherError{} ->
-        failMessage GHC.callStack
+        failMessage GHC.callStack . prettyToString
           $ "Expected OpCertWithinInterval but got: OpCertSomeOtherError\n"
           <> renderOpCertIntervalInformation opCertFp info
 

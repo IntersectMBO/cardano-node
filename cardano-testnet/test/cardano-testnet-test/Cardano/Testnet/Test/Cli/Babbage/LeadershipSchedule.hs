@@ -83,8 +83,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
 
   execConfig <- H.headM (poolSprockets tr) >>= H.mkExecConfig tempBaseAbsPath
 
-  sbe <- case cardanoEraStyle era of
-           ShelleyBasedEra era' -> return era'
+  let sbe = shelleyBasedEra @BabbageEra
   work <- H.note tempAbsPath'
 
   ----------------Need to register an SPO------------------

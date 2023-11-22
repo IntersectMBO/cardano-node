@@ -11,6 +11,7 @@ module Cardano.Testnet.Test.Node.Shutdown
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 
 import           Cardano.Testnet
 
@@ -99,7 +100,7 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
 
   -- 2. Create Alonzo genesis
   alonzoBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> shelleyDir </> "genesis.alonzo.spec.json"
-  gen <- H.evalEither $ first displayError defaultAlonzoGenesis
+  gen <- H.evalEither $ first (prettyToString . prettyError) defaultAlonzoGenesis
   H.evalIO $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
 
   -- 2. Create Conway genesis

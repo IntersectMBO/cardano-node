@@ -42,7 +42,7 @@ import qualified Network.DNS as DNS (Domain)
 import           Network.Socket (PortNumber, SockAddr (..))
 import           Text.Read (readMaybe)
 
-import           Ouroboros.Network.PeerSelection.RootPeersDNS (DomainAccessPoint (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (DomainAccessPoint (..))
 
 
 -- | IPv4 or IPv6 address with a port number.

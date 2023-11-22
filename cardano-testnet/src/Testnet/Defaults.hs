@@ -14,6 +14,7 @@ module Testnet.Defaults
   ) where
 
 import           Cardano.Api (AnyCardanoEra (..), CardanoEra (..))
+import           Cardano.Api.Pretty
 import qualified Cardano.Api.Shelley as Api
 
 import           Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
@@ -47,10 +48,10 @@ import           Testnet.Start.Types
 
 
 instance Api.Error AlonzoGenesisError where
-  displayError (AlonzoGenErrCostModels e) =
-    "Error in Alonzo genesis cost models: " <> show e
-  displayError (AlonzoGenErrTooMuchPrecision r) =
-    "Too much precision for bounded rational in Alonzo genesis: " ++ show r
+  prettyError (AlonzoGenErrCostModels e) =
+    "Error in Alonzo genesis cost models: " <> pshow e
+  prettyError (AlonzoGenErrTooMuchPrecision r) =
+    "Too much precision for bounded rational in Alonzo genesis: " <> pshow r
 
 data AlonzoGenesisError
   = AlonzoGenErrTooMuchPrecision Rational

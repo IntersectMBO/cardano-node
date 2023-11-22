@@ -1139,6 +1139,10 @@ instance
     mconcat [ "kind" .= String "InvalidPrevGovActionIdsInProposals"
             , "proposals" .= proposals
             ]
+  forMachine _ (Conway.VotingOnExpiredGovAction actions) =
+    mconcat [ "kind" .= String "VotingOnExpiredGovAction"
+            , "action" .= actions
+            ]
 
 instance
   ( Consensus.ShelleyBasedEra era

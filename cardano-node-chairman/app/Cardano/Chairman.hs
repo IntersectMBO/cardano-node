@@ -5,7 +5,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
@@ -18,7 +17,6 @@ import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadThrow
 import           Control.Monad.Class.MonadTimer.SI
 import           Control.Tracer
-import           Data.Coerce (coerce)
 import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -27,6 +25,7 @@ import           Data.Proxy (Proxy (..))
 import           Data.Word (Word64)
 
 import           Ouroboros.Consensus.Block.Abstract
+import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Config.SecurityParam
 
 import           Ouroboros.Network.AnchoredFragment (Anchor, AnchoredFragment)
@@ -56,7 +55,7 @@ chairmanTest :: ()
   -> DiffTime
   -> BlockNo
   -> [SocketPath]
-  -> ConsensusModeParams CardanoMode
+  -> ConsensusModeParams
   -> SecurityParam
   -> IO ()
 chairmanTest tracer nw runningTime progressThreshold socketPaths cModeParams secParam = do
@@ -65,8 +64,7 @@ chairmanTest tracer nw runningTime progressThreshold socketPaths cModeParams sec
 
   -- Run the chairman and get the final snapshot of the chain from each node.
   chainsSnapshot <-
-    obtainGetHeader (consensusModeOnly cModeParams) $
-     runChairman
+    runChairman
       tracer
       nw
       runningTime
@@ -78,8 +76,7 @@ chairmanTest tracer nw runningTime progressThreshold socketPaths cModeParams sec
 
   -- Test if we achieved consensus
   consensusSuccess <- either throwIO return $
-                        obtainHasHeader (consensusModeOnly cModeParams) $
-                        consensusCondition (consensusModeOnly cModeParams) chainsSnapshot secParam
+                        consensusCondition chainsSnapshot secParam
 
   traceWith tracer (show consensusSuccess)
 
@@ -109,14 +106,10 @@ instance Exception ConsensusFailure where
 -- the intersection of each pair is within K blocks of each tip.
 
 consensusCondition :: ()
-  => ConsensusBlockForMode CardanoMode ~ blk
-  => HasHeader (Header blk)
-  => ConvertRawHash blk
-  => ConsensusMode CardanoMode
-  -> Map PeerId (AnchoredFragment (Header blk))
+  => Map PeerId (AnchoredFragment (Header (CardanoBlock StandardCrypto)))
   -> SecurityParam
   -> Either ConsensusFailure ConsensusSuccess
-consensusCondition cMode chains securityParam =
+consensusCondition chains securityParam =
     -- The (forkTooLong . chainForkPoints) predicate is not transitive.
     -- As a consequence, we need to check it between all the pairs of chains:
     let forks =
@@ -126,14 +119,14 @@ consensusCondition cMode chains securityParam =
           ]
      in case List.find (forkTooLong . snd) forks of
           Just ((peerid1, peerid2), (intersection, tip1, tip2)) ->do
-            let apiTip1 = fromConsensusTip cMode $ AF.anchorToTip tip1
-                apiTip2 = fromConsensusTip cMode $ AF.anchorToTip tip2
+            let apiTip1 = AF.anchorToTip tip1
+                apiTip2 = AF.anchorToTip tip2
                 intersectChainPt = fromAnchor intersection
 
             Left $
               ConsensusFailure
-                (peerid1, apiTip1)
-                (peerid2, apiTip2)
+                (peerid1, fromConsensusTip apiTip1)
+                (peerid2, fromConsensusTip apiTip2)
                 intersectChainPt
                 securityParam
           Nothing ->
@@ -144,7 +137,7 @@ consensusCondition cMode chains securityParam =
                    $ List.minimumBy (comparing AF.anchorToBlockNo)
                        [ intersection | (_,(intersection,_,_)) <- forks ])
                 -- all the chain tips:
-                [ (peerid, fromConsensusTip cMode $ AF.anchorToTip (AF.headAnchor chain))
+                [ (peerid, fromConsensusTip $ AF.anchorToTip (AF.headAnchor chain))
                 | (peerid, chain) <- Map.toList chains ]
   where
     chainForkPoints
@@ -244,10 +237,8 @@ progressCondition minBlockNo (ConsensusSuccess _ tips) = do
    getBlockNo (ChainTip _ _ bNum) = bNum
    getBlockNo ChainTipAtGenesis = 0
 
-runChairman :: forall blk. ()
-  => ConsensusBlockForMode CardanoMode ~ blk
-  => GetHeader (ConsensusBlockForMode CardanoMode)
-  => Tracer IO String
+runChairman ::
+     Tracer IO String
   -> NetworkId
   -- ^ Security parameter, if a fork is deeper than it 'runChairman'
   -- will throw an exception.
@@ -255,15 +246,15 @@ runChairman :: forall blk. ()
   -- ^ Run for this much time.
   -> [SocketPath]
   -- ^ Local socket directory
-  -> ConsensusModeParams CardanoMode
+  -> ConsensusModeParams
   -> SecurityParam
   -> IO (Map SocketPath
              (AF.AnchoredSeq
                 (WithOrigin SlotNo)
-                (Anchor (Header blk))
-                (Header blk)))
+                (Anchor (Header (CardanoBlock StandardCrypto)))
+                (Header (CardanoBlock StandardCrypto))))
 runChairman tracer networkId runningTime socketPaths cModeParams secParam = do
-    let initialChains :: Map SocketPath (AF.AnchoredSeq (WithOrigin SlotNo) (Anchor (Header blk)) (Header blk))
+    let initialChains :: Map SocketPath (AF.AnchoredSeq (WithOrigin SlotNo) (Anchor (Header (CardanoBlock StandardCrypto))) (Header (CardanoBlock StandardCrypto)))
         initialChains = Map.fromList
           [ (socketPath, AF.Empty AF.AnchorGenesis)
           | socketPath <- socketPaths]
@@ -278,7 +269,7 @@ runChairman tracer networkId runningTime socketPaths cModeParams secParam = do
                           , localNodeSocketPath = socketPath
                           }
               chairmanChainSyncClient = LocalChainSyncClient $
-                chainSyncClient (showTracing tracer) socketPath chainsVar cModeParams secParam
+                chainSyncClient (showTracing tracer) socketPath chainsVar secParam
               protocolsInMode = LocalNodeClientProtocols
                 { localChainSyncClient = chairmanChainSyncClient
                 , localTxSubmissionClient = Nothing
@@ -310,22 +301,19 @@ addBlock sockPath chainsVar blk =
 
 -- | Rollback a single block.  If the rollback point is not found, we simply
 -- error.  It should never happen if the security parameter is set up correctly.
-rollback :: forall blk. ()
-  => ConsensusBlockForMode CardanoMode ~ blk
-  => HasHeader (Header blk)
-  => SocketPath
-  -> StrictTVar IO (Map SocketPath (AnchoredFragment (Header (ConsensusBlockForMode CardanoMode))))
-  -> ConsensusMode CardanoMode
+rollback ::
+     SocketPath
+  -> StrictTVar IO (Map SocketPath (AnchoredFragment (Header (CardanoBlock StandardCrypto))))
   -> ChainPoint
   -> STM IO ()
-rollback sockPath chainsVar cMode p =
+rollback sockPath chainsVar p =
   modifyTVar chainsVar (Map.adjust fn sockPath)
   where
-    p' :: Point (Header (ConsensusBlockForMode CardanoMode))
-    p' = coerce $ toConsensusPointInMode cMode p
+    p' :: Point (Header (CardanoBlock StandardCrypto))
+    p' = toConsensusPointHF p
 
-    fn :: AnchoredFragment (Header (ConsensusBlockForMode CardanoMode))
-       -> AnchoredFragment (Header (ConsensusBlockForMode CardanoMode))
+    fn :: AnchoredFragment (Header (CardanoBlock StandardCrypto))
+       -> AnchoredFragment (Header (CardanoBlock StandardCrypto))
     fn cf = case AF.rollback p' cf of
       Nothing  -> error "rollback error: rollback beyond chain fragment"
       Just cf' -> cf'
@@ -333,76 +321,57 @@ rollback sockPath chainsVar cMode p =
 -- Chain-Sync client
 type ChairmanTrace' = ConsensusSuccess
 
-type ChainVar = StrictTVar IO (Map SocketPath (AnchoredFragment (Header (ConsensusBlockForMode CardanoMode))))
+type ChainVar = StrictTVar IO (Map SocketPath (AnchoredFragment (Header (CardanoBlock StandardCrypto))))
 
 -- | 'chainSyncClient which build chain fragment; on every roll forward it will
 -- check if there is consensus on immutable chain.
 chainSyncClient
-  :: GetHeader (ConsensusBlockForMode CardanoMode)
-  => Tracer IO ChairmanTrace'
+  :: Tracer IO ChairmanTrace'
   -> SocketPath
   -> ChainVar
-  -> ConsensusModeParams CardanoMode
   -> SecurityParam
-  -> ChainSyncClient (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
-chainSyncClient tracer sockPath chainsVar cModeP secParam = ChainSyncClient $ pure $
+  -> ChainSyncClient BlockInMode ChainPoint ChainTip IO ()
+chainSyncClient tracer sockPath chainsVar secParam = ChainSyncClient $ pure $
   -- Notify the core node about the our latest points at which we are
   -- synchronised.  This client is not persistent and thus it just
   -- synchronises from the genesis block.  A real implementation should send
   -- a list of points up to a point which is k blocks deep.
   SendMsgFindIntersect
-    [fromConsensusPointInMode (consensusModeOnly cModeP) Block.genesisPoint]
+    [ChainPointAtGenesis]
     ClientStIntersect
     { recvMsgIntersectFound    = \_ _ -> ChainSyncClient $ pure clientStIdle
     , recvMsgIntersectNotFound = \  _ -> ChainSyncClient $ pure clientStIdle
     }
   where
-    clientStIdle :: ClientStIdle (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+    clientStIdle :: ClientStIdle BlockInMode ChainPoint ChainTip IO ()
     clientStIdle = SendMsgRequestNext clientStNext (pure clientStNext)
 
-    clientStNext :: ClientStNext (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
+    clientStNext :: ClientStNext BlockInMode ChainPoint ChainTip IO ()
     clientStNext = ClientStNext
       { recvMsgRollForward = \blk _tip -> ChainSyncClient $ do
           -- add block & check if there is consensus on immutable chain
           -- trace the decision or error
           res <- atomically $ do
             addBlock sockPath chainsVar $ toConsensusBlock blk
-            obtainHasHeader (consensusModeOnly cModeP) $ checkConsensus (consensusModeOnly cModeP) chainsVar secParam
+            checkConsensus chainsVar secParam
           traceWith tracer res
           pure clientStIdle
       , recvMsgRollBackward = \point _tip -> ChainSyncClient $ do
           -- rollback & check
           res <- atomically $ do
-            rollback sockPath chainsVar (consensusModeOnly cModeP) point
-            obtainHasHeader (consensusModeOnly cModeP) $ checkConsensus (consensusModeOnly cModeP) chainsVar secParam
+            rollback sockPath chainsVar point
+            checkConsensus chainsVar secParam
           traceWith tracer res
           pure clientStIdle
       }
 
 -- Helpers
 
-obtainHasHeader
-  :: ConsensusBlockForMode CardanoMode ~ blk
-  => ConsensusMode CardanoMode
-  -> ((HasHeader (Header blk), ConvertRawHash (ConsensusBlockForMode CardanoMode)) => a)
-  -> a
-obtainHasHeader CardanoMode f = f
-
-obtainGetHeader
-  :: ConsensusMode CardanoMode
-  -> ( (GetHeader (ConsensusBlockForMode CardanoMode)
-       ) => a)
-  -> a
-obtainGetHeader CardanoMode f = f
-
 -- | Check that all nodes agree with each other, within the security parameter.
 checkConsensus
-  :: HasHeader (Header (ConsensusBlockForMode CardanoMode))
-  => ConvertRawHash (ConsensusBlockForMode CardanoMode)
-  => ConsensusMode CardanoMode
-  -> ChainVar
+  :: ChainVar
   -> SecurityParam
   -> STM IO ConsensusSuccess
-checkConsensus cMode chainsVar secParam = do
+checkConsensus chainsVar secParam = do
   chainsSnapshot <- readTVar chainsVar
-  either throwIO return $ consensusCondition cMode  chainsSnapshot secParam
+  either throwIO return $ consensusCondition chainsSnapshot secParam

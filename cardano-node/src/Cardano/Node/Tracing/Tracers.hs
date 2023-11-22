@@ -477,11 +477,6 @@ mkDiffusionTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
                 ["Startup", "DiffusionInit"]
     configureTracers configReflection trConfig [dtDiffusionInitializationTr]
 
-    !dtLedgerPeersTr   <- mkCardanoTracer
-                trBase trForward mbTrEKG
-                ["Net", "Peers", "Ledger"]
-    configureTracers configReflection trConfig [dtLedgerPeersTr]
-
     pure $ Diffusion.Tracers
        { Diffusion.dtMuxTracer                     = Tracer $
            traceWith dtMuxTr
@@ -493,8 +488,6 @@ mkDiffusionTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
            traceWith dtLocalHandshakeTr
        , Diffusion.dtDiffusionTracer               = Tracer $
            traceWith dtDiffusionInitializationTr
-       , Diffusion.dtLedgerPeersTracer             = Tracer $
-           traceWith dtLedgerPeersTr
        }
 
 mkDiffusionTracersExtra  :: forall p2p.
@@ -583,6 +576,11 @@ mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint t
       ["Net", "Server", "Local"]
     configureTracers configReflection trConfig [localServerTr]
 
+    !dtLedgerPeersTr   <- mkCardanoTracer
+      trBase trForward mbTrEKG
+      ["Net", "Peers", "Ledger"]
+    configureTracers configReflection trConfig [dtLedgerPeersTr]
+
     pure $ Diffusion.P2PTracers P2P.TracersExtra
              { P2P.dtTraceLocalRootPeersTracer = Tracer $
                  traceWith localRootPeersTr
@@ -614,6 +612,8 @@ mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint t
                  traceWith localConnectionManagerTr
              , P2P.dtLocalServerTracer = Tracer $
                  traceWith localServerTr
+             , P2P.dtTraceLedgerPeersTracer = Tracer $
+                 traceWith dtLedgerPeersTr
              }
 
 mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint trConfig DisabledP2PMode = do

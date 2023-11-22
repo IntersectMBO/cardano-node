@@ -3,7 +3,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -fno-warn-partial-fields #-}
 
 {-|
@@ -16,8 +15,10 @@ module  Cardano.TxGenerator.Types
 
 import           GHC.Generics (Generic)
 import           GHC.Natural
+import           Prettyprinter
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 
 import           Cardano.Api.Shelley (ProtocolParameters)
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -130,18 +131,22 @@ data TxGenError where
   PlutusError     :: Show e => !e -> TxGenError
   TxGenError      :: !String -> TxGenError
 
-deriving instance Show TxGenError
+instance Show TxGenError where
+  show (ApiError e) = prettyToString $ "ApiError " <> parens (prettyError e)
+  show (ProtocolError e) = prettyToString $ "ProtocolError " <> parens (prettyError e)
+  show (PlutusError e) = prettyToString $ "ProtocolError " <> parens (pshow e)
+  show (TxGenError e) = prettyToString $ "ApiError " <> parens (pshow e)
 
 instance Semigroup TxGenError where
   TxGenError a <> TxGenError b  = TxGenError (a <> b)
-  TxGenError a <> b             = TxGenError (a <> show b)
-  a            <> TxGenError b  = TxGenError (show a <> b)
-  a            <> b             = TxGenError (show a <> show b)
+  TxGenError a <> b             = TxGenError (a <> prettyToString (pshow b))
+  a            <> TxGenError b  = TxGenError (prettyToString (pshow a) <> b)
+  a            <> b             = TxGenError $ prettyToString (pshow a <> pshow b)
 
 instance Error TxGenError where
-  displayError = \case
-    ApiError e        -> displayError e
-    ProtocolError e   -> displayError e
+  prettyError = \case
+    ApiError e        -> prettyError e
+    ProtocolError e   -> prettyError e
     _                 -> ""
 
 {-

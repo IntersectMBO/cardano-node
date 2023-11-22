@@ -131,6 +131,7 @@ testPartialYamlConfig =
     , pncMaybeMempoolCapacityOverride = mempty
     , pncProtocolIdleTimeout = mempty
     , pncTimeWaitTimeout = mempty
+    , pncChainSyncIdleTimeout = mempty
     , pncAcceptedConnectionsLimit = mempty
     , pncTargetNumberOfRootPeers = mempty
     , pncTargetNumberOfKnownPeers = mempty
@@ -140,7 +141,7 @@ testPartialYamlConfig =
     , pncTargetNumberOfEstablishedBigLedgerPeers = mempty
     , pncTargetNumberOfActiveBigLedgerPeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
-    , pncPeerSharing = Last (Just NoPeerSharing)
+    , pncPeerSharing = Last (Just PeerSharingDisabled)
     }
 
 -- | Example partial configuration theoretically created
@@ -169,6 +170,7 @@ testPartialCliConfig =
     , pncMaybeMempoolCapacityOverride = mempty
     , pncProtocolIdleTimeout = mempty
     , pncTimeWaitTimeout = mempty
+    , pncChainSyncIdleTimeout = mempty
     , pncAcceptedConnectionsLimit = mempty
     , pncTargetNumberOfRootPeers = mempty
     , pncTargetNumberOfKnownPeers = mempty
@@ -178,7 +180,7 @@ testPartialCliConfig =
     , pncTargetNumberOfEstablishedBigLedgerPeers = mempty
     , pncTargetNumberOfActiveBigLedgerPeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
-    , pncPeerSharing = Last (Just NoPeerSharing)
+    , pncPeerSharing = Last (Just PeerSharingDisabled)
     }
 
 -- | Expected final NodeConfiguration
@@ -208,6 +210,7 @@ eExpectedConfig = do
     , ncMaybeMempoolCapacityOverride = Nothing
     , ncProtocolIdleTimeout = 5
     , ncTimeWaitTimeout = 60
+    , ncChainSyncIdleTimeout = NoTimeoutOverride
     , ncAcceptedConnectionsLimit =
         AcceptedConnectionsLimit
           { acceptedConnectionsHardLimit = 512
@@ -222,7 +225,7 @@ eExpectedConfig = do
     , ncTargetNumberOfEstablishedBigLedgerPeers = 10
     , ncTargetNumberOfActiveBigLedgerPeers = 5
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
-    , ncPeerSharing = NoPeerSharing
+    , ncPeerSharing = PeerSharingDisabled
     }
 
 -- -----------------------------------------------------------------------------

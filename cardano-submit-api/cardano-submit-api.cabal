@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-submit-api
-version:                3.1.8
+version:                3.2.0
 synopsis:               A web server that allows transactions to be POSTed to the cardano chain
 description:            A web server that allows transactions to be POSTed to the cardano chain.
 homepage:               https://github.com/input-output-hk/cardano-node
@@ -15,7 +15,7 @@ maintainer:             operations@iohk.io
 category:               Cardano,
                         Web,
 build-type:             Simple
-extra-source-files:     CHANGELOG.md
+extra-doc-files:        CHANGELOG.md
 
 common project-config
   default-language:     Haskell2010
@@ -39,9 +39,9 @@ library
                       , aeson
                       , async
                       , bytestring
-                      , cardano-api ^>= 8.29
+                      , cardano-api ^>= 8.33
                       , cardano-binary
-                      , cardano-cli ^>= 8.13
+                      , cardano-cli ^>= 8.15
                       , cardano-crypto-class ^>= 2.1.2
                       , cardano-ledger-byron ^>= 1.0
                       , formatting
@@ -51,7 +51,7 @@ library
                       , network
                       , optparse-applicative-fork
                       , ouroboros-consensus-cardano
-                      , ouroboros-network ^>= 0.9.1
+                      , ouroboros-network ^>= 0.10
                       , ouroboros-network-protocols
                       , prometheus >= 2.2.4
                       , servant

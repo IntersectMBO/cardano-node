@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-testnet
-version:                8.6.0
+version:                8.7.0
 synopsis:               The cardano full node
 description:            The cardano full node.
 copyright:              2021-2023 Input Output Global Inc (IOG).
@@ -13,7 +13,7 @@ license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
 build-type:             Simple
-
+extra-doc-files:        CHANGELOG.md
 
 common project-config
   default-language:     Haskell2010
@@ -34,8 +34,8 @@ library
   build-depends:        aeson
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 8.29
-                      , cardano-cli ^>= 8.13
+                      , cardano-api ^>= 8.33
+                      , cardano-cli ^>= 8.15
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger-alonzo
@@ -55,7 +55,8 @@ library
                       , hedgehog-extras ^>= 0.4.7.0
                       , mtl
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.9.1
+                      , ouroboros-network ^>= 0.10
+                      , ouroboros-network-api
                       , process
                       , resourcet
                       , safe-exceptions

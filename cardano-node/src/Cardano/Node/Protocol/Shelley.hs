@@ -21,11 +21,11 @@ module Cardano.Node.Protocol.Shelley
   , validateGenesis
   ) where
 
-import           Cardano.Prelude (ConvertText (..))
 import           Control.Exception (IOException)
 import           Control.Monad.Except (ExceptT, MonadError (..))
 
 import qualified Cardano.Api as Api
+import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley hiding (FileError)
 
 import qualified Data.Aeson as Aeson
@@ -280,9 +280,9 @@ data ShelleyProtocolInstantiationError =
   deriving Show
 
 instance Error ShelleyProtocolInstantiationError where
-  displayError (GenesisReadError err) = displayError err
-  displayError (GenesisValidationError err) = displayError err
-  displayError (PraosLeaderCredentialsError err) = displayError err
+  prettyError (GenesisReadError err) = prettyError err
+  prettyError (GenesisValidationError err) = prettyError err
+  prettyError (PraosLeaderCredentialsError err) = prettyError err
 
 
 data GenesisReadError =
@@ -292,26 +292,26 @@ data GenesisReadError =
   deriving Show
 
 instance Error GenesisReadError where
-  displayError (GenesisReadFileError fp err) =
+  prettyError (GenesisReadFileError fp err) =
         "There was an error reading the genesis file: "
-     <> toS fp <> " Error: " <> show err
+     <> pshow fp <> " Error: " <> pshow err
 
-  displayError (GenesisHashMismatch actual expected) =
-        "Wrong genesis file: the actual hash is " <> show actual
+  prettyError (GenesisHashMismatch actual expected) =
+        "Wrong genesis file: the actual hash is " <> pshow actual
      <> ", but the expected genesis hash given in the node "
-     <> "configuration file is " <> show expected
+     <> "configuration file is " <> pshow expected
 
-  displayError (GenesisDecodeError fp err) =
+  prettyError (GenesisDecodeError fp err) =
         "There was an error parsing the genesis file: "
-     <> toS fp <> " Error: " <> show err
+     <> pshow fp <> " Error: " <> pshow err
 
 
 newtype GenesisValidationError = GenesisValidationErrors [Shelley.ValidationErr]
   deriving Show
 
 instance Error GenesisValidationError where
-  displayError (GenesisValidationErrors vErrs) =
-    T.unpack (T.unlines (map Shelley.describeValidationErr vErrs))
+  prettyError (GenesisValidationErrors vErrs) =
+    pshow (T.unlines (map Shelley.describeValidationErr vErrs))
 
 
 data PraosLeaderCredentialsError =
@@ -331,21 +331,21 @@ data PraosLeaderCredentialsError =
   deriving Show
 
 instance Error PraosLeaderCredentialsError where
-  displayError (CredentialsReadError fp err) =
+  prettyError (CredentialsReadError fp err) =
         "There was an error reading a credentials file: "
-     <> toS fp <> " Error: " <> show err
+     <> pshow fp <> " Error: " <> pshow err
 
-  displayError (EnvelopeParseError fp err) =
+  prettyError (EnvelopeParseError fp err) =
         "There was an error parsing a credentials envelope: "
-     <> toS fp <> " Error: " <> show err
+     <> pshow fp <> " Error: " <> pshow err
 
-  displayError (FileError fileErr) = displayError fileErr
-  displayError (MismatchedKesKey kesFp certFp) =
-       "The KES key provided at: " <> show kesFp
-    <> " does not match the KES key specified in the operational certificate at: " <> show certFp
-  displayError OCertNotSpecified  = missingFlagMessage "shelley-operational-certificate"
-  displayError VRFKeyNotSpecified = missingFlagMessage "shelley-vrf-key"
-  displayError KESKeyNotSpecified = missingFlagMessage "shelley-kes-key"
+  prettyError (FileError fileErr) = prettyError fileErr
+  prettyError (MismatchedKesKey kesFp certFp) =
+       "The KES key provided at: " <> pshow kesFp
+    <> " does not match the KES key specified in the operational certificate at: " <> pshow certFp
+  prettyError OCertNotSpecified  = pshow $ missingFlagMessage "shelley-operational-certificate"
+  prettyError VRFKeyNotSpecified = pshow $ missingFlagMessage "shelley-vrf-key"
+  prettyError KESKeyNotSpecified = pshow $ missingFlagMessage "shelley-kes-key"
 
 missingFlagMessage :: String -> String
 missingFlagMessage flag =

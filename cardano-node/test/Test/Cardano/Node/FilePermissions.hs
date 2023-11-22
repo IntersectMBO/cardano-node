@@ -18,6 +18,7 @@ import           Data.Foldable
 import           System.Directory (removeFile)
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 import           Cardano.Node.Run (checkVRFFilePermissions)
 import           Control.Exception (bracket)
 import           Control.Monad (Monad (..))
@@ -68,7 +69,7 @@ createFileWithOwnerPermissions :: HasTextEnvelope a => File () Out -> a -> Prope
 createFileWithOwnerPermissions targetfp value = do
   result <- liftIO $ writeLazyByteStringFileWithOwnerPermissions targetfp $ textEnvelopeToJSON Nothing value
   case result of
-    Left err -> failWith Nothing $ displayError @(FileError ()) err
+    Left err -> failWith Nothing $ prettyToString $ prettyError @(FileError ()) err
     Right () -> return ()
 
 #ifdef UNIX

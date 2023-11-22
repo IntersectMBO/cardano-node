@@ -364,7 +364,6 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
      , Diffusion.dtLocalMuxTracer                = localMuxTracer
      , Diffusion.dtLocalHandshakeTracer          = localHandshakeTracer
      , Diffusion.dtDiffusionTracer               = initializationTracer
-     , Diffusion.dtLedgerPeersTracer             = ledgerPeersTracer
      }
    diffusionTracersExtra' enP2P =
      case enP2P of
@@ -423,6 +422,9 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
            , P2P.dtLocalInboundGovernorTracer =
                tracerOnOff (traceLocalInboundGovernor trSel)
                             verb "LocalInboundGovernor" tr
+           , P2P.dtTraceLedgerPeersTracer =
+               tracerOnOff (traceLedgerPeers trSel)
+                            verb "LedgerPeers" tr
            }
        DisabledP2PMode ->
          Diffusion.NonP2PTracers NonP2P.TracersExtra
@@ -449,8 +451,6 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
      tracerOnOff (traceLocalHandshake trSel) verb "LocalHandshake" tr
    handshakeTracer =
      tracerOnOff (traceHandshake trSel) verb "Handshake" tr
-   ledgerPeersTracer =
-     tracerOnOff (traceLedgerPeers trSel) verb "LedgerPeers" tr
    initializationTracer =
      tracerOnOff (traceDiffusionInitialization trSel) verb
        "DiffusionInitializationTracer" tr
