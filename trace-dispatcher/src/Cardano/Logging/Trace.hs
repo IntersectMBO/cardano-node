@@ -181,7 +181,6 @@ withSeverity (Trace tr) = Trace $
         (lc, Left e) -> (lc, Left e))
       tr
   where
-    {-# INLINE process #-}
     process lc cont@(Right v) =
       if isJust (lcSeverity lc)
         then (lc,cont)
@@ -236,7 +235,6 @@ withPrivacy (Trace tr) = Trace $
         (lc, Left e) -> (lc, Left e))
       tr
   where
-    {-# INLINE process #-}
     process lc cont@(Right v) =
       if isJust (lcPrivacy lc)
         then (lc,cont)
@@ -268,7 +266,6 @@ withDetails (Trace tr) = Trace $
         (lc, Left e) -> (lc, Left e))
       tr
   where
-    {-# INLINE process #-}
     process lc cont@(Right v) =
       if isJust (lcDetails lc)
         then (lc,cont)
