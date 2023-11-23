@@ -244,7 +244,7 @@ data SeverityS
     | Critical                -- ^ Severe situations
     | Alert                   -- ^ Take immediate action
     | Emergency               -- ^ System is unusable
-  deriving (Show, Eq, Ord, Bounded, Enum, Read, AE.ToJSON, Generic, Serialise)
+  deriving (Show, Eq, Ord, Bounded, Enum, Read, AE.ToJSON, AE.FromJSON, Generic, Serialise)
 
 -- | Severity for a filter
 -- Nothing means don't show anything (Silence)
@@ -498,10 +498,6 @@ newtype Folding a b = Folding b
 
 unfold :: Folding a b -> b
 unfold (Folding b) = b
-
-
----------------------------------------------------------------------------
--- LogFormatting instances
 
 instance LogFormatting b => LogFormatting (Folding a b) where
   forMachine v (Folding b) =  forMachine v b

@@ -1,7 +1,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Cardano.Logging.Test.Unit.Trivial (
     test1
+  , test1Res
   , test2
+  , test2Res
 ) where
 
 
@@ -11,6 +13,7 @@ import           Cardano.Logging.Test.Unit.TestObjects
 
 import           Data.IORef
 import           Data.Text (Text)
+
 
 -- | Make sure the function append name is only called once
 --   for every path element
@@ -36,11 +39,18 @@ test1 = do
     msgs <- readIORef testTracerRef
     pure $ map formattedMsgAsText msgs
 
-test2 :: IO ()
+test1Res :: [Text]
+test1Res = ["{\"at\":\"2023-11-22T15:04:24.03979674Z\",\"ns\":\"Outer1.Inner2.Inner3\",\"data\":{\"kind\":\"TraceStartLeadershipCheck\",\"slot\":2002},\"sev\":\"Critical\",\"thread\":\"76\",\"host\":\"deusXmachina\"}"
+           ,"{\"at\":\"2023-11-22T15:04:24.039794343Z\",\"ns\":\"Outer1.Inner1\",\"data\":{\"current slot\":4400,\"kind\":\"TraceBlockFromFuture\",\"tip\":300},\"sev\":\"Info\",\"thread\":\"76\",\"host\":\"deusXmachina\"}"
+           ,"{\"at\":\"2023-11-22T15:04:24.039793997Z\",\"ns\":\"Outer1.Inner2\",\"data\":{\"kind\":\"TraceSlotIsImmutable\",\"slot\":3333,\"tip\":\"Origin\",\"tipBlockNo\":1},\"sev\":\"Warning\",\"thread\":\"76\",\"host\":\"deusXmachina\"}"
+           ,"{\"at\":\"2023-11-22T15:04:24.039787567Z\",\"ns\":\"Outer1.Inner1\",\"data\":{\"kind\":\"TraceStartLeadershipCheck\",\"slot\":1001},\"sev\":\"Error\",\"thread\":\"76\",\"host\":\"deusXmachina\"}"
+           ]
+
+test2 :: IO [Text]
 test2 = do
     stdoutTracerRef <- newIORef []
     stdoutTracer' <- testTracer stdoutTracerRef
-    simpleTracer <- humanFormatter True (Just "cardano") stdoutTracer'
+    simpleTracer <- machineFormatter (Just "cardano") stdoutTracer'
     confState <- emptyConfigReflection
     configureTracers confState emptyTraceConfig [simpleTracer]
     let simpleTracer1  = filterTraceBySeverity
@@ -54,3 +64,14 @@ test2 = do
     traceWith simpleTracerC2 message3
     traceWith (appendInnerName "Inner3" simpleTracerC3) message4
     traceWith (appendInnerName "cont1" $ appendInnerName "cont2" $ appendInnerName "cont3" simpleTracerC2) message1
+    msgs <- readIORef stdoutTracerRef
+    let res = map formattedMsgAsText msgs
+    pure res
+
+test2Res :: [Text]
+test2Res = ["{\"at\":\"2023-11-23T14:07:26.112114044Z\",\"ns\":\"Outer1.Inner1.cont3.cont2.cont1\",\"data\":{\"kind\":\"TraceStartLeadershipCheck\",\"slot\":1001},\"sev\":\"Info\",\"thread\":\"460\",\"host\":\"deusXmachina\"}"
+           ,"{\"at\":\"2023-11-23T14:07:26.112107139Z\",\"ns\":\"Outer1.Inner2.Inner3\",\"data\":{\"kind\":\"TraceStartLeadershipCheck\",\"slot\":2002},\"sev\":\"Info\",\"thread\":\"460\",\"host\":\"deusXmachina\"}"
+           ,"{\"at\":\"2023-11-23T14:07:26.112101607Z\",\"ns\":\"Outer1.Inner1\",\"data\":{\"current slot\":4400,\"kind\":\"TraceBlockFromFuture\",\"tip\":300},\"sev\":\"Info\",\"thread\":\"460\",\"host\":\"deusXmachina\"}"
+           ,"{\"at\":\"2023-11-23T14:07:26.112096216Z\",\"ns\":\"Outer1.Inner2\",\"data\":{\"kind\":\"TraceSlotIsImmutable\",\"slot\":3333,\"tip\":\"Origin\",\"tipBlockNo\":1},\"sev\":\"Critical\",\"thread\":\"460\",\"host\":\"deusXmachina\"}"
+           ,"{\"at\":\"2023-11-23T14:07:26.112085435Z\",\"ns\":\"Outer1.Inner1\",\"data\":{\"kind\":\"TraceStartLeadershipCheck\",\"slot\":1001},\"sev\":\"Info\",\"thread\":\"460\",\"host\":\"deusXmachina\"}"
+           ]
