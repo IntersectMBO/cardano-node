@@ -15,9 +15,6 @@ import Data.List                        (dropWhileEnd)
 import Data.Map.Strict                  qualified as Map
 import Data.Text                        qualified as T
 import Data.Text.Lazy                   qualified as LT
-#if __GLASGOW_HASKELL__ >= 906
-import Data.Type.Equality               (type (~))
-#endif
 import Options.Applicative              qualified as Opt
 
 import Data.CDF

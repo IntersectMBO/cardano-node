@@ -55,7 +55,6 @@ data ProtocolInstantiationError =
 
 
 instance Error ProtocolInstantiationError where
-  displayError (ByronProtocolInstantiationError   err) = displayError err
-  displayError (ShelleyProtocolInstantiationError err) = displayError err
-  displayError (CardanoProtocolInstantiationError err) = displayError err
-
+  prettyError (ByronProtocolInstantiationError   err) = prettyError err
+  prettyError (ShelleyProtocolInstantiationError err) = prettyError err
+  prettyError (CardanoProtocolInstantiationError err) = prettyError err

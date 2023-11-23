@@ -16,7 +16,8 @@ module Cardano.TxSubmit.Types
   , renderTxCmdError
   ) where
 
-import           Cardano.Api (AnyCardanoEra, AnyConsensusMode (..), Error (..), TxId, textShow)
+import           Cardano.Api (Error (..), TxId, textShow)
+import           Cardano.Api.Pretty
 import           Cardano.Binary (DecoderError)
 import           Data.Aeson (ToJSON (..), Value (..))
 import           Data.ByteString.Char8 (ByteString)
@@ -30,7 +31,6 @@ import           Servant (Accept (..), JSON, MimeRender (..), MimeUnrender (..),
 import           Servant.API.Generic (ToServantApi, (:-))
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.List as L
 
 newtype TxSubmitPort = TxSubmitPort Int
 
@@ -40,7 +40,7 @@ newtype RawCborDecodeError = RawCborDecodeError [DecoderError]
   deriving (Eq, Show)
 
 instance Error RawCborDecodeError where
-  displayError (RawCborDecodeError decodeErrors) = "RawCborDecodeError decode error: \n" <> L.intercalate "  \n" (fmap show decodeErrors)
+  prettyError (RawCborDecodeError decodeErrors) = "RawCborDecodeError decode error: " <> pshow (fmap pshow decodeErrors)
 
 -- | An error that can occur in the transaction submission web API.
 data TxSubmitWebApiError
@@ -54,7 +54,6 @@ newtype EnvSocketError = CliEnvVarLookup Text deriving (Eq, Show)
 
 data TxCmdError
   = TxCmdSocketEnvError EnvSocketError
-  | TxCmdEraConsensusModeMismatch !AnyConsensusMode !AnyCardanoEra
   | TxCmdTxReadError !RawCborDecodeError
   | TxCmdTxSubmitError !Text
   | TxCmdTxSubmitErrorEraMismatch !EraMismatch
@@ -67,7 +66,6 @@ convertJson = String . renderTxSubmitWebApiError
 
 renderTxCmdError :: TxCmdError -> Text
 renderTxCmdError (TxCmdSocketEnvError socketError) = "socket env error " <> textShow socketError
-renderTxCmdError (TxCmdEraConsensusModeMismatch mode era) = "era consensus mode mismatch" <> textShow mode <> " " <> textShow era
 renderTxCmdError (TxCmdTxReadError envelopeError) = "transaction read error " <> textShow envelopeError
 renderTxCmdError (TxCmdTxSubmitError msg) = "transaction submit error " <> msg
 renderTxCmdError (TxCmdTxSubmitErrorEraMismatch eraMismatch) = "transaction submit era mismatch" <> textShow eraMismatch

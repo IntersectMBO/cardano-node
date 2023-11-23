@@ -35,12 +35,11 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult
 import           Cardano.Node.Configuration.Logging (LoggingLayer)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 
-import           Cardano.Api.Shelley (CardanoMode)
 import           Cardano.CLI.Types.Common (SigningKeyFile)
 
 import           Cardano.Api (BlockType (..), ConsensusModeParams (..), EpochSlots (..),
                    LocalNodeConnectInfo (..), NetworkId (..), PaymentKey, SigningKey, SocketPath,
-                   TxInMode, TxValidationErrorInMode, protocolInfo, submitTxToNodeLocal)
+                   TxInMode, TxValidationErrorInCardanoMode, protocolInfo, submitTxToNodeLocal)
 import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
 
 type CardanoBlock = Consensus.CardanoBlock StandardCrypto
@@ -61,8 +60,8 @@ protocolToNetworkId :: SomeConsensusProtocol -> NetworkId
 protocolToNetworkId ptcl
   = Testnet $ getNetworkMagic $ configBlock $ protocolToTopLevelConfig ptcl
 
-makeLocalConnectInfo :: NetworkId -> SocketPath -> LocalNodeConnectInfo CardanoMode
+makeLocalConnectInfo :: NetworkId -> SocketPath -> LocalNodeConnectInfo
 makeLocalConnectInfo networkId socketPath
   = LocalNodeConnectInfo (CardanoModeParams (EpochSlots 21600)) networkId socketPath
 
-type LocalSubmitTx = (TxInMode CardanoMode -> IO (SubmitResult (TxValidationErrorInMode CardanoMode)))
+type LocalSubmitTx = (TxInMode -> IO (SubmitResult TxValidationErrorInCardanoMode))

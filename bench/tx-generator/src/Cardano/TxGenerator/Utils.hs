@@ -77,16 +77,7 @@ mkTxValidityUpperBound :: forall era. IsShelleyBasedEra era => SlotNo -> TxValid
 mkTxValidityUpperBound slotNo =
   TxValidityUpperBound (fromJust $ forEraMaybeEon (cardanoEra @era)) (Just slotNo)
 
--- | `mkTxOutValueAdaOnly` reinterprets the `Either` returned by
--- `multiAssetSupportedInEra` with `TxOutValue` constructors.
-mkTxOutValueAdaOnly :: forall era . IsShelleyBasedEra era => Lovelace -> TxOutValue era
-mkTxOutValueAdaOnly l = caseByronToAllegraOrMaryEraOnwards
-  (`TxOutAdaOnly` l)
-  (\p -> TxOutValue p $ lovelaceToValue l)
-  (cardanoEra @era)
-
 -- | `mkTxInModeCardano` never uses the `TxInByronSpecial` constructor
 -- because its type enforces it being a Shelley-based era.
-mkTxInModeCardano :: forall era . IsShelleyBasedEra era => Tx era -> TxInMode CardanoMode
-mkTxInModeCardano tx =
-  TxInMode tx (fromJust $ toEraInMode (cardanoEra @era) CardanoMode)
+mkTxInModeCardano :: forall era . IsCardanoEra era => Tx era -> TxInMode
+mkTxInModeCardano = TxInMode cardanoEra

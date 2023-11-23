@@ -9,6 +9,7 @@ module Cardano.Node.Protocol.Alonzo
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 
@@ -44,12 +45,11 @@ data AlonzoProtocolInstantiationError
   deriving Show
 
 instance Error AlonzoProtocolInstantiationError where
-  displayError (InvalidCostModelError fp) =
-    "Invalid cost model: " <> show fp
-  displayError (CostModelExtractionError fp) =
-    "Error extracting the cost model at: " <> show fp
-  displayError (AlonzoCostModelFileError err) =
-    displayError err
-  displayError (AlonzoCostModelDecodeError fp err) =
-    "Error decoding cost model at: " <> show fp <> " Error: " <> err
-
+  prettyError (InvalidCostModelError fp) =
+    "Invalid cost model: " <> pshow fp
+  prettyError (CostModelExtractionError fp) =
+    "Error extracting the cost model at: " <> pshow fp
+  prettyError (AlonzoCostModelFileError err) =
+    prettyError err
+  prettyError (AlonzoCostModelDecodeError fp err) =
+    "Error decoding cost model at: " <> pshow fp <> " Error: " <> pshow err

@@ -17,6 +17,7 @@ import           System.Exit
 
 import           Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty
+import           Data.Aeson.Parser as Aeson (json)
 import qualified Data.Attoparsec.ByteString as Atto
 import qualified Data.Yaml as Yaml (encode)
 
