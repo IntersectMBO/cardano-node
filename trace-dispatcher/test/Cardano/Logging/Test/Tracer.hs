@@ -7,6 +7,8 @@ module Cardano.Logging.Test.Tracer (
   , formattedMsgAsText
   ) where
 
+import           Cardano.Logging.Types
+import           Cardano.Prelude hiding (head)
 import           Control.Monad.IO.Class
 import           Data.IORef
 import           Data.Text (Text, pack)
@@ -29,3 +31,13 @@ formattedMsgAsText (FormattedHuman _ text) = text
 formattedMsgAsText (FormattedMachine text) = text
 formattedMsgAsText (FormattedMetrics metrics) = pack (show metrics)
 formattedMsgAsText (FormattedForwarder traceObj) = toMachine traceObj
+
+data LoggingMessage a = LoggingMessage {
+      at :: Time
+    , ns :: Namespace
+    , dataX :: a
+    , sev :: SeverityS
+    , thread :: Text
+    , host :: Text
+  } deriving (Eq, Ord, Show, Generic)
+
