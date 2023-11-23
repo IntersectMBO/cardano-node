@@ -11,6 +11,9 @@ import           Cardano.Logging
 import           Cardano.Logging.Test.Oracles
 import           Cardano.Logging.Test.Script
 import           Cardano.Logging.Test.Tracer
+import           Cardano.Logging.Test.Unit.Aggregation
+import           Cardano.Logging.Test.Unit.FrequencyLimiting
+import           Cardano.Logging.Test.Unit.Routing
 import           Cardano.Logging.Test.Unit.Trivial
 
 
@@ -24,17 +27,23 @@ tests = testGroup "Tests"
   , localTests
   ]
 
-
-
-
 unitTests :: TestTree
 unitTests = testGroup "trace-dispatcher-unit-tests"
     [ testCase "test1" $ do
         res <- test1
         assertBool "trivial1" (testLoggingMessagesEq res test1Res)
     , testCase "test2" $ do
-        res2 <- test2
-        assertBool "trivial2" (testLoggingMessagesEq res2 test2Res)
+        res <- test2
+        assertBool "trivial2" (testLoggingMessagesEq res test2Res)
+    , testCase "testAggregation" $ do
+        res <- testAggregation
+        assertBool "testAggregation" (testLoggingMessagesEq res testAggResult)
+    , testCase "testRouting" $ do
+        res <- testRouting
+        assertBool "testRouting" (testLoggingMessagesEq res testRoutingResult)
+    , testCase "testLimiting" $ do
+        res <- testLimiting
+        assertBool "testLimiting" (testLoggingMessagesEq res testLimitingResult)
 
     -- , testCase "multi-threaded send tests" $
     --     runScriptMultithreaded 1.0 oracleMessages
