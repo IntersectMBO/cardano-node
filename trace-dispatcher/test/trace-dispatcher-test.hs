@@ -2,7 +2,9 @@
 {-# OPTIONS_GHC -Wno-unused-imports  #-}
 
 import           Data.Aeson
-import           Data.Text (Text)
+import qualified Data.ByteString.Char8 as BS
+import           Data.Text (Text, breakOn, stripEnd)
+import           Data.Text.Encoding (decodeUtf8)
 import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Test.Tasty.QuickCheck
@@ -12,6 +14,7 @@ import           Cardano.Logging.Test.Oracles
 import           Cardano.Logging.Test.Script
 import           Cardano.Logging.Test.Tracer
 import           Cardano.Logging.Test.Unit.Aggregation
+import           Cardano.Logging.Test.Unit.Documentation
 import           Cardano.Logging.Test.Unit.FrequencyLimiting
 import           Cardano.Logging.Test.Unit.Routing
 import           Cardano.Logging.Test.Unit.Trivial
@@ -41,18 +44,17 @@ unitTests = testGroup "trace-dispatcher-unit-tests"
     , testCase "testRouting" $ do
         res <- testRouting
         assertBool "testRouting" (testLoggingMessagesEq res testRoutingResult)
-    , testCase "testLimiting" $ do
-        res <- testLimiting
-        assertBool "testLimiting" (testLoggingMessagesEq res testLimitingResult)
-
-    -- , testCase "multi-threaded send tests" $
-    --     runScriptMultithreaded 1.0 oracleMessages
-    -- , testCase "reconfiguration stress test" $
-    --     runScriptMultithreadedWithConstantReconfig 1.0 (\ _ _ -> assertBool "Always true" True)
-    -- , testGroup "Unit tests" $
-    --     [ testCase "some unit test" someUnitTestFunction
-    --     -- Add more testCase here for each test case you want to include
-    --     ]
+    -- , testCase "testLimiting" $ do
+    --     res <- testLimiting
+    --     assertBool "testLimiting" (testLoggingMessagesEq res testLimitingResult)
+    , testCase "testDocGeneration" $ do
+        res <- docTracers
+        let res' = fst $ breakOn "Generated at" res
+            docuFile = "test/data/docGeneration.md"
+        testDocResult <- BS.readFile docuFile
+        assertEqual "testDocGeneration"
+            (stripEnd res')
+            (stripEnd (decodeUtf8 testDocResult))
     ]
 
 localTests :: TestTree

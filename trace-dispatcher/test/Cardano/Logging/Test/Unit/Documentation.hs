@@ -4,16 +4,17 @@
 
 
 module Cardano.Logging.Test.Unit.Documentation (
-  docTracers
+    docTracers
 ) where
 
 import qualified Data.Map as Map
+import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
 import           Cardano.Logging
 import           Cardano.Logging.Test.Unit.TestObjects
 
-docTracers :: IO ()
+docTracers :: IO T.Text
 docTracers = do
   t <- standardTracer
   t1'' <- humanFormatter True Nothing t
@@ -39,7 +40,8 @@ docTracers = do
   bl <- documentTracer t1
   b2 <- documentTracer t2
   res <- docuResultsToText (bl <> b2) config1
-  T.writeFile "/tmp/Testdocu.md" res
+  T.putStrLn res
+  pure res
 
 config1 :: TraceConfig
 config1 = TraceConfig {
@@ -56,3 +58,4 @@ config1 = TraceConfig {
     , tcPeerFrequency = Nothing
     , tcResourceFrequency = Nothing
     }
+
