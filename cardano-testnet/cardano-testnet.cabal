@@ -165,6 +165,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
                         Cardano.Testnet.Test.FoldBlocks
                         Cardano.Testnet.Test.Misc
+                        Cardano.Testnet.Test.Node.LedgerEvents
                         Cardano.Testnet.Test.Node.Shutdown
 
   type:                 exitcode-stdio-1.0
@@ -186,6 +187,7 @@ test-suite cardano-testnet-test
                       , text
                       , time
                       , transformers
+                      , transformers-except
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
