@@ -3,7 +3,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
-
 module Cardano.Logging.Trace (
     traceWith
   , withLoggingContext
@@ -23,11 +22,14 @@ module Cardano.Logging.Trace (
   , setDetails
   , withDetails
 
+  , contramapM
+  , contramapMCond
+  , contramapM'
   , foldTraceM
-  , foldMTraceM
-  , foldMCondTraceM
+  , foldCondTraceM
   , routingTrace
 
+  , withNames
   , appendPrefixName
   , appendPrefixNames
   , appendInnerName
@@ -35,7 +37,7 @@ module Cardano.Logging.Trace (
   , withInnerNames
   ) where
 
-import           Control.Monad (join, when)
+import           Control.Monad (forM_, join)
 import           Control.Monad.IO.Unlift
 import qualified Control.Tracer as T
 import           Data.Maybe (isJust)
@@ -77,7 +79,7 @@ filterTraceMaybe (Trace tr) = Trace $
             ( lc, Left ctrl)         -> (lc, Left ctrl))
           tr)
 
---- | Only processes messages further with a severity equal or greater as the
+--- | Only processes messages further a severity equal or greater as the
 --- given one
 filterTraceBySeverity :: Monad m
   => Maybe SeverityF
@@ -119,6 +121,7 @@ appendInnerName name (Trace tr) = Trace $
       tr
 
 -- | Appends all names to the context.
+{-# INLINE appendPrefixNames #-}
 appendPrefixNames :: Monad m => [Text] -> Trace m a -> Trace m a
 appendPrefixNames names (Trace tr) = Trace $
     T.contramap
@@ -135,6 +138,7 @@ appendInnerNames names (Trace tr) = Trace $
       tr
 
 -- | Sets names for the messages in this trace based on the selector function
+{-# INLINE withInnerNames #-}
 withInnerNames :: forall m a. (Monad m, MetaTrace a) => Trace m a -> Trace m a
 withInnerNames (Trace tr) = Trace $
     T.contramap
@@ -142,6 +146,19 @@ withInnerNames (Trace tr) = Trace $
         (lc, Right a) -> (lc {lcNSInner = nsInner (namespaceFor a)}, Right a)
         (lc, Left c)  -> (lc, Left c))
       tr
+
+-- | Sets names for the messages in this trace based on the selector function
+--   and appends the provided names to the context.
+{-# INLINE withNames #-}
+withNames :: forall m a. (Monad m, MetaTrace a) => [Text] -> Trace m a -> Trace m a
+withNames names (Trace tr) = Trace $
+    T.contramap
+      (\case
+        (lc, Right a) -> (lc {lcNSPrefix = names,
+                              lcNSInner  = nsInner (namespaceFor a)}, Right a)
+        (lc, Left c)  -> (lc {lcNSPrefix = names}, Left c))
+      tr
+
 
 -- | Sets severity for the messages in this trace
 setSeverity :: Monad m => SeverityS -> Trace m a -> Trace m a
@@ -153,6 +170,7 @@ setSeverity s (Trace tr) = Trace $
       tr
 
 -- | Sets severities for the messages in this trace based on the MetaTrace class
+{-# INLINE withSeverity #-}
 withSeverity :: forall m a. (Monad m, MetaTrace a) => Trace m a -> Trace m a
 withSeverity (Trace tr) = Trace $
     T.contramap
@@ -259,76 +277,86 @@ withDetails (Trace tr) = Trace $
         else (lc {lcDetails = detailsFor (Namespace [] (lcNSInner lc)
                                               :: Namespace a) Nothing}, cont)
 
--- | Folds the cata function with acc over a.
--- Uses an MVar to store the state
-foldTraceM
-  :: forall a acc m . (MonadUnliftIO m)
-  => (acc -> LoggingContext -> a -> acc)
-  -> acc
-  -> Trace m (Folding a acc)
+-- | Contramap a monadic function over a trace
+{-# INLINE contramapM #-}
+contramapM :: Monad m
+  => Trace m b
+  -> ((LoggingContext, Either TraceControl a)
+      -> m (LoggingContext, Either TraceControl b))
   -> m (Trace m a)
-foldTraceM cata initial (Trace tr) = do
-  ref <- liftIO (newMVar initial)
-  let trr = mkTracer ref
-  pure $ Trace (T.Tracer trr)
- where
-    mkTracer ref = T.emit $
-      \case
-        (lc, Right v) -> do
-          x' <- modifyMVar ref $ \x ->
-            let !accu = cata x lc v
-            in pure (accu,accu)
-          T.traceWith tr (lc, Right (Folding x'))
-        (lc, Left control) -> do
-          T.traceWith tr (lc, Left control)
+contramapM (Trace tr) mFunc =
+  pure $ Trace $ T.Tracer $ T.emit rFunc
+    where
+      rFunc arg = do
+        res <- mFunc arg
+        T.traceWith tr res
 
+-- | Contramap a monadic function over a trace
+--   Can as well filter out messages
+{-# INLINE contramapMCond #-}
+contramapMCond :: Monad m
+  => Trace m b
+  -> ((LoggingContext, Either TraceControl a)
+      -> m (Maybe (LoggingContext, Either TraceControl b)))
+  -> m (Trace m a)
+contramapMCond (Trace tr) mFunc =
+  pure $ Trace $ T.Tracer $ T.emit rFunc
+    where
+      rFunc arg = do
+        condMes <- mFunc arg
+        forM_ condMes (T.traceWith tr)
+
+{-# INLINE contramapM' #-}
+contramapM' :: Monad m
+  => ((LoggingContext, Either TraceControl a)
+      -> m ())
+  -> Trace m a
+contramapM' rFunc =
+  Trace $ T.Tracer $ T.emit rFunc
 
 -- | Folds the monadic cata function with acc over a.
 -- Uses an IORef to store the state
-foldMTraceM
+foldTraceM
   :: forall a acc m . (MonadUnliftIO m)
   => (acc -> LoggingContext -> a -> m acc)
   -> acc
   -> Trace m (Folding a acc)
   -> m (Trace m a)
-foldMTraceM cata initial (Trace tr) = do
+foldTraceM cata initial (Trace tr) = do
   ref <- liftIO (newMVar initial)
-  let trr = mkTracer ref
-  pure $ Trace (T.arrow trr)
- where
-    mkTracer ref = T.emit $
-      \case
+  contramapM (Trace tr)
+      (\case
         (lc, Right v) -> do
           x' <- modifyMVar ref $ \x -> do
             !accu <- cata x lc v
             pure $ join (,) accu
-          T.traceWith tr (lc, Right (Folding x'))
+          pure (lc, Right (Folding x'))
         (lc, Left control) -> do
-          T.traceWith tr (lc, Left control)
+          pure (lc, Left control))
 
--- | Like foldMTraceM, but filter the trace by a predicate.
-foldMCondTraceM
+-- | Like foldTraceM, but filter the trace by a predicate.
+foldCondTraceM
   :: forall a acc m . (MonadUnliftIO m)
   => (acc -> LoggingContext -> a -> m acc)
   -> acc
   -> (a -> Bool)
   -> Trace m (Folding a acc)
   -> m (Trace m a)
-foldMCondTraceM cata initial flt (Trace tr) = do
+foldCondTraceM cata initial flt (Trace tr) = do
   ref <- liftIO (newMVar initial)
-  let trr = mkTracer ref
-  pure $ Trace (T.arrow trr)
+  contramapMCond (Trace tr) (foldF ref)
  where
-    mkTracer ref = T.emit $
+    foldF ref =
       \case
         (lc, Right v) -> do
           x' <- modifyMVar ref $ \x -> do
             !accu <- cata x lc v
             pure $ join (,) accu
-          when (flt v) $
-            T.traceWith tr (lc, Right (Folding x'))
+          if flt v
+            then pure $ Just (lc, Right (Folding x'))
+            else pure Nothing
         (lc, Left control) -> do
-          T.traceWith tr (lc, Left control)
+          pure $ Just (lc, Left control)
 
 -- | Allows to route to different tracers, based on the message being processed.
 --   The second argument must mappend all possible tracers of the first
@@ -337,12 +365,12 @@ routingTrace
   :: forall m a. Monad m
   => (a -> m (Trace m a))
   -> Trace m a
-  -> m (Trace m a)
-routingTrace rf rc = pure $ Trace $ T.arrow $ T.emit $
-    \case
+  -> Trace m a
+routingTrace rf rc = contramapM'
+    (\case
       (lc, Right a) -> do
           nt <- rf a
           T.traceWith (unpackTrace nt) (lc, Right a)
       (lc, Left control) ->
-          T.traceWith (unpackTrace rc) (lc, Left control)
+          T.traceWith (unpackTrace rc) (lc, Left control))
 

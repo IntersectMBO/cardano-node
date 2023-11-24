@@ -58,7 +58,7 @@ withAddedToCurrentChainEmptyLimited
   -> IO (Trace IO (ChainDB.TraceEvent blk))
 withAddedToCurrentChainEmptyLimited tr = do
   ltr <- limitFrequency 1.25 "AddedToCurrentChainLimiter" mempty tr
-  routingTrace (selecting ltr) tr
+  pure $ routingTrace (selecting ltr) tr
  where
     selecting
       ltr

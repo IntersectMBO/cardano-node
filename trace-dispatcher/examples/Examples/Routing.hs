@@ -10,7 +10,7 @@ import           Examples.TestObjects
 routingTracer1 :: (Monad m)
   => Trace m (TraceForgeEvent LogBlock)
   -> Trace m (TraceForgeEvent LogBlock)
-  -> m (Trace m (TraceForgeEvent LogBlock))
+  -> Trace m (TraceForgeEvent LogBlock)
 routingTracer1 t1 t2 = routingTrace routingf (t1 <> t2)
   where
     routingf TraceStartLeadershipCheck {} = pure t1
@@ -19,8 +19,8 @@ routingTracer1 t1 t2 = routingTrace routingf (t1 <> t2)
 routingTracer2 :: (Monad m)
   => Trace m (TraceForgeEvent LogBlock)
   -> Trace m (TraceForgeEvent LogBlock)
-  -> m (Trace m (TraceForgeEvent LogBlock))
-routingTracer2 t1 t2 = pure (t1 <> t2)
+  -> Trace m (TraceForgeEvent LogBlock)
+routingTracer2 t1 t2 = t1 <> t2
 
 testRouting :: IO ()
 testRouting = do
@@ -30,8 +30,8 @@ testRouting = do
     let t2 = appendPrefixName "tracer2" tf
     confState <- emptyConfigReflection
     configureTracers confState emptyTraceConfig [t1, t2]
-    r1 <- routingTracer1 t1 t2
-    r2 <- routingTracer2 t1 t2
+    let r1 = routingTracer1 t1 t2
+        r2 = routingTracer2 t1 t2
     traceWith r1 message1
     traceWith r1 message2
     traceWith r2 message3

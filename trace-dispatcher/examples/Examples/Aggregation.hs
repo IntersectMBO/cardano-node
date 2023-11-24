@@ -50,8 +50,8 @@ instance MetaTrace BaseStats where
 emptyStats :: BaseStats
 emptyStats = BaseStats 0.0 100000000.0 (-100000000.0) 0 0.0
 
-calculate :: BaseStats -> LoggingContext -> Double -> BaseStats
-calculate BaseStats{..} _ val =
+calculate :: BaseStats -> LoggingContext -> Double -> IO BaseStats
+calculate BaseStats{..} _ val = pure $
     BaseStats
       val
       (min bsMin val)
