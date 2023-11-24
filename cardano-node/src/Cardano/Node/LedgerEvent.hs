@@ -29,6 +29,7 @@ module Cardano.Node.LedgerEvent (
   , ledgerEventName
 
     -- ** Using Ledger events
+  , StandardLedgerEventHandler
   , withLedgerEventsServerStream
   , foldEvent
 
@@ -341,9 +342,9 @@ ledgerRewardUpdateEventName = \case
   LedgerIncrementalRewards {} -> "LedgerIncrementalRewards"
 
 fromAuxLedgerEvent
-  :: forall xs crypto. (All ConvertLedgerEvent xs, crypto ~ StandardCrypto)
+  :: forall xs. (All ConvertLedgerEvent xs)
   => AuxLedgerEvent (Abstract.LedgerState (HardForkBlock xs))
-  -> Maybe (LedgerEvent crypto)
+  -> Maybe (LedgerEvent StandardCrypto)
 fromAuxLedgerEvent =
   toLedgerEvent . WrapLedgerEvent @(HardForkBlock xs)
 
@@ -767,9 +768,11 @@ foldEvent h st0 fn =
         st' <- fn st event
         go st' events
 
+type StandardLedgerEventHandler = LedgerEventHandler IO (LedgerState StandardCrypto) (HardForkBlock (CardanoEras StandardCrypto))
+
 withLedgerEventsServerStream
   :: PortNumber
-  -> (LedgerEventHandler IO (LedgerState StandardCrypto) (HardForkBlock (CardanoEras crypto)) -> IO ())
+  -> (StandardLedgerEventHandler -> IO ())
   -> IO ()
 withLedgerEventsServerStream port handler = do
   withSocketsDo $ do
