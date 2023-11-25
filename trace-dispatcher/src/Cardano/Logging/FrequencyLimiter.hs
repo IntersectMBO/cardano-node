@@ -80,7 +80,7 @@ limitFrequency
   -> m (Trace m a) -- the original trace
 limitFrequency thresholdFrequency limiterName ltracer vtracer = do
     timeNow <- systemTimeToSeconds <$> liftIO getSystemTime
-    foldMTraceM
+    foldTraceM
       (checkLimiting (1.0 / thresholdFrequency))
       (FrequencyRec Nothing timeNow 0.0 0.0 Nothing)
       (Trace $ T.contramap unfoldTrace (unpackTrace (filterTraceMaybe vtracer)))

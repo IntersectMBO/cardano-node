@@ -36,7 +36,7 @@ testEKG :: IO ()
 testEKG = do
     server <- forkServer "localhost" 8000
     tracer <- ekgTracer (Right server)
-    let formattedTracer = metricsFormatter "cardano" tracer
+    let formattedTracer = metricsFormatter tracer
     confState <- emptyConfigReflection
     configureTracers confState emptyTraceConfig [formattedTracer]
     loop (appendPrefixName "ekg1" formattedTracer) 1

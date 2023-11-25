@@ -66,7 +66,7 @@ withReplayedBlock :: Trace IO ReplayBlockStats
 withReplayedBlock tr =
     let tr' = filterTrace filterFunction tr
         tr'' = contramap unfold tr'
-    in foldMTraceM replayBlockStats emptyReplayBlockStats tr''
+    in foldTraceM replayBlockStats emptyReplayBlockStats tr''
   where
     filterFunction(_, ReplayBlockStats {..}) = rpsDisplay
 

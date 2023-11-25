@@ -244,8 +244,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
 
     -- Special blockFetch client metrics, send directly to EKG
     !blockFetchClientMetricsTr <- do
-        tr1 <- foldMTraceM calculateBlockFetchClientMetrics initialClientMetrics
-                    (metricsFormatter ""
+        tr1 <- foldTraceM calculateBlockFetchClientMetrics initialClientMetrics
+                    (metricsFormatter
                       (mkMetricsTracer mbTrEKG))
         pure $ filterTrace (\ (_, TraceLabelPeer _ m) -> case m of
                                               BlockFetch.CompletedBlockFetch {} -> True
