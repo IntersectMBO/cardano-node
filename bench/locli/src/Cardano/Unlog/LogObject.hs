@@ -31,6 +31,7 @@ module Cardano.Unlog.LogObject
 where
 
 import           Cardano.Prelude hiding (Text, show)
+import           GHC.Conc (numCapabilities)
 import           Prelude (id, show, unzip3)
 
 import qualified Data.Aeson as AE
@@ -95,7 +96,7 @@ data HostLogs a
     , hlRawFirstAt     :: Maybe UTCTime
     , hlRawLastAt      :: Maybe UTCTime
     }
-  deriving (Generic)
+  deriving (Generic, NFData)
 
 deriving instance FromJSON a => FromJSON (HostLogs a)
 deriving instance   ToJSON a =>   ToJSON (HostLogs a)
@@ -117,11 +118,24 @@ rlLogs = fmap hlLogs . Map.elems . rlHostLogs
 
 runLiftLogObjects :: RunLogs () -> Bool -> Maybe [LOAnyType]
                   -> ExceptT LText.Text IO (RunLogs [LogObject])
-runLiftLogObjects rl@RunLogs{..} okDErr loAnyLimit = liftIO $ do
-  forConcurrently (Map.toList rlHostLogs)
-    (uncurry readHostLogs)
-    <&> \kvs -> rl { rlHostLogs = Map.fromList kvs }
+runLiftLogObjects rl@RunLogs{..} okDErr loAnyLimit = liftIO $
+ go Map.empty 0 simultaneousReads
  where
+   go (force -> !acc) batchBase = \case
+     []    -> pure $ rl{ rlHostLogs = acc }
+     c:cs  -> do
+       let batchBase' = batchBase + length c
+       when (length c > 1) $
+         progress "logs" (Q $ printf "processing batch %d - %d" batchBase (batchBase' - 1))
+       hlsMap <- readHostLogChunk c
+       go (acc `Map.union` hlsMap) batchBase' cs
+
+   simultaneousReads = chunksOf numCapabilities (Map.toList rlHostLogs)
+
+   readHostLogChunk :: [(Host, HostLogs ())] -> IO (Map Host (HostLogs [LogObject]))
+   readHostLogChunk hls =
+     Map.fromList <$> forConcurrently hls (uncurry readHostLogs)
+
    readHostLogs :: Host -> HostLogs () -> IO (Host, HostLogs [LogObject])
    readHostLogs h hl@HostLogs{..} =
      readLogObjectStream (unJsonLogfile $ fst hlLogs) okDErr loAnyLimit
