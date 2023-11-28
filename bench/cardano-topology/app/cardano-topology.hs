@@ -37,14 +37,22 @@ main = do
 
 --------------------------------------------------------------------------------
 
--- | Locations have a default AWS region that are the ones cardano-ops is using.
+-- | Locations from the CLI are parsed first using the "legacy mode" for
+-- backward compatiblity, in this mode locations have a default AWS region that
+-- are the ones cardano-ops is using. The new format is either "loopback" or a
+-- supported AWS Region.
 cliLocation :: String -> Either String Topo.Location
 cliLocation = \case
+  -- Legacy mode.
   "LO" -> Right Topo.Loopback
   "AP" -> Right (Topo.AWS Topo.AP_SOUTHEAST_2)
   "EU" -> Right (Topo.AWS Topo.EU_CENTRAL_1)
   "US" -> Right (Topo.AWS Topo.US_EAST_2)
-  str -> Left $ "Unknown Location: \"" ++ str ++ "\"
+  -- New format.
+  str -> Aeson.eitherDecode
+    -- Make the string JSON valid by enclosing it with quotes.
+    (LBS.pack $ "\"" ++  str ++ "\"")
+
 
 cliOpts :: ParserInfo (Topo.CoreNodesParams, FilePath, Maybe FilePath, Bool)
 cliOpts = info (cliParser <**> helper)

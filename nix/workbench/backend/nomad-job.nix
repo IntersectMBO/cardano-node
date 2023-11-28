@@ -197,8 +197,10 @@ let
 
     #  A list of datacenters in the region which are eligible for task
     # placement. This must be provided, and does not have a default.
-    # SRE: Only 3 Nomad datacenters exist actually.
-    datacenters = [ "eu-central-1" "us-east-2" "ap-southeast-2" ];
+    # What we currently have available:
+    # - Cardano World cluster: "eu-central-1", "us-east-2"
+    # - Dedicated P&T cluster: "eu-central-1", "us-east-1", and "ap-southeast-2"
+    datacenters = [ "ap-southeast-2" "eu-central-1" "us-east-1" "us-east-2" ];
 
     # Specifies user-defined constraints on the task. This can be provided
     # multiple times to define additional constraints.

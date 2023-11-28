@@ -409,44 +409,6 @@ allocate-run-nomadcloud() {
   then
     fatal "Envar \"WB_SHELL_PROFILE\" is empty!"
   else
-    ########################################################################
-    # Fix for region mismatches ############################################
-    ########################################################################
-    # If value profile, "value-nomadperf", topology was imported from
-    # cardano-ops / nixops that was already using "us-east-1", but not
-    # "default-nomadperf", "ci-test-nomadperf" and "ci-bench" that is generated
-    # by `cardano-topology` (Haskell project in bench/).
-    # - Cardano World cluster: "eu-central-1", "us-east-2"
-    # - Workbench (Nix level): "eu-central-1", "us-east-2", and "ap-southeast-2"
-    # - Dedicated P&T cluster: "eu-central-1", "us-east-1", and "ap-southeast-2"
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
-    then
-        jq \
-          "                                                         \
-              .[\"job\"][\"${nomad_job_name}\"][\"datacenters\"]    \
-            |=                                                      \
-              [\"eu-central-1\", \"us-east-1\", \"ap-southeast-2\"] \
-          " \
-          "${dir}"/nomad/nomad-job.json \
-      | \
-        sponge "${dir}"/nomad/nomad-job.json
-      # Nix creates a Nomad Job file with affinities taken from node-specs.json
-        jq \
-          "                                                  \
-               .[\"job\"][\"${nomad_job_name}\"][\"group\"]  \
-            |= with_entries(                                 \
-                 if (.value.affinity.value == \"us-east-2\") \
-                 then                                        \
-                   (.value.affinity.value |= \"us-east-1\")  \
-                 else                                        \
-                   (.)                                       \
-                 end                                         \
-               )                                             \
-          " \
-          "${dir}"/nomad/nomad-job.json \
-      | \
-        sponge "${dir}"/nomad/nomad-job.json
-    fi
     ############################################################################
     # Unique placement: ########################################################
     ############################################################################

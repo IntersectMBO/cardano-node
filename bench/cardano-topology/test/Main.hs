@@ -98,7 +98,7 @@ topology = Tasty.testGroup
             2
             [
               Types.AWS Types.EU_CENTRAL_1
-            , Types.AWS Types.US_EAST_2
+            , Types.AWS Types.US_EAST_1
             , Types.AWS Types.AP_SOUTHEAST_2
             ]
             (\_ -> Just 1)
@@ -149,7 +149,7 @@ topology = Tasty.testGroup
             6
             [
               Types.AWS Types.EU_CENTRAL_1
-            , Types.AWS Types.US_EAST_2
+            , Types.AWS Types.US_EAST_1
             , Types.AWS Types.AP_SOUTHEAST_2
             ]
             (\_ -> Just 1)
@@ -199,23 +199,23 @@ benchDense52 = Types.Topology {
   , Types.Node {Types.name = "node-46", Types.nodeId = 46, Types.region = Types.AWS Types.AP_SOUTHEAST_2, Types.producers = ["node-47","node-45","node-49","node-43","node-10","node-28"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
   , Types.Node {Types.name = "node-49", Types.nodeId = 49, Types.region = Types.AWS Types.AP_SOUTHEAST_2, Types.producers = ["node-50","node-48","node-1", "node-46","node-13","node-31"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
   -- US nodes x 17.
-  , Types.Node {Types.name = "node-2",  Types.nodeId =  2, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-0", "node-1", "node-5", "node-50","node-17","node-35"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
-  , Types.Node {Types.name = "node-5",  Types.nodeId =  5, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-3", "node-4", "node-8", "node-2", "node-20","node-38"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
-  , Types.Node {Types.name = "node-8",  Types.nodeId =  8, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-6", "node-7", "node-11","node-5", "node-23","node-41"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
-  , Types.Node {Types.name = "node-11", Types.nodeId = 11, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-9", "node-10","node-14","node-8", "node-26","node-44"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
-  , Types.Node {Types.name = "node-14", Types.nodeId = 14, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-12","node-13","node-17","node-11","node-29","node-47"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
-  , Types.Node {Types.name = "node-17", Types.nodeId = 17, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-15","node-16","node-20","node-14","node-32","node-50"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
-  , Types.Node {Types.name = "node-20", Types.nodeId = 20, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-18","node-19","node-23","node-17","node-35","node-2" ], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
-  , Types.Node {Types.name = "node-23", Types.nodeId = 23, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-21","node-22","node-26","node-20","node-38","node-5" ], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
-  , Types.Node {Types.name = "node-26", Types.nodeId = 26, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-24","node-25","node-29","node-23","node-41","node-8" ], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
-  , Types.Node {Types.name = "node-29", Types.nodeId = 29, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-27","node-28","node-32","node-26","node-44","node-11"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
-  , Types.Node {Types.name = "node-32", Types.nodeId = 32, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-30","node-31","node-35","node-29","node-47","node-14"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
-  , Types.Node {Types.name = "node-35", Types.nodeId = 35, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-33","node-34","node-38","node-32","node-50","node-17"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
-  , Types.Node {Types.name = "node-38", Types.nodeId = 38, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-36","node-37","node-41","node-35","node-2", "node-20"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
-  , Types.Node {Types.name = "node-41", Types.nodeId = 41, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-39","node-40","node-44","node-38","node-5", "node-23"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
-  , Types.Node {Types.name = "node-44", Types.nodeId = 44, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-42","node-43","node-47","node-41","node-8", "node-26"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
-  , Types.Node {Types.name = "node-47", Types.nodeId = 47, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-45","node-46","node-50","node-44","node-11","node-29"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
-  , Types.Node {Types.name = "node-50", Types.nodeId = 50, Types.region = Types.AWS Types.US_EAST_2, Types.producers = ["node-48","node-49","node-2", "node-47","node-14","node-32"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-2",  Types.nodeId =  2, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-0", "node-1", "node-5", "node-50","node-17","node-35"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-5",  Types.nodeId =  5, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-3", "node-4", "node-8", "node-2", "node-20","node-38"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-8",  Types.nodeId =  8, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-6", "node-7", "node-11","node-5", "node-23","node-41"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-11", Types.nodeId = 11, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-9", "node-10","node-14","node-8", "node-26","node-44"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-14", Types.nodeId = 14, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-12","node-13","node-17","node-11","node-29","node-47"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-17", Types.nodeId = 17, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-15","node-16","node-20","node-14","node-32","node-50"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-20", Types.nodeId = 20, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-18","node-19","node-23","node-17","node-35","node-2" ], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-23", Types.nodeId = 23, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-21","node-22","node-26","node-20","node-38","node-5" ], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-26", Types.nodeId = 26, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-24","node-25","node-29","node-23","node-41","node-8" ], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-29", Types.nodeId = 29, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-27","node-28","node-32","node-26","node-44","node-11"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-32", Types.nodeId = 32, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-30","node-31","node-35","node-29","node-47","node-14"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-35", Types.nodeId = 35, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-33","node-34","node-38","node-32","node-50","node-17"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-38", Types.nodeId = 38, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-36","node-37","node-41","node-35","node-2", "node-20"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-41", Types.nodeId = 41, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-39","node-40","node-44","node-38","node-5", "node-23"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-44", Types.nodeId = 44, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-42","node-43","node-47","node-41","node-8", "node-26"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-47", Types.nodeId = 47, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-45","node-46","node-50","node-44","node-11","node-29"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
+  , Types.Node {Types.name = "node-50", Types.nodeId = 50, Types.region = Types.AWS Types.US_EAST_1, Types.producers = ["node-48","node-49","node-2", "node-47","node-14","node-32"], Types.org = "IOHK", Types.pools = Just 2, Types.stakePool = Nothing}
   ]
 , Types.relayNodes = [
     Types.Node {

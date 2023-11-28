@@ -90,8 +90,8 @@ instance Aeson.ToJSON AWSRegion where
 
 instance Aeson.FromJSON AWSRegion where
   parseJSON = Aeson.withText "AWSRegion" $ \t -> case t of
-    -- Actually only the ones cardano-ops is using.
     "ap-southeast-2" -> return AP_SOUTHEAST_2
     "eu-central-1"   -> return EU_CENTRAL_1
+    "us-east-1"      -> return US_EAST_1
     "us-east-2"      -> return US_EAST_2
     _                -> fail $ "Unknown AWSRegion: \"" ++ Text.unpack t ++ "\""

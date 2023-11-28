@@ -573,7 +573,7 @@
         "node-17",
         "node-35"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     },
     {
@@ -589,7 +589,7 @@
         "node-20",
         "node-38"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     },
     {
@@ -605,7 +605,7 @@
         "node-23",
         "node-41"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     },
     {
@@ -621,7 +621,7 @@
         "node-26",
         "node-44"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     },
     {
@@ -637,7 +637,7 @@
         "node-29",
         "node-47"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     },
     {
@@ -653,7 +653,7 @@
         "node-32",
         "node-50"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     },
     {
@@ -669,7 +669,7 @@
         "node-35",
         "node-2"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     },
     {
@@ -685,7 +685,7 @@
         "node-38",
         "node-5"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     },
     {
@@ -701,7 +701,7 @@
         "node-41",
         "node-8"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     },
     {
@@ -717,7 +717,7 @@
         "node-44",
         "node-11"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     },
     {
@@ -733,7 +733,7 @@
         "node-47",
         "node-14"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     },
     {
@@ -749,7 +749,7 @@
         "node-50",
         "node-17"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     },
     {
@@ -765,7 +765,7 @@
         "node-2",
         "node-20"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     },
     {
@@ -781,7 +781,7 @@
         "node-5",
         "node-23"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     },
     {
@@ -797,7 +797,7 @@
         "node-8",
         "node-26"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     },
     {
@@ -813,7 +813,7 @@
         "node-11",
         "node-29"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     },
     {
@@ -829,7 +829,7 @@
         "node-14",
         "node-32"
       ],
-      "region": "us-east-2",
+      "region": "us-east-1",
       "stakePool": null
     }
   ],
