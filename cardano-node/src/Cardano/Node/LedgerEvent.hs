@@ -32,6 +32,10 @@ module Cardano.Node.LedgerEvent (
   , StandardLedgerEventHandler
   , withLedgerEventsServerStream
   , foldEvent
+  , withLedgerEventsChan
+  , mkLedgerEventHandler
+  , LedgerEventWriter
+  , LedgerEventReader
 
     -- * Type-level plumbing
   , ConvertLedgerEvent (..)
@@ -81,6 +85,7 @@ import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Encoding as CBOR
 import qualified Codec.CBOR.Read as CBOR
 import qualified Codec.CBOR.Write as CBOR
+import           Control.Concurrent.STM (newTChanIO, readTChan, writeTChan)
 import           Control.State.Transition (Event)
 import           Data.ByteString.Short(ShortByteString)
 import qualified Data.ByteString.Lazy as LBS
@@ -112,7 +117,7 @@ import qualified Cardano.Ledger.Conway.Rules as Conway
 import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
 import Cardano.Ledger.Alonzo.Rules (AlonzoBbodyEvent (ShelleyInAlonzoEvent), AlonzoUtxowEvent (WrappedShelleyEraEvent), AlonzoUtxoEvent (UtxosEvent), AlonzoUtxosEvent)
 import GHC.IO.Exception (IOException(IOError, ioe_type), IOErrorType (ResourceVanished))
-import Ouroboros.Network.Block (ChainHash(GenesisHash, BlockHash))
+import Ouroboros.Network.Block (ChainHash(GenesisHash, BlockHash), HeaderHash)
 
 type LedgerState crypto =
   ExtLedgerState (HardForkBlock (CardanoEras crypto))
@@ -807,3 +812,40 @@ withLedgerEventsServerStream port handler = do
             err -> do
               print err
               throwIO err
+
+withLedgerEventsChan
+  :: (LedgerEventWriter -> LedgerEventReader -> IO a)
+  -> IO a
+withLedgerEventsChan action = do
+  chan <- newTChanIO
+  action (atomically . writeTChan chan) (atomically $ readTChan chan)
+
+type LedgerEventWriter = AnchoredEvent -> IO ()
+type LedgerEventReader = IO AnchoredEvent
+
+mkLedgerEventHandler
+  :: LedgerEventWriter
+  -> StandardLedgerEventHandler
+mkLedgerEventHandler writer =
+  LedgerEventHandler $ \p h s b -> traverse_ writer . mkAnchoredEvents p h s b
+
+mkAnchoredEvents
+  :: ChainHash (HardForkBlock (CardanoEras StandardCrypto))
+  -> HeaderHash (HardForkBlock (CardanoEras StandardCrypto))
+  -> SlotNo
+  -> BlockNo
+  -> [AuxLedgerEvent (LedgerState StandardCrypto)]
+  -> [AnchoredEvent]
+mkAnchoredEvents prevHash headerHash slotNo blockNo auxEvents =
+  [ AnchoredEvent
+    (getOneEraHash <$> chainHashToOriginHash prevHash)
+    (getOneEraHash headerHash)
+    slotNo
+    blockNo
+    ledgerEvent
+  | Just ledgerEvent <- map fromAuxLedgerEvent auxEvents
+  ]
+  where
+    chainHashToOriginHash :: ChainHash b -> WithOrigin (HeaderHash b)
+    chainHashToOriginHash GenesisHash = Origin
+    chainHashToOriginHash (BlockHash bh) = At bh
