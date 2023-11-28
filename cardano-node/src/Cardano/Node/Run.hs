@@ -82,7 +82,10 @@ import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), SomeNetworkP2PMode (..),
                    defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP)
-import           Cardano.Node.LedgerEvent (withLedgerEventsServerStream)
+import           Cardano.Node.LedgerEvent (
+                   StandardLedgerEventHandler,
+                   withLedgerEventsServerStream,
+                   )
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.API
 import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
@@ -139,8 +142,9 @@ import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValenc
 
 runNode
   :: PartialNodeConfiguration
+  -> [StandardLedgerEventHandler]
   -> IO ()
-runNode cmdPc = do
+runNode cmdPc eventHandlers = do
     installSigTermHandler
 
     Crypto.cryptoInit
@@ -183,12 +187,16 @@ runNode cmdPc = do
       (SomeConsensusProtocol blockType@Api.CardanoBlockType runP, Just port) ->
         withLedgerEventsServerStream (fromIntegral port) $ \ledgerEventHandler ->
           handleNodeWithTracers
-            ledgerEventHandler
+            (mconcat $ ledgerEventHandler : eventHandlers)
             cmdPc nc p networkMagic blockType runP
-      (SomeConsensusProtocol blockType runP, _noGivenPort) ->
+      (SomeConsensusProtocol blockType@Api.CardanoBlockType runP, Nothing) ->
         handleNodeWithTracers
-          discardEvent
+          (mconcat eventHandlers)
           cmdPc nc p networkMagic blockType runP
+      (SomeConsensusProtocol otherBlockType runP, _somePort) ->
+        handleNodeWithTracers
+          mempty
+          cmdPc nc p networkMagic otherBlockType runP
 
 -- | Workaround to ensure that the main thread throws an async exception on
 -- receiving a SIGTERM signal.

@@ -30,7 +30,7 @@ main = do
     cmd <- Opt.customExecParser p opts
 
     case cmd of
-      RunCmd args -> runNode args
+      RunCmd args -> runNode args []
       TraceDocumentation tdc -> runTraceDocumentationCmd tdc
       VersionCmd  -> runVersionCommand
 

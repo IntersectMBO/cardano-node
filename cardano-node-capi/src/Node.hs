@@ -19,7 +19,7 @@ foreign export ccall "runNode" crunNode :: Int -> Ptr CString -> IO ()
 crunNode :: Int -> Ptr CString -> IO ()
 crunNode argc argv = peekArray argc argv >>= mapM peekCString >>= \args ->
     case execParserPure pref opts args of
-        Success pnc -> runNode pnc
+        Success pnc -> runNode pnc []
         Failure f   -> print f
         CompletionInvoked _ -> putStrLn "Completion Invoked?"
   where
