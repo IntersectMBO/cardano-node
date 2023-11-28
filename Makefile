@@ -99,6 +99,7 @@ PROFILES_NOMAD_CW_QA      := default-nomadcwqa ci-test-nomadcwqa ci-bench-nomadc
 # Cloud version of "default", "ci-test" and "ci-bench" plus value (52+explorer)
 # Not all local profiles are compatible or tested (yet) with a cloud runs
 PROFILES_NOMAD_PERF       := default-nomadperf ci-test-nomadperf ci-bench-nomadperf value-nomadperf oldtracing-nomadperf ci-test-oldtracing-nomadperf ci-bench-oldtracing-nomadperf value-oldtracing-nomadperf
+PROFILES_NOMAD_PERF       += plutus-nomadperf
 
 LOCAL_PROFILES += $(PROFILES_BASE)
 LOCAL_PROFILES += $(PROFILES_FAST)

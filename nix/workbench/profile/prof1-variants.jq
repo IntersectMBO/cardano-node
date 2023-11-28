@@ -245,6 +245,10 @@ def all_profile_variants:
     ) as $for_7ep
   |
     ({} |
+     .generator.epochs                = 9
+    ) as $for_9ep
+  |
+    ({} |
      .generator.epochs                = 15
     ) as $for_15ep
   |
@@ -526,6 +530,24 @@ def all_profile_variants:
       , desc: "AWS c5-2xlarge cluster dataset, 7 epochs"
     }) as $nomad_perf_base
   |
+   ($scenario_nomad_perf * $compose_fiftytwo * $dataset_oct2021 * $for_9ep * $plutus_base * $plutus_loop_counter *
+    { node:
+        { shutdown_on_slot_synced:        72000
+        }
+      , analysis:
+        { filters:                        ["epoch3+", "size-small"]
+        }
+      , generator:
+        { init_cooldown:                  45
+        , tps:                            0.85
+        }
+      , genesis:
+        { funds_balance:                  20000000000000
+        , max_block_size:                 88000
+        }
+      , desc: "AWS c5-2xlarge cluster dataset, 9 epochs"
+    }) as $nomad_perf_plutus_base
+  |
    ($scenario_model * $quadruplet * $dataset_current * $for_7ep *
     { node:
         { shutdown_on_slot_synced:        56000
@@ -805,6 +827,9 @@ def all_profile_variants:
     }
   , $nomad_perf_base * $nomad_perf_dense * $costmodel_v8_preview * $old_tracing *
     { name: "value-oldtracing-nomadperf"
+    }
+  , $nomad_perf_plutus_base * $nomad_perf_dense * $costmodel_v8_preview *
+    { name: "plutus-nomadperf"
     }
 
 ## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)
