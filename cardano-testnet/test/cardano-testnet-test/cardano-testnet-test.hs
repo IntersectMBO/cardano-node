@@ -10,6 +10,7 @@ import qualified Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldBlocks
+import qualified Cardano.Testnet.Test.Node.LedgerEvents
 import qualified Cardano.Testnet.Test.Node.Shutdown
 
 import           Prelude
@@ -26,7 +27,8 @@ import qualified Testnet.Property.Run as H
 tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
-    [  H.ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
+    [ H.ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
+    , H.ignoreOnWindows "LedgerEvents" Cardano.Testnet.Test.Node.LedgerEvents.hprop_ledger_events_sanity_check
     , H.ignoreOnWindows "ShutdownOnSigint" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSigint
     -- ShutdownOnSlotSynced FAILS Still. The node times out and it seems the "shutdown-on-slot-synced" flag does nothing
     -- , H.ignoreOnWindows "ShutdownOnSlotSynced" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSlotSynced

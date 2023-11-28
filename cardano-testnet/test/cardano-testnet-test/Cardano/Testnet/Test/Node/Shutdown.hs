@@ -177,6 +177,7 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
 
       return ()
 
+
 hprop_shutdownOnSlotSynced :: Property
 hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> do
   -- Start a local test net
