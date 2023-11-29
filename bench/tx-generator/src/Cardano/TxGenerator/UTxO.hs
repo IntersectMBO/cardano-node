@@ -58,7 +58,7 @@ mkUTxOScript networkId (script, txOutDatum) witness value
  where
   plutusScriptAddr = case script of
     ScriptInAnyLang lang script' ->
-      case scriptLanguageSupportedInEra (cardanoEra @era) lang of
+      case scriptLanguageSupportedInEra (shelleyBasedEra @era) lang of
         Nothing -> error "mkUtxOScript: scriptLanguageSupportedInEra==Nothing"
         Just{} -> makeShelleyAddressInEra
                        (shelleyBasedEra @era)
