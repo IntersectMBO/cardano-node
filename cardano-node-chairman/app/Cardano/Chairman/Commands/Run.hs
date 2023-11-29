@@ -117,7 +117,7 @@ run RunOpts
 
   p :: SomeConsensusProtocol <-
     case eitherSomeProtocol of
-      Left err -> putStrLn (prettyToString $ prettyError err) >> exitFailure
+      Left err -> putStrLn (docToString $ prettyError err) >> exitFailure
       Right p  -> pure p
 
   let (k , nId) = case p of
