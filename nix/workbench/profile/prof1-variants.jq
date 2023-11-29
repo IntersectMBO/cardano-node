@@ -245,6 +245,10 @@ def all_profile_variants:
     ) as $for_7ep
   |
     ({} |
+     .generator.epochs                = 8
+    ) as $for_8ep
+  |
+    ({} |
      .generator.epochs                = 9
     ) as $for_9ep
   |
@@ -513,9 +517,9 @@ def all_profile_variants:
       , desc: "Small dataset, honest 15 epochs duration"
     }) as $plutuscall_base
   |
-   ($scenario_nomad_perf * $compose_fiftytwo * $dataset_oct2021 * $for_7ep *
+   ($scenario_nomad_perf * $compose_fiftytwo * $dataset_oct2021 * $for_8ep *
     { node:
-        { shutdown_on_slot_synced:        56000
+        { shutdown_on_slot_synced:        64000
         }
       , analysis:
         { filters:                        ["epoch3+", "size-full"]
