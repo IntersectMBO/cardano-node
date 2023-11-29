@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Testnet.Test.Node.LedgerEvents
+module Cardano.Testnet.Test.Node.LedgerEvents.SanityCheck
   ( hprop_ledger_events_sanity_check
   ) where
 
