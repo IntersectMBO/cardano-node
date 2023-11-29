@@ -88,6 +88,7 @@ library
                         Testnet.Process.Cli
                         Testnet.Process.Run
                         Testnet.Runtime
+                        Testnet.SubmitApi
 
   other-modules:        Parsers.Cardano
                         Parsers.Help
@@ -168,11 +169,13 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Misc
                         Cardano.Testnet.Test.Node.LedgerEvents
                         Cardano.Testnet.Test.Node.Shutdown
+                        Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
 
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson
                       , async
+                      , base16-bytestring
                       , bytestring
                       , cardano-api
                       , cardano-cli
@@ -183,6 +186,8 @@ test-suite cardano-testnet-test
                       , filepath
                       , hedgehog
                       , hedgehog-extras
+                      , http-conduit
+                      , lens-aeson
                       , microlens
                       , process
                       , tasty
