@@ -14,6 +14,7 @@ PROFILE ?= default-${ERA}
 BACKEND ?= supervisor
 REV     ?= master
 ITER    ?=
+BATCH   ?=
 ARGS    ?=
 CMD     ?=
 RUN     ?=
