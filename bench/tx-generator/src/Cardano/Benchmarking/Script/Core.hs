@@ -35,12 +35,11 @@ import qualified Data.Text as Text (unpack)
 import           Prelude
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..),
-                   ProtocolParameters, ShelleyLedgerEra,
-                   convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
+import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
+                   ShelleyLedgerEra, convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
                    protocolParamPrices)
 
-import           Cardano.Logging hiding(LocalSocket)
+import           Cardano.Logging hiding (LocalSocket)
 
 import qualified Cardano.Ledger.Core as Ledger
 
@@ -504,7 +503,7 @@ makePlutusContext ScriptSpec{..} = do
     ScriptInAnyLang lang (PlutusScript version script') ->
       let
         scriptWitness :: ScriptWitness WitCtxTxIn era
-        scriptWitness = case scriptLanguageSupportedInEra (cardanoEra @era) lang of
+        scriptWitness = case scriptLanguageSupportedInEra (shelleyBasedEra @era) lang of
           Nothing -> error $ "runPlutusBenchmark: " ++ show version ++ " not supported in era: " ++ show (cardanoEra @era)
           Just scriptLang -> PlutusScriptWitness
                               scriptLang

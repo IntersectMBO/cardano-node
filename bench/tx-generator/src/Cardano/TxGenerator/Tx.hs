@@ -169,7 +169,7 @@ genTx _era ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
   = bimap
       ApiError
       (\b -> (signShelleyTransaction (shelleyBasedEra @era) b $ map WitnessPaymentKey allKeys, getTxId b))
-      (createAndValidateTransactionBody (cardanoEra @era) txBodyContent)
+      (createAndValidateTransactionBody (shelleyBasedEra @era) txBodyContent)
  where
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
   txBodyContent = defaultTxBodyContent (cardanoEra @era)

@@ -34,8 +34,8 @@ library
   build-depends:        aeson
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 8.33
-                      , cardano-cli ^>= 8.15
+                      , cardano-api ^>= 8.35
+                      , cardano-cli ^>= 8.16.0.1
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger-alonzo

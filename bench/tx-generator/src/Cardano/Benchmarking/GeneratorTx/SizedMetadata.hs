@@ -109,7 +109,7 @@ metadataSize :: forall era . IsShelleyBasedEra era => AsType era -> Maybe TxMeta
 metadataSize p m = dummyTxSize p m - dummyTxSize p Nothing
 
 dummyTxSizeInEra :: forall era . IsShelleyBasedEra era => TxMetadataInEra era -> Int
-dummyTxSizeInEra metadata = case createAndValidateTransactionBody (cardanoEra @era) dummyTx of
+dummyTxSizeInEra metadata = case createAndValidateTransactionBody (shelleyBasedEra @era) dummyTx of
   Right b -> BS.length $ serialiseToCBOR b
   Left err -> error $ "metaDataSize " ++ show err
  where

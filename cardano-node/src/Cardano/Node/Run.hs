@@ -42,7 +42,7 @@ import           "contra-tracer" Control.Tracer
 import           Data.Either (partitionEithers)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, mapMaybe, fromMaybe)
+import           Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Proxy (Proxy (..))
 import           Data.Text (Text, breakOn, pack)
@@ -78,9 +78,8 @@ import           Cardano.Node.Configuration.Logging (LoggingLayer (..), createLo
                    nodeBasicInfo, shutdownLoggingLayer)
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
-                   PartialNodeConfiguration (..), SomeNetworkP2PMode (..),
-                   defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP,
-                   TimeoutOverride (..))
+                   PartialNodeConfiguration (..), SomeNetworkP2PMode (..), TimeoutOverride (..),
+                   defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.API
 import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
@@ -104,9 +103,9 @@ import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), Co
                    PeerSelectionTargets (..), RemoteAddress)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
-import           Ouroboros.Network.Protocol.ChainSync.Codec
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                    gatherConfiguredSockets, getSocketOrSocketInfoAddr)
@@ -163,7 +162,7 @@ runNode cmdPc = do
 
     p :: SomeConsensusProtocol <-
       case eitherSomeProtocol of
-        Left err -> putStrLn (prettyToString (Api.prettyError err)) >> exitFailure
+        Left err -> putStrLn (docToString (Api.prettyError err)) >> exitFailure
         Right p  -> pure p
 
     let networkMagic :: Api.NetworkMagic =
