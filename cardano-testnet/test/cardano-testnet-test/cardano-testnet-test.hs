@@ -7,6 +7,7 @@ module Main
 import qualified Cardano.Crypto.Init as Crypto
 import qualified Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
 import qualified Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
+import qualified Cardano.Testnet.Test.Cli.Babbage.Transaction
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldBlocks
@@ -37,6 +38,7 @@ tests = pure $ T.testGroup "test/Spec.hs"
         -- this should remedy. Double check and make sure we have re-enabled it and remove this comment.
         [ H.ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule -- FAILS
         , H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot.hprop_stakeSnapshot
+        , H.ignoreOnWindows "transaction" Cardano.Testnet.Test.Cli.Babbage.Transaction.hprop_transaction
         ]
     -- TODO: Conway -  Re-enable when create-staked is working in conway again
     --, T.testGroup "Conway"

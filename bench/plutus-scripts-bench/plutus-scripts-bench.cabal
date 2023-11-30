@@ -1,6 +1,6 @@
 cabal-version:          3.0
 name:                   plutus-scripts-bench
-version:                1.0.0.6
+version:                1.0.1.0
 synopsis:               Plutus scripts used for benchmarking
 description:            Plutus scripts used for benchmarking.
 category:               Cardano,
@@ -66,6 +66,7 @@ library
     Cardano.Benchmarking.PlutusScripts.CustomCall
     Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1Loop
     Cardano.Benchmarking.PlutusScripts.Loop
+    Cardano.Benchmarking.PlutusScripts.LoopV3
     Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1Loop
 
   --------------------------

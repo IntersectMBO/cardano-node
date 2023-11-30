@@ -47,7 +47,7 @@ import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Mempool
 import qualified Ouroboros.Consensus.Shelley.Ledger.Mempool as Mempool (TxId(ShelleyTxId))
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 
-import qualified Ouroboros.Consensus.Cardano.Block as Block (TxId(GenTxIdShelley, GenTxIdAllegra, GenTxIdAlonzo, GenTxIdMary,GenTxIdBabbage ))
+import qualified Ouroboros.Consensus.Cardano.Block as Block (TxId(GenTxIdShelley, GenTxIdAllegra, GenTxIdAlonzo, GenTxIdMary,GenTxIdBabbage, GenTxIdConway))
 
 import           Ouroboros.Network.Protocol.TxSubmission2.Client (ClientStIdle (..),
                                                                   ClientStTxIds (..),
@@ -201,6 +201,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
   fromGenTxId (Block.GenTxIdMary    (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId (Block.GenTxIdAlonzo  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId (Block.GenTxIdBabbage (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId (Block.GenTxIdConway  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId _ = error "TODO: fix incomplete match"
 
   tokIsBlocking :: TokBlockingStyle a -> Bool

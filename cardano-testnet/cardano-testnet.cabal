@@ -160,6 +160,7 @@ test-suite cardano-testnet-test
   other-modules:        Cardano.Testnet.Test.Cli.Alonzo.LeadershipSchedule
                         Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
                         Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
+                        Cardano.Testnet.Test.Cli.Babbage.Transaction
                         Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
                         Cardano.Testnet.Test.Cli.KesPeriodInfo
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
@@ -182,6 +183,7 @@ test-suite cardano-testnet-test
                       , filepath
                       , hedgehog
                       , hedgehog-extras
+                      , microlens
                       , process
                       , tasty
                       , text

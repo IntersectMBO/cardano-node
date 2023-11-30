@@ -1,0 +1,32 @@
+{
+  "add_tx_size": 100,
+  "debugMode": false,
+  "era": "Conway",
+  "init_cooldown": 5,
+  "inputs_per_tx": 2,
+  "localNodeSocketPath": "../node-0/node.socket",
+  "min_utxo_value": 10000000,
+  "nodeConfigFile": "../node-0/config.json",
+  "outputs_per_tx": 2,
+  "plutus": {
+    "type": "LimitSaturationLoop",
+    "script": {
+        "Left": "LoopV3"
+    }
+  },
+  "sigKey": "../genesis/utxo-keys/utxo1.skey",
+  "targetNodes": [
+    {
+      "addr": "127.0.0.1",
+      "port": 30000
+    },
+    {
+      "addr": "127.0.0.1",
+      "port": 30001
+    }
+  ],
+  "tps": 15,
+  "tx_count": 9000,
+  "tx_fee": 1000000,
+  "pools": []
+}
