@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                8.7.0
+version:                8.7.1
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -176,7 +176,7 @@ library
                       , network-mux >= 0.4
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-consensus ^>= 0.13
+                      , ouroboros-consensus ^>= 0.14
                       , ouroboros-consensus-cardano ^>= 0.12
                       , ouroboros-consensus-diffusion ^>= 0.9
                       , ouroboros-consensus-protocol
