@@ -70,7 +70,6 @@ preFormatted backends' (Trace tr) = do
         time     <- liftIO getCurrentTime
         threadId <- liftIO myThreadId
         let ns' = lcNSPrefix lc ++ lcNSInner lc
-            nsText = intercalate "." ns'
             threadText = showT threadId
             threadTextShortened =
               fromMaybe threadText (stripPrefix "ThreadId " threadText)
@@ -83,18 +82,11 @@ preFormatted backends' (Trace tr) = do
                                   txt -> Just txt
                           else Nothing
             machineFormatted = forMachine details msg
-            machineObj = AE.pairs $
-                              "at"       .= time
-                            <> "ns"      .= nsText
-                            <> "data"    .= machineFormatted
-                            <> "sev"     .= fromMaybe Info (lcSeverity lc)
-                            <> "thread"  .= threadTextShortened
-                            <> "host"    .= hostname
 
         pure (lc, Right (PreFormatted
                           { pfMessage = msg
                           , pfForHuman = condForHuman
-                          , pfForMachine = encodingToText machineObj
+                          , pfForMachine = machineFormatted
                           , pfTimestamp = timeFormatted time
                           , pfTime = time
                           , pfNamespace = ns'
@@ -111,15 +103,24 @@ forwardFormatter'
   => Maybe Text
   -> Trace m FormattedMessage
   -> Trace m (PreFormatted a)
-forwardFormatter' _condPrefix (Trace tr) = Trace $
+forwardFormatter' condPrefix (Trace tr) = Trace $
   contramap
     (\ case
       (lc, Right v) ->
-            let
+            let ns = case condPrefix of
+                                  Just app -> app : pfNamespace v
+                                  Nothing -> pfNamespace v
+                machineObj = AE.pairs $
+                      "at"       .= pfTime v
+                    <> "ns"      .= ns
+                    <> "data"    .= pfForMachine v
+                    <> "sev"     .= fromMaybe Info (lcSeverity lc)
+                    <> "thread"  .= pfThreadId v
+                    <> "host"    .= pfHostname v
                 to = TraceObject {
                     toHuman     = pfForHuman v
-                  , toMachine   = pfForMachine v
-                  , toNamespace = pfNamespace v
+                  , toMachine   = encodingToText machineObj
+                  , toNamespace = ns
                   , toSeverity  = fromMaybe Info (lcSeverity lc)
                   , toDetails   = fromMaybe DNormal (lcDetails lc)
                   , toTimestamp = pfTime v
@@ -137,14 +138,25 @@ machineFormatter'
   => Maybe Text
   -> Trace m FormattedMessage
   -> Trace m (PreFormatted a)
-machineFormatter' _condPrefix (Trace tr) = Trace $
+machineFormatter' condPrefix (Trace tr) = Trace $
   contramap
     (\ case
-      (lc, Right v) -> (lc, Right (FormattedMachine (pfForMachine v)))
+      (lc, Right v) ->
+        let ns = case condPrefix of
+                                  Just app -> app : pfNamespace v
+                                  Nothing -> pfNamespace v
+            machineObj = AE.pairs $
+                   "at"      .= pfTime v
+                <> "ns"      .= intercalate "." ns
+                <> "data"    .= pfForMachine v
+                <> "sev"     .= fromMaybe Info (lcSeverity lc)
+                <> "thread"  .= pfThreadId v
+                <> "host"    .= pfHostname v
+        in (lc, Right (FormattedMachine (encodingToText machineObj)))
       (lc, Left ctrl) -> (lc, Left ctrl))
       tr
 
--- | Format this trace as TraceObject for the trace forwarder
+-- | Format this trace in human readable style
 humanFormatter'
   :: forall a m .
      MonadIO m
@@ -152,13 +164,16 @@ humanFormatter'
   -> Maybe Text
   -> Trace m FormattedMessage
   -> Trace m (PreFormatted a)
-humanFormatter' withColor _condPrefix (Trace tr) =
+humanFormatter' withColor condPrefix (Trace tr) =
   Trace $
       contramap
         (\ case
           (lc, Right v) ->
               let ns' = fromText $
-                          intercalate "." (pfNamespace v)
+                          intercalate "."
+                          (case condPrefix of
+                              Just app -> app : pfNamespace v
+                              Nothing  ->pfNamespace v)
                   severity' = fromMaybe Info (lcSeverity lc)
                   ns        = colorBySeverity
                                 withColor
@@ -220,7 +235,9 @@ humanFormatter
   -> m (Trace m a)
 humanFormatter withColor condPrefix tr = do
     let tr' = humanFormatter' withColor condPrefix tr
-    preFormatted [Stdout (if withColor then HumanFormatColoured else HumanFormatUncoloured)] tr'
+    preFormatted [Stdout (if withColor
+                            then HumanFormatColoured
+                            else HumanFormatUncoloured)] tr'
 
 machineFormatter
   :: forall a m .

@@ -54,6 +54,7 @@ module Cardano.Logging.Types (
 
 import           Codec.Serialise (Serialise (..))
 import qualified Data.Aeson as AE
+import qualified Data.Aeson.KeyMap as AE
 import qualified Data.HashMap.Strict as HM
 import           Data.IORef
 import           Data.Map.Strict (Map)
@@ -240,7 +241,7 @@ data SeverityS
     | Critical                -- ^ Severe situations
     | Alert                   -- ^ Take immediate action
     | Emergency               -- ^ System is unusable
-  deriving (Show, Eq, Ord, Bounded, Enum, Read, AE.ToJSON, Generic, Serialise)
+  deriving (Show, Eq, Ord, Bounded, Enum, Read, AE.ToJSON, AE.FromJSON, Generic, Serialise)
 
 -- | Severity for a filter
 -- Nothing means don't show anything (Silence)
@@ -311,7 +312,7 @@ data FormattedMessage =
 data PreFormatted a = PreFormatted {
     pfMessage    :: !a
   , pfForHuman   :: !(Maybe Text)
-  , pfForMachine :: !Text
+  , pfForMachine :: !(AE.KeyMap AE.Value)
   , pfNamespace  :: ![Text]
   , pfTimestamp  :: !Text
   , pfTime       :: !UTCTime
@@ -494,10 +495,6 @@ newtype Folding a b = Folding b
 
 unfold :: Folding a b -> b
 unfold (Folding b) = b
-
-
----------------------------------------------------------------------------
--- LogFormatting instances
 
 instance LogFormatting b => LogFormatting (Folding a b) where
   forMachine v (Folding b) =  forMachine v b

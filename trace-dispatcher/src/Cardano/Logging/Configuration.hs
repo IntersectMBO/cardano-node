@@ -257,27 +257,22 @@ filterSeverityFromConfig =
   where
     mapF confSev =
       \case
+        (lc, Right cont) -> do
+          let visible = case lcSeverity lc of
+                            (Just s)  -> case confSev of
+                                          Just (SeverityF (Just fs)) -> s >= fs
+                                          Just (SeverityF Nothing)   -> False
+                                          Nothing -> True
+                            Nothing -> True
+          if visible
+            then pure $ Just (lc, Right cont)
+            else pure Nothing
         (lc, Left c@TCDocument {}) -> do
           addFiltered c confSev
-          let visible = case lcSeverity lc of
-                            (Just s)  -> case confSev of
-                                          Just (SeverityF (Just fs)) -> s >= fs
-                                          Just (SeverityF Nothing)   -> False
-                                          Nothing -> True
-                            Nothing -> True
-          if visible
-            then pure $ Just (lc, Left c)
-            else pure Nothing
-        (lc, cont) -> do
-          let visible = case lcSeverity lc of
-                            (Just s)  -> case confSev of
-                                          Just (SeverityF (Just fs)) -> s >= fs
-                                          Just (SeverityF Nothing)   -> False
-                                          Nothing -> True
-                            Nothing -> True
-          if visible
-            then pure $ Just (lc, cont)
-            else pure Nothing
+          pure (Just (lc, Left c))
+        (lc, anx) ->  do
+          pure (Just (lc, anx))
+
 
 -- | Set detail level of a trace from the config
 withDetailsFromConfig :: (MonadIO m) =>

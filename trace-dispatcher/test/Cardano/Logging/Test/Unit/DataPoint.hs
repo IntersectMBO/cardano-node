@@ -6,8 +6,9 @@
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
-module Examples.DataPoint (
-  testDataPoint
+module Cardano.Logging.Test.Unit.DataPoint (
+    testDataPoint
+  , testDataPointResult
 ) where
 
 import           Control.DeepSeq (NFData)
@@ -16,6 +17,7 @@ import           Data.ByteString.Lazy.UTF8
 import qualified Data.Map.Strict as M
 import           GHC.Conc
 import           GHC.Generics (Generic)
+import           Trace.Forward.Protocol.DataPoint.Type (DataPointName)
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
 
 import           Cardano.Logging
@@ -50,11 +52,13 @@ instance Show DataPoint where
 emptyStats :: BaseStats
 emptyStats = BaseStats 0.0 100000000.0 (-100000000.0) 0 0.0
 
-testDataPoint :: IO ()
+testDataPoint :: IO (M.Map DataPointName DataPoint)
 testDataPoint = do
     dpMap <- newTVarIO M.empty
     let rawDataPointTracer = dataPointTracer dpMap
     dpTracer <- mkDataPointTracer rawDataPointTracer
     traceWith dpTracer emptyStats
-    dps <- readTVarIO dpMap
-    print dps
+    readTVarIO dpMap
+
+testDataPointResult :: String
+testDataPointResult = "fromList [(\"BaseStats\",{\"bsMeasure\":0.0,\"bsMin\":1.0e8,\"bsMax\":-1.0e8,\"bsCount\":0,\"bsSum\":0.0})]"
