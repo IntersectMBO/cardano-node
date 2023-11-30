@@ -88,60 +88,18 @@ library
                         -Wredundant-constraints
                         -Wmissing-export-lists
 
--- executable trace-dispatcher-examples
---   import:               project-config
---   main-is:              Main.hs
---   other-modules:        Cardano.Logging.Test.Unit.TestObjects
---                         Cardano.Logging.Test.Unit.Aggregation
---                         Cardano.Logging.Test.Unit.Trivial
---                         Cardano.Logging.Test.Unit.Routing
---                         Cardano.Logging.Test.Unit.EKG
---                         Cardano.Logging.Test.Unit.Configuration
---                         Cardano.Logging.Test.Unit.DataPoint
---                         Cardano.Logging.Test.Unit.FrequencyLimiting
---                         Cardano.Logging.Test.Unit.Documentation
---   hs-source-dirs:       examples
---   default-extensions:   OverloadedStrings
---   build-depends:        base >=4.12 && <5
---                       , aeson
---                       , bytestring
---                       , containers
---                       , deepseq
---                       , ekg
---                       , ekg-core
---                       , hostname
---                       , stm
---                       , text
---                       , trace-dispatcher
---                       , trace-forward
---                       , time
---                       , unagi-chan
---                       , unliftio
---                       , unliftio-core
---                       , unordered-containers
---                       , utf8-string
---                       , yaml
---   ghc-options:          -Wall
---                         -Wcompat
---                         -Wincomplete-uni-patterns
---                         -Wincomplete-record-updates
---                         -Wpartial-fields
---                         -Widentities
---                         -Wredundant-constraints
---                         -Wmissing-export-lists
---                         -Wno-incomplete-patterns
 
 test-suite trace-dispatcher-test
-  import:              project-config
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             trace-dispatcher-test.hs
-  other-modules:       Cardano.Logging.Test.Types
-                       Cardano.Logging.Test.Oracles
-                       Cardano.Logging.Test.Config
-                       Cardano.Logging.Test.Tracer
-                       Cardano.Logging.Test.Script
-                       Cardano.Logging.Test.Unit.TestObjects
+  import:               project-config
+  type:                 exitcode-stdio-1.0
+  hs-source-dirs:       test
+  main-is:              trace-dispatcher-test.hs
+  other-modules:        Cardano.Logging.Test.Types
+                        Cardano.Logging.Test.Oracles
+                        Cardano.Logging.Test.Config
+                        Cardano.Logging.Test.Tracer
+                        Cardano.Logging.Test.Script
+                        Cardano.Logging.Test.Unit.TestObjects
                         Cardano.Logging.Test.Unit.Aggregation
                         Cardano.Logging.Test.Unit.Trivial
                         Cardano.Logging.Test.Unit.Routing
