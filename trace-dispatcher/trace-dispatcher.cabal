@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   trace-dispatcher
-version:                2.4.1
+version:                2.5.0
 synopsis:               Tracers for Cardano
 description:            Package for development of simple and efficient tracers
                         based on the arrow based contra-tracer package
