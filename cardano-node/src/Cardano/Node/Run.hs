@@ -204,16 +204,20 @@ handleNodeWithTracers
   -> Api.BlockType blk
   -> Api.ProtocolInfoArgs blk
   -> IO ()
-handleNodeWithTracers cmdPc nc p networkMagic blockType runP = do
+handleNodeWithTracers cmdPc nc0 p networkMagic blockType runP = do
   -- This IORef contains node kernel structure which holds node kernel.
   -- Used for ledger queries and peer connection status.
   nodeKernelData <- mkNodeKernelData
   let ProtocolInfo { pInfoConfig = cfg } = fst $ Api.protocolInfo @IO runP
-  case ncEnableP2P nc of
+  case ncEnableP2P nc0 of
     SomeNetworkP2PMode p2pMode -> do
       let fp = maybe  "No file path found!"
                       unConfigPath
                       (getLast (pncConfigFile cmdPc))
+          -- Overwrite configured peer sharing mode if p2p is not enabled
+          nc = case p2pMode of
+            DisabledP2PMode -> nc0 { ncPeerSharing = PeerSharingDisabled }
+            EnabledP2PMode -> nc0
       case ncTraceConfig nc of
         TraceDispatcher{} -> do
           tracers <-
