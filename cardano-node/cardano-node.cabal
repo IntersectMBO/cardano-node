@@ -46,10 +46,17 @@ common maybe-unix
   if !os(windows)
     build-depends:      unix
 
+common text
+  if impl(ghc == 8.10.7) && os(darwin) && arch(aarch64)
+    build-depends: text >= 1.2.5.0
+  else
+    build-depends: text >= 2.0
+
 library
   import:               project-config
                       , maybe-unix
                       , maybe-Win32
+                      , text
   if flag(unexpected_thunks)
     cpp-options:        -DUNEXPECTED_THUNKS
 
@@ -194,7 +201,6 @@ library
                       , stm
                       , strict-sop-core
                       , strict-stm
-                      , text >= 2.0
                       , time
                       , trace-dispatcher ^>= 2.5
                       , trace-forward ^>= 2.2
