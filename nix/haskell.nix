@@ -169,6 +169,7 @@ let
             # add shell completion:
             packages.cardano-node.components.exes.cardano-node.postInstall = postInstall "cardano-node";
             packages.cardano-cli.components.exes.cardano-cli.postInstall = postInstall "cardano-cli";
+            packages.cardano-submit-api.components.exes.cardano-submit-api.postInstall = postInstall "cardano-submit-api";
             packages.cardano-topology.components.exes.cardano-topology.postInstall = postInstall "cardano-topology";
             packages.locli.components.exes.locli.postInstall = postInstall "locli";
           })
@@ -176,6 +177,8 @@ let
             let
               exportCliPath = "export CARDANO_CLI=${config.hsPkgs.cardano-cli.components.exes.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}";
               exportNodePath = "export CARDANO_NODE=${config.hsPkgs.cardano-node.components.exes.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}";
+              exportSubmitApiPath = "export CARDANO_SUBMIT_API=${config.hsPkgs.cardano-submit-api.components.exes.cardano-submit-api}/bin/cardano-submit-api${pkgs.stdenv.hostPlatform.extensions.executable}";
+              exportChairmanPath = "export CARDANO_NODE_CHAIRMAN=${config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman}/bin/cardano-node-chairman${pkgs.stdenv.hostPlatform.extensions.executable}";
               mainnetConfigFiles = [
                 "configuration/cardano/mainnet-config.yaml"
                 "configuration/cardano/mainnet-config.json"
@@ -216,7 +219,7 @@ let
                 ''
                   ${exportCliPath}
                   ${exportNodePath}
-                  export CARDANO_NODE_CHAIRMAN=${config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman}/bin/cardano-node-chairman${pkgs.stdenv.hostPlatform.extensions.executable}
+                  ${exportChairmanPath}
                   export CARDANO_NODE_SRC=${filteredProjectBase}
                 '';
               # cardano-testnet depends on cardano-node, cardano-cli, cardano-submit-api and some config files
@@ -241,7 +244,7 @@ let
                 ''
                   ${exportCliPath}
                   ${exportNodePath}
-                  export CARDANO_SUBMIT_API=${config.hsPkgs.cardano-submit-api.components.exes.cardano-submit-api}/bin/cardano-submit-api${pkgs.stdenv.hostPlatform.extensions.executable}
+                  ${exportSubmitApiPath}
                   export CARDANO_NODE_SRC=${filteredProjectBase}
                 ''
                 # the cardano-testnet-tests, use sockets stored in a temporary directory
