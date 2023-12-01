@@ -537,14 +537,14 @@ parsePartialResourceStates =
       rGcsMajor   <- o .:  "GcsMajor"
       rGcsMinor   <- o .:  "GcsMinor"
       rAlloc      <- o .:  "Alloc"
-      rLive       <- o .:? "Heap"       <&> fromMaybe 0
-      rHeap       <- o .:  "Live"
+      rLive       <- o .:  "Live"
+      rHeap       <- o .:? "Heap"       .!= 0
       rRSS        <- o .:  "RSS"
       rCentiBlkIO <- o .:  "CentiBlkIO"
-      rNetRd      <- o .:? "NetRd"      <&> fromMaybe 0
-      rNetWr      <- o .:? "NetWr"      <&> fromMaybe 0
-      rFsRd       <- o .:? "FsRd"       <&> fromMaybe 0
-      rFsWr       <- o .:? "FsWr"       <&> fromMaybe 0
+      rNetRd      <- o .:? "NetRd"      .!= 0
+      rNetWr      <- o .:? "NetWr"      .!= 0
+      rFsRd       <- o .:? "FsRd"       .!= 0
+      rFsWr       <- o .:? "FsWr"       .!= 0
       rThreads    <- o .:  "Threads"
       pure Resources{..}
 
