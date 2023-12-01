@@ -130,7 +130,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
         }
 
   withSubmitApi submitApiConf [] $ \uriBase -> do
-    H.threadDelay 1_000_000
+    H.threadDelay 5_000_000
 
     txBodySigned <- H.leftFailM $ H.readJsonFile txbodySignedFp
 
