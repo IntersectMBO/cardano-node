@@ -28,21 +28,22 @@ import qualified Cardano.Testnet as H
 import           Data.Functor ((<&>))
 import           Hedgehog.Extras (Integration)
 import           Hedgehog.Extras.Stock (Sprocket (..))
+import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.IO as IO
 import qualified System.Process as IO
 
 data SubmitApiConf = SubmitApiConf
-  { tempAbsPath :: FilePath
-  , configPath :: FilePath
-  , epochSlots :: Int
-  , sprocket :: Sprocket
-  , testnetMagic :: Int
-  , port :: Int
+  { tempAbsPath   :: FilePath
+  , configPath    :: FilePath
+  , epochSlots    :: Int
+  , sprocket      :: Sprocket
+  , testnetMagic  :: Int
+  , maybePort     :: Maybe Int
   } deriving (Eq, Show)
 
-withSubmitApi :: SubmitApiConf -> [String] -> Integration () -> Integration ()
+withSubmitApi :: SubmitApiConf -> [String] -> (String -> Integration ()) -> Integration ()
 withSubmitApi
     SubmitApiConf
       { tempAbsPath
@@ -50,7 +51,7 @@ withSubmitApi
       , epochSlots
       , sprocket
       , testnetMagic
-      , port
+      , maybePort
       } args f = do
   let logDir = makeLogDir $ TmpAbsolutePath tempAbsPath
       tempBaseAbsPath = H.makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath
@@ -61,6 +62,8 @@ withSubmitApi
   hNodeStdout <- H.evalIO $ IO.openFile nodeStdoutFile IO.WriteMode
   hNodeStderr <- H.evalIO $ IO.openFile nodeStderrFile IO.WriteMode
 
+  [submitApiPort] <- H.evalIO $ maybe (IO.allocateRandomPorts 1) (pure . (:[])) maybePort
+
   (_, _, _, hProcess, _) <- H.createProcess =<<
     ( H.procSubmitApi
       ( [ "--config", configPath
@@ -68,7 +71,7 @@ withSubmitApi
         , "--epoch-slots", show @Int epochSlots
         , "--socket-path", IO.sprocketArgumentName sprocket
         , "--testnet-magic", show @Int testnetMagic
-        , "--port", show @Int port
+        , "--port", show @Int submitApiPort
         ]
         <> args
       ) <&>
@@ -85,6 +88,8 @@ withSubmitApi
 
   H.noteShow_ =<< H.getPid hProcess
 
-  f
+  let uriBase = "http://localhost:" <> show submitApiPort
+
+  f uriBase
 
   H.evalIO $ IO.terminateProcess hProcess

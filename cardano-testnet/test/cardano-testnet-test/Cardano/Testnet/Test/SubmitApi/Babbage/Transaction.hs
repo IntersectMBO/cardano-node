@@ -125,11 +125,11 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
         , configPath = configurationFile
         , epochSlots = 2
         , sprocket = poolSprocket1
-        , port = 8090
+        , maybePort = Nothing
         , testnetMagic
         }
 
-  withSubmitApi submitApiConf [] $ do
+  withSubmitApi submitApiConf [] $ \uriBase -> do
     H.threadDelay 1_000_000
 
     txBodySigned <- H.leftFailM $ H.readJsonFile txbodySignedFp
@@ -140,7 +140,9 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
 
     H.evalIO $ BS.writeFile txbodySignedBinFp txBs
 
-    request <- H.evalM $ parseRequest "POST http://localhost:8090/api/submit/tx"
+    let submitApiRequestEndpoint = "POST " <> uriBase <> "/api/submit/tx"
+
+    request <- H.evalM $ parseRequest submitApiRequestEndpoint
       <&> setRequestBodyFile txbodySignedBinFp
       <&> setRequestHeader "Content-Type" ["application/cbor"]
 
@@ -148,7 +150,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
 
     getResponseStatusCode response === 202
 
-  H.byDurationM 1 10 "Expected UTxO found" $ do
+  H.byDurationM 5 30 "Expected UTxO found" $ do
     void $ execCli' execConfig
       [ "babbage", "query", "utxo"
       , "--address", Text.unpack $ paymentKeyInfoAddr $ head wallets
