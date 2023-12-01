@@ -78,16 +78,6 @@ cliOpts = info (cliParser <**> helper)
         <> help "Add an explorer to the topology")
 
    coreNodesParamsParser =
-     command "torus"
-     (info
-       (Topo.Torus
-        <$> parseSize
-        <*> some parseLocation
-        <*> parseRoleSelector)
-       (progDesc "Toroidal mesh"
-                 <> fullDesc
-                 <> header "Generate a toroidal mesh topology"))
-     <>
      command "line"
      (info
       (Topo.Line
@@ -107,6 +97,26 @@ cliOpts = info (cliParser <**> helper)
        (progDesc "Unidirectional circle"
                  <> fullDesc
                  <> header "Generate a unidirectional circle topology"))
+     <>
+     command "torus"
+     (info
+       (Topo.Torus
+        <$> parseSize
+        <*> some parseLocation
+        <*> parseRoleSelector)
+       (progDesc "Toroidal mesh"
+                 <> fullDesc
+                 <> header "Generate a toroidal mesh topology"))
+     <>
+     command "torus-dense"
+     (info
+       (Topo.TorusDense
+        <$> parseSize
+        <*> some parseLocation
+        <*> parseRoleSelector)
+       (progDesc "Toroidal mesh (dense)"
+                 <> fullDesc
+                 <> header "Generate a toroidal mesh topology (dense)"))
 
    parseSize =
      option auto

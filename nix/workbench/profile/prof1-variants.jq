@@ -189,7 +189,7 @@ def all_profile_variants:
     # Can only be used with the 52 + explorer value profile!
     { composition:
       { locations:                      ["eu-central-1", "us-east-1", "ap-southeast-2"]
-      , topology:                       "dense"
+      , topology:                       "torus-dense"
       , with_explorer:                  true
       }
     } as $nomad_perf_dense

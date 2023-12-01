@@ -87,14 +87,14 @@
       "pools": null,
       "producers": [
         "node-0",
-        "node-2",
-        "node-4",
         "node-1",
+        "node-2",
         "node-3",
+        "node-4",
         "node-5"
       ],
       "region": "eu-central-1",
-      "stakePool": false
+      "stakePool": null
     }
   ]
 }

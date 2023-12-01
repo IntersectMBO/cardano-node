@@ -14,7 +14,8 @@ license-files:          LICENSE
                         NOTICE
 build-type:             Simple
 extra-source-files:     README.md
-data-files:             data/bench-dense-52.json
+data-files:             data/bench-torus-52.json
+                        data/bench-torus-dense-52.json
                         data/ci-test-nomadcwqa.json
                         data/ci-test-nomadperf.json
                         data/ci-test.json
