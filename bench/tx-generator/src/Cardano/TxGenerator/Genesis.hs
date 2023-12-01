@@ -124,7 +124,7 @@ mkGenesisTransaction key ttl fee txins txouts
   = bimap
       ApiError
       (\b -> signShelleyTransaction (shelleyBasedEra @era) b [WitnessGenesisUTxOKey key])
-      (createAndValidateTransactionBody (cardanoEra @era) txBodyContent)
+      (createAndValidateTransactionBody (shelleyBasedEra @era) txBodyContent)
  where
   txBodyContent = defaultTxBodyContent (cardanoEra @era)
     & setTxIns (zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending)

@@ -132,16 +132,16 @@ data TxGenError where
   TxGenError      :: !String -> TxGenError
 
 instance Show TxGenError where
-  show (ApiError e) = prettyToString $ "ApiError " <> parens (prettyError e)
-  show (ProtocolError e) = prettyToString $ "ProtocolError " <> parens (prettyError e)
-  show (PlutusError e) = prettyToString $ "ProtocolError " <> parens (pshow e)
-  show (TxGenError e) = prettyToString $ "ApiError " <> parens (pshow e)
+  show (ApiError e) = docToString $ "ApiError " <> parens (prettyError e)
+  show (ProtocolError e) = docToString $ "ProtocolError " <> parens (prettyError e)
+  show (PlutusError e) = docToString $ "ProtocolError " <> parens (pshow e)
+  show (TxGenError e) = docToString $ "ApiError " <> parens (pshow e)
 
 instance Semigroup TxGenError where
   TxGenError a <> TxGenError b  = TxGenError (a <> b)
-  TxGenError a <> b             = TxGenError (a <> prettyToString (pshow b))
-  a            <> TxGenError b  = TxGenError (prettyToString (pshow a) <> b)
-  a            <> b             = TxGenError $ prettyToString (pshow a <> pshow b)
+  TxGenError a <> b             = TxGenError (a <> docToString (pshow b))
+  a            <> TxGenError b  = TxGenError (docToString (pshow a) <> b)
+  a            <> b             = TxGenError $ docToString (pshow a <> pshow b)
 
 instance Error TxGenError where
   prettyError = \case

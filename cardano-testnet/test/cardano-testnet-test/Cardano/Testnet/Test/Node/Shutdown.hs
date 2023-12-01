@@ -100,7 +100,7 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
 
   -- 2. Create Alonzo genesis
   alonzoBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> shelleyDir </> "genesis.alonzo.spec.json"
-  gen <- H.evalEither $ first (prettyToString . prettyError) defaultAlonzoGenesis
+  gen <- H.evalEither $ first (docToString . prettyError) defaultAlonzoGenesis
   H.evalIO $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
 
   -- 2. Create Conway genesis

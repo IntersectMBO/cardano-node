@@ -22,15 +22,15 @@ prop_op_cert_valid_kes_period opCertFp output =
     case qKesOpCertIntervalInformation output of
       OpCertWithinInterval{} -> success
       info@OpCertStartingKesPeriodIsInTheFuture{} ->
-        failMessage GHC.callStack . prettyToString
+        failMessage GHC.callStack . docToString
           $ "Expected OpCertWithinInterval but got: OpCertStartingKesPeriodIsInTheFuture\n"
           <> renderOpCertIntervalInformation opCertFp info
       info@OpCertExpired{} ->
-        failMessage GHC.callStack . prettyToString
+        failMessage GHC.callStack . docToString
           $ "Expected OpCertWithinInterval but got: OpCertExpired\n"
           <> renderOpCertIntervalInformation opCertFp info
       info@OpCertSomeOtherError{} ->
-        failMessage GHC.callStack . prettyToString
+        failMessage GHC.callStack . docToString
           $ "Expected OpCertWithinInterval but got: OpCertSomeOtherError\n"
           <> renderOpCertIntervalInformation opCertFp info
 

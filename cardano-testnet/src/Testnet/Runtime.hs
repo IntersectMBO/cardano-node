@@ -157,7 +157,7 @@ getStartTime tempRootPath TestnetRuntime{configurationFile} = withFrozenCallStac
       partialNodeCfg <- ExceptT $ A.eitherDecodeFileStrict' file
       fmap ncProtocolConfig . liftEither . makeNodeConfiguration $ defaultPartialNodeConfiguration <> partialNodeCfg
     decodeGenesisFile :: FilePath -> ExceptT String IO G.Config
-    decodeGenesisFile fp = withExceptT (prettyToString . prettyError) $
+    decodeGenesisFile fp = withExceptT (docToString . prettyError) $
       Byron.readGenesis (GenesisFile fp) Nothing RequiresNoMagic
 
 readNodeLoggingFormat :: String -> Either String NodeLoggingFormat
