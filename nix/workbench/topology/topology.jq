@@ -12,6 +12,27 @@ def loopback_node_topology_from_nixops_topology($topo; $i):
           ))
     };
 
+def p2p_loopback_node_topology_from_nixops_topology($topo; $i):
+    # DON'T ASSUME NODES ARE ORDERED INSIDE THE GLOBAL TOPOLOGY FILE!!!!!!!!!!!!
+    ($topo.coreNodes | map(select(.nodeId == $i)) | .[0] | .producers) as $producers
+  | ($producers | map(ltrimstr("node-") | fromjson))                   as $prod_indices
+  | { localRoots:
+      ( $prod_indices
+        | map
+          ({ accessPoints: [
+              { address: "127.0.0.1"
+              , port:    ($basePort + .)
+              }
+            ]
+          , advertise: false
+          , valency: 1
+          })
+      )
+    , publicRoots: []
+    , useLedgerAfterSlot: -1
+    }
+;
+
 def composition_block_sources_nr($compo):
   $compo.n_bft_hosts
 + $compo.n_pool_hosts

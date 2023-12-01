@@ -259,16 +259,23 @@ case "${op}" in
 
         case "$role" in
         local-bft | local-pool )
+            local jq_function
+            if jqtest ".node.verbatim.EnableP2P" <<<$prof
+            then
+              jq_function="p2p_loopback_node_topology_from_nixops_topology"
+            else
+              jq_function="loopback_node_topology_from_nixops_topology"
+            fi
             args=(-L$global_basedir
                   --slurpfile topology "$topo_dir"/topology.json
                   --argjson   basePort $basePort
                   --argjson   i        $i
                   --null-input
                  )
-            jq 'include "topology";
-
-            loopback_node_topology_from_nixops_topology($topology[0]; $i)
-            ' "${args[@]}";;
+            jq \
+                "include \"topology\"; $jq_function(\$topology[0]; \$i)" \
+                "${args[@]}"
+        ;;
         local-proxy )
             local   name=$(jq '.name'   <<<$prof --raw-output)
             local preset=$(jq '.preset' <<<$prof --raw-output)

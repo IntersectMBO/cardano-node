@@ -220,7 +220,10 @@ let
               inherit profileName;
               JSON = profileJson;
               value = profile;
-              topology.files = topologyFiles;
+              topology = {
+                files = topologyFiles;
+                value = (__fromJSON (__readFile "${topologyFiles}/topology.json"));
+              };
               node-specs = {JSON = nodeSpecsJson; value = nodeSpecs;};
               genesis.files = genesisFiles;
               inherit node-services generator-service tracer-service healthcheck-service;

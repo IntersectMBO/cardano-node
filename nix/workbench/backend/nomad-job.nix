@@ -716,10 +716,36 @@ let
               env = false;
               destination = "local/${stateDir}/${nodeSpec.name}/topology.json";
               data = escapeTemplate (
-                let topology = profileData.node-services."${nodeSpec.name}".topology;
-                in if execTaskDriver
-                  then (topologyToGoTemplate topology.value)
-                  else (__readFile           topology.JSON )
+                if execTaskDriver
+                then
+                  # Recreate the "topology.json" with IPs and ports that are
+                  # nomad template variables.
+                  (topologyToGoTemplate
+                    # Fetch this node's entry in the profile's "topology.json".
+                    (if nodeSpec.name != "explorer"
+                     then
+                      # Non explorer nodes are under "coreNodes"
+                      builtins.head # Must exist!
+                        (builtins.filter
+                          (coreNode: coreNode.name == nodeSpec.name)
+                          profileData.topology.value.coreNodes
+                        )
+                     else
+                      # The explorer node is under "relayNodes"
+                      builtins.head # Must exist!
+                        (builtins.filter
+                          (coreNode: coreNode.name == nodeSpec.name)
+                          profileData.topology.value.relayNodes
+                        )
+                    )
+                    # The P2P flag.
+                    (if profileData.value.node ? verbatim && profileData.value.node.verbatim ? EnableP2P
+                     then profileData.value.node.verbatim.EnableP2P
+                     else false
+                    )
+                  )
+                # Do nothing with the topology files.
+                else (__readFile profileData.node-services."${nodeSpec.name}".topology.JSON )
               );
               change_mode = "noop";
               error_on_missing_key = true;
@@ -745,8 +771,22 @@ let
               data = escapeTemplate (
                 let runScript = profileData.generator-service.config;
                 in if execTaskDriver
-                  then (runScriptToGoTemplate runScript.value)
-                  else (__readFile            runScript.JSON )
+                  # Recreate the "run-script.json" with IPs and ports that are
+                  # nomad template variables.
+                  then (runScriptToGoTemplate
+                    runScript.value
+                    # Just the node names.
+                    (lib.attrsets.mapAttrsToList
+                      (nodeSpecNodeName: nodeSpecNode: nodeSpecNodeName)
+                      # All the producer nodes. How the workbench creates it.
+                      (lib.attrsets.filterAttrs
+                        (nodeSpecNodeName: nodeSpecNode: nodeSpecNode.isProducer)
+                        profileData.node-specs.value
+                      )
+                    )
+                  )
+                  # Do nothing with the topology files.
+                  else (__readFile runScript.JSON)
               );
               change_mode = "noop";
               error_on_missing_key = true;
@@ -1202,11 +1242,14 @@ let
   escapeTemplate = str: builtins.replaceStrings ["\${" "%{"] ["\$\${" "%%{"] str;
 
   # A single node's service and network port use the same name, they are
-  # "perfnode0" .. "perfnode53" without "-" because they are not allowed for
-  # port names, I guess it's because Nomad uses them to create "NOMAD_HOST_IP_?"
-  # like envars.
-  nodeSpecToServicePortName = nodeSpec: "${"perfnode" + (toString nodeSpec.i)}";
+  # "perf-node-0" .. "perf-node-53".
+  # These names cannot be used for envars, envars translate "-" to "_", for
+  # example "NOMAD_HOST_PORT_perf_node_0".
+  nodeSpecToServicePortName = nodeSpec: "${"perf-node-" + (toString nodeSpec.i)}";
+  # WARNING: Node names should be of the form "node-#".
+  nodeNameToServicePortName = nodeName: "${"perf-" + (toString nodeName)}";
 
+  # Replaces the addresses and ports occurrences with Nomad templates variables.
   startScriptToGoTemplate = nodeSpec: servicePortName: startScript:
     builtins.replaceStrings
       [
@@ -1235,135 +1278,128 @@ let
         #''--host-addr {{range nomadService "${servicePortName}"}}{{.Address}}{{end}}''
 
         # Port string to
-        ''--port {{ env "NOMAD_HOST_PORT_${servicePortName}" }}''
+        ''--port {{range nomadService "${servicePortName}"}}{{.Port}}{{end}}''
         # Alternatives (may not work):
         #''--port {{ env "NOMAD_PORT_${servicePortName}" }}''
+        #''--port {{ env "NOMAD_HOST_PORT_${servicePortName}" }}''
         #''--port {{ env "NOMAD_ALLOC_PORT_${name}" }}''
-        #''--port {{range nomadService "${servicePortName}"}}{{.Port}}{{end}}''
       ]
       startScript
   ;
 
-  # Move from a topology.json with all addresses being "127.0.0.01" to one with
-  # all addresses being a placeholder like "{{NOMAD_IP_node-X}}"
+  # Convert from a Node's "topology.json" with all addresses being "127.0.0.01"
+  # to one with all addresses being a placeholder like "{{NOMAD_IP_node-X}}".
   #
-  # topology.json example:
-  # {
-  #   "Producers": [
-  #     {
-  #       "addr": "127.0.0.1",
-  #       "port": 30001,
-  #       "valency": 1
-  #     }
-  #   ]
-  # }
-  # Example node-specs.json:
-  # {
-  #   "node-1": {
-  #     "i": 1,
-  #     "kind": "pool",
-  #     "pools": 1,
-  #     "autostart": true,
-  #     "shutdown_on_slot_synced": null,
-  #     "name": "node-1",
-  #     "isProducer": true,
-  #     "port": 30001,
-  #     "shutdown_on_block_synced": 3
-  #   }
-  # }
-  # Input is a profileData.node-services."${nodeSpec.name}".topology.value
-  topologyToGoTemplate =
+  # The workbench creates JSON valid topology files with "127.0.0.1" and ports
+  # `basePort + nodeId` (Usually 30000 + Node number). The problem this function
+  # resolves is that a topology file with Nomad variables won't be valid JSON,
+  # a port number will be "{{ SOMETHING }}", so we handle them as strings and
+  # replace the values with Nomad template variables.
+  #
+  # Input is this node's entry in workbench's "topology.json" and the P2P flag.
+  topologyToGoTemplate = nodeTopology: p2p:
     let
-      # Here we must use the "service" definitions to resolve dynamically the
-      # other nodes' IPs and PORTs. Envars will only contain information from
-      # the actual node the "template" will run.
-      mergedNodeSpecToStr = mergedNodeSpecs: ''
-        {
-            "addr": "{{range nomadService "${(nodeSpecToServicePortName mergedNodeSpecs)}"}}{{.Address}}{{end}}"
-          , "port":  {{range nomadService "${(nodeSpecToServicePortName mergedNodeSpecs)}"}}{{.Port}}{{end}}
-          , "valency": ${toString mergedNodeSpecs.valency}
-        }
-      '';
+      nodesReferencesStr =
+          "["
+        + (builtins.concatStringsSep
+            ","
+            (nodeNamesToGoTemplateList nodeTopology.producers p2p)
+          )
+        + "]"
+      ;
     in
-      topology: ''
-        {
-          "Producers": [
-            ${builtins.concatStringsSep "," (
-                builtins.map
-                  mergedNodeSpecToStr
-                  (insertNodeSpecsInAddressesArray topology).Producers
-            )}
+      if p2p
+      then
+        ''
+        { "localRoots": [
+            { "accessPoints": ${nodesReferencesStr}
+            , "advertise": false
+            , "valency": 1
+            }
           ]
+        , "publicRoots": []
+        , "useLedgerAfterSlot": -1
         }
-      ''
+        ''
+      else
+        ''
+        { "Producers": ${nodesReferencesStr}
+        }
+        ''
   ;
 
-  # Input is a profileData.node-services."${nodeSpec.name}".topology.value
+  # Convert from generator's "run-script.json" with all addresses being
+  # "127.0.0.01" to one with all addresses being a placeholder like
+  # "{{NOMAD_IP_node-X}}".
+  #
+  # The workbench creates JSON valid script files with "127.0.0.1" and ports
+  # `basePort + nodeId` (Usually 30000 + Node number). The problem this function
+  # resolves is that a topology file with Nomad variables won't be valid JSON,
+  # a port number will be "{{ SOMETHING }}", so we handle them as strings and
+  # replace the values with Nomad template variable
   runScriptToGoTemplate =
-    let
-      mergedNodeSpecToStr = mergedNodeSpecs: ''
-        {
-            "addr": "{{range nomadService "${(nodeSpecToServicePortName mergedNodeSpecs)}"}}{{.Address}}{{end}}"
-          , "port":  {{range nomadService "${(nodeSpecToServicePortName mergedNodeSpecs)}"}}{{.Port}}{{end}}
-        }
-      '';
-    in
-      runScript: builtins.replaceStrings
-        # builtins.toJSON {a=null;} => "{\"a\":null}"
-        ["\"targetNodes\":null"]
-        [''
-          "targetNodes": [
-            ${builtins.concatStringsSep "," (
-              builtins.map
-                mergedNodeSpecToStr
-                (insertNodeSpecsInAddressesArray runScript).targetNodes
-            )}
-          ]
-        '']
-        (lib.generators.toJSON {} (runScript // {targetNodes=null;}))
+    runScript: producerNodes: builtins.replaceStrings
+      ["\"targetNodes\":null"]
+      [''
+        "targetNodes": [
+          ${builtins.concatStringsSep
+            ","
+            # The tx-generator always uses the non-p2p / peers format.
+            # targetNodes are like:
+            # "targetNodes": [
+            #   {
+            #     "addr": "127.0.0.1",
+            #     "port": 30000
+            #   }
+            # ]
+            (nodeNamesToGoTemplateList producerNodes false)
+          }
+        ]
+      '']
+      (lib.generators.toJSON {} (runScript // {targetNodes=null;}))
   ;
 
-  # Topology.Producers are like:
-  # "Producers": [
-  #   {
-  #     "addr": "127.0.0.1",
-  #     "port": 30001,
-  #     "valency": 1
-  #   }
-  # ]
-  # Tracer.targetNodes are like:
-  # "targetNodes": [
-  #   {
-  #     "addr": "127.0.0.1",
-  #     "port": 30000
-  #   }
-  # ]
-
-  # builtins.concatStringsSep
-  insertNodeSpecsInAddressesArray =
-    let fromPortToNodeSpec = port: (
-      builtins.head # Must exist!
-        # Returns
-        (builtins.filter
-          (nodeSpec: nodeSpec.port == port)
-          (lib.attrsets.mapAttrsToList
-            (nodeName: nodeSpec: nodeSpec)
-            profileData.node-specs.value
-          )
-        )
-    );
-    # lib.debug.traceVal
-    in addressesArray: builtins.mapAttrs
-      (key: value:
-        if key == "Producers" || key == "targetNodes"
-        then builtins.map
-          (remoteAddress:
-            remoteAddress // (fromPortToNodeSpec remoteAddress.port)
-          )
-          value
-        else value # Error!
-      )
-      addressesArray
+  # Convert from a list of node names ("node-0", "node-1", etc) to a list of
+  # strings having non-valid JSON syntax to use in the topology files of nodes.
+  nodeNamesToGoTemplateList = nodeNames: p2p:
+    let
+      # From node name to node reference object as expected in "topology.json".
+      nodeReferenceToStr = nodeName:
+        let
+          # What Nomad templates will run for interpolation of address and port.
+          # Here we must use the definitions in the "service" Nomad Job stanza
+          # to resolve dynamically, once deployed, the other nodes' IPs and
+          # PORTs. Nomad stanza envars of a Nomad Client will only contain
+          # information about the node it has deployed, the node the "template"
+          # will run.
+          addr = ''{{range nomadService "${(nodeNameToServicePortName nodeName)}"}}{{.Address}}{{end}}'';
+          port = ''{{range nomadService "${(nodeNameToServicePortName nodeName)}"}}{{.Port}}{{end}}'';
+        in
+          # Builds a string with a node's JSON object containing the Nomad
+          # template variables to interpolate address and port.
+          if p2p
+          then
+            # The format of a Node inside "localRoots:[{accessPoints:[ NODE ]}]"
+            ''
+            {
+              "address": "${addr}"
+            , "port": ${port}
+            }
+            ''
+          else
+            # The format of a Node inside "Producers:[ NODE ]"
+            ''
+            {
+              "addr": "${addr}"
+            , "port": ${port}
+            , "valency": 1
+            }
+            ''
+      ;
+    in
+      builtins.map
+        (nodeName: nodeReferenceToStr nodeName)
+        nodeNames
   ;
 
 in lib.generators.toJSON {} clusterJob
