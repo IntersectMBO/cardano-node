@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                8.7.0
+version:                8.7.1
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -46,10 +46,17 @@ common maybe-unix
   if !os(windows)
     build-depends:      unix
 
+common text
+  if impl(ghc == 8.10.7) && os(darwin) && arch(aarch64)
+    build-depends: text >= 1.2.5.0
+  else
+    build-depends: text >= 2.0
+
 library
   import:               project-config
                       , maybe-unix
                       , maybe-Win32
+                      , text
   if flag(unexpected_thunks)
     cpp-options:        -DUNEXPECTED_THUNKS
 
@@ -176,7 +183,7 @@ library
                       , network-mux >= 0.4
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-consensus ^>= 0.13
+                      , ouroboros-consensus ^>= 0.14
                       , ouroboros-consensus-cardano ^>= 0.12
                       , ouroboros-consensus-diffusion ^>= 0.9
                       , ouroboros-consensus-protocol
@@ -194,11 +201,10 @@ library
                       , stm
                       , strict-sop-core
                       , strict-stm
-                      , text >= 2.0
                       , time
-                      , trace-dispatcher ^>= 2.4
+                      , trace-dispatcher ^>= 2.5
                       , trace-forward ^>= 2.2
-                      , trace-resources ^>= 0.2.0.2
+                      , trace-resources ^>= 0.2.1.0
                       , tracer-transformers
                       , transformers
                       , transformers-except
