@@ -50,9 +50,9 @@ jobs:
         for f in "${test_files[@]}"; do
           nix_file="result/$f"
           repo_file="configuration/cardano/$f"
-          if ! jq -e --argfile nix "$nix_file" --argfile repo "$repo_file" -n '$repo | reduce keys[] as $k (true; . and $repo[$k] == $nix[$k])' &>/dev/null ; then
+          if ! jq -e --argfile nix "$nix_file" --argfile repo "$repo_file" -n '$repo | reduce keys[] as $k (true; . and $repo[$k] == $nix[$k])' >/dev/null ; then
             echo "Nix file $nix_file does not have all the same top-level entries as the file from repository $repo_file"
-            diff "$nix_file" "$repo_file"
+            diff <(jq -S . "$nix_file") <(jq -S . "$repo_file")
             exit 1
           fi
         done
