@@ -3,17 +3,17 @@
 
 module Codec.CBOR.Schema where
 
-import Prelude
+import           Prelude
 
-import Data.Text (Text)
-import qualified Data.Text as Text
-import Data.ByteString (ByteString)
-import qualified Data.ByteString.Base16 as Base16
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as B8
-import Foreign.Marshal.Alloc (free)
-import Foreign.C.String (CString, peekCString, withCStringLen)
-import System.IO.Unsafe (unsafePerformIO)
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import           Foreign.C.String (CString, peekCString, withCStringLen)
+import           Foreign.Marshal.Alloc (free)
+import           System.IO.Unsafe (unsafePerformIO)
 
 data ValidationError = ValidationError
   { cbor :: String -- | The erroneous CBOR as a base16-encoded text string

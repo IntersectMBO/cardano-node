@@ -14,8 +14,8 @@ import qualified Test.Cardano.Node.FilePermissions
 import qualified Test.Cardano.Node.Json
 import qualified Test.Cardano.Node.LedgerEvent
 import qualified Test.Cardano.Node.POM
-import qualified Test.Cardano.Tracing.OrphanInstances.HardFork
 import qualified Test.Cardano.Tracing.NewTracing.Consistency
+import qualified Test.Cardano.Tracing.OrphanInstances.HardFork
 
 import qualified Cardano.Crypto.Init as Crypto
 

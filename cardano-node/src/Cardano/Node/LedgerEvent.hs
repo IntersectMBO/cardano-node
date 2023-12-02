@@ -1,19 +1,19 @@
-{-# LANGUAGE ConstraintKinds            #-}
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GADTs                      #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE NamedFieldPuns             #-}
-{-# LANGUAGE NoImplicitPrelude          #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE PartialTypeSignatures      #-}
-{-# LANGUAGE RankNTypes                 #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE TypeOperators              #-}
-{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Local representation for display purpose of cardano-ledger events.
 --
@@ -58,67 +58,65 @@ module Cardano.Node.LedgerEvent (
 
 import           Cardano.Prelude hiding (All, Sum)
 
-import           Control.Arrow ((&&&))
-import           Control.Monad.Fail (MonadFail(..))
-import           Cardano.Ledger.Binary (DecCBOR(..), EncCBOR(..), Version,
-                   decodeFull', fromCBOR, serialize', toCBOR)
-import           Cardano.Ledger.Binary.Coders (Decode(..), Encode (..), encode, (!>),
-                   (<!), decode)
+import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyEvent (ShelleyInAlonzoEvent),
+                   AlonzoUtxoEvent (UtxosEvent), AlonzoUtxosEvent,
+                   AlonzoUtxowEvent (WrappedShelleyEraEvent))
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
+import           Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Version, decodeFull', fromCBOR,
+                   serialize', toCBOR)
+import           Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import           Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import           Cardano.Ledger.Credential (Credential (..))
-import           Cardano.Ledger.Rewards (Reward(..))
-import qualified Cardano.Ledger.Core as Ledger
+import           Cardano.Ledger.Conway.Rules (ConwayEpochEvent, ConwayNewEpochEvent)
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import           Cardano.Ledger.Core (eraProtVerLow)
+import qualified Cardano.Ledger.Core as Ledger
+import           Cardano.Ledger.Credential (Credential (..))
 import           Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import           Cardano.Ledger.Keys (KeyRole (..))
-import           Cardano.Ledger.Shelley.API (InstantaneousRewards (..), KeyHash (..), ScriptHash (..))
+import           Cardano.Ledger.Rewards (Reward (..))
+import           Cardano.Ledger.Shelley.API (InstantaneousRewards (..), KeyHash (..),
+                   ScriptHash (..))
+import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
 import           Cardano.Ledger.Shelley.Core (EraCrypto)
+import           Cardano.Ledger.Shelley.Rules (RupdEvent (..), ShelleyEpochEvent (..),
+                   ShelleyMirEvent (..), ShelleyNewEpochEvent, ShelleyPoolreapEvent (..),
+                   ShelleyTickEvent (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import           Cardano.Ledger.Shelley.Rules (RupdEvent (..),
-                     ShelleyEpochEvent (..), ShelleyMirEvent (..),
-                     ShelleyNewEpochEvent, ShelleyPoolreapEvent (..),
-                     ShelleyTickEvent (..))
-import           Cardano.Slotting.Slot (SlotNo (..), EpochNo (..), WithOrigin (..))
-import           Cardano.Slotting.Block (BlockNo(..))
+import           Cardano.Slotting.Block (BlockNo (..))
+import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Encoding as CBOR
 import qualified Codec.CBOR.Read as CBOR
 import qualified Codec.CBOR.Write as CBOR
+import           Control.Arrow ((&&&))
 import           Control.Concurrent.STM (newTChanIO, readTChan, writeTChan)
+import           Control.Monad.Fail (MonadFail (..))
 import           Control.State.Transition (Event)
-import           Data.ByteString.Short(ShortByteString)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString  as BS
+import           Data.ByteString.Short (ShortByteString)
 import qualified Data.List.NonEmpty as NE
-import           Data.SOP (All, K (..))
-import           Data.SOP.Strict (NS(..), hcmap, hcollapse)
 import qualified Data.Set as Set
+import           Data.SOP (All, K (..))
+import           Data.SOP.Strict (NS (..), hcmap, hcollapse)
 import           Data.String (String)
-import           Network.Socket(PortNumber, defaultProtocol, listen, accept,
-                  bind, close, socket, socketToHandle, withSocketsDo,
-                  SockAddr(..), SocketType(Stream), Family(AF_INET))
+import           GHC.IO.Exception (IOErrorType (ResourceVanished), IOException (IOError, ioe_type))
+import           Network.Socket (Family (AF_INET), PortNumber, SockAddr (..), SocketType (Stream),
+                   accept, bind, close, defaultProtocol, listen, socket, socketToHandle,
+                   withSocketsDo)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
-import           Ouroboros.Consensus.Cardano.Block (AllegraEra, AlonzoEra,
-                     BabbageEra, CardanoEras, ConwayEra, HardForkBlock,
-                     MaryEra, ShelleyEra)
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras
-                     (OneEraLedgerEvent(..), getOneEraHash, getOneEraLedgerEvent)
-import           Ouroboros.Consensus.Ledger.Abstract (AuxLedgerEvent,
-                     LedgerEventHandler(..))
+import           Ouroboros.Consensus.Cardano.Block (AllegraEra, AlonzoEra, BabbageEra, CardanoEras,
+                   ConwayEra, HardForkBlock, MaryEra, ShelleyEra)
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraLedgerEvent (..),
+                   getOneEraHash, getOneEraLedgerEvent)
+import           Ouroboros.Consensus.Ledger.Abstract (AuxLedgerEvent, LedgerEventHandler (..))
 import qualified Ouroboros.Consensus.Ledger.Abstract as Abstract
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
-import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock,
-                     ShelleyLedgerEvent (..))
+import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock, ShelleyLedgerEvent (..))
 import           Ouroboros.Consensus.TypeFamilyWrappers
+import           Ouroboros.Network.Block (ChainHash (BlockHash, GenesisHash), HeaderHash)
 import           Prelude (type (~))
-import           System.IO(hIsEOF)
-import Cardano.Ledger.Conway.Rules (ConwayNewEpochEvent, ConwayEpochEvent)
-import qualified Cardano.Ledger.Conway.Rules as Conway
-import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
-import Cardano.Ledger.Alonzo.Rules (AlonzoBbodyEvent (ShelleyInAlonzoEvent), AlonzoUtxowEvent (WrappedShelleyEraEvent), AlonzoUtxoEvent (UtxosEvent), AlonzoUtxosEvent)
-import GHC.IO.Exception (IOException(IOError, ioe_type), IOErrorType (ResourceVanished))
-import Ouroboros.Network.Block (ChainHash(GenesisHash, BlockHash), HeaderHash)
+import           System.IO (hIsEOF)
 
 type LedgerState crypto =
   ExtLedgerState (HardForkBlock (CardanoEras crypto))

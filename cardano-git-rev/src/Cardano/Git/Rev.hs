@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ForeignFunctionInterface #-}
 
 module Cardano.Git.Rev
   ( gitRev
@@ -13,8 +13,8 @@ import qualified Data.Text as T
 #if !defined(arm_HOST_ARCH)
 import           Cardano.Git.RevFromGit (gitRevFromGit)
 #endif
-import           GHC.Foreign (peekCStringLen)
 import           Foreign.C.String (CString)
+import           GHC.Foreign (peekCStringLen)
 import           System.IO (utf8)
 import           System.IO.Unsafe (unsafeDupablePerformIO)
 

@@ -29,6 +29,7 @@ import           Cardano.Prelude (FatalError (..), bool, (:~:) (..))
 import           Data.Bits
 import           Data.IP (toSockAddr)
 
+import           Cardano.Ledger.Binary (serialize')
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
 import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Exception (try)
@@ -38,8 +39,6 @@ import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT, runExceptT)
 import           Control.Monad.Trans.Except.Extra (left)
 import           "contra-tracer" Control.Tracer
-import           Cardano.Ledger.Binary (serialize')
-import           System.IO (withFile, IOMode(..))
 import qualified Data.ByteString as BS
 import           Data.Either (partitionEithers)
 import           Data.Map.Strict (Map)
@@ -59,6 +58,7 @@ import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
 import           System.Exit (exitFailure)
+import           System.IO (IOMode (..), withFile)
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
 import           System.Posix.Files
@@ -82,10 +82,7 @@ import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), SomeNetworkP2PMode (..),
                    defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP)
-import           Cardano.Node.LedgerEvent (
-                   StandardLedgerEventHandler,
-                   withLedgerEventsServerStream,
-                   )
+import           Cardano.Node.LedgerEvent (StandardLedgerEventHandler, withLedgerEventsServerStream)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.API
 import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
@@ -95,7 +92,9 @@ import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
-import           Ouroboros.Consensus.Ledger.Basics (LedgerEventHandler(..), LedgerState,
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraHash (..),
+                   OneEraLedgerEvent (..))
+import           Ouroboros.Consensus.Ledger.Basics (LedgerEventHandler (..), LedgerState,
                    discardEvent)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNodeArgs (..),
@@ -103,10 +102,8 @@ import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNodeArgs (..)
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
-import           Ouroboros.Consensus.Util.Orphans ()
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraHash(..),
-                   OneEraLedgerEvent(..))
 import           Ouroboros.Consensus.TypeFamilyWrappers (unwrapLedgerEvent)
+import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
 import qualified Ouroboros.Network.Diffusion.P2P as P2P

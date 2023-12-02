@@ -40,7 +40,7 @@ import           System.FilePath (takeDirectory, (</>))
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
-import           Cardano.Node.Configuration.NodeAddress (SocketPath, PortNumber)
+import           Cardano.Node.Configuration.NodeAddress (PortNumber, SocketPath)
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Types (Protocol (..))

@@ -1,12 +1,12 @@
 module Codec.CBOR.SchemaSpec where
 
-import Prelude
+import           Prelude
 
 import qualified Codec.CBOR.Schema as CDDL
 import qualified Data.ByteString.Base16 as Base16
-import Data.Text (Text)
+import           Data.Text (Text)
 import qualified Data.Text.Encoding as T
-import Test.Hspec (Spec, SpecWith, context, specify, shouldBe)
+import           Test.Hspec (Spec, SpecWith, context, shouldBe, specify)
 
 spec :: Spec
 spec = context "Codec.CBOR.SchemaSpec" $ do

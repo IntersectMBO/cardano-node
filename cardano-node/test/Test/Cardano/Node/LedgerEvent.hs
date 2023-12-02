@@ -3,7 +3,7 @@
 
 module Test.Cardano.Node.LedgerEvent where
 
-import Prelude
+import           Prelude
 
 import           Cardano.Node.LedgerEvent
 
@@ -11,23 +11,23 @@ import           Cardano.Crypto.Hash (Hash, HashAlgorithm, hashFromBytes)
 import qualified Codec.CBOR.Schema as CDDL
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Hex
-import           Data.ByteString.Lazy(fromStrict)
+import           Data.ByteString.Lazy (fromStrict)
 import           Data.ByteString.Short (ShortByteString, toShort)
 import           Data.Map (Map)
 import           Data.Maybe (fromJust)
 import           Data.Set (Set)
-import           Data.String (IsString(..))
+import           Data.String (IsString (..))
 import           Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
 import           Hedgehog (Property, discover, footnote)
 import qualified Hedgehog
-import qualified Hedgehog.Internal.Property as Hedgehog
 import qualified Hedgehog.Extras.Test.Process as Hedgehog
 import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Internal.Property as Hedgehog
 import qualified Hedgehog.Range as Range
 import           System.FilePath ((</>))
 import           System.IO.Unsafe (unsafePerformIO)
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
 
 specification :: Text
 specification =
