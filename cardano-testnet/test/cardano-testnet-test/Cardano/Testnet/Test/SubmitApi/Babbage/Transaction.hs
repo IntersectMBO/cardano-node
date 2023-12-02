@@ -47,7 +47,6 @@ import qualified Data.Aeson.Lens as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.List as List
-import qualified Hedgehog.Extras as H
 import           Lens.Micro
 import           Testnet.SubmitApi
 
@@ -130,40 +129,39 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
         }
 
   withSubmitApi submitApiConf [] $ \uriBase -> do
-    H.threadDelay 5_000_000
+    H.byDurationM 1 5 "Expected UTxO found" $ do
+      txBodySigned <- H.leftFailM $ H.readJsonFile txbodySignedFp
 
-    txBodySigned <- H.leftFailM $ H.readJsonFile txbodySignedFp
+      cborHex <- H.nothingFail $ txBodySigned ^? Aeson.key "cborHex" . Aeson._String
 
-    cborHex <- H.nothingFail $ txBodySigned ^? Aeson.key "cborHex" . Aeson._String
+      let txBs = Base16.decodeLenient (Text.encodeUtf8 cborHex)
 
-    let txBs = Base16.decodeLenient (Text.encodeUtf8 cborHex)
+      H.evalIO $ BS.writeFile txbodySignedBinFp txBs
 
-    H.evalIO $ BS.writeFile txbodySignedBinFp txBs
+      let submitApiRequestEndpoint = "POST " <> uriBase <> "/api/submit/tx"
 
-    let submitApiRequestEndpoint = "POST " <> uriBase <> "/api/submit/tx"
+      request <- H.evalM $ parseRequest submitApiRequestEndpoint
+        <&> setRequestBodyFile txbodySignedBinFp
+        <&> setRequestHeader "Content-Type" ["application/cbor"]
 
-    request <- H.evalM $ parseRequest submitApiRequestEndpoint
-      <&> setRequestBodyFile txbodySignedBinFp
-      <&> setRequestHeader "Content-Type" ["application/cbor"]
+      response <- H.evalM $ httpLbs request
 
-    response <- H.evalM $ httpLbs request
+      getResponseStatusCode response === 202
 
-    getResponseStatusCode response === 202
+    H.byDurationM 5 30 "Expected UTxO found" $ do
+      void $ execCli' execConfig
+        [ "babbage", "query", "utxo"
+        , "--address", Text.unpack $ paymentKeyInfoAddr $ head wallets
+        , "--cardano-mode"
+        , "--testnet-magic", show @Int testnetMagic
+        , "--out-file", work </> "utxo-2.json"
+        ]
 
-  H.byDurationM 5 30 "Expected UTxO found" $ do
-    void $ execCli' execConfig
-      [ "babbage", "query", "utxo"
-      , "--address", Text.unpack $ paymentKeyInfoAddr $ head wallets
-      , "--cardano-mode"
-      , "--testnet-magic", show @Int testnetMagic
-      , "--out-file", work </> "utxo-2.json"
-      ]
+      utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
+      UTxO utxo2 <- H.noteShowM $ H.noteShowM $ decodeEraUTxO sbe utxo2Json
+      txouts2 <- H.noteShow $ L.unCoin . txOutValueLovelace . txOutValue . snd <$> Map.toList utxo2
 
-    utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
-    UTxO utxo2 <- H.noteShowM $ H.noteShowM $ decodeEraUTxO sbe utxo2Json
-    txouts2 <- H.noteShow $ L.unCoin . txOutValueLovelace . txOutValue . snd <$> Map.toList utxo2
-
-    H.assert $ 5_000_001 `List.elem` txouts2
+      H.assert $ 5_000_001 `List.elem` txouts2
 
 txOutValue :: TxOut ctx era -> TxOutValue era
 txOutValue (TxOut _ v _ _) = v
