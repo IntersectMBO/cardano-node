@@ -67,7 +67,7 @@ source-repository-package
     type: git
     location: https://github.com/CardanoSolutions/ouroboros-consensus
     tag: 79da9a368cb6d2e7ed5ff5e89bb318b94c3c606d
-    --sha256: sha256-a3pPcIQPk4GgsWREAnfo/xHYqTb9dWaXzyU3t95ekgs=
+    --sha256: 02wjbvgbfdr5rybncxgx6slxh4gzx1vh4i34n6h834qghiq4yykb
     subdir:
       ouroboros-consensus
       ouroboros-consensus-cardano
