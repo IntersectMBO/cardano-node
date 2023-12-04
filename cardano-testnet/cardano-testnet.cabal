@@ -190,6 +190,7 @@ test-suite cardano-testnet-test
                       , lens-aeson
                       , microlens
                       , process
+                      , regex-compat
                       , tasty
                       , text
                       , time

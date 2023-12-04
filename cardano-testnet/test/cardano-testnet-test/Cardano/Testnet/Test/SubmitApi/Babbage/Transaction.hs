@@ -46,9 +46,12 @@ import qualified Cardano.Api.Ledger as L
 import qualified Data.Aeson.Lens as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
+import qualified Hedgehog.Extras.Test.Golden as H
 import           Lens.Micro
 import           Testnet.SubmitApi
+import           Text.Regex (mkRegex, subRegex)
 
 hprop_transaction :: Property
 hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transaction" $ \tempAbsBasePath' -> do
@@ -89,6 +92,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
   txbodyFp <- H.note $ work </> "tx.body"
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
   txbodySignedBinFp <- H.note $ work </> "tx.body.signed.bin"
+  txFailedResponseFp <- H.note $ work </> "tx.failed.response"
 
   void $ execCli' execConfig
     [ "babbage", "query", "utxo"
@@ -162,6 +166,49 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
       txouts2 <- H.noteShow $ L.unCoin . txOutValueLovelace . txOutValue . snd <$> Map.toList utxo2
 
       H.assert $ 5_000_001 `List.elem` txouts2
+
+    response <- H.byDurationM 1 5 "Expected UTxO found" $ do
+      txBodySigned <- H.leftFailM $ H.readJsonFile txbodySignedFp
+
+      cborHex <- H.nothingFail $ txBodySigned ^? Aeson.key "cborHex" . Aeson._String
+
+      let txBs = Base16.decodeLenient (Text.encodeUtf8 cborHex)
+
+      H.evalIO $ BS.writeFile txbodySignedBinFp txBs
+
+      let submitApiRequestEndpoint = "POST " <> uriBase <> "/api/submit/tx"
+
+      request <- H.evalM $ parseRequest submitApiRequestEndpoint
+        <&> setRequestBodyFile txbodySignedBinFp
+        <&> setRequestHeader "Content-Type" ["application/cbor"]
+
+      response <- H.evalM $ httpLbs request
+
+      getResponseStatusCode response === 400
+
+      pure response
+
+    H.evalIO $ LBS.writeFile txFailedResponseFp $ redactHashLbs $ getResponseBody response
+
+    H.diffFileVsGoldenFile txFailedResponseFp "test/cardano-testnet-test/files/golden/tx.failed.response.golden"
+
+
+redactHashLbs :: LBS.ByteString -> LBS.ByteString
+redactHashLbs = id
+  . LBS.fromStrict
+  . Text.encodeUtf8
+  . Text.pack
+  . redactHashString
+  . Text.unpack
+  . Text.decodeUtf8
+  . LBS.toStrict
+
+redactHashString :: String -> String
+redactHashString input =
+  subRegex regex input "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  where
+    regexPattern = "[0-9a-fA-F]{64}"
+    regex = mkRegex regexPattern
 
 txOutValue :: TxOut ctx era -> TxOutValue era
 txOutValue (TxOut _ v _ _) = v
