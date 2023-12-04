@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2023-11-20T23:52:53Z
-  , cardano-haskell-packages 2023-11-30T13:34:52Z
+  , hackage.haskell.org 2023-12-04T11:58:53Z
+  , cardano-haskell-packages 2023-12-01T11:57:23Z
 
 packages:
   cardano-git-rev
@@ -60,3 +60,10 @@ package plutus-scripts-bench
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-network.git
+  tag: c6d3da4aedd77db6e3332d135be4507bda14d94e
+  subdir:
+    ouroboros-network
+  --sha256: sha256-VNhhI0ttRvxDTCR/2i5N/icch05/49TLnwvCO0z7VGk=
