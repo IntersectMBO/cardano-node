@@ -16,7 +16,9 @@ import           Cardano.Testnet
 
 import           Prelude
 
+import           Cardano.Crypto.Hash.Class
 import qualified Cardano.Ledger.Conway.Governance as Ledger
+import qualified Cardano.Ledger.SafeHash as Ledger
 import           Control.Monad
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
@@ -25,7 +27,8 @@ import           Data.String
 import qualified Data.Text as Text
 import           Data.Word
 import           GHC.IO.Exception (IOException)
-import           GHC.Stack (callStack)
+import           GHC.Stack (HasCallStack, callStack)
+import           Lens.Micro
 import           System.FilePath ((</>))
 
 import           Hedgehog
@@ -37,6 +40,7 @@ import qualified Testnet.Process.Run as H
 import           Testnet.Components.SPO
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
+
 
 newtype AdditionalCatcher
   = IOE IOException
@@ -67,7 +71,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationRetryWorkspace 2 "le
     , wallets
     }
     <- cardanoTestnet fastTestnetOptions conf
-  -- H.failMessage callStack "After cardanoTestnet" -- FAILED SUCCESFULLY HERE
 
   poolNode1 <- H.headM poolNodes
 
@@ -325,8 +328,26 @@ hprop_ledger_events_propose_new_constitution = H.integrationRetryWorkspace 2 "le
     , "--tx-file", voteTxFp
     ]
 
-  success --TODO: check if The proposal was ratified
+  -- We check that constitution was succcessfully ratified
 
+  !eConstitutionAdopted
+    <- runExceptT $ handleIOExceptT IOE
+                  $ runExceptT $ foldBlocks
+                      (File $ configurationFile testnetRuntime)
+                      (File socketPath)
+                      FullValidation
+                      [] -- Initial accumulator state
+                      (foldBlocksCheckConstitutionWasRatified constitutionHash)
+
+
+  case eConstitutionAdopted of
+    Left (IOE e) ->
+      H.failMessage callStack
+        $ "foldBlocksCheckConstitutionWasRatified failed with: " <> show e
+    Right (Left e) ->
+      H.failMessage callStack
+        $ "foldBlocksCheckConstitutionWasRatified failed with: " <> Text.unpack (renderFoldBlocksError e)
+    Right (Right _events) -> success
 
 foldBlocksCheckProposalWasSubmitted
   :: TxId -- TxId of submitted tx
@@ -342,7 +363,8 @@ foldBlocksCheckProposalWasSubmitted txid _ _ allEvents _ _ =
   else return ([], ContinueFold)
 
 retrieveGoveranceActionIndex
-  :: MonadTest m => TxId -> [LedgerEvent] -> m Word32
+  :: (HasCallStack, MonadTest m)
+  => TxId -> [LedgerEvent] -> m Word32
 retrieveGoveranceActionIndex txid events = do
   let newGovProposals = filter (filterNewGovProposals txid) events
   if null newGovProposals
@@ -364,3 +386,29 @@ filterNewGovProposals txid (NewGovernanceProposals eventTxId (AnyProposals props
   in fromShelleyTxId eventTxId == txid
 filterNewGovProposals _ _ = False
 
+
+foldBlocksCheckConstitutionWasRatified
+  :: String -- submitted constitution hash
+  -> Env
+  -> LedgerState
+  -> [LedgerEvent]
+  -> BlockInMode -- Block i
+  -> [LedgerEvent] -- ^ Accumulator at block i - 1
+  -> IO ([LedgerEvent], FoldStatus) -- ^ Accumulator at block i and fold status
+foldBlocksCheckConstitutionWasRatified submittedConstitutionHash _ _ allEvents _ _ =
+  if any (filterRatificationState submittedConstitutionHash) allEvents
+  then return (allEvents , StopFold)
+  else return ([], ContinueFold)
+
+filterRatificationState
+  :: String -- ^ Submitted constitution anchor hash
+  -> LedgerEvent
+  -> Bool
+filterRatificationState c (EpochBoundaryRatificationState (AnyRatificationState rState)) =
+  let constitutionAnchorHash = Ledger.anchorDataHash $ Ledger.constitutionAnchor (rState ^. Ledger.rsEnactStateL . Ledger.ensConstitutionL)
+  in Text.pack c == renderSafeHashAsHex constitutionAnchorHash
+filterRatificationState _ _ = False
+
+-- TODO: Move to cardano-api
+renderSafeHashAsHex :: Ledger.SafeHash c tag -> Text.Text
+renderSafeHashAsHex = hashToTextAsHex . Ledger.extractHash
