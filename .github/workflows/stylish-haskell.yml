@@ -79,7 +79,7 @@ jobs:
         git add .
         git stash
         git fetch origin ${{ github.base_ref }} --unshallow
-        for x in $(git diff --name-only origin/${{ github.base_ref }}..HEAD ${{ env.STYLISH_HASKELL_PATHS }}); do
+        for x in $(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}..HEAD ${{ env.STYLISH_HASKELL_PATHS }}); do
           if [ "${x##*.}" == "hs" ]; then
             if grep -qE '^#' $x; then
               echo "$x contains CPP.  Skipping."
