@@ -1,18 +1,18 @@
 {-# OPTIONS_GHC -Wno-partial-fields #-}
 
-{-# LANGUAGE AllowAmbiguousTypes  #-}
-{-# LANGUAGE DataKinds            #-}
-{-# LANGUAGE DeriveGeneric        #-}
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE GADTs                #-}
-{-# LANGUAGE KindSignatures       #-}
-{-# LANGUAGE LambdaCase           #-}
-{-# LANGUAGE OverloadedStrings    #-}
-{-# LANGUAGE PackageImports       #-}
-{-# LANGUAGE RankNTypes           #-}
-{-# LANGUAGE RecordWildCards      #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Tracer.MetaTrace
@@ -21,21 +21,21 @@ module Cardano.Tracer.MetaTrace
   , traceWith
   ) where
 
-import "trace-dispatcher" Control.Tracer qualified as T
-import Data.Aeson hiding (Error)
-import Data.Aeson qualified as AE
-import Data.Function
-import Data.Map.Strict qualified as Map
-import Data.Text (Text)
-import Data.Text qualified as T
-import GHC.Generics
-import System.IO qualified as Sys
+import qualified "trace-dispatcher" Control.Tracer as T
+import           Data.Aeson hiding (Error)
+import qualified Data.Aeson as AE
+import           Data.Function
+import qualified Data.Map.Strict as Map
+import           Data.Text (Text)
+import qualified Data.Text as T
+import           GHC.Generics
+import qualified System.IO as Sys
 
-import Cardano.Logging
+import           Cardano.Logging
 
-import Cardano.Tracer.Configuration
+import           Cardano.Tracer.Configuration
 
-import Cardano.Logging.Resources
+import           Cardano.Logging.Resources
 
 data TracerTrace
   = TracerParamsAre

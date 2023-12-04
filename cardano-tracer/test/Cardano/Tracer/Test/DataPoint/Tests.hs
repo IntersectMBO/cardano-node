@@ -92,6 +92,5 @@ propDataPoint ts@TestSetup{..} rootDir localSock = do
     , verbosity      = Just Minimum
     , metricsComp    = Nothing
     , hasForwarding  = Nothing
-    , hasForwarding  = Nothing
     , resourceFreq   = Nothing
     }

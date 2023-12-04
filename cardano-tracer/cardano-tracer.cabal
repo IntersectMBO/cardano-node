@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-tracer
-version:                0.2.1
+version:                0.2.2
 synopsis:               A service for logging and monitoring over Cardano nodes
 description:            A service for logging and monitoring over Cardano nodes.
 category:               Cardano,

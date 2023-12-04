@@ -1,27 +1,27 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-import Control.Concurrent.Extra (newLock)
-import Control.Concurrent.STM.TVar (newTVarIO)
-import Criterion.Main
-import Data.List.NonEmpty qualified as NE
-import Data.Time.Clock (UTCTime, getCurrentTime)
-import System.Directory (getTemporaryDirectory, removePathForcibly)
-import System.FilePath ((</>))
+import           Control.Concurrent.Extra (newLock)
+import           Control.Concurrent.STM.TVar (newTVarIO)
+import           Criterion.Main
+import qualified Data.List.NonEmpty as NE
+import           Data.Time.Clock (UTCTime, getCurrentTime)
+import           System.Directory (getTemporaryDirectory, removePathForcibly)
+import           System.FilePath ((</>))
 
-import Cardano.Logging hiding (LocalSocket)
+import           Cardano.Logging hiding (LocalSocket)
 
-import Cardano.Tracer.Handlers.RTView.Run
-import Cardano.Tracer.Handlers.RTView.State.Historical
-import Cardano.Tracer.Utils
+import           Cardano.Tracer.Handlers.RTView.Run
+import           Cardano.Tracer.Handlers.RTView.State.Historical
+import           Cardano.Tracer.Utils
 
-import Cardano.Tracer.Configuration
-import Cardano.Tracer.Environment
-import Cardano.Tracer.Handlers.Logs.TraceObjects
-import Cardano.Tracer.MetaTrace
-import Cardano.Tracer.Types
+import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.Logs.TraceObjects
+import           Cardano.Tracer.MetaTrace
+import           Cardano.Tracer.Types
 
-import Criterion.Types qualified as Criterion
+import qualified Criterion.Types as Criterion
 
 main :: IO ()
 main = do
