@@ -646,9 +646,13 @@ def all_profile_variants:
     { name: "default-nomadcwqa"
     , desc: "Default on Cardano World QA"
     }
-  , $nomad_perf_torus *
+  , $nomad_perf_torus * $p2p *
     { name: "default-nomadperf"
     , desc: "Default on P&T exclusive cluster"
+    }
+  , $nomad_perf_torus *
+    { name: "default-nomadperf-nop2p"
+    , desc: "Default on P&T exclusive cluster with P2P disabled"
     }
   , $plutus_base * $costmodel_v8_preview * $plutus_loop_counter *
     { name: "plutus"
@@ -670,9 +674,13 @@ def all_profile_variants:
     { name: "oldtracing-nomadcwqa"
     , desc: "Default in legacy tracing mode on Cardano World QA"
     }
-  , $nomad_perf_torus * $old_tracing *
+  , $nomad_perf_torus * $p2p * $old_tracing *
     { name: "oldtracing-nomadperf"
     , desc: "Default in legacy tracing mode on P&T exclusive cluster"
+    }
+  , $nomad_perf_torus * $old_tracing *
+    { name: "oldtracing-nomadperf-nop2p"
+    , desc: "Default in legacy tracing mode on P&T exclusive cluster with P2P disabled"
     }
   , $scenario_idle *
     { name: "idle"
@@ -724,13 +732,17 @@ def all_profile_variants:
     { name: "ci-test-oldtracing-nomadcwqa"
     , desc: "ci-test in legacy tracing mode on Cardano World QA"
     }
-  , $citest_base * $nomad_perf_torus *
+  , $citest_base * $nomad_perf_torus * $p2p *
     { name: "ci-test-nomadperf"
     , desc: "ci-test on P&T exclusive cluster"
     }
   , $citest_base * $nomad_perf_torus * $old_tracing *
     { name: "ci-test-oldtracing-nomadperf"
     , desc: "ci-test in legacy tracing mode on P&T exclusive cluster"
+    }
+  , $citest_base * $nomad_perf_torus *
+    { name: "ci-test-nomadperf-nop2p"
+    , desc: "ci-test on P&T exclusive cluster with P2P disabled"
     }
 
   ## CI variants: bench duration, 15 blocks
@@ -763,13 +775,17 @@ def all_profile_variants:
     { name: "ci-bench-oldtracing-nomadcwqa"
     , desc: "ci-bench in legacy tracing mode on Cardano World QA"
     }
-  , $cibench_base * $nomad_perf_torus *
+  , $cibench_base * $nomad_perf_torus * $p2p *
     { name: "ci-bench-nomadperf"
     , desc: "ci-bench on P&T exclusive cluster"
     }
   , $cibench_base * $nomad_perf_torus * $old_tracing *
     { name: "ci-bench-oldtracing-nomadperf"
     , desc: "ci-bench in legacy tracing mode on P&T exclusive cluster"
+    }
+  , $cibench_base * $nomad_perf_torus *
+    { name: "ci-bench-nomadperf-nop2p"
+    , desc: "ci-bench on P&T exclusive cluster with P2P disabled"
     }
 
   ## CI variants: test duration, 3 blocks, dense10
@@ -825,15 +841,26 @@ def all_profile_variants:
     { name: "plutuscall-secp-schnorr-double"
     }
 
-## P&T Nomad cluster: 52 nodes, 3 regions, value variant
-  , $nomad_perf_base * $nomad_perf_dense * $costmodel_v8_preview *
+## P&T Nomad cluster: 52 nodes, 3 regions, value-only (incl. old tracing variant) and Plutus, P2P enabled by default
+  , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "value-nomadperf"
     }
-  , $nomad_perf_base * $nomad_perf_dense * $costmodel_v8_preview * $old_tracing *
+  , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview * $old_tracing *
     { name: "value-oldtracing-nomadperf"
     }
-  , $nomad_perf_plutus_base * $nomad_perf_dense * $costmodel_v8_preview *
+  , $nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "plutus-nomadperf"
+    }
+
+## P&T Nomad cluster: 52 nodes, 3 regions, value-only (with old tracing variant) and Plutus, no P2P flavour
+  , $nomad_perf_base * $nomad_perf_dense * $costmodel_v8_preview *
+    { name: "value-nomadperf-nop2p"
+    }
+  , $nomad_perf_base * $nomad_perf_dense * $costmodel_v8_preview * $old_tracing *
+    { name: "value-oldtracing-nomadperf-nop2p"
+    }
+  , $nomad_perf_plutus_base * $nomad_perf_dense * $costmodel_v8_preview *
+    { name: "plutus-nomadperf-nop2p"
     }
 
 ## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)
