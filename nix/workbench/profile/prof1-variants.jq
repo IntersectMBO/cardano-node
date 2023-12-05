@@ -396,7 +396,7 @@ def all_profile_variants:
       | .genesis.pparamsOverlays      = ["mimic-ops"]
     ) as $mimic_ops_params
   ##
-  ### Definition vocabulary:  node config variants
+  ### Definition vocabulary:  node + tracer config variants
   ##
   |
     ({ extra_desc:                     "without cardano-tracer"
@@ -408,8 +408,13 @@ def all_profile_variants:
     ({ extra_desc:                     "with RTView"
      , suffix:                         "rtvw"
      }|
-     .node.rtview                     = true
+     .tracer.rtview                   = true
     ) as $with_rtview
+  |
+    ({ extra_desc:                     "with resource tracing in cardano-tracer"
+     }|
+     .tracer.withresources            = true
+    ) as $with_resources
   |
     ({ extra_desc:                     "with legacy iohk-monitoring"
      , suffix:                         "iomf"
@@ -507,7 +512,7 @@ def all_profile_variants:
     { desc: "Miniature dataset, CI-friendly duration, bench scale"
     }) as $cibench_base
   |
-   ($scenario_fixed_loaded * $hexagon * $torus * $dataset_empty * $for_15blk * $no_filtering *
+   ($scenario_fixed_loaded * $hexagon * $torus * $dataset_empty * $for_15blk * $no_filtering * $with_resources *
     { desc: "6 low-footprint nodes in a torus topology, 5 minutes runtime"
     }) as $tracebench_base
   |

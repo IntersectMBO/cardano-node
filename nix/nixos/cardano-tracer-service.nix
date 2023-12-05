@@ -2,7 +2,7 @@ pkgs:
 let serviceConfigToJSON =
       cfg:
       {
-        inherit (cfg) networkMagic;
+        inherit (cfg) networkMagic resourceFreq;
         # loRequestNum = 100;
         network =
           if        cfg.acceptingSocket != null
@@ -74,6 +74,7 @@ in pkgs.commonLib.defServiceModule
         ekgPortBase     = opt    int 3100      "EKG port base.";
         ekgRequestFreq  = opt    int 1         "EKG request frequency";
         prometheus      = opt    attrs {}      "Prometheus overrides: see cardano-tracer documentation.";
+        resourceFreq    = mayOpt int           "Frequency (1/ms) for tracing resource usage.";
 
         ### Here be dragons, on the other hand..
         configFile      = mayOpt str

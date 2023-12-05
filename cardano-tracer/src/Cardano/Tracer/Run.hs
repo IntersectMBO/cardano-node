@@ -48,7 +48,7 @@ runCardanoTracer TracerParams{tracerConfig, stateDir, logSeverity} = do
         mbrs <- readResourceStats
         for_ mbrs \resourceStat ->
           traceWith tr (TracerResource resourceStat)
-        threadDelay (1_000 * msInterval) -- Delay in seconds, given microseconds
+        threadDelay (1_000 * msInterval) -- Delay in seconds, given milliseconds
     link threadId
 
   brake <- initProtocolsBrake
