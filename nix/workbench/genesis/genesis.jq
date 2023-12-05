@@ -5,29 +5,15 @@ def fmt_decimal_10_5($x):
 
 def profile_cli_args($p):
 { common:
-  { createSpec:
-    [ "--supply",                  fmt_decimal_10_5($p.derived.supply_total)
-    , "--testnet-magic",           $p.genesis.network_magic
-    , "--gen-genesis-keys",        $p.composition.n_bft_hosts
-    , "--gen-utxo-keys",           1
-    ]
- , createFinalIncremental:
-    ([ "--supply",                 $p.genesis.funds_balance
-     , "--gen-utxo-keys",          1
-     ] +
-     if $p.composition.dense_pool_density != 1
-     then
-     [  ]
-     else [] end)
-  , createFinalBulk:
+  { createStackedArgs:
     ([ "--supply",                 fmt_decimal_10_5($p.genesis.funds_balance)
      , "--gen-utxo-keys",          1
      , "--gen-genesis-keys",       $p.composition.n_bft_hosts
      , "--supply-delegated",       fmt_decimal_10_5($p.derived.supply_delegated)
      , "--gen-pools",              $p.composition.n_pools
      , "--gen-stake-delegs",       $p.derived.delegators_effective
-     , "--testnet-magic",          $p.genesis.network_magic
      , "--num-stuffed-utxo",       fmt_decimal_10_5($p.derived.utxo_stuffed)
+     , "--testnet-magic",          $p.genesis.network_magic
      ] +
      if $p.composition.dense_pool_density != 1
      then
