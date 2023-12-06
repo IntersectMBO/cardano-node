@@ -156,7 +156,7 @@ start()
     local run_args=()
     local run_allocate_args=()
     local run_start_args=()
-    local analyse_args=(--dump-logobjects --dump-machviews)
+    local analyse_args=(--dump-machviews)
     while test $# -gt 0
     do case "$1" in
         --batch-name )                   batch_name=$2;   shift;;
@@ -185,6 +185,7 @@ start()
         ## Analyse
         --no-analysis )                  no_analysis=true;;
         --analysis-can-fail | -af )      analysis_can_fail=t;;
+        --dump-logobjects )              analyse_args+=($1);;
         --filters )                      analyse_args+=($1 $2); shift;;
 
         ## Aux
