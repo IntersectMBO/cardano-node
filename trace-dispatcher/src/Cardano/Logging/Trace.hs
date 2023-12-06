@@ -69,7 +69,7 @@ filterTraceMaybe :: Monad m
 filterTraceMaybe (Trace tr) = Trace $
     T.squelchUnless
       (\case
-        (_lc, Left _ctrl)      -> True
+        (_lc, Left _ctrl)     -> True
         (_lc, Right (Just _)) -> True
         (_lc, Right Nothing)  -> False)
       (T.contramap
@@ -316,8 +316,7 @@ contramapM' rFunc =
 
 -- | Folds the monadic cata function with acc over a.
 -- Uses an IORef to store the state
-foldTraceM
-  :: forall a acc m . (MonadUnliftIO m)
+foldTraceM :: forall a acc m . (MonadUnliftIO m)
   => (acc -> LoggingContext -> a -> m acc)
   -> acc
   -> Trace m (Folding a acc)
@@ -335,8 +334,7 @@ foldTraceM cata initial (Trace tr) = do
           pure (lc, Left control))
 
 -- | Like foldTraceM, but filter the trace by a predicate.
-foldCondTraceM
-  :: forall a acc m . (MonadUnliftIO m)
+foldCondTraceM :: forall a acc m . (MonadUnliftIO m)
   => (acc -> LoggingContext -> a -> m acc)
   -> acc
   -> (a -> Bool)
@@ -361,8 +359,7 @@ foldCondTraceM cata initial flt (Trace tr) = do
 -- | Allows to route to different tracers, based on the message being processed.
 --   The second argument must mappend all possible tracers of the first
 --   argument to one tracer. This is required for the configuration!
-routingTrace
-  :: forall m a. Monad m
+routingTrace :: forall m a. Monad m
   => (a -> m (Trace m a))
   -> Trace m a
   -> Trace m a

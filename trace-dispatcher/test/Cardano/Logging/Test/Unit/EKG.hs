@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
-module Examples.EKG (
+module Cardano.Logging.Test.Unit.EKG (
   testEKG
 ) where
 
@@ -9,7 +9,7 @@ import           Control.Concurrent
 
 import qualified Data.Aeson as AE
 import           Data.Text (pack)
-import           System.Remote.Monitoring (forkServer)
+import           System.Metrics (newStore)
 
 
 newtype Measure = Measure Int
@@ -32,20 +32,20 @@ instance MetaTrace Measure where
   allNamespaces = [Namespace [] ["Count"]]
 
 
-testEKG :: IO ()
+testEKG :: IO Int
 testEKG = do
-    server <- forkServer "localhost" 8000
-    tracer <- ekgTracer (Right server)
+    store <- newStore
+    tracer <- ekgTracer (Left store)
     let formattedTracer = metricsFormatter tracer
     confState <- emptyConfigReflection
     configureTracers confState emptyTraceConfig [formattedTracer]
     loop (appendPrefixName "ekg1" formattedTracer) 1
   where
-    loop :: Trace IO Measure -> Int -> IO ()
+    loop :: Trace IO Measure -> Int -> IO Int
     loop tr count = do
       if count == 1000
-        then pure ()
+        then pure 1000
         else do
           traceWith tr (Measure count)
-          threadDelay 100000
+          threadDelay 1000
           loop tr (count + 1)

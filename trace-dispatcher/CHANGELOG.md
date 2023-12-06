@@ -1,5 +1,9 @@
 # Revision history for trace-dispatcher
 
+## 2.5.1 -- Dec 2023
+
+* Rewrite of examples as unit tests
+
 ## 2.4.1 -- Nov 2023
 
 * Updated to `ouroboros-network-0.10`

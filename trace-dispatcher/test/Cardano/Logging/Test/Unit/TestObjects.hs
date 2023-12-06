@@ -8,7 +8,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Examples.TestObjects (
+module Cardano.Logging.Test.Unit.TestObjects (
 
     TraceForgeEvent(..)
   , LogBlock(..)
@@ -103,11 +103,12 @@ instance MetaTrace (TraceForgeEvent blk) where
   namespaceFor TraceStartLeadershipCheck {} = Namespace [] ["StartLeadershipCheck"]
   namespaceFor TraceSlotIsImmutable {} = Namespace [] ["SlotIsImmutable"]
   namespaceFor TraceBlockFromFuture {} = Namespace  [] ["BlockFromFuture"]
+
   severityFor (Namespace _ ["StartLeadershipCheck"]) _ = Just Info
   severityFor (Namespace _ ["SlotIsImmutable"]) _ = Just Error
   severityFor (Namespace _ ["BlockFromFuture"]) _ = Just Error
-  severityFor _ns _ =Nothing
-  privacyFor  (Namespace _ _) _ = Just Public
+  severityFor _ns _ = Nothing
+
   documentFor (Namespace _ ["StartLeadershipCheck"]) = Just
     "Start of the leadership check\n\
     \\n\
@@ -143,7 +144,9 @@ instance MetaTrace (TraceForgeEvent blk) where
     , "See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
     ]
   documentFor _ns = Nothing
+
   metricsDocFor (Namespace _ _) = []
+
   allNamespaces = [ Namespace [] ["StartLeadershipCheck"]
                   , Namespace [] ["SlotIsImmutable"]
                   , Namespace [] ["BlockFromFuture"]]

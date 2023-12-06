@@ -17,6 +17,7 @@ import           Data.Text (Text, intercalate)
 import qualified Control.Tracer as NT
 import           Trace.Forward.Utils.DataPoint (DataPoint (..), DataPointStore, writeToStore)
 
+import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Trace
 import           Cardano.Logging.Types
 
@@ -36,9 +37,8 @@ dataPointTracer dataPointStore =
       liftIO $ writeToStore dataPointStore (nameSpaceToText (lcNSPrefix ++ lcNSInner)) val
     output LoggingContext {} (Left TCReset) = liftIO $ do
       pure ()
-    output _lk (Left _c@TCDocument {}) = do
-      pure ()
-      -- TODO docIt DataPoint (lk, Just c, val)
+    output lk (Left c@TCDocument {}) = do
+      docIt DatapointBackend (lk, Left c)
     output LoggingContext {} _  = pure ()
 
     nameSpaceToText :: [Text] -> Text
