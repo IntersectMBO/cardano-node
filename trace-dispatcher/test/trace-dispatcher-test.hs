@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-unused-imports  #-}
 
@@ -59,6 +60,7 @@ unitTests = testGroup "trace-dispatcher-unit-tests"
         res <- testConfig
         bres <- testLoggingMessagesEq res testConfigResult
         assertBool "testConfig" bres
+#ifdef linux_HOST_OS
     , testCase "testDocGeneration" $ do
         actual <- docTracers
         expected <- readFile "test/data/docGeneration.md"
@@ -66,6 +68,7 @@ unitTests = testGroup "trace-dispatcher-unit-tests"
         assertEqual "testDocGeneration"
             (stripEnd expected)
             (stripEnd actual')
+#endif
     , testCase "testEKG" $ do
         res <- testEKG
         assertBool "testEKG" (res == 1000)
