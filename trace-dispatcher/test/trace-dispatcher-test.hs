@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-unused-imports  #-}
 
-import           Prelude hiding (readFile)
+import           Prelude hiding (readFile, writeFile)
 
 import           Data.Aeson
 import qualified Data.ByteString.Char8 as BS
@@ -38,7 +38,8 @@ tests = testGroup "Tests"
 
 unitTests :: TestTree
 unitTests = testGroup "trace-dispatcher-unit-tests"
-    [ testCase "testTrivial1" $ do
+    [
+        testCase "testTrivial1" $ do
         res <- test1
         bres <- testLoggingMessagesEq res test1Res
         assertBool "testTrivial1" bres
@@ -60,13 +61,11 @@ unitTests = testGroup "trace-dispatcher-unit-tests"
         assertBool "testConfig" bres
     , testCase "testDocGeneration" $ do
         actual <- docTracers
-        let actual' = fst $ breakOn "Configuration:" actual
         expected <- readFile "test/data/docGeneration.md"
-        let actual'' = replace "\9442" "\\9442"
-                            $ replace "\9443" "\\9443" actual'
+        let actual' = fst $ breakOn "Configuration:" actual
         assertEqual "testDocGeneration"
             (stripEnd expected)
-            (stripEnd actual'')
+            (stripEnd actual')
     , testCase "testEKG" $ do
         res <- testEKG
         assertBool "testEKG" (res == 1000)
