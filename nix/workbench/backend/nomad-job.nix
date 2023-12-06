@@ -1307,6 +1307,7 @@ let
           )
         + "]"
       ;
+      valency = builtins.length nodeTopology.producers;
     in
       if p2p
       then
@@ -1314,7 +1315,7 @@ let
         { "localRoots": [
             { "accessPoints": ${nodesReferencesStr}
             , "advertise": false
-            , "valency": 1
+            , "valency": ${builtins.toString valency}
             }
           ]
         , "publicRoots": []

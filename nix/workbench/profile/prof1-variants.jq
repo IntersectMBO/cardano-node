@@ -642,6 +642,10 @@ def all_profile_variants:
   , { name: "default"
     , desc: "Default, as per nix/workbench/profile/prof0-defaults.jq"
     }
+  , $p2p *
+    { name: "default-p2p"
+    , desc: "Default, as per nix/workbench/profile/prof0-defaults.jq with P2P enabled"
+    }
   , $nomad_cardano_world_qa *
     { name: "default-nomadcwqa"
     , desc: "Default on Cardano World QA"
