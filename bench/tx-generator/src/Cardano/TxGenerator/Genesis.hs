@@ -126,7 +126,7 @@ mkGenesisTransaction key ttl fee txins txouts
       (\b -> signShelleyTransaction (shelleyBasedEra @era) b [WitnessGenesisUTxOKey key])
       (createAndValidateTransactionBody (shelleyBasedEra @era) txBodyContent)
  where
-  txBodyContent = defaultTxBodyContent (cardanoEra @era)
+  txBodyContent = defaultTxBodyContent shelleyBasedEra
     & setTxIns (zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending)
     & setTxOuts txouts
     & setTxFee (mkTxFee fee)
