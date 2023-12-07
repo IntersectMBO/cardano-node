@@ -43,6 +43,7 @@ import qualified Control.Tracer as TR
 
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
 
+
 utf16CircledT :: Text
 utf16CircledT = "\x24E3"
 
@@ -286,6 +287,7 @@ documentTracersRun tracers = do
             let condDoc = documentFor ns
                 -- TODO YUP: add error reporting
                 doc = fromMaybe mempty condDoc
+
             modifyIORef docRef
                         (Map.insert
                           idx
@@ -498,7 +500,7 @@ generateTOC dt traces metrics datapoints =
                       let symbolsText = case condDocTracer of
                                           Nothing -> ""
                                           Just docTracers -> getSymbolsOf ns docTracers
-                      in ( fromString (concat (replicate (length context) "\t"))
+                      in ( fromString (concat (replicate (length context) "    "))
                           <> fromText "1. "
                           <> fromText "["
                           <> fromText (last ns)
@@ -524,7 +526,7 @@ generateTOC dt traces metrics datapoints =
         [single] -> let symbolsText = case condDocTracer of
                               Nothing -> ""
                               Just docTracers -> getSymbolsOf (context ++ [single]) docTracers
-                    in ((fromString (concat (replicate (length context) "\t"))
+                    in ((fromString (concat (replicate (length context) "    "))
                                 <> fromText "1. "
                                 <> fromText "["
                                 <> fromText single
@@ -536,7 +538,7 @@ generateTOC dt traces metrics datapoints =
           let symbolsText = case condDocTracer of
                               Nothing -> ""
                               Just docTracers -> getSymbolsOf (context ++ [hdn]) docTracers
-              builder = fromString (concat (replicate (length context) "\t"))
+              builder = fromString (concat (replicate (length context) "    "))
                         <> fromText "1. __"
                         <> fromText hdn
                         <> fromText symbolsText
@@ -577,4 +579,9 @@ accentuated :: Text -> Builder
 accentuated t = if t == ""
                   then fromText "\n"
                   else fromText "\n"
-                        <> fromText (unlines $ map ("> " <>) (lines t))
+                        <> fromText (unlines $ map addAccent (lines t))
+  where
+    addAccent :: Text -> Text
+    addAccent t' = if t' == ""
+                    then ">"
+                    else "> " <> t'
