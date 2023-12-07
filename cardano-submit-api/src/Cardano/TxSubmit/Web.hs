@@ -13,11 +13,12 @@ module Cardano.TxSubmit.Web
 
 import           Cardano.Api (AllegraEra, AnyCardanoEra (AnyCardanoEra), AsType (..),
                    CardanoEra (..), ConsensusModeParams (..), Error (..), FromSomeType (..),
-                   HasTypeProxy (AsType), InAnyCardanoEra (..), IsCardanoEra (..),
+                   HasTypeProxy (AsType), InAnyCardanoEra (..), InAnyShelleyBasedEra (..),
+                   IsCardanoEra (..),
                    LocalNodeConnectInfo (LocalNodeConnectInfo, localConsensusModeParams, localNodeNetworkId, localNodeSocketPath),
-                   NetworkId, SerialiseAsCBOR (..), ShelleyEra, SocketPath, ToJSON, Tx, TxId (..),
-                   TxInMode (TxInMode), TxValidationErrorInCardanoMode (..), getTxBody, getTxId,
-                   submitTxToNodeLocal)
+                   NetworkId, SerialiseAsCBOR (..), ShelleyBasedEra (..), ShelleyEra, SocketPath,
+                   ToJSON, Tx, TxId (..), TxInMode (TxInMode), TxValidationErrorInCardanoMode (..),
+                   getTxBody, getTxId, submitTxToNodeLocal)
 
 import           Cardano.Binary (DecoderError (..))
 import           Cardano.BM.Trace (Trace, logInfo)
@@ -113,15 +114,14 @@ deserialiseAnyOf ts te = getResult . partitionEithers $ fmap (`deserialiseOne` t
     getResult (dErrors, []) = Left $ RawCborDecodeError dErrors
     getResult (_, result:_) = Right result -- take the first successful decode
 
-readByteStringTx :: ByteString -> ExceptT TxCmdError IO (InAnyCardanoEra Tx)
+readByteStringTx :: ByteString -> ExceptT TxCmdError IO (InAnyShelleyBasedEra Tx)
 readByteStringTx = firstExceptT TxCmdTxReadError . hoistEither . deserialiseAnyOf
-  [ FromSomeType (AsTx AsByronEra)   (InAnyCardanoEra ByronEra)
-  , FromSomeType (AsTx AsShelleyEra) (InAnyCardanoEra ShelleyEra)
-  , FromSomeType (AsTx AsAllegraEra) (InAnyCardanoEra AllegraEra)
-  , FromSomeType (AsTx AsMaryEra)    (InAnyCardanoEra MaryEra)
-  , FromSomeType (AsTx AsAlonzoEra)  (InAnyCardanoEra AlonzoEra)
-  , FromSomeType (AsTx AsBabbageEra) (InAnyCardanoEra BabbageEra)
-  , FromSomeType (AsTx AsConwayEra)  (InAnyCardanoEra ConwayEra)
+  [ FromSomeType (AsTx AsShelleyEra) (InAnyShelleyBasedEra ShelleyBasedEraShelley)
+  , FromSomeType (AsTx AsAllegraEra) (InAnyShelleyBasedEra ShelleyBasedEraAllegra)
+  , FromSomeType (AsTx AsMaryEra)    (InAnyShelleyBasedEra ShelleyBasedEraMary)
+  , FromSomeType (AsTx AsAlonzoEra)  (InAnyShelleyBasedEra ShelleyBasedEraAlonzo)
+  , FromSomeType (AsTx AsBabbageEra) (InAnyShelleyBasedEra ShelleyBasedEraBabbage)
+  , FromSomeType (AsTx AsConwayEra)  (InAnyShelleyBasedEra ShelleyBasedEraConway)
   ]
 
 txSubmitPost
@@ -134,8 +134,8 @@ txSubmitPost
   -> Handler TxId
 txSubmitPost trace metrics p@(CardanoModeParams cModeParams) networkId socketPath txBytes =
   handle $ do
-    InAnyCardanoEra era tx <- readByteStringTx txBytes
-    let txInMode = TxInMode era tx
+    InAnyShelleyBasedEra sbe tx <- readByteStringTx txBytes
+    let txInMode = TxInMode sbe tx
         localNodeConnInfo = LocalNodeConnectInfo
                               { localConsensusModeParams = p
                               , localNodeNetworkId = networkId

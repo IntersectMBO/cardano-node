@@ -159,26 +159,26 @@ sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
 -- for a function type -- of two arguments.
 genTx :: forall era. ()
   => IsShelleyBasedEra era
-  => CardanoEra era
+  => ShelleyBasedEra era
   -> LedgerProtocolParameters era
   -> (TxInsCollateral era, [Fund])
   -> TxFee era
   -> TxMetadataInEra era
   -> TxGenerator era
-genTx _era ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
+genTx sbe ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
   = bimap
       ApiError
       (\b -> (signShelleyTransaction (shelleyBasedEra @era) b $ map WitnessPaymentKey allKeys, getTxId b))
       (createAndValidateTransactionBody (shelleyBasedEra @era) txBodyContent)
  where
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
-  txBodyContent = defaultTxBodyContent (cardanoEra @era)
+  txBodyContent = defaultTxBodyContent sbe
     & setTxIns (map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds)
     & setTxInsCollateral collateral
     & setTxOuts outputs
     & setTxFee fee
     & setTxValidityLowerBound TxValidityNoLowerBound
-    & setTxValidityUpperBound (defaultTxValidityUpperBound (cardanoEra @era))
+    & setTxValidityUpperBound (defaultTxValidityUpperBound sbe)
     & setTxMetadata metadata
     & setTxProtocolParams (BuildTxWith (Just ledgerParameters))
 
