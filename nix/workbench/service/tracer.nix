@@ -1,5 +1,6 @@
 { pkgs
 , runJq
+, jsonFilePretty
 
 , backend
 , profile
@@ -87,10 +88,7 @@ let
 
       config = rec {
         value = execConfig;
-        JSON  = runJq "config.json"
-                  ''--null-input
-                    --argjson x '${__toJSON execConfig}'
-                  '' "$x";
+        JSON  = jsonFilePretty "config.json" (__toJSON execConfig);
       };
     })
     nodeSpecs;

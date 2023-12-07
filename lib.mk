@@ -16,10 +16,10 @@ else
 $(1): ARGS += --arg 'profiling' '"none"'
 endif
 ifeq ($(strip $(5))$(strip $(6)),truetrue)
-$(1): CMD := start-cluster $(if ${ITER},--iterations ${ITER}) $(if ${ID},--ident ${ID}); return
+$(1): CMD := start-cluster $(if ${ITER},--iterations ${ITER}) $(if ${ID},--ident ${ID}) $(if ${BATCH},--batch-name ${BATCH}); return
 endif
 ifeq ($(strip $(5))$(strip $(6)),truefalse)
-$(1): RUN := start-cluster $(if ${ITER},--iterations ${ITER}) $(if ${ID},--ident ${ID})
+$(1): RUN := start-cluster $(if ${ITER},--iterations ${ITER}) $(if ${ID},--ident ${ID}) $(if ${BATCH},--batch-name ${BATCH})
 endif
 ifeq ($(strip $(3))$(strip $(4))$(strip $(5))$(strip $(6)),falsetruefalsefalse)
 define EXTRA_HELP +=

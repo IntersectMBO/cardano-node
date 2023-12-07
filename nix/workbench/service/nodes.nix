@@ -1,6 +1,7 @@
 { pkgs
 , runJq
 , runWorkbench
+, jsonFilePretty
 
 ## The cardano-node config used as baseline:
 , baseNodeConfig
@@ -201,10 +202,10 @@ let
 
       config = {
         value = service.nodeConfig;
-        JSON  = runJq "node-config-${name + modeIdSuffix}.json"
-                  ''--null-input --sort-keys
-                    --argjson x '${__toJSON service.nodeConfig}'
-                  '' "$x";
+        JSON  = jsonFilePretty
+                  "node-config-${name + modeIdSuffix}.json"
+                  (__toJSON service.nodeConfig)
+        ;
       };
 
       topology =

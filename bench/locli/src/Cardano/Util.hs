@@ -44,7 +44,7 @@ import GHC.Utils.Misc                   as Util
                                  hiding (fst3, snd3, third3, uncurry3)
 #endif
 
-import Data.Aeson                       (FromJSON (..), ToJSON (..), Object, Value (..), (.:), (.:?), withObject, object)
+import Data.Aeson                       (FromJSON (..), ToJSON (..), Object, Value (..), (.:), (.:?), (.!=), withObject, object)
 import Data.Aeson                       qualified as AE
 import Control.Arrow                    ((&&&), (***))
 import Control.Applicative              ((<|>))

@@ -394,9 +394,6 @@ allocate-run-nomadcloud() {
     fi
   fi
 
-  # There are so many assumptions that I like having the user confirm them!
-  read -p "Hit enter to continue ..."
-
   # Set the placement info and resources accordingly
   local nomad_job_name
   nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
@@ -932,10 +929,6 @@ allocate-run-nomadcloud() {
     }' \
     "${dir}"/nomad/nomad-job.json \
   > "${dir}"/nomad/nomad-job.summary.json
-
-  # Show the summary before starting the job, a precaution!
-  jq . "${dir}"/nomad/nomad-job.summary.json
-  read -p "Hit enter to continue ..."
 }
 
 check-deployment() {
