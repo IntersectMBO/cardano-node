@@ -14,9 +14,14 @@
 }:
 
 with pkgs.lib;
-with (import ../lib.nix pkgs.lib);
 
 let
+  readJSONMay = fp:
+    let fv = __tryEval (__readFile fp);
+    in if fv.success
+       then __fromJSON fv.value
+       else {};
+
   profileName = profile.name;
 
   eras = [ ## This defines the order of eras -- which is important.
