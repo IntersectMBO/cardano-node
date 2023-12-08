@@ -167,7 +167,7 @@ in {
       };
 
       profiling = mkOption {
-        type = types.enum ["none" "time" "space" "space-cost" "space-module" "space-closure" "space-type" "space-retainer" "space-bio" "space-heap"];
+        type = types.enum ["none" "time" "time-detail" "space" "space-cost" "space-module" "space-closure" "space-type" "space-retainer" "space-bio" "space-heap"];
         default = "none";
       };
 
@@ -638,6 +638,7 @@ in {
         default = let commonProfilingArgs = ["--machine-readable" "-tcardano-node.stats" "-pocardano-node"]
           ++ lib.optional (cfg.eventlog) "-l";
           in if cfg.profiling == "time" then ["-p"] ++ commonProfilingArgs
+            else if cfg.profiling == "time-detail" then ["-P"] ++ commonProfilingArgs
             else if cfg.profiling == "space" then ["-h"] ++ commonProfilingArgs
             else if cfg.profiling == "space-cost" then ["-hc"] ++ commonProfilingArgs
             else if cfg.profiling == "space-module" then ["-hm"] ++ commonProfilingArgs

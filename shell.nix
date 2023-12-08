@@ -29,13 +29,14 @@ let
   profilingEff =
     if    profiling == "none"
        || profiling == "time"
+       || profiling == "time-detail"
        || profiling == "space-cost"
        || profiling == "space-heap"
        || profiling == "space-module"
        || profiling == "space-retainer"
        || profiling == "space-type"
     then profiling
-    else throw "FATAL:  WB_PROFILING must be one of:  none, time, space-cost, space-heap, space-module, space-retainer, space-type";
+    else throw "FATAL:  WB_PROFILING must be one of:  none, time, time-detail, space-cost, space-heap, space-module, space-retainer, space-type";
   project = if profilingEff != "none" then cardanoNodeProject.profiled else cardanoNodeProject;
 
   ## The default shell is defined by flake.nix: (cardanoNodeProject = flake.project.${final.system})

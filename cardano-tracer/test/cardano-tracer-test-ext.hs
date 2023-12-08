@@ -1,3 +1,4 @@
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
@@ -117,7 +118,7 @@ getExternalTracerState TestSetup{..} ref = do
        [ "--config" ,    "config.yaml"
        , "--state-dir" , unI tsWorkDir <> "/tracer-statedir"
        ]
-     threadDelay 1000000 --wait 1 seconds
+     threadDelay 1_000_000 --wait 1 seconds
      res <- Sys.getProcessExitCode externalTracerHdl
      case res of
        Nothing   -> putStrLn "cardano-tracer started.."

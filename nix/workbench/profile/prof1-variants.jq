@@ -237,10 +237,6 @@ def all_profile_variants:
     ) as $for_3ep
   |
     ({} |
-     .generator.epochs                = 4
-    ) as $for_4ep
-  |
-    ({} |
      .generator.epochs                = 7
     ) as $for_7ep
   |
@@ -275,6 +271,10 @@ def all_profile_variants:
     ({}
      | .node.shutdown_on_slot_synced    = 900
     ) as $for_900slot
+  |
+    ({}
+     | .node.shutdown_on_slot_synced    = 1200
+    ) as $for_1200slot
   ##
   ### Definition vocabulary:  workload
   ##
@@ -388,7 +388,7 @@ def all_profile_variants:
       | .genesis.pparamsOverlays      = ["mimic-ops"]
     ) as $mimic_ops_params
   ##
-  ### Definition vocabulary:  node config variants
+  ### Definition vocabulary:  node + tracer config variants
   ##
   |
     ({ extra_desc:                     "without cardano-tracer"
@@ -400,8 +400,13 @@ def all_profile_variants:
     ({ extra_desc:                     "with RTView"
      , suffix:                         "rtvw"
      }|
-     .node.rtview                     = true
+     .tracer.rtview                   = true
     ) as $with_rtview
+  |
+    ({ extra_desc:                     "with resource tracing in cardano-tracer"
+     }|
+     .tracer.withresources            = true
+    ) as $with_resources
   |
     ({ extra_desc:                     "with legacy iohk-monitoring"
      , suffix:                         "iomf"
@@ -499,9 +504,13 @@ def all_profile_variants:
     { desc: "Miniature dataset, CI-friendly duration, bench scale"
     }) as $cibench_base
   |
-   ($scenario_fixed_loaded * $hexagon * $torus * $dataset_empty * $for_15blk * $no_filtering *
+   ($scenario_fixed_loaded * $hexagon * $torus * $dataset_empty * $for_15blk * $no_filtering * $with_resources *
     { desc: "6 low-footprint nodes in a torus topology, 5 minutes runtime"
     }) as $tracebench_base
+  |
+   ($scenario_fixed_loaded * $hexagon * $torus * $dataset_empty * $for_1200slot * $no_filtering * $with_resources *
+    { desc: "6 low-footprint nodes in a torus topology, 20 minutes runtime"
+    }) as $tracefull_base
   |
    ($scenario_fixed_loaded * $doublet * $dataset_empty * $for_900slot * $no_filtering *
     { desc: "2 low-footprint nodes, 15 minutes runtime"
@@ -809,6 +818,14 @@ def all_profile_variants:
     }
   , $tracebench_base * $with_rtview *
     { name: "trace-bench-rtview"
+    }
+
+  ## Full variants: 120 blocks
+  , $tracefull_base *
+    { name: "trace-full"
+    }
+  , $tracefull_base * $with_rtview *
+    { name: "trace-full-rtview"
     }
 
   ## Epoch transition test: 1.5 epochs, 15mins runtime
