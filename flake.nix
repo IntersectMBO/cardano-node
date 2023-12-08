@@ -151,6 +151,25 @@
                 exes = collect isDerivation exes;
               };
 
+          # Profiled and Asserted exe variants
+          extraExeVariants =
+            let
+              mkExes = prefix: project:
+                pkgs.lib.pipe (with project.exes; [cardano-node tx-generator locli]) [
+                  (builtins.map
+                    (exe: pkgs.lib.nameValuePair exe.identifier.component-id exe))
+                  builtins.listToAttrs
+                  (iohkNix.lib.prefixNamesWith "${prefix}-")
+                ];
+            in
+              mkExes "profiled" project.profiled //
+              mkExes "asserted" project.asserted //
+              pkgs.lib.concatMapAttrs
+                (name: project:
+                  mkExes "${name}-profiled" project.profiled //
+                  mkExes "${name}-profiled" project.asserted)
+                project.projectVariants;
+
           project = (import ./nix/haskell.nix {
             inherit (pkgs) haskell-nix;
             inherit (std) incl;
@@ -177,7 +196,7 @@
             gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
           } // optionalAttrs (system == "x86_64-linux") ({
             inherit cardano-deployment cardano-node-linux cardano-node-win64;
-          } // nixosChecks) // optionalAttrs (system == "x86_64-darwin") {
+          } // nixosChecks // extraExesVariants) // optionalAttrs (system == "x86_64-darwin") {
             inherit cardano-node-macos;
           };
 
@@ -224,14 +243,19 @@
               inherit hlint;
             } // lib.optionalAttrs (system == "x86_64-linux") nixosChecks;
 
+            devShells = {
+              profiled = project.profiled.shell;
+            };
+
             packages = {
               inherit cardano-deployment;
+
               default = flake.packages."cardano-node:exe:cardano-node";
             } // lib.optionalAttrs (system == "x86_64-linux") {
               inherit cardano-node-linux cardano-node-win64;
             } // lib.optionalAttrs (system == "x86_64-macos") {
               inherit cardano-node-macos;
-            };
+            } // extraExeVariants;
           }) // {
             # Completele replace hydraJobs
             hydraJobs = callPackages iohkNix.utils.ciJobsAggregates {
