@@ -20,7 +20,7 @@ let
     {
       src = ../.;
       name = "cardano-node";
-      compiler-nix-name = lib.mkDefault "ghc963";
+      compiler-nix-name = lib.mkDefault "ghc928";
       # extra-compilers
       flake.variants = lib.genAttrs [ ] (x: {compiler-nix-name = x;});
       cabalProjectLocal = ''

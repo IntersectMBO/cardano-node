@@ -6,7 +6,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE RankNTypes #-}
@@ -115,7 +114,7 @@ import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock, ShelleyLedgerEvent (..))
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Network.Block (ChainHash (BlockHash, GenesisHash), HeaderHash)
-import           Prelude (type (~))
+import           Prelude hiding (MonadFail (..), String, map, print, putStrLn, show, (.))
 import           System.IO (hIsEOF)
 
 type LedgerState crypto =
