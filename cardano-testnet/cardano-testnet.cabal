@@ -209,6 +209,7 @@ test-suite cardano-testnet-test
                       , time
                       , transformers
                       , transformers-except
+                      , yaml
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 

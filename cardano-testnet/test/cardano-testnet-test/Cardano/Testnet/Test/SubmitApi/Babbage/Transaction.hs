@@ -43,11 +43,13 @@ import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
 
 import qualified Cardano.Api.Ledger as L
+import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
+import qualified Data.Yaml as Yaml
 import qualified Hedgehog.Extras.Test.Golden as H
 import           Lens.Micro
 import           Testnet.SubmitApi
@@ -93,6 +95,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
   txbodySignedBinFp <- H.note $ work </> "tx.body.signed.bin"
   txFailedResponseFp <- H.note $ work </> "tx.failed.response"
+  txFailedResponseYamlFp <- H.note $ work </> "tx.failed.response.yaml"
 
   void $ execCli' execConfig
     [ "babbage", "query", "utxo"
@@ -190,7 +193,13 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
 
     H.evalIO $ LBS.writeFile txFailedResponseFp $ redactHashLbs $ getResponseBody response
 
-    H.diffFileVsGoldenFile txFailedResponseFp "test/cardano-testnet-test/files/golden/tx.failed.response.golden"
+    v <- H.leftFailM $ H.evalIO $ Aeson.eitherDecodeFileStrict @Aeson.Value txFailedResponseFp
+
+    let opts = Yaml.defaultEncodeOptions
+
+    H.evalIO $ Yaml.encodeFileWith opts txFailedResponseYamlFp v
+
+    H.diffFileVsGoldenFile txFailedResponseYamlFp "test/cardano-testnet-test/files/golden/tx.failed.response.yaml.golden"
 
 
 redactHashLbs :: LBS.ByteString -> LBS.ByteString

@@ -197,7 +197,7 @@ let
                 "cardano-testnet/test/cardano-testnet-golden/files/golden/mary_node_default_config.json"
                 "cardano-testnet/test/cardano-testnet-golden/files/golden/shelley_node_default_config.json"
                 "cardano-testnet/test/cardano-testnet-golden/files/golden/shelley_node_default_config.json"
-                "cardano-testnet/test/cardano-testnet-test/files/golden/tx.failed.response.golden"
+                "cardano-testnet/test/cardano-testnet-test/files/golden/tx.failed.response.yaml.golden"
                 "cardano-testnet/files/data/alonzo/genesis.alonzo.spec.json"
                 "cardano-testnet/files/data/conway/genesis.conway.spec.json"
               ];

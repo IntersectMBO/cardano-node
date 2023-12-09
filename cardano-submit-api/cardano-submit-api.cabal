@@ -43,7 +43,6 @@ library
                       , cardano-binary
                       , cardano-cli ^>= 8.17.0.0
                       , cardano-crypto-class ^>= 2.1.2
-                      , formatting
                       , http-media
                       , iohk-monitoring
                       , mtl
@@ -68,8 +67,8 @@ library
   other-modules:        Cardano.TxSubmit.CLI.Parsers
                       , Cardano.TxSubmit.CLI.Types
                       , Cardano.TxSubmit.Config
-                      , Cardano.TxSubmit.ErrorRender
                       , Cardano.TxSubmit.Metrics
+                      , Cardano.TxSubmit.Orphans
                       , Cardano.TxSubmit.Rest.Parsers
                       , Cardano.TxSubmit.Rest.Types
                       , Cardano.TxSubmit.Rest.Web
