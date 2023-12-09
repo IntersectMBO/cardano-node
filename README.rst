@@ -8,8 +8,8 @@
     <tr><td colspan="2" align="center">GitHub Actions</td></tr>
     <tr>
       <td>
-        <a href="https://github.com/input-output-hk/cardano-node/actions/workflows/haskell.yml"><img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/workflow/status/input-output-hk/cardano-node/Haskell%20CI/master" /></a>
-        <a href="https://github.com/input-output-hk/cardano-node/actions/workflows/haskell.yml"><img alt="GitHub Workflow Status (branch)" src="https://img.shields.io/github/workflow/status/input-output-hk/cardano-node/Haskell%20CI/nightly?label=nightly" /></a>
+        <a href="https://github.com/input-output-hk/cardano-node/actions/workflows/haskell.yml"><img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/actions/workflow/status/input-output-hk/cardano-node/haskell.yml?branch=master" /></a>
+        <a href="https://github.com/input-output-hk/cardano-node/actions/workflows/haskell.yml"><img alt="GitHub Workflow Status (branch)" src="https://img.shields.io/github/actions/workflow/status/input-output-hk/cardano-node/haskell.yml?branch=nightly" /></a>
       </td>
     </tr>
   </table>
@@ -20,7 +20,7 @@
 Overview of the ``cardano-node`` repository
 *************************
 
-Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger-specs>`_, `consensus <https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-consensus>`_,
+Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger-specs>`_, `consensus <https://github.com/input-output-hk/ouroboros-consensus>`_,
 `networking <https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-network>`_ and
 `node shell <https://github.com/input-output-hk/cardano-shell>`_ repositories.
 
