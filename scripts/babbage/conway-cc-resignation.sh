@@ -62,6 +62,10 @@ $CARDANO_CLI conway transaction submit \
 
 sleep 5
 
+$CARDANO_CLI conway query committee-state --testnet-magic $NETWORK_MAGIC 
+
+sleep 5
+
 $CARDANO_CLI conway governance committee key-gen-hot \
   --verification-key-file "${CC_DIR}/hot${i}-cc.vkey" \
   --signing-key-file "${CC_DIR}/hot1-cc.skey"

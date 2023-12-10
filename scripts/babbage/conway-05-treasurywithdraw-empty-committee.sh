@@ -171,6 +171,7 @@ $CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals'
 ID="$($CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].actionId.txId')"
 IX="$($CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].actionId.govActionIx')"
 
+
 ### ---------
 # DREP VOTES
 ### ---------
@@ -189,9 +190,7 @@ $CARDANO_CLI conway transaction build \
   --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
   --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
   --vote-file "${TRANSACTIONS_DIR}/treasury-drep1.vote" \
-  --vote-file "${TRANSACTIONS_DIR}/treasury-drep2.vote" \
-  --vote-file "${TRANSACTIONS_DIR}/treasury-drep3.vote" \
-  --witness-override 4 \
+  --witness-override 2 \
   --out-file "${TRANSACTIONS_DIR}/treasury-dreps-vote-tx.raw"
 
 $CARDANO_CLI conway transaction sign \
@@ -199,8 +198,6 @@ $CARDANO_CLI conway transaction sign \
   --tx-body-file "${TRANSACTIONS_DIR}/treasury-dreps-vote-tx.raw" \
   --signing-key-file "${UTXO_DIR}/payment1.skey" \
   --signing-key-file "${DREP_DIR}/drep1.skey" \
-  --signing-key-file "${DREP_DIR}/drep2.skey" \
-  --signing-key-file "${DREP_DIR}/drep3.skey" \
   --out-file "${TRANSACTIONS_DIR}/treasury-dreps-vote-tx.signed"
 
 $CARDANO_CLI conway transaction submit \
@@ -208,50 +205,6 @@ $CARDANO_CLI conway transaction submit \
   --tx-file "${TRANSACTIONS_DIR}/treasury-dreps-vote-tx.signed"
 
 sleep 5
-
-# Check the state for Drep votes
-
-$CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals'
-
-### ----------––––––––
-# CC VOTES
-### ----------––––––––
-
-for i in {1..3}; do
-  $CARDANO_CLI conway governance vote create \
-    --yes \
-    --governance-action-tx-id "${ID}" \
-    --governance-action-index "${IX}" \
-    --cc-hot-verification-key-file "${CC_DIR}/hot${i}-cc.vkey" \
-    --out-file "${TRANSACTIONS_DIR}/treasury-cc${i}.vote"
-done
-
-$CARDANO_CLI conway transaction build \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
-  --vote-file "${TRANSACTIONS_DIR}/treasury-cc1.vote" \
-  --vote-file "${TRANSACTIONS_DIR}/treasury-cc2.vote" \
-  --vote-file "${TRANSACTIONS_DIR}/treasury-cc3.vote" \
-  --witness-override 4 \
-  --out-file "${TRANSACTIONS_DIR}/treasury-cc-votes-tx.raw"
-
-$CARDANO_CLI conway transaction sign \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-body-file "${TRANSACTIONS_DIR}/treasury-cc-votes-tx.raw" \
-  --signing-key-file "${UTXO_DIR}/payment1.skey" \
-  --signing-key-file "${CC_DIR}/hot1-cc.skey" \
-  --signing-key-file "${CC_DIR}/hot2-cc.skey" \
-  --signing-key-file "${CC_DIR}/hot3-cc.skey" \
-  --out-file "${TRANSACTIONS_DIR}/treasury-cc-votes-tx.signed"
-
-$CARDANO_CLI conway transaction submit \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-file "${TRANSACTIONS_DIR}/treasury-cc-votes-tx.signed"
-
-sleep 5
-
-# Check the state for DREP and SPO votes
 
 $CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals'
 
@@ -267,3 +220,4 @@ sleep $((60 * (expiresAfter - current_epoch) + slots_to_epoch_end / 10))
 
 $CARDANO_CLI conway query stake-address-info --testnet-magic "$NETWORK_MAGIC" --address "$(cat "${UTXO_DIR}/stake4.addr")"
 
+$CARDANO_CLI conway query stake-address-info --testnet-magic "$NETWORK_MAGIC" --address "$(cat "${UTXO_DIR}/stake1.addr")"

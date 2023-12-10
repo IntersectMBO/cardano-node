@@ -40,18 +40,24 @@ DREP_DIR=example/dreps
 mkdir -p "$TRANSACTIONS_DIR"
 mkdir -p "$CC_DIR"
 
+$CARDANO_CLI conway query gov-state --testnet-magic $NETWORK_MAGIC | jq -r '.enactState.curPParams.nOpt'
 
 wget https://tinyurl.com/3wrwb2as -O "${TRANSACTIONS_DIR}/govActionJustification.txt"
 
+govActDeposit=$($CARDANO_CLI conway query gov-state --testnet-magic $NETWORK_MAGIC | jq .enactState.curPParams.govActionDeposit)
+proposalHash="$($CARDANO_CLI conway governance hash --file-text ${TRANSACTIONS_DIR}/govActionJustification.txt)"
+
 $CARDANO_CLI conway governance action create-protocol-parameters-update \
 --testnet \
---governance-action-deposit 0 \
+--governance-action-deposit "$govActDeposit" \
 --stake-verification-key-file "${UTXO_DIR}/stake1.vkey" \
---proposal-anchor-url https://tinyurl.com/3wrwb2as \
---proposal-anchor-metadata-file "${TRANSACTIONS_DIR}/govActionJustification.txt" \
---key-reg-deposit-amt 4000000 \
---drep-deposit 300000000 \
---out-file "${TRANSACTIONS_DIR}/pparams.action"
+--anchor-url https://tinyurl.com/3wrwb2as  \
+--anchor-data-hash "$proposalHash" \
+--number-of-pools 100 \
+--governance-action-tx-id "$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r .enactState.prevGovActionIds.pgaPParamUpdate.txId)" \
+--governance-action-index "$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r .enactState.prevGovActionIds.pgaPParamUpdate.govActionIx)" \
+--out-file "${TRANSACTIONS_DIR}/pparams.action" \
+
 
 $CARDANO_CLI conway transaction build \
   --testnet-magic $NETWORK_MAGIC \
@@ -73,14 +79,10 @@ $CARDANO_CLI conway transaction submit \
   --tx-file "${TRANSACTIONS_DIR}/pparams-tx.signed"
 
 
-sleep 5
+sleep 7
 
-$CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovSnapshots.psGovActionStates'
-
-IDIX="$($CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovSnapshots.psGovActionStates | keys[0]')" # Assumes this is the only governance action in transit
-ID="${IDIX%#*}"  # This removes everything from the last # to the end
-IX="${IDIX##*#}"   # This removes everything up to and including $ID
-
+ID="$($CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].actionId.txId')"
+IX="$($CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].actionId.govActionIx')"
 
 ### ---------
 # DREP VOTES
@@ -118,15 +120,15 @@ $CARDANO_CLI conway transaction submit \
   --testnet-magic $NETWORK_MAGIC \
   --tx-file "${TRANSACTIONS_DIR}/pparams-dreps-vote-tx.signed"
 
-sleep 5
+sleep 7
 
 # Check the state for Drep votes
 
-$CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovSnapshots.psGovActionStates'
+$CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals'
 
-### ----------––––––––
-# CC VOTES
-### ----------––––––––
+# ### ----------––––––––
+# # CC VOTES
+# ### ----------––––––––
 
 for i in {1..3}; do
   $CARDANO_CLI conway governance vote create \
@@ -145,7 +147,7 @@ $CARDANO_CLI conway transaction build \
   --vote-file "${TRANSACTIONS_DIR}/pparams-cc2.vote" \
   --vote-file "${TRANSACTIONS_DIR}/pparams-cc3.vote" \
   --witness-override 4 \
-  --out-file "${TRANSACTIONS_DIR}/pparams-cc-votes-tx.raw"
+  --out-file "${TRANSACTIONS_DIR}/pparams-cc-votes-tx.raw" 
 
 $CARDANO_CLI conway transaction sign \
   --testnet-magic $NETWORK_MAGIC \
@@ -156,6 +158,7 @@ $CARDANO_CLI conway transaction sign \
   --signing-key-file "${CC_DIR}/hot3-cc.skey" \
   --out-file "${TRANSACTIONS_DIR}/pparams-cc-votes-tx.signed"
 
+
 $CARDANO_CLI conway transaction submit \
   --testnet-magic $NETWORK_MAGIC \
   --tx-file "${TRANSACTIONS_DIR}/pparams-cc-votes-tx.signed"
@@ -164,9 +167,9 @@ sleep 5
 
 # Check the state for DREP and SPO votes
 
-$CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovSnapshots.psGovActionStates'
+$CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals'
 
-expiresAfter=$($CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovSnapshots.psGovActionStates[] | .expiresAfter')
+expiresAfter=$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].expiresAfter')
 
 echo "ONCE THE VOTING PERIOD ENDS ON EPOCH ${expiresAfter}, WE SHOULD SEE THE NEW PROTOCOL PARAMETERS RATIFIED"
 
@@ -176,4 +179,4 @@ slots_to_epoch_end=$(echo $tip | jq .slotsToEpochEnd)
 
 sleep $((60 * (expiresAfter - current_epoch) + slots_to_epoch_end / 10))
 
-$CARDANO_CLI conway governance query gov-state --testnet-magic $NETWORK_MAGIC | jq -r '.ratify.pgaPParamUpdate'
+$CARDANO_CLI conway query gov-state --testnet-magic $NETWORK_MAGIC | jq -r '.enactState.curPParams.nOpt'

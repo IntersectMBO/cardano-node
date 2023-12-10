@@ -1,28 +1,28 @@
 {
   "poolVotingThresholds": {
-    "pvtCommitteeNormal": 0.51,
-    "pvtCommitteeNoConfidence": 0.51,
-    "pvtHardForkInitiation": 0.51,
-    "pvtMotionNoConfidence": 0.51
+    "pvtCommitteeNormal": 0.50,
+    "pvtCommitteeNoConfidence": 0.50,
+    "pvtHardForkInitiation": 0.50,
+    "pvtMotionNoConfidence": 0.50
   },
   "dRepVotingThresholds": {
-    "dvtMotionNoConfidence": 0.51,
-    "dvtCommitteeNormal": 0.51,
-    "dvtCommitteeNoConfidence": 0.51,
-    "dvtUpdateToConstitution": 0.51,
-    "dvtHardForkInitiation": 0.51,
-    "dvtPPNetworkGroup": 0.51,
-    "dvtPPEconomicGroup": 0.51,
-    "dvtPPTechnicalGroup": 0.51,
-    "dvtPPGovGroup": 0.51,
-    "dvtTreasuryWithdrawal": 0.51
+    "dvtMotionNoConfidence": 0.50,
+    "dvtCommitteeNormal": 0.50,
+    "dvtCommitteeNoConfidence": 0.50,
+    "dvtUpdateToConstitution": 0.50,
+    "dvtHardForkInitiation": 0.50,
+    "dvtPPNetworkGroup": 0.50,
+    "dvtPPEconomicGroup": 0.50,
+    "dvtPPTechnicalGroup": 0.50,
+    "dvtPPGovGroup": 0.50,
+    "dvtTreasuryWithdrawal": 0.50
   },
   "committeeMinSize": 0,
   "committeeMaxTermLength": 200,
-  "govActionLifetime": 2,
-  "govActionDeposit": 0,
-  "dRepDeposit": 0,
-  "dRepActivity": 200,
+  "govActionLifetime": 1,
+  "govActionDeposit": 1000000000,
+  "dRepDeposit": 2000000,
+  "dRepActivity": 100,
   "constitution": {
     "anchor": {
       "url": "",

@@ -34,6 +34,7 @@ CARDANO_CLI="${CARDANO_CLI:-cardano-cli}"
 NETWORK_MAGIC=42
 DREP_DIR=example/dreps
 UTXO_DIR=example/utxo-keys
+POOL_DIR=example/pools
 TRANSACTIONS_DIR=example/transactions
 CC_DIR=example/cc
 
@@ -47,7 +48,7 @@ wget https://tinyurl.com/3wrwb2as -O "${TRANSACTIONS_DIR}/proposal.txt"
 
 # "DOWNLOAD OUR SAMPLE CONSTITUTION FILE"
 
-wget https://tinyurl.com/mr3ferf9 -O "${TRANSACTIONS_DIR}/constitution.txt"
+wget https://tinyurl.com/2pahcy6z -O "${TRANSACTIONS_DIR}/constitution.txt"
 
 echo "CALCULATE THE HASH OURSELVES"
 
@@ -59,11 +60,17 @@ echo "$hash"
 $CARDANO_CLI conway query constitution \
   --testnet-magic $NETWORK_MAGIC
 
-# "CREATE A PROPOSAL TO UPDATE THE CONSTITUTION"
+
+# Query the governance action deposit amount
 govActDeposit=$($CARDANO_CLI conway query gov-state --testnet-magic $NETWORK_MAGIC | jq .enactState.curPParams.govActionDeposit)
+
+# Calculate the hash of our proposed constitution  
 constitutionHash="$($CARDANO_CLI conway governance hash --file-text ${TRANSACTIONS_DIR}/constitution.txt)"
+
+# Calculate the hash of our proposal document (justification)
 proposalHash="$($CARDANO_CLI conway governance hash --file-text ${TRANSACTIONS_DIR}/proposal.txt)"
 
+# "CREATE A PROPOSAL TO UPDATE THE CONSTITUTION"
 
 $CARDANO_CLI conway governance action create-constitution \
   --testnet \
@@ -98,13 +105,15 @@ $CARDANO_CLI conway transaction submit \
 
 sleep 5
 
+# Get the gov action id and index
+
 ID="$($CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].actionId.txId')"
 IX="$($CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].actionId.govActionIx')"
 
 echo "VOTE AS DREPS AND AS SPO"
 
 ### ----------––––––––
-# DREP VOTES
+# DREP VOTES, all yes
 ### ----------––––––––
 
 for i in {1..3}; do
@@ -139,56 +148,11 @@ $CARDANO_CLI conway transaction submit \
   --testnet-magic $NETWORK_MAGIC \
   --tx-file "${TRANSACTIONS_DIR}/constitution-drep-votes-tx.signed"
 
-sleep 5
+sleep 7
 
+$CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals' 
+$CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.enactState.committee'
 
-### ----------––––––––
-# CC VOTES
-### ----------––––––––
-
-for i in {1..2}; do
-  $CARDANO_CLI conway governance vote create \
-    --yes \
-    --governance-action-tx-id "${ID}" \
-    --governance-action-index "${IX}" \
-    --cc-hot-verification-key-file "${CC_DIR}/hot${i}-cc.vkey" \
-    --out-file "${TRANSACTIONS_DIR}/cc${i}.vote"
-done
-
-for i in {3..3}; do
-  $CARDANO_CLI conway governance vote create \
-    --no \
-    --governance-action-tx-id "${ID}" \
-    --governance-action-index "${IX}" \
-    --cc-hot-verification-key-file "${CC_DIR}/hot${i}-cc.vkey" \
-    --out-file "${TRANSACTIONS_DIR}/cc${i}.vote"
-done
-
-
-$CARDANO_CLI conway transaction build \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
-  --vote-file "${TRANSACTIONS_DIR}/cc1.vote" \
-  --vote-file "${TRANSACTIONS_DIR}/cc2.vote" \
-  --vote-file "${TRANSACTIONS_DIR}/cc3.vote" \
-  --witness-override 4 \
-  --out-file "${TRANSACTIONS_DIR}/constitution-cc-votes-tx.raw"
-
-$CARDANO_CLI conway transaction sign \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-body-file "${TRANSACTIONS_DIR}/constitution-cc-votes-tx.raw" \
-  --signing-key-file "${UTXO_DIR}/payment1.skey" \
-  --signing-key-file "${CC_DIR}/hot1-cc.skey" \
-  --signing-key-file "${CC_DIR}/hot2-cc.skey" \
-  --signing-key-file "${CC_DIR}/hot3-cc.skey" \
-  --out-file "${TRANSACTIONS_DIR}/constitution-cc-votes-tx.signed"
-
-$CARDANO_CLI conway transaction submit \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-file "${TRANSACTIONS_DIR}/constitution-cc-votes-tx.signed"
-
-sleep 5
 expiresAfter=$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].expiresAfter')
 
 echo "ONCE THE VOTING PERIOD ENDS ON EPOCH ${expiresAfter}, WE SHOULD SEE THE NEW CONSITUTION RATIFIED ON THE GOVERNANCE STATE"

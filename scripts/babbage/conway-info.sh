@@ -41,18 +41,21 @@ CC_DIR=example/cc
 
 mkdir -p "$TRANSACTIONS_DIR"
 
-wget https://tinyurl.com/2p8fjbnf -O "${ROOT}/govActionJustification.txt"
+wget https://tinyurl.com/3wrwb2as -O "${TRANSACTIONS_DIR}/govActionJustification.txt"
+
+govActDeposit=$($CARDANO_CLI conway query gov-state --testnet-magic $NETWORK_MAGIC | jq .enactState.curPParams.govActionDeposit)
+proposalHash="$($CARDANO_CLI conway governance hash --file-text ${TRANSACTIONS_DIR}/govActionJustification.txt)"
 
 $CARDANO_CLI conway governance action create-info --testnet \
-  --governance-action-deposit 0 \
+  --governance-action-deposit "$govActDeposit" \
   --stake-verification-key-file "${UTXO_DIR}/stake1.vkey" \
-  --proposal-url https://tinyurl.com/2p8fjbnf \
-  --proposal-file "${ROOT}/govActionJustification.txt" \
+  --anchor-url https://tinyurl.com/3wrwb2as  \
+  --anchor-data-hash "$proposalHash" \
   --out-file ${TRANSACTIONS_DIR}/info.action
 
 $CARDANO_CLI conway transaction build \
   --testnet-magic $NETWORK_MAGIC \
-  --tx-in "$(cardano-cli query utxo --address $(cat "${UTXO_DIR}/payment1.addr") --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
   --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
   --proposal-file "${TRANSACTIONS_DIR}/info.action" \
   --witness-override 2 \
@@ -71,17 +74,35 @@ $CARDANO_CLI conway transaction submit \
 
 sleep 5
 
-IDIX="$($CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovSnapshots.psGovActionStates | keys[0]')"
-ID="${IDIX%#*}"  # This removes everything from the last # to the end
-IX="${IDIX##*#}"   # This removes everything up to and including $ID
+ID="$($CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].actionId.txId')"
+IX="$($CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].actionId.govActionIx')"
 
 ### ---------
 # DREP VOTES
 ### ---------
 
-for i in {1..3}; do
+for i in {1..1}; do
+  $CARDANO_CLI conway governance vote create \
+    --no \
+    --governance-action-tx-id "${ID}" \
+    --governance-action-index "${IX}" \
+    --drep-verification-key-file "${DREP_DIR}/drep${i}.vkey" \
+    --out-file "${TRANSACTIONS_DIR}/info-drep${i}.vote"
+done
+
+for i in {2..2}; do
   $CARDANO_CLI conway governance vote create \
     --yes \
+    --governance-action-tx-id "${ID}" \
+    --governance-action-index "${IX}" \
+    --drep-verification-key-file "${DREP_DIR}/drep${i}.vkey" \
+    --out-file "${TRANSACTIONS_DIR}/info-drep${i}.vote"
+done
+
+
+for i in {3..3}; do
+  $CARDANO_CLI conway governance vote create \
+    --abstain \
     --governance-action-tx-id "${ID}" \
     --governance-action-index "${IX}" \
     --drep-verification-key-file "${DREP_DIR}/drep${i}.vkey" \
@@ -117,9 +138,27 @@ sleep 5
 # SPO VOTES
 ### ----------
 
-for i in {1..3}; do
+for i in {1..1}; do
   $CARDANO_CLI conway governance vote create \
     --yes \
+    --governance-action-tx-id "${ID}" \
+    --governance-action-index "${IX}" \
+    --cold-verification-key-file "${POOL_DIR}/cold${i}.vkey" \
+    --out-file "${TRANSACTIONS_DIR}/info-spo${i}.vote"
+done
+
+for i in {2..2}; do
+  $CARDANO_CLI conway governance vote create \
+    --no \
+    --governance-action-tx-id "${ID}" \
+    --governance-action-index "${IX}" \
+    --cold-verification-key-file "${POOL_DIR}/cold${i}.vkey" \
+    --out-file "${TRANSACTIONS_DIR}/info-spo${i}.vote"
+done
+
+for i in {3..3}; do
+  $CARDANO_CLI conway governance vote create \
+    --abstain \
     --governance-action-tx-id "${ID}" \
     --governance-action-index "${IX}" \
     --cold-verification-key-file "${POOL_DIR}/cold${i}.vkey" \
@@ -156,7 +195,25 @@ sleep 5
 # CC VOTES
 ### ----------––––––––
 
-for i in {1..3}; do
+for i in {1..1}; do
+  $CARDANO_CLI conway governance vote create \
+    --abstain \
+    --governance-action-tx-id "${ID}" \
+    --governance-action-index "${IX}" \
+    --cc-hot-verification-key-file "${CC_DIR}/hot${i}-cc.vkey" \
+    --out-file "${TRANSACTIONS_DIR}/info-cc${i}.vote"
+done
+
+for i in {2..2}; do
+  $CARDANO_CLI conway governance vote create \
+    --no \
+    --governance-action-tx-id "${ID}" \
+    --governance-action-index "${IX}" \
+    --cc-hot-verification-key-file "${CC_DIR}/hot${i}-cc.vkey" \
+    --out-file "${TRANSACTIONS_DIR}/info-cc${i}.vote"
+done
+
+for i in {3..3}; do
   $CARDANO_CLI conway governance vote create \
     --yes \
     --governance-action-tx-id "${ID}" \
@@ -190,7 +247,7 @@ $CARDANO_CLI conway transaction build \
 
   sleep 5
 
-expiresAfter=$($CARDANO_CLI conway governance query gov-state --testnet-magic 42 | jq -r '.gov.curGovSnapshots.psGovActionStates[] | .expiresAfter')
+expiresAfter=$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].expiresAfter')
 
 echo "THIS INFO GOVERNANCE ACTION EXPIRES AFTER EPOCH ${expiresAfter}; SINCE INFO ACTIONS ARE NOT REALLY ENACTED BY LEDGER, AFTER IT EXPIRES IT IS REMOVED"
 echo "IT WILL BE REMOVED ON EPOCH $(($expiresAfter + 1 ))"
@@ -201,10 +258,10 @@ slots_to_epoch_end=$(echo $tip | jq .slotsToEpochEnd)
 
 sleep $((60 * (expiresAfter - current_epoch) + slots_to_epoch_end / 10))
 
-$CARDANO_CLI conway governance query gov-state --testnet-magic $NETWORK_MAGIC | jq -r '.gov.curGovSnapshots.psGovActionStates'
+$CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals'
 
 echo "After one more epoch the info action is removed from the state"
 
-sleep 65
+sleep 62
 
-$CARDANO_CLI conway governance query gov-state --testnet-magic $NETWORK_MAGIC | jq -r '.gov.curGovSnapshots.psGovActionStates'
+$CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals'

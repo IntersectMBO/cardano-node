@@ -41,16 +41,16 @@ mkdir -p "$TRANSACTIONS_DIR"
 
 # GENERATE NEW PAYMENT KEYS
 
-for i in {1..3}; do
+for i in {5..5}; do
 $CARDANO_CLI conway address key-gen \
   --verification-key-file "${UTXO_DIR}/payment${i}.vkey" \
   --signing-key-file "${UTXO_DIR}/payment${i}.skey"
 
 done
 
-# GENERATE NEW STAKE
+# GENERATE NEW STAKE KEYS
 
-for i in {1..3}; do
+for i in {5..5}; do
 $CARDANO_CLI conway stake-address key-gen \
   --verification-key-file "${UTXO_DIR}/stake${i}.vkey" \
   --signing-key-file "${UTXO_DIR}/stake${i}.skey"
@@ -58,7 +58,7 @@ $CARDANO_CLI conway stake-address key-gen \
 done
 
 # BUILD ADDRESSES FOR OUR NEW KEYS
-for i in {1..3}; do
+for i in {5..5}; do
   $CARDANO_CLI conway address build \
     --testnet-magic $NETWORK_MAGIC \
     --payment-verification-key-file "${UTXO_DIR}/payment${i}.vkey" \
@@ -66,35 +66,26 @@ for i in {1..3}; do
     --out-file  "${UTXO_DIR}/payment${i}.addr"
 done
 
-# BUILD ADDRESSES FOR THE EXISTING KEYS, WE WILL NEED THEM FOR OUT FUTURE TRANSACTIONS
-
-for i in {1..3}; do
-  $CARDANO_CLI conway address build \
-    --testnet-magic $NETWORK_MAGIC \
-    --payment-verification-key-file "${UTXO_DIR}/utxo${i}.vkey" \
-    --out-file  "${UTXO_DIR}/utxo${i}.addr"
-
+for i in {5..5}; do
+  $CARDANO_CLI stake-address build \
+  --stake-verification-key-file "${UTXO_DIR}/stake${i}.vkey" \
+  --testnet-magic $NETWORK_MAGIC \
+  --out-file "${UTXO_DIR}/stake${i}.addr"
 done
-
+# BUILD ADDRESSES FOR THE EXISTING KEYS, WE WILL NEED THEM FOR OUT FUTURE TRANSACTIONS
 # --------------------
 # FUND OUR NEWLY CREATED ADDRESSES
 
 $CARDANO_CLI conway transaction build \
   --testnet-magic $NETWORK_MAGIC \
   --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/utxo1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/utxo2.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/utxo3.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-  --tx-out "$(cat ${UTXO_DIR}/payment1.addr)+500000000000" \
-  --tx-out "$(cat ${UTXO_DIR}/payment2.addr)+500000000000" \
-  --tx-out "$(cat ${UTXO_DIR}/payment3.addr)+500000000000" \
+  --tx-out "$(cat ${UTXO_DIR}/payment5.addr)+25000000" \
   --change-address "$(cat ${UTXO_DIR}/utxo1.addr)" \
   --out-file "${TRANSACTIONS_DIR}/tx.raw"
 
 $CARDANO_CLI conway transaction sign --testnet-magic $NETWORK_MAGIC \
   --tx-body-file "${TRANSACTIONS_DIR}/tx.raw" \
   --signing-key-file "${UTXO_DIR}/utxo1.skey" \
-  --signing-key-file "${UTXO_DIR}/utxo2.skey" \
-  --signing-key-file "${UTXO_DIR}/utxo3.skey" \
   --out-file "${TRANSACTIONS_DIR}/tx.signed"
 
 $CARDANO_CLI conway transaction submit \
@@ -111,7 +102,7 @@ sleep 5
 
 # REGISTER STAKE ADDRESSES
 
-for i in {1..3}; do
+for i in {5..5}; do
   $CARDANO_CLI conway stake-address registration-certificate \
     --stake-verification-key-file "${UTXO_DIR}/stake${i}.vkey" \
     --key-reg-deposit-amt 0 \
@@ -120,20 +111,16 @@ done
 
 $CARDANO_CLI conway transaction build \
   --testnet-magic $NETWORK_MAGIC \
-  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
-  --certificate-file "${TRANSACTIONS_DIR}/stake1reg.cert" \
-  --certificate-file "${TRANSACTIONS_DIR}/stake2reg.cert" \
-  --certificate-file "${TRANSACTIONS_DIR}/stake3reg.cert" \
-  --witness-override 4 \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment5.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+  --change-address "$(cat ${UTXO_DIR}/payment5.addr)" \
+  --certificate-file "${TRANSACTIONS_DIR}/stake5reg.cert" \
+  --witness-override 2 \
   --out-file "${TRANSACTIONS_DIR}/reg-stake-tx.raw"
 
 $CARDANO_CLI conway transaction sign --testnet-magic $NETWORK_MAGIC \
   --tx-body-file "${TRANSACTIONS_DIR}/reg-stake-tx.raw" \
-  --signing-key-file "${UTXO_DIR}/payment1.skey" \
-  --signing-key-file "${UTXO_DIR}/stake1.skey" \
-  --signing-key-file "${UTXO_DIR}/stake2.skey" \
-  --signing-key-file "${UTXO_DIR}/stake3.skey" \
+  --signing-key-file "${UTXO_DIR}/payment5.skey" \
+  --signing-key-file "${UTXO_DIR}/stake5.skey" \
   --out-file "${TRANSACTIONS_DIR}/reg-stake-tx.signed"
 
 $CARDANO_CLI conway transaction submit \
@@ -144,33 +131,55 @@ sleep 5
 
 # DELEGATE STAKE KEYS TO POOLS
 
-for i in {1..3}; do
+for i in {5..5}; do
   $CARDANO_CLI conway stake-address stake-delegation-certificate \
     --stake-verification-key-file "${UTXO_DIR}/stake${i}.vkey" \
-    --stake-pool-verification-key-file "${POOL_DIR}/cold${i}.vkey" \
+    --stake-pool-verification-key-file "${POOL_DIR}/cold1.vkey" \
     --out-file "${TRANSACTIONS_DIR}/stake${i}-pool-deleg.cert"
 done
 
 $CARDANO_CLI conway transaction build \
   --testnet-magic $NETWORK_MAGIC \
-  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
-  --certificate-file "${TRANSACTIONS_DIR}/stake1-pool-deleg.cert" \
-  --certificate-file "${TRANSACTIONS_DIR}/stake2-pool-deleg.cert" \
-  --certificate-file "${TRANSACTIONS_DIR}/stake3-pool-deleg.cert" \
-  --witness-override 4 \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment5.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+  --change-address "$(cat ${UTXO_DIR}/payment5.addr)" \
+  --certificate-file "${TRANSACTIONS_DIR}/stake5-pool-deleg.cert" \
+  --witness-override 2 \
   --out-file "${TRANSACTIONS_DIR}/stake-delegation-tx.raw"
 
 $CARDANO_CLI conway transaction sign --testnet-magic $NETWORK_MAGIC \
   --tx-body-file "${TRANSACTIONS_DIR}/stake-delegation-tx.raw" \
-  --signing-key-file "${UTXO_DIR}/payment1.skey" \
-  --signing-key-file "${UTXO_DIR}/stake1.skey" \
-  --signing-key-file "${UTXO_DIR}/stake2.skey" \
-  --signing-key-file "${UTXO_DIR}/stake3.skey" \
+  --signing-key-file "${UTXO_DIR}/payment5.skey" \
+  --signing-key-file "${UTXO_DIR}/stake5.skey" \
   --out-file "${TRANSACTIONS_DIR}/stake-delegation-tx.raw"
 
 $CARDANO_CLI conway transaction submit \
   --testnet-magic $NETWORK_MAGIC \
   --tx-file "${TRANSACTIONS_DIR}/stake-delegation-tx.raw"
 
+sleep 500
+
+rewardsBalance="$($CARDANO_CLI conway query stake-address-info --testnet-magic 42 --address "$(cat ${UTXO_DIR}/stake5.addr)" | jq -r '.[].rewardAccountBalance')"
+echo "$rewardsBalance"
+
+$CARDANO_CLI conway transaction build \
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment5.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+  --withdrawal "$(cat "${UTXO_DIR}/stake5.addr")"+"$rewardsBalance" \
+  --change-address "$(cat ${UTXO_DIR}/payment5.addr)" \
+  --witness-override 2 \
+  --out-file "${TRANSACTIONS_DIR}/withdrawrewards-tx.raw"
+
+$CARDANO_CLI conway transaction sign --testnet-magic $NETWORK_MAGIC \
+  --tx-body-file "${TRANSACTIONS_DIR}/withdrawrewards-tx.raw" \
+  --signing-key-file "${UTXO_DIR}/payment5.skey" \
+  --signing-key-file "${UTXO_DIR}/stake5.skey" \
+  --out-file "${TRANSACTIONS_DIR}/withdrawrewards-tx.signed"
+
+$CARDANO_CLI conway transaction submit \
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-file "${TRANSACTIONS_DIR}/withdrawrewards-tx.signed"
+
 sleep 5
+
+rewardsBalance="$($CARDANO_CLI conway query stake-address-info --testnet-magic 42 --address "$(cat ${UTXO_DIR}/stake5.addr)" | jq -r '.[].rewardAccountBalance')"
+echo "$rewardsBalance"

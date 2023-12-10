@@ -42,18 +42,9 @@ CC_DIR=example/cc
 mkdir -p "$TRANSACTIONS_DIR"
 mkdir -p "$CC_DIR"
 
-# ----------------------
+# Generate keys for new cc member
 
-# DOWNLOAD THE DUMMY PROPOSAL FILE
-wget https://shorturl.at/asIJ6  -O "${TRANSACTIONS_DIR}/cc_proposal.txt"
-
-# QUERY THE CURRENT EPOCH, WE WILL USE IT TO SET THE EXPIRATION DATE FOR OUR CC MEMEBER
-
-epoch=$($CARDANO_CLI conway query tip --testnet-magic $NETWORK_MAGIC | jq -r .epoch)
-
-# Create CC credentials
-
-for i in {1..3}; do
+for i in {4..4}; do
   $CARDANO_CLI conway governance committee key-gen-cold \
     --cold-verification-key-file "${CC_DIR}/cold${i}-cc.vkey" \
     --cold-signing-key-file "${CC_DIR}/cold${i}-cc.skey"
@@ -62,17 +53,24 @@ done
 
 # Get key-hashes
 
-for i in {1..3}; do
+for i in {4..4}; do
    $CARDANO_CLI conway governance committee key-hash \
    --verification-key-file "${CC_DIR}/cold${i}-cc.vkey" > "${CC_DIR}/cold${i}-vkey.hash"
 done
+echo "ADD"
+cat "${CC_DIR}/cold4-vkey.hash"
+echo "REMOVE"
+cat "${CC_DIR}/cold2-vkey.hash"
+# ----------------------
+
+# DOWNLOAD THE DUMMY PROPOSAL FILE
+wget https://shorturl.at/asIJ6  -O "${TRANSACTIONS_DIR}/cc_proposal.txt"
 
 # CREATE THE PROPOSAL
 
+epoch=$($CARDANO_CLI conway query tip --testnet-magic $NETWORK_MAGIC | jq -r .epoch)
 govActDeposit=$($CARDANO_CLI conway query gov-state --testnet-magic $NETWORK_MAGIC | jq .enactState.curPParams.govActionDeposit)
 proposalHash="$($CARDANO_CLI conway governance hash --file-text ${TRANSACTIONS_DIR}/cc_proposal.txt)"
-
-
 
 $CARDANO_CLI conway governance action update-committee \
   --testnet \
@@ -80,13 +78,12 @@ $CARDANO_CLI conway governance action update-committee \
   --stake-verification-key-file "${UTXO_DIR}/stake1.vkey" \
   --anchor-url https://shorturl.at/asIJ6 \
   --anchor-data-hash "$proposalHash" \
-  --add-cc-cold-verification-key-hash "$(cat "${CC_DIR}/cold1-vkey.hash")" \
+  --remove-cc-cold-verification-key-hash "$(cat "${CC_DIR}/cold2-vkey.hash")" \
+  --add-cc-cold-verification-key-hash "$(cat "${CC_DIR}/cold4-vkey.hash")" \
   --epoch $((epoch + 100)) \
-  --add-cc-cold-verification-key-hash "$(cat "${CC_DIR}/cold2-vkey.hash")" \
-  --epoch $((epoch + 150)) \
-  --add-cc-cold-verification-key-hash "$(cat "${CC_DIR}/cold3-vkey.hash")" \
-  --epoch $((epoch + 200)) \
-  --quorum 0.60 \
+  --quorum 1/2 \
+  --governance-action-tx-id "$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r .enactState.prevGovActionIds.pgaCommittee.txId)" \
+  --governance-action-index "$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r .enactState.prevGovActionIds.pgaCommittee.govActionIx)" \
   --out-file "${TRANSACTIONS_DIR}/new-committee.action"
 
 $CARDANO_CLI conway transaction build \
@@ -228,45 +225,3 @@ slots_to_epoch_end=$(echo $tip | jq .slotsToEpochEnd)
 sleep $((60 * (expiresAfter - current_epoch) + slots_to_epoch_end / 10))
 
 $CARDANO_CLI conway query gov-state --testnet-magic $NETWORK_MAGIC | jq -r '.enactState.committee'
-
-# Issue Authorization certificates from cold to hot keys
-
-for i in {1..3}; do
-  $CARDANO_CLI conway governance committee key-gen-hot \
-    --verification-key-file "${CC_DIR}/hot${i}-cc.vkey" \
-    --signing-key-file "${CC_DIR}/hot${i}-cc.skey"
-done
-
-for i in {1..3}; do
-  $CARDANO_CLI conway governance committee create-hot-key-authorization-certificate \
-    --cold-verification-key-file "${CC_DIR}/cold${i}-cc.vkey" \
-    --hot-key-file "${CC_DIR}/hot${i}-cc.vkey" \
-    --out-file "${CC_DIR}/hot-key${i}-cc-authorization.cert"
-done
-
-sleep 5
-
-$CARDANO_CLI conway transaction build \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
-  --certificate-file "${CC_DIR}/hot-key1-cc-authorization.cert" \
-  --certificate-file "${CC_DIR}/hot-key2-cc-authorization.cert" \
-  --certificate-file "${CC_DIR}/hot-key3-cc-authorization.cert" \
-  --witness-override 4 \
-  --out-file "${TRANSACTIONS_DIR}/authorization-certs-tx.raw"
-
-$CARDANO_CLI conway transaction sign \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-body-file "${TRANSACTIONS_DIR}/authorization-certs-tx.raw" \
-  --signing-key-file "${UTXO_DIR}/payment1.skey" \
-  --signing-key-file "${CC_DIR}/cold1-cc.skey" \
-  --signing-key-file "${CC_DIR}/cold2-cc.skey" \
-  --signing-key-file "${CC_DIR}/cold3-cc.skey" \
-  --out-file "${TRANSACTIONS_DIR}/authorization-certs-tx.signed"
-
-$CARDANO_CLI conway transaction submit \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-file "${TRANSACTIONS_DIR}/authorization-certs-tx.signed"
-
-sleep 5
