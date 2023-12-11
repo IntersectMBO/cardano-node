@@ -11,7 +11,8 @@ import qualified Cardano.Testnet.Test.Cli.Babbage.Transaction
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldBlocks
-import qualified Cardano.Testnet.Test.Node.LedgerEvents
+import qualified Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution as LedgerEvents
+import qualified Cardano.Testnet.Test.LedgerEvents.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
 
@@ -29,9 +30,13 @@ import qualified Testnet.Property.Run as H
 tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
-      [ T.testGroup "CLI"
+      [ T.testGroup "Ledger Events"
+          [ H.ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
+          , T.testGroup "Governance"
+             [ H.ignoreOnWindows "ProposeAndRatifyNewConstitution" LedgerEvents.hprop_ledger_events_propose_new_constitution]
+          ]
+      , T.testGroup "CLI"
         [ H.ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
-        , H.ignoreOnWindows "LedgerEvents" Cardano.Testnet.Test.Node.LedgerEvents.hprop_ledger_events_sanity_check
         , H.ignoreOnWindows "ShutdownOnSigint" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSigint
         -- ShutdownOnSlotSynced FAILS Still. The node times out and it seems the "shutdown-on-slot-synced" flag does nothing
         -- , H.ignoreOnWindows "ShutdownOnSlotSynced" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSlotSynced
@@ -52,6 +57,7 @@ tests = pure $ T.testGroup "test/Spec.hs"
         , H.ignoreOnWindows "query-slot-number" Cardano.Testnet.Test.Cli.QuerySlotNumber.hprop_querySlotNumber
         , H.ignoreOnWindows "foldBlocks receives ledger state" Cardano.Testnet.Test.FoldBlocks.prop_foldBlocks
         ]
+
       ]
   , T.testGroup "SubmitApi"
       [ T.testGroup "Babbage"

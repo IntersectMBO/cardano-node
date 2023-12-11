@@ -6,6 +6,7 @@ module Testnet.Components.Configuration
   ( createConfigYaml
   , createSPOGenesisAndFiles
   , mkTopologyConfig
+  , numSeededUTxOKeys
   ) where
 
 import           Cardano.Api.Shelley hiding (cardanoEra)
@@ -71,6 +72,9 @@ createConfigYaml (TmpAbsolutePath tempAbsPath') anyCardanoEra' = GHC.withFrozenC
               ]
 
 
+numSeededUTxOKeys :: Int
+numSeededUTxOKeys = 3
+
 createSPOGenesisAndFiles
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => CardanoTestnetOptions
@@ -121,7 +125,7 @@ createSPOGenesisAndFiles testnetOptions startTime (TmpAbsolutePath tempAbsPath')
     , "--supply", "1000000000000"
     , "--supply-delegated", "1000000000000"
     , "--gen-stake-delegs", "3"
-    , "--gen-utxo-keys", "3"
+    , "--gen-utxo-keys", show numSeededUTxOKeys
     , "--start-time", DTC.formatIso8601 startTime
     ]
 

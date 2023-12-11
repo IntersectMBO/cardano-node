@@ -167,7 +167,10 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
                         Cardano.Testnet.Test.FoldBlocks
                         Cardano.Testnet.Test.Misc
-                        Cardano.Testnet.Test.Node.LedgerEvents
+
+                        Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
+                        Cardano.Testnet.Test.LedgerEvents.SanityCheck
+                        
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
 
@@ -180,6 +183,8 @@ test-suite cardano-testnet-test
                       , cardano-api
                       , cardano-cli
                       , cardano-crypto-class
+                      , cardano-ledger-conway
+                      , cardano-ledger-core
                       , cardano-testnet
                       , containers
                       , directory
