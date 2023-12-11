@@ -215,11 +215,17 @@ let
             local node=$1
             msg "Connectivity using 'cardano-cli ping' of \"''${node}\"'s Producers"
             local topology_path="../''${node}/topology.json"
-            local keys=$(${jq}/bin/jq --raw-output '.Producers | keys | join (" ")' "''${topology_path}")
+            # Merge non-P2P and P2P in the same {addr:"ADDR",port:0} format.
+            local producers
+            producers=$(${jq}/bin/jq '.Producers//[] + ((.localRoots[0].accessPoints//[]) | map({addr:.address,port:.port}))' "''${topology_path}")
+            local keys
+            keys=$(echo "''${producers}" | ${jq}/bin/jq --raw-output 'keys | join (" ")')
             for key in ''${keys[*]}
             do
-              local host=$(${jq}/bin/jq --raw-output ".Producers[''${key}].addr" "''${topology_path}")
-              local port=$(${jq}/bin/jq --raw-output ".Producers[''${key}].port" "''${topology_path}")
+              local host
+              host=$(echo "''${producers}" | ${jq}/bin/jq --raw-output ".[''${key}].addr")
+              local port
+              port=$(echo "''${producers}" | ${jq}/bin/jq --raw-output ".[''${key}].port")
               msg "Executing 'cardano-cli ping' to \"''${host}:''${port}\""
               # If the ping fails the whole script must fail!
               ${cardano-cli}/bin/cardano-cli ping \

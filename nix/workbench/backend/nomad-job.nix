@@ -342,8 +342,7 @@ let
               # environment variable that indicates which port your
               # application should bind to (envar only available for the
               # ports of current Tasks, not to resolve all port names).
-              # Names need to be "node#" instead of "node-#" (without "-").
-              name = servicePortName;
+              name = servicePortName; # Cannot be used for envars ("-" to "_").
               value =
                 if portNum != null && portNum != 0
                 then
@@ -465,7 +464,7 @@ let
             # the cluster. Names must adhere to RFC-1123 §2.1 and are limited to
             # alphanumeric and hyphen characters (i.e. [a-z0-9\-]), and be less
             # than 64 characters in length.
-            name = servicePortName;
+            name = servicePortName; # Cannot be used for envars ("-" to "_").
             # Specifies a custom address to advertise in Consul or Nomad service
             # registration. If set, address_mode must be in auto mode. Useful
             # with interpolation - for example to advertise the public IP
@@ -492,7 +491,7 @@ let
             # - host:   Advertise the host port for this service. port must
             #           match a port label specified in the network block.
             # Here we use "network"->"port"->"name" specified in the Group.
-            port = servicePortName;
+            port = servicePortName; # Cannot be used for envars ("-" to "_").
             # Checks of type "script" need "consul" instead of "nomad" as
             # service provider, so as healthcheck we are using a supervisord
             # "program".
@@ -949,7 +948,7 @@ let
                 network_mode = "host";
 
                 # This can be used here but not with "exec"!
-                # All names of the form node#, without the "-", instead of node-#
+                # These name cannot be used for envars, "-" replaced with "_".
                 ports = [ servicePortName ];
 
                 # A list of /container_path strings for tmpfs mount points. See
@@ -980,8 +979,8 @@ let
               "tracer"                               # taskName
               # TODO: Which region?
               {region=null;}                         # node-spec
-              # (can't have "-")
-              "perftracer"                           # servicePortName
+              # These name cannot be used for envars, "-" is replaced with "_".
+              "perf-tracer"                          # servicePortName
               0                                      # portNum
             ;
           }
@@ -989,18 +988,11 @@ let
         ++
         (lib.mapAttrsToList
           (_: nodeSpec: {
-            /* Nomad randomly changes '-' to '_', so switching all service/ports
-            # names to '_'
-            NOMAD_ADDR_node_0=192.168.2.125:30000
-            NOMAD_ADDR_node_1=192.168.2.125:30001
-            NOMAD_HOST_ADDR_node-0=192.168.2.125:30000
-            NOMAD_HOST_ADDR_node-1=192.168.2.125:30001
-            */
             name = nodeSpec.name;
             value = valueF
               nodeSpec.name                          # taskName
               nodeSpec                               # node-spec
-              # (can't have "-")
+              # These name cannot be used for envars, "-" is replaced with "_".
               (nodeSpecToServicePortName nodeSpec)   # servicePortName
               nodeSpec.port                          # portNum
             ;

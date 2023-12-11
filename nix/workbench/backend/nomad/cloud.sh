@@ -572,7 +572,7 @@ allocate-run-nomadcloud() {
       # TODO/MAYBE: When not "value" profile, let the explorer run in any node?
       # resource wise. So more than one "ci-test", "ci-bench", "default" profile
       # can be run at the same time. This will need some changes to Nomad
-      # services names (currently all "perfnode#").
+      # services names (currently all "perf-node-#" and maybe "perf-tracer").
       # WARNING: By always using/placing the explorer node in the only machine
       # with more memory, we are sure runs do not overlap and no ports, etc are
       # clashing and interfering with benchmarks results!
