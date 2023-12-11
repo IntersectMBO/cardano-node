@@ -168,8 +168,8 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.FoldBlocks
                         Cardano.Testnet.Test.Misc
 
-                        Cardano.Testnet.Test.Node.LedgerEvents.Governance.ProposeNewConstitution
-                        Cardano.Testnet.Test.Node.LedgerEvents.SanityCheck
+                        Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
+                        Cardano.Testnet.Test.LedgerEvents.SanityCheck
                         
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.SubmitApi.Babbage.Transaction

@@ -11,8 +11,8 @@ import qualified Cardano.Testnet.Test.Cli.Babbage.Transaction
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldBlocks
-import qualified Cardano.Testnet.Test.Node.LedgerEvents.Governance.ProposeNewConstitution as LedgerEvents
-import qualified Cardano.Testnet.Test.Node.LedgerEvents.SanityCheck
+import qualified Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution as LedgerEvents
+import qualified Cardano.Testnet.Test.LedgerEvents.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
 
@@ -31,7 +31,7 @@ tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
       [ T.testGroup "Ledger Events"
-          [ H.ignoreOnWindows "Sanity Check" Cardano.Testnet.Test.Node.LedgerEvents.SanityCheck.hprop_ledger_events_sanity_check
+          [ H.ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
           , T.testGroup "Governance"
              [ H.ignoreOnWindows "ProposeAndRatifyNewConstitution" LedgerEvents.hprop_ledger_events_propose_new_constitution]
           ]
