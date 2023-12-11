@@ -50,12 +50,9 @@ backend_nomadcloud() {
     # Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
     start-cluster )
       backend_nomad start-cluster           "$@"
-      # If value profile on the dedicated P&T Nomad cluster on AWS extra checks
-      # to make sure the topology that was deployed is the correct one.
-      if                                                                 \
-          test "${WB_SHELL_PROFILE:0:15}" = 'value-nomadperf'            \
-        ||                                                               \
-          test "${WB_SHELL_PROFILE:0:26}" = 'value-oldtracing-nomadperf'
+      # If value/plutus profile on the dedicated P&T Nomad cluster on AWS extra
+      # checks to make sure the topology that was deployed is the correct one.
+      if jqtest '.composition.topology == "torus-dense"' "${dir}"/profile.json
       then
         # Show a big warning but let the run continue!
         check-deployment "${dir}"
@@ -637,12 +634,9 @@ allocate-run-nomadcloud() {
     ########################################################################
     # Reproducibility: #####################################################
     ########################################################################
-    # If value profile on "-nomadperf", using always the same placement!
+    # If value/plutus profile on "-nomadperf", using always the same placement!
     # This means node-N always runs on the same Nomad Client/AWS EC2 machine
-    if                                                                  \
-         test "${WB_SHELL_PROFILE:0:15}" = 'value-nomadperf'            \
-      ||                                                                \
-         test "${WB_SHELL_PROFILE:0:26}" = 'value-oldtracing-nomadperf'
+    if jqtest '.composition.topology == "torus-dense"' "${dir}"/profile.json
     then
       # A file with all the available Nomad Clients is needed!
       # This files is a list of Nomad Clients with a minimun of ".id",
