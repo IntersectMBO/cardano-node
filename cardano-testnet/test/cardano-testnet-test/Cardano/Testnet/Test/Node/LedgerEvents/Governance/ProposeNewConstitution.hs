@@ -48,7 +48,7 @@ newtype AdditionalCatcher
 
 
 hprop_ledger_events_propose_new_constitution :: Property
-hprop_ledger_events_propose_new_constitution = H.integrationRetryWorkspace 2 "ledger-events-governance-propose-new-constitution" $ \tempAbsBasePath' -> do
+hprop_ledger_events_propose_new_constitution = H.integrationRetryWorkspace 2 "propose-new-constitution" $ \tempAbsBasePath' -> do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -89,7 +89,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationRetryWorkspace 2 "le
 
   -- Create Conway constitution
   gov <- H.createDirectoryIfMissing $ work </> "governance"
-  proposalAnchorFile <- H.note $ work </> gov </> "sample-propoal-anchor"
+  proposalAnchorFile <- H.note $ work </> gov </> "sample-proposFal-anchor"
   consitutionFile <- H.note $ work </> gov </> "sample-constitution"
   constitutionActionFp <- H.note $ work </> gov </> "constitution.action"
 
@@ -120,7 +120,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationRetryWorkspace 2 "le
       drepSKeyFp n = gov </> "drep-keys" <>"drep" <> show n <> ".skey"
 
   -- Create DReps -- TODO: Refactor with shelleyKeyGen
-  forM_ [(1::Int)..3] $ \n -> do
+  forM_ [1..3] $ \n -> do
    H.execCli' execConfig
      [ "conway", "governance", "drep", "key-gen"
      , "--verification-key-file", drepVkeyFp n
@@ -130,7 +130,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationRetryWorkspace 2 "le
   -- Create Drep registration certificates
   let drepCertFile :: Int -> FilePath
       drepCertFile n = gov </> "drep-keys" <>"drep" <> show n <> ".regcert"
-  forM_ [(1::Int)..3] $ \n -> do
+  forM_ [1..3] $ \n -> do
     H.execCli' execConfig
        [ "conway", "governance", "drep", "registration-certificate"
        , "--drep-verification-key-file", drepVkeyFp n
@@ -219,7 +219,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationRetryWorkspace 2 "le
     , "--testnet-magic", show @Int testnetMagic
     , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 1
     , "--tx-in", Text.unpack $ renderTxIn txin2
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr (wallets !! 0)) <> "+" <> show @Int 5_000_000
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr (head wallets)) <> "+" <> show @Int 5_000_000
     , "--proposal-file", constitutionActionFp
     , "--out-file", txbodyFp
     ]
@@ -248,10 +248,10 @@ hprop_ledger_events_propose_new_constitution = H.integrationRetryWorkspace 2 "le
                       (File $ configurationFile testnetRuntime)
                       (File socketPath)
                       FullValidation
-                      [] -- Initial accumulator state
+                      Nothing -- Initial accumulator state
                       (foldBlocksCheckProposalWasSubmitted (fromString txidString))
 
-  newProposalEvent <- case propSubmittedResult of
+  newProposalEvents <- case propSubmittedResult of
                         Left (IOE e) ->
                           H.failMessage callStack
                             $ "foldBlocksCheckProposalWasSubmitted failed with: " <> show e
@@ -260,13 +260,13 @@ hprop_ledger_events_propose_new_constitution = H.integrationRetryWorkspace 2 "le
                             $ "foldBlocksCheckProposalWasSubmitted failed with: " <> Text.unpack (renderFoldBlocksError e)
                         Right (Right events) -> return events
 
-  governanceActionIndex <- retrieveGoveranceActionIndex (fromString txidString) newProposalEvent
+  governanceActionIndex <- retrieveGovernanceActionIndex newProposalEvents
 
   let voteFp :: Int -> FilePath
       voteFp n = work </> gov </> "vote-" <> show n
 
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
-  forM_ [(1::Int)..3] $ \n -> do
+  forM_ [1..3] $ \n -> do
     H.execCli' execConfig
       [ "conway", "governance", "vote", "create"
       , "--yes"
@@ -306,9 +306,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationRetryWorkspace 2 "le
     , "--witness-override", show @Int 4
     , "--out-file", voteTxBodyFp
     ]
-  let _wallet1VKeyFp = paymentVKey . paymentKeyInfoPair $ head  wallets
-      _wallet2VKeyFp = paymentVKey . paymentKeyInfoPair $ wallets !! 1
-      _wallet3VKeyFp = paymentVKey . paymentKeyInfoPair $ wallets !! 2
 
 
   void $ H.execCli' execConfig
@@ -355,29 +352,32 @@ foldBlocksCheckProposalWasSubmitted
   -> LedgerState
   -> [LedgerEvent]
   -> BlockInMode -- Block i
-  -> [LedgerEvent] -- ^ Accumulator at block i - 1
-  -> IO ([LedgerEvent], FoldStatus) -- ^ Accumulator at block i and fold status
-foldBlocksCheckProposalWasSubmitted txid _ _ allEvents _ _ =
-  if any (filterNewGovProposals txid) allEvents
-  then return (allEvents , StopFold)
-  else return ([], ContinueFold)
+  -> Maybe LedgerEvent -- ^ Accumulator at block i - 1
+  -> IO (Maybe LedgerEvent, FoldStatus) -- ^ Accumulator at block i and fold status
+foldBlocksCheckProposalWasSubmitted txid _ _ allEvents _ _ = do
+  let newGovProposal = filter (filterNewGovProposals txid) allEvents
+  if null newGovProposal
+  then return (Nothing, ContinueFold)
+  else return (Just $ head newGovProposal , StopFold)
 
-retrieveGoveranceActionIndex
+
+retrieveGovernanceActionIndex
   :: (HasCallStack, MonadTest m)
-  => TxId -> [LedgerEvent] -> m Word32
-retrieveGoveranceActionIndex txid events = do
-  let newGovProposals = filter (filterNewGovProposals txid) events
-  if null newGovProposals
-  then H.failMessage callStack "retrieveGoveranceActionIndex: No new governance proposals found"
-  else
+  => Maybe LedgerEvent -> m Word32
+retrieveGovernanceActionIndex mEvent = do
+  case mEvent of
+    Nothing -> H.failMessage callStack "retrieveGovernanceActionIndex: No new governance proposals found"
+    Just (NewGovernanceProposals _ (AnyProposals props)) ->
     -- In this test there will only be one
-    case head newGovProposals of
-      NewGovernanceProposals _ (AnyProposals props) -> do
         let govActionStates = [i
                               | Ledger.GovActionIx i <- map Ledger.gaidGovActionIx . Map.keys $ Ledger.proposalsGovActionStates props
                               ]
-        return $ head  govActionStates
-      other -> H.failMessage callStack $ "retrieveGoveranceActionIndex: Expected NewGovernanceProposals, got: " <> show other
+        in return $ head  govActionStates
+    Just unexpectedEvent ->
+      H.failMessage callStack
+        $ mconcat ["retrieveGovernanceActionIndex: Expected NewGovernanceProposals, got: "
+                  , show unexpectedEvent
+                  ]
 
 
 filterNewGovProposals :: TxId -> LedgerEvent -> Bool
@@ -409,6 +409,8 @@ filterRatificationState c (EpochBoundaryRatificationState (AnyRatificationState 
   in Text.pack c == renderSafeHashAsHex constitutionAnchorHash
 filterRatificationState _ _ = False
 
--- TODO: Move to cardano-api
+-- TODO: Move to cardano-api and share with
+-- https://github.com/input-output-hk/cardano-cli/blob/694782210c6d73a1b5151400214ef691f6f3ecb0/cardano-cli/src/Cardano/CLI/EraBased/Run/Governance/Hash.hs#L67
+-- when doing so
 renderSafeHashAsHex :: Ledger.SafeHash c tag -> Text.Text
 renderSafeHashAsHex = hashToTextAsHex . Ledger.extractHash
