@@ -19,8 +19,7 @@ module Cardano.TxSubmit.Types
   , renderTxCmdError
   ) where
 
-import           Cardano.Api (AnyCardanoEra, Error (..), TxId, TxValidationErrorInCardanoMode (..),
-                   textShow)
+import           Cardano.Api (Error (..), TxId, TxValidationErrorInCardanoMode (..), textShow)
 import           Cardano.Api.Pretty
 import           Cardano.Binary (DecoderError)
 import           Cardano.TxSubmit.Orphans ()
@@ -71,7 +70,6 @@ instance ToJSON EnvSocketError where
 
 data TxCmdError
   = TxCmdSocketEnvError EnvSocketError
-  | TxCmdEraConsensusModeMismatch !AnyCardanoEra
   | TxCmdTxReadError !RawCborDecodeError
   | TxCmdTxSubmitValidationError !TxValidationErrorInCardanoMode
 
@@ -83,8 +81,6 @@ renderTxCmdError :: TxCmdError -> Text
 renderTxCmdError = \case
   TxCmdSocketEnvError socketError ->
     "socket env error " <> textShow socketError
-  TxCmdEraConsensusModeMismatch era ->
-    "era consensus mode mismatch " <> textShow era
   TxCmdTxReadError envelopeError ->
     "transaction read error " <> textShow envelopeError
   TxCmdTxSubmitValidationError e ->
