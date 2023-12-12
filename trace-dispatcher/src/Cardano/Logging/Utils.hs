@@ -1,4 +1,6 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
+
 
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 -- showHex needs to be a show instance on ghc8, but not any more on ghc9
@@ -8,13 +10,26 @@ module Cardano.Logging.Utils (
   , uncurry3
   , showT
   , showTHex
+#if ! (MIN_VERSION_base(4, 16, 0))
+  , prependList
+#endif
   ) where
 
 import           Control.Concurrent (threadDelay)
 import           Control.Exception (SomeAsyncException (..), fromException, tryJust)
 import           Control.Tracer (stdoutTracer, traceWith)
+import           Data.List.NonEmpty (NonEmpty (..), toList)
 import qualified Data.Text as T
 import           Numeric (showHex)
+
+#if MIN_VERSION_base(4, 16, 0)
+#else
+-- | Prepend a list to a NonEmpty list
+prependList :: [a] -> NonEmpty a -> NonEmpty a
+prependList ls ne = case ls of
+  [] -> ne
+  (x : xs) -> x :| xs <> toList ne
+#endif
 
 -- | Run monadic action in a loop. If there's an exception, it will re-run
 --   the action again, after pause that grows.

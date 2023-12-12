@@ -45,6 +45,8 @@ library
                       Control.Tracer
 
   default-extensions:   OverloadedStrings
+                      , OverloadedLists
+
   build-depends:        base >=4.12 && <5
                       , aeson >= 2.1.0.0
                       , aeson-pretty

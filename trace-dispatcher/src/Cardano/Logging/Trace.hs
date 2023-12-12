@@ -40,6 +40,7 @@ module Cardano.Logging.Trace (
 import           Control.Monad (forM_, join)
 import           Control.Monad.IO.Unlift
 import qualified Control.Tracer as T
+import           Data.List.NonEmpty (fromList, toList)
 import           Data.Maybe (isJust)
 import           Data.Text (Text)
 import           UnliftIO.MVar
@@ -143,7 +144,7 @@ withInnerNames :: forall m a. (Monad m, MetaTrace a) => Trace m a -> Trace m a
 withInnerNames (Trace tr) = Trace $
     T.contramap
       (\case
-        (lc, Right a) -> (lc {lcNSInner = nsInner (namespaceFor a)}, Right a)
+        (lc, Right a) -> (lc {lcNSInner = (toList . nsInner) (namespaceFor a)}, Right a)
         (lc, Left c)  -> (lc, Left c))
       tr
 
@@ -155,7 +156,7 @@ withNames names (Trace tr) = Trace $
     T.contramap
       (\case
         (lc, Right a) -> (lc {lcNSPrefix = names,
-                              lcNSInner  = nsInner (namespaceFor a)}, Right a)
+                              lcNSInner  = (toList . nsInner) (namespaceFor a)}, Right a)
         (lc, Left c)  -> (lc {lcNSPrefix = names}, Left c))
       tr
 
@@ -184,13 +185,19 @@ withSeverity (Trace tr) = Trace $
     process lc cont@(Right v) =
       if isJust (lcSeverity lc)
         then (lc,cont)
-        else (lc {lcSeverity = severityFor (Namespace [] (lcNSInner lc)
-                                              :: Namespace a) (Just v)} , cont)
+        else case lcNSInner lc of
+                hd : tl -> (lc {lcSeverity = severityFor
+                                                (Namespace [] (fromList (hd : tl))
+                                                  :: Namespace a) (Just v)} , cont)
+                []  -> (lc {lcSeverity = Just Info} , cont)
     process lc cont@(Left _) =
       if isJust (lcSeverity lc)
         then (lc,cont)
-        else (lc {lcSeverity = severityFor (Namespace [] (lcNSInner lc)
-                                              :: Namespace a) Nothing}, cont)
+        else case lcNSInner lc of
+                hd : tl -> (lc {lcSeverity = severityFor
+                                                (Namespace [] (fromList (hd : tl))
+                                                  :: Namespace a) Nothing} , cont)
+                []  -> (lc {lcSeverity = Just Info} , cont)
 
 --- | Only processes messages further with a privacy greater then the given one
 filterTraceByPrivacy :: (Monad m) =>
@@ -238,13 +245,19 @@ withPrivacy (Trace tr) = Trace $
     process lc cont@(Right v) =
       if isJust (lcPrivacy lc)
         then (lc,cont)
-        else (lc {lcPrivacy = privacyFor (Namespace [] (lcNSInner lc)
-                                              :: Namespace a) (Just v)} , cont)
+        else case lcNSInner lc of
+                hd : tl -> (lc {lcPrivacy = privacyFor
+                                                (Namespace [] (fromList (hd : tl))
+                                                  :: Namespace a) (Just v)} , cont)
+                []  -> (lc {lcPrivacy = Nothing} , cont)
     process lc cont@(Left _) =
       if isJust (lcPrivacy lc)
         then (lc,cont)
-        else (lc {lcPrivacy = privacyFor (Namespace [] (lcNSInner lc)
-                                              :: Namespace a) Nothing}, cont)
+        else case lcNSInner lc of
+                hd : tl -> (lc {lcPrivacy = privacyFor
+                                                (Namespace [] (fromList (hd : tl))
+                                                  :: Namespace a) Nothing} , cont)
+                []  -> (lc {lcPrivacy = Nothing} , cont)
 
 -- | Sets detail level for the messages in this trace
 setDetails :: Monad m => DetailLevel -> Trace m a -> Trace m a
@@ -269,14 +282,19 @@ withDetails (Trace tr) = Trace $
     process lc cont@(Right v) =
       if isJust (lcDetails lc)
         then (lc,cont)
-        else (lc {lcDetails = detailsFor (Namespace [] (lcNSInner lc)
-                                              :: Namespace a) (Just v)} , cont)
+        else case lcNSInner lc of
+                hd : tl -> (lc {lcDetails = detailsFor
+                                                (Namespace [] (fromList (hd : tl))
+                                                  :: Namespace a) (Just v)} , cont)
+                []  -> (lc {lcDetails = Nothing} , cont)
     process lc cont@(Left _) =
       if isJust (lcDetails lc)
         then (lc,cont)
-        else (lc {lcDetails = detailsFor (Namespace [] (lcNSInner lc)
-                                              :: Namespace a) Nothing}, cont)
-
+        else case lcNSInner lc of
+                hd : tl -> (lc {lcDetails = detailsFor
+                                                (Namespace [] (fromList (hd : tl))
+                                                  :: Namespace a) Nothing} , cont)
+                []  -> (lc {lcDetails = Nothing} , cont)
 -- | Contramap a monadic function over a trace
 {-# INLINE contramapM #-}
 contramapM :: Monad m
