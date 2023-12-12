@@ -45,6 +45,7 @@ data TraceStartLeadershipCheckPlus =
         tsSlotNo       :: SlotNo
       , tsUtxoSize     :: Int
       , tsDelegMapSize :: Int
+      , tsDRepMapSize  :: Int
       , tsChainDensity :: Double
     }
 
@@ -64,18 +65,20 @@ forgeTracerTransform nodeKern (Trace tr) =
           (lc, Right (Left slc@(TraceStartLeadershipCheck slotNo))) -> do
             query <- mapNodeKernelDataIO
                         (\nk ->
-                          (,,)
+                          (,,,)
                             <$> nkQueryLedger (ledgerUtxoSize . ledgerState) nk
                             <*> nkQueryLedger (ledgerDelegMapSize . ledgerState) nk
+                            <*> nkQueryLedger (ledgerDRepMapSize . ledgerState) nk
                             <*> nkQueryChain fragmentChainDensity nk)
                         nodeKern
             case query of
               SNothing -> pure (lc, Right (Left slc))
-              SJust (utxoSize, delegMapSize, chainDensity) ->
+              SJust (utxoSize, delegMapSize, drepMapSize, chainDensity) ->
                     let msg = TraceStartLeadershipCheckPlus
                                 slotNo
                                 utxoSize
                                 delegMapSize
+                                drepMapSize
                                 (fromRational chainDensity)
                     in pure (lc, Right (Right msg))
           (lc, Right a) ->

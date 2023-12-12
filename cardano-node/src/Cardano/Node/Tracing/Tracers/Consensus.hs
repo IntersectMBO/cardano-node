@@ -1044,17 +1044,20 @@ instance LogFormatting TraceStartLeadershipCheckPlus where
         mconcat [ "kind" .= String "TraceStartLeadershipCheck"
                 , "slot" .= toJSON (unSlotNo tsSlotNo)
                 , "utxoSize" .= Number (fromIntegral tsUtxoSize)
-                , "delegMapSize" .= Number (fromIntegral tsUtxoSize)
+                , "delegMapSize" .= Number (fromIntegral tsDelegMapSize)
+                , "drepMapSize" .= Number (fromIntegral tsDRepMapSize)
                 , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
                 ]
   forHuman TraceStartLeadershipCheckPlus {..} =
       "Checking for leadership in slot " <> showT (unSlotNo tsSlotNo)
       <> " utxoSize " <> showT tsUtxoSize
       <> " delegMapSize " <> showT tsDelegMapSize
+      <> " drepMapSize " <> showT tsDRepMapSize
       <> " chainDensity " <> showT tsChainDensity
   asMetrics TraceStartLeadershipCheckPlus {..} =
     [IntM "Forge.UtxoSize" (fromIntegral tsUtxoSize),
-     IntM "Forge.DelegMapSize" (fromIntegral tsDelegMapSize)]
+     IntM "Forge.DelegMapSize" (fromIntegral tsDelegMapSize),
+     IntM "Forge.DRepMapSize" (fromIntegral tsDRepMapSize)]
 
 --------------------------------------------------------------------------------
 -- ForgeEvent Tracer

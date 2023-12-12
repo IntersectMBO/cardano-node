@@ -234,10 +234,12 @@ instance All GetKESInfo xs => GetKESInfo (HardForkBlock xs) where
 class LedgerQueries blk where
   ledgerUtxoSize     :: LedgerState blk -> Int
   ledgerDelegMapSize :: LedgerState blk -> Int
+  ledgerDRepMapSize  :: LedgerState blk -> Int
 
 instance LedgerQueries Byron.ByronBlock where
   ledgerUtxoSize = Map.size . Byron.unUTxO . Byron.cvsUtxo . Byron.byronLedgerState
   ledgerDelegMapSize _ = 0
+  ledgerDRepMapSize  _ = 0
 
 instance LedgerQueries (Shelley.ShelleyBlock protocol era) where
   ledgerUtxoSize =
@@ -256,11 +258,21 @@ instance LedgerQueries (Shelley.ShelleyBlock protocol era) where
     . Shelley.esLState
     . Shelley.nesEs
     . Shelley.shelleyLedgerState
+  ledgerDRepMapSize =
+      UM.size
+    . UM.DRepUView
+    . Shelley.dsUnified
+    . Shelley.certDState
+    . Shelley.lsCertState
+    . Shelley.esLState
+    . Shelley.nesEs
+    . Shelley.shelleyLedgerState
 
 instance (LedgerQueries x, NoHardForks x)
       => LedgerQueries (HardForkBlock '[x]) where
   ledgerUtxoSize = ledgerUtxoSize . project
   ledgerDelegMapSize = ledgerDelegMapSize . project
+  ledgerDRepMapSize = ledgerDRepMapSize . project
 
 instance LedgerQueries (Cardano.CardanoBlock c) where
   ledgerUtxoSize = \case
@@ -279,6 +291,14 @@ instance LedgerQueries (Cardano.CardanoBlock c) where
     Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDelegMapSize ledgerAlonzo
     Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDelegMapSize ledgerBabbage
     Cardano.LedgerStateConway  ledgerConway  -> ledgerDelegMapSize ledgerConway
+  ledgerDRepMapSize = \case
+    Cardano.LedgerStateByron   ledgerByron   -> ledgerDRepMapSize ledgerByron
+    Cardano.LedgerStateShelley ledgerShelley -> ledgerDRepMapSize ledgerShelley
+    Cardano.LedgerStateAllegra ledgerAllegra -> ledgerDRepMapSize ledgerAllegra
+    Cardano.LedgerStateMary    ledgerMary    -> ledgerDRepMapSize ledgerMary
+    Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDRepMapSize ledgerAlonzo
+    Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDRepMapSize ledgerBabbage
+    Cardano.LedgerStateConway  ledgerConway  -> ledgerDRepMapSize ledgerConway
 
 --
 -- * Node kernel
