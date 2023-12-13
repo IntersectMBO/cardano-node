@@ -106,18 +106,23 @@ import           GHC.IO.Exception (IOErrorType (ResourceVanished), IOException (
 import           Network.Socket (Family (AF_INET), PortNumber, SockAddr (..), SocketType (Stream),
                    accept, bind, close, defaultProtocol, listen, socket, socketToHandle,
                    withSocketsDo)
+import           Ouroboros.Consensus.Block.Abstract (BlockProtocol)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.Cardano.Block (AllegraEra, AlonzoEra, BabbageEra, CardanoEras,
                    ConwayEra, HardForkBlock, MaryEra, ShelleyEra)
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraLedgerEvent (..),
-                   getOneEraHash, getOneEraLedgerEvent)
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraHash,
+                   OneEraLedgerEvent (..), getOneEraHash, getOneEraLedgerEvent)
+import           Ouroboros.Consensus.HardFork.Combinator.Basics (HardForkProtocol)
 import           Ouroboros.Consensus.Ledger.Abstract (AuxLedgerEvent, LedgerEventHandler (..))
 import qualified Ouroboros.Consensus.Ledger.Abstract as Abstract
-import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
+import           Ouroboros.Consensus.Ledger.Extended
+                   (AuxExtLedgerEvent (AuxConsensusEvent, AuxLedgerEvent), ExtLedgerState)
+import qualified Ouroboros.Consensus.Protocol.Abstract as Abstract
+import           Ouroboros.Consensus.Protocol.TPraos (TPraosEvent (..))
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock, ShelleyLedgerEvent (..))
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Network.Block (ChainHash (BlockHash, GenesisHash), HeaderHash)
-import           Prelude hiding (MonadFail (..), String, map, print, putStrLn, show, (.))
+import           Prelude hiding (MonadFail (..), String, map, print, putStrLn, show, undefined, (.))
 import           System.IO (hIsEOF)
 
 type LedgerState crypto =
@@ -347,6 +352,22 @@ ledgerNewEpochEventName = \case
 ledgerRewardUpdateEventName :: LedgerRewardUpdateEvent crypto -> Text
 ledgerRewardUpdateEventName = \case
   LedgerIncrementalRewards {} -> "LedgerIncrementalRewards"
+
+-- fromAuxExtLedgerEvent
+--   :: forall xs crypto. (All ConvertLedgerEvent xs, crypto ~ StandardCrypto)
+--   => AuxExtLedgerEvent (Abstract.LedgerState (HardForkBlock xs)) (HardForkBlock xs)
+--   -> Maybe (LedgerEvent crypto)
+-- fromAuxExtLedgerEvent
+--   :: AuxExtLedgerEvent (Abstract.LedgerState (HardForkBlock xs)) (HardForkBlock xs)
+--   -> Maybe (LedgerEvent StandardCrypto)
+fromAuxExtLedgerEvent
+  :: (All ConvertLedgerEvent xs, AuxLedgerEvent l ~ OneEraLedgerEvent xs, Abstract.ConsensusEvent c ~ TPraosEvent c)
+  => AuxExtLedgerEvent l c
+  -> Maybe (LedgerEvent StandardCrypto)
+fromAuxExtLedgerEvent event =
+  case event of
+    AuxLedgerEvent e -> fromAuxLedgerEvent e
+    AuxConsensusEvent (EpochNonce _nonce) -> undefined
 
 fromAuxLedgerEvent
   :: forall xs. (All ConvertLedgerEvent xs)
@@ -693,11 +714,18 @@ instance ConvertLedgerEvent (ShelleyBlock proto (BabbageEra StandardCrypto)) whe
 instance ConvertLedgerEvent (ShelleyBlock proto (ConwayEra StandardCrypto)) where
   toLedgerEvent = toConwayEventShelley
 
-eventCodecVersion ::
+eventCodecVersion
+  :: AuxExtLedgerEvent (ExtLedgerState (HardForkBlock xs)) (HardForkBlock xs)
+  -> Version
+eventCodecVersion = \case
+  AuxLedgerEvent e -> undefined
+  AuxConsensusEvent e -> undefined
+
+eventCodecVersion' ::
      forall crypto. Crypto crypto
   => OneEraLedgerEvent (CardanoEras crypto)
   -> Version
-eventCodecVersion = \case
+eventCodecVersion' = \case
   OneEraLedgerEvent (          S(Z{})     ) -> eraProtVerLow @(ShelleyEra crypto)
   OneEraLedgerEvent (        S(S(Z{}))    ) -> eraProtVerLow @(AllegraEra crypto)
   OneEraLedgerEvent (      S(S(S(Z{})))   ) -> eraProtVerLow @(MaryEra crypto)
@@ -711,7 +739,7 @@ data AnchoredEvents =
     , blockHeaderHash :: !ShortByteString
     , slotNo :: !SlotNo
     , blockNo :: !BlockNo
-    , ledgerEvents :: ![LedgerEvent StandardCrypto]
+    , ledgerEvents :: !LedgerEvents
     }
   deriving (Eq, Show)
 
