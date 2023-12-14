@@ -196,7 +196,7 @@
             gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
           } // optionalAttrs (system == "x86_64-linux") ({
             inherit cardano-deployment cardano-node-linux cardano-node-win64;
-          } // nixosChecks // extraExesVariants) // optionalAttrs (system == "x86_64-darwin") {
+          } // nixosChecks // extraExeVariants) // optionalAttrs (system == "x86_64-darwin") {
             inherit cardano-node-macos;
           };
 
