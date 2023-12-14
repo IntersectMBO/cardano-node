@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2023-11-20T23:52:53Z
-  , cardano-haskell-packages 2023-12-14T20:14:48Z
+  , cardano-haskell-packages 2023-12-14T21:48:23Z
 
 packages:
   cardano-git-rev
@@ -54,8 +54,6 @@ package bitvec
 -- required for haddocks to build successfully
 package plutus-scripts-bench
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
-
-allow-older: ouroboros-network:strict-checked-vars
 
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
