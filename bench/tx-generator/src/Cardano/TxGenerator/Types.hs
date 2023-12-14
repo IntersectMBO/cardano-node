@@ -80,6 +80,7 @@ data TxGenConfig = TxGenConfig
   , confInitCooldown  :: !Double                -- ^ Delay between init and main submissions in seconds
   , confTxsInputs     :: !NumberOfInputsPerTx   -- ^ Inputs per transaction
   , confTxsOutputs    :: !NumberOfOutputsPerTx  -- ^ Outputs per transaction
+  , confDRepCount     :: !Int                   -- ^ DReps to be registered for the run (0 = none)
   }
   deriving (Show, Eq)
 

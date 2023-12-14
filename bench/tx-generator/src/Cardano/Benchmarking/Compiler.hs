@@ -64,6 +64,7 @@ compileToScript = do
   emit $ StartProtocol nc tc
   genesisWallet <- importGenesisFunds
   collateralWallet <- addCollaterals genesisWallet
+  registerDReps
   splitWallet <- splittingPhase genesisWallet
   void $ benchmarkingPhase splitWallet collateralWallet
 
@@ -88,6 +89,22 @@ importGenesisFunds = do
   delay
   logMsg "Importing Genesis Fund. Done."
   return wallet
+
+registerDReps :: Compiler ()
+registerDReps = do
+  era <- askNixOption _nix_era
+  drepCount <- fromMaybe 0 <$> askNixOption _nix_drepCount
+  when (drepCount > 0) $
+    if era `notElem` [AnyCardanoEra ConwayEra]
+    then throwCompileError $ SomeCompilerError "DRep registration impossible in a pre-Conway era"
+    else do
+      logMsg $ "Registering " <> Text.pack (show drepCount) <> " DReps. (not yet implemented)"
+      delay
+      logMsg $ "Delegating to DReps. (not yet implemented)"
+      -- TODO: actually emit actions 
+      -- * creating desired number DReps
+      -- * submitting DRep registration txs
+      -- * submitting txs delegating stake to the dreps
 
 addCollaterals :: SrcWallet -> Compiler (Maybe String)
 addCollaterals src = do

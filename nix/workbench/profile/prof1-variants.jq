@@ -67,6 +67,11 @@ def all_profile_variants:
       }
     } as $dataset_dish
   |
+    { generator:
+      { drepCount:                          (1 * $Ki)
+      }
+    } as $dataset_drep1k
+  |
   ##
   ### Definition vocabulary:  chain
   ##
@@ -779,6 +784,10 @@ def all_profile_variants:
     }
   , $cibench_base * $with_rtview *
     { name: "ci-bench-rtview"
+    }
+  , $cibench_base * $dataset_drep1k *
+    { name: "ci-bench-drep1k"
+    , extra_desc: "registering 1024 DReps"
     }
   , $cibench_base * $nomad_cardano_world_qa *
     { name: "ci-bench-nomadcwqa"

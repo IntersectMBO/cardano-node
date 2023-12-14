@@ -46,6 +46,7 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_sigKey               :: SigningKeyFile In
   , _nix_localNodeSocketPath  :: String
   , _nix_targetNodes          :: NonEmpty NodeIPv4Address
+  , _nix_drepCount            :: Maybe Int
   } deriving (Show, Eq)
 
 deriving instance Generic NixServiceOptions
@@ -106,6 +107,7 @@ txGenConfig NixServiceOptions{..}
   , confInitCooldown = _nix_init_cooldown
   , confTxsInputs = _nix_inputs_per_tx
   , confTxsOutputs = _nix_outputs_per_tx
+  , confDRepCount = fromMaybe 0 _nix_drepCount
   }
 
 txGenPlutusParams :: NixServiceOptions -> TxGenPlutusParams

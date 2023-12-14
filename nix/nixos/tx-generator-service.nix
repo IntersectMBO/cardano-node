@@ -51,7 +51,8 @@ let
         sigKey
         tps
         tx_count
-        tx_fee;
+        tx_fee
+        drepCount;
      };
   defaultGeneratorScriptFn = cleanNixServiceOptions;
   ## The standard decision procedure for the run script:
@@ -133,6 +134,8 @@ in pkgs.commonLib.defServiceModule
         localNodeConf   = mayOpt attrs       "Config of the local node";
 
         targetNodes     = mayOpt attrs       "Targets: { name = { ip, port } }";
+
+        drepCount       = mayOpt int         "DReps to be registered for the run.";
 
         era             = opt (enum [ "shelley"
                                       "allegra"
