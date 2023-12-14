@@ -6,55 +6,47 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-{-# OPTIONS_GHC -fno-warn-unused-imports #-}
-
-{- HLINT ignore "Use map" -}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
 module Main (main) where
 
 import           Control.Arrow
 import           Control.Monad
-import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
-import           Data.Aeson (FromJSON, eitherDecodeFileStrict', encode)
+import           Data.Aeson (eitherDecodeFileStrict')
 import qualified Data.ByteString.Lazy.Char8 as BSL (putStrLn)
-import           Data.List (sortOn)
-import           Data.Ord (comparing)
+import           Data.Either (fromRight)
 import           GHC.Natural (Natural)
 import           Options.Applicative as Opt
-import           Options.Applicative.Common as Opt (runParserInfo)
 
 import           System.Environment (getArgs)
 import           System.Exit (die, exitSuccess)
 import           System.FilePath
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters (..), fromPlutusData)
+import           Cardano.Api.Shelley (ProtocolParameters (..), ReferenceScript (..))
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types (AdjustFilePaths (..), GenesisFile (..))
 
+import           Cardano.TxGenerator.DRep
+import           Cardano.TxGenerator.Fund
 import           Cardano.TxGenerator.Genesis
 import           Cardano.TxGenerator.PlutusContext
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Setup.NodeConfig
 import           Cardano.TxGenerator.Setup.Plutus
 import           Cardano.TxGenerator.Setup.SigningKey
+import           Cardano.TxGenerator.Tx
 import           Cardano.TxGenerator.Types
+import           Cardano.TxGenerator.Utils
 
-import           Cardano.Benchmarking.Script.Aeson (prettyPrint, prettyPrintOrdered,
-                   prettyPrintYaml)
-import           Cardano.Benchmarking.Script.Selftest (testScript)
-import           Cardano.Benchmarking.Script.Types (SubmitMode (..))
+import           Cardano.Benchmarking.Script.Aeson (prettyPrintOrdered)
 
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts
 import           Cardano.Benchmarking.PlutusScripts.CustomCallTypes
 #endif
-
-import           Cardano.Node.Protocol.Types
-
-import qualified PlutusTx
 
 import           Paths_tx_generator
 
@@ -111,14 +103,20 @@ main
       Left err -> die (show err)
       Right (nixService, _nc, genesis, sigKey) -> do
         putStrLn $ "* Did I manage to extract a genesis fund?\n--> " ++ checkFund nixService genesis sigKey
+        let
+          plutus  = _nix_plutus nixService
+          theEra  = _nix_era nixService
+
+        putStrLn "* checking DRep registration..."
+        checkDRepRegistration theEra
+
         putStrLn "* Can I pre-execute a plutus script?"
-        let plutus = _nix_plutus nixService
         case plutusType <$> plutus of
           Just LimitSaturationLoop  -> checkPlutusLoop protoParamPath plutus
           Just BenchCustomCall      -> checkPlutusBuiltin protoParamPath
-          _                         -> putStrLn $ "plutusType "
-                                                   ++ show plutus
-                                                   ++ " unrecognised"
+          _                         -> putStrLn
+            "--> skipping Plutus check; unhandled or unspecified plutusType"
+
         exitSuccess
 
 -- The type annotations within patterns or expressions that would be
@@ -153,6 +151,32 @@ checkFundCore ::
   -> SigningKey PaymentKey
   -> Maybe (AddressInEra era, Lovelace)
 checkFundCore = genesisInitialFundForKey Mainnet
+
+
+checkDRepRegistration ::
+     AnyCardanoEra
+  -> IO ()
+checkDRepRegistration era = do
+  case era of
+    AnyCardanoEra ConwayEra | Just w <- forEraMaybeEon ConwayEra -> do
+      dreps <- replicateM (fromIntegral drepCount) (createDRep w $ Lovelace deposit)
+      putStrLn $ "--> " ++ show (drepCert $ head dreps)
+
+      let
+        inValue   = getFundLovelace mockFund
+        outValue  = lovelaceToTxOutValue ShelleyBasedEraConway $ inValue - (Lovelace $ deposit * drepCount) - mockFeeLovelace
+        addr      = keyAddress Mainnet mockKey
+        txouts    = [TxOut addr outValue TxOutDatumNone ReferenceScriptNone]
+
+      case genTxCert ShelleyBasedEraConway mockFee dreps mockFund txouts of
+        Left err -> print err
+        Right (tx, _) ->
+          putStrLn $ "--> tx size in bytes: " ++ show (txSizeInBytes tx)  -- don't let this surpass `maxTxSize` in PParams
+
+    _ -> putStrLn "* checkDRepRegistration: skipped - in pre-Conway era"
+  where
+    deposit   = 0  :: Integer                                             -- minimum deposit specified in Conway genesis as `dRepDeposit`
+    drepCount = 16 :: Integer
 
 checkPlutusBuiltin :: FilePath -> IO ()
 #ifndef WITH_LIBRARY
@@ -309,3 +333,40 @@ parserCommandLine
             <> help "The Nix service definition JSON file"
             <> completer (bashCompleter "file")
         )
+
+
+---
+--- some mock data in the Conway era for easy check implementation
+---
+
+mockKey :: SigningKey PaymentKey
+mockKey = fromRight (error "signingKey: parseError") $ parseSigningKeyTE keyData
+  where
+    keyData = TextEnvelope { teType = TextEnvelopeType "GenesisUTxOSigningKey_ed25519"
+              , teDescription = "Genesis Initial UTxO Signing Key"
+              , teRawCBOR = "X \vl1~\182\201v(\152\250A\202\157h0\ETX\248h\153\171\SI/m\186\242D\228\NAK\182(&\162"}
+
+mockGenesisTxIn :: TxIn
+mockGenesisValue :: TxOutValue ConwayEra
+(mockGenesisTxIn, mockGenesisValue) =
+  ( TxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162" (TxIx 0)
+  , lovelaceToTxOutValue ShelleyBasedEraConway $ Lovelace 90_000_000_000_000
+  )
+
+mockFund :: Fund
+mockFund
+  = Fund $ InAnyCardanoEra ConwayEra fundInEra
+  where
+    fundInEra :: FundInEra ConwayEra
+    fundInEra  = FundInEra {
+        _fundTxIn = mockGenesisTxIn
+      , _fundVal = mockGenesisValue
+      , _fundWitness = KeyWitness KeyWitnessForSpending
+      , _fundSigningKey = Just mockKey
+      }
+
+mockFee :: TxFee ConwayEra
+mockFee = TxFeeExplicit ShelleyBasedEraConway mockFeeLovelace
+
+mockFeeLovelace :: Lovelace
+mockFeeLovelace = Lovelace 100_000

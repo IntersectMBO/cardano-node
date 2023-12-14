@@ -10,11 +10,12 @@ module  Cardano.TxGenerator.Tx
 import           Data.Bifunctor (bimap, second)
 import qualified Data.ByteString as BS (length)
 import           Data.Function ((&))
-import           Data.Maybe (mapMaybe)
+import           Data.Maybe (fromJust, mapMaybe)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (LedgerProtocolParameters)
 
+import           Cardano.TxGenerator.DRep
 import           Cardano.TxGenerator.Fund
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.UTxO (ToUTxOList)
@@ -181,6 +182,33 @@ genTx sbe ledgerParameters (collateral, collFunds) fee metadata inFunds outputs
     & setTxValidityUpperBound (defaultTxValidityUpperBound sbe)
     & setTxMetadata metadata
     & setTxProtocolParams (BuildTxWith (Just ledgerParameters))
+
+genTxCert :: forall era. ()
+  => IsShelleyBasedEra era
+  => ShelleyBasedEra era
+  -> TxFee era
+  -> [DRep era]
+  -> Fund
+  -> [TxOut CtxTx era]
+  -> Either TxGenError (Tx era, TxId)
+genTxCert sbe fee dreps inFund output
+  = bimap
+      ApiError
+      (\b -> (signShelleyTransaction (shelleyBasedEra @era) b $ map WitnessPaymentKey signingKeys, getTxId b))
+      (createAndValidateTransactionBody (shelleyBasedEra @era) txBodyContent)
+ where
+  signingKeys = key : map (castDrep . drepSKey) dreps
+  _certs = map drepCert dreps
+  key = fromJust $ getFundKey inFund
+
+  txBodyContent = defaultTxBodyContent sbe
+    & setTxIns [(getFundTxIn inFund, BuildTxWith $ getFundWitness inFund)]
+    & setTxOuts output
+    & setTxFee fee
+    & setTxValidityLowerBound TxValidityNoLowerBound
+    & setTxValidityUpperBound (defaultTxValidityUpperBound sbe)
+    -- TODO actually build a TxCertificates value to submit certs
+    -- & setTxCertificates undefined
 
 
 txSizeInBytes :: forall era. IsShelleyBasedEra era =>
