@@ -1,7 +1,7 @@
 
 ## Build Cardano Node + Image
 
-https://github.com/input-output-hk/cardano-node-wiki/wiki/building-the-node-using-nix
+https://github.com/intersectmbo/cardano-node-wiki/wiki/building-the-node-using-nix
 
 ```
 # Build + Install the cardano node

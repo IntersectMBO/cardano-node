@@ -32,61 +32,61 @@ let
             {
               coreutils = rec {
                 nix-store-path  = pkgs.coreutils;
-                flake-reference = "github:input-output-hk/cardano-node";
+                flake-reference = "github:intersectmbo/cardano-node";
                 flake-output = "legacyPackages.x86_64-linux.coreutils";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
               bashInteractive = rec {
                 nix-store-path  = pkgs.bashInteractive;
-                flake-reference = "github:input-output-hk/cardano-node";
+                flake-reference = "github:intersectmbo/cardano-node";
                 flake-output = "legacyPackages.x86_64-linux.bashInteractive";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
               findutils = rec {
                 nix-store-path  = pkgs.findutils;
-                flake-reference = "github:input-output-hk/cardano-node";
+                flake-reference = "github:intersectmbo/cardano-node";
                 flake-output = "legacyPackages.x86_64-linux.findutils";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
               gnutar = rec {
                 nix-store-path  = pkgs.gnutar;
-                flake-reference = "github:input-output-hk/cardano-node";
+                flake-reference = "github:intersectmbo/cardano-node";
                 flake-output = "legacyPackages.x86_64-linux.gnutar";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
               zstd = rec {
                 nix-store-path  = pkgs.zstd;
-                flake-reference = "github:input-output-hk/cardano-node";
+                flake-reference = "github:intersectmbo/cardano-node";
                 flake-output = "legacyPackages.x86_64-linux.zstd";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
               wget = rec {
                 nix-store-path  = pkgs.wget;
-                flake-reference = "github:input-output-hk/cardano-node";
+                flake-reference = "github:intersectmbo/cardano-node";
                 flake-output = "legacyPackages.x86_64-linux.wget";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
               cacert = rec {
                 nix-store-path  = pkgs.cacert;
-                flake-reference = "github:input-output-hk/cardano-node";
+                flake-reference = "github:intersectmbo/cardano-node";
                 flake-output = "legacyPackages.x86_64-linux.cacert";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
               supervisor = rec {
                 nix-store-path  = pkgs.python3Packages.supervisor;
-                flake-reference = "github:input-output-hk/cardano-node";
+                flake-reference = "github:intersectmbo/cardano-node";
                 flake-output = "legacyPackages.x86_64-linux.python3Packages.supervisor";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
               gnugrep = rec {
                 nix-store-path  = pkgs.gnugrep;
-                flake-reference = "github:input-output-hk/cardano-node";
+                flake-reference = "github:intersectmbo/cardano-node";
                 flake-output = "legacyPackages.x86_64-linux.gnugrep";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
               jq = rec {
                 nix-store-path  = pkgs.jq;
-                flake-reference = "github:input-output-hk/cardano-node";
+                flake-reference = "github:intersectmbo/cardano-node";
                 flake-output = "legacyPackages.x86_64-linux.jq";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
@@ -104,7 +104,7 @@ let
                     then cardanoNodePackages.cardano-node.passthru.eventlogged
                     else cardanoNodePackages.cardano-node
                 ;
-                flake-reference = "github:input-output-hk/cardano-node";
+                flake-reference = "github:intersectmbo/cardano-node";
                 flake-output =
                   if eventlogged
                     then "cardanoNodePackages.cardano-node.passthru.eventlogged"
@@ -120,13 +120,13 @@ let
               };
               cardano-tracer = rec {
                 nix-store-path  = pkgs.cardanoNodePackages.cardano-tracer;
-                flake-reference = "github:input-output-hk/cardano-node";
+                flake-reference = "github:intersectmbo/cardano-node";
                 flake-output = "cardanoNodePackages.cardano-tracer";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
               tx-generator = rec {
                 nix-store-path  = pkgs.cardanoNodePackages.tx-generator;
-                flake-reference = "github:input-output-hk/cardano-node";
+                flake-reference = "github:intersectmbo/cardano-node";
                 flake-output = "cardanoNodePackages.tx-generator";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
@@ -142,7 +142,7 @@ let
               };
               rsync = rec {
                 nix-store-path  = pkgs.rsync;
-                flake-reference = "github:input-output-hk/cardano-node";
+                flake-reference = "github:intersectmbo/cardano-node";
                 flake-output = "legacyPackages.x86_64-linux.rsync";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };

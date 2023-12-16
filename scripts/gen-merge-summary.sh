@@ -24,5 +24,5 @@ git log --merges --since $since --until $until --format=fuller \
       | (.body =  (.message | split("\n") | del(.[0]) | del(.[0]) | join("\n")))
       | select(.subject | startswith("Merge pull request #"))
       | (.subject |= sub("^.*#(?<a>[0-9]+) .*$"; .a))
-      | ("- [" + (.body | gsub("\n.*"; "")) + "](https://github.com/input-output-hk/cardano-node/pull/" + .subject + ") (" + .author + ")")
+      | ("- [" + (.body | gsub("\n.*"; "")) + "](https://github.com/intersectmbo/cardano-node/pull/" + .subject + ") (" + .author + ")")
     '

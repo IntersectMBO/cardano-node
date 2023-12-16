@@ -20,7 +20,7 @@
       inputs.hackage.follows = "hackageNix";
     };
     CHaP = {
-      url = "github:input-output-hk/cardano-haskell-packages?ref=repo";
+      url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
       flake = false;
     };
     utils.url = "github:numtide/flake-utils";
@@ -227,7 +227,7 @@
                   MAKE_TARGET=testpr
                   mkdir -p tmp && cd tmp
                   rm -rf cardano-node-tests
-                  git clone https://github.com/input-output-hk/cardano-node-tests.git
+                  git clone https://github.com/intersectmbo/cardano-node-tests.git
                   cd cardano-node-tests
                   sed -i '1 s/^.*$/#! \/usr\/bin\/env bash/' ./.github/regression.sh
                   export NODE_REV

@@ -35,7 +35,7 @@ let
           flags: +use-ghc-stub
       '';
       inputMap = {
-        "https://input-output-hk.github.io/cardano-haskell-packages" = CHaP;
+        "https://chap.intersectmbo.org/" = CHaP;
       };
       shell = {
         name = "cabal-dev-shell";

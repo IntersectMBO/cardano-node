@@ -1,6 +1,6 @@
 # Cardano RTView
 
-RTView is a part of `cardano-tracer` [service](https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md). It is a real-time monitoring tool for Cardano nodes (RTView is an abbreviation for "Real Time View"). It provides an interactive web page where you can see different kinds of information about connected nodes.
+RTView is a part of `cardano-tracer` [service](https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md). It is a real-time monitoring tool for Cardano nodes (RTView is an abbreviation for "Real Time View"). It provides an interactive web page where you can see different kinds of information about connected nodes.
 
 # Contents
 
@@ -121,7 +121,7 @@ hasRTView:
   epPort: 3300
 ```
 
-Here `epHost` and `epPort` specify the host and the port for RTView web page. Also, you can find examples of configuration files in [configuration directory](https://github.com/input-output-hk/cardano-node/tree/master/cardano-tracer/configuration).
+Here `epHost` and `epPort` specify the host and the port for RTView web page. Also, you can find examples of configuration files in [configuration directory](https://github.com/intersectmbo/cardano-node/tree/master/cardano-tracer/configuration).
 
 That's it. Now run `cardano-tracer` and open [127.0.0.1:3300](https://127.0.0.1:3300) in your browser.
 

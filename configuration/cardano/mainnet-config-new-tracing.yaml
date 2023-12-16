@@ -22,7 +22,7 @@ RequiresNetworkMagic: RequiresNoMagic
 # This protocol version number gets used by block producing nodes as part
 # of the system for agreeing on and synchronising protocol updates.
 #
-# See https://github.com/input-output-hk/cardano-node/blob/master/cardano-node/src/Cardano/Node/Protocol/Cardano.hs#L199
+# See https://github.com/intersectmbo/cardano-node/blob/master/cardano-node/src/Cardano/Node/Protocol/Cardano.hs#L199
 LastKnownBlockVersion-Major: 3
 LastKnownBlockVersion-Minor: 0
 LastKnownBlockVersion-Alt: 0

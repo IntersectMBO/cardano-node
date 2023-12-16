@@ -4,7 +4,7 @@ Contributing to the ``cardano-node`` project
 
 The ``cardano-node`` development is primarily based on the Nix infrastructure (https://nixos.org/ ), which enables packaging, CI, development environments and deployments.
 
-On how to set up Nix for ``cardano-node`` development, please see `Building Cardano Node with nix <https://github.com/input-output-hk/cardano-node-wiki/wiki/building-the-node-using-nix>`_.
+On how to set up Nix for ``cardano-node`` development, please see `Building Cardano Node with nix <https://github.com/intersectmbo/cardano-node-wiki/wiki/building-the-node-using-nix>`_.
 
 
 Roles and Responsibilities
@@ -14,7 +14,7 @@ We maintain a [CODEOWNERS file][CODEOWNERS] which provides information who
 should review a contributing PR.  Note that you might need to get approvals
 from all code owners (even though GitHub doesn't give a way to enforce it).
 
-[CODEOWNERS]: https://github.com/input-output-hk/cardano-node/blob/master//CODEOWNERS
+[CODEOWNERS]: https://github.com/intersectmbo/cardano-node/blob/master//CODEOWNERS
 
 
 Supplementary tooling
@@ -30,7 +30,7 @@ Testing
 
 ``cardano-node`` is essentially a container which implements several components such networking, consensus, and storage. These components have individual test coverage. The node goes through integration and release testing by Devops/QA while automated CLI tests are ongoing alongside development.
 
-Developers on ``cardano-node`` can `launch their own testnets <https://github.com/input-output-hk/cardano-node-wiki/wiki/launching-a-testnet>`_ or `run the chairman tests <https://github.com/input-output-hk/cardano-node-wiki/wiki/running-chairman-tests>`_ locally.
+Developers on ``cardano-node`` can `launch their own testnets <https://github.com/intersectmbo/cardano-node-wiki/wiki/launching-a-testnet>`_ or `run the chairman tests <https://github.com/intersectmbo/cardano-node-wiki/wiki/running-chairman-tests>`_ locally.
 
 Debugging
 ====
@@ -105,12 +105,12 @@ You can quickly spin up a local cluster (on Linux and Darwin), based on any of a
     - ``devops`` is an unloaded profile (no transaction generation) with short slots -- ``0.2`` sec.
     - ..and many more -- which can be either:
         - listed, by ``make ps``
-        - observed at their point of definition: `nix/workbench/profiles/prof1-variants.jq <https://github.com/input-output-hk/cardano-node/tree/master/nix/workbench/profiles/prof1-variants.jq#L333-L526>`_
+        - observed at their point of definition: `nix/workbench/profiles/prof1-variants.jq <https://github.com/intersectmbo/cardano-node/tree/master/nix/workbench/profiles/prof1-variants.jq#L333-L526>`_
 2. Optional: select mode of operation, by optionally providing a suffix:
     - default -- no suffix -- just enter the workbench shell, allowing you to run ``start-cluster`` at any time.  Binaries will be built locally, by ``cabal``.
     - ``autostay`` suffix -- enter the workbench shell, start the cluster, and stay in the shell afterwards.  Binaries will be built locally, by ``cabal``.
     - ``autonix`` suffix -- enter the workbench shell, start the cluster.  All binaries will be provided by the Nix CI.
-    - ..there are other modes, as per `lib.mk <https://github.com/input-output-hk/cardano-node/tree/master/lib.mk>`_
+    - ..there are other modes, as per `lib.mk <https://github.com/intersectmbo/cardano-node/tree/master/lib.mk>`_
 3. Enter the workbench shell for the chosen profile & mode:
     ``make <PROFILE-NAME>`` or ``make <PROFILE-NAME>-<SUFFIX>`` (when there is a suffix).
 4. Optional: start cluster:

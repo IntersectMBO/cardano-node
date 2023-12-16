@@ -64,14 +64,14 @@ jobs:
     # pushed the tagged commit somewhere, and Hydra will have had the
     # change to build the image.
 
-    - name: Uploading input-output-hk/cardano-node
+    - name: Uploading intersectmbo/cardano-node
       run: |
         echo "::group::Downloading from cache"
         nix build --accept-flake-config --print-out-paths --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#dockerImage/node
         echo "::endgroup::"
 
         echo "::group::Uploading to registry"
-        skopeo copy docker-archive:./result docker://ghcr.io/input-output-hk/cardano-node:$GITHUB_REF_NAME
+        skopeo copy docker-archive:./result docker://ghcr.io/intersectmbo/cardano-node:$GITHUB_REF_NAME
         echo "::endgroup::"
 
     - name: Uploading input-output-hk/cardano-submit-api

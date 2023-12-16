@@ -42,7 +42,7 @@ case "${op}" in
         def is_from_chap:
           ."pkg-src".repo?.uri?
           | strings
-          | . == "https://input-output-hk.github.io/cardano-haskell-packages" or startswith("file:" + $chappath)
+          | . == "https://chap.intersectmbo.org/" or startswith("file:" + $chappath)
           ;
 
         def extract_package_data:

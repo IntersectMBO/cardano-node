@@ -62,7 +62,7 @@ mkNoNodesInfo networkConfig = do
                 ]
             , UI.p #. "mt-5" #+
                 [ UI.span # set UI.html sshNote
-                , UI.anchor # set UI.href "https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md#distributed-scenario"
+                , UI.anchor # set UI.href "https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md#distributed-scenario"
                             # set text "here"
                             # set UI.target "_blank"
                 , image "rt-view-href-icon" externalLinkSVG
@@ -73,7 +73,7 @@ mkNoNodesInfo networkConfig = do
                 ]
             , UI.p #. "mt-5" #+
                 [ string "For more details, please read "
-                , UI.anchor # set UI.href "https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md#configuration"
+                , UI.anchor # set UI.href "https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md#configuration"
                             # set text "our documentation"
                             # set UI.target "_blank"
                 , image "rt-view-href-icon" externalLinkSVG
