@@ -15,7 +15,7 @@
   </table>
 
 .. contents:: Contents
-
+ 
 *************************
 Overview of the ``cardano-node`` repository
 *************************
