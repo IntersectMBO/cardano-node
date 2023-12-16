@@ -4,7 +4,7 @@ Contributing to the ``cardano-node`` project
 
 The ``cardano-node`` development is primarily based on the Nix infrastructure (https://nixos.org/ ), which enables packaging, CI, development environments and deployments.
 
-On how to set up Nix for ``cardano-node`` development, please see `Building Cardano Node with nix <https://github.com/intersectmbo/cardano-node-wiki/wiki/building-the-node-using-nix>`_.
+On how to set up Nix for ``cardano-node`` development, please see `Building Cardano Node with nix <https://github.com/input-output-hk/cardano-node-wiki/wiki/building-the-node-using-nix>`_.
 
 
 Roles and Responsibilities
@@ -30,7 +30,7 @@ Testing
 
 ``cardano-node`` is essentially a container which implements several components such networking, consensus, and storage. These components have individual test coverage. The node goes through integration and release testing by Devops/QA while automated CLI tests are ongoing alongside development.
 
-Developers on ``cardano-node`` can `launch their own testnets <https://github.com/intersectmbo/cardano-node-wiki/wiki/launching-a-testnet>`_ or `run the chairman tests <https://github.com/intersectmbo/cardano-node-wiki/wiki/running-chairman-tests>`_ locally.
+Developers on ``cardano-node`` can `launch their own testnets <https://github.com/input-output-hk/cardano-node-wiki/wiki/launching-a-testnet>`_ or `run the chairman tests <https://github.com/input-output-hk/cardano-node-wiki/wiki/running-chairman-tests>`_ locally.
 
 Debugging
 ====

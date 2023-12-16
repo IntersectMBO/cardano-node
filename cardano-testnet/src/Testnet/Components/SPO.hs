@@ -160,7 +160,7 @@ convertToEraFlag (AnyCardanoEra e) =
     ShelleyEra -> "--shelley-era"
     ByronEra -> "--byron-era"
 
--- | Related documentation: https://github.com/intersectmbo/cardano-node-wiki/blob/main/docs/stake-pool-operations/8_register_stakepool.md
+-- | Related documentation: https://github.com/input-output-hk/cardano-node-wiki/blob/main/docs/stake-pool-operations/8_register_stakepool.md
 registerSingleSpo
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => Int -- ^ Identifier for stake pool

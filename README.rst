@@ -117,7 +117,7 @@ The general synopsis is as follows:
 
 * ``--start-as-non-producing-node`` -  Optional flag to disable block production on node
   start. If credentials flags are passed the node will start block producing, however with
-  this flag the node will only start block producing on SIGHUP (see `here <https://github.com/intersectmbo/cardano-node-wiki/wiki/dynamic-block-forging>`_ for more details)
+  this flag the node will only start block producing on SIGHUP (see `here <https://github.com/input-output-hk/cardano-node-wiki/wiki/dynamic-block-forging>`_ for more details)
 
 * ``--socket-path`` - Path to the socket file.
 
@@ -212,7 +212,7 @@ The Byron genesis generation operations will create a directory that contains:
 * ``poor-keys.*.key``:
   Non-delegate private keys with genesis UTxO. Affected by: ``--n-poor-addresses``, ``--total-balance``.
 
-More details on the Byron Genesis ``JSON`` file can be found in ``https://github.com/intersectmbo/cardano-node-wiki/wiki/byron-genesis``
+More details on the Byron Genesis ``JSON`` file can be found in ``https://github.com/input-output-hk/cardano-node-wiki/wiki/byron-genesis``
 
  Byron genesis delegation and related concepts are described in detail in:
 
@@ -433,11 +433,11 @@ To help you get started, see:
 
 - `Ledger explanations: native tokens <https://cardano-ledger.readthedocs.io/en/latest/>`_. Covers explainers about assets, tokens, token bundles, minting policies, comparison to ERC20, and minimum ada value requirements.
 
-- `A tutorial on how to get started with native tokens <https://github.com/intersectmbo/cardano-node-wiki/wiki/02-getting-started>`_. Explains how to create new currencies and assets, submit and send transactions containing multi-asset tokens, send and receive token bundles, manage your addresses and values.
+- `A tutorial on how to get started with native tokens <https://github.com/input-output-hk/cardano-node-wiki/wiki/02-getting-started>`_. Explains how to create new currencies and assets, submit and send transactions containing multi-asset tokens, send and receive token bundles, manage your addresses and values.
 
-- `Native tokens exercises <https://github.com/intersectmbo/cardano-node-wiki/wiki/03-exercises>`_
+- `Native tokens exercises <https://github.com/input-output-hk/cardano-node-wiki/wiki/03-exercises>`_
 
-To start, please ensure that you are familiar with setting up and operating the `Cardano node <https://github.com/intersectmbo/cardano-node>`_. Alternatively, see instructions on how to `start your node <https://github.com/intersectmbo/cardano-node-wiki/wiki/2_start_your_nodes>`_ to submit the commands. You will not need to set up and start a full block producing node ('stake pool'), just a much simpler relay node. This node will need to connect to a Cardano network that is capable of processing native tokens (e.g., the native token pre-production environment (PPE), or the Cardano mainnet).
+To start, please ensure that you are familiar with setting up and operating the `Cardano node <https://github.com/intersectmbo/cardano-node>`_. Alternatively, see instructions on how to `start your node <https://github.com/input-output-hk/cardano-node-wiki/wiki/2_start_your_nodes>`_ to submit the commands. You will not need to set up and start a full block producing node ('stake pool'), just a much simpler relay node. This node will need to connect to a Cardano network that is capable of processing native tokens (e.g., the native token pre-production environment (PPE), or the Cardano mainnet).
 
 ****
 API Documentation
@@ -460,13 +460,13 @@ Please note that you may need to use any ``source-repository-package`` stanzas d
 Style guide
 ****
 
-The `style guide <https://github.com/intersectmbo/cardano-node-wiki/wiki/Style-guide>`_ for can be found
-on the `cardano-node repository's wiki <https://github.com/intersectmbo/cardano-node-wiki/wiki>`_.
+The `style guide <https://github.com/input-output-hk/cardano-node-wiki/wiki/Style-guide>`_ for can be found
+on the `cardano-node repository's wiki <https://github.com/input-output-hk/cardano-node-wiki/wiki>`_.
 
 ****
 Troubleshooting ``cardano-node`` issues
 ****
 
 For some troubleshooting help with building or running ``cardano-node``, the wiki has a
-`troubleshooting page <https://github.com/intersectmbo/cardano-node-wiki/wiki/Troubleshooting>`_
+`troubleshooting page <https://github.com/input-output-hk/cardano-node-wiki/wiki/Troubleshooting>`_
 that documents some common gotchas.

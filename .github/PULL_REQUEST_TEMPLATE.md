@@ -12,7 +12,7 @@ to the issue.
   - property tests
   - roundtrip tests
   - integration tests
-  See [Runnings tests](https://github.com/intersectmbo/cardano-node-wiki/wiki/Running-tests) for more details
+  See [Runnings tests](https://github.com/input-output-hk/cardano-node-wiki/wiki/Running-tests) for more details
 - [ ] Any changes are noted in the `CHANGELOG.md` for affected package
 - [ ] The version bounds in `.cabal` files are updated
 - [ ] CI passes. See note on CI.  The following CI checks are required:

@@ -44,7 +44,7 @@
 `trace-dispatcher` is an attempt to enable design and implementation of simple, efficient __tracing systems__, one that has a reduced footprint in the executed program, has a more pleasant API, and provides self-documenting features.
 
 For a quick start into new tracing see the document
-[New Tracing Quickstart](https://github.com/intersectmbo/cardano-node-wiki/wiki/New-Tracing-Quickstart)
+[New Tracing Quickstart](https://github.com/input-output-hk/cardano-node-wiki/wiki/New-Tracing-Quickstart)
 
 
 ## Design decisions
@@ -608,7 +608,7 @@ provided by the node is structured using the same namespace as metrics and log m
 But otherwise DataPoints work independent of tracing, but are written in a local store,
 so the latest value of a particular DataPoint can be queried on demand.
 
-Also, [there is a document](https://github.com/intersectmbo/cardano-node-wiki/wiki/cardano-node-and-DataPoints:-demo)
+Also, [there is a document](https://github.com/input-output-hk/cardano-node-wiki/wiki/cardano-node-and-DataPoints:-demo)
 describing how to accept DataPoints from an external process.
 
 [`demo-acceptor`](https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/demo/acceptor.hs)
@@ -628,7 +628,7 @@ mkDataPointTracer trDataPoint namesFor = do
     pure $ withNamesAppended namesFor tr
 ```
 
-Also, [there is a document](https://github.com/intersectmbo/cardano-node-wiki/wiki/cardano-node-and-DataPoints:-demo)
+Also, [there is a document](https://github.com/input-output-hk/cardano-node-wiki/wiki/cardano-node-and-DataPoints:-demo)
 describing how to accept DataPoints from an external process. [`demo-acceptor`](https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/demo/acceptor.hs) application allows to ask for particular DataPoint by its name and display its value.
 
 # Integration and implementation in the node
@@ -762,7 +762,7 @@ runTraceDocumentationCmd
   -> IO ()
 ```
 
-A periodically generated documentation of the tracers can be found in the cardano-node-wiki repository in the path `https://github.com/intersectmbo/cardano-node-wiki/blob/main/docs/new-tracing/tracers_doc_generated.md`
+A periodically generated documentation of the tracers can be found in the cardano-node-wiki repository in the path `https://github.com/input-output-hk/cardano-node-wiki/blob/main/docs/new-tracing/tracers_doc_generated.md`
 
 
 # Appendix
@@ -772,11 +772,11 @@ A periodically generated documentation of the tracers can be found in the cardan
 This is a document which is regenerated periodically and documents all trace-messages,  metrics and data-points in cardano-node. It as well displays the handling of these
 messages with the current default configuration:
 
-[Generated Cardano Trace Documentation](https://github.com/intersectmbo/cardano-node-wiki/wiki/tracers_doc_generated)
+[Generated Cardano Trace Documentation](https://github.com/input-output-hk/cardano-node-wiki/wiki/tracers_doc_generated)
 
 For a quick start into new tracing see the document:
 
-[New Tracing Quickstart](https://github.com/intersectmbo/cardano-node-wiki/wiki/New-Tracing-Quickstart)
+[New Tracing Quickstart](https://github.com/input-output-hk/cardano-node-wiki/wiki/New-Tracing-Quickstart)
 
 This document describes a separate service for logging and monitoring Cardano nodes:
 
@@ -784,7 +784,7 @@ This document describes a separate service for logging and monitoring Cardano no
 
 This document describes how to accept DataPoints from an external process:
 
-[cardano node and DataPoints: demo](https://github.com/intersectmbo/cardano-node-wiki/wiki/cardano-node-and-DataPoints:-demo)
+[cardano node and DataPoints: demo](https://github.com/input-output-hk/cardano-node-wiki/wiki/cardano-node-and-DataPoints:-demo)
 
 
 ## Future work
