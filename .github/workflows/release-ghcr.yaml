@@ -41,7 +41,7 @@ jobs:
               sleep 30;;
           esac
         done
-    
+
   build:
     needs: [wait-for-hydra]
     name: "Upload to ghcr.io"
@@ -71,7 +71,7 @@ jobs:
         echo "::endgroup::"
 
         echo "::group::Uploading to registry"
-        skopeo copy docker-archive:./result docker://ghcr.io/intersectmbo/cardano-node:$GITHUB_REF_NAME
+        skopeo copy docker-archive:./result docker://ghcr.io/input-output-hk/cardano-node:$GITHUB_REF_NAME
         echo "::endgroup::"
 
     - name: Uploading input-output-hk/cardano-submit-api
