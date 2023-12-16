@@ -56,4 +56,4 @@ assignees: ''
 
 Acceptance Criteria & User Stories define here (or in a separate file (linked here) for a big feature)
 
-Example - https://github.com/input-output-hk/cardano-node/issues/4453
+Example - https://github.com/intersectmbo/cardano-node/issues/4453

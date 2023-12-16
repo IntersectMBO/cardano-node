@@ -366,7 +366,7 @@ allocate-run-nomadcloud() {
     local curl_response
     # Makes `curl` return two objects, one with the body the other with
     # the headers, separated by a newline (`jq -s`).
-    if curl_response=$(curl --silent --show-error --write-out '%{json}' https://api.github.com/repos/input-output-hk/cardano-node/commits/"${gitrev}")
+    if curl_response=$(curl --silent --show-error --write-out '%{json}' https://api.github.com/repos/intersectmbo/cardano-node/commits/"${gitrev}")
     then
       # Check HTTP status code for existance
       # https://docs.github.com/en/rest/commits/commits?apiVersion=2022-11-28#get-a-commit

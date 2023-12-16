@@ -73,7 +73,7 @@ mkAboutInfo = do
                           [ UI.anchor
                                #. ("rt-view-href is-family-monospace has-text-weight-normal"
                                    <> " has-tooltip-multiline has-tooltip-top")
-                               # set UI.href ("https://github.com/input-output-hk/cardano-node/commit/" <> commit)
+                               # set UI.href ("https://github.com/intersectmbo/cardano-node/commit/" <> commit)
                                # set UI.target "_blank"
                                # set dataTooltip "Browse repository on this commit"
                                # set text commit

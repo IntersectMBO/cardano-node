@@ -573,7 +573,7 @@ p2pNetworkConfigLegacyMessage =
     pack
   $ intercalate "\n"
   [ "You are using legacy p2p topology file format."
-  , "See https://github.com/input-output-hk/cardano-node/issues/4559"
+  , "See https://github.com/intersectmbo/cardano-node/issues/4559"
   , "Note that the legacy p2p format will be removed in `1.37` release."
   ]
 

@@ -157,7 +157,7 @@ getCHaPPackagesMap = do
 
 chapPackagesURL :: Url 'Https
 chapPackagesURL =
-  https "input-output-hk.github.io" /: "cardano-haskell-packages" /: "foliage" /: "packages.json"
+  https "chap.intersectmbo.org" /: "foliage" /: "packages.json"
 
 lookupCHaPEntry :: PkgId -> PackagesMap -> Shell CHaPEntry
 lookupCHaPEntry (PkgId (PkgName n) (Ver v)) packagesMap = do

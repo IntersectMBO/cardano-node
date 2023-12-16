@@ -4,8 +4,8 @@ name:                   cardano-submit-api
 version:                3.2.1
 synopsis:               A web server that allows transactions to be POSTed to the cardano chain
 description:            A web server that allows transactions to be POSTed to the cardano chain.
-homepage:               https://github.com/input-output-hk/cardano-node
-bug-reports:            https://github.com/input-output-hk/cardano-node/issues
+homepage:               https://github.com/intersectmbo/cardano-node
+bug-reports:            https://github.com/intersectmbo/cardano-node/issues
 license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE

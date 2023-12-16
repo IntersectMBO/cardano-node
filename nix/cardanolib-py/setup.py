@@ -11,7 +11,7 @@ setuptools.setup(
     description="Library for interacting with cardano-cli in python",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/input-output-hk/cardano-node",
+    url="https://github.com/intersectmbo/cardano-node",
     py_modules= ["cardanolib"],
     classifiers=[
         "Programming Language :: Python :: 3",

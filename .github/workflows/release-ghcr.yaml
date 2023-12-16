@@ -41,7 +41,7 @@ jobs:
               sleep 30;;
           esac
         done
-    
+
   build:
     needs: [wait-for-hydra]
     name: "Upload to ghcr.io"
@@ -64,7 +64,7 @@ jobs:
     # pushed the tagged commit somewhere, and Hydra will have had the
     # change to build the image.
 
-    - name: Uploading input-output-hk/cardano-node
+    - name: Uploading intersectmbo/cardano-node
       run: |
         echo "::group::Downloading from cache"
         nix build --accept-flake-config --print-out-paths --builders "" --max-jobs 0 ${{ steps.flake-metadata.outputs.LOCKED_URL }}#dockerImage/node

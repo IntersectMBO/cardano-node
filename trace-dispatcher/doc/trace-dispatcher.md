@@ -555,7 +555,7 @@ message per second, then add this to your configuration file:
     maxFrequency: 1.0
 ```
 
-In Cardano a default configuration is given in the module [Cardano.Node.Tracing.DefaultTraceConfig](https://github.com/input-output-hk/cardano-node/blob/master/cardano-node/src/Cardano/Node/Tracing/DefaultTraceConfig.hs). In the config file all entries of the default configuration can be overridden. To remove a frequency limiter, define a limiter with maxFrequency 0.0.
+In Cardano a default configuration is given in the module [Cardano.Node.Tracing.DefaultTraceConfig](https://github.com/intersectmbo/cardano-node/blob/master/cardano-node/src/Cardano/Node/Tracing/DefaultTraceConfig.hs). In the config file all entries of the default configuration can be overridden. To remove a frequency limiter, define a limiter with maxFrequency 0.0.
 
 ## Documentation
 
@@ -611,7 +611,7 @@ so the latest value of a particular DataPoint can be queried on demand.
 Also, [there is a document](https://github.com/input-output-hk/cardano-node-wiki/wiki/cardano-node-and-DataPoints:-demo)
 describing how to accept DataPoints from an external process.
 
-[`demo-acceptor`](https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/demo/acceptor.hs)
+[`demo-acceptor`](https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/demo/acceptor.hs)
 application allows to ask for particular DataPoint by its name and display its value.
 
 ```haskell
@@ -629,7 +629,7 @@ mkDataPointTracer trDataPoint namesFor = do
 ```
 
 Also, [there is a document](https://github.com/input-output-hk/cardano-node-wiki/wiki/cardano-node-and-DataPoints:-demo)
-describing how to accept DataPoints from an external process. [`demo-acceptor`](https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/demo/acceptor.hs) application allows to ask for particular DataPoint by its name and display its value.
+describing how to accept DataPoints from an external process. [`demo-acceptor`](https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/demo/acceptor.hs) application allows to ask for particular DataPoint by its name and display its value.
 
 # Integration and implementation in the node
 
@@ -780,7 +780,7 @@ For a quick start into new tracing see the document:
 
 This document describes a separate service for logging and monitoring Cardano nodes:
 
-[Cardano Tracer](https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md)
+[Cardano Tracer](https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md)
 
 This document describes how to accept DataPoints from an external process:
 
