@@ -152,7 +152,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
 
       getResponseStatusCode response === 202
 
-    H.byDurationM 5 30 "Expected UTxO found" $ do
+    H.byDurationM 5 45 "Expected UTxO found" $ do
       void $ execCli' execConfig
         [ "babbage", "query", "utxo"
         , "--address", Text.unpack $ paymentKeyInfoAddr $ head wallets

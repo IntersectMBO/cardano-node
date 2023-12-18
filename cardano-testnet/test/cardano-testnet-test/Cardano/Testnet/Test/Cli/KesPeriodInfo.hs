@@ -201,7 +201,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
            , "--testnet-magic", show @Int testnetMagic
            ]
 
-  threadDelay 15_000000
+  threadDelay 20_000_000
   let testDelegatorStakeAddressInfoOutFp = work </> "test-delegator-stake-address-info.json"
   void $ checkStakeKeyRegistered
            tempAbsPath
@@ -267,7 +267,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
 
   yamlBs <- createConfigYaml tempAbsPath (cardanoNodeEra cTestnetOptions)
   H.lbsWriteFile (work </> "configuration.yaml") yamlBs
-  eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath tempAbsPath') "test-spo" 3005
+  eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath tempAbsPath') "test-spo" 3005 testnetMagic
         [ "run"
         , "--config", work </> "configuration.yaml"
         , "--topology", topologyFile

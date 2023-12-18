@@ -46,21 +46,28 @@ library
                       , cardano-ledger-byron
                       , cardano-ledger-shelley
                       , cardano-node
+                      , cardano-ping ^>= 0.2.0.10
+                      , contra-tracer
                       , containers
                       , data-default-class
+                      , cborg
                       , directory
                       , exceptions
                       , filepath
                       , hedgehog
                       , hedgehog-extras ^>= 0.4.7.0
                       , mtl
+                      , network
+                      , network-mux
                       , optparse-applicative-fork
                       , ouroboros-network ^>= 0.10
                       , ouroboros-network-api
+                      , prettyprinter
                       , process
                       , resourcet
                       , safe-exceptions
                       , scientific
+                      , si-timers
                       , stm
                       , tasty
                       , tasty-expected-failure
@@ -89,6 +96,7 @@ library
                         Testnet.Process.Run
                         Testnet.Runtime
                         Testnet.SubmitApi
+                        Testnet.Ping
 
   other-modules:        Parsers.Cardano
                         Parsers.Help
@@ -170,7 +178,7 @@ test-suite cardano-testnet-test
 
                         Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
                         Cardano.Testnet.Test.LedgerEvents.SanityCheck
-                        
+
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
 

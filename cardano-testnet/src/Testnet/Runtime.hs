@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Testnet.Runtime
@@ -42,8 +41,7 @@ import           Cardano.Node.Types
 
 import           Prelude
 
-import qualified Control.Concurrent as IO
-import           Control.Exception (IOException)
+import           Control.Exception
 import           Control.Monad
 import           Control.Monad.Error.Class
 import           Control.Monad.IO.Class
@@ -53,7 +51,6 @@ import           Control.Monad.Trans.Except.Extra
 import           Control.Monad.Trans.Resource
 import qualified Data.Aeson as A
 import qualified Data.List as List
-import           Data.Maybe
 import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime)
 import           GHC.Generics (Generic)
@@ -72,6 +69,10 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import           Testnet.Filepath
 import           Testnet.Process.Run
 import           Testnet.Start.Types
+
+import qualified Control.Monad.Class.MonadTimer.SI as MT
+import           Prettyprinter ((<+>))
+import qualified Testnet.Ping as Ping
 
 data TestnetRuntime = TestnetRuntime
   { configurationFile :: FilePath
@@ -188,10 +189,12 @@ startNode
   -- ^ The name of the node
   -> Int
   -- ^ Node port
+  -> Int
+  -- ^ Testnet magic
   -> [String]
   -- ^ The command --socket-path will be added automatically.
   -> ExceptT NodeStartFailure (ResourceT IO) NodeRuntime
-startNode tp node port nodeCmd = GHC.withFrozenCallStack $ do
+startNode tp node port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
   let tempBaseAbsPath = makeTmpBaseAbsPath tp
       socketDir = makeSocketDir tp
       logDir = makeLogDir tp
@@ -206,11 +209,11 @@ startNode tp node port nodeCmd = GHC.withFrozenCallStack $ do
   hNodeStdout <- handleIOExceptT FileRelatedFailure $ IO.openFile nodeStdoutFile IO.WriteMode
   hNodeStderr <- handleIOExceptT FileRelatedFailure $ IO.openFile nodeStderrFile IO.ReadWriteMode
 
-
   unless (List.length (IO.sprocketArgumentName sprocket) <= IO.maxSprocketArgumentNameLength) $
      left MaxSprocketLengthExceededError
 
   let portString = show port
+      socketAbsPath = IO.sprocketSystemName sprocket
 
   nodeProcess
     <- firstExceptT ExecutableRelatedFailure
@@ -232,30 +235,37 @@ startNode tp node port nodeCmd = GHC.withFrozenCallStack $ do
   -- We force the evaluation of initiateProcess so we can be sure that
   -- the process has started. This allows us to read stderr in order
   -- to fail early on errors generated from the cardano-node binary.
-  mpid <- liftIO $ IO.getPid hProcess
+  _ <- liftIO (IO.getPid hProcess)
+    >>= hoistMaybe (NodeExecutableError $ mconcat ["startNode: ", node, "'s process did not start."])
 
-  when (isNothing mpid)
-    $ left $ NodeExecutableError $ mconcat ["startNode: ", node, "'s process did not start."]
+  -- allow network to thermalize before proceeding
+  -- FIXME: use ledger events to listen here instead of this workaround
+  liftIO $ MT.threadDelay 10
 
-  -- The process should have started so we wait a short amount of time to allow
-  -- stderr to be populated with any errors from the cardano-node binary.
-  liftIO $ IO.threadDelay 5_000_000
+  -- Wait for socket to be created
+  eSprocketError <-
+    Ping.waitForSprocket
+      20  -- timeout
+      0.2 -- check interval
+      sprocket
 
+  -- If we do have anything on stderr, fail.
   stdErrContents <- liftIO $ IO.readFile nodeStderrFile
+  unless (null stdErrContents)
+    $ left $ NodeExecutableError stdErrContents
 
-  if null stdErrContents
-  then do
+  -- No stderr and no socket? Fail.
+  firstExceptT
+    (\ioex ->
+      NodeExecutableError . mconcat $
+        ["Socket ", socketAbsPath, " was not created after 20 seconds. There was no output on stderr. Exception: ", displayException ioex])
+    $ hoistEither eSprocketError
 
-    -- TODO: Replace with cardano-ping library. However currently
-    -- the library returns errors with printf.
-    -- when (OS.os `List.elem` ["darwin", "linux"]) $ do
-    --   void . handleIOExceptT NodePortNotOpenError
-    --   $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
+  -- Ping node and fail on error
+  Ping.pingNode (fromIntegral testnetMagic) sprocket
+    >>= (firstExceptT (NodeExecutableError . docToString . ("Ping error:" <+>) . prettyError) . hoistEither)
 
-    return $ NodeRuntime node sprocket stdIn nodeStdoutFile nodeStderrFile hProcess
-  else left $ NodeExecutableError stdErrContents
-
-
+  pure $ NodeRuntime node sprocket stdIn nodeStdoutFile nodeStderrFile hProcess
 
 
 createDirectoryIfMissingNew :: HasCallStack => FilePath -> IO FilePath
