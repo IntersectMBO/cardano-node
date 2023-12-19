@@ -135,8 +135,14 @@
 
                 (import ./nix/pkgs.nix)
 
-                (final: prev: {
-                  cardanoNodePackages = mkCardanoNodePackages project;
+                (final: prev:
+                  let
+                    cardanoNodePackages = mkCardanoNodePackages project;
+                  in {
+                    inherit cardanoNodePackages;
+                    inherit (cardanoNodePackages) db-analyser;
+
+                    cardanoNodeProject = project;
                 })
             ] ++ (import ops-lib.outPath {}).overlays;
           };
@@ -196,6 +202,7 @@
             gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
           } // optionalAttrs (system == "x86_64-linux") ({
             inherit cardano-deployment cardano-node-linux cardano-node-win64;
+            inherit (pkgs) all-profiles-json;
           } // nixosChecks // extraExeVariants) // optionalAttrs (system == "x86_64-darwin") {
             inherit cardano-node-macos;
           };
@@ -249,6 +256,7 @@
 
             packages = {
               inherit cardano-deployment;
+              inherit (pkgs) all-profiles-json;
 
               default = flake.packages."cardano-node:exe:cardano-node";
             } // lib.optionalAttrs (system == "x86_64-linux") {
