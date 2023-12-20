@@ -71,3 +71,6 @@ cardano-tracer/cardano-tracer-test
 
 # IntellIJ project folder
 .idea/
+
+# beacon-run data
+beacon/

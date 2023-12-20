@@ -1,0 +1,52 @@
+cabal-version:   3.0
+name:            beacon-run
+version:         0.1.0.0
+synopsis:        Benchmarking, exploration, and analysis of Consensus.
+description:
+  Tool that can be used to compare the performance of two consensus versions, through `ouroboros-consensus:db-analyser`.
+
+license:         Apache-2.0
+license-files:
+  LICENSE
+  NOTICE
+
+copyright:       2023 Input Output Global Inc (IOG)
+author:          IOHK Engineering Team
+maintainer:      operations@iohk.io
+category:        Network
+build-type:      Simple
+extra-doc-files:
+  CHANGELOG.md
+  README.md
+
+executable beacon-run
+  hs-source-dirs:   app
+  main-is:          beacon-run.hs
+
+  other-modules:    Cardano.Beacon.Shell
+                    Cardano.Beacon.Types
+
+  default-language: Haskell2010
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-uni-patterns
+    -Wincomplete-record-updates -Wpartial-fields -Widentities
+    -Wredundant-constraints -Wmissing-export-lists -Wunused-packages
+    -Wno-unticked-promoted-constructors
+
+  build-depends:
+    , aeson
+    , ansi-terminal
+    , base
+    , bytestring
+    , Chart                 >=1.9
+    , Chart-cairo           >=1.9
+    , containers
+    , directory
+    , extra
+    , optparse-applicative
+    , process
+    , shh
+    , slugger
+    , text
+    , vector
+    , vector-algorithms
