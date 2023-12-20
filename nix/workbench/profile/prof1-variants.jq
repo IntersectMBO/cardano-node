@@ -237,12 +237,16 @@ def all_profile_variants:
     ) as $for_3ep
   |
     ({} |
-     .generator.epochs                = 4
-    ) as $for_4ep
-  |
-    ({} |
      .generator.epochs                = 7
     ) as $for_7ep
+  |
+    ({} |
+     .generator.epochs                = 8
+    ) as $for_8ep
+  |
+    ({} |
+     .generator.epochs                = 9
+    ) as $for_9ep
   |
     ({} |
      .generator.epochs                = 15
@@ -267,6 +271,10 @@ def all_profile_variants:
     ({}
      | .node.shutdown_on_slot_synced    = 900
     ) as $for_900slot
+  |
+    ({}
+     | .node.shutdown_on_slot_synced    = 1200
+    ) as $for_1200slot
   ##
   ### Definition vocabulary:  workload
   ##
@@ -380,7 +388,7 @@ def all_profile_variants:
       | .genesis.pparamsOverlays      = ["mimic-ops"]
     ) as $mimic_ops_params
   ##
-  ### Definition vocabulary:  node config variants
+  ### Definition vocabulary:  node + tracer config variants
   ##
   |
     ({ extra_desc:                     "without cardano-tracer"
@@ -392,8 +400,13 @@ def all_profile_variants:
     ({ extra_desc:                     "with RTView"
      , suffix:                         "rtvw"
      }|
-     .node.rtview                     = true
+     .tracer.rtview                   = true
     ) as $with_rtview
+  |
+    ({ extra_desc:                     "with resource tracing in cardano-tracer"
+     }|
+     .tracer.withresources            = true
+    ) as $with_resources
   |
     ({ extra_desc:                     "with legacy iohk-monitoring"
      , suffix:                         "iomf"
@@ -491,9 +504,13 @@ def all_profile_variants:
     { desc: "Miniature dataset, CI-friendly duration, bench scale"
     }) as $cibench_base
   |
-   ($scenario_fixed_loaded * $hexagon * $torus * $dataset_empty * $for_15blk * $no_filtering *
+   ($scenario_fixed_loaded * $hexagon * $torus * $dataset_empty * $for_15blk * $no_filtering * $with_resources *
     { desc: "6 low-footprint nodes in a torus topology, 5 minutes runtime"
     }) as $tracebench_base
+  |
+   ($scenario_fixed_loaded * $hexagon * $torus * $dataset_empty * $for_1200slot * $no_filtering * $with_resources *
+    { desc: "6 low-footprint nodes in a torus topology, 20 minutes runtime"
+    }) as $tracefull_base
   |
    ($scenario_fixed_loaded * $doublet * $dataset_empty * $for_900slot * $no_filtering *
     { desc: "2 low-footprint nodes, 15 minutes runtime"
@@ -509,9 +526,9 @@ def all_profile_variants:
       , desc: "Small dataset, honest 15 epochs duration"
     }) as $plutuscall_base
   |
-   ($scenario_nomad_perf * $compose_fiftytwo * $dataset_oct2021 * $for_7ep *
+   ($scenario_nomad_perf * $compose_fiftytwo * $dataset_oct2021 * $for_8ep *
     { node:
-        { shutdown_on_slot_synced:        56000
+        { shutdown_on_slot_synced:        64000
         }
       , analysis:
         { filters:                        ["epoch3+", "size-full"]
@@ -525,6 +542,24 @@ def all_profile_variants:
         }
       , desc: "AWS c5-2xlarge cluster dataset, 7 epochs"
     }) as $nomad_perf_base
+  |
+   ($scenario_nomad_perf * $compose_fiftytwo * $dataset_oct2021 * $for_9ep * $plutus_base * $plutus_loop_counter *
+    { node:
+        { shutdown_on_slot_synced:        72000
+        }
+      , analysis:
+        { filters:                        ["epoch3+", "size-small"]
+        }
+      , generator:
+        { init_cooldown:                  45
+        , tps:                            0.85
+        }
+      , genesis:
+        { funds_balance:                  20000000000000
+        , max_block_size:                 88000
+        }
+      , desc: "AWS c5-2xlarge cluster dataset, 9 epochs"
+    }) as $nomad_perf_plutus_base
   |
    ($scenario_model * $quadruplet * $dataset_current * $for_7ep *
     { node:
@@ -616,13 +651,21 @@ def all_profile_variants:
   , { name: "default"
     , desc: "Default, as per nix/workbench/profile/prof0-defaults.jq"
     }
+  , $p2p *
+    { name: "default-p2p"
+    , desc: "Default, as per nix/workbench/profile/prof0-defaults.jq with P2P enabled"
+    }
   , $nomad_cardano_world_qa *
     { name: "default-nomadcwqa"
     , desc: "Default on Cardano World QA"
     }
-  , $nomad_perf_torus *
+  , $nomad_perf_torus * $p2p *
     { name: "default-nomadperf"
     , desc: "Default on P&T exclusive cluster"
+    }
+  , $nomad_perf_torus *
+    { name: "default-nomadperf-nop2p"
+    , desc: "Default on P&T exclusive cluster with P2P disabled"
     }
   , $plutus_base * $costmodel_v8_preview * $plutus_loop_counter *
     { name: "plutus"
@@ -644,9 +687,13 @@ def all_profile_variants:
     { name: "oldtracing-nomadcwqa"
     , desc: "Default in legacy tracing mode on Cardano World QA"
     }
-  , $nomad_perf_torus * $old_tracing *
+  , $nomad_perf_torus * $p2p * $old_tracing *
     { name: "oldtracing-nomadperf"
     , desc: "Default in legacy tracing mode on P&T exclusive cluster"
+    }
+  , $nomad_perf_torus * $old_tracing *
+    { name: "oldtracing-nomadperf-nop2p"
+    , desc: "Default in legacy tracing mode on P&T exclusive cluster with P2P disabled"
     }
   , $scenario_idle *
     { name: "idle"
@@ -698,13 +745,17 @@ def all_profile_variants:
     { name: "ci-test-oldtracing-nomadcwqa"
     , desc: "ci-test in legacy tracing mode on Cardano World QA"
     }
-  , $citest_base * $nomad_perf_torus *
+  , $citest_base * $nomad_perf_torus * $p2p *
     { name: "ci-test-nomadperf"
     , desc: "ci-test on P&T exclusive cluster"
     }
   , $citest_base * $nomad_perf_torus * $old_tracing *
     { name: "ci-test-oldtracing-nomadperf"
     , desc: "ci-test in legacy tracing mode on P&T exclusive cluster"
+    }
+  , $citest_base * $nomad_perf_torus *
+    { name: "ci-test-nomadperf-nop2p"
+    , desc: "ci-test on P&T exclusive cluster with P2P disabled"
     }
 
   ## CI variants: bench duration, 15 blocks
@@ -737,13 +788,17 @@ def all_profile_variants:
     { name: "ci-bench-oldtracing-nomadcwqa"
     , desc: "ci-bench in legacy tracing mode on Cardano World QA"
     }
-  , $cibench_base * $nomad_perf_torus *
+  , $cibench_base * $nomad_perf_torus * $p2p *
     { name: "ci-bench-nomadperf"
     , desc: "ci-bench on P&T exclusive cluster"
     }
   , $cibench_base * $nomad_perf_torus * $old_tracing *
     { name: "ci-bench-oldtracing-nomadperf"
     , desc: "ci-bench in legacy tracing mode on P&T exclusive cluster"
+    }
+  , $cibench_base * $nomad_perf_torus *
+    { name: "ci-bench-nomadperf-nop2p"
+    , desc: "ci-bench on P&T exclusive cluster with P2P disabled"
     }
 
   ## CI variants: test duration, 3 blocks, dense10
@@ -763,6 +818,14 @@ def all_profile_variants:
     }
   , $tracebench_base * $with_rtview *
     { name: "trace-bench-rtview"
+    }
+
+  ## Full variants: 120 blocks
+  , $tracefull_base *
+    { name: "trace-full"
+    }
+  , $tracefull_base * $with_rtview *
+    { name: "trace-full-rtview"
     }
 
   ## Epoch transition test: 1.5 epochs, 15mins runtime
@@ -799,12 +862,26 @@ def all_profile_variants:
     { name: "plutuscall-secp-schnorr-double"
     }
 
-## P&T Nomad cluster: 52 nodes, 3 regions, value variant
-  , $nomad_perf_base * $nomad_perf_dense * $costmodel_v8_preview *
+## P&T Nomad cluster: 52 nodes, 3 regions, value-only (incl. old tracing variant) and Plutus, P2P enabled by default
+  , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "value-nomadperf"
     }
-  , $nomad_perf_base * $nomad_perf_dense * $costmodel_v8_preview * $old_tracing *
+  , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview * $old_tracing *
     { name: "value-oldtracing-nomadperf"
+    }
+  , $nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
+    { name: "plutus-nomadperf"
+    }
+
+## P&T Nomad cluster: 52 nodes, 3 regions, value-only (with old tracing variant) and Plutus, no P2P flavour
+  , $nomad_perf_base * $nomad_perf_dense * $costmodel_v8_preview *
+    { name: "value-nomadperf-nop2p"
+    }
+  , $nomad_perf_base * $nomad_perf_dense * $costmodel_v8_preview * $old_tracing *
+    { name: "value-oldtracing-nomadperf-nop2p"
+    }
+  , $nomad_perf_plutus_base * $nomad_perf_dense * $costmodel_v8_preview *
+    { name: "plutus-nomadperf-nop2p"
     }
 
 ## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)

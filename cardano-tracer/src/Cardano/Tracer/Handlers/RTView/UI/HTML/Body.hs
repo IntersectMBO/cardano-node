@@ -556,12 +556,12 @@ footer =
             [ string "© IOHK 2015—2022"
             ]
         , UI.div #. "column has-text-right" #+
-            [ UI.anchor # set UI.href "https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/README.md"
+            [ UI.anchor # set UI.href "https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/README.md"
                         # set UI.target "_blank" #+
                 [ image "has-tooltip-multiline has-tooltip-left rt-view-footer-github" githubSVG
                         # set dataTooltip "Browse our GitHub repository"
                 ]
-            , UI.anchor # set UI.href "https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/docs/cardano-rtview.md"
+            , UI.anchor # set UI.href "https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/docs/cardano-rtview.md"
                         # set UI.target "_blank" #+
                 [ image "has-tooltip-multiline has-tooltip-left rt-view-footer-doc" docSVG
                         # set dataTooltip "Read RTView documentation"

@@ -1,4 +1,7 @@
+{- HLINT ignore "Avoid lambda" -}
+
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 
 -- | This top-level module is used by 'cardano-tracer' app.
 module Cardano.Tracer.Run
@@ -9,8 +12,9 @@ module Cardano.Tracer.Run
 import           Control.Concurrent.Async.Extra (sequenceConcurrently)
 import           Control.Concurrent.Extra (newLock)
 import           Control.Concurrent.STM.TVar (newTVarIO)
-import           Control.Monad (void)
+import           Data.Foldable (for_)
 
+import           Cardano.Logging.Resources
 import           Cardano.Tracer.Acceptors.Run
 import           Cardano.Tracer.CLI
 import           Cardano.Tracer.Configuration
@@ -25,6 +29,9 @@ import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
+import           Control.Concurrent (threadDelay)
+import           Control.Concurrent.Async (async, link)
+import           Control.Monad
 
 -- | Top-level run function, called by 'cardano-tracer' app.
 runCardanoTracer :: TracerParams -> IO ()
@@ -34,6 +41,15 @@ runCardanoTracer TracerParams{tracerConfig, stateDir, logSeverity} = do
 
   config <- readTracerConfig tracerConfig
   traceWith tr $ TracerConfigIs config
+
+  for_ (resourceFreq config) \msInterval -> do
+    threadId <- async do
+      forever do
+        mbrs <- readResourceStats
+        for_ mbrs \resourceStat ->
+          traceWith tr (TracerResource resourceStat)
+        threadDelay (1_000 * msInterval) -- Delay in seconds, given milliseconds
+    link threadId
 
   brake <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors

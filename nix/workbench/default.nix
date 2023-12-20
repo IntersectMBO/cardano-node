@@ -9,7 +9,7 @@ with lib;
 
 let
   # recover CHaP location from cardano's project
-  chap = cardanoNodeProject.args.inputMap."https://input-output-hk.github.io/cardano-haskell-packages";
+  chap = cardanoNodeProject.args.inputMap."https://chap.intersectmbo.org/";
   # build plan as computed by nix
   nixPlanJson = cardanoNodeProject.plan-nix.json;
 
@@ -76,23 +76,18 @@ let
       ${jq}/bin/jq '${query}' "''${args[@]}" > $out
     '';
 
-  jsonFilePretty = name: x: runJq name ''--null-input --sort-keys
-                                         --argjson x '${x}'
-                                       '' "$x";
-
   run-analysis = import ./analyse/analyse.nix;
 
 in {
   inherit workbench' workbench runWorkbench runWorkbenchJqOnly;
-  inherit runJq jsonFilePretty;
+  inherit runJq;
 
   inherit run-analysis;
 
   inherit
     (pkgs.callPackage ./profile/profile.nix
-      {
-        inherit runJq jsonFilePretty runWorkbenchJqOnly runWorkbench;
-      })
+      {inherit runJq runWorkbenchJqOnly runWorkbench;}
+    )
     profile-names-json
     profile-names
     materialise-profile;

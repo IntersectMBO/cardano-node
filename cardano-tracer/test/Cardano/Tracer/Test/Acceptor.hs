@@ -93,6 +93,7 @@ launchAcceptorsSimple mode localSock dpName = do
     , verbosity      = Just Minimum
     , metricsComp    = Nothing
     , hasForwarding  = Nothing
+    , resourceFreq   = Nothing
     }
 
 -- | To be able to ask any 'DataPoint' by the name without knowing the actual type,

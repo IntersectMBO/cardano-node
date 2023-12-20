@@ -288,11 +288,11 @@ benchmarkTxStream txStream targetNodes threadName tps txCount era = do
     Left err -> liftTxGenError err
     Right ctl -> setEnvThreads threadName ctl
 
-evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
+evalGenerator :: IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
   networkId <- getEnvNetworkId
   protocolParameters <- getProtocolParameters
-  case convertToLedgerProtocolParameters (shelleyBasedEra @era) protocolParameters of
+  case convertToLedgerProtocolParameters shelleyBasedEra protocolParameters of
     Left err -> throwE (Env.TxGenError (ApiError err))
     Right ledgerParameters ->
       case generator of
@@ -323,7 +323,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           let
             fundSource = walletSource wallet 1
             inToOut = Utils.includeChange fee coins
-            txGenerator = genTx (cardanoEra @era) ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
+            txGenerator = genTx shelleyBasedEra ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
             sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
           return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
@@ -339,7 +339,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           let
             fundSource = walletSource wallet 1
             inToOut = Utils.inputsToOutputsWithFee fee count
-            txGenerator = genTx (cardanoEra @era) ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
+            txGenerator = genTx shelleyBasedEra ledgerParameters (TxInsCollateralNone, []) feeInEra TxMetadataNone
             sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
           return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
@@ -351,7 +351,7 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           let
             fundSource = walletSource wallet inputs
             inToOut = Utils.inputsToOutputsWithFee fee outputs
-            txGenerator = genTx (cardanoEra @era) ledgerParameters collaterals feeInEra (toMetadata metadataSize)
+            txGenerator = genTx shelleyBasedEra ledgerParameters collaterals feeInEra (toMetadata metadataSize)
             sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
 
           fundPreview <- liftIO $ walletPreview wallet inputs

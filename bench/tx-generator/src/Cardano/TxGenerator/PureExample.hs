@@ -106,7 +106,7 @@ generateTx TxEnvironment{..}
     generator =
         case convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
           Right ledgerParameters ->
-            genTx BabbageEra ledgerParameters collateralFunds txEnvFee txEnvMetadata
+            genTx ShelleyBasedEraBabbage ledgerParameters collateralFunds txEnvFee txEnvMetadata
           Left err -> \_ _ -> Left (ApiError err)
       where
         -- collateralFunds are needed for Plutus transactions
@@ -157,7 +157,7 @@ generateTxPure TxEnvironment{..} inQueue
     generator =
         case convertToLedgerProtocolParameters shelleyBasedEra txEnvProtocolParams of
           Right ledgerParameters ->
-            genTx BabbageEra ledgerParameters collateralFunds txEnvFee txEnvMetadata
+            genTx ShelleyBasedEraBabbage ledgerParameters collateralFunds txEnvFee txEnvMetadata
           Left err -> \_ _ -> Left (ApiError err)
       where
         -- collateralFunds are needed for Plutus transactions

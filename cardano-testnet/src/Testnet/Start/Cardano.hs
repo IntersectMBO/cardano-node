@@ -45,6 +45,8 @@ import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
+import qualified Control.Monad.Class.MonadTimer.SI as MT
+import           Control.Monad.IO.Class
 import           Testnet.Components.Configuration
 import           Testnet.Defaults
 import           Testnet.Filepath
@@ -284,7 +286,7 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
     let spoNodesWithPortNos = L.zip spoNodes [3001..]
         nodeConfigFile = tempAbsPath' </> "configuration.yaml"
     ePoolNodes <- forM (L.zip spoNodesWithPortNos poolKeys) $ \((node, port),key) -> do
-      eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath tempAbsPath') node port
+      eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath tempAbsPath') node port testnetMagic
                                   [ "run"
                                   , "--config", nodeConfigFile
                                   , "--topology", tempAbsPath' </> node </> "topology.json"
@@ -302,8 +304,11 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
     then failMessage GHC.callStack . show . map show $ lefts ePoolNodes
     else do
       let (_ , poolNodes) = partitionEithers ePoolNodes
+
+      -- FIXME: replace with ledger events waiting for chain extensions
+      liftIO $ MT.threadDelay 10
       now <- H.noteShowIO DTC.getCurrentTime
-      deadline <- H.noteShow $ DTC.addUTCTime 30 now
+      deadline <- H.noteShow $ DTC.addUTCTime 35 now
 
       forM_ nodeStdoutFiles $ \nodeStdoutFile -> do
         H.assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile

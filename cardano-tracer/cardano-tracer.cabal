@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-tracer
-version:                0.2.1
+version:                0.2.2
 synopsis:               A service for logging and monitoring over Cardano nodes
 description:            A service for logging and monitoring over Cardano nodes.
 category:               Cardano,
@@ -19,6 +19,12 @@ extra-doc-files:        README.md
 common project-config
   default-language:     Haskell2010
   build-depends:        base >= 4.14 && < 5
+
+  default-extensions:   BlockArguments
+                      , CPP
+                      , ImportQualifiedPost
+                      , InstanceSigs
+                      , ScopedTypeVariables
 
   ghc-options:          -Wall
                         -Wcompat
@@ -161,6 +167,7 @@ library
                       , time
                       , trace-dispatcher
                       , trace-forward
+                      , trace-resources
                       , unordered-containers
                       , vector
                       , yaml
@@ -182,6 +189,9 @@ executable cardano-tracer
 
   other-modules:        Paths_cardano_tracer
   autogen-modules:      Paths_cardano_tracer
+
+  default-extensions:   BlockArguments
+                      , ScopedTypeVariables
 
   build-depends:        cardano-tracer
                       , optparse-applicative

@@ -94,6 +94,11 @@ local multi_aspect='--inter-cdf' rtsmode=
 local locli_render=() locli_timeline=()
 locli_args=()
 
+if test -v "WB_BACKEND"
+then backend=$WB_BACKEND
+else backend=
+fi
+
 progress "analyse" "args:  $(yellow $*)"
 while test $# -gt 0
 do case "$1" in
@@ -124,6 +129,12 @@ do case "$1" in
        * ) break;; esac; shift; done
 
 local op=${1:-$analyse_default_op}; if test $# != 0; then shift; fi
+
+if [ $backend = "nomadcloud" ]
+then
+   rtsmode='lomem'
+   verbose "analyse" "backend is nomadcloud - forcing $(yellow --lomem)"
+fi
 
 verbose "analyse" "op:    $(yellow $op)"
 verbose "analyse" "sargs: $(yellow ${sargs[*]})"

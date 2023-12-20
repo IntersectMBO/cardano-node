@@ -1,5 +1,6 @@
 { pkgs
 , runJq
+, jsonFilePretty
 
 , backend
 , profile
@@ -29,11 +30,13 @@ let
           logRoot        = ".";
         } // optionalAttrs backend.useCabalRun {
           executable     = "cardano-tracer";
-        } // optionalAttrs profile.node.rtview {
+        } // optionalAttrs profile.tracer.rtview {
           RTView         = {
             epHost = "127.0.0.1";
             epPort = 3300;
           };
+        } // optionalAttrs (profile.tracer.withresources or false) {
+          resourceFreq = 1000;
         }
       ;
       systemdCompat.options = {
@@ -87,10 +90,7 @@ let
 
       config = rec {
         value = execConfig;
-        JSON  = runJq "config.json"
-                  ''--null-input
-                    --argjson x '${__toJSON execConfig}'
-                  '' "$x";
+        JSON  = jsonFilePretty "config.json" (__toJSON execConfig);
       };
     })
     nodeSpecs;

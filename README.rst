@@ -1,15 +1,15 @@
 .. raw:: html
 
   <p align="center">
-    <a href="https://github.com/input-output-hk/cardano-node/releases"><img src="https://img.shields.io/github/release-pre/input-output-hk/cardano-node.svg?style=for-the-badge" /></a>
+    <a href="https://github.com/intersectmbo/cardano-node/releases"><img src="https://img.shields.io/github/release-pre/intersectmbo/cardano-node.svg?style=for-the-badge" /></a>
   </p>
 
   <table align="center">
     <tr><td colspan="2" align="center">GitHub Actions</td></tr>
     <tr>
       <td>
-        <a href="https://github.com/input-output-hk/cardano-node/actions/workflows/haskell.yml"><img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/workflow/status/input-output-hk/cardano-node/Haskell%20CI/master" /></a>
-        <a href="https://github.com/input-output-hk/cardano-node/actions/workflows/haskell.yml"><img alt="GitHub Workflow Status (branch)" src="https://img.shields.io/github/workflow/status/input-output-hk/cardano-node/Haskell%20CI/nightly?label=nightly" /></a>
+        <a href="https://github.com/intersectmbo/cardano-node/actions/workflows/haskell.yml"><img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-node/haskell.yml?branch=master" /></a>
+        <a href="https://github.com/intersectmbo/cardano-node/actions/workflows/haskell.yml"><img alt="GitHub Workflow Status (branch)" src="https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-node/haskell.yml?branch=nightly" /></a>
       </td>
     </tr>
   </table>
@@ -20,7 +20,7 @@
 Overview of the ``cardano-node`` repository
 *************************
 
-Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger-specs>`_, `consensus <https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-consensus>`_,
+Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger-specs>`_, `consensus <https://github.com/input-output-hk/ouroboros-consensus>`_,
 `networking <https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-network>`_ and
 `node shell <https://github.com/input-output-hk/cardano-shell>`_ repositories.
 
@@ -52,7 +52,7 @@ Documentation for building the node can be found `here <https://docs.cardano.org
 Executables
 ===========
 
-You can download the hydra binaries of ``cardano-node`` and ``cardano-cli`` from the `release notes <https://github.com/input-output-hk/cardano-node/releases>`_
+You can download the hydra binaries of ``cardano-node`` and ``cardano-cli`` from the `release notes <https://github.com/intersectmbo/cardano-node/releases>`_
 
 
 Running the node on Windows
@@ -135,7 +135,7 @@ Configuration
 ====
 
 The ``--config`` flag points to a ``.yaml`` (or a structurally equivalent ``.json``) file that is responsible to configuring the logging & other important settings for the node. E.g. see the Byron mainnet configuration in this
-`configuration.yaml <https://github.com/input-output-hk/cardano-node/blob/master/configuration/defaults/byron-mainnet/configuration.yaml>`_.
+`configuration.yaml <https://github.com/intersectmbo/cardano-node/blob/master/configuration/defaults/byron-mainnet/configuration.yaml>`_.
 
 Some of the more important settings are as follows:
 
@@ -437,13 +437,13 @@ To help you get started, see:
 
 - `Native tokens exercises <https://github.com/input-output-hk/cardano-node-wiki/wiki/03-exercises>`_
 
-To start, please ensure that you are familiar with setting up and operating the `Cardano node <https://github.com/input-output-hk/cardano-node>`_. Alternatively, see instructions on how to `start your node <https://github.com/input-output-hk/cardano-node-wiki/wiki/2_start_your_nodes>`_ to submit the commands. You will not need to set up and start a full block producing node ('stake pool'), just a much simpler relay node. This node will need to connect to a Cardano network that is capable of processing native tokens (e.g., the native token pre-production environment (PPE), or the Cardano mainnet).
+To start, please ensure that you are familiar with setting up and operating the `Cardano node <https://github.com/intersectmbo/cardano-node>`_. Alternatively, see instructions on how to `start your node <https://github.com/input-output-hk/cardano-node-wiki/wiki/2_start_your_nodes>`_ to submit the commands. You will not need to set up and start a full block producing node ('stake pool'), just a much simpler relay node. This node will need to connect to a Cardano network that is capable of processing native tokens (e.g., the native token pre-production environment (PPE), or the Cardano mainnet).
 
 ****
 API Documentation
 ****
 
-The API documentation is published `here <https://input-output-hk.github.io/cardano-node/>`_.
+The API documentation is published `here <https://cardano-node.cardano.intersectmbo.org/>`_.
 
 The documentation is built with each push, but is only published from ``master`` branch.  In order to
 test if the documentation is working, build the documentation locally with ``cabal haddock-project --local --output=./haddocks`` and

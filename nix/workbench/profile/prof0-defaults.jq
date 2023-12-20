@@ -64,9 +64,7 @@ def era_defaults($era):
     , shutdown_on_slot_synced:        null
     , shutdown_on_block_synced:       null
     , tracing_backend:                "trace-dispatcher"  ## or "iohk-monitoring"
-    , ekg:                            false
     , tracer:                         true
-    , rtview:                         false
     , verbatim:
       {
       }
@@ -81,6 +79,12 @@ def era_defaults($era):
     , tx_loss_ratio:                  0.02
     , finish_patience:                21
     , filters:                        ["unitary"]
+    }
+
+  , tracer:
+    { rtview:                         false
+    , ekg:                            false
+    , withresources:                  false   # enable resource tracing for cardano-tracer
     }
   }
 } | (.common * (.[$era] // {}));

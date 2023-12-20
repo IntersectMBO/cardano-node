@@ -35,7 +35,7 @@ let
           flags: +use-ghc-stub
       '';
       inputMap = {
-        "https://input-output-hk.github.io/cardano-haskell-packages" = CHaP;
+        "https://chap.intersectmbo.org/" = CHaP;
       };
       shell = {
         name = "cabal-dev-shell";
@@ -187,7 +187,7 @@ let
                 "configuration/cardano/mainnet-alonzo-genesis.json"
                 "configuration/cardano/mainnet-conway-genesis.json"
               ];
-              goldenConfigFiles = [
+              cardanoTestnetGoldenFiles = [
                 "configuration/defaults/byron-mainnet"
                 "cardano-testnet/test/cardano-testnet-golden/files/golden/allegra_node_default_config.json"
                 "cardano-testnet/test/cardano-testnet-golden/files/golden/alonzo_node_default_config.json"
@@ -196,6 +196,8 @@ let
                 "cardano-testnet/test/cardano-testnet-golden/files/golden/conway_node_default_config.json"
                 "cardano-testnet/test/cardano-testnet-golden/files/golden/mary_node_default_config.json"
                 "cardano-testnet/test/cardano-testnet-golden/files/golden/shelley_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-golden/files/golden/shelley_node_default_config.json"
+                "cardano-testnet/test/cardano-testnet-test/files/golden/tx.failed.response.golden"
                 "cardano-testnet/files/data/alonzo/genesis.alonzo.spec.json"
                 "cardano-testnet/files/data/conway/genesis.conway.spec.json"
               ];
@@ -214,7 +216,7 @@ let
               packages.cardano-node-chairman.preCheck =
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
-                  filteredProjectBase = incl ../. goldenConfigFiles;
+                  filteredProjectBase = incl ../. cardanoTestnetGoldenFiles;
                 in
                 ''
                   ${exportCliPath}
@@ -234,7 +236,7 @@ let
               packages.cardano-testnet.preCheck =
                 let
                   # This define files included in the directory that will be passed to `H.getProjectBase` for this test:
-                  filteredProjectBase = incl ../. (mainnetConfigFiles ++ goldenConfigFiles ++ [
+                  filteredProjectBase = incl ../. (mainnetConfigFiles ++ cardanoTestnetGoldenFiles ++ [
                     "configuration/cardano/mainnet-topology.json"
                     "configuration/cardano/mainnet-conway-genesis.json"
                     "scripts/babbage/alonzo-babbage-test-genesis.json"

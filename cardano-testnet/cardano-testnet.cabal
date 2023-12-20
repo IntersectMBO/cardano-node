@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-testnet
-version:                8.7.0
+version:                8.7.2
 synopsis:               The cardano full node
 description:            The cardano full node.
 copyright:              2021-2023 Input Output Global Inc (IOG).
@@ -34,8 +34,8 @@ library
   build-depends:        aeson
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 8.35
-                      , cardano-cli ^>= 8.16.0.1
+                      , cardano-api ^>= 8.36.0.1
+                      , cardano-cli ^>= 8.17.0.0
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger-alonzo
@@ -46,21 +46,28 @@ library
                       , cardano-ledger-byron
                       , cardano-ledger-shelley
                       , cardano-node
+                      , cardano-ping ^>= 0.2.0.10
+                      , contra-tracer
                       , containers
                       , data-default-class
+                      , cborg
                       , directory
                       , exceptions
                       , filepath
                       , hedgehog
                       , hedgehog-extras ^>= 0.4.7.0
                       , mtl
+                      , network
+                      , network-mux
                       , optparse-applicative-fork
                       , ouroboros-network ^>= 0.10
                       , ouroboros-network-api
+                      , prettyprinter
                       , process
                       , resourcet
                       , safe-exceptions
                       , scientific
+                      , si-timers
                       , stm
                       , tasty
                       , tasty-expected-failure
@@ -89,6 +96,7 @@ library
                         Testnet.Process.Run
                         Testnet.Runtime
                         Testnet.SubmitApi
+                        Testnet.Ping
 
   other-modules:        Parsers.Cardano
                         Parsers.Help
@@ -167,7 +175,10 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
                         Cardano.Testnet.Test.FoldBlocks
                         Cardano.Testnet.Test.Misc
-                        Cardano.Testnet.Test.Node.LedgerEvents
+
+                        Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
+                        Cardano.Testnet.Test.LedgerEvents.SanityCheck
+
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
 
@@ -180,6 +191,8 @@ test-suite cardano-testnet-test
                       , cardano-api
                       , cardano-cli
                       , cardano-crypto-class
+                      , cardano-ledger-conway
+                      , cardano-ledger-core
                       , cardano-testnet
                       , containers
                       , directory
@@ -190,6 +203,7 @@ test-suite cardano-testnet-test
                       , lens-aeson
                       , microlens
                       , process
+                      , regex-compat
                       , tasty
                       , text
                       , time

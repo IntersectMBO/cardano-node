@@ -468,9 +468,12 @@ EOF
         ##    NOTE: The tag time is different from the genesis time
         local hash=$(jq '."cardano-node".commit | .[:5]' -r <<<$manifest)
         local date_pref=$(date --utc +'%Y-%m-%d'-'%H-%M')
-        local batch_inf=$(test "${batch}" != 'plain' && echo -n -${batch})
+        if [[ "$batch" == "undefined" ]]
+        then batch=$(get_most_significant_git_tag)
+        fi
+        local batch_inf=$(echo -n ${batch} | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z^0-9]//g')
         local prof_suf=$(test -v "WB_PROFILING" && test -n "$WB_PROFILING" -a "$WB_PROFILING" != 'none' && echo '-prof')
-        local run="${date_pref}-${hash}-${profile_name}-${backend_name::3}${prof_suf}"
+        local run="${date_pref}-${hash}-${batch_inf::12}-${profile_name}-${backend_name::3}${prof_suf}"
         progress "run | tag" "allocated run identifier (tag):  $(with_color white $run)"
 
         ## 3. create directory:
@@ -1085,4 +1088,11 @@ get_node_ghc_version(){
     else
         echo "unknown"
     fi
+}
+
+get_most_significant_git_tag(){
+    local lasttag=$(git describe --tags --abbrev=0)
+    local commhash=$(git rev-list -n 1 $lasttag)
+    local oldesttag=$(git tag --sort=creatordate --points-at $commhash | head -n1)
+    echo $oldesttag
 }

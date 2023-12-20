@@ -4,7 +4,7 @@ self: {
   localCluster = {
     cacheDir    = "${self.localCluster.stateDir}/.cache";
     stateDir    = "run/current";
-    batchName   = "plain";
+    batchName   = "undefined";
     profileName = "default-bage";
     backendName = "supervisor";
     basePort    = 30000;

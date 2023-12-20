@@ -108,13 +108,12 @@ measureBSCosts era = map (metadataSize era . Just . bsMetadata) [0..maxBSSize]
 metadataSize :: forall era . IsShelleyBasedEra era => AsType era -> Maybe TxMetadata -> Int
 metadataSize p m = dummyTxSize p m - dummyTxSize p Nothing
 
-dummyTxSizeInEra :: forall era . IsShelleyBasedEra era => TxMetadataInEra era -> Int
-dummyTxSizeInEra metadata = case createAndValidateTransactionBody (shelleyBasedEra @era) dummyTx of
+dummyTxSizeInEra :: IsShelleyBasedEra era => TxMetadataInEra era -> Int
+dummyTxSizeInEra metadata = case createAndValidateTransactionBody shelleyBasedEra dummyTx of
   Right b -> BS.length $ serialiseToCBOR b
   Left err -> error $ "metaDataSize " ++ show err
  where
-  dummyTx :: TxBodyContent BuildTx era
-  dummyTx = defaultTxBodyContent (cardanoEra @era)
+  dummyTx = defaultTxBodyContent shelleyBasedEra
     & setTxIns
       [ ( TxIn "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810" (TxIx 0)
         , BuildTxWith $ KeyWitness KeyWitnessForSpending

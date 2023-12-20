@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                8.7.1
+version:                8.7.2
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -144,7 +144,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.35
+                      , cardano-api ^>= 8.36.0.1
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev

@@ -1,5 +1,5 @@
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -25,8 +25,8 @@ module Cardano.Benchmarking.GeneratorTx.SubmissionClient
   , txSubmissionClient
   ) where
 
-import           Prelude (error,fail)
 import           Cardano.Prelude hiding (ByteString, atomically, retry, state, threadDelay)
+import           Prelude (error, fail)
 
 import           Control.Arrow ((&&&))
 
@@ -44,17 +44,16 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId, txInBlockSize)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Mempool
-import qualified Ouroboros.Consensus.Shelley.Ledger.Mempool as Mempool (TxId(ShelleyTxId))
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
+import qualified Ouroboros.Consensus.Shelley.Ledger.Mempool as Mempool (TxId (ShelleyTxId))
 
-import qualified Ouroboros.Consensus.Cardano.Block as Block (TxId(GenTxIdShelley, GenTxIdAllegra, GenTxIdAlonzo, GenTxIdMary,GenTxIdBabbage, GenTxIdConway))
+import qualified Ouroboros.Consensus.Cardano.Block as Block
+                   (TxId (GenTxIdAllegra, GenTxIdAlonzo, GenTxIdBabbage, GenTxIdConway, GenTxIdMary, GenTxIdShelley))
 
 import           Ouroboros.Network.Protocol.TxSubmission2.Client (ClientStIdle (..),
-                                                                  ClientStTxIds (..),
-                                                                  ClientStTxs (..),
-                                                                  TxSubmissionClient (..))
+                   ClientStTxIds (..), ClientStTxs (..), TxSubmissionClient (..))
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (BlockingReplyList (..),
-                                                                TokBlockingStyle (..), TxSizeInBytes)
+                   TokBlockingStyle (..), TxSizeInBytes)
 
 import           Cardano.Api hiding (Active)
 import           Cardano.Api.Shelley (fromShelleyTxId, toConsensusGenTx)
@@ -187,13 +186,8 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
   txToIdSize = (Mempool.txId &&& txInBlockSize) . toGenTx
 
   toGenTx :: tx -> GenTx CardanoBlock
-  toGenTx tx = case shelleyBasedEra @era of
-    ShelleyBasedEraShelley  -> toConsensusGenTx $ TxInMode ShelleyEra tx
-    ShelleyBasedEraAllegra  -> toConsensusGenTx $ TxInMode AllegraEra tx
-    ShelleyBasedEraMary     -> toConsensusGenTx $ TxInMode MaryEra tx
-    ShelleyBasedEraAlonzo   -> toConsensusGenTx $ TxInMode AlonzoEra tx
-    ShelleyBasedEraBabbage  -> toConsensusGenTx $ TxInMode BabbageEra tx
-    ShelleyBasedEraConway   -> toConsensusGenTx $ TxInMode ConwayEra tx
+  toGenTx tx = toConsensusGenTx $ TxInMode (shelleyBasedEra @era) tx
+
 
   fromGenTxId :: GenTxId CardanoBlock -> TxId
   fromGenTxId (Block.GenTxIdShelley (Mempool.ShelleyTxId i)) = fromShelleyTxId i

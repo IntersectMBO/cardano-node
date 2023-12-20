@@ -366,7 +366,7 @@ allocate-run-nomadcloud() {
     local curl_response
     # Makes `curl` return two objects, one with the body the other with
     # the headers, separated by a newline (`jq -s`).
-    if curl_response=$(curl --silent --show-error --write-out '%{json}' https://api.github.com/repos/input-output-hk/cardano-node/commits/"${gitrev}")
+    if curl_response=$(curl --silent --show-error --write-out '%{json}' https://api.github.com/repos/intersectmbo/cardano-node/commits/"${gitrev}")
     then
       # Check HTTP status code for existance
       # https://docs.github.com/en/rest/commits/commits?apiVersion=2022-11-28#get-a-commit
@@ -393,9 +393,6 @@ allocate-run-nomadcloud() {
       fatal "Could not fetch commit info from GitHub (\`curl\` error)"
     fi
   fi
-
-  # There are so many assumptions that I like having the user confirm them!
-  read -p "Hit enter to continue ..."
 
   # Set the placement info and resources accordingly
   local nomad_job_name
@@ -932,10 +929,6 @@ allocate-run-nomadcloud() {
     }' \
     "${dir}"/nomad/nomad-job.json \
   > "${dir}"/nomad/nomad-job.summary.json
-
-  # Show the summary before starting the job, a precaution!
-  jq . "${dir}"/nomad/nomad-job.summary.json
-  read -p "Hit enter to continue ..."
 }
 
 check-deployment() {

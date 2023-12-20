@@ -1,6 +1,6 @@
 { pkgs, lib, cardanoLib
 , runCommand
-, runJq, jsonFilePretty
+, runJq
 , runWorkbenchJqOnly,  runWorkbench
 }:
 
@@ -64,6 +64,10 @@ let
       ''
   ;
 
+  jsonFilePretty = name: x: runJq name ''--null-input --sort-keys
+                                         --argjson x '${x}'
+                                       '' "$x";
+
   mkServices = { profile, nodeSpecs, topologyFiles, backend, profiling }:
     rec {
       inherit
@@ -72,7 +76,7 @@ let
           {
             inherit backend profile nodeSpecs;
             inherit topologyFiles profiling;
-            inherit runJq runWorkbench;
+            inherit runJq runWorkbench jsonFilePretty;
             baseNodeConfig = cardanoLib.environments.testnet.nodeConfig;
           })
         node-services;
@@ -92,7 +96,7 @@ let
           ../service/tracer.nix
           {
             inherit backend profile nodeSpecs;
-            inherit runJq;
+            inherit runJq jsonFilePretty;
           })
         tracer-service;
 
@@ -168,9 +172,11 @@ let
               generatorService =
                 with generator-service;
                 __toJSON
-                { name           = "generator";
-                  start          = start.JSON;
-                  config         = config.JSON;
+                { name            = "generator";
+                  start           = start.JSON;
+                  config          = config.JSON;
+                  plutus-redeemer = plutus-redeemer.JSON;
+                  plutus-datum    = plutus-datum.JSON;
                 };
               tracerService =
                 with tracer-service;
@@ -214,7 +220,10 @@ let
               inherit profileName;
               JSON = profileJson;
               value = profile;
-              topology.files = topologyFiles;
+              topology = {
+                files = topologyFiles;
+                value = (__fromJSON (__readFile "${topologyFiles}/topology.json"));
+              };
               node-specs = {JSON = nodeSpecsJson; value = nodeSpecs;};
               genesis.files = genesisFiles;
               inherit node-services generator-service tracer-service healthcheck-service;

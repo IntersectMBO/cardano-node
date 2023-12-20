@@ -14,7 +14,7 @@ We maintain a [CODEOWNERS file][CODEOWNERS] which provides information who
 should review a contributing PR.  Note that you might need to get approvals
 from all code owners (even though GitHub doesn't give a way to enforce it).
 
-[CODEOWNERS]: https://github.com/input-output-hk/cardano-node/blob/master//CODEOWNERS
+[CODEOWNERS]: https://github.com/intersectmbo/cardano-node/blob/master//CODEOWNERS
 
 
 Supplementary tooling
@@ -105,12 +105,12 @@ You can quickly spin up a local cluster (on Linux and Darwin), based on any of a
     - ``devops`` is an unloaded profile (no transaction generation) with short slots -- ``0.2`` sec.
     - ..and many more -- which can be either:
         - listed, by ``make ps``
-        - observed at their point of definition: `nix/workbench/profiles/prof1-variants.jq <https://github.com/input-output-hk/cardano-node/tree/master/nix/workbench/profiles/prof1-variants.jq#L333-L526>`_
+        - observed at their point of definition: `nix/workbench/profiles/prof1-variants.jq <https://github.com/intersectmbo/cardano-node/tree/master/nix/workbench/profiles/prof1-variants.jq#L333-L526>`_
 2. Optional: select mode of operation, by optionally providing a suffix:
     - default -- no suffix -- just enter the workbench shell, allowing you to run ``start-cluster`` at any time.  Binaries will be built locally, by ``cabal``.
     - ``autostay`` suffix -- enter the workbench shell, start the cluster, and stay in the shell afterwards.  Binaries will be built locally, by ``cabal``.
     - ``autonix`` suffix -- enter the workbench shell, start the cluster.  All binaries will be provided by the Nix CI.
-    - ..there are other modes, as per `lib.mk <https://github.com/input-output-hk/cardano-node/tree/master/lib.mk>`_
+    - ..there are other modes, as per `lib.mk <https://github.com/intersectmbo/cardano-node/tree/master/lib.mk>`_
 3. Enter the workbench shell for the chosen profile & mode:
     ``make <PROFILE-NAME>`` or ``make <PROFILE-NAME>-<SUFFIX>`` (when there is a suffix).
 4. Optional: start cluster:

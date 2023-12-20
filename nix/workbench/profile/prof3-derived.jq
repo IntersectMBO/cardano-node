@@ -1,6 +1,5 @@
 include "prof0-defaults";
 include "genesis";
-include "lib";
 
 ## XXX:  this is corruption at the highest levels, pure and simple.
 def default_value_tx_size_estimate:
@@ -102,7 +101,7 @@ def add_derived_params:
 | ($shutdown_slots | may_mult($gsis.slot_duration)) as $shutdown_time
 | ([ $generator_requested_duration
    , $shutdown_time
-   ] | drop_nulls | min)                     as $generator_duration
+   ] | map(values) | min)                     as $generator_duration
 
 ## Tx count for inferred absolute duration.
 ##   Note that this the workload would take longer, if we saturate the cluster.

@@ -102,6 +102,7 @@ data TracerConfig = TracerConfig
   , rotation       :: !(Maybe RotationParams)       -- ^ Rotation parameters.
   , verbosity      :: !(Maybe Verbosity)            -- ^ Verbosity of the tracer itself.
   , metricsComp    :: !(Maybe (Map Text Text))      -- ^ Metrics compatibility map from metrics name to metrics name
+  , resourceFreq   :: !(Maybe Int)                  -- ^ Frequency (1/millisecond) for gathering resource data.
   } deriving (Eq, Generic, FromJSON, ToJSON, Show)
 
 -- | Read the tracer's configuration file.
