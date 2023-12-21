@@ -23,6 +23,9 @@ module Cardano.Logging.Types (
   , nsCast
   , nsPrependInner
   , nsGetComplete
+  , nsGetTuple
+  , nsRawToText
+  , nsToText
   , MetaTrace(..)
   , DetailLevel(..)
   , Privacy(..)
@@ -54,6 +57,7 @@ module Cardano.Logging.Types (
 
 import           Codec.Serialise (Serialise (..))
 import qualified Data.Aeson as AE
+import qualified Data.Aeson.Encoding as AE
 import qualified Data.Aeson.KeyMap as AE
 import qualified Data.HashMap.Strict as HM
 import           Data.IORef
@@ -62,6 +66,8 @@ import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text, intercalate, pack, singleton, unpack)
+import           Data.Text.Lazy (toStrict)
+import           Data.Text.Lazy.Encoding (decodeUtf8)
 import           Data.Time (UTCTime)
 import           GHC.Generics
 import           Network.HostName (HostName)
@@ -125,6 +131,15 @@ nsGetComplete :: Namespace a -> [Text]
 nsGetComplete (Namespace [] i) = i
 nsGetComplete (Namespace o i)  = o ++ i
 
+nsGetTuple :: Namespace a -> ([Text],[Text])
+nsGetTuple (Namespace o i)  = (o,i)
+
+nsRawToText :: ([Text], [Text]) -> Text
+nsRawToText (ns1, ns2) = intercalate "." (ns1 ++ ns2)
+
+nsToText :: Namespace a -> Text
+nsToText (Namespace ns1 ns2) = intercalate "." (ns1 ++ ns2)
+
 -- | Every message needs this to define how to represent itself
 class LogFormatting a where
   -- | Machine readable representation with the possibility to represent
@@ -137,6 +152,13 @@ class LogFormatting a where
   -- The default implementation returns no human representation
   forHuman :: a -> Text
   forHuman _v = ""
+
+  forHumanOrMachine :: a -> Text
+  forHumanOrMachine v =
+    case forHuman v of
+      "" -> toStrict . decodeUtf8 . AE.encodingToLazyByteString $
+              AE.toEncoding $ forMachine DNormal v
+      s  -> s
 
   -- | Metrics representation.
   -- No metrics by default

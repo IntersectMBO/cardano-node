@@ -298,7 +298,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     forgeKESInfoTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                ["Forge", "StateInfo"]
+                ["Forge"]
     configureTracers configReflection trConfig [forgeKESInfoTr]
     forgeKESInfoTrDoc <- documentTracer (forgeKESInfoTr ::
       Trace IO (Consensus.TraceLabelCreds HotKey.KESInfo))
