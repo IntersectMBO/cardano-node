@@ -98,7 +98,7 @@ instance LogFormatting a => LogFormatting (TraceLabelCreds a) where
     mconcat $ ("credentials" .= toJSON creds) : [forMachine dtal a]
 
   forHuman (TraceLabelCreds creds a)         =
-    "With label " <> (Text.pack . show) creds <> ", " <> forHuman a
+    "With label " <> (Text.pack . show) creds <> ", " <> forHumanOrMachine a
   asMetrics (TraceLabelCreds _creds a)        =
     asMetrics a
 
@@ -126,8 +126,8 @@ instance (LogFormatting peer, Show peer, LogFormatting a)
   => LogFormatting (TraceLabelPeer peer a) where
   forMachine dtal (TraceLabelPeer peerid a) =
     mconcat [ "peer" .= forMachine dtal peerid ] <> forMachine dtal a
-  forHuman (TraceLabelPeer peerid a) = "Peer is " <> showT peerid
-                                        <> ". " <> forHuman a
+  forHuman (TraceLabelPeer peerid a) = "Peer is: (" <> showT peerid
+                                        <> "). " <> forHumanOrMachine a
   asMetrics (TraceLabelPeer _peerid a) = asMetrics a
 
 instance MetaTrace a => MetaTrace (TraceLabelPeer label a) where
@@ -982,8 +982,8 @@ instance ( tx ~ GenTx blk
          => LogFormatting (ForgeTracerType blk) where
   forMachine dtal (Left i)  = forMachine dtal i
   forMachine dtal (Right i) = forMachine dtal i
-  forHuman (Left i)  = forHuman i
-  forHuman (Right i) = forHuman i
+  forHuman (Left i)  = forHumanOrMachine i
+  forHuman (Right i) = forHumanOrMachine i
   asMetrics (Left i)  = asMetrics i
   asMetrics (Right i) = asMetrics i
 

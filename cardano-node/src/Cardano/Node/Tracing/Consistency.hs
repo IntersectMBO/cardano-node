@@ -50,11 +50,11 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSy
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
-import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 
 
+import           Cardano.Node.Tracing.Documentation (docTracersFirstPhase)
 import           Ouroboros.Network.Block (Point (..), SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
@@ -94,18 +94,19 @@ import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInboun
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
 
 
-
 -- | Check the configuration in the given file.
 -- If there is no configuration in the file check the standard configuration
 -- An empty return list means, everything is well
 checkNodeTraceConfiguration ::
      FilePath
   -> IO NSWarnings
-checkNodeTraceConfiguration configFileName =
-  checkTraceConfiguration
-    configFileName
-    defaultCardanoConfig
-    getAllNamespaces
+checkNodeTraceConfiguration configFileName = do
+  w1 <- checkTraceConfiguration
+          configFileName
+          defaultCardanoConfig
+          getAllNamespaces
+  (dt,_) <- docTracersFirstPhase Nothing
+  pure $ w1 <> dtWarnings dt
 
 -- | Check the configuration in the given file.
 -- If there is no configuration in the file check the standard configuration
@@ -120,119 +121,118 @@ checkNodeTraceConfiguration' trConfig =
 
 
 -- | Returns a list of all namepsaces from all tracers
-getAllNamespaces :: [[T.Text]]
+getAllNamespaces :: [([T.Text],[T.Text])]
 getAllNamespaces =
     -- NodeInfo tracer
-    let stateNS = map (nsGetComplete . nsReplacePrefix ["NodeState"])
+    let stateNS = map (nsGetTuple . nsReplacePrefix ["NodeState"])
                       (allNamespaces :: [Namespace SR.NodeState])
-        peersNS = map (nsGetComplete . nsReplacePrefix ["Net", "Peers", "List"])
+        peersNS = map (nsGetTuple . nsReplacePrefix ["Net", "Peers", "List"])
                       (allNamespaces :: [Namespace [PeerT blk]])
-        resourcesNS = map nsGetComplete
+        resourcesNS = map nsGetTuple
                           (allNamespaces :: [Namespace ResourceStats])
-        startupNS = map (nsGetComplete . nsReplacePrefix ["Startup"])
+        startupNS = map (nsGetTuple . nsReplacePrefix ["Startup"])
                         (allNamespaces :: [Namespace (StartupTrace blk)])
-        shutdownNS = map (nsGetComplete . nsReplacePrefix ["Shutdown"])
+        shutdownNS = map (nsGetTuple . nsReplacePrefix ["Shutdown"])
                         (allNamespaces :: [Namespace ShutdownTrace])
-        chainDBNS = map (nsGetComplete . nsReplacePrefix ["ChainDB"])
+        chainDBNS = map (nsGetTuple . nsReplacePrefix ["ChainDB"])
                         (allNamespaces :: [Namespace (ChainDB.TraceEvent blk)])
-        replayBlockNS = map (nsGetComplete . nsReplacePrefix ["ChainDB", "ReplayBlock"])
+        replayBlockNS = map (nsGetTuple . nsReplacePrefix ["ChainDB", "ReplayBlock"])
                         (allNamespaces :: [Namespace ReplayBlockStats])
 -- Consensus tracers
         chainSyncClientNS = map
-                              (nsGetComplete . nsReplacePrefix  ["ChainSync", "Client"])
+                              (nsGetTuple . nsReplacePrefix  ["ChainSync", "Client"])
                               (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
                                                            (ConnectionId RemoteAddress)
                                                            (TraceChainSyncClientEvent blk))])
 
-        chainSyncServerHeaderNS = map (nsGetComplete . nsReplacePrefix ["ChainSync", "ServerHeader"])
+        chainSyncServerHeaderNS = map (nsGetTuple . nsReplacePrefix ["ChainSync", "ServerHeader"])
                         (allNamespaces :: [Namespace (TraceChainSyncServerEvent blk)])
-        chainSyncServerBlockNS = map (nsGetComplete . nsReplacePrefix ["ChainSync", "ServerBlock"])
+        chainSyncServerBlockNS = map (nsGetTuple . nsReplacePrefix ["ChainSync", "ServerBlock"])
                         (allNamespaces :: [Namespace (TraceChainSyncServerEvent blk)])
-        blockFetchDecisionNS = map (nsGetComplete . nsReplacePrefix ["BlockFetch", "Decision"])
+        blockFetchDecisionNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Decision"])
                         (allNamespaces :: [Namespace [BlockFetch.TraceLabelPeer
                                                       remotePeer
                                                       (FetchDecision [Point (Header blk)])]])
-        blockFetchClientNS = map (nsGetComplete . nsReplacePrefix ["BlockFetch", "Client"])
+        blockFetchClientNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Client"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
                                                       remotePeer
                                                       (BlockFetch.TraceFetchClientState (Header blk)))])
 
-        blockFetchServerNS = map (nsGetComplete . nsReplacePrefix ["BlockFetch", "Server"])
+        blockFetchServerNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Server"])
                     (allNamespaces :: [Namespace (TraceBlockFetchServerEvent blk)])
 
-        forgeKESInfoNS = map (nsGetComplete . nsReplacePrefix ["Forge", "StateInfo"])
-                    (allNamespaces :: [Namespace (Consensus.TraceLabelCreds HotKey.KESInfo)])
-        txInboundNS = map (nsGetComplete . nsReplacePrefix ["TxSubmission", "TxInbound"])
+        forgeKESInfoNS = map (nsGetTuple . nsReplacePrefix ["Forge"])
+                    (allNamespaces :: [Namespace HotKey.KESInfo])
+
+        txInboundNS = map (nsGetTuple . nsReplacePrefix ["TxSubmission", "TxInbound"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
                             remotePeer
                             (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk)))])
-        txOutboundNS = map (nsGetComplete . nsReplacePrefix ["TxSubmission", "TxOutbound"])
+        txOutboundNS = map (nsGetTuple . nsReplacePrefix ["TxSubmission", "TxOutbound"])
                         (allNamespaces :: [Namespace (BlockFetch.TraceLabelPeer
                   remotePeer
                   (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk)))])
-        localTxSubmissionServerNS = map (nsGetComplete . nsReplacePrefix
+        localTxSubmissionServerNS = map (nsGetTuple . nsReplacePrefix
                                             ["TxSubmission", "LocalServer"])
                         (allNamespaces :: [Namespace
                           (TraceLocalTxSubmissionServerEvent blk)])
-        mempoolNS = map (nsGetComplete . nsReplacePrefix ["Mempool"])
+        mempoolNS = map (nsGetTuple . nsReplacePrefix ["Mempool"])
                         (allNamespaces :: [Namespace (TraceEventMempool blk)])
-        forgeNS = map (nsGetComplete . nsReplacePrefix ["Forge", "Loop"])
+        forgeNS = map (nsGetTuple . nsReplacePrefix ["Forge", "Loop"])
                         (allNamespaces :: [Namespace (ForgeTracerType blk)])
 
-        forgeStateNS = [["Forge", "StateInfo"]]
-
-        blockchainTimeNS = map (nsGetComplete . nsReplacePrefix  ["BlockchainTime"])
+        blockchainTimeNS = map (nsGetTuple . nsReplacePrefix  ["BlockchainTime"])
                         (allNamespaces :: [Namespace (TraceBlockchainTimeEvent RelativeTime)])
 
 -- Node to client
-        keepAliveClientNS = map (nsGetComplete . nsReplacePrefix ["Net"])
+        keepAliveClientNS = map (nsGetTuple . nsReplacePrefix ["Net"])
                                 (allNamespaces :: [Namespace  (TraceKeepAliveClient peer)])
-        chainSyncNS = map (nsGetComplete . nsReplacePrefix ["ChainSync", "Local"])
+        chainSyncNS = map (nsGetTuple . nsReplacePrefix ["ChainSync", "Local"])
                           (allNamespaces :: [Namespace
                             (BlockFetch.TraceLabelPeer peer (TraceSendRecv
                               (ChainSync (Header blk) (Point blk) (Tip blk))))])
-        txMonitorNS = map (nsGetComplete . nsReplacePrefix  ["TxSubmission", "MonitorClient"])
+        txMonitorNS = map (nsGetTuple . nsReplacePrefix  ["TxSubmission", "MonitorClient"])
                           (allNamespaces :: [Namespace
                                 (BlockFetch.TraceLabelPeer
                                     peer
                                     (TraceSendRecv
                                         (LTM.LocalTxMonitor
                                           (GenTxId blk) (GenTx blk) SlotNo)))])
-        txSubmissionNS = map (nsGetComplete . nsReplacePrefix ["TxSubmission", "Local"])
+        txSubmissionNS = map (nsGetTuple . nsReplacePrefix ["TxSubmission", "Local"])
                              (allNamespaces :: [Namespace
                                 (BlockFetch.TraceLabelPeer
                                   peer
                                   (TraceSendRecv
                                     (LTS.LocalTxSubmission
                                         (GenTx blk) (ApplyTxErr blk))))])
-        stateQueryNS = map (nsGetComplete . nsReplacePrefix ["StateQueryServer"])
+        stateQueryNS = map (nsGetTuple . nsReplacePrefix ["StateQueryServer"])
                            (allNamespaces :: [Namespace
                                 (BlockFetch.TraceLabelPeer peer
                                   (TraceSendRecv
                                     (LocalStateQuery blk (Point blk) (Query blk))))])
 
 -- Node to Node
-        chainSyncNodeNS = map (nsGetComplete . nsReplacePrefix ["ChainSync", "Remote"])
+        chainSyncNodeNS = map (nsGetTuple . nsReplacePrefix ["ChainSync", "Remote"])
                               (allNamespaces :: [Namespace
                                 (BlockFetch.TraceLabelPeer peer (TraceSendRecv
                                   (ChainSync (Header blk) (Point blk) (Tip blk))))])
-        chainSyncSerialisedNS = map (nsGetComplete . nsReplacePrefix
+        chainSyncSerialisedNS = map (nsGetTuple . nsReplacePrefix
                                         ["ChainSync", "Remote", "Serialised"])
                              (allNamespaces :: [Namespace
                                 (BlockFetch.TraceLabelPeer peer (TraceSendRecv
                                   (ChainSync (Header blk) (Point blk) (Tip blk))))])
-        blockFetchNS = map (nsGetComplete . nsReplacePrefix ["BlockFetch", "Remote"])
+        blockFetchNS = map (nsGetTuple . nsReplacePrefix ["BlockFetch", "Remote"])
                              (allNamespaces :: [Namespace
                                  (BlockFetch.TraceLabelPeer peer
                                     (TraceSendRecv
                                       (BlockFetch blk (Point blk))))])
-        blockFetchSerialisedNS = map (nsGetComplete . nsReplacePrefix
+        blockFetchSerialisedNS = map (nsGetTuple . nsReplacePrefix
                                         ["BlockFetch", "Remote", "Serialised"])
                              (allNamespaces :: [Namespace
                                  (BlockFetch.TraceLabelPeer peer
                                     (TraceSendRecv
                                       (BlockFetch blk (Point blk))))])
-        txSubmission2NS = map (nsGetComplete . nsReplacePrefix
+        txSubmission2NS = map (nsGetTuple . nsReplacePrefix
                                         ["TxSubmission", "Remote"])
                              (allNamespaces :: [Namespace
                                  (BlockFetch.TraceLabelPeer peer
@@ -241,61 +241,61 @@ getAllNamespaces =
 
 -- Diffusion
 
-        dtMuxNS = map (nsGetComplete . nsReplacePrefix ["Net", "Mux", "Remote"])
+        dtMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Remote"])
                              (allNamespaces :: [Namespace
                                  (WithMuxBearer (ConnectionId RemoteAddress) MuxTrace)])
-        dtLocalMuxNS = map (nsGetComplete . nsReplacePrefix ["Net", "Mux", "Local"])
+        dtLocalMuxNS = map (nsGetTuple . nsReplacePrefix ["Net", "Mux", "Local"])
                              (allNamespaces :: [Namespace
                                  (WithMuxBearer (ConnectionId LocalAddress) MuxTrace)])
-        dtHandshakeNS = map (nsGetComplete . nsReplacePrefix
+        dtHandshakeNS = map (nsGetTuple . nsReplacePrefix
                                 ["Net", "Handshake", "Remote"])
                             (allNamespaces :: [Namespace
                               (NtN.HandshakeTr NtN.RemoteAddress NtN.NodeToNodeVersion)])
-        dtLocalHandshakeNS = map (nsGetComplete . nsReplacePrefix
+        dtLocalHandshakeNS = map (nsGetTuple . nsReplacePrefix
                                    ["Net", "Handshake", "Local"])
                                  (allNamespaces :: [Namespace
                                    (NtC.HandshakeTr LocalAddress
                                       NtC.NodeToClientVersion)])
-        dtDiffusionInitializationNS = map (nsGetComplete . nsReplacePrefix
+        dtDiffusionInitializationNS = map (nsGetTuple . nsReplacePrefix
                                             ["Startup", "DiffusionInit"])
                                           (allNamespaces :: [Namespace
                                             (Diffusion.DiffusionTracer Socket.SockAddr
                                                 LocalAddress)])
-        dtLedgerPeersNS = map (nsGetComplete . nsReplacePrefix
+        dtLedgerPeersNS = map (nsGetTuple . nsReplacePrefix
                                ["Net", "Peers", "Ledger"])
                                (allNamespaces :: [Namespace TraceLedgerPeers])
 
 -- DiffusionTracersExtra P2P
 
-        localRootPeersNS = map (nsGetComplete . nsReplacePrefix
+        localRootPeersNS = map (nsGetTuple . nsReplacePrefix
                                ["Net", "Peers", "LocalRoot"])
                                (allNamespaces :: [Namespace
                                  (TraceLocalRootPeers RemoteAddress SomeException)])
-        publicRootPeersNS = map (nsGetComplete . nsReplacePrefix
+        publicRootPeersNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "Peers", "PublicRoot"])
                                (allNamespaces :: [Namespace TracePublicRootPeers])
-        peerSelectionNS = map (nsGetComplete . nsReplacePrefix
+        peerSelectionNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Selection"])
                                (allNamespaces :: [Namespace
                                           (TracePeerSelection Socket.SockAddr)])
-        debugPeerSelectionNS = map (nsGetComplete . nsReplacePrefix
+        debugPeerSelectionNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Initiator"])
                                (allNamespaces :: [Namespace
                                           (DebugPeerSelection Socket.SockAddr)])
-        debugPeerSelectionResponderNS = map (nsGetComplete . nsReplacePrefix
+        debugPeerSelectionResponderNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Responder"])
                                (allNamespaces :: [Namespace
                                           (DebugPeerSelection Socket.SockAddr)])
-        peerSelectionCountersNS = map (nsGetComplete . nsReplacePrefix
+        peerSelectionCountersNS = map (nsGetTuple . nsReplacePrefix
                                         ["Net", "PeerSelection", "Counters"])
                                       (allNamespaces :: [Namespace
                                         PeerSelectionCounters])
 
-        peerSelectionActionsNS = map (nsGetComplete . nsReplacePrefix
+        peerSelectionActionsNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Actions"])
                                (allNamespaces :: [Namespace
                                  (PeerSelectionActionsTrace Socket.SockAddr LocalAddress)])
-        connectionManagerNS = map (nsGetComplete . nsReplacePrefix
+        connectionManagerNS = map (nsGetTuple . nsReplacePrefix
                                     ["Net", "ConnectionManager", "Remote"])
                                   (allNamespaces :: [Namespace
                                     (ConnectionManagerTrace
@@ -303,23 +303,23 @@ getAllNamespaces =
                                       (ConnectionHandlerTrace
                                         UnversionedProtocol
                                         UnversionedProtocolData))])
-        connectionManagerTransitionsNS = map (nsGetComplete . nsReplacePrefix
+        connectionManagerTransitionsNS = map (nsGetTuple . nsReplacePrefix
                                                 ["Net", "ConnectionManager", "Transition"])
                                             (allNamespaces :: [Namespace
                                                 (ConnectionManager.AbstractTransitionTrace
                                                 Socket.SockAddr)])
-        serverNS = map (nsGetComplete . nsReplacePrefix
+        serverNS = map (nsGetTuple . nsReplacePrefix
                          ["Net", "Server", "Remote"])
                        (allNamespaces :: [Namespace (ServerTrace Socket.SockAddr)])
-        inboundGovernorNS = map (nsGetComplete . nsReplacePrefix
+        inboundGovernorNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "InboundGovernor", "Remote"])
                                 (allNamespaces :: [Namespace
                                   (InboundGovernorTrace Socket.SockAddr)])
-        inboundGovernorTransitionsNS = map (nsGetComplete . nsReplacePrefix
+        inboundGovernorTransitionsNS = map (nsGetTuple . nsReplacePrefix
                                       ["Net", "InboundGovernor", "Transition"])
                                            (allNamespaces :: [Namespace
                                       (InboundGovernor.RemoteTransitionTrace Socket.SockAddr)])
-        localConnectionManagerNS = map (nsGetComplete . nsReplacePrefix
+        localConnectionManagerNS = map (nsGetTuple . nsReplacePrefix
                                          ["Net", "ConnectionManager", "Local"])
                                        (allNamespaces :: [Namespace
                                        (ConnectionManagerTrace
@@ -327,11 +327,11 @@ getAllNamespaces =
                                           (ConnectionHandlerTrace
                                             UnversionedProtocol
                                             UnversionedProtocolData))])
-        localServerNS = map (nsGetComplete . nsReplacePrefix
+        localServerNS = map (nsGetTuple . nsReplacePrefix
                               ["Net", "Server", "Local"])
                             (allNamespaces :: [Namespace
                               (ServerTrace LocalAddress)])
-        localInboundGovernorNS = map (nsGetComplete . nsReplacePrefix
+        localInboundGovernorNS = map (nsGetTuple . nsReplacePrefix
                                         ["Net", "InboundGovernor", "Local"])
                                      (allNamespaces :: [Namespace
                                         (InboundGovernorTrace LocalAddress)])
@@ -339,32 +339,32 @@ getAllNamespaces =
 
 -- -- DiffusionTracersExtra nonP2P
 
-        dtIpSubscriptionNS = map (nsGetComplete . nsReplacePrefix
+        dtIpSubscriptionNS = map (nsGetTuple . nsReplacePrefix
                                    ["Net", "Subscription", "IP"])
                                  (allNamespaces :: [Namespace
                                    (SubscriptionTrace Socket.SockAddr)])
-        dtDnsSubscriptionNS = map (nsGetComplete . nsReplacePrefix
+        dtDnsSubscriptionNS = map (nsGetTuple . nsReplacePrefix
                                     ["Net", "Subscription", "DNS"])
                                   (allNamespaces :: [Namespace
                                     (WithDomainName (SubscriptionTrace Socket.SockAddr))])
-        dtDnsResolverNS = map (nsGetComplete . nsReplacePrefix
+        dtDnsResolverNS = map (nsGetTuple . nsReplacePrefix
                                 ["Net", "DNSResolver"])
                               (allNamespaces :: [Namespace
                                 (WithDomainName DnsTrace)])
-        dtErrorPolicyNS = map (nsGetComplete . nsReplacePrefix
+        dtErrorPolicyNS = map (nsGetTuple . nsReplacePrefix
                                 ["Net", "ErrorPolicy", "Remote"])
                               (allNamespaces :: [Namespace
                                  (WithAddr Socket.SockAddr ErrorPolicyTrace)])
-        dtLocalErrorPolicyNS = map (nsGetComplete . nsReplacePrefix
+        dtLocalErrorPolicyNS = map (nsGetTuple . nsReplacePrefix
                                      ["Net", "ErrorPolicy", "Local"])
                                    (allNamespaces :: [Namespace
                                      (WithAddr LocalAddress ErrorPolicyTrace)])
-        dtAcceptPolicyNS = map (nsGetComplete . nsReplacePrefix
+        dtAcceptPolicyNS = map (nsGetTuple . nsReplacePrefix
                                  ["Net", "AcceptPolicy"])
                                (allNamespaces :: [Namespace
                                   NtN.AcceptConnectionsPolicyTrace])
 
-        allNamespaces' :: [[T.Text]] =
+        allNamespaces' :: [([T.Text],[T.Text])] =
             stateNS
             <> peersNS
             <> resourcesNS
@@ -385,7 +385,6 @@ getAllNamespaces =
             <> localTxSubmissionServerNS
             <> mempoolNS
             <> forgeNS
-            <> forgeStateNS
             <> blockchainTimeNS
 -- NodeToClient
             <> keepAliveClientNS

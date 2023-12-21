@@ -7,7 +7,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Tracing.Documentation
@@ -15,6 +15,7 @@ module Cardano.Node.Tracing.Documentation
   , parseTraceDocumentationCmd
   , runTraceDocumentationCmd
   , docTracers
+  , docTracersFirstPhase
   ) where
 
 import           Control.Exception (SomeException)
@@ -148,29 +149,35 @@ runTraceDocumentationCmd
   :: TraceDocumentationCmd
   -> IO ()
 runTraceDocumentationCmd TraceDocumentationCmd{..} = do
-  docTracers
-    tdcConfigFile tdcOutput (Proxy @(CardanoBlock StandardCrypto))
-                            (Proxy @(NtN.ConnectionId LocalAddress))
-                            (Proxy @(NtN.ConnectionId NtN.RemoteAddress))
+  docTracers tdcConfigFile tdcOutput
 
 -- Have to repeat the construction of the tracers here,
 -- as the tracers are behind old tracer interface after construction in mkDispatchTracers.
 -- Can be changed, when old tracers have gone
-docTracers :: forall blk peer remotePeer.
-  ( TraceConstraints blk
-  , LogFormatting peer
-  , LogFormatting remotePeer
-  , Show remotePeer
-  , Show peer
-  )
-  => FilePath
+docTracers ::
+     FilePath
   -> FilePath
-  -> Proxy blk
-  -> Proxy peer
-  -> Proxy remotePeer
   -> IO ()
-docTracers configFileName outputFileName _ _ _ = do
-    trConfig      <- readConfigurationWithDefault configFileName defaultCardanoConfig
+docTracers configFileName outputFileName = do
+    (bl, trConfig) <- docTracersFirstPhase (Just configFileName)
+    docTracersSecondPhase outputFileName trConfig bl
+
+
+-- Have to repeat the construction of the tracers here,
+-- as the tracers are behind old tracer interface after construction in mkDispatchTracers.
+-- Can be changed, when old tracers have gone
+docTracersFirstPhase :: forall blk peer remotePeer.
+  ( TraceConstraints blk
+  , Proxy blk ~ Proxy (CardanoBlock StandardCrypto)
+  , Proxy peer ~ Proxy (NtN.ConnectionId LocalAddress)
+  , Proxy remotePeer ~ Proxy (NtN.ConnectionId NtN.RemoteAddress)
+  )
+  => Maybe FilePath
+  -> IO (DocTracer, TraceConfig)
+docTracersFirstPhase condConfigFileName = do
+    trConfig      <- case condConfigFileName of
+                        Just fn -> readConfigurationWithDefault fn defaultCardanoConfig
+                        Nothing -> pure defaultCardanoConfig
     let trBase    :: Trace IO FormattedMessage = docTracer (Stdout MachineFormat)
         trForward :: Trace IO FormattedMessage = docTracer Forwarder
         trDataPoint = docTracerDatapoint DatapointBackend
@@ -738,7 +745,14 @@ docTracers configFileName outputFileName _ _ _ = do
             <> dtAcceptPolicyTrDoc
 -- Internal tracer
             <> internalTrDoc
+    pure (bl,trConfig)
 
+docTracersSecondPhase ::
+     FilePath
+  -> TraceConfig
+  -> DocTracer
+  -> IO ()
+docTracersSecondPhase outputFileName trConfig bl = do
     res <- docuResultsToText bl trConfig
     T.writeFile outputFileName res
     pure ()
