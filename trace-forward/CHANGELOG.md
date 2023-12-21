@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 2.2.2 - Dec 2023
+
+* with overflow callback
+
 ## 2.2.1 - Oct 2023
 
 * Updated to `ouroboros-network-api-0.6` and `ouroboros-network-framework-0.10`

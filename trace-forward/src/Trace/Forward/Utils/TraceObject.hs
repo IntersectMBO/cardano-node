@@ -18,7 +18,6 @@ import           Control.Monad (unless, when, (<$!>))
 import           Control.Monad.Extra (whenM)
 import qualified Data.List.NonEmpty as NE
 import           Data.Word (Word16)
-import           System.IO
 
 import           Trace.Forward.Configuration.TraceObject
 import qualified Trace.Forward.Protocol.TraceObject.Forwarder as Forwarder
@@ -30,12 +29,14 @@ data ForwardSink lo = ForwardSink
   , disconnectedSize :: !Word
   , connectedSize    :: !Word
   , wasUsed          :: !(TVar Bool)
+  , overflowCallback :: !([lo] -> IO ())
   }
 
 initForwardSink
   :: ForwarderConfiguration lo
+  -> ([lo] -> IO ())
   -> IO (ForwardSink lo)
-initForwardSink ForwarderConfiguration{disconnectedQueueSize, connectedQueueSize} = do
+initForwardSink ForwarderConfiguration{disconnectedQueueSize, connectedQueueSize} callback = do
   -- Initially we always create a big queue, because during node's start
   -- the number of tracing items may be very big.
   (queue, used) <-
@@ -46,6 +47,7 @@ initForwardSink ForwarderConfiguration{disconnectedQueueSize, connectedQueueSize
     , disconnectedSize = disconnectedQueueSize
     , connectedSize    = connectedQueueSize
     , wasUsed          = used
+    , overflowCallback = callback
     }
 
 -- | There are 4 possible cases when we try to write tracing item:
@@ -53,12 +55,16 @@ initForwardSink ForwarderConfiguration{disconnectedQueueSize, connectedQueueSize
 --   2. The queue is __already__ empty (all previously written items were taken from it).
 --   3. The queue is full. In this case flush all tracing items to stdout and continue.
 --   4. The queue isn't empty and isn't full. Just continue writing.
-writeToSink
-  :: Show lo
-  => ForwardSink lo
+writeToSink ::
+     ForwardSink lo
   -> lo
   -> IO ()
-writeToSink ForwardSink{forwardQueue, disconnectedSize, connectedSize, wasUsed} traceObject = do
+writeToSink ForwardSink{
+              forwardQueue,
+              disconnectedSize,
+              connectedSize,
+              wasUsed,
+              overflowCallback} traceObject = do
   condToFlush <- atomically $ do
     q <- readTVar forwardQueue
     ((,) <$> isFullTBQueue q
@@ -78,9 +84,7 @@ writeToSink ForwardSink{forwardQueue, disconnectedSize, connectedSize, wasUsed} 
                           pure Nothing
   case condToFlush of
     Nothing -> pure ()
-    Just li -> do
-                  mapM_ print li
-                  hFlush stdout
+    Just li -> overflowCallback li
  where
   -- The queue is full, but if it's a small queue, we can switch it
   -- to a big one and give a chance not to flush items to stdout yet.
