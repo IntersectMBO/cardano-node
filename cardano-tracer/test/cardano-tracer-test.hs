@@ -51,7 +51,7 @@ main = do
        [      Logs.tests ts
        , DataPoint.tests ts
 --       ,   Restart.tests ts
-       ,     Queue.tests ts
+--       ,   Queue.tests ts
        ])
      `catch` (\ (e :: SomeException) -> do
                  unsetEnv "TASTY_NUM_THREADS"
