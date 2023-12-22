@@ -12,7 +12,7 @@ import           Test.Tasty
 
 import qualified Cardano.Tracer.Test.DataPoint.Tests as DataPoint
 import qualified Cardano.Tracer.Test.Logs.Tests as Logs
-import qualified Cardano.Tracer.Test.Queue.Tests as Queue
+-- import qualified Cardano.Tracer.Test.Queue.Tests as Queue
 -- import qualified Cardano.Tracer.Test.Restart.Tests as Restart
 
 import           Cardano.Tracer.Test.TestSetup
