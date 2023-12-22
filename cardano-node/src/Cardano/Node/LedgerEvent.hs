@@ -21,6 +21,7 @@ module Cardano.Node.LedgerEvent (
     -- * Ledger Events
     AnchoredEvents (..)
   , LedgerEvent (..)
+  , LedgerEvents
   , LedgerNewEpochEvent (..)
   , LedgerRewardUpdateEvent (..)
   , Versioned (..)
@@ -156,6 +157,7 @@ instance Crypto crypto => DecCBOR (LedgerEvent crypto) where
         SumD LedgerBody
       decRaw n = Invalid n
 
+type LedgerEvents = NE.NonEmpty (LedgerEvent StandardCrypto) -- ^ convenient alias to refer to a list of LedgerEvents
 
 -- TODO(KtorZ): Discuss that design choice; I believe we should favor a more
 -- 'flat' structure for events instead of preserving whatever the ledger imposes
