@@ -1,14 +1,14 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE OverloadedRecordDot   #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
--- TODO: remove this once this tool is refactored into smaller sub-modules.
-{-# OPTIONS_GHC -Wno-unused-top-binds -fno-warn-unused-imports #-}
+-- TODO --
+-- * disered output formats
+-- * publishing option?
+-- * running as a service?
+-- * haskell92 support in consensus
 
-{- HLINT ignore "Use <$>" -}
-{- HLINT ignore "Use camelCase" -}
+
 -- | This program compares two versions of Consensus through the 'db-analyser' tool.
 --
 -- Given two versions 'A' and 'B', which can be specified as branches or
@@ -53,11 +53,11 @@ module Main (main) where
 
 import           Control.Arrow ((>>>))
 import           Control.Exception (assert, bracket_)
-import           Control.Monad (unless, when)
+import           Control.Monad (foldM_, unless, when)
 import           Control.Monad.Extra (ifM, unlessM)
+import           Data.Aeson (eitherDecodeStrict')
 import qualified Data.ByteString.Lazy as BL
 import           Data.Char (ord)
-import qualified Data.Csv as Csv
 import           Data.List (findIndex, foldl')
 import           Data.Ord (Down (Down), comparing)
 import           Data.Set (Set)
@@ -69,37 +69,106 @@ import qualified Data.Text.IO as Text.IO
 import           Data.Vector (Vector)
 import qualified Data.Vector as V
 import           Data.Vector.Algorithms.Merge (sortBy)
+import           Data.Version (showVersion)
 import qualified Graphics.Rendering.Chart.Backend.Cairo as Chart.Cairo
 import           Graphics.Rendering.Chart.Easy ((.=))
 import qualified Graphics.Rendering.Chart.Easy as Chart
-import           Options.Applicative (Parser, auto, execParser, flag, fullDesc,
-                     help, helper, info, long, metavar, option, progDesc,
-                     strOption, value, (<**>))
-import qualified System.Console.ANSI as Console
-import           System.Directory (doesFileExist)
+
+import           System.Directory (doesDirectoryExist, doesFileExist)
 import           System.Exit (die)
+import           System.FilePath
 import           System.IO (IOMode (ReadMode), openFile)
-import           System.Process (callCommand)
 
+import           Cardano.Beacon.Chain
+import           Cardano.Beacon.CLI
+import           Cardano.Beacon.Console
+import           Cardano.Beacon.Run
+import           Cardano.Beacon.Types
 
-main :: IO ()
-main = putStrLn "good"
+import qualified Paths_beacon_run as Paths (version)
 
-{- }
--- | Should the program overwrite the benchmark data?
-data OverwriteData = OverwriteData | DoNotOverwriteData
-
--- | Should the program plot the benchmark data?
-data ShouldEmitPlots = EmitPlots | DoNotEmitPlots
-  deriving Eq
-
-emitPlots :: BenchmarksCompareOptions -> Bool
-emitPlots = (EmitPlots ==) . doPlotting
 
 --------------------------------------------------------------------------------
 -- Entry point
 --------------------------------------------------------------------------------
 
+main :: IO ()
+main = do
+  putStrLn appHeader
+  (options, commands) <- getOpts
+
+  let env = envEmpty options
+
+  ifM (doesDirectoryExist $ optBeaconDir options)
+    (runCommands env commands)
+    (printFatalAndDie $ "beacon data directory missing: " ++ optBeaconDir options)
+
+
+-- constants
+
+chainRegisterFilename :: FilePath
+chainRegisterFilename = "chain" </> "chain-register.json"
+
+
+
+runCommands :: RunEnvironment -> [BeaconCommand] -> IO ()
+runCommands = foldM_ runCommand
+
+runCommand :: RunEnvironment -> BeaconCommand -> IO RunEnvironment
+runCommand env BeaconListChains = do
+  env' <- runCommand env BeaconLoadChains
+  print $ runChains env'
+  pure env'
+
+runCommand env BeaconLoadChains =
+  case runChains env of
+    Nothing -> do
+      chains <- loadChainsInfo $ envBeaconDir env </> chainRegisterFilename
+      pure $ if countChains chains > 0
+        then env{ runChains = Just chains }
+        else env
+    Just{} -> pure env
+
+runCommand env (BeaconLoadCommit ref) = do
+  result <- shellCurlGitHubAPI env tmpFile $ "/repos/IntersectMBO/ouroboros-consensus/commits/" ++ ref
+  case eitherDecodeStrict' result of
+    Left err ->
+      printFatalAndDie $ "could not find commit for ref '" ++ ref ++ "' on GitHub\n" ++ err
+    Right ci -> do
+      printStyled StyleInfo $ "found commit on GitHub: " ++ ciCommitSHA1 ci
+      pure env{ runCommit = Just ci }
+  where
+    tmpFile = envBeaconDir env </> "temp.json"
+
+runCommand env@Env{ runCommit = Nothing } cmd@(BeaconBuild ver) = do
+  env' <- runCommand env (BeaconLoadCommit $ verGitRef ver)
+  runCommand env' cmd
+runCommand env (BeaconBuild ver) = do
+  install <- shellNixBuildVersion env ver
+  printStyled StyleNone $ "installed binary is: " ++ installPath install
+  pure env{ runInstall = Just install }
+
+runCommand env@Env{ runChains = Nothing } cmd@BeaconRun{} = do
+  env' <- runCommand env BeaconLoadChains
+  case runChains env' of
+    Nothing -> printFatalAndDie "no registered chain fragments found"
+    Just{}  -> runCommand env' cmd
+runCommand env@Env{ runInstall = Nothing } cmd@(BeaconRun _ ver _) = do
+  env' <- runCommand env (BeaconBuild ver)
+  runCommand env' cmd
+runCommand env (BeaconRun chain ver count) = do
+  _beaconChain <- case runChains env >>= lookupChain chain of
+    Nothing -> printFatalAndDie $ "requested chain " ++ show chain ++ " is not registered"
+    Just c  -> pure c
+
+  printStyled StyleWarning "performing run... (to be implemented)"
+  if count <= 1
+    then runCommand env (BeaconRun chain ver (count - 1))
+    else pure env{ runInstall = Nothing }
+
+
+
+{-
 main :: IO ()
 main = do
     opts <- getOpts
@@ -310,13 +379,6 @@ check b =
       -- TODO: Add an option to return an error at the end if the above condition is true.
       printWarning "Distance treshold exceeded!"
 
-printWarning :: String -> IO ()
-printWarning str =
-    bracket_
-      (Console.setSGR [Console.SetColor Console.Foreground Console.Vivid Console.Red])
-      (Console.setSGR [Console.Reset])
-      (print str)
-
 -- | Relative change per-slot. See 'relChangeDescending'.
 --
 -- TODO: The first component in the vector represents a slot. We might want to
@@ -383,57 +445,21 @@ plotMeasurements (ChartTitle title) header mSlots csvA csvB outfile = do
 -- Functions needed to install and run benchmarks
 --------------------------------------------------------------------------------
 
--- TODO: Make this configurable.
-echo :: EchoCommand
-echo = -- EchoCommand
-   DoNotEchoCommand
-
-data Version = Version {
-    dbAnalyser :: String
-    -- | Compiler version used to compile db-analyser.
-    --
-    -- This comes from the 'ouroboros-consensus' 'nix' setup.
-    -- Since relying on this is brittle anyway, we do not define a type for it, and rely instead on a free-form string.
-  , compiler   :: String
-  }
-
-data InstallInfo = InstallInfo { installPath :: String, installedVersion :: Version }
-
-installBenchmarkingProg ::
-     Version
-  -> IO InstallInfo
-installBenchmarkingProg version = do
-    let installCmd =  "nix build "
-                   <> "github:input-output-hk/ouroboros-consensus/"
-                   <> version.dbAnalyser
-                   <> "#hydraJobs.x86_64-linux.native."
-                   <> version.compiler
-                   <> ".exesNoAsserts.ouroboros-consensus-cardano.db-analyser"
-                   <> " -o " <> installDir
-        installDir = "db-analyser-" <> version.dbAnalyser <> "-" <> version.compiler
-        executable = installDir <> "/bin/db-analyser"
-    ifM (doesFileExist executable)
-        (putStrLn $ "File " <> executable <> " exists. No installation required.")
-        (callCommandEchoing echo installCmd)
-    pure $ InstallInfo {
-             installPath = executable
-           , installedVersion = version
-           }
 
 newtype BenchmarkRunDataPath = BenchmarkRunDataPath { benchmarkRunDataPath :: String }
 
 -- | Run the benchmarks and return the file path where the benchmarks are stored.
 runBenchmarks ::
-     BenchmarksCompareOptions
+     BeaconOptions_
   -> InstallInfo
   -> IO BenchmarkRunDataPath
-runBenchmarks opts InstallInfo { installPath, installedVersion } = do
+runBenchmarks opts InstallInfo { installPath, installVersion } = do
     unlessM (doesFileExist outfile) run
     pure $ BenchmarkRunDataPath { benchmarkRunDataPath = outfile }
   where
     outfile = toSlug (
       "ledger-ops-cost-"
-        <> vToFilePath installedVersion
+        <> vToFilePath installVersion
         <> "-from_" <> show (analyseFromSlot opts)
         <> "-nr_blocks_" <> show (numBlocksToProcess opts)
       ) <> ".csv"
@@ -454,16 +480,8 @@ runBenchmarks opts InstallInfo { installPath, installedVersion } = do
         <> "\t --num-blocks-to-process " <> show (numBlocksToProcess opts) <> newLine
         <> "\t --only-immutable-db"                            <> newLine
         <> "\t +RTS -T -RTS"
+-}
 
-data EchoCommand = EchoCommand | DoNotEchoCommand
-
-callCommandEchoing ::
-     EchoCommand
-     -- | Command to run
-  -> String
-  -> IO ()
-callCommandEchoing EchoCommand      cmd = putStrLn cmd >> callCommandEchoing DoNotEchoCommand cmd
-callCommandEchoing DoNotEchoCommand cmd = callCommand cmd
 
 --------------------------------------------------------------------------------
 -- Printing functions
@@ -476,98 +494,10 @@ printPairs fstHeader sndHeader xs = do
   where
     printPair (a, b) = putStrLn $ "" <> show a <> ", " <> show b <> ""
 
---------------------------------------------------------------------------------
--- Command line parsing
---------------------------------------------------------------------------------
-
-getOpts :: IO BenchmarksCompareOptions
-getOpts = execParser
-        $ info (parseOpts <**> helper)
-        $ mconcat
-          [ fullDesc
-          , progDesc "Compare benchmarks."
-          ]
-
-parseOpts :: Parser BenchmarksCompareOptions
-parseOpts =   BenchmarksCompareOptions
-          <$> parseVersion "versionA"
-          <*> parseVersion "versionB"
-          <*> parseNodeHome
-          <*> parseConfigPath
-          <*> parseDBPath
-          <*> parseAnalyseFrom
-          <*> parseNumBlocksToProcess
-          <*> parseOverwriteData
-          <*> parseDoPlotting
-  where
-    parseVersion :: String -> Parser Version
-    parseVersion name =  Version
-                <$> strOption
-                    ( mconcat
-                    [ long name
-                    , help "Version to compare"
-                    ])
-                 <*> parseCompilerVersion
-      where
-        parseCompilerVersion :: Parser String
-        parseCompilerVersion =
-          strOption
-            ( mconcat
-              [ long name
-              , help ("Compiler version (eg \"haskell810\", \"haskell96\". See the 'ouroboros-consensus' 'nix' setup for options. ")
-                <> metavar "GHC_VERSION"
-              ]
-            )
-
-    parseNodeHome :: Parser FilePath
-    parseNodeHome = strOption
-                    ( mconcat
-                      [ long "node-home"
-                      , help "File path to the 'mainnet' data directory of the node."
-                      ]
-                    )
-
-    parseConfigPath :: Parser FilePath
-    parseConfigPath = strOption
-                      ( mconcat
-                        [ long "config-path"
-                        , value "/configuration/cardano/mainnet-config.json"
-                        , help "File path to the config.json file. Relative to node-home. When not passed this defaults to /configuration/cardano/mainnet-config.json"
-                        ]
-                      )
-
-    parseDBPath :: Parser FilePath
-    parseDBPath = strOption
-                    ( mconcat
-                      [ long "db-path"
-                      , value "/mainnet/db"
-                      , help "File path to the db file analyzed by db-analyzer. Relative to node-home. When not passed this defaults to mainnet/db"
-                      ]
-                    )
-
-    parseAnalyseFrom :: Parser Int
-    parseAnalyseFrom = option auto
-                     $ mconcat
-                       [ long "analyse-from"
-                       ]
-
-    parseNumBlocksToProcess :: Parser Int
-    parseNumBlocksToProcess = option auto
-                            $ mconcat
-                            [ long "num-blocks-to-process"
-                            ]
-
-    parseOverwriteData :: Parser OverwriteData
-    parseOverwriteData = flag OverwriteData DoNotOverwriteData
-                       $ mconcat
-                         [ long "overwrite-data"
-                         , help "Overwrite previous benchmark data"
-                         ]
-
-    parseDoPlotting :: Parser ShouldEmitPlots
-    parseDoPlotting = flag DoNotEmitPlots EmitPlots
-                      $ mconcat
-                      [ long "do-plotting"
-                      , help "Whether to plot and compare db-analyser data, or not."
-                      ]
--}
+appHeader :: String
+appHeader = unlines
+  [ "┳┓"
+  , "┣┫┏┓┏┓┏┏┓┏┓"
+  , "┻┛┗ ┗┻┗┗┛┛┗     v" ++ showVersion Paths.version
+  , "Benchmarking, exploration, and analysis of Consensus"
+  ]

@@ -23,30 +23,47 @@ executable beacon-run
   hs-source-dirs:   app
   main-is:          beacon-run.hs
 
-  other-modules:    Cardano.Beacon.Shell
+  other-modules:    Cardano.Beacon.Chain
+                    Cardano.Beacon.CLI
+                    Cardano.Beacon.Console
+                    Cardano.Beacon.Run
+                    Cardano.Beacon.SlotDataPoint
                     Cardano.Beacon.Types
+
+                    Paths_beacon_run
+
+  autogen-modules:  Paths_beacon_run
 
   default-language: Haskell2010
   ghc-options:
     -Wall -Wcompat -Wincomplete-uni-patterns
-    -Wincomplete-record-updates -Wpartial-fields -Widentities
+    -Wincomplete-record-updates -Widentities
     -Wredundant-constraints -Wmissing-export-lists -Wunused-packages
     -Wno-unticked-promoted-constructors
 
+  -- development only
+  ghc-options:
+    -Wno-unused-top-binds -fno-warn-unused-imports -fno-warn-unused-local-binds
+
   build-depends:
-    , aeson
+    , aeson                 >=2.1.2
     , ansi-terminal
     , base
     , bytestring
+    , cardano-slotting
     , Chart                 >=1.9
     , Chart-cairo           >=1.9
     , containers
     , directory
     , extra
+    , filepath
     , optparse-applicative
     , process
-    , shh
     , slugger
     , text
+    , time
+    -- , ouroboros-consensus-cardano:unstable-cardano-tools  ^>= 0.12.1
     , vector
     , vector-algorithms
+
+    , text-builder
