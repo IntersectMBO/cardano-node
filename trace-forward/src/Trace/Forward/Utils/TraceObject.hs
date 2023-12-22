@@ -14,7 +14,7 @@ module Trace.Forward.Utils.TraceObject
 import           Control.Concurrent.STM (STM, atomically)
 import           Control.Concurrent.STM.TBQueue
 import           Control.Concurrent.STM.TVar
-import           Control.Monad (unless, when, (<$!>))
+import           Control.Monad (forM_, unless, when, (<$!>))
 import           Control.Monad.Extra (whenM)
 import qualified Data.List.NonEmpty as NE
 import           Data.Word (Word16)
@@ -82,9 +82,8 @@ writeToSink ForwardSink{
       (_,    _)    -> do
                           writeTBQueue q traceObject
                           pure Nothing
-  case condToFlush of
-    Nothing -> pure ()
-    Just li -> overflowCallback li
+  forM_ condToFlush overflowCallback
+
  where
   -- The queue is full, but if it's a small queue, we can switch it
   -- to a big one and give a chance not to flush items to stdout yet.
