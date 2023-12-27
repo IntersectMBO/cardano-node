@@ -2,14 +2,13 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Testnet.Components.Query
-  ( QueryTip
-  , EpochStateView
+  ( EpochStateView
   , getEpochState
   , queryTip
   , waitUntilEpoch
+  , waitForEpochs
   , getEpochStateView
   , findAllUtxos
   , findUtxosWithAddress
@@ -22,13 +21,12 @@ import           Cardano.Api as Api
 import           Cardano.Api.Shelley (ShelleyLedgerEra, fromShelleyTxIn, fromShelleyTxOut)
 
 import           Cardano.CLI.Types.Output
+import           Cardano.Ledger.BaseTypes (EpochInterval, addEpochInterval)
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.UTxO as L
 
 import           Control.Exception.Safe (MonadCatch)
-import           Control.Monad
 import           Control.Monad.Trans.Resource
-import           Data.Aeson
 import           Data.Bifunctor (bimap)
 import           Data.IORef
 import           Data.List (sortOn)
@@ -40,11 +38,11 @@ import           Data.Ord (Down (..))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Type.Equality
+import           GHC.IsList
 import           GHC.Stack
 import           Lens.Micro ((^.))
-import           System.Directory (doesFileExist, removeFile)
 
-import qualified Testnet.Process.Run as H
+import qualified Testnet.Process.Cli as H
 import           Testnet.Property.Assert
 import           Testnet.Property.Utils (runInBackground)
 import           Testnet.Runtime
@@ -77,26 +75,27 @@ waitUntilEpoch nodeConfigFile socketPath desiredEpoch = withFrozenCallStack $ do
         <> "- invalid foldEpochState behaviour, result: " <> show res
       H.failure
 
+-- | Wait for the number of epochs
+waitForEpochs
+  :: MonadTest m
+  => MonadCatch m
+  => MonadIO m
+  => ExecConfig
+  -> NodeConfigFile In
+  -> SocketPath
+  -> EpochInterval  -- ^ Number of epochs to wait
+  -> m EpochNo -- ^ The epoch number reached
+waitForEpochs execConfig nodeConfigFile socketPath interval = withFrozenCallStack $ do
+  currentEpoch <- H.nothingFailM $ mEpoch <$> queryTip execConfig
+  waitUntilEpoch nodeConfigFile socketPath $ addEpochInterval currentEpoch interval
+
+-- | Query the tip of the blockchain
 queryTip
   :: (MonadCatch m, MonadIO m, MonadTest m, HasCallStack)
-  => File QueryTip Out
-  -- ^ Output file
-  -> ExecConfig
+  => ExecConfig
   -> m QueryTipLocalStateOutput
-queryTip (File fp) execConfig = do
-  exists <- H.evalIO $ doesFileExist fp
-  when exists $ H.evalIO $ removeFile fp
-
-  void $ H.execCli' execConfig
-    [ "query",  "tip"
-    , "--out-file", fp
-    ]
-
-  tipJSON <- H.leftFailM $ H.readJsonFile fp
-  H.noteShowM $ H.jsonErrorFail $ fromJSON @QueryTipLocalStateOutput tipJSON
-
--- | Type level tag for a file storing query tip
-data QueryTip
+queryTip execConfig = withFrozenCallStack $
+  H.execCliStdoutToJson execConfig [ "query", "tip" ]
 
 -- | A read-only mutable pointer to an epoch state, updated automatically
 newtype EpochStateView = EpochStateView (IORef (Maybe AnyNewEpochState))
@@ -178,7 +177,7 @@ findUtxosWithAddress epochStateView sbe address = withFrozenCallStack $ do
         (deserialiseAddress AsAddressAny address)
 
   let utxos' = M.filter (\(TxOut txAddr _ _ _)  -> txAddr == address') utxos
-  H.note_ $ show utxos'
+  H.note_ $ unlines (map show $ toList utxos')
   pure utxos'
   where
     maybeToEither e = maybe (Left e) Right
@@ -204,7 +203,6 @@ findLargestUtxoWithAddress epochStateView sbe address = withFrozenCallStack $ do
 findLargestUtxoForPaymentKey
   :: MonadTest m
   => MonadAssertion m
-  => MonadCatch m
   => MonadIO m
   => HasCallStack
   => EpochStateView
@@ -212,9 +210,10 @@ findLargestUtxoForPaymentKey
   -> PaymentKeyInfo
   -> m TxIn
 findLargestUtxoForPaymentKey epochStateView sbe address =
-  withFrozenCallStack $
-    fmap fst
-    . H.noteShowM
-    . H.nothingFailM
-    $ findLargestUtxoWithAddress epochStateView sbe (paymentKeyInfoAddr address)
+  withFrozenCallStack $ do
+    utxo <- fmap fst
+      . H.nothingFailM
+      $ findLargestUtxoWithAddress epochStateView sbe (paymentKeyInfoAddr address)
+    H.note_ $ "Largest UTxO for " <> T.unpack (paymentKeyInfoAddr address) <> ": " <> show utxo
+    pure utxo
 
