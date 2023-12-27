@@ -23,9 +23,7 @@ import           Prelude
 
 import           Control.Monad
 import           Control.Monad.State.Strict (StateT)
-import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as AL
-import qualified Data.ByteString.Lazy as LBS
 import           Data.Maybe
 import           Data.Maybe.Strict
 import           Data.String
@@ -69,7 +67,8 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
       numVotes = length allVotes
   annotateShow numVotes
 
-  let sbe = ShelleyBasedEraConway
+  let ceo = ConwayEraOnwardsConway
+      sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       fastTestnetOptions = cardanoDefaultTestnetOptions
@@ -101,11 +100,11 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   H.note_ $ "Socketpath: " <> socketPath
   H.note_ $ "Foldblocks config file: " <> configurationFile
 
-  minDRepDeposit <- getMinDRepDeposit execConfig
+  minDRepDeposit <- getMinDRepDeposit execConfig ceo
 
   -- Create Conway constitution
   gov <- H.createDirectoryIfMissing $ work </> "governance"
-  proposalAnchorFile <- H.note $ work </> gov </> "sample-proposFal-anchor"
+  proposalAnchorFile <- H.note $ work </> gov </> "sample-proposal-anchor"
   consitutionFile <- H.note $ work </> gov </> "sample-constitution"
   constitutionActionFp <- H.note $ work </> gov </> "constitution.action"
 
@@ -144,7 +143,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   void $ H.execCli' execConfig
     [ "conway", "governance", "action", "create-constitution"
     , "--testnet"
-    , "--governance-action-deposit", show @Integer minDRepDeposit
+    , "--governance-action-deposit", show minDRepDeposit
     , "--deposit-return-stake-verification-key-file", stakeVkeyFp
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
@@ -256,25 +255,14 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   void $ evalEither eConstitutionAdopted
 
-  finalGovState <- H.note $ work </> gov </> "final_gov_state.json"
-
-  void $ H.execCli' execConfig
-    [ "conway", "query", "gov-state"
-    , "--volatile-tip"
-    , "--out-file", finalGovState
-    ]
-
   -- Tally registered votes
-
-  finalGovFileBS <- evalIO $ LBS.readFile finalGovState
-
-  decodedFinalGovFile <- H.nothingFail (Aeson.decode finalGovFileBS :: Maybe Aeson.Value)
+  govState <- getGovState execConfig ceo
   let votes :: [Text]
-      votes = decodedFinalGovFile ^.. AL.key "proposals"
-                                    . AL.nth 0
-                                    . AL.key "dRepVotes"
-                                    . AL.members
-                                    . AL._String
+      votes = govState ^.. AL.key "proposals"
+                         . AL.nth 0
+                         . AL.key "dRepVotes"
+                         . AL.members
+                         . AL._String
 
   length (filter (== "VoteYes") votes) === 4
   length (filter (== "VoteNo") votes) === 3

@@ -35,6 +35,7 @@ module Cardano.Testnet (
   -- * Utils
   integration,
   waitUntilEpoch,
+  waitForEpochs,
 
   -- * Runtime
   NodeRuntime(..),

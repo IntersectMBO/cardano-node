@@ -32,10 +32,9 @@ import           Ouroboros.Network.PeerSelection.State.LocalRootPeers
 
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
-import           Data.Aeson
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Encode.Pretty as Aeson
-import qualified Data.Aeson.KeyMap as Aeson
+import           Data.Aeson (Value (..))
+import qualified Data.Aeson.Encode.Pretty as A
+import           Data.Aeson.KeyMap (KeyMap)
 import qualified Data.Aeson.Lens as L
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
@@ -71,7 +70,7 @@ createConfigJson (TmpAbsolutePath tempAbsPath) era = GHC.withFrozenCallStack $ d
   alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
   conwayGenesisHash  <- getHash ConwayEra  "ConwayGenesisHash"
 
-  return . Aeson.encodePretty . Aeson.Object
+  pure . A.encodePretty . Object
     $ mconcat [ byronGenesisHash
               , shelleyGenesisHash
               , alonzoGenesisHash
@@ -79,7 +78,7 @@ createConfigJson (TmpAbsolutePath tempAbsPath) era = GHC.withFrozenCallStack $ d
               , defaultYamlHardforkViaConfig era
               ]
    where
-    getHash :: (MonadTest m, MonadIO m) => CardanoEra a -> Text.Text -> m (Aeson.KeyMap Aeson.Value)
+    getHash :: (MonadTest m, MonadIO m) => CardanoEra a -> Text.Text -> m (KeyMap Value)
     getHash e = getShelleyGenesisHash (tempAbsPath </> defaultGenesisFilepath e)
 
 numSeededUTxOKeys :: Int
@@ -115,9 +114,9 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) era shell
   -- Then, create-testnet-data will output (possibly augmented/modified) versions
   -- and we remove those input files (see below), to avoid confusion.
   H.evalIO $ do
-    LBS.writeFile inputGenesisShelleyFp $ Aeson.encodePretty shelleyGenesis
-    LBS.writeFile inputGenesisAlonzoFp  $ Aeson.encodePretty alonzoGenesis
-    LBS.writeFile inputGenesisConwayFp  $ Aeson.encodePretty conwayGenesis
+    LBS.writeFile inputGenesisShelleyFp $ A.encodePretty shelleyGenesis
+    LBS.writeFile inputGenesisAlonzoFp  $ A.encodePretty alonzoGenesis
+    LBS.writeFile inputGenesisConwayFp  $ A.encodePretty conwayGenesis
 
   let genesisShelleyDirAbs = takeDirectory inputGenesisShelleyFp
   genesisShelleyDir <- H.createDirectoryIfMissing genesisShelleyDirAbs
@@ -176,7 +175,7 @@ ifaceAddress = "127.0.0.1"
 -- TODO: Reconcile all other mkTopologyConfig functions. NB: We only intend
 -- to support current era on mainnet and the upcoming era.
 mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> LBS.ByteString
-mkTopologyConfig numNodes allPorts port False = Aeson.encodePretty topologyNonP2P
+mkTopologyConfig numNodes allPorts port False = A.encodePretty topologyNonP2P
   where
     topologyNonP2P :: NonP2P.NetworkTopology
     topologyNonP2P =
@@ -186,7 +185,7 @@ mkTopologyConfig numNodes allPorts port False = Aeson.encodePretty topologyNonP2
                                (numNodes - 1)
         | peerPort <- allPorts List.\\ [port]
         ]
-mkTopologyConfig numNodes allPorts port True = Aeson.encodePretty topologyP2P
+mkTopologyConfig numNodes allPorts port True = A.encodePretty topologyP2P
   where
     rootConfig :: P2P.RootConfig
     rootConfig =

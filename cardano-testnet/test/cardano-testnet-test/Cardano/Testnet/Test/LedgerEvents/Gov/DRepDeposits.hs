@@ -4,8 +4,7 @@ module Cardano.Testnet.Test.LedgerEvents.Gov.DRepDeposits
   ( hprop_ledger_events_drep_deposits
   ) where
 
-import           Cardano.Api (AnyCardanoEra (..), File (..), ShelleyBasedEra (..),
-                   ToCardanoEra (..))
+import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
@@ -45,7 +44,8 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let sbe = ShelleyBasedEraConway
+  let ceo = ConwayEraOnwardsConway
+      sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       fastTestnetOptions = cardanoDefaultTestnetOptions
@@ -79,7 +79,7 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
-  minDRepDeposit <- getMinDRepDeposit execConfig
+  minDRepDeposit <- getMinDRepDeposit execConfig ceo
 
   -- DRep 1 (not enough deposit)
 
