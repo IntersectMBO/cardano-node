@@ -99,7 +99,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   -- Create Conway constitution
   gov <- H.createDirectoryIfMissing $ work </> "governance"
-  proposalAnchorFile <- H.note $ work </> gov </> "sample-proposFal-anchor"
+  proposalAnchorFile <- H.note $ work </> gov </> "sample-proposal-anchor"
   consitutionFile <- H.note $ work </> gov </> "sample-constitution"
   constitutionActionFp <- H.note $ work </> gov </> "constitution.action"
 
@@ -174,7 +174,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     ]
 
   -- Create constitution proposal
-
   void $ H.execCli' execConfig
     [ "conway", "governance", "action", "create-constitution"
     , "--testnet"
@@ -192,6 +191,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   txin2 <- findLargestUtxoForPaymentKey epochStateView sbe $ wallets !! 1
 
+  -- TX: UTXO2 -> UTXO1
   void $ H.execCli' execConfig
     [ "conway", "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 1
@@ -358,3 +358,4 @@ filterRatificationState
 filterRatificationState c rState =
   let constitutionAnchorHash = Ledger.anchorDataHash $ Ledger.constitutionAnchor (rState ^. Ledger.rsEnactStateL . Ledger.ensConstitutionL)
   in Text.pack c == renderSafeHashAsHex constitutionAnchorHash
+

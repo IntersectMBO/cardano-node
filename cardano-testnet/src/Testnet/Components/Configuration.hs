@@ -28,7 +28,6 @@ import           Ouroboros.Network.PeerSelection.State.LocalRootPeers
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Aeson
-import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as L
 import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
@@ -68,14 +67,13 @@ createConfigYaml (TmpAbsolutePath tempAbsPath') anyCardanoEra' = GHC.withFrozenC
   conwayGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> "shelley/genesis.conway.json") "ConwayGenesisHash"
 
 
-  return . Aeson.encode . Aeson.Object
+  return . encode . Object
     $ mconcat [ byronGenesisHash
               , shelleyGenesisHash
               , alonzoGenesisHash
               , conwayGenesisHash
               , defaultYamlHardforkViaConfig anyCardanoEra'
               ]
-
 
 numSeededUTxOKeys :: Int
 numSeededUTxOKeys = 3
@@ -156,10 +154,10 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
   -- TODO: This conway and alonzo genesis creation should be ultimately moved to create-testnet-data
   alonzoConwayTestGenesisJsonTargetFile <- H.noteShow (genesisShelleyDir </> "genesis.alonzo.json")
   gen <- H.evalEither $ first prettyError defaultAlonzoGenesis
-  H.evalIO $ LBS.writeFile alonzoConwayTestGenesisJsonTargetFile $ Aeson.encode gen
+  H.evalIO $ LBS.writeFile alonzoConwayTestGenesisJsonTargetFile $ encode gen
 
   conwayConwayTestGenesisJsonTargetFile <- H.noteShow (genesisShelleyDir </> "genesis.conway.json")
-  H.evalIO $ LBS.writeFile conwayConwayTestGenesisJsonTargetFile $ Aeson.encode defaultConwayGenesis
+  H.evalIO $ LBS.writeFile conwayConwayTestGenesisJsonTargetFile $ encode defaultConwayGenesis
 
   H.renameFile (tempAbsPath' </> "byron-gen-command" </> "genesis.json") (genesisByronDir </> "genesis.json")
   -- TODO: create-testnet-data outputs the new shelley genesis to genesis.json
@@ -179,7 +177,7 @@ ifaceAddress = "127.0.0.1"
 -- TODO: Reconcile all other mkTopologyConfig functions. NB: We only intend
 -- to support current era on mainnet and the upcoming era.
 mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> LBS.ByteString
-mkTopologyConfig numNodes allPorts port False = Aeson.encode topologyNonP2P
+mkTopologyConfig numNodes allPorts port False = encode topologyNonP2P
   where
     topologyNonP2P :: NonP2P.NetworkTopology
     topologyNonP2P =
@@ -189,7 +187,7 @@ mkTopologyConfig numNodes allPorts port False = Aeson.encode topologyNonP2P
                                (numNodes - 1)
         | peerPort <- allPorts List.\\ [port]
         ]
-mkTopologyConfig numNodes allPorts port True = Aeson.encode topologyP2P
+mkTopologyConfig numNodes allPorts port True = encode topologyP2P
   where
     rootConfig :: P2P.RootConfig
     rootConfig =
