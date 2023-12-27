@@ -1,12 +1,11 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
-  ( hprop_ledger_events_propose_new_constitution
+module Cardano.Testnet.Test.LedgerEvents.Gov.NewConstitutionalCommittee
+  ( hprop_ledger_events_new_constitutional_committee
   ) where
 
 import           Cardano.Api
@@ -20,11 +19,9 @@ import           Cardano.Crypto.Hash.Class
 import qualified Cardano.Ledger.Conway.Governance as Ledger
 import qualified Cardano.Ledger.SafeHash as Ledger
 import           Control.Monad
-import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.Except.Extra
 import qualified Data.Map.Strict as Map
-import           Data.String
 import qualified Data.Text as Text
+
 import           Data.Word
 import           GHC.IO.Exception (IOException)
 import           GHC.Stack (HasCallStack, callStack)
@@ -47,8 +44,8 @@ newtype AdditionalCatcher
   deriving Show
 
 
-hprop_ledger_events_propose_new_constitution :: Property
-hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-new-constitution" $ \tempAbsBasePath' -> do
+hprop_ledger_events_new_constitutional_committee :: Property
+hprop_ledger_events_new_constitutional_committee = H.integrationWorkspace "propose-new-constitutional-committee" $ \tempAbsBasePath' -> do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -86,25 +83,10 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   H.note_ $ "Abs path: " <> tempAbsBasePath'
   H.note_ $ "Socketpath: " <> socketPath
   H.note_ $ "Foldblocks config file: " <> configurationFile testnetRuntime
-
-  -- Create Conway constitution
   gov <- H.createDirectoryIfMissing $ work </> "governance"
-  proposalAnchorFile <- H.note $ work </> gov </> "sample-proposal-anchor"
-  consitutionFile <- H.note $ work </> gov </> "sample-constitution"
-  constitutionActionFp <- H.note $ work </> gov </> "constitution.action"
 
-  H.writeFile proposalAnchorFile "dummy anchor data"
-  H.writeFile consitutionFile "dummy constitution data"
-  constitutionHash <- H.execCli' execConfig
-    [ "conway", "governance"
-    , "hash", "--file-text", consitutionFile
-    ]
-
-  proposalAnchorDataHash <- H.execCli' execConfig
-    [ "conway", "governance"
-    , "hash", "--file-text", proposalAnchorFile
-    ]
-
+  -- Set up dreps so we can vote on the new committee proposal
+  -- TODO: Refactor this into a function that generates n dreps
   let stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
 
@@ -113,11 +95,14 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
                       , P.signingKeyFile = stakeSKeyFp
                       }
 
-  let drepVkeyFp :: Int -> FilePath
-      drepVkeyFp n = gov </> "drep-keys" <>"drep" <> show n <> ".vkey"
+  let drepDir = gov </> "drep-keys"
+      drepVkeyFp :: Int -> FilePath
+      drepVkeyFp n =  drepDir </> "drep" <> show n <> ".vkey"
 
       drepSKeyFp :: Int -> FilePath
-      drepSKeyFp n = gov </> "drep-keys" <>"drep" <> show n <> ".skey"
+      drepSKeyFp n = drepDir </> "drep" <> show n <> ".skey"
+
+  H.createDirectoryIfMissing_ drepDir
 
   -- Create DReps -- TODO: Refactor with shelleyKeyGen
   forM_ [1..3] $ \n -> do
@@ -126,13 +111,10 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
      , "--verification-key-file", drepVkeyFp n
      , "--signing-key-file", drepSKeyFp n
      ]
-  let drepKeysDir = gov </> "drep-keys"
-  H.createDirectoryIfMissing_ drepKeysDir
 
   -- Create Drep registration certificates
   let drepCertFile :: Int -> FilePath
-      drepCertFile n = drepKeysDir </>"drep" <> show n <> ".regcert"
-
+      drepCertFile n = gov </> "drep-keys" <>"drep" <> show n <> ".regcert"
   forM_ [1..3] $ \n -> do
     H.execCli' execConfig
        [ "conway", "governance", "drep", "registration-certificate"
@@ -188,20 +170,49 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     , "--tx-file", drepRegTxSignedFp
     ]
 
-  -- Create constitution proposal
+  proposalAnchorFile <- H.note $ work </> gov </> "sample-proposal-anchor"
+  H.writeFile proposalAnchorFile "dummy anchor data"
+  proposalAnchorDataHash <- H.execCli' execConfig
+    [ "conway", "governance"
+    , "hash", "--file-text", proposalAnchorFile
+    ]
+
+  -- Create Conway update committee action
+  let coldKeyDir = gov </> "committee"
+      ccColdVkeyFp :: Int -> FilePath
+      ccColdVkeyFp n = coldKeyDir </> "committee-member" <> show n <> ".vkey"
+
+      ccColdSKeyFp :: Int -> FilePath
+      ccColdSKeyFp n = coldKeyDir </> "committee-member" <> show n <> ".skey"
+  H.createDirectoryIfMissing_ coldKeyDir
+  forM_ [1] $ \n -> do
+   H.execCli' execConfig
+     [ "conway", "governance", "committee", "key-gen-cold"
+     , "--cold-verification-key-file", ccColdVkeyFp n
+     , "--cold-signing-key-file", ccColdSKeyFp n
+     ]
+  ccColdVkeyHash <- mconcat . lines <$> H.execCli' execConfig
+    [ "conway", "governance", "committee"
+    , "key-hash", "--verification-key-file", ccColdVkeyFp 1
+    ]
+  updateCommitteeActionFile <- H.note $ work </> gov </> "update-committee.action"
+  let committeeMemExpiryEpoch = 5
+      quorum = "1/2"
 
   void $ H.execCli' execConfig
-    [ "conway", "governance", "action", "create-constitution"
+    [ "conway", "governance", "action", "update-committee"
     , "--testnet"
     , "--governance-action-deposit", show @Int 0 -- TODO: Get this from the node
     , "--deposit-return-stake-verification-key-file", stakeVkeyFp
-    , "--anchor-url", "https://tinyurl.com/3wrwb2as"
+    , "--anchor-url", "https://shorturl.at/asIJ6"
     , "--anchor-data-hash", proposalAnchorDataHash
-    , "--constitution-url", "https://tinyurl.com/2pahcy6z"
-    , "--constitution-hash", constitutionHash
-    , "--out-file", constitutionActionFp
+    , "--add-cc-cold-verification-key-hash", ccColdVkeyHash
+    , "--epoch", show @Int committeeMemExpiryEpoch
+    , "--quorum", quorum
+    , "--out-file", updateCommitteeActionFile
     ]
-
+  success
+{-
   txbodyFp <- H.note $ work </> "tx.body"
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
@@ -348,6 +359,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
       H.failMessage callStack
         $ "foldBlocksCheckConstitutionWasRatified failed with: " <> Text.unpack (renderFoldBlocksError e)
     Right (Right _events) -> success
+-}
 
 foldBlocksCheckProposalWasSubmitted
   :: TxId -- TxId of submitted tx

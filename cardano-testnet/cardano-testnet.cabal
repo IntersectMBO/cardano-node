@@ -175,7 +175,8 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
                         Cardano.Testnet.Test.FoldBlocks
                         Cardano.Testnet.Test.Misc
-
+                        
+                        Cardano.Testnet.Test.LedgerEvents.Gov.NewConstitutionalCommittee
                         Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
                         Cardano.Testnet.Test.LedgerEvents.SanityCheck
 
