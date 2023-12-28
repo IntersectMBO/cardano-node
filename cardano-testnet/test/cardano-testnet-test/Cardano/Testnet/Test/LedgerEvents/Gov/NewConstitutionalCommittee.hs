@@ -366,6 +366,14 @@ hprop_ledger_events_new_constitutional_committee = H.integrationWorkspace "propo
         $ "foldBlocksConsitutionalCommitteeMemberCheck failed with: " <> Text.unpack (renderFoldBlocksError e)
     Right (Right _) -> success
 
+
+  cState' <- H.note $ work </> gov </> "committee-member-authorized-gov.state"
+  void $ H.execCli' execConfig
+        [ "conway", "query", "committee-state"
+        , "--testnet-magic", show @Int testnetMagic
+        , "--out-file", cState'
+        ]
+
   -- REMOVE COMMITTEE MEMBER --
 
   void $ H.execCli' execConfig
@@ -507,7 +515,14 @@ hprop_ledger_events_new_constitutional_committee = H.integrationWorkspace "propo
     , "--tx-file", voteTxFpRemoval
     ]
 
-
+  H.threadDelay 60_000_000
+  cState <- H.note $ work </> gov </> "committee-member-not-authorized-gov.state"
+  void $ H.execCli' execConfig
+        [ "conway", "query", "committee-state"
+        , "--testnet-magic", show @Int testnetMagic
+        , "--out-file", cState
+        ]
+  H.failMessage callStack "Force"
   !eCommitteMemberRemoved
     <- runExceptT $ handleIOExceptT IOE
                   $ runExceptT $ foldBlocks
@@ -524,4 +539,12 @@ hprop_ledger_events_new_constitutional_committee = H.integrationWorkspace "propo
     Right (Left e) ->
       H.failMessage callStack
         $ "foldBlocksConsitutionalCommitteeMemberCheck failed with: " <> Text.unpack (renderFoldBlocksError e)
-    Right (Right _) -> success
+    Right (Right _) -> do
+      cState <- H.note $ work </> gov </> "committee-member-not-authorized-gov.state"
+      void $ H.execCli' execConfig
+            [ "conway", "query", "gov-state"
+            , "--testnet-magic", show @Int testnetMagic
+            , "--out-file", cState
+            ]
+      H.failMessage callStack "Force"
+      success
