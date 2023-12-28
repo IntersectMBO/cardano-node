@@ -10,7 +10,6 @@ module Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley
 
 import           Cardano.Testnet
 
@@ -27,7 +26,7 @@ import           Data.String
 import qualified Data.Text as Text
 import           Data.Word
 import           GHC.IO.Exception (IOException)
-import           GHC.Stack (HasCallStack, callStack)
+import           GHC.Stack (callStack)
 import           Lens.Micro
 import           System.FilePath ((</>))
 
@@ -37,6 +36,7 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 
+import           Cardano.Testnet.Test.LedgerEvents.Utils
 import           Testnet.Components.SPO
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
@@ -349,46 +349,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
         $ "foldBlocksCheckConstitutionWasRatified failed with: " <> Text.unpack (renderFoldBlocksError e)
     Right (Right _events) -> success
 
-foldBlocksCheckProposalWasSubmitted
-  :: TxId -- TxId of submitted tx
-  -> Env
-  -> LedgerState
-  -> [LedgerEvent]
-  -> BlockInMode -- Block i
-  -> Maybe LedgerEvent -- ^ Accumulator at block i - 1
-  -> IO (Maybe LedgerEvent, FoldStatus) -- ^ Accumulator at block i and fold status
-foldBlocksCheckProposalWasSubmitted txid _ _ allEvents _ _ = do
-  let newGovProposal = filter (filterNewGovProposals txid) allEvents
-  if null newGovProposal
-  then return (Nothing, ContinueFold)
-  else return (Just $ head newGovProposal , StopFold)
-
-
-retrieveGovernanceActionIndex
-  :: (HasCallStack, MonadTest m)
-  => Maybe LedgerEvent -> m Word32
-retrieveGovernanceActionIndex mEvent = do
-  case mEvent of
-    Nothing -> H.failMessage callStack "retrieveGovernanceActionIndex: No new governance proposals found"
-    Just (NewGovernanceProposals _ (AnyProposals props)) ->
-    -- In this test there will only be one
-        let govActionStates = [i
-                              | Ledger.GovActionIx i <- map Ledger.gaidGovActionIx . Map.keys $ Ledger.proposalsGovActionStates props
-                              ]
-        in return $ head  govActionStates
-    Just unexpectedEvent ->
-      H.failMessage callStack
-        $ mconcat ["retrieveGovernanceActionIndex: Expected NewGovernanceProposals, got: "
-                  , show unexpectedEvent
-                  ]
-
-
-filterNewGovProposals :: TxId -> LedgerEvent -> Bool
-filterNewGovProposals txid (NewGovernanceProposals eventTxId (AnyProposals props)) =
-  let _govActionStates = Ledger.proposalsGovActionStates props
-  in fromShelleyTxId eventTxId == txid
-filterNewGovProposals _ _ = False
-
 
 foldBlocksCheckConstitutionWasRatified
   :: String -- submitted constitution hash
@@ -411,6 +371,8 @@ filterRatificationState c (EpochBoundaryRatificationState (AnyRatificationState 
   let constitutionAnchorHash = Ledger.anchorDataHash $ Ledger.constitutionAnchor (rState ^. Ledger.rsEnactStateL . Ledger.ensConstitutionL)
   in Text.pack c == renderSafeHashAsHex constitutionAnchorHash
 filterRatificationState _ _ = False
+
+
 
 -- TODO: Move to cardano-api and share with
 -- https://github.com/input-output-hk/cardano-cli/blob/694782210c6d73a1b5151400214ef691f6f3ecb0/cardano-cli/src/Cardano/CLI/EraBased/Run/Governance/Hash.hs#L67

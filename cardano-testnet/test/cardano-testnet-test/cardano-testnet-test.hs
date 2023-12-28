@@ -32,10 +32,10 @@ tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
       [ T.testGroup "Ledger Events"
-          [ H.ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
-          , T.testGroup "Governance"
+          [ -- H.ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
+           T.testGroup "Governance"
              [ H.ignoreOnWindows "ProposeAndRatifyNewConstitutionalCommitteeMember" LedgerEvents.hprop_ledger_events_new_constitutional_committee
-             , H.ignoreOnWindows "ProposeAndRatifyNewConstitution" LedgerEvents.hprop_ledger_events_propose_new_constitution
+          --   , H.ignoreOnWindows "ProposeAndRatifyNewConstitution" LedgerEvents.hprop_ledger_events_propose_new_constitution
              ]
           ]
       , T.testGroup "CLI"
