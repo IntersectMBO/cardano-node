@@ -25,7 +25,7 @@ import qualified Cardano.Crypto.VRF.Class as Crypto
 import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Allegra.Scripts as Allegra
-import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
+import qualified Cardano.Ledger.Alonzo.Plutus.Evaluate as Alonzo
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure, AlonzoUtxoPredFailure,
                    AlonzoUtxosPredFailure, AlonzoUtxowPredFailure (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
@@ -1135,13 +1135,19 @@ instance
     mconcat [ "kind" .= String "ExpirationEpochTooSmall"
             , "credentialsToEpoch" .= credsToEpoch
             ]
-  forMachine _ (Conway.InvalidPrevGovActionIdsInProposals proposals) =
-    mconcat [ "kind" .= String "InvalidPrevGovActionIdsInProposals"
-            , "proposals" .= proposals
+  forMachine _ (Conway.InvalidPrevGovActionId proposalProcedure) =
+    mconcat [ "kind" .= String "InvalidPrevGovActionId"
+            , "proposalProcedure" .= proposalProcedure
             ]
   forMachine _ (Conway.VotingOnExpiredGovAction actions) =
     mconcat [ "kind" .= String "VotingOnExpiredGovAction"
             , "action" .= actions
+            ]
+  forMachine _ (Conway.ProposalCantFollow prevGovActionId protVer prevProtVer) =
+    mconcat [ "kind" .= String "ProposalCantFollow"
+            , "prevGovActionId" .= prevGovActionId
+            , "protVer" .= protVer
+            , "prevProtVer" .= prevProtVer
             ]
 
 instance

@@ -28,20 +28,25 @@ import qualified Cardano.Crypto.VRF.Class as Crypto
 import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Allegra.Scripts as Allegra
+import qualified Cardano.Ledger.Alonzo as Alonzo
+import qualified Cardano.Ledger.Alonzo.Plutus.Evaluate as Alonzo
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
-import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..), AlonzoUtxoPredFailure,
                    AlonzoUtxosPredFailure, AlonzoUtxowPredFailure (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Api as Ledger
+import qualified Cardano.Ledger.Babbage as Babbage
 import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
+import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import           Cardano.Ledger.BaseTypes (activeSlotLog, strictMaybeToMaybe)
 import           Cardano.Ledger.Chain
 import           Cardano.Ledger.Conway.Governance (govActionIdToText)
+import qualified Cardano.Ledger.Conway as Conway
 import           Cardano.Ledger.Conway.Rules ()
 import qualified Cardano.Ledger.Conway.Rules as Conway
+import qualified Cardano.Ledger.Conway.TxInfo as Conway
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -376,13 +381,19 @@ instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) whe
     mconcat [ "kind" .= String "ExpirationEpochTooSmall"
             , "credentialsToEpoch" .= credsToEpoch
             ]
-  toObject _ (Conway.InvalidPrevGovActionIdsInProposals proposals) =
-    mconcat [ "kind" .= String "InvalidPrevGovActionIdsInProposals"
-            , "proposals" .= proposals
+  toObject _ (Conway.InvalidPrevGovActionId proposalProcedure) =
+    mconcat [ "kind" .= String "InvalidPrevGovActionId"
+            , "proposalProcedure" .= proposalProcedure
             ]
   toObject _ (Conway.VotingOnExpiredGovAction actions) =
     mconcat [ "kind" .= String "VotingOnExpiredGovAction"
             , "action" .= actions
+            ]
+  toObject _ (Conway.ProposalCantFollow prevGovActionId protVer prevProtVer) =
+    mconcat [ "kind" .= String "ProposalCantFollow"
+            , "prevGovActionId" .= prevGovActionId
+            , "protVer" .= protVer
+            , "prevProtVer" .= prevProtVer
             ]
 
 instance
@@ -1133,10 +1144,7 @@ instance
 
 deriving newtype instance ToJSON Alonzo.IsValid
 
-instance
-  ( Core.Crypto (Ledger.EraCrypto ledgerera)
-  , Ledger.EraCrypto ledgerera ~ StandardCrypto
-  ) => ToJSON (Alonzo.CollectError ledgerera) where
+instance ToJSON (Alonzo.CollectError (Alonzo.AlonzoEra StandardCrypto)) where
   toJSON cError =
     case cError of
       Alonzo.NoRedeemer sPurpose ->
@@ -1161,28 +1169,86 @@ instance
         object
           [ "kind" .= String "PlutusTranslationError"
           , "error" .= case err of
-              Alonzo.ByronTxOutInContext txOutSource ->
+              Alonzo.TranslationLogicMissingInput txin ->
+                String $ "Transaction input does not exist in the UTxO: " <> textShow txin
+              Alonzo.TimeTranslationPastHorizon msg ->
+                String $ "Time translation requested past the horizon: " <> textShow msg
+          ]
+
+instance ToJSON (Alonzo.CollectError (Babbage.BabbageEra StandardCrypto)) where
+  toJSON cError =
+    case cError of
+      Alonzo.NoRedeemer sPurpose ->
+        object
+          [ "kind" .= String "CollectError"
+          , "error" .= String "NoRedeemer"
+          , "scriptpurpose" .= renderScriptPurpose sPurpose
+          ]
+      Alonzo.NoWitness sHash ->
+        object
+          [ "kind" .= String "CollectError"
+          , "error" .= String "NoWitness"
+          , "scripthash" .= renderScriptHash sHash
+          ]
+      Alonzo.NoCostModel lang ->
+        object
+          [ "kind" .= String "CollectError"
+          , "error" .= String "NoCostModel"
+          , "language" .= toJSON lang
+          ]
+      Alonzo.BadTranslation err ->
+        object
+          [ "kind" .= String "PlutusTranslationError"
+          , "error" .= case err of
+              Babbage.AlonzoContextError _alonzoCtxErr ->
+                String "???"
+              Babbage.ByronTxOutInContext txOutSource ->
                 String $
                   "Cannot construct a Plutus ScriptContext from this transaction "
                     <> "due to a Byron UTxO being created or spent: "
                     <> textShow txOutSource
-              Alonzo.TranslationLogicMissingInput txin ->
-                String $ "Transaction input does not exist in the UTxO: " <> textShow txin
-              Alonzo.RdmrPtrPointsToNothing ptr ->
+              Babbage.RdmrPtrPointsToNothing ptr ->
                 object
                   [ "kind" .= String "RedeemerPointerPointsToNothing"
                   , "ptr" .= Api.fromAlonzoRdmrPtr ptr
                   ]
-              Alonzo.LanguageNotSupported lang ->
-                String $ "Language not supported: " <> textShow lang
-              Alonzo.InlineDatumsNotSupported txOutSource ->
+              Babbage.InlineDatumsNotSupported txOutSource ->
                 String $ "Inline datums not supported, output source: " <> textShow txOutSource
-              Alonzo.ReferenceScriptsNotSupported txOutSource ->
+              Babbage.ReferenceScriptsNotSupported txOutSource ->
                 String $ "Reference scripts not supported, output source: " <> textShow txOutSource
-              Alonzo.ReferenceInputsNotSupported txins ->
+              Babbage.ReferenceInputsNotSupported txins ->
                 String $ "Reference inputs not supported: " <> textShow txins
-              Alonzo.TimeTranslationPastHorizon msg ->
-                String $ "Time translation requested past the horizon: " <> textShow msg
+          ]
+
+instance ToJSON (Alonzo.CollectError (Conway.ConwayEra StandardCrypto)) where
+  toJSON cError =
+    case cError of
+      Alonzo.NoRedeemer sPurpose ->
+        object
+          [ "kind" .= String "CollectError"
+          , "error" .= String "NoRedeemer"
+          , "scriptpurpose" .= renderScriptPurpose sPurpose
+          ]
+      Alonzo.NoWitness sHash ->
+        object
+          [ "kind" .= String "CollectError"
+          , "error" .= String "NoWitness"
+          , "scripthash" .= renderScriptHash sHash
+          ]
+      Alonzo.NoCostModel lang ->
+        object
+          [ "kind" .= String "CollectError"
+          , "error" .= String "NoCostModel"
+          , "language" .= toJSON lang
+          ]
+      Alonzo.BadTranslation err ->
+        object
+          [ "kind" .= String "PlutusTranslationError"
+          , "error" .= case err of
+              Conway.BabbageContextError _babbageCtxErr ->
+                String "???"
+              Conway.CertificateNotSupported _cert ->
+                String "???"
           ]
 
 instance ToJSON Alonzo.TagMismatchDescription where

@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2023-11-20T23:52:53Z
-  , cardano-haskell-packages 2023-12-15T14:50:31Z
+  , hackage.haskell.org 2023-12-20T12:41:18Z
+  , cardano-haskell-packages 2023-12-24T05:55:00Z
 
 packages:
   cardano-git-rev
@@ -60,3 +60,65 @@ package plutus-scripts-bench
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
+
+source-repository-package
+    type: git
+    location: https://github.com/IntersectMBO/cardano-ledger.git
+    tag: 8e281ac3372f996eff4a19e241526eebbf96a0eb
+    subdir:
+      eras/allegra/impl
+      eras/alonzo/impl
+      eras/alonzo/test-suite
+      eras/babbage/impl
+      eras/babbage/test-suite
+      eras/byron/ledger/impl
+      eras/conway/impl
+      eras/conway/test-suite
+      eras/mary/impl
+      eras/shelley/impl
+      eras/shelley/test-suite
+      eras/shelley-ma/test-suite
+      libs/cardano-data
+      libs/cardano-ledger-api
+      libs/cardano-ledger-binary
+      libs/cardano-ledger-core
+      libs/cardano-ledger-pretty
+      libs/small-steps
+      libs/small-steps-test
+      libs/vector-map
+    --sha256: 0dxy0rcf36k7vmxqi0i35jrvh9gfz2hf7ksjxx4azlm5s5fa4v06
+
+source-repository-package
+    type: git
+    location: https://github.com/IntersectMBO/ouroboros-consensus.git
+    tag: 2ec1925bf2cb05e8b761b7db1cd75e5e9cb2bcfd
+    subdir:
+      ouroboros-consensus
+      ouroboros-consensus-cardano
+      ouroboros-consensus-protocol
+      ouroboros-consensus-diffusion
+      sop-extras
+      strict-sop-core
+    --sha256: 1301wr951688k2dcav33391x9c0pgn1w32q8yhjm6j7m8zjczh93
+
+-- Remove once QSM 0.9 is released, see
+-- https://github.com/stevana/quickcheck-state-machine/pull/31
+source-repository-package
+  type: git
+  location: https://github.com/stevana/quickcheck-state-machine
+  tag: 8e2bfb2214c7af1dae728180f2092effea6fbeb7
+  --sha256: 1x3wxx57qwn5j7qr5wgakpigawaaidg172n00s33yjrlmg42w5s9
+
+source-repository-package
+    type: git
+    location: https://github.com/IntersectMBO/cardano-api.git
+    tag: 610e78b0419350ad2051bd7505ab6ab6242de78a
+    subdir: cardano-api
+    --sha256: 1sga07sfhlwhmj2pj5hxv830kyzb8a3b5nvmv13wcmw3plw3x2rj
+
+source-repository-package
+    type: git
+    location: https://github.com/IntersectMBO/cardano-cli.git
+    tag: 97849de4e6cb4a4b9853cbf5be17cb5377a59a96
+    subdir: cardano-cli
+    --sha256: 02dgj99d113d8h9aam82lggwlf1vp4rdfq8km8sqcwmrfgbp1igy

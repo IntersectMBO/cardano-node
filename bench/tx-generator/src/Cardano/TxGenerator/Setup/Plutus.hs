@@ -27,7 +27,7 @@ import           Cardano.CLI.Read (readFileScriptInAnyLang)
 import           Cardano.Api
 import           Cardano.Api.Shelley (PlutusScript (..), ProtocolParameters (..), fromAlonzoExUnits,
                    protocolParamCostModels, toPlutusData)
-import           Cardano.Ledger.Alonzo.Plutus.TxInfo (exBudgetToExUnits)
+import           Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
 
 import qualified PlutusLedgerApi.V1 as PlutusV1
 import qualified PlutusLedgerApi.V2 as PlutusV2
@@ -252,7 +252,7 @@ preExecutePlutusV3 (major, _minor) (PlutusScript _ (PlutusScriptSerialised (scri
     dummyTxInfo = PlutusV3.TxInfo
       { PlutusV3.txInfoInputs = []
       , PlutusV3.txInfoOutputs = []
-      , PlutusV3.txInfoFee = mempty
+      , PlutusV3.txInfoFee = 0
       , PlutusV3.txInfoMint = mempty
       , PlutusV3.txInfoTxCerts = []
       , PlutusV3.txInfoWdrl = PlutusV3.fromList []

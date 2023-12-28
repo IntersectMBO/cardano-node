@@ -27,7 +27,7 @@ common project-config
   if os(windows)
     buildable: False
 
-  if impl(ghc < 9)
+  if impl(ghc < 9.6)
     buildable: False
 
 
