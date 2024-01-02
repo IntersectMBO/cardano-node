@@ -59,7 +59,6 @@ executable beacon-run
     , filepath
     , optparse-applicative
     , process
-    , slugger
     , text
     , time
     -- , ouroboros-consensus-cardano:unstable-cardano-tools  ^>= 0.12.1

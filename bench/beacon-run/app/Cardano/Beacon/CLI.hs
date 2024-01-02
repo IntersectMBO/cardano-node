@@ -4,9 +4,10 @@ module  Cardano.Beacon.CLI
         , getOpts
         ) where
 
+import           Data.Text as Text (Text, pack)
 import           Options.Applicative
-import Data.Text as Text (Text, pack)
 
+import           Cardano.Beacon.Chain (ChainName(..))
 import           Cardano.Beacon.Types
 
 
@@ -15,7 +16,7 @@ data BeaconCommand =
     -- commands can be chained
       BeaconListChains
     | BeaconBuild       !Version
-    | BeaconRun         !Chain !Version !Int
+    | BeaconRun         !ChainName !Version !Int
 
     -- commands that can't be used directly from the CLI
     | BeaconLoadChains
@@ -25,6 +26,7 @@ data BeaconCommand =
 data BeaconOptions = BeaconOptions {
       optEchoing        :: !EchoCommand
     , optBeaconDir      :: !FilePath
+    , optLockFile       :: !FilePath
     }
     deriving Show
 
@@ -39,16 +41,16 @@ parseCLI :: Parser (BeaconOptions, [BeaconCommand])
 parseCLI = (,) <$> parseOptions <*> some parseCommand
 
 parseOptions :: Parser BeaconOptions
-parseOptions = 
-  BeaconOptions 
-    <$> flag DoNotEchoCommand EchoCommand 
-        (mconcat 
+parseOptions =
+  BeaconOptions
+    <$> flag DoNotEchoCommand EchoCommand
+        (mconcat
           [ short 'e'
           , long "echo"
           , help "Echo shell commands"
           ])
     <*> strOption
-        (mconcat 
+        (mconcat
           [ short 'd'
           , long "data-dir"
           , value "./beacon"
@@ -56,6 +58,13 @@ parseOptions =
           , metavar "DIR"
           , action "directory"
           , help "Specify beacon data directory"
+          ])
+    <*> strOption
+        (mconcat
+          [ long "lock"
+          , value ""
+          , metavar "FILE"
+          , help "Use a lock file"
           ])
 
 parseCommand :: Parser BeaconCommand
@@ -65,7 +74,7 @@ parseCommand =  subparser $ mconcat
   , op "list-chains" "List registered chain fragments that beacon can be run on"
       (pure BeaconListChains)
   , op "run" "Perform a beacon run"
-      (BeaconRun <$> (Chain . Text.pack <$> parseChainName) <*> parseVersion <*> parseCount)
+      (BeaconRun <$> (ChainName . Text.pack <$> parseChainName) <*> parseVersion <*> parseCount)
   , op "test-github" "Test the GitHub query on a given git ref"
       (BeaconLoadCommit <$> parseRevision)
   ]
@@ -77,7 +86,7 @@ parseCommand =  subparser $ mconcat
 
     parseRevision :: Parser String
     parseRevision = strOption
-      (mconcat 
+      (mconcat
         [ long "rev"
         , metavar "REF"
         , help "Commit hash (full or shortened) or tag or branch name"
@@ -85,26 +94,26 @@ parseCommand =  subparser $ mconcat
 
     parseGHCVersion :: Parser String
     parseGHCVersion = strOption
-      (mconcat 
+      (mconcat
         [ long "ghc"
         , metavar "VER"
         , value "haskell810"
-        , showDefault        
+        , showDefault
         , help "Compiler version; cf. ouroboros-consensus-cardano/README.md#Assertions"
         ])
 
     parseChainName :: Parser String
     parseChainName = strOption
-      (mconcat 
+      (mconcat
         [ short 'n'
         , long "name"
         , metavar "NAME"
         , help "Chain fragment name to run on"
         ])
-    
+
     parseCount :: Parser Int
     parseCount = option auto
-      (mconcat 
+      (mconcat
         [ short 'c'
         , value 1
         , showDefault
@@ -113,45 +122,3 @@ parseCommand =  subparser $ mconcat
 
     parseVersion :: Parser Version
     parseVersion =  Version <$> parseRevision <*> parseGHCVersion
-
-    {-
-    parseOpts :: Parser BeaconOptions_
-    parseOpts =
-        BeaconOptions_
-          <$> parseVersion "versionA"
-          <*> parseVersion "versionB"
-          <*> parseNodeHome
-          <*> parseConfigPath
-          <*> parseDBPath
-          <*> parseAnalyseFrom
-          <*> parseNumBlocksToProcess
-
-
-
-    parseNodeHome :: Parser FilePath
-    parseNodeHome = strOption
-                    ( mconcat
-                      [ long "node-home"
-                      , help "File path to the 'mainnet' data directory of the node."
-                      ]
-                    )
-
-    parseConfigPath :: Parser FilePath
-    parseConfigPath = strOption
-                      ( mconcat
-                        [ long "config-path"
-                        , value "/configuration/cardano/mainnet-config.json"
-                        , help "File path to the config.json file. Relative to node-home. When not passed this defaults to /configuration/cardano/mainnet-config.json"
-                        ]
-                      )
-
-    parseDBPath :: Parser FilePath
-    parseDBPath = strOption
-                    ( mconcat
-                      [ long "db-path"
-                      , value "/mainnet/db"
-                      , help "File path to the db file analyzed by db-analyzer. Relative to node-home. When not passed this defaults to mainnet/db"
-                      ]
-                    )
-
-    -}

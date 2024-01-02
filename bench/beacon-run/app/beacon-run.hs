@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -52,17 +53,18 @@
 module Main (main) where
 
 import           Control.Arrow ((>>>))
+import           Control.Concurrent (threadDelay)
 import           Control.Exception (assert, bracket_)
 import           Control.Monad (foldM_, unless, when)
 import           Control.Monad.Extra (ifM, unlessM)
-import           Data.Aeson (eitherDecodeStrict')
+import           Data.Aeson (eitherDecodeFileStrict, eitherDecodeStrict')
 import qualified Data.ByteString.Lazy as BL
 import           Data.Char (ord)
 import           Data.List (findIndex, foldl')
+import           Data.Maybe (fromJust)
 import           Data.Ord (Down (Down), comparing)
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.String.Slugger (toSlug)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text.IO
@@ -74,8 +76,8 @@ import qualified Graphics.Rendering.Chart.Backend.Cairo as Chart.Cairo
 import           Graphics.Rendering.Chart.Easy ((.=))
 import qualified Graphics.Rendering.Chart.Easy as Chart
 
-import           System.Directory (doesDirectoryExist, doesFileExist)
-import           System.Exit (die)
+import           System.Directory (doesDirectoryExist, doesFileExist, removeFile)
+import           System.Environment (getExecutablePath)
 import           System.FilePath
 import           System.IO (IOMode (ReadMode), openFile)
 
@@ -83,6 +85,7 @@ import           Cardano.Beacon.Chain
 import           Cardano.Beacon.CLI
 import           Cardano.Beacon.Console
 import           Cardano.Beacon.Run
+import           Cardano.Beacon.SlotDataPoint
 import           Cardano.Beacon.Types
 
 import qualified Paths_beacon_run as Paths (version)
@@ -110,15 +113,41 @@ chainRegisterFilename :: FilePath
 chainRegisterFilename = "chain" </> "chain-register.json"
 
 
-
 runCommands :: RunEnvironment -> [BeaconCommand] -> IO ()
-runCommands = foldM_ runCommand
+runCommands env cmds
+  | null lockFile = evalCommands
+  | otherwise = do
+      waitForLock True
+      bracket_ createLock removeLock evalCommands
+  where
+    evalCommands  = foldM_ runCommand env cmds
+    lockFile      = optLockFile $ runOptions env
+    createLock    = getExecutablePath >>= writeFile lockFile
+    removeLock    = removeFile lockFile
+
+    waitForLock firstCheck = do
+      locked <- doesFileExist lockFile
+      when locked $ do
+        when firstCheck $
+          printStyled StyleInfo $ "waiting for lock to be released: " ++ lockFile
+        threadDelay $ 1_000_000
+        waitForLock False
 
 runCommand :: RunEnvironment -> BeaconCommand -> IO RunEnvironment
 runCommand env BeaconListChains = do
   env' <- runCommand env BeaconLoadChains
-  print $ runChains env'
+  case runChains env' of
+    Nothing -> printStyled StyleWarning $
+         "in: " ++ registerFile ++ "\n"
+      ++ "    no registered chain fragments found"
+    Just cs -> do
+      mapM_ (printStyled StyleNone) $ renderChainsInfo cs
+      printStyled StyleInfo $
+           "in:    " ++ registerFile ++ "\n"
+        ++ "found: " ++ show (countChains cs) ++ " registered chain fragment(s)"
   pure env'
+  where
+    registerFile = envBeaconDir env </> chainRegisterFilename
 
 runCommand env BeaconLoadChains =
   case runChains env of
@@ -130,15 +159,13 @@ runCommand env BeaconLoadChains =
     Just{} -> pure env
 
 runCommand env (BeaconLoadCommit ref) = do
-  result <- shellCurlGitHubAPI env tmpFile $ "/repos/IntersectMBO/ouroboros-consensus/commits/" ++ ref
+  result <- shellCurlGitHubAPI env $ "/repos/IntersectMBO/ouroboros-consensus/commits/" ++ ref
   case eitherDecodeStrict' result of
-    Left err ->
-      printFatalAndDie $ "could not find commit for ref '" ++ ref ++ "' on GitHub\n" ++ err
+    Left{} ->
+      printFatalAndDie $ "could not find commit for ref '" ++ ref ++ "' on GitHub"
     Right ci -> do
       printStyled StyleInfo $ "found commit on GitHub: " ++ ciCommitSHA1 ci
       pure env{ runCommit = Just ci }
-  where
-    tmpFile = envBeaconDir env </> "temp.json"
 
 runCommand env@Env{ runCommit = Nothing } cmd@(BeaconBuild ver) = do
   env' <- runCommand env (BeaconLoadCommit $ verGitRef ver)
@@ -148,23 +175,30 @@ runCommand env (BeaconBuild ver) = do
   printStyled StyleNone $ "installed binary is: " ++ installPath install
   pure env{ runInstall = Just install }
 
-runCommand env@Env{ runChains = Nothing } cmd@BeaconRun{} = do
+runCommand env@Env{ runChains = Nothing } cmd@(BeaconRun chain _ _) = do
   env' <- runCommand env BeaconLoadChains
-  case runChains env' of
-    Nothing -> printFatalAndDie "no registered chain fragments found"
+  case runChains env' >>= lookupChain chain of
+    Nothing -> printFatalAndDie $ "requested chain " ++ show chain ++ " is not registered"
     Just{}  -> runCommand env' cmd
 runCommand env@Env{ runInstall = Nothing } cmd@(BeaconRun _ ver _) = do
   env' <- runCommand env (BeaconBuild ver)
   runCommand env' cmd
 runCommand env (BeaconRun chain ver count) = do
-  _beaconChain <- case runChains env >>= lookupChain chain of
-    Nothing -> printFatalAndDie $ "requested chain " ++ show chain ++ " is not registered"
-    Just c  -> pure c
+  printStyled StyleInfo "performing run..."
+  shellRunDbAnalyser env beaconChain currentResult
 
-  printStyled StyleWarning "performing run... (to be implemented)"
-  if count <= 1
+  sdps <- eitherDecodeFileStrict currentResult
+  case sdps of
+    Left err -> printStyled StyleWarning $ "error reading slot data points: " ++ err
+    Right (xs :: [SlotDataPoint]) -> do
+      printStyled StyleInfo $ "acquired " ++ show (length xs) ++ " slot data points, the last one being:\n"
+        ++ show (last xs)
+  if count > 1
     then runCommand env (BeaconRun chain ver (count - 1))
     else pure env{ runInstall = Nothing }
+  where
+    currentResult = envBeaconDir env </> "beacon-result.json"
+    beaconChain   = fromJust $ runChains env >>= lookupChain chain
 
 
 
@@ -440,48 +474,7 @@ plotMeasurements (ChartTitle title) header mSlots csvA csvB outfile = do
   where
     onlySlotsIn Nothing      _ = True
     onlySlotsIn (Just slots) s = s `Set.member` slots
-
---------------------------------------------------------------------------------
--- Functions needed to install and run benchmarks
---------------------------------------------------------------------------------
-
-
-newtype BenchmarkRunDataPath = BenchmarkRunDataPath { benchmarkRunDataPath :: String }
-
--- | Run the benchmarks and return the file path where the benchmarks are stored.
-runBenchmarks ::
-     BeaconOptions_
-  -> InstallInfo
-  -> IO BenchmarkRunDataPath
-runBenchmarks opts InstallInfo { installPath, installVersion } = do
-    unlessM (doesFileExist outfile) run
-    pure $ BenchmarkRunDataPath { benchmarkRunDataPath = outfile }
-  where
-    outfile = toSlug (
-      "ledger-ops-cost-"
-        <> vToFilePath installVersion
-        <> "-from_" <> show (analyseFromSlot opts)
-        <> "-nr_blocks_" <> show (numBlocksToProcess opts)
-      ) <> ".csv"
-
-    vToFilePath version =
-      version.dbAnalyser <> "-" <> version.compiler
-
-    newLine = " \\\n"
-
-    run =
-      callCommandEchoing echo
-        $ "./" <> installPath <> " cardano"                    <> newLine
-        <> "\t --config " <> nodeHome opts <> configPath opts  <> newLine
-        <> "\t --db "     <> nodeHome opts <> dbPath opts      <> newLine
-        <> "\t --analyse-from " <> show (analyseFromSlot opts) <> newLine
-        <> "\t --benchmark-ledger-ops"                         <> newLine
-        <> "\t --out-file " <> outfile                         <> newLine
-        <> "\t --num-blocks-to-process " <> show (numBlocksToProcess opts) <> newLine
-        <> "\t --only-immutable-db"                            <> newLine
-        <> "\t +RTS -T -RTS"
 -}
-
 
 --------------------------------------------------------------------------------
 -- Printing functions
