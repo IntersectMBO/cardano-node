@@ -11,6 +11,7 @@ module  Cardano.Beacon.Run
         , envEmpty
 
         , shellCurlGitHubAPI
+        , shellMergeMetaAndData
         , shellNixBuildVersion
         , shellRunDbAnalyser
         ) where
@@ -106,7 +107,7 @@ shellNixBuildVersion env ver@Version{verCompiler = compiler} = do
 shellRunDbAnalyser :: RunEnvironment -> BeaconChain -> FilePath -> IO ()
 shellRunDbAnalyser env BeaconChain{..} outFile = do
   _ <- runShellEchoing echoing dbAnalyser dbAnalyserArgs
-  postProcessJSON echoing tempResult outFile
+  callJQ echoing outFile jqToListArgs
   removeFile tempResult
   where
     -- These are the compiled-in options specified in cardano-node.cabal, used for relese builds.
@@ -132,13 +133,23 @@ shellRunDbAnalyser env BeaconChain{..} outFile = do
       , "+RTS", rtsOpts, "-RTS"
       ]
 
-postProcessJSON :: EchoCommand -> FilePath -> FilePath -> IO ()
-postProcessJSON echoing src dest = do
-  postProc <- BSC.pack <$> runShellEchoing echoing "jq" jqArgs
-  BSC.writeFile dest postProc
-  where
-    jqArgs =
+    jqToListArgs =
       [ "-M"
       , "'map(inputs)'"
-      , src
+      , tempResult
       ]
+
+shellMergeMetaAndData :: RunEnvironment -> FilePath -> FilePath -> FilePath -> IO ()
+shellMergeMetaAndData env srcMeta srcData dest =
+  callJQ (envEchoing env) dest
+    [ "-M"
+    , "'{\"meta\": $meta[0], \"data\": $data[0]}'"
+    , "--slurpfile", "meta", srcMeta
+    , "--slurpfile", "data", srcData
+    , "--null-input"
+    ]
+
+callJQ :: EchoCommand -> FilePath -> [String] -> IO ()
+callJQ echoing dest jqArgs = do
+  out <- BSC.pack <$> runShellEchoing echoing "jq" jqArgs
+  BSC.writeFile dest out

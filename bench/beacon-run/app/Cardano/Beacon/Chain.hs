@@ -39,11 +39,7 @@ data BeaconChain = BeaconChain {
   } deriving (Generic, Show)
 
 instance FromJSON BeaconChain where
-  parseJSON = genericParseJSON defaultOptions { sumEncoding = ObjectWithSingleField }
-
-newtype ChainName = ChainName Text
-        deriving (Eq, Ord, Show, FromJSON, FromJSONKey)
-          via Text
+  parseJSON = genericParseJSON aesonNoTagFields
 
 newtype Chains = Chains {unChains :: Map ChainName BeaconChain}
         deriving (Show, FromJSON)

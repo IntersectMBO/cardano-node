@@ -1,6 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- TODO --
@@ -55,9 +56,9 @@ module Main (main) where
 import           Control.Arrow ((>>>))
 import           Control.Concurrent (threadDelay)
 import           Control.Exception (assert, bracket_)
-import           Control.Monad (foldM_, unless, when)
+import           Control.Monad (foldM_, forM_, unless, when)
 import           Control.Monad.Extra (ifM, unlessM)
-import           Data.Aeson (eitherDecodeFileStrict, eitherDecodeStrict')
+import           Data.Aeson (eitherDecodeFileStrict, eitherDecodeStrict', encodeFile)
 import qualified Data.ByteString.Lazy as BL
 import           Data.Char (ord)
 import           Data.List (findIndex, foldl')
@@ -68,6 +69,7 @@ import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text.IO
+import           Data.Time.Clock (getCurrentTime)
 import           Data.Vector (Vector)
 import qualified Data.Vector as V
 import           Data.Vector.Algorithms.Merge (sortBy)
@@ -76,7 +78,7 @@ import qualified Graphics.Rendering.Chart.Backend.Cairo as Chart.Cairo
 import           Graphics.Rendering.Chart.Easy ((.=))
 import qualified Graphics.Rendering.Chart.Easy as Chart
 
-import           System.Directory (doesDirectoryExist, doesFileExist, removeFile)
+import           System.Directory
 import           System.Environment (getExecutablePath)
 import           System.FilePath
 import           System.IO (IOMode (ReadMode), openFile)
@@ -130,7 +132,7 @@ runCommands env cmds
       when locked $ do
         when firstCheck $
           printStyled StyleInfo $ "waiting for lock to be released: " ++ lockFile
-        threadDelay $ 1_000_000
+        threadDelay 1_000_000
         waitForLock False
 
 runCommand :: RunEnvironment -> BeaconCommand -> IO RunEnvironment
@@ -175,31 +177,54 @@ runCommand env (BeaconBuild ver) = do
   printStyled StyleNone $ "installed binary is: " ++ installPath install
   pure env{ runInstall = Just install }
 
-runCommand env@Env{ runChains = Nothing } cmd@(BeaconRun chain _ _) = do
+runCommand env@Env{ runChains = Nothing } cmd@(BeaconDoRun bChain _ _) = do
   env' <- runCommand env BeaconLoadChains
-  case runChains env' >>= lookupChain chain of
-    Nothing -> printFatalAndDie $ "requested chain " ++ show chain ++ " is not registered"
+  case runChains env' >>= lookupChain bChain of
+    Nothing -> printFatalAndDie $ "requested chain " ++ show bChain ++ " is not registered"
     Just{}  -> runCommand env' cmd
-runCommand env@Env{ runInstall = Nothing } cmd@(BeaconRun _ ver _) = do
+runCommand env@Env{ runInstall = Nothing } cmd@(BeaconDoRun _ ver _) = do
   env' <- runCommand env (BeaconBuild ver)
   runCommand env' cmd
-runCommand env (BeaconRun chain ver count) = do
+runCommand env@Env{..} (BeaconDoRun bChain ver count) = do
   printStyled StyleInfo "performing run..."
-  shellRunDbAnalyser env beaconChain currentResult
 
-  sdps <- eitherDecodeFileStrict currentResult
-  case sdps of
-    Left err -> printStyled StyleWarning $ "error reading slot data points: " ++ err
-    Right (xs :: [SlotDataPoint]) -> do
-      printStyled StyleInfo $ "acquired " ++ show (length xs) ++ " slot data points, the last one being:\n"
-        ++ show (last xs)
+  meta <- meta_ <$> getCurrentTime
+  shellRunDbAnalyser env beaconChain currentData
+  encodeFile currentMeta meta
+  shellMergeMetaAndData env currentMeta currentData currentRun
+
+  forM_ [currentMeta, currentData]
+    removeFile
+  _ <- runCommand env (BeaconStoreRun currentRun)
+
   if count > 1
-    then runCommand env (BeaconRun chain ver (count - 1))
+    then runCommand env (BeaconDoRun bChain ver (count - 1))
     else pure env{ runInstall = Nothing }
   where
-    currentResult = envBeaconDir env </> "beacon-result.json"
-    beaconChain   = fromJust $ runChains env >>= lookupChain chain
+    currentData   = envBeaconDir env </> "beacon-slotdata.json"
+    currentMeta   = envBeaconDir env </> "beacon-metadata.json"
+    currentRun    = envBeaconDir env </> "beacon-result.json"
+    beaconChain   = fromJust $ runChains >>= lookupChain bChain
+    meta_ = BeaconRunMeta
+      (fromJust runCommit)
+      ver
+      bChain
+      (installNixPath $ fromJust runInstall)
 
+runCommand env (BeaconStoreRun file) = do
+  run <- eitherDecodeFileStrict file
+  case run of
+    Left err -> printFatalAndDie $
+      "doesn't seem to be a beacon run result JSON: " ++ file
+      ++ "\n" ++ show err
+    Right (BeaconRun meta _) -> do
+      let slugDir = runDir </> toSlug meta
+      printStyled StyleInfo $ "storing to directory: " ++ slugDir
+      createDirectoryIfMissing True slugDir
+      renameFile file (slugDir </> "run-01.json")
+  pure env
+  where
+    runDir = envBeaconDir env </> "run"
 
 
 {-

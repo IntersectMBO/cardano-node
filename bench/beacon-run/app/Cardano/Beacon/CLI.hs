@@ -7,7 +7,6 @@ module  Cardano.Beacon.CLI
 import           Data.Text as Text (Text, pack)
 import           Options.Applicative
 
-import           Cardano.Beacon.Chain (ChainName(..))
 import           Cardano.Beacon.Types
 
 
@@ -16,7 +15,8 @@ data BeaconCommand =
     -- commands can be chained
       BeaconListChains
     | BeaconBuild       !Version
-    | BeaconRun         !ChainName !Version !Int
+    | BeaconDoRun       !ChainName !Version !Int
+    | BeaconStoreRun    !FilePath
 
     -- commands that can't be used directly from the CLI
     | BeaconLoadChains
@@ -74,7 +74,9 @@ parseCommand =  subparser $ mconcat
   , op "list-chains" "List registered chain fragments that beacon can be run on"
       (pure BeaconListChains)
   , op "run" "Perform a beacon run"
-      (BeaconRun <$> (ChainName . Text.pack <$> parseChainName) <*> parseVersion <*> parseCount)
+      (BeaconDoRun <$> (ChainName . Text.pack <$> parseChainName) <*> parseVersion <*> parseCount)
+  , op "store" "Store a run"
+      (BeaconStoreRun <$> parseFileName)
   , op "test-github" "Test the GitHub query on a given git ref"
       (BeaconLoadCommit <$> parseRevision)
   ]
@@ -122,3 +124,11 @@ parseCommand =  subparser $ mconcat
 
     parseVersion :: Parser Version
     parseVersion =  Version <$> parseRevision <*> parseGHCVersion
+
+    parseFileName :: Parser FilePath
+    parseFileName = strArgument
+      (mconcat
+        [ metavar "FILE"
+        , action "file"
+        , help "JSON run file to be stored"
+        ])
