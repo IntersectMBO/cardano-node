@@ -63,3 +63,11 @@ constraints:
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: b50d1b82ef5fc86d85f1965668127a7d7f6fec51
+  subdir:
+    ouroboros-network
+  --sha256: sha256-VlB1umWBOkzeyLs4pxZr/2red+YYlweKneYZ0TbjEPs=
