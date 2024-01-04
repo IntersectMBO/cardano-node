@@ -58,7 +58,26 @@ data TxSubmitWebApiError
 
 deriving instance Generic TxSubmitWebApiError
 
-deriving anyclass instance ToJSON TxSubmitWebApiError
+instance ToJSON TxSubmitWebApiError where
+  toJSON = \case
+    TxSubmitDecodeHex -> Aeson.object
+      [ "tag" .= String "TxSubmitDecodeHex"
+      ]
+    TxSubmitEmpty -> Aeson.object
+      [ "tag" .= String "TxSubmitEmpty"
+      ]
+    TxSubmitDecodeFail err -> Aeson.object
+      [ "tag" .= String "TxSubmitDecodeFail"
+      , "contents" .= toJSON err
+      ]
+    TxSubmitBadTx err -> Aeson.object
+      [ "tag" .= String "TxSubmitBadTx"
+      , "contents" .= toJSON err
+      ]
+    TxSubmitFail err -> Aeson.object
+      [ "tag" .= String "TxSubmitFail"
+      , "contents" .= toJSON err
+      ]
 
 newtype EnvSocketError = CliEnvVarLookup Text
   deriving (Eq, Generic, Show)
