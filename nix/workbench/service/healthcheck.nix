@@ -61,8 +61,8 @@ let
           ${coreutils}/bin/echo "- active_slots_coeff: ''${active_slots_coeff}"
           ${coreutils}/bin/echo "- active_slots:       ''${active_slots}"
 
-          # Fetch all node names (Including "explorer" nodes)
-          ###################################################
+          # Fetch all defined node names (Including "explorer" nodes)
+          ###########################################################
 
           node_specs_nodes=$(${jq}/bin/jq --raw-output \
             "keys | join (\" \")"                      \
@@ -76,8 +76,8 @@ let
           ${coreutils}/bin/echo "- Nodes: [''${node_specs_nodes[*]}]"
           ${coreutils}/bin/echo "- Pools: ''${node_specs_pools}"
 
-          # Look for deployed nodes and allocate healthcheck
-          ##################################################
+          # Look for locally deployed nodes and allocate healthcheck
+          ##########################################################
 
           nodes=()
           started_time=$(${coreutils}/bin/date +%s)
@@ -140,7 +140,7 @@ let
             # Start individual nodes' healthchecks
             ######################################
 
-            # Check that all available nodes are synced and past slot zero!
+            # Check that locally available nodes are synced and past slot zero!
             for node in ''${nodes[*]}
             do
               # Returns false if not synced and true when synced.
@@ -151,10 +151,6 @@ let
               done
               msg "Node "\"''${node}\"" is now synced!"
             done
-
-            # Ignore PIPE "errors", mixing 'jq', 'tac', 'grep' and/or 'head'
-            # will evetually throw a PIPE exception (see jq_node_stdout_last).
-            trap "${coreutils}/bin/echo \"trap PIPE\" >&2" PIPE
 
             # This is an "explorer" node (only one node and generator).
             # If not an explorer node we don't keep unwanted stuff running!
@@ -201,12 +197,10 @@ let
               msg "Done, bye!"
             fi
 
-            trap - PIPE
-
           }
 
           ######################################################################
-          # Network ############################################################
+          # Network functions ##################################################
           ######################################################################
 
           # TODO: latency_topology_producers "''${node}"
@@ -232,7 +226,7 @@ let
           }
 
           ######################################################################
-          # Node ###############################################################
+          # Node functions #####################################################
           ######################################################################
 
           function healthcheck_node_synced() {
@@ -516,8 +510,9 @@ let
             local node=$1
             local select=$2
             local stdout_path="../''${node}/stdout"
-            local ans return_code=0 pipe_status=(0 0 0 0)
-            ans="$( \
+            local ansfile_path=../''${node}/healthcheck/jq_node_stdout_last
+            local pipe_status
+            if ! \
                   { ${coreutils}/bin/tac "''${stdout_path}" 2>/dev/null; } \
                 | \
                   { ${grep}/bin/grep -E  "^{\".*}$"         2>/dev/null; } \
@@ -529,21 +524,16 @@ let
                     "nth(0; inputs | select(''${select}))" \
                 | \
                   ${jq}/bin/jq 'select(. != null)' \
-              || \
-                { return_code="$?"; pipe_status="''${PIPESTATUS[@]}"; } \
-            )"
-            if test "''${return_code}" == 0
+                > "''${ansfile_path}"
             then
-               ${coreutils}/bin/echo "''${ans}"
-            else
               # Ignore "writing output failed: Broken pipe"
-              if test "''${pipe_status[2]}" != 0 || test "''${pipe_status[3]}" != 0 || test "''${return_code}" != 141
+              pipe_status=("''${PIPESTATUS[@]}")
+              if (test "''${pipe_status[0]}" != 0 && test "''${pipe_status[0]}" != 141) || (test "''${pipe_status[1]}" != 0 && test "''${pipe_status[1]}" != 141) || test "''${pipe_status[2]}" != 0 || test "''${pipe_status[3]}" != 0
               then
-                exit_22 "jq error: jq_node_stdout_last: ''${node}"
-              else
-                ${coreutils}/bin/echo "''${ans}"
+                exit_22 "unknown error: jq_node_stdout_last: ''${node}"
               fi
             fi
+            ${coreutils}/bin/cat "''${ansfile_path}"
           }
 
           # This one exists with "write error: Broken pipe"
