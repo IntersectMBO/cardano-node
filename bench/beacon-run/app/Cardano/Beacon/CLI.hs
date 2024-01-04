@@ -17,6 +17,7 @@ data BeaconCommand =
     | BeaconBuild       !Version
     | BeaconDoRun       !ChainName !Version !Int
     | BeaconStoreRun    !FilePath
+    | BeaconCompare     !String !String
 
     -- commands that can't be used directly from the CLI
     | BeaconLoadChains
@@ -26,6 +27,7 @@ data BeaconCommand =
 data BeaconOptions = BeaconOptions {
       optEchoing        :: !EchoCommand
     , optBeaconDir      :: !FilePath
+    , optMachineId      :: !String
     , optLockFile       :: !FilePath
     }
     deriving Show
@@ -61,6 +63,13 @@ parseOptions =
           ])
     <*> strOption
         (mconcat
+          [ long "id"
+          , value ""
+          , metavar "ID"
+          , help "Set host identifier (default: hostname)"
+          ])
+    <*> strOption
+        (mconcat
           [ long "lock"
           , value ""
           , metavar "FILE"
@@ -71,6 +80,8 @@ parseCommand :: Parser BeaconCommand
 parseCommand =  subparser $ mconcat
   [ op "build" "Build and link target binary only"
       (BeaconBuild <$> parseVersion)
+  , op "compare" "Compare two stored runs"
+      (BeaconCompare <$> parseSlug <*> parseSlug)
   , op "list-chains" "List registered chain fragments that beacon can be run on"
       (pure BeaconListChains)
   , op "run" "Perform a beacon run"
@@ -131,4 +142,11 @@ parseCommand =  subparser $ mconcat
         [ metavar "FILE"
         , action "file"
         , help "JSON run file to be stored"
+        ])
+
+    parseSlug :: Parser String
+    parseSlug = strArgument
+      (mconcat
+        [ metavar "SLUG"
+        , help "slug specifying a stored run"
         ])

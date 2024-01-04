@@ -85,6 +85,7 @@ data BeaconRunMeta = BeaconRunMeta {
   , version     :: Version
   , chain       :: ChainName
   , nixPath     :: FilePath
+  , host        :: String
   , date        :: UTCTime
   }
   deriving (Show, Generic)

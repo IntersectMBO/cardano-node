@@ -25,6 +25,7 @@ executable beacon-run
 
   other-modules:    Cardano.Beacon.Chain
                     Cardano.Beacon.CLI
+                    Cardano.Beacon.Compare
                     Cardano.Beacon.Console
                     Cardano.Beacon.Run
                     Cardano.Beacon.SlotDataPoint
@@ -57,6 +58,7 @@ executable beacon-run
     , directory
     , extra
     , filepath
+    , hostname
     , optparse-applicative
     , process
     , text

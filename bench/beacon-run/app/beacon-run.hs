@@ -53,31 +53,17 @@
 -- - [ ] Perform a statistical analysis on the measurements.
 module Main (main) where
 
-import           Control.Arrow ((>>>))
 import           Control.Concurrent (threadDelay)
-import           Control.Exception (assert, bracket_)
+import           Control.Exception (bracket_)
 import           Control.Monad (foldM_, forM_, unless, when)
 import           Control.Monad.Extra (ifM, unlessM)
 import           Data.Aeson (eitherDecodeFileStrict, eitherDecodeStrict', encodeFile)
-import qualified Data.ByteString.Lazy as BL
 import           Data.Char (ord)
-import           Data.List (findIndex, foldl')
 import           Data.Maybe (fromJust)
-import           Data.Ord (Down (Down), comparing)
-import           Data.Set (Set)
-import qualified Data.Set as Set
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text.IO
 import           Data.Time.Clock (getCurrentTime)
-import           Data.Vector (Vector)
-import qualified Data.Vector as V
-import           Data.Vector.Algorithms.Merge (sortBy)
 import           Data.Version (showVersion)
-import qualified Graphics.Rendering.Chart.Backend.Cairo as Chart.Cairo
-import           Graphics.Rendering.Chart.Easy ((.=))
-import qualified Graphics.Rendering.Chart.Easy as Chart
 
+import           Network.HostName
 import           System.Directory
 import           System.Environment (getExecutablePath)
 import           System.FilePath
@@ -85,6 +71,7 @@ import           System.IO (IOMode (ReadMode), openFile)
 
 import           Cardano.Beacon.Chain
 import           Cardano.Beacon.CLI
+import           Cardano.Beacon.Compare
 import           Cardano.Beacon.Console
 import           Cardano.Beacon.Run
 import           Cardano.Beacon.SlotDataPoint
@@ -102,7 +89,10 @@ main = do
   putStrLn appHeader
   (options, commands) <- getOpts
 
-  let env = envEmpty options
+  hostName <-
+    let machId = optMachineId options
+    in if null machId then getHostName else pure machId
+  let env = envEmpty options { optMachineId = hostName }
 
   ifM (doesDirectoryExist $ optBeaconDir options)
     (runCommands env commands)
@@ -188,7 +178,7 @@ runCommand env@Env{ runInstall = Nothing } cmd@(BeaconDoRun _ ver _) = do
 runCommand env@Env{..} (BeaconDoRun bChain ver count) = do
   printStyled StyleInfo "performing run..."
 
-  meta <- meta_ <$> getCurrentTime
+  meta <- mkMeta <$> getCurrentTime
   shellRunDbAnalyser env beaconChain currentData
   encodeFile currentMeta meta
   shellMergeMetaAndData env currentMeta currentData currentRun
@@ -205,11 +195,14 @@ runCommand env@Env{..} (BeaconDoRun bChain ver count) = do
     currentMeta   = envBeaconDir env </> "beacon-metadata.json"
     currentRun    = envBeaconDir env </> "beacon-result.json"
     beaconChain   = fromJust $ runChains >>= lookupChain bChain
-    meta_ = BeaconRunMeta
-      (fromJust runCommit)
-      ver
-      bChain
-      (installNixPath $ fromJust runInstall)
+    mkMeta date = BeaconRunMeta {
+        commit  = fromJust runCommit
+      , version = ver
+      , chain   = bChain
+      , nixPath = installNixPath $ fromJust runInstall
+      , host    = optMachineId runOptions
+      , ..
+      }
 
 runCommand env (BeaconStoreRun file) = do
   run <- eitherDecodeFileStrict file
@@ -226,291 +219,17 @@ runCommand env (BeaconStoreRun file) = do
   where
     runDir = envBeaconDir env </> "run"
 
+runCommand env (BeaconCompare slugA slugB) = do
+  readA <- eitherDecodeFileStrict $ runDir </> slugA </> "run-01.json"
+  readB <- eitherDecodeFileStrict $ runDir </> slugB </> "run-01.json"
 
-{-
-main :: IO ()
-main = do
-    opts <- getOpts
-    --
-    -- Obtain benchmarks data
-    --
-    -- TODO: we could consider using db-analyzer as a library instead.
-    csvPathA <- installBenchmarkingProg (versionA opts) >>= runBenchmarks opts
-    csvPathB <- installBenchmarkingProg (versionB opts) >>= runBenchmarks opts
+  case (readA, readB) of
+    (Right runA, Right runB) -> doCompare runA runB
+    _ -> printFatalAndDie "could not read / parse specified slugs"
 
-    --
-    -- Process benchmarks data
-    --
-    csvA <- parseBenchmarkLedgerOpsCsv $ benchmarkRunDataPath csvPathA
-    csvB <- parseBenchmarkLedgerOpsCsv $ benchmarkRunDataPath csvPathB
-
-    unless (csvA .@ slot == csvB .@ slot) $ die "Slot columns must be the same!"
-      -- TODO: show a couple of differences.
-
-    compareMeasurements opts mut_forecast csvA csvB
-    compareMeasurements opts mut_blockApply csvA csvB
-
---------------------------------------------------------------------------------
--- Csv with headers file abstraction
---------------------------------------------------------------------------------
-
--- | Data from a CSV file, consisting of headers and columns.
---
--- INVARIANT:
--- - length headers <= length columns
--- - for all 0<= i, j < length columns, length (columns !! i) == length (columns !! j)
---
--- TODO: We might want to hide this constructor so that we can check the invariants.
-data Csv = Csv { headers :: ![Text], columns :: ![Vector Double] }
-
-mkCsv :: [Text] -> [Vector Double] -> Csv
-mkCsv hs cs = assert (length hs <= length cs)
-            $ assert (and [ length (cs !! i) == length (cs !! (i+1)) | i <- [0 .. length cs - 2] ])
-            $ Csv hs cs
-
--- | Get the column that corresponds to the given header.
---
--- Throws a runtime exception if the column does not exists in the CSV data.
-(.@) ::
-     Csv
-  -> Text
-  -- ^ Field to look up.
-  -> Vector Double
-df .@ t = case findIndex (== t) (headers df) of
-  Nothing -> error $ "Could not find field " <> show t <> " in " <> show (headers df)
-  Just i  -> columns df !! i
-
-infixl 9 .@
-
---------------------------------------------------------------------------------
--- Output data processing functions
---------------------------------------------------------------------------------
-
--- | Given a comma-separated values (CSV) file, parse its header and columns.
---
--- PRECONDITION: the input file should use '\t' as delimiter for values.
---
--- RETURNS: a tuple such that:
--- - The first element contains the headers.
--- - The second element contains one vector per-column of the input CSV file.
---
--- THROWS: a failure exception ('die') if the CSV file could not be parsed.
---
--- TODO: make the function more robust by introducing extra type safety.
-parseBenchmarkLedgerOpsCsv :: FilePath -> IO Csv
-parseBenchmarkLedgerOpsCsv csvDataPath = do
-    csvData <- BL.readFile csvDataPath
-    -- TODO: this is a bit fragile because we assume that the benchmarking ledger
-    -- ops analysis uses tabs as separator. This might be ok if we run the
-    -- analysis within this program, because we control the separator (assuming
-    -- it's configurable).
-    let decodingOpts = Csv.defaultDecodeOptions {
-        Csv.decDelimiter = fromIntegral (ord '\t')
-      }
-    case Csv.decodeWith decodingOpts Csv.HasHeader csvData of
-      Left err  -> die err
-      Right res -> do
-        -- Create empty vectors per each column.
-        csvFileHandle <- openFile csvDataPath ReadMode
-        headers <- Text.splitOn "\t" <$> Text.IO.hGetLine csvFileHandle
-        pure $ mkCsv headers (transposeCsv res)
+  pure env
   where
-    transposeCsv :: Vector [a] -> [Vector a]
-    transposeCsv vec =
-        fmap (V.fromList . reverse) $ foldl' addRow [] vec
-      where
-        addRow :: [[a]] -> [a] -> [[a]]
-        addRow acc []          = acc
-        addRow [] (x:xs)       = [x]: addRow [] xs
-        addRow (rs:rss) (x:xs) = (x:rs) : addRow rss xs
-
---------------------------------------------------------------------------------
--- Output data analysis functions
---------------------------------------------------------------------------------
-
--- Fields that we assume present in the csv files. NOTE: This is brittle, but
--- works for now.
---
--- TODO: We might consider including this as part of the program
--- option/configuration. Alternatively, the CSV fields can be obtained from
--- `db-analyser` if we use it as a library.
-slot, mut_forecast, mut_blockApply :: Text
-slot = "slot"
-mut_forecast = "mut_forecast"
-mut_blockApply = "mut_blockApply"
-
--- | Compare two measurements (benchmarks).
---
--- At the moment we perform a very simple comparison between the benchmark
--- results of versions 'A' and 'B'. We will refine the comparison process in
--- later versions. Per each slot 's', and each metric 'm' at that slot (eg block
--- processing time), we compute the relative change between measurements 'A'
--- and 'B':
---
--- > d_s A B = (m_s_B - m_s_A) / (max m_s_A m_s_B)
---
--- where 'm_s_v' is the measurement of metric 'm' at slot 's' for version 'v'.
---
--- Given the way we compute this ratio, 'd_s A B' will be positive if the
--- measurement for version 'B' is larger than the measurement for version 'A',
--- and conversely, 'd_s A B' will be negative if the measurement for version 'A' is
--- larger than the corresponding measurement for 'B'.
---
--- For instance, if we're measuring block application time, and 'd_100' is '0.6'
--- this means that version 'B' took 60% more time to apply a block in that
--- particular run.
---
--- We use the maximum betweeen 'm_s_A' and 'm_s_B' as quotient to guarantee that
--- a change from 'm_s_A' to 'm_s_B' has the same magnitude as a change in the
--- opposite direction. In other words:
---
--- > d_s A B = - (d_s B A)
---
--- TODO: Describe what we do with the comparison results.
-compareMeasurements :: BenchmarksCompareOptions -> Text -> Csv -> Csv -> IO ()
-compareMeasurements opts header csvA csvB = do
-    -- TODO: Make this configurable.
-    let threshold = 0.8
-
-    let abRelChange = relChangeAscending csvA csvB
-
-    putStrLn $ "Comparison for " <> Text.unpack header
-
-    -- TODO: Bigger is better or smaller is better depends on the metric. We should make this configurable.
-    abRelChange `shouldBeBelow` threshold
-
-    let n = 10 :: Int
-
-    putStrLn $ "Top " <> show n <> " measurements smaller than baseline (" <> (versionA opts).dbAnalyser <> ")"
-    printPairs slot header $ V.take 10 $ relativeChange abRelChange
-
-    putStrLn $ "Top " <> show n <> " measurements larger than baseline ("  <> (versionA opts).dbAnalyser <> ")"
-    printPairs slot header $ V.take 10 $ V.reverse $ relativeChange abRelChange
-
-    -- Filter the slots that have a difference above the give threshold.
-    let outliers = Set.fromList
-                 $ V.toList
-                 $ filterSlots (\v -> v <= -threshold || v >= threshold ) abRelChange
-    -- TODO: We might avoid an 'n * log n' runtime if we augment the CSV file with the relative change.
-
-    when (emitPlots opts) $
-      plotMeasurements
-      (ChartTitle (Text.unpack header))
-      header
-      (Just outliers)
-      csvA
-      csvB
-      $ toSlug (
-      Text.unpack header
-        <> "-"
-        <> (versionA opts).dbAnalyser
-        <> "_vs_"
-        <> (versionB opts).dbAnalyser
-      ) <> ".png"
-    where
-      -- Given two runs and a column name, return the relative change, sorted in
-      -- ascending order.
-      relChangeAscending ::
-           Csv
-        -> Csv
-        -> RelativeChange
-      relChangeAscending dfA dfB =
-            RelativeChange
-          $ sortAscendingWithSlot dfA
-          $ fmap relChange
-          $ V.zip (dfA .@ header) (dfB .@ header)
-        where
-          relChange (a, b) = (b - a) / max a b
-
--- | Check that the relative change is above the given threshold.
-shouldBeAbove :: RelativeChange -> Double -> IO ()
-shouldBeAbove dr threshold =
-  check (threshold < maxRelativeChange dr)
-
-shouldBeBelow :: RelativeChange -> Double -> IO ()
-shouldBeBelow dr threshold =
-  check (maxRelativeChange dr < threshold)
-
--- | Check that the relative change is above the given threshold.
-check :: Bool -> IO ()
-check b =
-  unless b $ do
-      -- TODO: Add an option to return an error at the end if the above condition is true.
-      printWarning "Distance treshold exceeded!"
-
--- | Relative change per-slot. See 'relChangeDescending'.
---
--- TODO: The first component in the vector represents a slot. We might want to
--- change this type.
---
--- INVARIANT:
---
--- - the vector is sorted in ascending order on its second component.
---
--- TODO: we might want to add a smart constructor for this.
-newtype RelativeChange = RelativeChange { relativeChange :: Vector (Double, Double) }
-
-maxRelativeChange :: RelativeChange -> Double
-maxRelativeChange = snd . V.last . relativeChange
-
-minRelativeChange :: RelativeChange -> Double
-minRelativeChange = snd . (V.! 0) . relativeChange
-
--- | Keep only the slots that satisfy the given predicate on the second component.
-filterSlots :: (Double -> Bool) -> RelativeChange -> Vector Double
-filterSlots f RelativeChange { relativeChange } =
-    V.map fst $ V.filter (f . snd) relativeChange
-
-sortDescendingWithSlot :: Ord a => Csv -> Vector a -> Vector (Double, a)
-sortDescendingWithSlot df = V.zip (df .@ slot)
-                          >>> V.modify (sortBy (comparing (Down . snd)))
-
-sortAscendingWithSlot :: Ord a => Csv -> Vector a -> Vector (Double, a)
-sortAscendingWithSlot df = V.zip (df .@ slot)
-                          >>> V.modify (sortBy (comparing snd))
-
---------------------------------------------------------------------------------
--- Output data plotting functions
---------------------------------------------------------------------------------
-
-newtype ChartTitle = ChartTitle String
-
-plotMeasurements ::
-     ChartTitle
-  -> Text
-     -- ^ Header to print.
-  -> Maybe (Set Double)
-     -- ^ Slots from the CSV files to plot ('Nothing' means print all the slots).
-  -> Csv
-  -> Csv
-  -> FilePath
-  -> IO ()
-plotMeasurements (ChartTitle title) header mSlots csvA csvB outfile = do
-    let slotXvalue csv = V.toList
-                       $ V.filter (onlySlotsIn mSlots . fst)
-                       $ V.zip (csv .@ slot) (csv .@ header)
-        slotXvalueA = slotXvalue csvA
-        slotXvalueB = slotXvalue csvB
-    Chart.Cairo.toFile Chart.def outfile $ do
-      Chart.layout_title .= title
-      Chart.setColors [Chart.opaque Chart.blue, Chart.opaque Chart.red]
-      Chart.plot (Chart.points (Text.unpack header <> " A") slotXvalueA)
-      Chart.plot (Chart.points (Text.unpack header <> " B") slotXvalueB)
-  where
-    onlySlotsIn Nothing      _ = True
-    onlySlotsIn (Just slots) s = s `Set.member` slots
--}
-
---------------------------------------------------------------------------------
--- Printing functions
---------------------------------------------------------------------------------
-
-printPairs :: (Foldable t, Show a, Show b) => Text -> Text -> t (a, b) -> IO ()
-printPairs fstHeader sndHeader xs = do
-    putStrLn $ show fstHeader <> ", " <> show sndHeader
-    mapM_ printPair xs
-  where
-    printPair (a, b) = putStrLn $ "" <> show a <> ", " <> show b <> ""
+    runDir = envBeaconDir env </> "run"
 
 appHeader :: String
 appHeader = unlines
