@@ -76,7 +76,6 @@ library
                       , time
                       , transformers
                       , transformers-except
-                      , unordered-containers
                       , vector
 
   hs-source-dirs:       src
