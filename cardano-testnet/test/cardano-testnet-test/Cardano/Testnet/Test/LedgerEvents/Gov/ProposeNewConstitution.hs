@@ -16,9 +16,7 @@ import           Cardano.Testnet
 
 import           Prelude
 
-import           Cardano.Crypto.Hash.Class
 import qualified Cardano.Ledger.Conway.Governance as Ledger
-import qualified Cardano.Ledger.SafeHash as Ledger
 import           Control.Monad
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
@@ -408,9 +406,3 @@ filterRatificationState c (EpochBoundaryRatificationState (AnyRatificationState 
   let constitutionAnchorHash = Ledger.anchorDataHash $ Ledger.constitutionAnchor (rState ^. Ledger.rsEnactStateL . Ledger.ensConstitutionL)
   in Text.pack c == renderSafeHashAsHex constitutionAnchorHash
 filterRatificationState _ _ = False
-
--- TODO: Move to cardano-api and share with
--- https://github.com/input-output-hk/cardano-cli/blob/694782210c6d73a1b5151400214ef691f6f3ecb0/cardano-cli/src/Cardano/CLI/EraBased/Run/Governance/Hash.hs#L67
--- when doing so
-renderSafeHashAsHex :: Ledger.SafeHash c tag -> Text.Text
-renderSafeHashAsHex = hashToTextAsHex . Ledger.extractHash
