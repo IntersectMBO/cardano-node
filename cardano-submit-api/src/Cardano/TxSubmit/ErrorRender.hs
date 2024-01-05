@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.TxSubmit.ErrorRender
-  ( renderApplyMempoolPayloadErr
+  ( renderApplyMempoolPayloadErr_
   , renderEraMismatch
   ) where
 
@@ -20,8 +20,8 @@ import           Data.Text (Text)
 import           Formatting (build, sformat, stext, (%))
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
 
-renderApplyMempoolPayloadErr :: ApplyMempoolPayloadErr -> Text
-renderApplyMempoolPayloadErr err =
+renderApplyMempoolPayloadErr_ :: ApplyMempoolPayloadErr -> Text
+renderApplyMempoolPayloadErr_ err =
     case err of
       MempoolTxErr ve -> renderValidationError ve
       MempoolDlgErr {} -> "Delegation error"
