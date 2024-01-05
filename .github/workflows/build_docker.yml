@@ -23,6 +23,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
+          sync_tags: true
           file: Dockerfile.node
           tags: emurgornd/cardano-node:latest,emurgornd/cardano-node:${{ github.ref_name }}
       - name: Build and push Cardano Submit API
