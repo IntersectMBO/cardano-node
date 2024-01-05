@@ -33,6 +33,7 @@ import           Data.IP (toSockAddr)
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
 import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Exception (try)
+import qualified Control.Exception as Exception
 import           Control.Monad (forM_, unless, void, when)
 import           Control.Monad.Class.MonadThrow (MonadThrow (..))
 import           Control.Monad.IO.Class (MonadIO (..))
@@ -56,7 +57,6 @@ import           Network.HostName (getHostName)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
-import           System.Exit (exitFailure)
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
 import           System.Posix.Files
@@ -148,8 +148,7 @@ runNode cmdPc = do
     case shelleyVRFFile $ ncProtocolFiles nc of
       Just vrfFp -> do vrf <- runExceptT $ checkVRFFilePermissions (File vrfFp)
                        case vrf of
-                         Left err ->
-                           Text.putStrLn (renderVRFPrivateKeyFilePermissionError err) >> exitFailure
+                         Left err -> Exception.throwIO err
                          Right () ->
                            pure ()
       Nothing -> pure ()
@@ -162,7 +161,7 @@ runNode cmdPc = do
 
     p :: SomeConsensusProtocol <-
       case eitherSomeProtocol of
-        Left err -> putStrLn (docToString (Api.prettyError err)) >> exitFailure
+        Left err -> Exception.throwIO err
         Right p  -> pure p
 
     let networkMagic :: Api.NetworkMagic =
@@ -244,7 +243,7 @@ handleNodeWithTracers cmdPc nc0 p networkMagic blockType runP = do
             p
 
           loggingLayer <- case eLoggingLayer of
-            Left err  -> Text.putStrLn (Text.pack $ show err) >> exitFailure
+            Left err  -> Exception.throwIO err
             Right res -> return res
           !trace <- setupTrace loggingLayer
           let tracer = contramap pack $ toLogObject trace
@@ -367,7 +366,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
       Left err -> do
         traceWith (startupTracer tracers)
                 $ StartupSocketConfigError err
-        throwIO err
+        Exception.throwIO err
 
   dbPath <- canonDbPath nc
 
