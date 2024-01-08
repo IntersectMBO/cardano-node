@@ -12,6 +12,7 @@ jobs:
         uses: dabreadman/sync-upstream-repo@v1.3.0
         with: 
           upstream_repo: https://github.com/input-output-hk/cardano-node.git
+          sync_tags: true
           upstream_branch: master
           downstream_branch: master
           token: ${{ secrets.WORKFLOW_TOKEN }}
