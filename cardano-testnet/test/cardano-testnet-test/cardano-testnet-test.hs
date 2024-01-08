@@ -11,12 +11,13 @@ import qualified Cardano.Testnet.Test.Cli.Babbage.Transaction
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldBlocks
+import qualified Cardano.Testnet.Test.LedgerEvents.Gov.InfoAction as LedgerEvents
 import qualified Cardano.Testnet.Test.LedgerEvents.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
+import qualified Testnet.Property.Run as H
 
 import           Prelude
-
 import qualified System.Environment as E
 import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 
@@ -24,16 +25,17 @@ import qualified Test.Tasty as T
 import           Test.Tasty (TestTree)
 import qualified Test.Tasty.Ingredients as T
 
-import qualified Testnet.Property.Run as H
 
 tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
       [ T.testGroup "Ledger Events"
           [ H.ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
-         -- TODO: Replace foldBlocks with checkLedgerStateCondition
-         -- , T.testGroup "Governance"
-         --    [ H.ignoreOnMacAndWindows "ProposeAndRatifyNewConstitution" LedgerEvents.hprop_ledger_events_propose_new_constitution]
+          -- TODO: Replace foldBlocks with checkLedgerStateCondition
+          , T.testGroup "Governance"
+            -- [ H.ignoreOnMacAndWindows "ProposeAndRatifyNewConstitution" LedgerEvents.hprop_ledger_events_propose_new_constitution
+            [ H.ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
+            ]
           ]
       , T.testGroup "CLI"
         [ H.ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown

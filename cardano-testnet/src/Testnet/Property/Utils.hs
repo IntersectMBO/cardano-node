@@ -11,6 +11,7 @@ module Testnet.Property.Utils
   , QueryTipOutput(..)
   , queryTip
   , waitUntilEpoch
+  , queryUtxos
 
   -- ** Parsers
   , pMaxLovelaceSupply
@@ -35,13 +36,17 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Key
 import           Data.Aeson.KeyMap
 import qualified Data.ByteString as BS
+import           Data.IORef
+import           Data.Map.Strict (Map)
 import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           Options.Applicative
 import           System.Directory (doesFileExist, removeFile)
 import qualified System.Environment as IO
+import           System.FilePath ((</>))
 import           System.Info (os)
 import qualified System.IO.Unsafe as IO
 
@@ -51,7 +56,7 @@ import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import           Hedgehog.Extras.Test.Process (ExecConfig)
 import           Hedgehog.Internal.Property (MonadTest)
-
+import           Testnet.Components.SPO (decodeEraUTxO)
 import qualified Testnet.Process.Run as H
 
 disableRetries :: Bool
@@ -138,6 +143,27 @@ queryTip (QueryTipOutput fp) execConfig = do
 
 newtype QueryTipOutput = QueryTipOutput { unQueryTipOutput :: FilePath}
 
+
+queryUtxos
+  :: (HasCallStack, MonadIO m, MonadTest m, MonadCatch m, IsShelleyBasedEra era)
+  => ExecConfig
+  -> FilePath -- ^ working directory
+  -> IORef Int -- ^ filename counter, initialize with 1 usually
+  -> ShelleyBasedEra era
+  -> Text -- ^ payment address
+  -> m (Map TxIn (TxOut CtxUTxO era))
+queryUtxos execConfig work counter sbe address = withFrozenCallStack $ do
+  i <- liftIO $ atomicModifyIORef' counter (\i -> (i+1, i))
+  let utxoFp = work </> "utxo-" <> show i <> ".json"
+  void $ H.execCli' execConfig
+    [ "conway", "query", "utxo"
+    , "--address", Text.unpack address
+    , "--cardano-mode"
+    , "--out-file", utxoFp
+    ]
+
+  utxoJson <- H.leftFailM . H.readJsonFile $ utxoFp
+  H.noteShowM . fmap unUTxO $ decodeEraUTxO sbe utxoJson
 
 -- Parsers
 
