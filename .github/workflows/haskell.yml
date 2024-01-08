@@ -26,12 +26,12 @@ jobs:
       fail-fast: false
       matrix:
         ghc: ["9.2.8", "9.6.3"]
-        cabal: ["3.10.2.0"]
+        cabal: ["3.10.2.1"]
         os: [macos-latest, windows-latest, ubuntu-latest]
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2023-12-15"
+      CABAL_CACHE_VERSION: "2024-10-05-b"
 
     concurrency:
       group: >
@@ -122,6 +122,17 @@ jobs:
         archive-uri: https://iohk.cache.haskellworks.io/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}/${{ matrix.cabal }}/${{ matrix.ghc }}
         skip: "${{ vars.BINARY_CACHE_URI != '' }}"
         enable-save: false
+
+    # The following seems like a duplicate but it is due to a bug in cabal which can sometimes
+    # cause build intermittent build failures on Windows, so we run the build twice.
+    #
+    # https://github.com/haskell/cabal/issues/9587
+    #
+    # TODO Remove the workaround when the cabal bug is fixed.
+    - name: Build core components
+      continue-on-error: true
+      run: |
+        cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api -j1
 
     - name: Build core components
       run: |
