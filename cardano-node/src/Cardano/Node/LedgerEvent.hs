@@ -25,7 +25,9 @@ module Cardano.Node.LedgerEvent (
   , LedgerNewEpochEvent (..)
   , LedgerRewardUpdateEvent (..)
   , Versioned (..)
+  , deserializeVersioned
   , ledgerEventName
+  , serializeVersioned
 
     -- ** Using Ledger events
   , StandardLedgerEventHandler
@@ -732,6 +734,7 @@ instance DecCBOR AnchoredEvents where
       <! From
 
 data Versioned a = Versioned Version a
+  deriving (Eq, Ord, Show)
 
 serializeVersioned :: EncCBOR a => Versioned a -> ByteString
 serializeVersioned (Versioned version x) =

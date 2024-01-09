@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Node.LedgerEvent where
 
@@ -13,6 +14,7 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Hex
 import           Data.ByteString.Lazy (fromStrict)
 import           Data.ByteString.Short (ShortByteString, toShort)
+import           Data.Foldable (for_, toList)
 import           Data.Map (Map)
 import           Data.Maybe (fromJust)
 import           Data.Set (Set)
@@ -40,29 +42,30 @@ prop_roundtrip_LedgerEvent_CBOR :: Property
 prop_roundtrip_LedgerEvent_CBOR =
   Hedgehog.property $ do
     version <- Hedgehog.forAll Gen.enumBounded
-    event <- Hedgehog.forAll genAnchoredEvent
-    footnote ("serialized event: " <> show (Hex.encode $ serializeAnchoredEvent version event))
-    Hedgehog.tripping event
-      (serializeAnchoredEvent version)
-      (fmap snd . deserializeAnchoredEvent . fromStrict)
+    event <- Hedgehog.forAll genAnchoredEvents
+    footnote ("serialized event: " <> show (Hex.encode $ serializeVersioned $ Versioned version event))
+    Hedgehog.tripping (Versioned version event)
+      serializeVersioned
+      (fmap snd . deserializeVersioned . fromStrict)
 
 prop_LedgerEvent_CDDL_conformance :: Property
 prop_LedgerEvent_CDDL_conformance =
   Hedgehog.property $ do
   version <- Hedgehog.forAll Gen.enumBounded
-  event <- Hedgehog.forAll genAnchoredEvent
+  event <- Hedgehog.forAll genAnchoredEvents
   Hedgehog.label (labelName event)
   -- FIXME: We do want to validate full anchored events here, not just ledger events.
   -- This requires the `cddl-cat` Rust crate to support the '.cbor' control
   -- operator which should make for a straightforward and nice contribution.
-  let bytes = serialize' version (ledgerEvent event)
-  case CDDL.validate specification bytes of
-    Right () ->
-      Hedgehog.success
-    Left (CDDL.ValidationError { CDDL.cbor = cbor, CDDL.hint = hint }) -> do
-      Hedgehog.footnote hint
-      Hedgehog.footnote cbor
-      Hedgehog.failure
+  for_ (ledgerEvents event) $ \le -> do
+    let bytes = serialize' version le
+    case CDDL.validate specification bytes of
+      Right () ->
+        Hedgehog.success
+      Left (CDDL.ValidationError { CDDL.cbor = cbor, CDDL.hint = hint }) -> do
+        Hedgehog.footnote hint
+        Hedgehog.footnote cbor
+        Hedgehog.failure
 
 --
 -- Generators
@@ -72,17 +75,20 @@ type StakePoolId = KeyHash 'StakePool StandardCrypto
 
 type StakeCredential = Credential 'Staking StandardCrypto
 
-genAnchoredEvent :: Hedgehog.Gen AnchoredEvent
-genAnchoredEvent =
-  AnchoredEvent
+genAnchoredEvents :: Hedgehog.Gen AnchoredEvents
+genAnchoredEvents =
+  AnchoredEvents
     <$> (At <$> genBlockHeaderHash)
     <*> genBlockHeaderHash
     <*> genSlotNo
     <*> genBlockNo
-    <*> Gen.choice (mconcat
-      [ fmap LedgerNewEpochEvent <$> genLedgerNewEpochEvent
-      , fmap LedgerRewardUpdateEvent <$> genLedgerRewardUpdateEvent
-      ])
+    <*> Gen.nonEmpty
+          (Range.linear 0 20)
+          (Gen.choice
+            (mconcat
+              [ fmap LedgerNewEpochEvent <$> genLedgerNewEpochEvent
+              , fmap LedgerRewardUpdateEvent <$> genLedgerRewardUpdateEvent
+              ]))
 
 genLedgerNewEpochEvent :: [Hedgehog.Gen (LedgerNewEpochEvent StandardCrypto)]
 genLedgerNewEpochEvent =
@@ -191,10 +197,10 @@ genStakeCredentialMap genValue =
   Gen.map (Range.linear 0 3) ((,) <$> genCredential <*> genValue)
 
 labelName
-  :: AnchoredEvent
+  :: AnchoredEvents
   -> Hedgehog.LabelName
 labelName =
-  fromString . T.unpack . ledgerEventName . ledgerEvent
+  fromString . T.unpack . T.intercalate "," . map ledgerEventName . toList . ledgerEvents
 
 unsafeHashFromBytes
   :: (HashAlgorithm algo)
