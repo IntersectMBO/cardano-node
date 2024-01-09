@@ -17,7 +17,7 @@ import qualified Data.Text as T (unpack)
 import           Data.Time.Clock (UTCTime)
 import           GHC.Generics (Generic)
 
-import           Cardano.Beacon.SlotDataPoint (SlotDataPoint)
+import           Cardano.Beacon.SlotDataPoint (SortedDataPoints)
 
 
 data EchoCommand =
@@ -98,7 +98,7 @@ instance FromJSON BeaconRunMeta where
 
 data BeaconRun = BeaconRun {
     rMeta :: BeaconRunMeta
-  , rData :: [SlotDataPoint]
+  , rData :: SortedDataPoints
   }
   deriving Show
 

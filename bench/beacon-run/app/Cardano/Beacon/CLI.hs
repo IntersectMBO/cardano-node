@@ -18,6 +18,7 @@ data BeaconCommand =
     | BeaconDoRun       !ChainName !Version !Int
     | BeaconStoreRun    !FilePath
     | BeaconCompare     !String !String
+    | BeaconVariance    !String
 
     -- commands that can't be used directly from the CLI
     | BeaconLoadChains
@@ -86,8 +87,10 @@ parseCommand =  subparser $ mconcat
       (pure BeaconListChains)
   , op "run" "Perform a beacon run"
       (BeaconDoRun <$> (ChainName . Text.pack <$> parseChainName) <*> parseVersion <*> parseCount)
-  , op "store" "Store a run"
+  , op "store" "Store a run, moving the given file"
       (BeaconStoreRun <$> parseFileName)
+  , op "variance" "Perform variace analysis on all runs for certain slug"
+      (BeaconVariance <$> parseSlug)
   , op "test-github" "Test the GitHub query on a given git ref"
       (BeaconLoadCommit <$> parseRevision)
   ]
@@ -148,5 +151,5 @@ parseCommand =  subparser $ mconcat
     parseSlug = strArgument
       (mconcat
         [ metavar "SLUG"
-        , help "slug specifying a stored run"
+        , help "slug specifying stored run(s)"
         ])

@@ -1,4 +1,3 @@
-{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -58,23 +57,25 @@ import           Control.Exception (bracket_)
 import           Control.Monad (foldM_, forM_, unless, when)
 import           Control.Monad.Extra (ifM, unlessM)
 import           Data.Aeson (eitherDecodeFileStrict, eitherDecodeStrict', encodeFile)
-import           Data.Char (ord)
+import           Data.Either (rights)
+import           Data.List (sort)
 import           Data.Maybe (fromJust)
+import           Data.Monoid
 import           Data.Time.Clock (getCurrentTime)
 import           Data.Version (showVersion)
+import           Text.Printf
+import           Text.Read (readMaybe)
 
 import           Network.HostName
 import           System.Directory
 import           System.Environment (getExecutablePath)
 import           System.FilePath
-import           System.IO (IOMode (ReadMode), openFile)
 
 import           Cardano.Beacon.Chain
 import           Cardano.Beacon.CLI
 import           Cardano.Beacon.Compare
 import           Cardano.Beacon.Console
 import           Cardano.Beacon.Run
-import           Cardano.Beacon.SlotDataPoint
 import           Cardano.Beacon.Types
 
 import qualified Paths_beacon_run as Paths (version)
@@ -212,9 +213,11 @@ runCommand env (BeaconStoreRun file) = do
       ++ "\n" ++ show err
     Right (BeaconRun meta _) -> do
       let slugDir = runDir </> toSlug meta
-      printStyled StyleInfo $ "storing to directory: " ++ slugDir
       createDirectoryIfMissing True slugDir
-      renameFile file (slugDir </> "run-01.json")
+      target <- nextUnusedFilename slugDir
+      let dest = slugDir </> target
+      printStyled StyleNone $ "moving file to: " ++ dest
+      renameFile file dest
   pure env
   where
     runDir = envBeaconDir env </> "run"
@@ -230,6 +233,33 @@ runCommand env (BeaconCompare slugA slugB) = do
   pure env
   where
     runDir = envBeaconDir env </> "run"
+
+runCommand env (BeaconVariance slug) = do
+  results <- listDirectory $ runDir </> slug
+  parses  <- mapM (\f -> eitherDecodeFileStrict $ runDir </> slug </> f) results
+  doVariance $ rights parses
+  pure env
+  where
+    runDir = envBeaconDir env </> "run"
+
+
+
+nextUnusedFilename :: FilePath -> IO FilePath
+nextUnusedFilename inSlugDir = do
+  fileNamesDesc <- reverse . sort <$> listDirectory inSlugDir
+  pure
+    $ indexedName
+    $ maybe 1 (+ 1)
+    $ getAlt
+    $ mconcat
+    $ map (Alt . parseFileName) fileNamesDesc
+  where
+    indexedName :: Int -> FilePath
+    indexedName = printf "run-%03d.json" . max 1 . min 999
+
+    parseFileName fn
+      | length fn /= 12 || takeExtension fn /= ".json" = Nothing
+      | otherwise = readMaybe $ take 3 $ drop 4 fn
 
 appHeader :: String
 appHeader = unlines

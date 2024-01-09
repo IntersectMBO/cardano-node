@@ -1,20 +1,20 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module  Cardano.Beacon.Compare (doCompare) where
+{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
+
+module  Cardano.Beacon.Compare
+        ( doCompare
+        , doVariance
+        ) where
 
 import           Prelude hiding (putStr, putStrLn)
 
 import           Control.Arrow ((>>>))
-import           Control.Exception (assert)
 import           Control.Monad (unless, when)
-import qualified Data.ByteString.Lazy as BL
-import           Data.List (findIndex, foldl')
 import           Data.Ord (Down (Down), comparing)
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text.IO
 import           Data.Vector (Vector)
 import qualified Data.Vector as V
 import           Data.Vector.Algorithms.Merge (sortBy)
@@ -33,6 +33,18 @@ doCompare :: BeaconRun -> BeaconRun -> IO ()
 doCompare runA runB = do
   compareMeasurements True runA runB selMutForecast
   compareMeasurements True runA runB selMutBlockApply
+
+doVariance :: [BeaconRun] -> IO ()
+doVariance [] =
+  printStyled StyleWarning "doVariance: empty list of beacon runs"
+doVariance runs = do
+  let
+    title = selName selMutBlockApply
+    fName = "variance-" ++ slug ++ ".png"
+  plotMeasurements' runs (ChartTitle title) selMutBlockApply Nothing fName
+  where
+    slug = toSlug $ rMeta $ head runs
+
 
 --------------------------------------------------------------------------------
 -- Output data analysis functions
@@ -58,7 +70,7 @@ selMutBlockApply    = Selector "mut_blockApply" (fromIntegral . mut_blockApply)
   -> Selector
   -> Vector Double
 BeaconRun{ rData } .> Selector{ selProjection } =
-  V.map selProjection $ V.fromList rData
+  V.map selProjection $ V.fromList $ unPoints rData
 
 infixl 9 .>
 
@@ -119,19 +131,21 @@ compareMeasurements emitPlots runA runB selector@(Selector header _) = do
                  $ filterSlots (\v -> v <= -threshold || v >= threshold ) abRelChange
     -- TODO: We might avoid an 'n * log n' runtime if we augment the CSV file with the relative change.
 
+    print outliers
+
     when emitPlots $
       plotMeasurements
-      (ChartTitle header)
-      selector
-      (Just outliers)
-      runA
-      runB
-      $ header
-        <> "-"
-        <> take 9 versionA
-        <> "_vs_"
-        <> take 9 versionB
-        <> ".png"
+        (ChartTitle header)
+        selector
+        (Just outliers)
+        runA
+        runB
+        $ header
+          <> "-"
+          <> take 9 versionA
+          <> "_vs_"
+          <> take 9 versionB
+          <> ".png"
     where
       versionA = verGitRef $ version $ rMeta runA
       versionB = verGitRef $ version $ rMeta runB
@@ -224,7 +238,40 @@ plotMeasurements (ChartTitle title) selector mSlots runA runB outfile = do
       Chart.plot (Chart.points (toSlug $ rMeta runB) slotXvalueB)
   where
     onlySlotsIn Nothing      _ = True
-    onlySlotsIn (Just slots) s = not $ s `Set.member` slots
+    onlySlotsIn (Just slots) s = s `Set.notMember` slots
+
+plotMeasurements' ::
+     [BeaconRun]
+  -> ChartTitle
+  -> Selector
+  -> Maybe (Set Double)
+     -- ^ Slots to include in plot ('Nothing' means include all slots).
+  -> FilePath
+  -> IO ()
+plotMeasurements' runs (ChartTitle title) selector mSlots outfile =
+  Chart.Cairo.toFile Chart.def outfile $ do
+    Chart.layout_title .= title
+    Chart.setColors
+      [ Chart.opaque Chart.blue
+      , Chart.opaque Chart.red
+      , Chart.opaque Chart.green
+      , Chart.opaque Chart.magenta
+      , Chart.opaque Chart.cyan
+      ]
+    mapM_ Chart.plot
+      [ Chart.points name points
+        | (run, ix) <- zip runs [1 :: Int ..]
+          , let name    = "run " ++ show ix
+          , let points  = valuesBySlot run
+      ]
+  where
+    valuesBySlot run =
+        V.toList
+      $ V.filter (onlySlotsIn mSlots . fst)
+      $ V.zip (run .> selSlot) (run .> selector)
+
+    onlySlotsIn Nothing      _ = True
+    onlySlotsIn (Just slots) s = s `Set.notMember` slots
 
 --------------------------------------------------------------------------------
 -- Printing functions

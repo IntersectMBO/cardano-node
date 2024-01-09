@@ -1,9 +1,13 @@
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Beacon.SlotDataPoint
-       ( module Cardano.Beacon.SlotDataPoint
+       ( SlotDataPoint(..)
+       , SortedDataPoints(unPoints)
+
+       , mkSortedDataPoints
        -- , module SDP
        ) where
 
@@ -11,11 +15,26 @@ module Cardano.Beacon.SlotDataPoint
 
 import           Data.Aeson
 import           Data.Int
+import           Data.List (sortOn)
+import qualified Data.Vector as V (toList)
 import           Data.Word
 import           Text.Builder (Builder)
 
 import           Cardano.Slotting.Slot (SlotNo)
 -- import           Cardano.Tools.DBAnalyser.Analysis.BenchmarkLedgerOps.SlotDataPoint as SDP
+
+
+-- | type for a lightweight guarantee to have a list of data points
+-- sorted by SlotNo in ascending order
+newtype SortedDataPoints = SDP {unPoints :: [SlotDataPoint]}
+        deriving Show
+          via [SlotDataPoint]
+
+instance FromJSON SortedDataPoints where
+  parseJSON o = mkSortedDataPoints <$> parseJSON o
+
+mkSortedDataPoints :: [SlotDataPoint] -> SortedDataPoints
+mkSortedDataPoints = SDP . sortOn slot
 
 
 instance FromJSON SlotDataPoint where
@@ -36,7 +55,6 @@ instance FromJSON SlotDataPoint where
     let blockStats = BlockStats []
 
     pure SlotDataPoint{..}
-
 
 
 -- TODO remove types once this has been resolved:
