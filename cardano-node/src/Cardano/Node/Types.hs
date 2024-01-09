@@ -31,6 +31,7 @@ module Cardano.Node.Types
   , renderVRFPrivateKeyFilePermissionError
   ) where
 
+import           Control.Exception
 import           Data.Aeson
 import           Data.ByteString (ByteString)
 import           Data.Monoid (Last)
@@ -42,6 +43,7 @@ import           Data.Word (Word16, Word8)
 import           Control.Monad (MonadPlus (..))
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
@@ -56,6 +58,14 @@ data ConfigError =
     ConfigErrorFileNotFound FilePath
   | ConfigErrorNoEKG
     deriving Show
+
+instance Exception ConfigError where
+  displayException = docToString . prettyError
+
+instance Error ConfigError where
+  prettyError ConfigErrorNoEKG = "ConfigErrorNoEKG"
+  prettyError (ConfigErrorFileNotFound fp) =
+    mconcat ["ConfigErrorFileNotFound: ", pretty fp]
 
 -- | Filepath of the configuration yaml file. This file determines
 -- all the configuration settings required for the cardano node
@@ -351,6 +361,12 @@ data VRFPrivateKeyFilePermissionError
   | GroupPermissionsExist FilePath
   | GenericPermissionsExist FilePath
   deriving Show
+
+instance Exception VRFPrivateKeyFilePermissionError where
+  displayException = Text.unpack . renderVRFPrivateKeyFilePermissionError
+
+instance Error VRFPrivateKeyFilePermissionError where
+  prettyError = pretty . renderVRFPrivateKeyFilePermissionError
 
 renderVRFPrivateKeyFilePermissionError :: VRFPrivateKeyFilePermissionError -> Text
 renderVRFPrivateKeyFilePermissionError err =
