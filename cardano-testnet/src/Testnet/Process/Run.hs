@@ -1,5 +1,13 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Testnet.Process.Run
   ( bashPath
+  , exec
   , execCli
   , execCli_
   , execCli'
@@ -38,8 +46,8 @@ import qualified System.Environment as IO
 import           System.FilePath
 import           System.IO
 import qualified System.IO.Unsafe as IO
-import qualified System.Process as IO
 import           System.Process
+import qualified System.Process as IO
 
 import           Hedgehog (MonadTest)
 import           Hedgehog.Extras.Internal.Plan (Component (..), Plan (..))
@@ -62,6 +70,50 @@ bashPath = IO.unsafePerformIO $ do
     Nothing -> return "bash"
 
 {-# NOINLINE bashPath #-}
+
+-- | The tag to use to execute @cardano-cli@
+data CLI
+
+-- | A type alias, to shorten definitions below. Basically just conjuncting
+-- the three monads we use.
+type ExecMonad m = (MonadTest m, MonadCatch m, MonadIO m)
+
+class ExecMonad m => Executable tag i m o where
+  -- | Call an executable determined by @tag@, using different input types
+  -- and different output types. The input types are usually the executable
+  -- arguments, possibly with some extra context. The output types are usually
+  -- either a single String (the stdout) or a tuple @(ExitCode, String, String)@
+  -- containing the return code, the stdout and the stderr.
+  exec :: HasCallStack => i -> m o
+
+-- | How to create a process, by giving its arguments, returning a @CreateProcess@ value
+class ExecMonad m => Procable tag where
+  -- | Create a 'CreateProcess' describing how to start the executable, with
+  -- the given arguments list.
+  proc_ :: [String] -> m CreateProcess
+
+-- | The instance to call the CLI when it is supposed to succeed. The
+-- returned String is the standard output from the call.
+instance ExecMonad m => Executable CLI [String] m String where
+  -- | Call me with @exec @CLI args@
+  exec = GHC.withFrozenCallStack $ H.execFlex "cardano-cli" "CARDANO_CLI"
+
+-- | The instance to call the CLI when it is supposed to succeed, not
+-- returning anything.
+instance ExecMonad m => Executable CLI [String] m () where
+  -- | Call me with @exec @CLI args@
+  exec args = void $ GHC.withFrozenCallStack $ H.execFlex "cardano-cli" "CARDANO_CLI" args
+
+-- | The instance to call the CLI (with a custom @ExecConfig),
+-- when it is supposed to succeed, not returning anything.
+instance ExecMonad m => Executable CLI (ExecConfig, [String]) m String where
+  -- | Call me with @exec @CLI (config, args)@
+  exec (config, args) =
+    GHC.withFrozenCallStack $ H.execFlex' config "cardano-cli" "CARDANO_CLI" args
+
+instance ExecMonad m => Procable CLI where
+  -- | Call me with @proc @CLI args@
+  proc_ = GHC.withFrozenCallStack $ H.procFlex "cardano-cli" "CARDANO_CLI"
 
 -- | Run cardano-cli, returning the stdout
 execCli
