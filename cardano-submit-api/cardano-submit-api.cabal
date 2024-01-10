@@ -43,7 +43,6 @@ library
                       , cardano-binary
                       , cardano-cli ^>= 8.18.0.0
                       , cardano-crypto-class ^>= 2.1.2
-                      , cardano-ledger-byron ^>= 1.0
                       , formatting
                       , http-media
                       , iohk-monitoring
