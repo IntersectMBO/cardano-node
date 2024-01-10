@@ -25,11 +25,9 @@ import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
-import           Data.Either
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           GHC.Stack (callStack)
-import qualified GHC.Stack as GHC
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
@@ -60,6 +58,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
       sbe = ShelleyBasedEraBabbage
       era = toCardanoEra sbe
+      anyEra = AnyCardanoEra era
       cTestnetOptions = cardanoDefaultTestnetOptions
                           { cardanoNodes = cardanoDefaultTestnetNodeOptions
                           , cardanoSlotLength = 0.1
@@ -67,39 +66,29 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
                           , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                           }
 
-  runTime@TestnetRuntime { testnetMagic } <- cardanoTestnet cTestnetOptions conf
-
+  runTime@TestnetRuntime { testnetMagic, wallets } <- cardanoTestnet cTestnetOptions conf
   execConfig <- H.headM (poolSprockets runTime) >>= H.mkExecConfig tempBaseAbsPath
 
   -- First we note all the relevant files
   work <- H.note tempAbsPath'
 
   -- We get our UTxOs from here
-  utxoVKeyFile <- H.note $ tempAbsPath' </> "utxo-keys/utxo1.vkey"
-  utxoSKeyFile <- H.note $ tempAbsPath' </> "utxo-keys/utxo1.skey"
-
-  utxoAddr <- execCli
-                [ "address", "build"
-                , "--testnet-magic", show @Int testnetMagic
-                , "--payment-verification-key-file", utxoVKeyFile
-                ]
-
-  void $ execCli' execConfig
-      [ "query", "utxo"
-      , "--address", utxoAddr
-      , "--cardano-mode"
-      , "--testnet-magic", show @Int testnetMagic
-      , "--out-file", work </> "utxo-1.json"
-      ]
-
-  H.cat $ work </> "utxo-1.json"
+  let utxoAddr = Text.unpack $ paymentKeyInfoAddr $ head wallets
+      utxoSKeyFile = paymentSKey . paymentKeyInfoPair $ head wallets
+  void $ H.execCli' execConfig
+    [ convertToEraString anyEra, "query", "utxo"
+    , "--address", utxoAddr
+    , "--cardano-mode"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--out-file", work </> "utxo-1.json"
+    ]
 
   utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
-  UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
-  txin <- H.noteShow =<< H.headM (Map.keys utxo1)
+  UTxO utxo1 <- H.noteShowM $ H.noteShowM $ decodeEraUTxO sbe utxo1Json
+  txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
 
   (stakePoolId, stakePoolColdSigningKey, stakePoolColdVKey, _, _)
-    <- registerSingleSpo 1 tempAbsPath cTestnetOptions execConfig (txin, utxoSKeyFile, utxoAddr)
+    <- registerSingleSpo 1 tempAbsPath cTestnetOptions execConfig (txin1, utxoSKeyFile, utxoAddr)
 
   -- Create test stake address to delegate to the new stake pool
   -- NB: We need to fund the payment credential of the overall address
@@ -153,13 +142,13 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   -- TODO: Refactor getting valid UTxOs into a function
   H.note_  "Get updated UTxO"
 
-  void $ execCli' execConfig
-      [ "query", "utxo"
-      , "--address", utxoAddr
-      , "--cardano-mode"
-      , "--testnet-magic", show @Int testnetMagic
-      , "--out-file", work </> "utxo-2.json"
-      ]
+  void $ H.execCli' execConfig
+    [ convertToEraString anyEra, "query", "utxo"
+    , "--address", utxoAddr
+    , "--cardano-mode"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--out-file", work </> "utxo-2.json"
+    ]
 
   H.cat $ work </> "utxo-2.json"
 
@@ -202,6 +191,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
            ]
 
   threadDelay 20_000_000
+
   let testDelegatorStakeAddressInfoOutFp = work </> "test-delegator-stake-address-info.json"
   void $ checkStakeKeyRegistered
            tempAbsPath
@@ -276,11 +266,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
         , "--shelley-vrf-key", testSpoVrfSKey
         , "--shelley-operational-certificate", testSpoOperationalCertFp
         ]
-  unless (isRight eRuntime) $ do
-    H.failMessage GHC.callStack
-      $ mconcat [ "Failed to start node: "
-                , show (fromLeft (error "hprop_kes_period_info: Should be impossible") eRuntime)
-                ]
+  NodeRuntime{ nodeStdout } <- H.evalEither eRuntime
 
   threadDelay 5_000000
 
@@ -308,7 +294,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   kesPeriodInfoExpectedSuccess <- H.leftFailM $ H.readJsonFile kesPeriodInfoOutput
   kesPeriodOutputSuccess <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @QueryKesPeriodInfoOutput kesPeriodInfoExpectedSuccess
 
-  -- We check if the operational certificate is valid for the current KES period
+
   prop_op_cert_valid_kes_period testSpoOperationalCertFp kesPeriodOutputSuccess
 
   H.note_ $ mconcat
@@ -380,6 +366,6 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
     , "--testnet-magic", show @Int testnetMagic
     ]
   H.writeFile (work </> "ledger-state-2.json") ledgerStateJson2
-  -- TODO: Linking to the node log file like this is fragile.
-  spoLogFile <- H.note $ tempAbsPath' </> "logs/test-spo.stdout.log"
+
+  spoLogFile <- H.note nodeStdout
   prop_node_minted_block spoLogFile
