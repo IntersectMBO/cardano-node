@@ -89,7 +89,7 @@ isLinux = os == "linux"
 
 -- | Submit the desired epoch to wait to.
 waitUntilEpoch
-  :: (MonadCatch m, MonadIO m, MonadTest m)
+  :: (MonadCatch m, MonadIO m, MonadTest m, HasCallStack)
   => FilePath
   -- ^ Output file
   -> Int
@@ -121,7 +121,7 @@ waitUntilEpoch fp testnetMagic execConfig desiredEpoch = do
               waitUntilEpoch fp testnetMagic execConfig desiredEpoch
 
 queryTip
-  :: (MonadCatch m, MonadIO m, MonadTest m)
+  :: (MonadCatch m, MonadIO m, MonadTest m, HasCallStack)
   => QueryTipOutput
   -- ^ Output file
   -> Int
