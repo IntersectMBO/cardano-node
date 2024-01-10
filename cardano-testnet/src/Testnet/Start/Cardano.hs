@@ -123,7 +123,9 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
     alonzoConwayTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> "genesis.alonzo.spec.json"
     gen <- H.evalEither $ first prettyError defaultAlonzoGenesis
     H.evalIO $ LBS.writeFile alonzoConwayTestGenesisJsonTargetFile $ Aeson.encode gen
-
+    -- TODO: Left off here. Copy Carlos's conway genesis and then try again. Probably only
+    -- require votes from DReps for now to keep things simple.
+    -- TODO:Perhaps switch to making sure a committee member can expire
     conwayConwayTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> "genesis.conway.spec.json"
     H.evalIO $ LBS.writeFile conwayConwayTestGenesisJsonTargetFile $ Aeson.encode defaultConwayGenesis
 

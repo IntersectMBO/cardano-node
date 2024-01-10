@@ -1,33 +1,31 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
-  ( hprop_ledger_events_propose_new_constitution
+module Cardano.Testnet.Test.LedgerEvents.Gov.NewConstitutionalCommittee
+  ( hprop_ledger_events_new_constitutional_committee
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Ledger
+import           Cardano.Api.Shelley
 
 import           Cardano.Testnet
 
 import           Prelude
 
-import           Cardano.Crypto.Hash.Class
-import qualified Cardano.Ledger.Conway.Governance as Ledger
-import qualified Cardano.Ledger.SafeHash as Ledger
-import           Control.Monad
-import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.Except.Extra
+import qualified Cardano.Ledger.Credential as Ledger
 import qualified Data.Map.Strict as Map
 import           Data.String
 import qualified Data.Text as Text
+
 import           Data.Word
 import           GHC.IO.Exception (IOException)
 import           GHC.Stack (callStack)
-import           Lens.Micro
 import           System.FilePath ((</>))
 
 import           Hedgehog
@@ -37,6 +35,9 @@ import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 
 import           Cardano.Testnet.Test.LedgerEvents.Utils
+import           Control.Monad
+import           Control.Monad.Trans.Except
+import           Control.Monad.Trans.Except.Extra
 import           Testnet.Components.SPO
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
@@ -47,8 +48,8 @@ newtype AdditionalCatcher
   deriving Show
 
 
-hprop_ledger_events_propose_new_constitution :: Property
-hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-new-constitution" $ \tempAbsBasePath' -> do
+hprop_ledger_events_new_constitutional_committee :: Property
+hprop_ledger_events_new_constitutional_committee = H.integrationWorkspace "propose-new-constitutional-committee" $ \tempAbsBasePath' -> do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -86,25 +87,10 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   H.note_ $ "Abs path: " <> tempAbsBasePath'
   H.note_ $ "Socketpath: " <> socketPath
   H.note_ $ "Foldblocks config file: " <> configurationFile testnetRuntime
-
-  -- Create Conway constitution
   gov <- H.createDirectoryIfMissing $ work </> "governance"
-  proposalAnchorFile <- H.note $ work </> gov </> "sample-proposal-anchor"
-  consitutionFile <- H.note $ work </> gov </> "sample-constitution"
-  constitutionActionFp <- H.note $ work </> gov </> "constitution.action"
 
-  H.writeFile proposalAnchorFile "dummy anchor data"
-  H.writeFile consitutionFile "dummy constitution data"
-  constitutionHash <- H.execCli' execConfig
-    [ "conway", "governance"
-    , "hash", "--file-text", consitutionFile
-    ]
-
-  proposalAnchorDataHash <- H.execCli' execConfig
-    [ "conway", "governance"
-    , "hash", "--file-text", proposalAnchorFile
-    ]
-
+  -- Set up dreps so we can vote on the new committee proposal
+  -- TODO: Refactor this into a function that generates n dreps
   let stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
 
@@ -113,11 +99,14 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
                       , P.signingKeyFile = stakeSKeyFp
                       }
 
-  let drepVkeyFp :: Int -> FilePath
-      drepVkeyFp n = gov </> "drep-keys" <>"drep" <> show n <> ".vkey"
+  let drepDir = gov </> "drep-keys"
+      drepVkeyFp :: Int -> FilePath
+      drepVkeyFp n =  drepDir </> "drep" <> show n <> ".vkey"
 
       drepSKeyFp :: Int -> FilePath
-      drepSKeyFp n = gov </> "drep-keys" <>"drep" <> show n <> ".skey"
+      drepSKeyFp n = drepDir </> "drep" <> show n <> ".skey"
+
+  H.createDirectoryIfMissing_ drepDir
 
   -- Create DReps -- TODO: Refactor with shelleyKeyGen
   forM_ [1..3] $ \n -> do
@@ -126,13 +115,10 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
      , "--verification-key-file", drepVkeyFp n
      , "--signing-key-file", drepSKeyFp n
      ]
-  let drepKeysDir = gov </> "drep-keys"
-  H.createDirectoryIfMissing_ drepKeysDir
 
   -- Create Drep registration certificates
   let drepCertFile :: Int -> FilePath
-      drepCertFile n = drepKeysDir </>"drep" <> show n <> ".regcert"
-
+      drepCertFile n = gov </> "drep-keys" <>"drep" <> show n <> ".regcert"
   forM_ [1..3] $ \n -> do
     H.execCli' execConfig
        [ "conway", "governance", "drep", "registration-certificate"
@@ -188,18 +174,48 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     , "--tx-file", drepRegTxSignedFp
     ]
 
-  -- Create constitution proposal
+  proposalAnchorFile <- H.note $ work </> gov </> "sample-proposal-anchor"
+  H.writeFile proposalAnchorFile "dummy anchor data"
+  proposalAnchorDataHash <- H.execCli' execConfig
+    [ "conway", "governance"
+    , "hash", "--file-text", proposalAnchorFile
+    ]
+
+  -- Create Conway update committee action
+  let coldKeyDir = gov </> "committee"
+      ccColdVkeyFp :: Int -> FilePath
+      ccColdVkeyFp n = coldKeyDir </> "committee-member" <> show n <> ".vkey"
+      ccColdSKeyFp :: Int -> FilePath
+      ccColdSKeyFp n = coldKeyDir </> "committee-member" <> show n <> ".skey"
+
+  H.createDirectoryIfMissing_ coldKeyDir
+  forM_ [1] $ \n -> do
+   H.execCli' execConfig
+     [ "conway", "governance", "committee", "key-gen-cold"
+     , "--cold-verification-key-file", ccColdVkeyFp n
+     , "--cold-signing-key-file", ccColdSKeyFp n
+     ]
+
+  ccColdVkeyHash <- mconcat . lines <$> H.execCli' execConfig
+    [ "conway", "governance", "committee"
+    , "key-hash", "--verification-key-file", ccColdVkeyFp 1
+    ]
+
+  updateCommitteeActionFile <- H.note $ work </> gov </> "update-committee.action"
+  let committeeMemExpiryEpoch = 1000
+      quorum = "1/2"
 
   void $ H.execCli' execConfig
-    [ "conway", "governance", "action", "create-constitution"
+    [ "conway", "governance", "action", "update-committee"
     , "--testnet"
     , "--governance-action-deposit", show @Int 0 -- TODO: Get this from the node
     , "--deposit-return-stake-verification-key-file", stakeVkeyFp
-    , "--anchor-url", "https://tinyurl.com/3wrwb2as"
+    , "--anchor-url", "https://shorturl.at/asIJ6"
     , "--anchor-data-hash", proposalAnchorDataHash
-    , "--constitution-url", "https://tinyurl.com/2pahcy6z"
-    , "--constitution-hash", constitutionHash
-    , "--out-file", constitutionActionFp
+    , "--add-cc-cold-verification-key-hash", ccColdVkeyHash
+    , "--epoch", show @Int committeeMemExpiryEpoch
+    , "--quorum", quorum
+    , "--out-file", updateCommitteeActionFile
     ]
 
   txbodyFp <- H.note $ work </> "tx.body"
@@ -223,7 +239,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 1
     , "--tx-in", Text.unpack $ renderTxIn txin2
     , "--tx-out", Text.unpack (paymentKeyInfoAddr (head wallets)) <> "+" <> show @Int 5_000_000
-    , "--proposal-file", constitutionActionFp
+    , "--proposal-file", updateCommitteeActionFile
     , "--out-file", txbodyFp
     ]
 
@@ -241,10 +257,12 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     , "--tx-file", txbodySignedFp
     ]
 
+  -- Vote on governance action
   txidString <- mconcat . lines <$> H.execCli' execConfig
     [ "transaction", "txid"
     , "--tx-file", txbodySignedFp
     ]
+
   !propSubmittedResult
     <- runExceptT $ handleIOExceptT IOE
                   $ runExceptT $ foldBlocks
@@ -310,7 +328,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     , "--out-file", voteTxBodyFp
     ]
 
-
   void $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--testnet-magic", show @Int testnetMagic
@@ -327,8 +344,9 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     , "--testnet-magic", show @Int testnetMagic
     , "--tx-file", voteTxFp
     ]
-
-  -- We check that constitution was succcessfully ratified
+  let CommitteeColdKeyHash cred = fromString ccColdVkeyHash
+      ledgerCredential :: Credential 'ColdCommitteeRole StandardCrypto
+      ledgerCredential = Ledger.KeyHashObj cred
 
   !eConstitutionAdopted
     <- runExceptT $ handleIOExceptT IOE
@@ -336,46 +354,197 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
                       (File $ configurationFile testnetRuntime)
                       (File socketPath)
                       FullValidation
-                      [] -- Initial accumulator state
-                      (foldBlocksCheckConstitutionWasRatified constitutionHash)
-
+                      Nothing -- Initial accumulator state
+                      (foldBlocksConsitutionalCommitteeMemberCheck ledgerCredential Present)
 
   case eConstitutionAdopted of
     Left (IOE e) ->
       H.failMessage callStack
-        $ "foldBlocksCheckConstitutionWasRatified failed with: " <> show e
+        $ "foldBlocksConsitutionalCommitteeMemberCheck failed with: " <> show e
     Right (Left e) ->
       H.failMessage callStack
-        $ "foldBlocksCheckConstitutionWasRatified failed with: " <> Text.unpack (renderFoldBlocksError e)
-    Right (Right _events) -> success
+        $ "foldBlocksConsitutionalCommitteeMemberCheck failed with: " <> Text.unpack (renderFoldBlocksError e)
+    Right (Right _) -> success
 
 
-foldBlocksCheckConstitutionWasRatified
-  :: String -- submitted constitution hash
-  -> Env
-  -> LedgerState
-  -> [LedgerEvent]
-  -> BlockInMode -- Block i
-  -> [LedgerEvent] -- ^ Accumulator at block i - 1
-  -> IO ([LedgerEvent], FoldStatus) -- ^ Accumulator at block i and fold status
-foldBlocksCheckConstitutionWasRatified submittedConstitutionHash _ _ allEvents _ _ =
-  if any (filterRatificationState submittedConstitutionHash) allEvents
-  then return (allEvents , StopFold)
-  else return ([], ContinueFold)
+  cState' <- H.note $ work </> gov </> "committee-member-authorized-gov.state"
+  void $ H.execCli' execConfig
+        [ "conway", "query", "committee-state"
+        , "--testnet-magic", show @Int testnetMagic
+        , "--out-file", cState'
+        ]
 
-filterRatificationState
-  :: String -- ^ Submitted constitution anchor hash
-  -> LedgerEvent
-  -> Bool
-filterRatificationState c (EpochBoundaryRatificationState (AnyRatificationState rState)) =
-  let constitutionAnchorHash = Ledger.anchorDataHash $ Ledger.constitutionAnchor (rState ^. Ledger.rsEnactStateL . Ledger.ensConstitutionL)
-  in Text.pack c == renderSafeHashAsHex constitutionAnchorHash
-filterRatificationState _ _ = False
+  -- REMOVE COMMITTEE MEMBER --
 
+  void $ H.execCli' execConfig
+    [ "conway", "governance", "action", "update-committee"
+    , "--testnet"
+    , "--governance-action-deposit", show @Int 0 -- TODO: Get this from the node
+    , "--deposit-return-stake-verification-key-file", stakeVkeyFp
+    , "--anchor-url", "https://shorturl.at/asIJ6"
+    , "--anchor-data-hash", proposalAnchorDataHash
+    , "--remove-cc-cold-verification-key-hash", ccColdVkeyHash
+    , "--prev-governance-action-tx-id", txidString
+    , "--prev-governance-action-index", show @Word32 governanceActionIndex
+    , "--quorum", quorum
+    , "--out-file", updateCommitteeActionFile
+    ]
 
+  txbodyFpRemove <- H.note $ work </> "tx-remove-cc-member.body"
+  txbodySignedFpRemove <- H.note $ work </> "tx-remove-cc-member.body.signed"
+  H.threadDelay 3_000_000
+  utxoOut <- H.note $ work </> "utxo-4.json"
 
--- TODO: Move to cardano-api and share with
--- https://github.com/input-output-hk/cardano-cli/blob/694782210c6d73a1b5151400214ef691f6f3ecb0/cardano-cli/src/Cardano/CLI/EraBased/Run/Governance/Hash.hs#L67
--- when doing so
-renderSafeHashAsHex :: Ledger.SafeHash c tag -> Text.Text
-renderSafeHashAsHex = hashToTextAsHex . Ledger.extractHash
+  void $ H.execCli' execConfig
+   [ "conway", "query", "utxo"
+   , "--address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 2
+   , "--cardano-mode"
+   , "--testnet-magic", show @Int testnetMagic
+   , "--out-file", utxoOut
+   ]
+
+  utxo4Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-4.json"
+  UTxO utxo4 <- H.noteShowM $ H.noteShowM $ decodeEraUTxO sbe utxo4Json
+  txin4 <- H.noteShow =<< H.headM (Map.keys utxo4)
+
+  void $ H.execCli' execConfig
+    [ "conway", "transaction", "build"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
+    , "--tx-in", Text.unpack $ renderTxIn txin4
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr (head wallets)) <> "+" <> show @Int 4_000_000
+    , "--proposal-file", updateCommitteeActionFile
+    , "--out-file", txbodyFpRemove
+    ]
+
+  void $ H.execCli' execConfig
+    [ "conway", "transaction", "sign"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--tx-body-file", txbodyFpRemove
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 2
+    , "--out-file", txbodySignedFpRemove
+    ]
+
+  void $ H.execCli' execConfig
+    [ "conway", "transaction", "submit"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--tx-file", txbodySignedFpRemove
+    ]
+  -- Vote on governance action
+  txidStringRemoval <- mconcat . lines <$> H.execCli' execConfig
+    [ "transaction", "txid"
+    , "--tx-file", txbodySignedFpRemove
+    ]
+  !propSubmittedResultRemoval
+    <- runExceptT $ handleIOExceptT IOE
+                  $ runExceptT $ foldBlocks
+                      (File $ configurationFile testnetRuntime)
+                      (File socketPath)
+                      FullValidation
+                      Nothing -- Initial accumulator state
+                      (foldBlocksCheckProposalWasSubmitted (fromString txidStringRemoval))
+
+  removalProposalEvents
+    <- case propSubmittedResultRemoval of
+         Left (IOE e) ->
+           H.failMessage callStack
+             $ "foldBlocksCheckProposalWasSubmitted failed with: " <> show e
+         Right (Left e) ->
+           H.failMessage callStack
+             $ "foldBlocksCheckProposalWasSubmitted failed with: " <> Text.unpack (renderFoldBlocksError e)
+         Right (Right events) -> return events
+
+  removalGovActionIndex <- retrieveGovernanceActionIndex removalProposalEvents
+
+  -- Vote on the removal
+
+  forM_ [1..3] $ \n -> do
+    H.execCli' execConfig
+      [ "conway", "governance", "vote", "create"
+      , "--yes"
+      , "--governance-action-tx-id", txidStringRemoval
+      , "--governance-action-index", show @Word32 removalGovActionIndex
+      , "--drep-verification-key-file", drepVkeyFp n
+      , "--out-file", voteFp n
+      ]
+-- We need more UTxOs
+
+  void $ H.execCli' execConfig
+   [ "conway", "query", "utxo"
+   , "--address", Text.unpack $ paymentKeyInfoAddr $ head wallets
+   , "--cardano-mode"
+   , "--testnet-magic", show @Int testnetMagic
+   , "--out-file", work </> "utxo-5.json"
+   ]
+
+  utxo5Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-5.json"
+  UTxO utxo5 <- H.noteShowM $ H.noteShowM $ decodeEraUTxO sbe utxo5Json
+  txin5 <- H.noteShow =<< H.headM (Map.keys utxo5)
+
+  voteTxFpRemoval <- H.note $ work </> gov </> "vote.tx"
+  voteTxBodyFpRemoval <- H.note $ work </> gov </> "vote.txbody"
+
+  -- Submit votes
+  void $ H.execCli' execConfig
+    [ "conway", "transaction", "build"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
+    , "--tx-in", Text.unpack $ renderTxIn txin5
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr (wallets !! 1)) <> "+" <> show @Int 3_000_000
+    , "--vote-file", voteFp 1
+    , "--vote-file", voteFp 2
+    , "--vote-file", voteFp 3
+    , "--witness-override", show @Int 4
+    , "--out-file", voteTxBodyFpRemoval
+    ]
+
+  void $ H.execCli' execConfig
+    [ "conway", "transaction", "sign"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--tx-body-file", voteTxBodyFpRemoval
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ head wallets
+    , "--signing-key-file", drepSKeyFp 1
+    , "--signing-key-file", drepSKeyFp 2
+    , "--signing-key-file", drepSKeyFp 3
+    , "--out-file", voteTxFpRemoval
+    ]
+
+  void $ H.execCli' execConfig
+    [ "conway", "transaction", "submit"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--tx-file", voteTxFpRemoval
+    ]
+
+  H.threadDelay 60_000_000
+  cState <- H.note $ work </> gov </> "committee-member-not-authorized-gov.state"
+  void $ H.execCli' execConfig
+        [ "conway", "query", "committee-state"
+        , "--testnet-magic", show @Int testnetMagic
+        , "--out-file", cState
+        ]
+  H.failMessage callStack "Force"
+  !eCommitteMemberRemoved
+    <- runExceptT $ handleIOExceptT IOE
+                  $ runExceptT $ foldBlocks
+                      (File $ configurationFile testnetRuntime)
+                      (File socketPath)
+                      FullValidation
+                      Nothing -- Initial accumulator state
+                      (foldBlocksConsitutionalCommitteeMemberCheck ledgerCredential NotPresent)
+
+  case eCommitteMemberRemoved of
+    Left (IOE e) ->
+      H.failMessage callStack
+        $ "foldBlocksConsitutionalCommitteeMemberCheck failed with: " <> show e
+    Right (Left e) ->
+      H.failMessage callStack
+        $ "foldBlocksConsitutionalCommitteeMemberCheck failed with: " <> Text.unpack (renderFoldBlocksError e)
+    Right (Right _) -> do
+      cState <- H.note $ work </> gov </> "committee-member-not-authorized-gov.state"
+      void $ H.execCli' execConfig
+            [ "conway", "query", "gov-state"
+            , "--testnet-magic", show @Int testnetMagic
+            , "--out-file", cState
+            ]
+      H.failMessage callStack "Force"
+      success
