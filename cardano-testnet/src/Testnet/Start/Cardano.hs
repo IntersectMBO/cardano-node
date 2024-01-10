@@ -18,17 +18,13 @@ module Testnet.Start.Cardano
   , cardanoTestnet
   ) where
 
-import           Cardano.Api hiding (cardanoEra)
-
 import           Prelude hiding (lines)
 
 import           Control.Monad
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Aeson
-import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
-import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either
 import qualified Data.List as L
@@ -133,7 +129,6 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       testnetMagic = cardanoTestnetMagic testnetOptions
-      logDir = makeLogDir $ TmpAbsolutePath tempAbsPath'
       numPoolNodes = length $ cardanoNodes testnetOptions
 
   if all isJust [mconfig | SpoTestnetNodeOptions mconfig _ <- cardanoNodes testnetOptions]
@@ -145,8 +140,6 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
     H.failMessage GHC.callStack "Specifying node configuration files per node not supported yet."
   else do
     startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
-
-    H.createDirectoryIfMissing_ logDir
 
     H.lbsWriteFile (tempAbsPath' </> "byron.genesis.spec.json")
       . J.encode $ defaultByronProtocolParamsJsonValue
@@ -161,17 +154,10 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
       (tempAbsPath' </> "byron.genesis.spec.json")
       (tempAbsPath' </> "byron-gen-command")
 
-
-    alonzoConwayTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> "genesis.alonzo.spec.json"
-    gen <- H.evalEither $ first prettyError defaultAlonzoGenesis
-    H.evalIO $ LBS.writeFile alonzoConwayTestGenesisJsonTargetFile $ Aeson.encode gen
-
-    conwayConwayTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> "genesis.conway.spec.json"
-    H.evalIO $ LBS.writeFile conwayConwayTestGenesisJsonTargetFile $ Aeson.encode defaultConwayGenesis
+    _ <- createSPOGenesisAndFiles testnetOptions startTime (TmpAbsolutePath tempAbsPath')
 
     configurationFile <- H.noteShow $ tempAbsPath' </> "configuration.yaml"
 
-    genesisShelleyDir <- createSPOGenesisAndFiles testnetOptions startTime (TmpAbsolutePath tempAbsPath')
 
     poolKeys <- H.noteShow $ flip fmap [1..numPoolNodes] $ \n ->
       PoolNodeKeys
@@ -182,15 +168,20 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
         , poolNodeKeysStakingVkey = tempAbsPath' </> "pools" </> "staking-reward" <> show n <> ".vkey"
         , poolNodeKeysStakingSkey = tempAbsPath' </> "pools" </> "staking-reward" <> show n <> ".skey"
         }
+    let makeUTxOVKeyFp :: Int -> FilePath
+        makeUTxOVKeyFp n = tempAbsPath' </> "utxo-keys" </> "utxo" <> show n </> "utxo.vkey"
+
+        makeUTxOSkeyFp :: Int -> FilePath
+        makeUTxOSkeyFp n = tempAbsPath' </> "utxo-keys" </> "utxo" <> show n </> "utxo.skey"
 
     wallets <- forM [1..3] $ \idx -> do
-      let paymentSKeyFile = tempAbsPath' </> "utxo-keys/utxo" <> show @Int idx <> ".skey"
-      let paymentVKeyFile = tempAbsPath' </> "utxo-keys/utxo" <> show @Int idx <> ".vkey"
-      let paymentAddrFile = tempAbsPath' </> "utxo-keys/utxo" <> show @Int idx <> ".addr"
+      let paymentSKeyFile = makeUTxOSkeyFp idx
+      let paymentVKeyFile = makeUTxOVKeyFp idx
+      let paymentAddrFile = tempAbsPath' </> "utxo-keys" </> "utxo" <> show @Int idx </> "utxo.addr"
 
       execCli_
         [ "address", "build"
-        , "--payment-verification-key-file", paymentVKeyFile
+        , "--payment-verification-key-file", makeUTxOVKeyFp idx
         , "--testnet-magic", show @Int testnetMagic
         , "--out-file", paymentAddrFile
         ]
@@ -217,12 +208,10 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
           }
         }
 
-    let spoNodes :: [String] = ("node-spo" <>) . show <$> [1 .. numPoolNodes]
-
-    -- Create the node directories
-
-    forM_ spoNodes $ \node -> do
-      H.createDirectoryIfMissing_ (tempAbsPath' </> node)
+    -- TODO: This should come from the configuration!
+    let poolKeyDir :: Int -> FilePath
+        poolKeyDir i = "pools-keys" </> "pool" <> show i
+        poolKeysFps = map poolKeyDir [1 .. numPoolNodes]
 
 
     -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
@@ -230,37 +219,25 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
 
     H.evalIO $ LBS.writeFile configurationFile finalYamlConfig
 
-    H.renameFile (tempAbsPath' </> "pools/vrf1.skey") (tempAbsPath' </> "node-spo1/vrf.skey")
-    H.renameFile (tempAbsPath' </> "pools/vrf2.skey") (tempAbsPath' </> "node-spo2/vrf.skey")
-    H.renameFile (tempAbsPath' </> "pools/vrf3.skey") (tempAbsPath' </> "node-spo3/vrf.skey")
-
-    H.renameFile (tempAbsPath' </> "pools/opcert1.cert") (tempAbsPath' </> "node-spo1/opcert.cert")
-    H.renameFile (tempAbsPath' </> "pools/opcert2.cert") (tempAbsPath' </> "node-spo2/opcert.cert")
-    H.renameFile (tempAbsPath' </> "pools/opcert3.cert") (tempAbsPath' </> "node-spo3/opcert.cert")
-
-    H.renameFile (tempAbsPath' </> "pools/kes1.skey") (tempAbsPath' </> "node-spo1/kes.skey")
-    H.renameFile (tempAbsPath' </> "pools/kes2.skey") (tempAbsPath' </> "node-spo2/kes.skey")
-    H.renameFile (tempAbsPath' </> "pools/kes3.skey") (tempAbsPath' </> "node-spo3/kes.skey")
-
     -- Byron related
 
-    H.renameFile (tempAbsPath' </> "byron-gen-command/delegate-keys.000.key") (tempAbsPath' </> "node-spo1/byron-delegate.key")
-    H.renameFile (tempAbsPath' </> "byron-gen-command/delegate-keys.001.key") (tempAbsPath' </> "node-spo2/byron-delegate.key")
-    H.renameFile (tempAbsPath' </> "byron-gen-command/delegate-keys.002.key") (tempAbsPath' </> "node-spo3/byron-delegate.key")
+    H.renameFile (tempAbsPath' </> "byron-gen-command/delegate-keys.000.key") (tempAbsPath' </> poolKeyDir 1 </> "byron-delegate.key")
+    H.renameFile (tempAbsPath' </> "byron-gen-command/delegate-keys.001.key") (tempAbsPath' </> poolKeyDir 2 </> "byron-delegate.key")
+    H.renameFile (tempAbsPath' </> "byron-gen-command/delegate-keys.002.key") (tempAbsPath' </> poolKeyDir 3 </> "byron-delegate.key")
 
-    H.renameFile (tempAbsPath' </> "byron-gen-command/delegation-cert.000.json") (tempAbsPath' </> "node-spo1/byron-delegation.cert")
-    H.renameFile (tempAbsPath' </> "byron-gen-command/delegation-cert.001.json") (tempAbsPath' </> "node-spo2/byron-delegation.cert")
-    H.renameFile (tempAbsPath' </> "byron-gen-command/delegation-cert.002.json") (tempAbsPath' </> "node-spo3/byron-delegation.cert")
+    H.renameFile (tempAbsPath' </> "byron-gen-command/delegation-cert.000.json") (tempAbsPath' </> poolKeyDir 1 </>"byron-delegation.cert")
+    H.renameFile (tempAbsPath' </> "byron-gen-command/delegation-cert.001.json") (tempAbsPath' </> poolKeyDir 2 </>"byron-delegation.cert")
+    H.renameFile (tempAbsPath' </> "byron-gen-command/delegation-cert.002.json") (tempAbsPath' </> poolKeyDir 3 </>"byron-delegation.cert")
 
-    H.writeFile (tempAbsPath' </> "node-spo1/port") "3001"
-    H.writeFile (tempAbsPath' </> "node-spo2/port") "3002"
-    H.writeFile (tempAbsPath' </> "node-spo3/port") "3003"
+    H.writeFile (tempAbsPath' </> poolKeyDir 1 </> "port") "3001"
+    H.writeFile (tempAbsPath' </> poolKeyDir 2 </> "port") "3002"
+    H.writeFile (tempAbsPath' </> poolKeyDir 3 </> "port") "3003"
 
 
     -- Make topology files
     -- TODO generalise this over the N BFT nodes and pool nodes
 
-    H.lbsWriteFile (tempAbsPath' </> "node-spo1/topology.json") $ encode $
+    H.lbsWriteFile (tempAbsPath' </> poolKeyDir 1 </> "topology.json") $ encode $
       object
       [ "Producers" .= toJSON
         [ object
@@ -281,7 +258,7 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
         ]
       ]
 
-    H.lbsWriteFile (tempAbsPath' </> "node-spo2/topology.json") $ encode $
+    H.lbsWriteFile (tempAbsPath' </> poolKeyDir 2 </> "topology.json")  $ encode $
       object
       [ "Producers" .= toJSON
         [ object
@@ -302,7 +279,7 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
         ]
       ]
 
-    H.lbsWriteFile (tempAbsPath' </> "node-spo3/topology.json") $ encode $
+    H.lbsWriteFile (tempAbsPath' </> poolKeyDir 3 </> "topology.json") $ encode $
       object
       [ "Producers" .= toJSON
         [ object
@@ -322,13 +299,12 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
           ]
         ]
       ]
-    nodeStdoutFiles <- forM spoNodes $ \node -> do
-                        H.noteTempFile (makeLogDir $ TmpAbsolutePath tempAbsPath') $ node <> ".stdout.log"
 
-    let spoNodesWithPortNos = L.zip spoNodes [3001..]
+    let spoNodesWithPortNos = L.zip poolKeysFps [3001..]
         nodeConfigFile = tempAbsPath' </> "configuration.yaml"
     ePoolNodes <- forM (L.zip spoNodesWithPortNos poolKeys) $ \((node, port),key) -> do
-      eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath tempAbsPath') node port testnetMagic
+
+      eRuntime <- lift . lift . runExceptT $ startNode tempAbsPath node port testnetMagic
                                   [ "run"
                                   , "--config", nodeConfigFile
                                   , "--topology", tempAbsPath' </> node </> "topology.json"
@@ -352,7 +328,7 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
       now <- H.noteShowIO DTC.getCurrentTime
       deadline <- H.noteShow $ DTC.addUTCTime 35 now
 
-      forM_ nodeStdoutFiles $ \nodeStdoutFile -> do
+      forM_ (map (nodeStdout . poolRuntime) poolNodes) $ \nodeStdoutFile -> do
         H.assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile
 
       H.noteShowIO_ DTC.getCurrentTime
@@ -363,7 +339,7 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
 
       let runtime = TestnetRuntime
             { configurationFile
-            , shelleyGenesisFile = genesisShelleyDir </> "genesis.json"
+            , shelleyGenesisFile = tempAbsPath' </> defaultShelleyGenesisFp
             , testnetMagic
             , poolNodes
             , wallets = wallets
