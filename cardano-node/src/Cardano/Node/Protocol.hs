@@ -4,10 +4,12 @@ module Cardano.Node.Protocol
   , ProtocolInstantiationError(..)
   ) where
 
+import           Control.Exception
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 
 import           Cardano.Node.Types
 
@@ -53,6 +55,8 @@ data ProtocolInstantiationError =
   | CardanoProtocolInstantiationError CardanoProtocolInstantiationError
   deriving Show
 
+instance Exception ProtocolInstantiationError where
+  displayException = docToString . prettyError
 
 instance Error ProtocolInstantiationError where
   prettyError (ByronProtocolInstantiationError   err) = prettyError err
