@@ -24,14 +24,14 @@ newtype NSLookup = NSLookup (Map.Map T.Text NSLookup)
 -- | Checks if all namespaces in this configuration are legal.
 --   Legal in this case means that it can be found by a hierarchcical
 --   lookup in all namespaces.
---   Warns as well if namespaces in all namespaces are not unique,
---   Warns as well if namespaces in all namespaces are ending in the
+--   Warns if namespaces in all namespaces are not unique,
+--   Warns if namespaces in all namespaces are ending in the
 --   middle of another namespace.
 --   TODO TRACING: add more checks from documentation
 checkTraceConfiguration ::
      FilePath
   -> TraceConfig
-  -> [[T.Text]]
+  -> [([T.Text], [T.Text])]
   -> IO NSWarnings
 checkTraceConfiguration configFileName defaultTraceConfig allNamespaces' = do
     trConfig <- readConfigurationWithDefault configFileName defaultTraceConfig
@@ -39,14 +39,18 @@ checkTraceConfiguration configFileName defaultTraceConfig allNamespaces' = do
 
 checkTraceConfiguration' ::
      TraceConfig
-  -> [[T.Text]]
+  -> [([T.Text], [T.Text])]
   -> NSWarnings
 checkTraceConfiguration' trConfig allNamespaces' =
-    let namespaces     = Map.keys (tcOptions trConfig)
-        (nsLookup, systemWarnings) = asNSLookup allNamespaces'
-        configWarnings = mapMaybe (checkNamespace nsLookup) namespaces
-        allWarnings    = map ("System namespace error: "<>) systemWarnings ++
-                           map ("Config namespace error: " <>) configWarnings
+    let configNS        = Map.keys (tcOptions trConfig)
+        emptyInner      = filter (null . snd) allNamespaces'
+        allNamespaces'' = map (uncurry (<>)) allNamespaces'
+        (nsLookup, systemWarnings) = asNSLookup allNamespaces''
+        configWarnings  = mapMaybe (checkNamespace nsLookup) configNS
+        allWarnings     = map ("System namespace error: "<>) systemWarnings
+                            ++ map (\(ns, _) -> "Empty inner namespace: "
+                                              <> T.intercalate "." ns) emptyInner
+                              ++ map ("Config namespace error: " <>) configWarnings
     in allWarnings
 
 -- | Check if a single namespace is legal. Legal in this case means that

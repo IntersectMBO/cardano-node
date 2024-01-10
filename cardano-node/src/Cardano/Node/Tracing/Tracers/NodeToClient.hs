@@ -33,8 +33,8 @@ instance LogFormatting (AnyMessageAndAgency ps)
   forMachine dtal (TraceRecvMsg m) = mconcat
     [ "kind" .= String "Recv" , "msg" .= forMachine dtal m ]
 
-  forHuman (TraceSendMsg m) = "Send: " <> forHuman m
-  forHuman (TraceRecvMsg m) = "Receive: " <> forHuman m
+  forHuman (TraceSendMsg m) = "Send: " <> forHumanOrMachine m
+  forHuman (TraceRecvMsg m) = "Receive: " <> forHumanOrMachine m
 
   asMetrics (TraceSendMsg m) = asMetrics m
   asMetrics (TraceRecvMsg m) = asMetrics m

@@ -14,7 +14,7 @@ mkdir -p "${socket_dir}"
 
 # Launch a node
 cabal run exe:cardano-node -- run \
-  --config "${configuration}/mainnet-config-new-tracing.yaml" \
+  --config "${configuration}/mainnet-config-new-tracing.json" \
   --topology "${configuration}/mainnet-topology.json" \
   --database-path "${db_dir}" \
   --socket-path "${socket_dir}/node-1-socket" \

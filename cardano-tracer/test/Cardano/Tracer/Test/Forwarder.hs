@@ -154,7 +154,7 @@ doConnectToAcceptor
 doConnectToAcceptor TestSetup{..} snocket muxBearer address timeLimits (ekgConfig, tfConfig, dpfConfig) = do
   store <- EKG.newStore
   EKG.registerGcMetrics store
-  sink <- initForwardSink tfConfig
+  sink <- initForwardSink tfConfig (\ _ -> pure ())
   dpStore <- initDataPointStore
   writeToStore dpStore "test.data.point" $ DataPoint mkTestDataPoint
   withAsync (traceObjectsWriter sink) $ \_ -> do
@@ -209,7 +209,7 @@ doListenToAcceptor TestSetup{..}
 
   store <- EKG.newStore
   EKG.registerGcMetrics store
-  sink <- initForwardSink tfConfig
+  sink <- initForwardSink tfConfig (\ _ -> pure ())
   dpStore <- initDataPointStore
   writeToStore dpStore "test.data.point" $ DataPoint mkTestDataPoint
   withAsync (traceObjectsWriter sink) $ \_ -> do

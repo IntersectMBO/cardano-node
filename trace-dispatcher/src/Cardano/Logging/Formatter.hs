@@ -169,33 +169,28 @@ humanFormatter' withColor condPrefix (Trace tr) =
       contramap
         (\ case
           (lc, Right v) ->
-              let ns' = fromText $
-                          intercalate "."
-                          (case condPrefix of
-                              Just app -> app : pfNamespace v
-                              Nothing  ->pfNamespace v)
-                  severity' = fromMaybe Info (lcSeverity lc)
-                  ns        = colorBySeverity
-                                withColor
-                                severity'
-                                $ fromString (pfHostname v)
-                                  <> singleton ':'
-                                  <> ns'
-                  tadd     = fromText " ("
-                              <> fromString (show severity')
-                              <> singleton ','
-                              <> fromText (pfThreadId v)
-                              <> fromText ") "
-                  forHuman' = fromMaybe
+              let sev      = fromMaybe Info (lcSeverity lc)
+                  ns       = fromString (pfHostname v)
+                                <> singleton ':'
+                                <> fromText
+                                    (intercalate "."
+                                      (case condPrefix of
+                                          Just app -> app : pfNamespace v
+                                          Nothing  ->pfNamespace v))
+                  prePart  = squareBrackets (fromText (pfTimestamp v))
+                                <> squareBrackets ns
+                                <> roundBrackets
+                                    (fromString (show sev)
+                                    <> singleton ','
+                                    <> fromText (pfThreadId v))
+                  dataPart = fromMaybe
                                 (encodingToText (AE.pairs ("data" .= pfForMachine v)))
                                 (pfForHuman v)
                   forHuman'' = toStrict
                                 $ toLazyText
-                                  $ squareBrackets (fromText (pfTimestamp v))
+                                  (colorBySeverity withColor sev prePart
                                     <> singleton ' '
-                                    <> squareBrackets ns
-                                    <> tadd
-                                    <> fromText forHuman'
+                                    <> fromText dataPart)
                   in (lc, Right (FormattedHuman withColor forHuman''))
           (lc, Left ctrl) -> (lc, Left ctrl))
           tr
@@ -203,24 +198,31 @@ humanFormatter' withColor condPrefix (Trace tr) =
 squareBrackets :: Builder -> Builder
 squareBrackets b = singleton '[' <> b <> singleton ']'
 
+roundBrackets :: Builder -> Builder
+roundBrackets b = singleton '(' <> b <> singleton ')'
+
 -- | Color a text message based on `Severity`. `Error` and more severe errors
 -- are colored red, `Warning` is colored yellow, and all other messages are
 -- rendered in the default color.
 colorBySeverity :: Bool -> SeverityS -> Builder -> Builder
 colorBySeverity withColor severity' msg =
-    case severity' of
-      Emergency -> red msg
-      Alert     -> red msg
-      Critical  -> red msg
-      Error     -> red msg
-      Warning   -> yellow msg
-      _         -> msg
+  if withColor
+    then case severity' of
+            Emergency -> red msg
+            Alert     -> red msg
+            Critical  -> red msg
+            Error     -> red msg
+            Warning   -> yellow msg
+            Notice    -> magenta msg
+            Info      -> blue msg
+            Debug     -> msg
+    else msg
   where
     red = colorize "31"
     yellow = colorize "33"
-    colorize c s
-      | withColor = "\ESC["<> c <> "m" <> s <> "\ESC[0m"
-      | otherwise = s
+    magenta = colorize "35"
+    blue = colorize "34"
+    colorize c msg' = "\ESC[" <> c <> "m" <> msg' <> "\ESC[0m"
 
 timeFormatted :: UTCTime -> Text
 timeFormatted = pack . formatTime defaultTimeLocale "%F %H:%M:%S%4QZ"
