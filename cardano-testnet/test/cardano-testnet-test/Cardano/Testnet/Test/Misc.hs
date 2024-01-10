@@ -18,7 +18,6 @@ import           Hedgehog.Extras.Test.Base (Integration, failMessage, note_)
 -- | This property checks that a given operational certificate has a valid specified KES starting period.
 prop_op_cert_valid_kes_period :: GHC.HasCallStack => FilePath -> QueryKesPeriodInfoOutput -> Integration ()
 prop_op_cert_valid_kes_period opCertFp output =
-  GHC.withFrozenCallStack $
     case qKesOpCertIntervalInformation output of
       OpCertWithinInterval{} -> success
       info@OpCertStartingKesPeriodIsInTheFuture{} ->

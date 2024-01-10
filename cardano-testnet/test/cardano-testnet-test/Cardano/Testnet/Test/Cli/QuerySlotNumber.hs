@@ -136,8 +136,6 @@ hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tem
       ]
     H.assertWith result isLeft
 
-  -- }}}
-
 formatTime :: DT.UTCTime -> String
 formatTime = DT.formatTime DT.defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ"
 

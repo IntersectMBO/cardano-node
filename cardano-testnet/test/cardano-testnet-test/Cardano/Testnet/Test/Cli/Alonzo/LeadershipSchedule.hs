@@ -9,7 +9,7 @@
 
 {- HLINT ignore "Redundant return" -}
 {- HLINT ignore "Use let" -}
-
+-- TODO: Delete
 module Cardano.Testnet.Test.Cli.Alonzo.LeadershipSchedule
   ( hprop_leadershipSchedule
   ) where

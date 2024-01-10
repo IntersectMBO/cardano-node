@@ -43,7 +43,7 @@ newtype AdditionalCatcher
 -- This sets the stage for more direct testing of clusters allowing us to avoid querying the node, dealing with serialization to and from disk,
 -- setting timeouts for expected results etc.
 hprop_ledger_events_sanity_check :: Property
-hprop_ledger_events_sanity_check = H.integrationRetryWorkspace 2 "ledger-events-sanity-check" $ \tempAbsBasePath' -> do
+hprop_ledger_events_sanity_check = H.integrationWorkspace "ledger-events-sanity-check" $ \tempAbsBasePath' -> do
   -- Start a local test net
   conf <- H.noteShowM $  mkConf tempAbsBasePath'
 
