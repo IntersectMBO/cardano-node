@@ -84,7 +84,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
     ]
 
   utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
-  UTxO utxo1 <- H.noteShowM $ H.noteShowM $ decodeEraUTxO sbe utxo1Json
+  UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
 
   (stakePoolId, stakePoolColdSigningKey, stakePoolColdVKey, _, _)
@@ -153,7 +153,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   H.cat $ work </> "utxo-2.json"
 
   utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
-  UTxO utxo2 <- H.noteShowM $ H.noteShowM $ decodeEraUTxO sbe utxo2Json
+  UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
   txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 
   let eraFlag = convertToEraFlag $ cardanoNodeEra cTestnetOptions

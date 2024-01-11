@@ -111,7 +111,7 @@ createSPOGenesisAndFiles testnetOptions startTime (TmpAbsolutePath tempAbsPath')
   -- TODO: Remove this rewrite.
  -- 50 second epochs
  -- Epoch length should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"
-  H.rewriteJsonFile createStakedInitialGenesisFile $ \o -> o
+  H.rewriteJsonFile genesisShelleyFpAbs $ \o -> o
     & L.key "securityParam" . L._Integer .~ 5
     & L.key "rho" . L._Double  .~ 0.1
     & L.key "tau" . L._Double  .~ 0.1

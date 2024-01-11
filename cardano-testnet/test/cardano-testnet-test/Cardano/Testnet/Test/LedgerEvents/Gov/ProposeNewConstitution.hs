@@ -147,7 +147,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     ]
 
   utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
-  UTxO utxo1 <- H.noteShowM $ H.noteShowM $ decodeEraUTxO sbe utxo1Json
+  UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
 
   drepRegTxbodyFp <- H.note $ work </> "drep.registration.txbody"
@@ -209,7 +209,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     ]
 
   utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
-  UTxO utxo2 <- H.noteShowM $ H.noteShowM $ decodeEraUTxO sbe utxo2Json
+  UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
   txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 
   void $ H.execCli' execConfig
@@ -285,7 +285,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
    ]
 
   utxo3Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-3.json"
-  UTxO utxo3 <- H.noteShowM $ H.noteShowM $ decodeEraUTxO sbe utxo3Json
+  UTxO utxo3 <- H.noteShowM $ decodeEraUTxO sbe utxo3Json
   txin3 <- H.noteShow =<< H.headM (Map.keys utxo3)
 
   voteTxFp <- H.note $ work </> gov </> "vote.tx"

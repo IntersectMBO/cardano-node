@@ -204,7 +204,8 @@ startNode tp node port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
 
   let nodeStdoutFile = logDir </> node </> "stdout.log"
       nodeStderrFile = logDir </> node </> "stderr.log"
-      sprocket = Sprocket tempBaseAbsPath (socketDir </> node </> "sock")
+      socketRelPath = socketDir </> node </> "sock"
+      sprocket = Sprocket tempBaseAbsPath socketRelPath
 
   hNodeStdout <- handleIOExceptT FileRelatedFailure $ IO.openFile nodeStdoutFile IO.WriteMode
   hNodeStderr <- handleIOExceptT FileRelatedFailure $ IO.openFile nodeStderrFile IO.ReadWriteMode

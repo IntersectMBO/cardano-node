@@ -107,7 +107,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
     ]
 
   utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
-  UTxO utxo1 <- H.noteShowM $ H.noteShowM $ decodeEraUTxO sbe utxo1Json
+  UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
 
   void $ execCli' execConfig
@@ -166,7 +166,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
         ]
 
       utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
-      UTxO utxo2 <- H.noteShowM $ H.noteShowM $ decodeEraUTxO sbe utxo2Json
+      UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
       txouts2 <- H.noteShow $ L.unCoin . txOutValueLovelace . txOutValue . snd <$> Map.toList utxo2
 
       H.assert $ 5_000_001 `List.elem` txouts2
