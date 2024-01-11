@@ -183,7 +183,9 @@ wb_nomad() {
                 then
                   local expire_time
                   expire_time=$(echo "${token_lookup_response}" | jq -r .data.expire_time)
-                  if test "$(date -u -d "${expire_time}" "+%s")" -ge "$(date -u "+%s")"
+                  # Compare expire date with the actual date minus one day.
+                  # This avoids a token expiring while a profile is running.
+                  if test "$(date -u -d "${expire_time}" "+%s")" -ge "$(($(date -u "+%s") - 86400))"
                   then
                     true
                   else
