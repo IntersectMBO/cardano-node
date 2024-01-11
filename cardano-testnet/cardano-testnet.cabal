@@ -178,6 +178,7 @@ test-suite cardano-testnet-test
 
                         Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
                         Cardano.Testnet.Test.LedgerEvents.Gov.InfoAction
+                        Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO
                         Cardano.Testnet.Test.LedgerEvents.SanityCheck
 
                         Cardano.Testnet.Test.Node.Shutdown
@@ -194,6 +195,7 @@ test-suite cardano-testnet-test
                       , cardano-cli
                       , cardano-crypto-class
                       , cardano-ledger-conway
+                      , cardano-ledger-shelley
                       , cardano-testnet
                       , containers
                       , directory
