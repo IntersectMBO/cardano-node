@@ -590,19 +590,20 @@ def all_profile_variants:
     , desc: "Oct 2021 dataset size, four epochs."
     }) as $forge_stress_pre_base
   |
+   ($forge_stress_pre_base * $hexagon *
+    { analysis:
+      { filters:                        ["epoch3+"] }
+    , node:
+      { shutdown_on_slot_synced:        4800 }
+    , desc: "Status-quo dataset size, eight epochs, six nodes."
+    }) as $forge_stress_pre_large_base
+  |
    ($scenario_fixed_loaded * $triplet * $dataset_current *
     { node:
       { shutdown_on_slot_synced:        2400
       }
     , desc: "Status-quo dataset size, four epochs."
     }) as $forge_stress_base
-  |
-   ($scenario_fixed_loaded * $triplet * $dataset_oct2021 *
-    { node:
-      { shutdown_on_slot_synced:        2400
-      }
-    , desc: "Status-quo dataset size, four epochs, smaller UTxO/delegation."
-    }) as $forge_stress_light_base
   |
    ($forge_stress_base * $hexagon *
     { analysis:
@@ -951,9 +952,6 @@ def all_profile_variants:
   , $forge_stress_base *
     { name: "forge-stress"
     }
-  , $forge_stress_light_base *
-    { name: "forge-stress-light"
-    }
   , $forge_stress_base * $plutus_base * $plutus_loop_counter *
     { name: "forge-stress-p2p"
     }
@@ -978,6 +976,11 @@ def all_profile_variants:
     }
   , $forge_stress_pre_base * $without_tracer *
     { name: "forge-stress-pre-notracer"
+    }
+
+  , $forge_stress_pre_large_base * $solo * $costmodel_v8_preview *
+    { name: "forge-stress-pre-solo-xl"
+    , extra_desc: "with blocksize bumped to 88k"
     }
 
   ## Large dataset, small cluster (3 nodes), variants for RTS parametrization
