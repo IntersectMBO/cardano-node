@@ -9,6 +9,7 @@ module Cardano.Testnet.Test.LedgerEvents.SanityCheck
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Shelley
 
 import           Cardano.Testnet
 

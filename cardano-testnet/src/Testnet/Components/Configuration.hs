@@ -23,8 +23,8 @@ import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.IO.Class (MonadIO)
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as List
 import           Data.String
 import           Data.Time
@@ -75,6 +75,13 @@ createConfigYaml (TmpAbsolutePath tempAbsPath') anyCardanoEra' = GHC.withFrozenC
 numSeededUTxOKeys :: Int
 numSeededUTxOKeys = 3
 
+-- | Adjust a value at a specific key. When the key is not a member of the map, the original map is returned
+adjustKM :: (v -> v) -> KM.Key -> KM.KeyMap v -> KM.KeyMap v
+adjustKM f k m =
+  case KM.lookup k m of
+    Nothing -> m
+    Just v -> KM.insert k (f v) m
+
 createSPOGenesisAndFiles
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => CardanoTestnetOptions
@@ -105,16 +112,16 @@ createSPOGenesisAndFiles testnetOptions startTime (TmpAbsolutePath tempAbsPath')
  -- 50 second epochs
  -- Epoch length should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"
   H.rewriteJsonFile createStakedInitialGenesisFile $ J.rewriteObject
-      ( HM.insert "securityParam"          (toJSON @Int 5)    -- TODO: USE config p arameter
-      . HM.adjust
+      ( KM.insert "securityParam"          (toJSON @Int 5)    -- TODO: USE config p arameter
+      . adjustKM
           (J.rewriteObject
-              $ HM.adjust
-                (J.rewriteObject (HM.insert "major" (toJSON @Int 8)))
+              $ adjustKM
+                (J.rewriteObject (KM.insert "major" (toJSON @Int 8)))
                 "protocolVersion"
           )   "protocolParams"
-      . HM.insert "rho"                    (toJSON @Double 0.1)
-      . HM.insert "tau"                    (toJSON @Double 0.1)
-      . HM.insert "updateQuorum"           (toJSON @Int 2)
+      . KM.insert "rho"                    (toJSON @Double 0.1)
+      . KM.insert "tau"                    (toJSON @Double 0.1)
+      . KM.insert "updateQuorum"           (toJSON @Int 2)
       )
 
   execCli_

@@ -34,8 +34,8 @@ library
   build-depends:        aeson
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 8.36.0.1
-                      , cardano-cli ^>= 8.17.0.0
+                      , cardano-api ^>= 8.37.0.0
+                      , cardano-cli ^>= 8.18.0.0
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger-alonzo
@@ -55,7 +55,7 @@ library
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.4.7.0
+                      , hedgehog-extras ^>= 0.5.0.0
                       , mtl
                       , network
                       , network-mux
@@ -76,7 +76,6 @@ library
                       , time
                       , transformers
                       , transformers-except
-                      , unordered-containers
                       , vector
 
   hs-source-dirs:       src
@@ -192,7 +191,6 @@ test-suite cardano-testnet-test
                       , cardano-cli
                       , cardano-crypto-class
                       , cardano-ledger-conway
-                      , cardano-ledger-core
                       , cardano-testnet
                       , containers
                       , directory
