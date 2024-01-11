@@ -21,6 +21,8 @@ import qualified System.Metrics.Label as Label
 import           System.Remote.Monitoring (Server, getCounter, getGauge, getLabel)
 
 
+-- | It is mandatory to construct only one standard tracer in any application!
+-- Throwing away a standard tracer and using a new one will result in an exception
 ekgTracer :: MonadIO m => Either Metrics.Store Server-> m (Trace m FormattedMessage)
 ekgTracer storeOrServer = liftIO $ do
     rgsGauges   <- newMVar Map.empty

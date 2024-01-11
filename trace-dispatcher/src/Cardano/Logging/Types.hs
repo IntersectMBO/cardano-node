@@ -393,9 +393,9 @@ data ConfigOption =
     -- | Detail level (default is DNormal)
   | ConfDetail {detail :: DetailLevel}
   -- | To which backend to pass
-  --   Default is [EKGBackend, Forwarder, Stdout HumanFormatColoured]
+  --   Default is [EKGBackend, Forwarder, Stdout MachineFormat]
   | ConfBackend {backends :: [BackendConfig]}
-  -- | Construct a limiter with name (Text) and limiting to the Double,
+  -- | Construct a limiter with limiting to the Double,
   -- which represents frequency in number of messages per second
   | ConfLimiter {maxFrequency :: Double}
   deriving (Eq, Ord, Show, Generic)

@@ -27,7 +27,8 @@ newtype NSLookup = NSLookup (Map.Map T.Text NSLookup)
 --   Warns if namespaces in all namespaces are not unique,
 --   Warns if namespaces in all namespaces are ending in the
 --   middle of another namespace.
---   TODO TRACING: add more checks from documentation
+--   The namespaces in allNamespaces are consistent with the namespaces for the
+--   severityFor, privacyFor, detailsFor, documentFor and metricsDofFor functions.
 checkTraceConfiguration ::
      FilePath
   -> TraceConfig
