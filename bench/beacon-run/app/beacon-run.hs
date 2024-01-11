@@ -235,7 +235,7 @@ runCommand env (BeaconCompare slugA slugB) = do
     runDir = envBeaconDir env </> "run"
 
 runCommand env (BeaconVariance slug) = do
-  results <- listDirectory $ runDir </> slug
+  results <- sort <$> listDirectory (runDir </> slug)
   parses  <- mapM (\f -> eitherDecodeFileStrict $ runDir </> slug </> f) results
   doVariance $ rights parses
   pure env

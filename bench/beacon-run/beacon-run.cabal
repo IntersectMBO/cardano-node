@@ -23,7 +23,8 @@ executable beacon-run
   hs-source-dirs:   app
   main-is:          beacon-run.hs
 
-  other-modules:    Cardano.Beacon.Chain
+  other-modules:    Cardano.Beacon.CDF
+                    Cardano.Beacon.Chain
                     Cardano.Beacon.CLI
                     Cardano.Beacon.Compare
                     Cardano.Beacon.Console
@@ -44,7 +45,7 @@ executable beacon-run
 
   -- development only
   ghc-options:
-    -Wno-unused-top-binds -fno-warn-unused-imports -fno-warn-unused-local-binds
+    -Wno-unused-top-binds -fno-warn-unused-imports -fno-warn-unused-local-binds -fno-warn-unused-packages
 
   build-depends:
     , aeson                 >=2.1.2
@@ -58,9 +59,11 @@ executable beacon-run
     , directory
     , extra
     , filepath
+    , fingertree
     , hostname
     , optparse-applicative
     , process
+    , statistics
     , text
     , time
     -- , ouroboros-consensus-cardano:unstable-cardano-tools  ^>= 0.12.1

@@ -11,7 +11,7 @@ module  Cardano.Beacon.Compare
 import           Prelude hiding (putStr, putStrLn)
 
 import           Control.Arrow ((>>>))
-import           Control.Monad (unless, when)
+import           Control.Monad (forM_, unless, when)
 import           Data.Ord (Down (Down), comparing)
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -38,12 +38,18 @@ doVariance :: [BeaconRun] -> IO ()
 doVariance [] =
   printStyled StyleWarning "doVariance: empty list of beacon runs"
 doVariance runs = do
-  let
-    title = selName selMutBlockApply
-    fName = "variance-" ++ slug ++ ".png"
-  plotMeasurements' runs (ChartTitle title) selMutBlockApply Nothing fName
+  forM_ selectors $ \selector ->
+    let
+      title = selName selector
+      fName = "variance-" ++ slug ++ "-" ++ title ++ ".png"
+    in plotMeasurements' runs (ChartTitle title) selector Nothing fName
   where
     slug = toSlug $ rMeta $ head runs
+    selectors =
+      [ selMutBlockApply
+      , selMutTotalTime
+      , selAllocatedBytes
+      ]
 
 
 --------------------------------------------------------------------------------
@@ -59,10 +65,12 @@ data Selector = Selector {
   , selProjection   :: SlotDataPoint -> Double
   }
 
-selSlot, selMutForecast, selMutBlockApply :: Selector
+selSlot, selMutForecast, selMutBlockApply, selMutTotalTime, selAllocatedBytes :: Selector
 selSlot             = Selector "slot"           (fromIntegral . unSlotNo . slot)
 selMutForecast      = Selector "mut_forecast"   (fromIntegral . mut_forecast)
 selMutBlockApply    = Selector "mut_blockApply" (fromIntegral . mut_blockApply)
+selMutTotalTime     = Selector "totalTime"      (fromIntegral . totalTime)
+selAllocatedBytes   = Selector "allocatedBytes" (fromIntegral . allocatedBytes)
 
 -- | Get metric specified by the selector for all slots.
 (.>) ::
