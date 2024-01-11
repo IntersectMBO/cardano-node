@@ -82,17 +82,17 @@ instance (  LogFormatting (Header blk)
           , LedgerSupportsProtocol blk
           , InspectLedger blk
           ) => LogFormatting (ChainDB.TraceEvent blk) where
-  forHuman (ChainDB.TraceAddBlockEvent v)          = forHuman v
-  forHuman (ChainDB.TraceFollowerEvent v)          = forHuman v
-  forHuman (ChainDB.TraceCopyToImmutableDBEvent v) = forHuman v
-  forHuman (ChainDB.TraceGCEvent v)                = forHuman v
-  forHuman (ChainDB.TraceInitChainSelEvent v)      = forHuman v
-  forHuman (ChainDB.TraceOpenEvent v)              = forHuman v
-  forHuman (ChainDB.TraceIteratorEvent v)          = forHuman v
-  forHuman (ChainDB.TraceSnapshotEvent v)          = forHuman v
-  forHuman (ChainDB.TraceLedgerReplayEvent v)      = forHuman v
-  forHuman (ChainDB.TraceImmutableDBEvent v)       = forHuman v
-  forHuman (ChainDB.TraceVolatileDBEvent v)        = forHuman v
+  forHuman (ChainDB.TraceAddBlockEvent v)          = forHumanOrMachine v
+  forHuman (ChainDB.TraceFollowerEvent v)          = forHumanOrMachine v
+  forHuman (ChainDB.TraceCopyToImmutableDBEvent v) = forHumanOrMachine v
+  forHuman (ChainDB.TraceGCEvent v)                = forHumanOrMachine v
+  forHuman (ChainDB.TraceInitChainSelEvent v)      = forHumanOrMachine v
+  forHuman (ChainDB.TraceOpenEvent v)              = forHumanOrMachine v
+  forHuman (ChainDB.TraceIteratorEvent v)          = forHumanOrMachine v
+  forHuman (ChainDB.TraceSnapshotEvent v)          = forHumanOrMachine v
+  forHuman (ChainDB.TraceLedgerReplayEvent v)      = forHumanOrMachine v
+  forHuman (ChainDB.TraceImmutableDBEvent v)       = forHumanOrMachine v
+  forHuman (ChainDB.TraceVolatileDBEvent v)        = forHumanOrMachine v
 
   forMachine details (ChainDB.TraceAddBlockEvent v) =
     forMachine details v
@@ -413,14 +413,14 @@ instance ( LogFormatting (Header blk)
   forHuman (ChainDB.SwitchedToAFork es _ _ c) =
       "Switched to a fork, new tip: " <> renderPointAsPhrase (AF.headPoint c) <>
         Text.concat [ "\nEvent: " <> showT e | e <- es ]
-  forHuman (ChainDB.AddBlockValidation ev') = forHuman ev'
+  forHuman (ChainDB.AddBlockValidation ev') = forHumanOrMachine ev'
   forHuman (ChainDB.AddedBlockToVolatileDB pt _ _ enclosing) =
       case enclosing of
         RisingEdge  -> "Chain about to add block " <> renderRealPointAsPhrase pt
         FallingEdge -> "Chain added block " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.ChainSelectionForFutureBlock pt) =
       "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
-  forHuman (ChainDB.PipeliningEvent ev') = forHuman ev'
+  forHuman (ChainDB.PipeliningEvent ev') = forHumanOrMachine ev'
   forMachine dtal (ChainDB.IgnoreBlockOlderThanK pt) =
       mconcat [ "kind" .= String "IgnoreBlockOlderThanK"
                , "block" .= forMachine dtal pt ]
@@ -952,7 +952,7 @@ instance MetaTrace (ChainDB.TraceGCEvent blk) where
 
 instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
   => LogFormatting (ChainDB.TraceInitChainSelEvent blk) where
-    forHuman (ChainDB.InitChainSelValidation v) = forHuman v
+    forHuman (ChainDB.InitChainSelValidation v) = forHumanOrMachine v
     forHuman ChainDB.InitalChainSelected{} =
         "Initial chain selected"
     forHuman ChainDB.StartedInitChainSelection {} =
@@ -1251,7 +1251,7 @@ instance MetaTrace (ChainDB.TraceOpenEvent blk) where
 instance  ( StandardHash blk
           , ConvertRawHash blk
           ) => LogFormatting (ChainDB.TraceIteratorEvent blk) where
-  forHuman (ChainDB.UnknownRangeRequested ev') = forHuman ev'
+  forHuman (ChainDB.UnknownRangeRequested ev') = forHumanOrMachine ev'
   forHuman (ChainDB.BlockMissingFromVolatileDB realPt) = mconcat
     [ "This block is no longer in the VolatileDB because it has been garbage"
     , " collected. It might now be in the ImmDB if it was part of the"
@@ -2120,8 +2120,8 @@ instance (   LogFormatting (LedgerError blk)
     forMachine dtal (ExtValidationErrorLedger err) = forMachine dtal err
     forMachine dtal (ExtValidationErrorHeader err) = forMachine dtal err
 
-    forHuman (ExtValidationErrorLedger err) =  forHuman err
-    forHuman (ExtValidationErrorHeader err) =  forHuman err
+    forHuman (ExtValidationErrorLedger err) =  forHumanOrMachine err
+    forHuman (ExtValidationErrorHeader err) =  forHumanOrMachine err
 
     asMetrics (ExtValidationErrorLedger err) =  asMetrics err
     asMetrics (ExtValidationErrorHeader err) =  asMetrics err

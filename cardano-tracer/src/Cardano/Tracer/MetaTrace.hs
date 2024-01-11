@@ -9,7 +9,6 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -21,7 +20,6 @@ module Cardano.Tracer.MetaTrace
   , traceWith
   ) where
 
-import qualified "trace-dispatcher" Control.Tracer as T
 import           Data.Aeson hiding (Error)
 import qualified Data.Aeson as AE
 import           Data.Function
@@ -185,6 +183,7 @@ instance MetaTrace TracerTrace where
     severityFor (Namespace _ ["ShutdownHistBackup"]) _ = Just Info
     severityFor (Namespace _ ["ShutdownComplete"]) _ = Just Warning
     severityFor (Namespace _ ["Error"]) _ = Just Error
+    severityFor (Namespace _ ["Resource"]) _ = Just Info
     severityFor _ _ = Nothing
 
     documentFor _ = Just ""
@@ -208,16 +207,17 @@ instance MetaTrace TracerTrace where
       , Namespace [] ["ShutdownHistBackup"]
       , Namespace [] ["ShutdownComplete"]
       , Namespace [] ["Error"]
+      , Namespace [] ["Resource"]
       ]
 
 stderrShowTracer :: Trace IO TracerTrace
-stderrShowTracer =  Trace $ T.arrow $ T.emit
+stderrShowTracer =  contramapM'
     (either (const $ pure ()) (Sys.hPrint Sys.stderr) . snd)
 
 stderrTracer :: Trace IO FormattedMessage
 stderrTracer =
-  Trace $ T.arrow $ T.emit $
-    either (const $ pure ()) (Sys.hPutStrLn Sys.stderr . T.unpack . render) . snd
+  contramapM'
+    (either (const $ pure ()) (Sys.hPutStrLn Sys.stderr . T.unpack . render) . snd)
  where
    render = \case
       FormattedHuman _ x -> x

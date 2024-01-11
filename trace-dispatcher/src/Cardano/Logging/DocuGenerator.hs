@@ -20,7 +20,7 @@ module Cardano.Logging.DocuGenerator (
   , addDocumentedNamespace
 
   , DocuResult
-  , DocTracer
+  , DocTracer(..)
 ) where
 
 import           Prelude hiding (lines, unlines)
@@ -30,7 +30,7 @@ import           Data.IORef (modifyIORef, newIORef, readIORef)
 import           Data.List (groupBy, intersperse, nub, sortBy)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
-import           Data.Text (Text, lines, split, toLower, unlines)
+import           Data.Text (Text, lines, pack, split, toLower, unlines)
 import           Data.Text.Internal.Builder (toLazyText)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder (Builder, fromString, fromText, singleton)
@@ -43,6 +43,7 @@ import qualified Control.Tracer as TR
 
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
 
+type InconsistencyWarning = Text
 
 utf16CircledT :: Text
 utf16CircledT = "\x24E3"
@@ -71,6 +72,7 @@ data DocTracer = DocTracer {
     , dtSilent      :: [[Text]]
     , dtNoMetrics   :: [[Text]]
     , dtBuilderList :: [([Text], DocuResult)]
+    , dtWarnings    :: [InconsistencyWarning]
 } deriving (Show)
 
 instance Semigroup DocTracer where
@@ -79,6 +81,7 @@ instance Semigroup DocTracer where
                  (dtSilent dtl <> dtSilent dtr)
                  (dtNoMetrics dtl <> dtNoMetrics dtr)
                  (dtBuilderList dtl <> dtBuilderList dtr)
+                 (dtWarnings dtl <> dtWarnings dtr)
 
 isTracer :: DocuResult -> Bool
 isTracer DocuTracer {} = True
@@ -131,11 +134,16 @@ documentTracer tracer = do
                       ((_i, ld) : _) -> ldSilent ld
                       [] -> False
         hasNoMetrics = null metricsItems
+        warnings = concatMap (\(i, ld) -> case ldNamespace ld of
+                                            (_,_): _       -> warningItem (i, ld)
+                                            []             -> (pack "No ns for " <> ldDoc ld) :
+                                              warningItem (i, ld)) sortedItems
     pure $ DocTracer
             [tracerName]
             [tracerName | silent]
             [tracerName | hasNoMetrics]
             (messageDocs ++ metricsDocs)
+            warnings
 
   where
     documentItem :: (Int, LogDoc) -> DocuResult
@@ -153,6 +161,13 @@ documentTracer tracer = do
                       , propertiesBuilder ld
                       , configBuilder ld
                       ]
+
+    warningItem :: (Int, LogDoc) -> [InconsistencyWarning]
+    warningItem (_idx, ld@LogDoc {..}) =
+      case ldBackends of
+        [DatapointBackend] -> namespacesWarning (nub ldNamespace) ld
+        _ -> namespacesWarning (nub ldNamespace) ld
+                ++ propertiesWarning ld
 
     documentMetrics :: [LogDoc] -> [([Text],DocuResult)]
     documentMetrics logDocs =
@@ -193,6 +208,10 @@ documentTracer tracer = do
     namespaceMetricsBuilder (nsPr, nsPo) = mconcat (intersperse (singleton '.')
                                                       (map fromText (nsPr ++ nsPo)))
 
+    namespacesWarning :: [([Text], [Text])] -> LogDoc -> [InconsistencyWarning]
+    namespacesWarning [] ld  = ["Namespace missing " <> ldDoc ld]
+    namespacesWarning _ _  = []
+
     propertiesBuilder :: LogDoc -> Builder
     propertiesBuilder LogDoc {..} =
         case ldSeverityCoded of
@@ -201,11 +220,25 @@ documentTracer tracer = do
       <>
         case ldPrivacyCoded of
           Just p  -> fromText "Privacy:   " <> asCode (fromString (show p)) <> "\n"
-          Nothing -> fromText "nPrivacy missing" <> "\n"
+          Nothing -> fromText "Privacy missing" <> "\n"
       <>
         case ldDetailsCoded of
           Just d  -> fromText "Details:   " <> asCode (fromString (show d)) <> "\n"
-          Nothing -> fromText "nPrivacy missing" <> "\n"
+          Nothing -> fromText "Details missing" <> "\n"
+
+    propertiesWarning :: LogDoc ->[InconsistencyWarning]
+    propertiesWarning LogDoc {..} =
+        case ldSeverityCoded of
+          Just _s -> []
+          Nothing -> map (\ns -> pack "Severity missing" <> nsRawToText ns) ldNamespace
+      <>
+        case ldPrivacyCoded of
+          Just _p -> []
+          Nothing -> map (\ns -> pack "Privacy missing" <> nsRawToText ns) ldNamespace
+      <>
+        case ldDetailsCoded of
+          Just _d -> []
+          Nothing -> map (\ns -> pack "Details missing" <> nsRawToText ns) ldNamespace
 
     configBuilder :: LogDoc -> Builder
     configBuilder LogDoc {..} =
@@ -285,7 +318,6 @@ documentTracersRun tracers = do
       mapM_
         (\ (ns, idx) -> do
             let condDoc = documentFor ns
-                -- TODO YUP: add error reporting
                 doc = fromMaybe mempty condDoc
 
             modifyIORef docRef
@@ -585,3 +617,5 @@ accentuated t = if t == ""
     addAccent t' = if t' == ""
                     then ">"
                     else "> " <> t'
+
+

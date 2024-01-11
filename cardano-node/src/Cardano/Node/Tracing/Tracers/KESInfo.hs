@@ -127,7 +127,7 @@ instance LogFormatting HotKey.KESInfo where
 
 
 instance MetaTrace HotKey.KESInfo where
-    namespaceFor HotKey.KESInfo {} = Namespace [] []
+    namespaceFor HotKey.KESInfo {} = Namespace [] ["StateInfo"]
 
     severityFor (Namespace _ _) (Just forgeStateInfo) = Just $
       let maxKesEvos = endKesPeriod - startKesPeriod
@@ -144,20 +144,24 @@ instance MetaTrace HotKey.KESInfo where
         , HotKey.kesEvolution = currKesPeriod
         , HotKey.kesEndPeriod = KESPeriod endKesPeriod
         } = forgeStateInfo
-    severityFor (Namespace _ _) Nothing = Just Info
 
-    documentFor (Namespace _ _) = Just
+    severityFor (Namespace _ ["StateInfo"]) _ = Just Info
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["StateInfo"]) = Just
       "kesStartPeriod \
        \\nkesEndPeriod is kesStartPeriod + tpraosMaxKESEvo\
        \\nkesEvolution is the current evolution or /relative period/."
+    documentFor _ = Nothing
 
-    metricsDocFor (Namespace _ _) =
+    metricsDocFor (Namespace _ ["StateInfo"]) =
         [ ("KESInfo.operationalCertificateStartKESPeriod", "")
         , ("KESInfo.operationalCertificateExpiryKESPeriod", "")
         , ("KESInfo.currentKESPeriod", "")
         , ("KESInfo.remainingKESPeriods", "")]
+    metricsDocFor _ = []
 
-    allNamespaces = []
+    allNamespaces = [Namespace [] ["StateInfo"]]
 
 
 

@@ -38,6 +38,7 @@ import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), Handsh
                    newNetworkMutableState, nullNetworkConnectTracers, nullNetworkServerTracers,
                    withServerNode)
 
+import           System.IO (hPutStrLn, stderr)
 import qualified System.Metrics as EKG
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Forwarder
@@ -60,7 +61,7 @@ initForwarding :: forall m. (MonadIO m)
   -> Maybe (FilePath, ForwarderMode)
   -> m (ForwardSink TraceObject, DataPointStore)
 initForwarding iomgr config magic ekgStore tracerSocketMode = liftIO $ do
-  forwardSink <- initForwardSink tfConfig
+  forwardSink <- initForwardSink tfConfig handleOverflow
   dpStore <- initDataPointStore
   launchForwarders
     iomgr
@@ -107,6 +108,19 @@ initForwarding iomgr config magic ekgStore tracerSocketMode = liftIO $ do
   mkTracer :: Show a => Verbosity -> Tracer IO a
   mkTracer Maximum = contramap show stdoutTracer
   mkTracer Minimum = nullTracer
+
+-- | this function is called when the queue is full.
+--  It is called with the list of messages that were dropped.
+-- It writes an error message on stderr
+handleOverflow :: [TraceObject] -> IO ()
+handleOverflow [] = pure ()
+handleOverflow msgs =
+    let lengthM = length msgs
+        beginning = toTimestamp (head msgs)
+        end = toTimestamp (last msgs)
+        msg = "TraceObject queue overflowed. Dropped " <> show lengthM <>
+                " messages from " <> show beginning <> " to " <> show end
+    in hPutStrLn stderr msg
 
 launchForwarders
   :: IOManager
