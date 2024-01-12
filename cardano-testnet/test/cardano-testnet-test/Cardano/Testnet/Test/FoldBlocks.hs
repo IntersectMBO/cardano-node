@@ -4,7 +4,8 @@
 module Cardano.Testnet.Test.FoldBlocks where
 
 import           Cardano.Api hiding (cardanoEra)
-import qualified Cardano.Api as C
+import qualified Cardano.Api as Api
+import qualified Cardano.Api.Shelley as Api
 
 import           Cardano.Testnet as TN
 
@@ -27,10 +28,10 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
 
-newtype FoldBlocksException = FoldBlocksException C.FoldBlocksError
+newtype FoldBlocksException = FoldBlocksException Api.FoldBlocksError
 instance Exception FoldBlocksException
 instance Show FoldBlocksException where
-  show (FoldBlocksException a) = TS.unpack $ C.renderFoldBlocksError a
+  show (FoldBlocksException a) = TS.unpack $ Api.renderFoldBlocksError a
 
 -- | This test starts a testnet with wery short timing, then starts
 -- `foldBlocks` in another thread to listen for ledger state, ledger
@@ -68,9 +69,9 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
       -- permanent (= older than the k parameter) blocks created. In
       -- that case we simply restart `foldBlocks` again.
       forever $ do
-        let handler :: Env -> LedgerState -> [LedgerEvent] -> BlockInMode -> () -> IO ((), FoldStatus)
+        let handler :: Env -> LedgerState -> [Api.LedgerEvent] -> BlockInMode -> () -> IO ((), FoldStatus)
             handler _env _ledgerState _ledgerEvents _blockInCardanoMode _ = (, ContinueFold) <$> IO.putMVar lock ()
-        e <- runExceptT (C.foldBlocks (File configFile) (C.File socketPathAbs) C.QuickValidation () handler)
+        e <- runExceptT (Api.foldBlocks (File configFile) (Api.File socketPathAbs) Api.QuickValidation () handler)
         either (throw . FoldBlocksException) (\_ -> pure ()) e
     link a -- Throw async thread's exceptions in main thread
 
