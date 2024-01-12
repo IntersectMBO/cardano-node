@@ -5,11 +5,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Testnet.Test.LedgerEvents.SanityCheck
-  ( hprop_ledger_events_sanity_check
+  ( hprop_checkLedgerStateCondition_condition_met
+  , hprop_checkLedgerStateCondition_temination_epoch
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Shelley
 
 import           Cardano.Testnet
 
@@ -42,8 +42,8 @@ newtype AdditionalCatcher
 -- `foldBlocks` does. Below is a simple test that illustrates `foldBlocks` pattern matching on the RetiredPools event (https://github.com/input-output-hk/cardano-ledger/blob/afedb7d519761ccdd9c013444aa4b3e0bf0e68ef/eras/shelley/impl/src/Cardano/Ledger/Shelley/Rules/PoolReap.hs#L177).
 -- This sets the stage for more direct testing of clusters allowing us to avoid querying the node, dealing with serialization to and from disk,
 -- setting timeouts for expected results etc.
-hprop_ledger_events_sanity_check :: Property
-hprop_ledger_events_sanity_check = H.integrationRetryWorkspace 2 "ledger-events-sanity-check" $ \tempAbsBasePath' -> do
+hprop_checkLedgerStateCondition_condition_met :: Property
+hprop_checkLedgerStateCondition_condition_met = H.integrationWorkspace "Ledger state condition met" $ \tempAbsBasePath' -> do
   -- Start a local test net
   conf <- H.noteShowM $  mkConf tempAbsBasePath'
 
@@ -62,38 +62,63 @@ hprop_ledger_events_sanity_check = H.integrationRetryWorkspace 2 "ledger-events-
   H.note_ $ "Sprocket: " <> show nodeSprocket
   H.note_ $ "Abs path: " <> tempAbsBasePath'
   H.note_ $ "Socketpath: " <> socketPath
+  !ret <- runExceptT
+            $ handleIOExceptT IOE
+            $ runExceptT
+            $ checkLedgerStateCondition
+                (File $ configurationFile testnetRuntime)
+                (File socketPath)
+                FullValidation
+                0
+                (const ConditionMet)
 
-
-  !ret <- runExceptT $ handleIOExceptT IOE
-                   $ runExceptT $ foldBlocks
-                       (File $ configurationFile testnetRuntime)
-                       (File socketPath)
-                       FullValidation
-                       [] -- Initial accumulator state
-                       foldBlocksAccumulator
   case ret of
     Left (IOE e) ->
-      H.failMessage callStack $ "foldBlocks failed with: " <> show e
+      H.failMessage callStack $ "checkLedgerStateCondition failed with: " <> show e
     Right (Left e) ->
-      H.failMessage callStack $ "foldBlocks failed with: " <> Text.unpack (renderFoldBlocksError e)
-    Right (Right _v) -> success
+      H.failMessage callStack $ "checkLedgerStateCondition failed with: " <> Text.unpack (renderFoldBlocksError e)
+    Right (Right v) -> if ConditionMet == v
+                       then success
+                       else H.failMessage callStack $ "Condition not met: " <> show v
 
 
-foldBlocksAccumulator
-  :: Env
-  -> LedgerState
-  -> [LedgerEvent]
-  -> BlockInMode -- Block i
-  -> [LedgerEvent] -- ^ Accumulator at block i - 1
-  -> IO ([LedgerEvent], FoldStatus) -- ^ Accumulator at block i and fold status
-foldBlocksAccumulator _ _ allEvents _ _ =
-  if any filterPoolReap allEvents
-  then return (allEvents , StopFold)
-  else return ([], ContinueFold)
- where
-  -- We end the fold on PoolReap ledger event
-  filterPoolReap :: LedgerEvent -> Bool
-  filterPoolReap (PoolReap _) = True
-  filterPoolReap _ = False
 
+hprop_checkLedgerStateCondition_temination_epoch :: Property
+hprop_checkLedgerStateCondition_temination_epoch = H.integrationWorkspace "Ledger state termination epoch reaced" $ \tempAbsBasePath' -> do
+  -- Start a local test net
+  conf <- H.noteShowM $  mkConf tempAbsBasePath'
+
+  let fastTestnetOptions = cardanoDefaultTestnetOptions
+        { cardanoEpochLength = 100
+        , cardanoSlotLength = 0.1
+        }
+
+  !testnetRuntime
+    <- cardanoTestnet fastTestnetOptions conf
+  NodeRuntime{nodeSprocket} <- H.headM $ poolRuntime <$> poolNodes testnetRuntime
+  let socketName' = IO.sprocketName nodeSprocket
+      socketBase = IO.sprocketBase nodeSprocket -- /tmp
+      socketPath = socketBase </> socketName'
+  let terminationEpoch = 1
+  H.note_ $ "Sprocket: " <> show nodeSprocket
+  H.note_ $ "Abs path: " <> tempAbsBasePath'
+  H.note_ $ "Socketpath: " <> socketPath
+  !ret <- runExceptT
+            $ handleIOExceptT IOE
+            $ runExceptT
+            $ checkLedgerStateCondition
+                (File $ configurationFile testnetRuntime)
+                (File socketPath)
+                FullValidation
+                terminationEpoch
+                (const ConditionNotMet)
+  case ret of
+    Left (IOE e) ->
+      H.failMessage callStack $ "checkLedgerStateCondition failed with: " <> show e
+    Right (Left (FoldBlocksApplyBlockError (TerminationEpochReached termEpoch))) ->
+      termEpoch === terminationEpoch
+    Right (Left e) ->
+      H.failMessage callStack $ "checkLedgerStateCondition failed with: " <> Text.unpack (renderFoldBlocksError e)
+    Right (Right v) ->
+      H.failMessage callStack $ "checkLedgerStateCondition unexpectedly succeeded with: " <> show v
 

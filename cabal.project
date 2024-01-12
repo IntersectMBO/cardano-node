@@ -32,8 +32,8 @@ packages:
   trace-resources
   trace-forward
 
-program-options
-  ghc-options: -Werror
+-- program-options
+--   ghc-options: -Werror
 
 test-show-details: direct
 
@@ -60,3 +60,8 @@ package plutus-scripts-bench
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
+source-repository-package
+    type: git
+    location: git@github.com:IntersectMBO/cardano-api.git
+    tag: 9a65bd6ef56844788d6430f7f252e391814af13f
+    subdir: cardano-api
