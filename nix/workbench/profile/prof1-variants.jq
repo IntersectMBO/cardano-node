@@ -169,30 +169,30 @@ def all_profile_variants:
       }
     } as $chainsync_cluster
   |
-    # "qa" class Nomad Nodes in ["eu-central-1", "us-east-2"] datacenters
+    # "qa" class Nodes of Cardano World Nomad cluster
     { composition:
-      { locations:                      ["EU", "US"]
+      { locations:                      ["eu-central-1", "us-east-2"]
       , topology:                       "torus"
       , with_explorer:                  true
       }
     } as $nomad_cardano_world_qa
   |
-    # nomad_perf using cardano-ops "dense" topology
-    # Can only be used with the 52 + explorer value profile!
+    # P&T exclusive Nomad cluster Nodes
     { composition:
-      { locations:                      ["EU", "US", "AP"]
-      , topology:                       "dense"
-      , with_explorer:                  true
-      }
-    } as $nomad_perf_dense
-  |
-    # P&T Nomad cluster Nodes in ["eu-central-1", "us-east-2", "ap-southeast-2"] datacenters
-    { composition:
-      { locations:                      ["EU", "US", "AP"]
+      { locations:                      ["eu-central-1", "us-east-1", "ap-southeast-2"]
       , topology:                       "torus"
       , with_explorer:                  true
       }
     } as $nomad_perf_torus
+  |
+    # nomad_perf using cardano-ops "dense" topology
+    # Can only be used with the 52 + explorer value profile!
+    { composition:
+      { locations:                      ["eu-central-1", "us-east-1", "ap-southeast-2"]
+      , topology:                       "torus-dense"
+      , with_explorer:                  true
+      }
+    } as $nomad_perf_dense
   |
   ##
   ### Definition vocabulary:  filtering

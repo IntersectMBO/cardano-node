@@ -13,6 +13,15 @@ license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
 build-type:             Simple
+extra-source-files:     README.md
+data-files:             data/bench-torus-52.json
+                        data/bench-torus-dense-52.json
+                        data/ci-test-nomadcwqa.json
+                        data/ci-test-nomadperf.json
+                        data/ci-test.json
+                        data/default-nomadcwqa.json
+                        data/default-nomadperf.json
+                        data/default.json
 
 common project-config
   build-depends:        base >= 4.14 && < 5
@@ -25,10 +34,21 @@ common project-config
                         -Wno-unticked-promoted-constructors
                         -Wpartial-fields
                         -Wredundant-constraints
+                        -Wwarn=deprecations
+
+library
+  import:               project-config
+  hs-source-dirs:       src
+  exposed-modules:      Cardano.Benchmarking.Topology
+                      , Cardano.Benchmarking.Topology.Types
+  build-depends:        base >=4.12 && <5
+                      , aeson
+                      , bytestring
+                      , text
 
 executable cardano-topology
   import:               project-config
-  hs-source-dirs:       .
+  hs-source-dirs:       app/
   main-is:              cardano-topology.hs
   ghc-options:          -threaded
                         -rtsopts
@@ -40,3 +60,21 @@ executable cardano-topology
                       , optparse-applicative-fork
                       , split
                       , text
+                      , cardano-topology
+
+test-suite cardano-topology-test
+  import:               project-config
+  hs-source-dirs:       test/
+  main-is:              Main.hs
+  type:                 exitcode-stdio-1.0
+  other-modules:        Paths_cardano_topology
+  autogen-modules:      Paths_cardano_topology
+  build-depends:        base
+                      , aeson
+                      , bytestring
+                      , tasty
+                      , tasty-hunit
+                      , cardano-topology
+  ghc-options:          -threaded
+                        -rtsopts
+                        "-with-rtsopts=-T"

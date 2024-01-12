@@ -50,12 +50,9 @@ backend_nomadcloud() {
     # Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
     start-cluster )
       backend_nomad start-cluster           "$@"
-      # If value profile on the dedicated P&T Nomad cluster on AWS extra checks
-      # to make sure the topology that was deployed is the correct one.
-      if                                                                 \
-          test "${WB_SHELL_PROFILE:0:15}" = 'value-nomadperf'            \
-        ||                                                               \
-          test "${WB_SHELL_PROFILE:0:26}" = 'value-oldtracing-nomadperf'
+      # If value/plutus profile on the dedicated P&T Nomad cluster on AWS extra
+      # checks to make sure the topology that was deployed is the correct one.
+      if jqtest '.composition.topology == "torus-dense"' "${dir}"/profile.json
       then
         # Show a big warning but let the run continue!
         check-deployment "${dir}"
@@ -409,44 +406,6 @@ allocate-run-nomadcloud() {
   then
     fatal "Envar \"WB_SHELL_PROFILE\" is empty!"
   else
-    ########################################################################
-    # Fix for region mismatches ############################################
-    ########################################################################
-    # If value profile, "value-nomadperf", topology was imported from
-    # cardano-ops / nixops that was already using "us-east-1", but not
-    # "default-nomadperf", "ci-test-nomadperf" and "ci-bench" that is generated
-    # by `cardano-topology` (Haskell project in bench/).
-    # - Cardano World cluster: "eu-central-1", "us-east-2"
-    # - Workbench (Nix level): "eu-central-1", "us-east-2", and "ap-southeast-2"
-    # - Dedicated P&T cluster: "eu-central-1", "us-east-1", and "ap-southeast-2"
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
-    then
-        jq \
-          "                                                         \
-              .[\"job\"][\"${nomad_job_name}\"][\"datacenters\"]    \
-            |=                                                      \
-              [\"eu-central-1\", \"us-east-1\", \"ap-southeast-2\"] \
-          " \
-          "${dir}"/nomad/nomad-job.json \
-      | \
-        sponge "${dir}"/nomad/nomad-job.json
-      # Nix creates a Nomad Job file with affinities taken from node-specs.json
-        jq \
-          "                                                  \
-               .[\"job\"][\"${nomad_job_name}\"][\"group\"]  \
-            |= with_entries(                                 \
-                 if (.value.affinity.value == \"us-east-2\") \
-                 then                                        \
-                   (.value.affinity.value |= \"us-east-1\")  \
-                 else                                        \
-                   (.)                                       \
-                 end                                         \
-               )                                             \
-          " \
-          "${dir}"/nomad/nomad-job.json \
-      | \
-        sponge "${dir}"/nomad/nomad-job.json
-    fi
     ############################################################################
     # Unique placement: ########################################################
     ############################################################################
@@ -613,7 +572,7 @@ allocate-run-nomadcloud() {
       # TODO/MAYBE: When not "value" profile, let the explorer run in any node?
       # resource wise. So more than one "ci-test", "ci-bench", "default" profile
       # can be run at the same time. This will need some changes to Nomad
-      # services names (currently all "perfnode#").
+      # services names (currently all "perf-node-#" and maybe "perf-tracer").
       # WARNING: By always using/placing the explorer node in the only machine
       # with more memory, we are sure runs do not overlap and no ports, etc are
       # clashing and interfering with benchmarks results!
@@ -675,12 +634,9 @@ allocate-run-nomadcloud() {
     ########################################################################
     # Reproducibility: #####################################################
     ########################################################################
-    # If value profile on "-nomadperf", using always the same placement!
+    # If value/plutus profile on "-nomadperf", using always the same placement!
     # This means node-N always runs on the same Nomad Client/AWS EC2 machine
-    if                                                                  \
-         test "${WB_SHELL_PROFILE:0:15}" = 'value-nomadperf'            \
-      ||                                                                \
-         test "${WB_SHELL_PROFILE:0:26}" = 'value-oldtracing-nomadperf'
+    if jqtest '.composition.topology == "torus-dense"' "${dir}"/profile.json
     then
       # A file with all the available Nomad Clients is needed!
       # This files is a list of Nomad Clients with a minimun of ".id",

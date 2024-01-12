@@ -450,12 +450,12 @@ backend_nomad() {
       do
         local node_name
         node_name=$(jq -r "map(select( .i == ${i} ))[0].name" "${dir}"/node-specs.json)
-        nomad service info -json "perfnode${i}" > "${dir}"/nomad/"${node_name}"/service-info.json &
+        nomad service info -json "perf-node-${i}" > "${dir}"/nomad/"${node_name}"/service-info.json &
         jobs_array+=("$!")
       done
       if ! test "${one_tracer_per_node}" = "true"
       then
-        nomad service info -json "perftracer" > "${dir}"/nomad/tracer/service-info.json &
+        nomad service info -json "perf-tracer" > "${dir}"/nomad/tracer/service-info.json &
         jobs_array+=("$!")
       fi
       # Wait and check!
