@@ -15,7 +15,7 @@ module Cardano.Benchmarking.Topology (
 import           Prelude hiding (id)
 
 import           Data.Function  ((&))
-import           Data.List      (tails, sortOn)
+import           Data.List      (tails, sortOn, uncons)
 import           Data.Maybe     (isJust)
 
 import qualified Cardano.Benchmarking.Topology.Types as Types
@@ -79,7 +79,7 @@ mkExplorer explorerLocation coreNodes =
 
 -- | Intermediate structure to work with Nodes producers by ID instead of name.
 data Spec = Spec
-  { id     :: Int
+  { specId :: Int
   , loc    :: Types.Location
   , mpools :: Maybe Int
   , links  :: [Int]
@@ -94,7 +94,7 @@ mkNode :: Spec -> Types.Node
 mkNode Spec{..} = Types.Node{..} where
   name = idName nodeId
   org = "IOHK"
-  nodeId = id
+  nodeId = specId
   pools = mpools
   stakePool = Just $ isJust mpools
   region = loc
@@ -108,10 +108,10 @@ mkCoreNodes' Line{..} = breakLoop tpSize phase1 where
   phase0 = mkInitial <$> specIds
     where
       mkInitial :: Int -> Spec
-      mkInitial id =
+      mkInitial specId =
         Spec {
             links = []
-          , mpools = tpIdPools id
+          , mpools = tpIdPools specId
           , loc = tpLocation
           , ..
         }
@@ -124,10 +124,10 @@ mkCoreNodes' UniCircle{..} = phase1 where
   phase0 = mkInitial <$> specIds
     where
       mkInitial :: Int -> Spec
-      mkInitial id =
+      mkInitial specId =
         Spec {
           links = []
-        , mpools = tpIdPools id
+        , mpools = tpIdPools specId
         , loc = tpLocation
         , ..
         }
@@ -159,10 +159,10 @@ mkCoreNodesTorus tpSize' tpLocations' tpIdPools' dense = concat phase3 where
   phase0 = zipWith mkInitial specIds specLocs
     where
       mkInitial :: Int -> Types.Location -> Spec
-      mkInitial id loc =
+      mkInitial specId loc =
         Spec {
           links = []
-        , mpools = tpIdPools' id
+        , mpools = tpIdPools' specId
         , ..
         }
   -- Split into per-location lists (list of lists).
@@ -184,23 +184,23 @@ mkCoreNodesTorus tpSize' tpLocations' tpIdPools' dense = concat phase3 where
   -- inmmediate next same-region node and one to the inmmediate previous
   -- same-region node.
   -- [
-  --     Spec {id =  0, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 3,51]}
-  --   , Spec {id =  3, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 6, 0]}
-  --   , Spec {id =  6, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 9, 3]}
+  --     Spec {specId =  0, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 3,51]}
+  --   , Spec {specId =  3, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 6, 0]}
+  --   , Spec {specId =  6, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 9, 3]}
   --   ...
-  --   , Spec {id = 45, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [48,42]}
-  --   , Spec {id = 48, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [51,45]}
-  --   , Spec {id = 51, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 0,48]}
+  --   , Spec {specId = 45, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [48,42]}
+  --   , Spec {specId = 48, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [51,45]}
+  --   , Spec {specId = 51, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 0,48]}
   -- ]
   -- For the dense version of the Torus it add two more intra links:
   -- [
-  --     Spec {id = 0,  loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 3,51,18,36]}
-  --   , Spec {id = 3,  loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 6, 0,21,39]}
-  --   , Spec {id = 6,  loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 9, 3,24,42]}
+  --     Spec {specId = 0,  loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 3,51,18,36]}
+  --   , Spec {specId = 3,  loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 6, 0,21,39]}
+  --   , Spec {specId = 6,  loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 9, 3,24,42]}
   --   ...
-  --   , Spec {id = 45, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [48,42, 9,27]}
-  --   , Spec {id = 48, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [51,45,12,30]}
-  --   , Spec {id = 51, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 0,48,15,33]}
+  --   , Spec {specId = 45, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [48,42, 9,27]}
+  --   , Spec {specId = 48, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [51,45,12,30]}
+  --   , Spec {specId = 51, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 0,48,15,33]}
   -- ]
   phase2 = intraConnectRing dense True <$> phase1
   -- Establish inter-location connections.
@@ -222,7 +222,7 @@ mkCoreNodesTorus tpSize' tpLocations' tpIdPools' dense = concat phase3 where
         ]
         where
           rings = take (nlocs - 1) $ cycle <$> xss'
-          idOf n xs' = id (xs' !! n)
+          idOf n xs' = specId (xs' !! n)
       linker [] = error "Invariant failure: empty list of specs"
 
 breakLoop :: Int -> [Spec] -> [Spec]
@@ -240,13 +240,13 @@ intraConnectRing False False $
   (\id' -> Spec id' (Types.AWS Types.EU_CENTRAL_1) Nothing [])
   [0,3..51]
 [
-  Spec {id =  0, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 3]}
-, Spec {id =  3, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 6]}
-, Spec {id =  6, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 9]}
+  Spec {specId =  0, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 3]}
+, Spec {specId =  3, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 6]}
+, Spec {specId =  6, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 9]}
 ...
-, Spec {id = 45, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [48]}
-, Spec {id = 48, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [51]}
-, Spec {id = 51, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 0]}
+, Spec {specId = 45, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [48]}
+, Spec {specId = 48, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [51]}
+, Spec {specId = 51, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 0]}
 ]
 
 intraConnectRing False True $
@@ -254,13 +254,13 @@ intraConnectRing False True $
   (\id' -> Spec id' (Types.AWS Types.EU_CENTRAL_1) Nothing [])
   [0,3..51]
 [
-  Spec {id =  0, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 3,51]}
-, Spec {id =  3, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 6, 0]}
-, Spec {id =  6, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 9, 3]}
+  Spec {specId =  0, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 3,51]}
+, Spec {specId =  3, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 6, 0]}
+, Spec {specId =  6, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 9, 3]}
 ...
-, Spec {id = 45, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [48,42]}
-, Spec {id = 48, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [51,45]}
-, Spec {id = 51, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 0,48]}
+, Spec {specId = 45, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [48,42]}
+, Spec {specId = 48, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [51,45]}
+, Spec {specId = 51, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 0,48]}
 ]
 
 intraConnectRing True False $
@@ -268,13 +268,13 @@ intraConnectRing True False $
   (\id' -> Spec id' (Types.AWS Types.EU_CENTRAL_1) Nothing [])
   [0,3..51]
 [
-  Spec {id =  0, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 3]}
-, Spec {id =  3, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 6]}
-, Spec {id =  6, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 9]}
+  Spec {specId =  0, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 3]}
+, Spec {specId =  3, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 6]}
+, Spec {specId =  6, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 9]}
 ...
-, Spec {id = 45, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [48]}
-, Spec {id = 48, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [51]}
-, Spec {id = 51, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 0]}
+, Spec {specId = 45, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [48]}
+, Spec {specId = 48, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [51]}
+, Spec {specId = 51, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 0]}
 ]
 
 intraConnectRing True True $
@@ -282,13 +282,13 @@ intraConnectRing True True $
   (\id' -> Spec id' (Types.AWS Types.EU_CENTRAL_1) Nothing [])
   [0,3..51]
 [
-  Spec {id = 0,  loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 3,51,18,36]}
-, Spec {id = 3,  loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 6, 0,21,39]}
-, Spec {id = 6,  loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 9, 3,24,42]}
+  Spec {specId = 0,  loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 3,51,18,36]}
+, Spec {specId = 3,  loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 6, 0,21,39]}
+, Spec {specId = 6,  loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 9, 3,24,42]}
 ...
-, Spec {id = 45, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [48,42, 9,27]}
-, Spec {id = 48, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [51,45,12,30]}
-, Spec {id = 51, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 0,48,15,33]}
+, Spec {specId = 45, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [48,42, 9,27]}
+, Spec {specId = 48, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [51,45,12,30]}
+, Spec {specId = 51, loc = AWS EU_CENTRAL_1, mpools = Nothing, links = [ 0,48,15,33]}
 ]
 
 --}
@@ -319,15 +319,16 @@ intraConnectRing withChords bidirectional specs =
                        : links x }
            linker [] = error "Invariant failure: empty list of specs"
            ring = cycle xs
-           idOf n xs' = id (xs' !! n)
+           idOf n xs' = specId (xs' !! n)
 
 --- * Aux
 ---
 -- | Update the first element of a list, if it exists.
 --   O(1).
 updateHead :: (a -> a) -> [a] -> [a]
-updateHead _ []       = []
-updateHead f (a : as) = f a : as
+updateHead f xs = case uncons xs of
+  Nothing -> []
+  Just (x,xs') -> f x:xs'
 
 -- | Update the last element of a list, if it exists.
 --   O(n).

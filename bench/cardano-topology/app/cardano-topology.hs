@@ -10,8 +10,6 @@
 
 import           Prelude hiding (id)
 
-import qualified System.IO as IO
-
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.GraphViz as G
@@ -149,9 +147,7 @@ cliOpts = info (cliParser <**> helper)
 --- * To JSON topology
 ---
 writeTopo :: [Topo.Node] -> [Topo.Node] -> FilePath -> IO ()
-writeTopo cores relays f =
-  IO.withFile f IO.WriteMode $ \hnd ->
-    LBS.hPutStrLn hnd . Aeson.encode $ Topo.Topology cores relays
+writeTopo cores relays f = Aeson.encodeFile f (Topo.Topology cores relays)
 
 --------------------------------------------------------------------------------
 
@@ -159,10 +155,9 @@ writeTopo cores relays f =
 ---
 writeDot :: [Topo.Node] -> FilePath -> IO ()
 writeDot topo f =
-  IO.withFile f IO.WriteMode $ \hnd ->
-    T.hPutStrLn hnd $
-      G.renderDot $ G.toDot $
-        uncurry (G.graphElemsToDot params) (toGV topo)
+  T.writeFile f $
+    G.renderDot $ G.toDot $
+      uncurry (G.graphElemsToDot params) (toGV topo)
  where
    params = G.nonClusteredParams
      { G.globalAttributes =
