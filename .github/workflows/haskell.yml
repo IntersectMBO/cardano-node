@@ -30,7 +30,7 @@ jobs:
         cabal: ["3.10.2.1"]
         os: [windows-latest, ubuntu-latest]
         include:
-          # Using include, to make sure only be one macOS job, even if the matrix gets expanded later on.
+          # Using include, to make sure there will only be one macOS job, even if the matrix gets expanded later on.
           # We want a single job, because macOS runners are scarce.
           - os: macos-latest
             cabal: "3.10.2.1"
