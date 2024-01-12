@@ -25,9 +25,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # If you edit these versions, make sure the version in the lonely macos-latest job below is updated accordingly
         ghc: ["9.2.8", "9.6.3"]
         cabal: ["3.10.2.1"]
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest]
+        include:
+          # Using include, to make sure only be one macOS job, even if the matrix gets expanded later on.
+          # We want a single job, because macOS runners are scarce.
+          - os: macos-latest
+            cabal: "3.10.2.1"
+            ghc: "9.6.3"
 
     env:
       # Modify this value to "invalidate" the cabal cache.
