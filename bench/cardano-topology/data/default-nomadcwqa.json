@@ -1,0 +1,100 @@
+{
+  "coreNodes": [
+    {
+      "name": "node-0",
+      "nodeId": 0,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-1",
+        "node-2",
+        "node-4"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-2",
+      "nodeId": 2,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-3",
+        "node-4",
+        "node-0"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-4",
+      "nodeId": 4,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-5",
+        "node-0",
+        "node-2"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-1",
+      "nodeId": 1,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-0",
+        "node-3",
+        "node-5"
+      ],
+      "region": "us-east-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-3",
+      "nodeId": 3,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-2",
+        "node-5",
+        "node-1"
+      ],
+      "region": "us-east-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-5",
+      "nodeId": 5,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-4",
+        "node-1",
+        "node-3"
+      ],
+      "region": "us-east-2",
+      "stakePool": true
+    }
+  ],
+  "relayNodes": [
+    {
+      "name": "explorer",
+      "nodeId": 6,
+      "org": "IOHK",
+      "pools": null,
+      "producers": [
+        "node-0",
+        "node-1",
+        "node-2",
+        "node-3",
+        "node-4",
+        "node-5"
+      ],
+      "region": "eu-central-1",
+      "stakePool": null
+    }
+  ]
+}

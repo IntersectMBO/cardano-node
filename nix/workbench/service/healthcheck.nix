@@ -61,8 +61,8 @@ let
           ${coreutils}/bin/echo "- active_slots_coeff: ''${active_slots_coeff}"
           ${coreutils}/bin/echo "- active_slots:       ''${active_slots}"
 
-          # Fetch all node names (Including "explorer" nodes)
-          ###################################################
+          # Fetch all defined node names (Including "explorer" nodes)
+          ###########################################################
 
           node_specs_nodes=$(${jq}/bin/jq --raw-output \
             "keys | join (\" \")"                      \
@@ -76,8 +76,8 @@ let
           ${coreutils}/bin/echo "- Nodes: [''${node_specs_nodes[*]}]"
           ${coreutils}/bin/echo "- Pools: ''${node_specs_pools}"
 
-          # Look for deployed nodes and allocate healthcheck
-          ##################################################
+          # Look for locally deployed nodes and allocate healthcheck
+          ##########################################################
 
           nodes=()
           started_time=$(${coreutils}/bin/date +%s)
@@ -140,7 +140,7 @@ let
             # Start individual nodes' healthchecks
             ######################################
 
-            # Check that all available nodes are synced and past slot zero!
+            # Check that locally available nodes are synced and past slot zero!
             for node in ''${nodes[*]}
             do
               # Returns false if not synced and true when synced.
@@ -151,10 +151,6 @@ let
               done
               msg "Node "\"''${node}\"" is now synced!"
             done
-
-            # Ignore PIPE "errors", mixing 'jq', 'tac', 'grep' and/or 'head'
-            # will evetually throw a PIPE exception (see jq_node_stdout_last).
-            trap "${coreutils}/bin/echo \"trap PIPE\" >&2" PIPE
 
             # This is an "explorer" node (only one node and generator).
             # If not an explorer node we don't keep unwanted stuff running!
@@ -201,12 +197,10 @@ let
               msg "Done, bye!"
             fi
 
-            trap - PIPE
-
           }
 
           ######################################################################
-          # Network ############################################################
+          # Network functions ##################################################
           ######################################################################
 
           # TODO: latency_topology_producers "''${node}"
@@ -215,11 +209,17 @@ let
             local node=$1
             msg "Connectivity using 'cardano-cli ping' of \"''${node}\"'s Producers"
             local topology_path="../''${node}/topology.json"
-            local keys=$(${jq}/bin/jq --raw-output '.Producers | keys | join (" ")' "''${topology_path}")
+            # Merge non-P2P and P2P in the same {addr:"ADDR",port:0} format.
+            local producers
+            producers=$(${jq}/bin/jq '.Producers//[] + ((.localRoots[0].accessPoints//[]) | map({addr:.address,port:.port}))' "''${topology_path}")
+            local keys
+            keys=$(echo "''${producers}" | ${jq}/bin/jq --raw-output 'keys | join (" ")')
             for key in ''${keys[*]}
             do
-              local host=$(${jq}/bin/jq --raw-output ".Producers[''${key}].addr" "''${topology_path}")
-              local port=$(${jq}/bin/jq --raw-output ".Producers[''${key}].port" "''${topology_path}")
+              local host
+              host=$(echo "''${producers}" | ${jq}/bin/jq --raw-output ".[''${key}].addr")
+              local port
+              port=$(echo "''${producers}" | ${jq}/bin/jq --raw-output ".[''${key}].port")
               msg "Executing 'cardano-cli ping' to \"''${host}:''${port}\""
               # If the ping fails the whole script must fail!
               ${cardano-cli}/bin/cardano-cli ping \
@@ -232,7 +232,7 @@ let
           }
 
           ######################################################################
-          # Node ###############################################################
+          # Node functions #####################################################
           ######################################################################
 
           function healthcheck_node_synced() {
@@ -485,30 +485,40 @@ let
 
           # Gets the last "matching" JSON message from a Node's stdout file.
           #
+          # TL;DR;
           # To avoid reading the whole node's "stdout" file its contents are
           # reversed using `tac` (assuming `tac` is efficient) and piped to
           # `jq --unbuffered` that uses its "minimal support for I/O" using
           # 'inputs' to control over when inputs are read in combination with
           # the null input option '--null-input' to prevent one input from being
           # read implicitly.
-          # With all these, we can efficiently select the first occurrence like
+          # With all these, we can efficiently select the last occurrence like
           # this: "nth(0; inputs | select( INSERT_BLOCK_QUERY ))"
           #
+          # Extras:
           # Note that the log file is composed of one JSON object per line were
           # 'inputs' read one by one and we are using `--compact-output` to make
           # sure every output log message matched by `jq` is contained within a
-          # line.
+          # line. Also, the stdout of the node starts with some text that's
+          # echoed by node's start.sh script that is not valid JSON, so we use
+          # `grep` to filter only lines matching "{"... }".
           #
-          # Also, the stdout of the node starts with some text that's echoed by
-          # node's start.sh script that is not valid JSON, so we `grep` for
-          # "{"... }". We still need to check the exit code of these functions
-          # just in case because if it fails a query may have failed and the
-          # healthcheck should fail. This is tricky because when 'jq' finishes
-          # and exists `tac` or `grep` may throw the following error:
+          # We still need to check the exit code of these functions just in case
+          # because if it fails a query may have failed and the healthcheck
+          # should fail. This is tricky because when 'jq' finishes and exists
+          # `tac` or `grep` may throw the following error:
           # "writing output failed: Broken pipe"
+          # (We "want" broken pipe errors, that means that `tac` in combination
+          # with `grep` and `jq` are working as expected, lazy/efficiently).
+          # To obtain the `PIPESTATUS` of the whole command we avoid subshells,
+          # not assigning value directly, and redirect the result to a file.
+          #
+          # In case `jq` fails we are using 'fromjson' to get the input supplied
+          # to `jq` in the error messages for debugging purposes.
+          # https://github.com/jqlang/jq/issues/996#issuecomment-361778464
           #
           # Finally filter for "null" inputs that are the output of 'nth(0;...)'
-          # if no occurrence. Return the empty "string" if no value.
+          # if no occurrence. Returns the empty "string" if no value.
           #
           # $1: node name
           # $2: jq's query string
@@ -516,34 +526,37 @@ let
             local node=$1
             local select=$2
             local stdout_path="../''${node}/stdout"
-            local ans return_code=0 pipe_status=(0 0 0 0)
-            ans="$( \
-                  { ${coreutils}/bin/tac "''${stdout_path}" 2>/dev/null; } \
+            # A file is needed to obtain both the response and PIPESTATUS
+            local ansfile_path=../''${node}/healthcheck/jq_node_stdout_last
+            local pipe_status=()
+            if ! \
+                  { ${coreutils}/bin/tac "''${stdout_path}" 2>/dev/null ; } \
                 | \
-                  { ${grep}/bin/grep -E  "^{\".*}$"         2>/dev/null; } \
+                  { ${grep}/bin/grep --line-buffered --line-regexp "{.*}" 2>/dev/null ; } \
                 | \
-                  ${jq}/bin/jq                             \
-                    --compact-output                       \
-                    --unbuffered                           \
-                    --null-input                           \
-                    "nth(0; inputs | select(''${select}))" \
+                  ${jq}/bin/jq       \
+                    --compact-output \
+                    --unbuffered     \
+                    --null-input     \
+                    --raw-input      \
+                    "nth(0; inputs |                       \
+                      try                                  \
+                        (fromjson | select(''${select}))   \
+                      catch                                \
+                        (error(.))                         \
+                    )"                                     \
                 | \
                   ${jq}/bin/jq 'select(. != null)' \
-              || \
-                { return_code="$?"; pipe_status="''${PIPESTATUS[@]}"; } \
-            )"
-            if test "''${return_code}" == 0
+                > "''${ansfile_path}"
             then
-               ${coreutils}/bin/echo "''${ans}"
-            else
               # Ignore "writing output failed: Broken pipe"
-              if test "''${pipe_status[2]}" != 0 || test "''${pipe_status[3]}" != 0 || test "''${return_code}" != 141
+              pipe_status+=("''${PIPESTATUS[@]}")
+              if test "''${pipe_status[2]}" != 0 || test "''${pipe_status[3]}" != 0
               then
-                exit_22 "jq error: jq_node_stdout_last: ''${node}"
-              else
-                ${coreutils}/bin/echo "''${ans}"
+                exit_22 "unknown error: jq_node_stdout_last: ''${node}: ''${pipe_status[*]}"
               fi
             fi
+            ${coreutils}/bin/cat "''${ansfile_path}"
           }
 
           # This one exists with "write error: Broken pipe"

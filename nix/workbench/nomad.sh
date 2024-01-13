@@ -183,7 +183,9 @@ wb_nomad() {
                 then
                   local expire_time
                   expire_time=$(echo "${token_lookup_response}" | jq -r .data.expire_time)
-                  if test "$(date -u -d "${expire_time}" "+%s")" -ge "$(date -u "+%s")"
+                  # Compare expire date with the actual date minus one day.
+                  # This avoids a token expiring while a profile is running.
+                  if test "$(date -u -d "${expire_time}" "+%s")" -ge "$(($(date -u "+%s") - 86400))"
                   then
                     true
                   else
@@ -2248,9 +2250,33 @@ EOF
             echo "           , \"producers\": ["
             local node_topology_file_path
             node_topology_file_path="$(dirname "${job_file}")"/../"${task_name}"/topology.json
-            # Grab producers from the fetched, after deployment, "topology.json" files
+            # Grab producers from the fetched, after deployment, "topology.json" files, merging P2P and non-P2P formats.
             local node_producers
-            node_producers=$(jq .Producers "${node_topology_file_path}")
+            # Merge non-P2P and P2P in the same {addr:"ADDR",port:0} format.
+            # P2P uses "address" instead of "addr" and is:
+            ### {
+            ### "localRoots": [
+            ### {
+            ###   "accessPoints": [
+            ###     {
+            ###       "address": "10.0.0.1",
+            ###       "port": 30001
+            ###     },
+            ###     {
+            ###       "address": "10.0.0.2",
+            ###       "port": 30002
+            ###     },
+            # non-P2P is:
+            ### {
+            ### "Producers": [
+            ###  {
+            ###    "addr": "10.0.0.1",
+            ###    "port": 30001
+            ###  },
+            node_producers=$(jq \
+              '.Producers//[] + ((.localRoots[0].accessPoints//[]) | map({addr:.address,port:.port}))' \
+              "${node_topology_file_path}"
+            )
             local node_producers_keys
             node_producers_keys=$(echo "${node_producers}" | jq --raw-output 'keys | join (" ")')
             local node_producer_i=0

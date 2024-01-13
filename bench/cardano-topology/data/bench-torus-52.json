@@ -1,0 +1,796 @@
+{
+  "coreNodes": [
+    {
+      "name": "node-0",
+      "nodeId": 0,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-1",
+        "node-2",
+        "node-3",
+        "node-51"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-3",
+      "nodeId": 3,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-4",
+        "node-5",
+        "node-6",
+        "node-0"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-6",
+      "nodeId": 6,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-7",
+        "node-8",
+        "node-9",
+        "node-3"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-9",
+      "nodeId": 9,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-10",
+        "node-11",
+        "node-12",
+        "node-6"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-12",
+      "nodeId": 12,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-13",
+        "node-14",
+        "node-15",
+        "node-9"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-15",
+      "nodeId": 15,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-16",
+        "node-17",
+        "node-18",
+        "node-12"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-18",
+      "nodeId": 18,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-19",
+        "node-20",
+        "node-21",
+        "node-15"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-21",
+      "nodeId": 21,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-22",
+        "node-23",
+        "node-24",
+        "node-18"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-24",
+      "nodeId": 24,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-25",
+        "node-26",
+        "node-27",
+        "node-21"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-27",
+      "nodeId": 27,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-28",
+        "node-29",
+        "node-30",
+        "node-24"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-30",
+      "nodeId": 30,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-31",
+        "node-32",
+        "node-33",
+        "node-27"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-33",
+      "nodeId": 33,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-34",
+        "node-35",
+        "node-36",
+        "node-30"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-36",
+      "nodeId": 36,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-37",
+        "node-38",
+        "node-39",
+        "node-33"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-39",
+      "nodeId": 39,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-40",
+        "node-41",
+        "node-42",
+        "node-36"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-42",
+      "nodeId": 42,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-43",
+        "node-44",
+        "node-45",
+        "node-39"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-45",
+      "nodeId": 45,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-46",
+        "node-47",
+        "node-48",
+        "node-42"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-48",
+      "nodeId": 48,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-49",
+        "node-50",
+        "node-51",
+        "node-45"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-51",
+      "nodeId": 51,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-1",
+        "node-2",
+        "node-0",
+        "node-48"
+      ],
+      "region": "eu-central-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-1",
+      "nodeId": 1,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-2",
+        "node-0",
+        "node-4",
+        "node-49"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-4",
+      "nodeId": 4,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-5",
+        "node-3",
+        "node-7",
+        "node-1"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-7",
+      "nodeId": 7,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-8",
+        "node-6",
+        "node-10",
+        "node-4"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-10",
+      "nodeId": 10,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-11",
+        "node-9",
+        "node-13",
+        "node-7"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-13",
+      "nodeId": 13,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-14",
+        "node-12",
+        "node-16",
+        "node-10"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-16",
+      "nodeId": 16,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-17",
+        "node-15",
+        "node-19",
+        "node-13"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-19",
+      "nodeId": 19,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-20",
+        "node-18",
+        "node-22",
+        "node-16"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-22",
+      "nodeId": 22,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-23",
+        "node-21",
+        "node-25",
+        "node-19"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-25",
+      "nodeId": 25,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-26",
+        "node-24",
+        "node-28",
+        "node-22"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-28",
+      "nodeId": 28,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-29",
+        "node-27",
+        "node-31",
+        "node-25"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-31",
+      "nodeId": 31,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-32",
+        "node-30",
+        "node-34",
+        "node-28"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-34",
+      "nodeId": 34,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-35",
+        "node-33",
+        "node-37",
+        "node-31"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-37",
+      "nodeId": 37,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-38",
+        "node-36",
+        "node-40",
+        "node-34"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-40",
+      "nodeId": 40,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-41",
+        "node-39",
+        "node-43",
+        "node-37"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-43",
+      "nodeId": 43,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-44",
+        "node-42",
+        "node-46",
+        "node-40"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-46",
+      "nodeId": 46,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-47",
+        "node-45",
+        "node-49",
+        "node-43"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-49",
+      "nodeId": 49,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-50",
+        "node-48",
+        "node-1",
+        "node-46"
+      ],
+      "region": "us-east-1",
+      "stakePool": true
+    },
+    {
+      "name": "node-2",
+      "nodeId": 2,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-0",
+        "node-1",
+        "node-5",
+        "node-50"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-5",
+      "nodeId": 5,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-3",
+        "node-4",
+        "node-8",
+        "node-2"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-8",
+      "nodeId": 8,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-6",
+        "node-7",
+        "node-11",
+        "node-5"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-11",
+      "nodeId": 11,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-9",
+        "node-10",
+        "node-14",
+        "node-8"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-14",
+      "nodeId": 14,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-12",
+        "node-13",
+        "node-17",
+        "node-11"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-17",
+      "nodeId": 17,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-15",
+        "node-16",
+        "node-20",
+        "node-14"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-20",
+      "nodeId": 20,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-18",
+        "node-19",
+        "node-23",
+        "node-17"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-23",
+      "nodeId": 23,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-21",
+        "node-22",
+        "node-26",
+        "node-20"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-26",
+      "nodeId": 26,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-24",
+        "node-25",
+        "node-29",
+        "node-23"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-29",
+      "nodeId": 29,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-27",
+        "node-28",
+        "node-32",
+        "node-26"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-32",
+      "nodeId": 32,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-30",
+        "node-31",
+        "node-35",
+        "node-29"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-35",
+      "nodeId": 35,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-33",
+        "node-34",
+        "node-38",
+        "node-32"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-38",
+      "nodeId": 38,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-36",
+        "node-37",
+        "node-41",
+        "node-35"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-41",
+      "nodeId": 41,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-39",
+        "node-40",
+        "node-44",
+        "node-38"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-44",
+      "nodeId": 44,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-42",
+        "node-43",
+        "node-47",
+        "node-41"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-47",
+      "nodeId": 47,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-45",
+        "node-46",
+        "node-50",
+        "node-44"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    },
+    {
+      "name": "node-50",
+      "nodeId": 50,
+      "org": "IOHK",
+      "pools": 1,
+      "producers": [
+        "node-48",
+        "node-49",
+        "node-2",
+        "node-47"
+      ],
+      "region": "ap-southeast-2",
+      "stakePool": true
+    }
+  ],
+  "relayNodes": [
+    {
+      "name": "explorer",
+      "nodeId": 52,
+      "org": "IOHK",
+      "pools": null,
+      "producers": [
+        "node-0",
+        "node-1",
+        "node-2",
+        "node-3",
+        "node-4",
+        "node-5",
+        "node-6",
+        "node-7",
+        "node-8",
+        "node-9",
+        "node-10",
+        "node-11",
+        "node-12",
+        "node-13",
+        "node-14",
+        "node-15",
+        "node-16",
+        "node-17",
+        "node-18",
+        "node-19",
+        "node-20",
+        "node-21",
+        "node-22",
+        "node-23",
+        "node-24",
+        "node-25",
+        "node-26",
+        "node-27",
+        "node-28",
+        "node-29",
+        "node-30",
+        "node-31",
+        "node-32",
+        "node-33",
+        "node-34",
+        "node-35",
+        "node-36",
+        "node-37",
+        "node-38",
+        "node-39",
+        "node-40",
+        "node-41",
+        "node-42",
+        "node-43",
+        "node-44",
+        "node-45",
+        "node-46",
+        "node-47",
+        "node-48",
+        "node-49",
+        "node-50",
+        "node-51"
+      ],
+      "region": "eu-central-1",
+      "stakePool": null
+    }
+  ]
+}

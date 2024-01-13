@@ -52,59 +52,42 @@ case "${op}" in
 
         ## 0. Generate:
         #
-        if                                                         \
-               test "${topology_name}" = "dense"                   \
-            && test "${n_hosts}"       = 52                        \
-            && jqtest .composition.with_explorer "${profile_json}"
-        then
-            # If the value profiles's 52 nodes dense topology we just copy it as
-            # it was imported from cardano-ops when switching to Nomad.
-            # The other difference is that the .dot file is generated here
-            # instead of by `cardano-topology`.
-            progress "topology" "Copying cardano-ops 52 nodes + explorer \"dense\" topology"
-            cp \
-                "$(dirname "$(readlink -f "$0")")"/topology/bench-dense-52.json \
-                "${outdir}"/topology.json
-            topology dot "${outdir}"/topology.json > "${outdir}"/topology.dot
-        else
-            mkdir -p                 "$outdir"
-            args=( --topology-output "$outdir"/topology.json
-                   --dot-output      "$outdir"/topology.dot
-                   "$topology_name"
-                   --size             $n_hosts
-                   $(jq '.composition.locations
-                        | map("--loc " + .)
-                        | join(" ")
-                        ' --raw-output "$profile_json")
-                 )
-            if jqtest .composition.with_explorer $profile_json
-            then args+=('--with-explorer')
-            fi
-            progress "topology" "cardano-topology ${args[*]}"
-            cardano-topology "${args[@]}"
-            # Patch the nixops topology with the density information:
-            # This is only needed here, the dense topology was already imported
-            # from nixops / cardano-ops.
-            jq --slurpfile prof "$profile_json" '
-               def nixops_topology_set_pool_density($topo; $density):
-                  $topo *
-                  { coreNodes:
-                    ( .coreNodes
-                    | map
-                      ( . *
-                        { pools:
-                          (if .pools == null then 0 else
-                           if .pools == 1    then 1 else
-                              ([$density, 1] | max) end end)
-                        }
-                      )
-                    )
-                  };
-
-               nixops_topology_set_pool_density(.; $prof[0].dense_pool_density)
-               '   "$outdir"/topology.json |
-              sponge "$outdir"/topology.json
+        mkdir -p                 "$outdir"
+        args=( --topology-output "$outdir"/topology.json
+               --dot-output      "$outdir"/topology.dot
+               "$topology_name"
+               --size             $n_hosts
+               $(jq '.composition.locations
+                    | map("--loc " + .)
+                    | join(" ")
+                    ' --raw-output "$profile_json")
+             )
+        if jqtest .composition.with_explorer $profile_json
+        then args+=('--with-explorer')
         fi
+        progress "topology" "cardano-topology ${args[*]}"
+        cardano-topology "${args[@]}"
+        # Patch the nixops topology with the density information:
+        # This is only needed here, the dense topology was already imported
+        # from nixops / cardano-ops.
+        jq --slurpfile prof "$profile_json" '
+           def nixops_topology_set_pool_density($topo; $density):
+              $topo *
+              { coreNodes:
+                ( .coreNodes
+                | map
+                  ( . *
+                    { pools:
+                      (if .pools == null then 0 else
+                       if .pools == 1    then 1 else
+                          ([$density, 1] | max) end end)
+                    }
+                  )
+                )
+              };
+           nixops_topology_set_pool_density(.; $prof[0].dense_pool_density)
+           '   "$outdir"/topology.json |
+          sponge "$outdir"/topology.json
 
         ## 1. Render GraphViz topology PDF:
         #
