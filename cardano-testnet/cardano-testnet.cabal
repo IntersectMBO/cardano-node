@@ -186,6 +186,7 @@ test-suite cardano-testnet-test
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson
+                      , aeson-pretty
                       , async
                       , base16-bytestring
                       , bytestring
