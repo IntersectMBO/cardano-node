@@ -55,7 +55,9 @@ library
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.5.0.0
+                      , hedgehog-extras ^>= 0.5.1.0
+                      , microlens
+                      , lens-aeson
                       , mtl
                       , network
                       , network-mux

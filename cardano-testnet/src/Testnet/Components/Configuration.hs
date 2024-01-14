@@ -23,7 +23,6 @@ import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.IO.Class (MonadIO)
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
 import           Data.String
@@ -34,10 +33,12 @@ import           System.FilePath.Posix ((</>))
 
 import           Hedgehog
 import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.Time as DTC
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
+
+import qualified Data.Aeson.Lens as L
+import           Lens.Micro
 
 import           Testnet.Defaults
 import           Testnet.Filepath
@@ -75,13 +76,6 @@ createConfigYaml (TmpAbsolutePath tempAbsPath') anyCardanoEra' = GHC.withFrozenC
 numSeededUTxOKeys :: Int
 numSeededUTxOKeys = 3
 
--- | Adjust a value at a specific key. When the key is not a member of the map, the original map is returned
-adjustKM :: (v -> v) -> KM.Key -> KM.KeyMap v -> KM.KeyMap v
-adjustKM f k m =
-  case KM.lookup k m of
-    Nothing -> m
-    Just v -> KM.insert k (f v) m
-
 createSPOGenesisAndFiles
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => CardanoTestnetOptions
@@ -111,18 +105,12 @@ createSPOGenesisAndFiles testnetOptions startTime (TmpAbsolutePath tempAbsPath')
   -- TODO: Remove this rewrite.
  -- 50 second epochs
  -- Epoch length should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"
-  H.rewriteJsonFile createStakedInitialGenesisFile $ J.rewriteObject
-      ( KM.insert "securityParam"          (toJSON @Int 5)    -- TODO: USE config p arameter
-      . adjustKM
-          (J.rewriteObject
-              $ adjustKM
-                (J.rewriteObject (KM.insert "major" (toJSON @Int 8)))
-                "protocolVersion"
-          )   "protocolParams"
-      . KM.insert "rho"                    (toJSON @Double 0.1)
-      . KM.insert "tau"                    (toJSON @Double 0.1)
-      . KM.insert "updateQuorum"           (toJSON @Int 2)
-      )
+  H.rewriteJsonFile createStakedInitialGenesisFile $ \o -> o
+    & L.key "securityParam" . L._Integer .~ 5
+    & L.key "rho" . L._Double  .~ 0.1
+    & L.key "tau" . L._Double  .~ 0.1
+    & L.key "updateQuorum" . L._Integer .~ 2
+    & L.key "protocolParams" . L.key "protocolVersion" . L.key "major" . L._Integer .~ 8
 
   execCli_
     [ "genesis", "create-staked"
