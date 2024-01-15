@@ -353,16 +353,8 @@ ledgerRewardUpdateEventName :: LedgerRewardUpdateEvent crypto -> Text
 ledgerRewardUpdateEventName = \case
   LedgerIncrementalRewards {} -> "LedgerIncrementalRewards"
 
--- fromAuxExtLedgerEvent
---   :: forall xs crypto. (All ConvertLedgerEvent xs, crypto ~ StandardCrypto)
---   => AuxExtLedgerEvent (Abstract.LedgerState (HardForkBlock xs)) (HardForkBlock xs)
---   -> Maybe (LedgerEvent crypto)
--- fromAuxExtLedgerEvent
---   :: AuxExtLedgerEvent (Abstract.LedgerState (HardForkBlock xs)) (HardForkBlock xs)
---   -> Maybe (LedgerEvent StandardCrypto)
 fromAuxExtLedgerEvent
-  :: (All ConvertLedgerEvent xs, AuxLedgerEvent l ~ OneEraLedgerEvent xs, Abstract.ConsensusEvent c ~ TPraosEvent c)
-  => AuxExtLedgerEvent l c
+  :: AuxExtLedgerEvent (LedgerState StandardCrypto) (HardForkBlock (CardanoEras StandardCrypto))
   -> Maybe (LedgerEvent StandardCrypto)
 fromAuxExtLedgerEvent event =
   case event of
@@ -370,11 +362,10 @@ fromAuxExtLedgerEvent event =
     AuxConsensusEvent (EpochNonce _nonce) -> undefined
 
 fromAuxLedgerEvent
-  :: forall xs. (All ConvertLedgerEvent xs)
-  => AuxLedgerEvent (Abstract.LedgerState (HardForkBlock xs))
+  :: AuxLedgerEvent (LedgerState StandardCrypto)
   -> Maybe (LedgerEvent StandardCrypto)
 fromAuxLedgerEvent =
-  toLedgerEvent . WrapLedgerEvent @(HardForkBlock xs)
+  toLedgerEvent . WrapLedgerEvent @(HardForkBlock (CardanoEras StandardCrypto))
 
 class ConvertLedgerEvent blk where
   toLedgerEvent :: WrapLedgerEvent blk -> Maybe (LedgerEvent StandardCrypto)
@@ -878,6 +869,6 @@ mkVersionedAnchoredEvents prevHash headerHash slotNo blockNo auxEvents =
     chainHashToOriginHash :: ChainHash b -> WithOrigin (HeaderHash b)
     chainHashToOriginHash GenesisHash = Origin
     chainHashToOriginHash (BlockHash bh) = At bh
-    versionedEvents = map (eventCodecVersion &&& fromAuxLedgerEvent) auxEvents
+    versionedEvents = map ((eventCodecVersion &&& fromAuxExtLedgerEvent) . AuxLedgerEvent) auxEvents
     versionedGroups = map makeGroup $ NE.groupWith fst versionedEvents
     makeGroup = (NE.head *** catMaybes . NE.toList) . NE.unzip
