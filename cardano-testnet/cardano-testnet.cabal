@@ -38,14 +38,14 @@ library
                       , cardano-cli ^>= 8.20.3.0
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
+                      , cardano-git-rev
                       , cardano-ledger-alonzo
+                      , cardano-ledger-binary
+                      , cardano-ledger-byron
+                      , cardano-ledger-conway
                       , cardano-ledger-conway
                       , cardano-ledger-core
                       , cardano-ledger-core:testlib
-                      , cardano-git-rev
-                      , cardano-ledger-core
-                      , cardano-ledger-binary
-                      , cardano-ledger-byron
                       , cardano-ledger-shelley
                       , cardano-node
                       , cardano-ping ^>= 0.2.0.10
@@ -183,6 +183,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.LedgerEvents.Gov.InfoAction
                         Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO
                         Cardano.Testnet.Test.LedgerEvents.SanityCheck
+                        Cardano.Testnet.Test.LedgerEvents.TreasuryGrowth
 
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.SubmitApi.Babbage.Transaction

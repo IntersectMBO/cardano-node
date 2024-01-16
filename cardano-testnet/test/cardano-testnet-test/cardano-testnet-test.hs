@@ -15,6 +15,7 @@ import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldBlocks
 import qualified Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO as LedgerEvents
 import qualified Cardano.Testnet.Test.LedgerEvents.SanityCheck as LedgerEvents
+import qualified Cardano.Testnet.Test.LedgerEvents.TreasuryGrowth as LedgerEvents
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
 
@@ -36,6 +37,7 @@ tests = do
     [ testGroup "Spec"
         [ testGroup "Ledger Events"
             [ H.ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
+            , H.ignoreOnWindows "Treasury Growth" LedgerEvents.prop_check_if_treasury_is_growing
             -- TODO: Replace foldBlocks with checkLedgerStateCondition
             , testGroup "Governance"
                 -- FIXME Those tests are flaky
