@@ -1,11 +1,12 @@
 # trace-dispatcher: efficient, simple and flexible program tracing
 
-`trace-dispatcher` is a library that enables definition of __tracing systems__ -- systems that collect and manages traces -- evidence of program execution.
+`trace-dispatcher` is a library that enables definition of __tracing systems__ -- systems that collect and manages traces -- as evidence of program execution.
 
+- [trace-dispatcher: efficient, simple and flexible program tracing](#trace-dispatcher-efficient-simple-and-flexible-program-tracing)
 - [Introduction](#introduction)
   - [Rationale](#rationale)
   - [Transition Period](#transition-period)
-  - [Key Recommendations](#key-recommendations)
+  - [Key Recommendations for Developers](#key-recommendations-for-developers)
 - [Basic Tracer Topics](#basic-tracer-topics)
   - [Tracer Construction Basics](#tracer-construction-basics)
   - [Namespace Concept Explanation](#namespace-concept-explanation)
@@ -26,7 +27,7 @@
   - [Documentation Generation](#documentation-generation)
   - [Consistency Checking](#consistency-checking)
   - [Trace Backends Overview](#trace-backends-overview)
-  - [DataPoints Overview and Deprecation Notice](#datapoints-overview-and-deprecation-notice)
+  - [Data Points Overview and Deprecation Notice](#data-points-overview-and-deprecation-notice)
 - [Appendix](#appendix)
   - [References](#references)
   - [Future work](#future-work)
@@ -37,29 +38,31 @@
 
 ## Rationale
 
-The trace-dispatcher library serves as a sophisticated solution for streamlined and effective tracing systems. Built upon the arrow-based contra-tracer framework, it surpasses the capabilities of the iohk-monitoring framework with the following enhancements:
+The `trace-dispatcher` library serves as a sophisticated solution for streamlined and effective tracing systems. Built upon the arrow-based `contra-tracer` framework, it surpasses the capabilities of the `iohk-monitoring` framework with the following enhancements:
 
 - Persistent activation of all tracers, adhering to the configured severity levels.
 
-- Granular configuration of individual tracers based on hierarchical namespaces, extending down to individual messages.
+- Granular configuration (such as filtering, limiting) of individual tracers based on hierarchical namespaces, extending down to individual messages.
 
-- Seamless transmission of traces to a dedicated cardano-tracer process capable of handling traces from multiple nodes.
+- Seamless transmission of traces to a dedicated `cardano-tracer` process capable of handling traces from multiple nodes.
 
-- When old tracing will be gone it will be possible to dynamic reconfigure of tracing within a running node.
+- Dynamic reconfiguration (i.e. hot-reloading) of tracing settings within a running node (after removal of legacy tracing).
 
 - Automatic generation of comprehensive documentation encompassing all trace messages, metrics, and datapoints.
 
+- Sanity and consistency checking of tracer implementations and tracing settings based on the system's introspective capability.
+
 ## Transition Period
 
-During the transitional phase, both old-tracing, based on the iohk-monitoring-framework, and new-tracing, leveraging trace-dispatcher and cardano-tracer, will coexist.
+During the transitional phase, both legacy tracing, based on the `iohk-monitoring` framework, and new tracing, leveraging `trace-dispatcher` and `cardano-tracer`, will coexist.
 
-This interim period provides an opportunity to thoroughly test and enhance the new-tracing system. Given the extensive repertoire of over 600 trace messages, the likelihood of uncovering regressions and bugs is anticipated. Your assistance in identifying and rectifying these issues is invaluable.
+This interim period provides an opportunity to thoroughly test and enhance the new tracing system. Given the extensive repertoire of over 600 trace messages, the possibility of uncovering regressions and bugs is anticipated. Your assistance in identifying and rectifying these issues is invaluable.
 
-Please be aware that, owing to technical constraints, the new-tracing functionality will be constrained during this transitional phase. Certain features, such as the reconfiguration of a running node, will be temporarily unavailable. Additionally, there may be redundant implementations that are currently necessary but slated for refinement.
+Please be aware that, owing to compatibility with the legacy system, the new tracing functionality will be slightly constrained during this transitional phase. Certain features, such as dynamic reconfiguration of a running node, will be temporarily unavailable. Additionally, there may be redundant implementations that are currently necessary but slated for refinement.
 
-To activate new-tracing, set the UseTraceDispatcher value to true. When making this switch, ensure that the configuration file includes the requisite values for the new-tracing setup, as detailed in the subsequent section.
+To activate new tracing, set the `UseTraceDispatcher` in the node's config file value to `true`. When making this switch, ensure that the configuration file includes the requisite values for the new tracing setup, as detailed in the subsequent section.
 
-## Key Recommendations
+## Key Recommendations for Developers
 
 Kindly consider the following important suggestions:
 
@@ -67,9 +70,9 @@ Kindly consider the following important suggestions:
 
 - Avoid using strictness annotations for trace types. Given that trace messages are either promptly discarded or instantly converted to another format without storage, strictness annotations introduce unnecessary inefficiencies without tangible benefits.
 
-- When developing new tracers, consider creating the new tracers first and subsequently mapping to old tracers. You can refer to numerous examples in cardano-node under Cardano.Node.Tracing.Tracers.
+- When developing new tracers, consider creating the new tracers first and subsequently mapping to old tracers. You can refer to numerous examples in `cardano-node` under `Cardano.Node.Tracing.Tracers`.
 
-- For inquiries and reviews, please reach out to the benchmarking and tracing team. Your collaboration and questions are welcome to ensure a seamless transition and optimal utilization of the new tracing framework.
+- For inquiries and reviews, please reach out to the Performance & Tracing team. Your collaboration and questions are welcome to ensure a seamless transition and optimal utilization of the new tracing framework.
 
 # Basic Tracer Topics
 
@@ -92,15 +95,17 @@ data TraceAddBlockEvent blk =
 -- | Generate a tracer conforming to the cardano node requirements.
 -- The tracer must be an instance of LogFormatting for message display
 -- and an instance of MetaTrace for meta-information such as
--- severity, privacy, details, and backends'.
--- The tracer receives the backends: 'trStdout', 'trForward', and 'mbTrEkg'
--- as arguments.
+-- severity, privacy, details, and backends.
+-- The tracer receives those backends as arguments:
+--   * 'trStdout':  stdout tracing
+--   * 'trForward': trace forwarding
+--   * 'mbTrEkg':   (optional) EKG monitoring
 -- The tracer is supplied with a 'name' as an array of text, which is appended to its namespace.
 -- This function returns the new tracer.
 
 mkCardanoTracer :: forall evt.
     ( LogFormatting evt
-    , MetaTrace evt)
+    , MetaTrace evt )
   => Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
@@ -122,8 +127,8 @@ It is imperative that the tracer backends (the first three parameters) remain co
 -- This function does not return a value.
 
 configureTracers :: forall a m.
-    (MetaTrace a
-  ,  MonadIO m)
+    ( MetaTrace a
+    , MonadIO m )
   => ConfigReflection
   -> TraceConfig
   -> [Trace m a]
@@ -142,9 +147,9 @@ traceWith trAddBlock (IgnoreBlockOlderThanK p)
 
 ## Namespace Concept Explanation
 
-Understanding the concept of namespaces is crucial for comprehending the tracing system and the MetaTrace typeclass. Tracers are systematically organized within a hierarchical tracer namespace, with tree nodes and leaves identified by `Text` name components.
+Understanding the concept of namespaces is crucial for comprehending the tracing system and the `MetaTrace` typeclass. Tracers are systematically organized within a hierarchical tracer namespace, with tree nodes and leaves identified by `Text` name components.
 
-The trace dispatcher requires careful organization to ensure that all messages possess a unique name within this namespace. Moreover, the same tracer type can be utilized in different contexts, such as for local and remote messages. To enable this flexibility, the 'inner' namespace is prefixed by the namespace passed to a tracer during construction (refer to the mkCardanoTrace procedure above).
+The trace dispatcher requires careful organization to ensure that all messages possess a unique name within this namespace. Moreover, the same tracer type can be utilized in different contexts, such as for local and remote messages. To enable this flexibility, the 'inner' namespace is prefixed by the namespace passed to a tracer during construction (refer to `mkCardanoTracer` example above).
 
 ```haskell
 -- A unique identifier for every message, composed of arrays of text
@@ -174,7 +179,7 @@ The `LogFormatting` typeclass governs the presentation of trace messages, encomp
 
 - The `forMachine` method caters to a machine-readable representation, adaptable based on the detail level. Implementation is mandatory for the trace author.
 
-- The `forHuman` method renders the message in a human-readable form. Its default implementation defaults to `forMachine`.
+- The `forHuman` method renders the message in a human-readable form. Its default implementation is `forMachine`.
 
 - The `asMetrics` method portrays the message as 0 to n metrics. The default implementation assumes no metrics. Each metric can optionally specify a hierarchical identifier as a `[Text]`.
 
@@ -213,11 +218,11 @@ The `MetaTrace` typeclass plays a pivotal role in providing meta-information for
 
 - __severityFor__: Provides severity for a given namespace. As some severities depend not only on the message type but also on the individual message, the actual message may be passed as well.
 
-- __privacyFor__: Determines whether a message is Private or Public. Private messages are not sent to cardano-tracer and are only displayed on the stdout trace. If no implementation is given, Public is chosen.
+- __privacyFor__: Determines whether a message is `Private` or `Public`. Private messages are not sent to `cardano-tracer` and are only displayed on the stdout trace. If no implementation is given, `Public` is chosen.
 
-- __detailsFor__: Specifies the level of details for printing messages. Options include DMinimal, DNormal, DDetailed, and DMaximum. If no implementation is given, DNormal is chosen.
+- __detailsFor__: Specifies the level of details for printing messages. Options include `DMinimal`, `DNormal`, `DDetailed`, and `DMaximum`. If no implementation is given, `DNormal` is chosen.
 
-- __documentFor__: Allows the addition of documentation for messages as text.
+- __documentFor__: Allows the addition of optional documentation for messages as text.
 
 - __metricsDocFor__: Enables the addition of documentation for metrics carried by the respective message. If no implementation is given, the default is no metrics.
 
@@ -228,14 +233,18 @@ class MetaTrace a where
   namespaceFor  :: a -> Namespace a
 
   severityFor   :: Namespace a -> Maybe a -> Maybe SeverityS
+
   privacyFor    :: Namespace a -> Maybe a -> Maybe Privacy
-  privacyFor _  _ =  Just Public
+  privacyFor _ _ =  Just Public
+
   detailsFor    :: Namespace a -> Maybe a -> Maybe DetailLevel
-  detailsFor _  _ =  Just DNormal
+  detailsFor _ _ =  Just DNormal
 
   documentFor   :: Namespace a -> Maybe Text
+
   metricsDocFor :: Namespace a -> [(Text, Text)]
   metricsDocFor _ = []
+
   allNamespaces :: [Namespace a]
 ```
 
@@ -277,18 +286,18 @@ The configurability of dispatchers provided by this library relies on:
 
 2. __Runtime Reconfigurability__: Triggered by invoking `configureTracers`, enabling changes during program execution.
 
-The usual form to provide a configuration is via a configuration file, wich can be in json or yaml format. The options that
-can be given based on a namespace are: Severity, DetailLevel, Backends and Limiter.
+The usual form to provide a configuration is via a configuration file, wich can be in JSON or YAML format. The options that
+can be given based on a namespace are: `severity`, `detail`, `backends` and `limiter`.
 
-Backends can be a combination of Forwarder, EKGBackend, and
-one of Stdout MachineFormat, Stdout HumanFormatColoured and Stdout HumanFormatUncoloured.
+Backends can be a combination of `Forwarder`, `EKGBackend`, and
+one of `Stdout MachineFormat`, `tdout HumanFormatColoured` and `Stdout HumanFormatUncoloured`.
 
 ```yaml
 # Use new tracing
 UseTraceDispatcher: True
 
 TraceOptions:
-  "": # Options for all tracers, if not overwrittem:
+  "": # Options for all tracers, if not overwritten:
     severity: Notice
     detail: DNormal
     backends:
@@ -349,13 +358,13 @@ For explanations of the trace forwarder option refer to the following document:
 
 [New Tracing Quickstart](https://github.com/input-output-hk/cardano-node-wiki/wiki/New-Tracing-Quickstart)
 
-When TraceOptions are empty, or other entries are missing in the configuration file, default entries are taken from
+When `TraceOptions` is empty, or other entries are missing in the configuration file, default entries are taken from
 [Cardano.Node.Tracing.DefaultTraceConfig](https://github.com/intersectmbo/cardano-node/blob/master/cardano-node/src/Cardano/Node/Tracing/DefaultTraceConfig.hs) module.
 
 # Advanced Tracer Topics
 
-The functionality for cardano tracer are composed, by using basic combinators defined on contravariant tracing.
-In this part of the document we introduce this underlying functions, and you should look here if you want to
+The functionality of the new tracing system is composable using basic combinators defined on contravariant tracing.
+In this part of the document we introduce the underlying functions. You should look here if you want to
 implement some advanced functionality.
 
 ## Integrating a New Tracer into cardano-node
@@ -370,9 +379,9 @@ Presently, the process of adding a new tracer involves making changes in three s
 
 ## Message Filtering based on Severity
 
-The concept of severity in our system is articulated through an enumeration outlined in [section 6.2.1 of RFC 5424](https://tools.ietf.org/html/rfc5424#section-6.2.1). The severity levels, ranging from the least severe (`Debug`) to the most severe (`Emergency`), provide a framework for ignoring messages with severity levels below a globally configured severity cutoff.
+The concept of severity in the new system is articulated through an enumeration outlined in [section 6.2.1 of RFC 5424](https://tools.ietf.org/html/rfc5424#section-6.2.1). The severity levels, ranging from the least severe (`Debug`) to the most severe (`Emergency`), provide a framework for ignoring messages with severity levels below a globally configured severity cutoff.
 
-To enhance severity filtering, we introduce the option of `Silence`. This addition allows for the unconditional silencing of a specific trace, essentially representing the deactivation of tracers—a semantic continuation of the functionality in the older framework.
+To enhance severity filtering, we introduce the option of `Silence`. This addition allows for the unconditional silencing of a specific trace, essentially representing the deactivation of tracers — a semantic continuation of the functionality in the legacy system.
 
 The following trace combinators play a role in modifying the annotated severity of a trace:
 
@@ -419,7 +428,7 @@ data LoggingContext = LoggingContext {
 For instance, you can create a filter function to display only _Public_ messages:
 
 ```haskell
-filterTrace (\(c, a) -> case lcPrivacy c of
+filterTrace (\(c, _) -> case lcPrivacy c of
                 Just s  -> s == Public
                 Nothing -> True)
 ```
@@ -462,7 +471,7 @@ Trace filtering responds to privacy context as follows:
 1. Traces marked as `Confidential` can solely reach the `stdout` trace-out.
 2. Traces marked as `Public` reach both the `stdout` and `trace-forwarder` trace-outs.
 
-Effectively, preventing leaks of `Confidential` traces due to logging misconfiguration is inherent—any potential leak can only occur if the user explicitly permits network access to the standard output of the traced program.
+Effectively, preventing leaks of `Confidential` traces due to logging misconfiguration is inherent — any potential leak can only occur if the user explicitly permits network access to the standard output of the traced program.
 
 ## Detail Level in Trace Presentation
 
@@ -629,7 +638,7 @@ Filtered `Visible` by config value: `Info`
 
 ## Consistency Checking
 
-As namespaces are essentially strings, the type system doesn't inherently ensure the consistency of namespaces. To address this concern, we have incorporated consistency check functionality into the trace-dispatcher. Within the node, you can invoke the following procedure from the `Cardano.Node.Tracing.Consistency` module. It returns an array of Text, and an empty list indicates that everything is in order.
+As namespaces are essentially strings, the type system doesn't inherently ensure the consistency of namespaces. To address this concern, we have incorporated consistency check functionality into `trace-dispatcher`. Within the node, you can invoke the following procedure from the `Cardano.Node.Tracing.Consistency` module. It returns an array of `Text`, an empty list indicating that everything is in order.
 
 ```haskell
 -- | Check the configuration in the given file.
@@ -640,7 +649,7 @@ checkNodeTraceConfiguration ::
   -> IO [Text]
 ```
 
-This check is performed within a cardano-node test case (`Test.Cardano.Tracing.NewTracing.Consistency.tests`), ensuring that it is automatically verified with each pull request.
+This check is performed within a `cardano-node` test case (`Test.Cardano.Tracing.NewTracing.Consistency.tests`), ensuring that it is automatically verified with each pull request.
 
 The consistency checks cover the following aspects:
 
@@ -648,7 +657,7 @@ The consistency checks cover the following aspects:
 
 - Each namespace is a terminal and is not a part of another namespace.
 
-- Namespaces in the severityFor, privacyFor, detailsFor, documentFor, and metricsDocFor functions are consistent with the allNamespaces function.
+- Namespaces in the `severityFor`, `privacyFor`, `detailsFor`, `documentFor`, and `metricsDocFor` functions are consistent with the `allNamespaces` definition.
 
 - Any namespace in the configuration must be found by a hierarchical lookup in `all namespaces`.
 
@@ -663,7 +672,7 @@ As mentioned earlier, trace backends serve as the final destinations for all tra
       => m (Trace m FormattedMessage)
     ```
 
-2. __Trace-Forward Tracer:__ This is a network-only sink dedicated to forwarding messages using specific protocols over TCP or local sockets. It exclusively handles public traces and should be instantiated only once per application.
+2. __Trace-Forward Tracer:__ This is a network-only sink dedicated to forwarding messages using typed protocols over TCP or local sockets. It exclusively handles public traces and should be instantiated only once per application.
 
     ```haskell
     forwardTracer :: forall m. (MonadIO m)
@@ -681,13 +690,13 @@ As mentioned earlier, trace backends serve as the final destinations for all tra
 
 It's imperative to note that constructing more than one instance of each tracer in an application may lead to exceptions and should be avoided.
 
-## DataPoints Overview and Deprecation Notice
+## Data Points Overview and Deprecation Notice
 
-In the imminent future, DataPoints will be deprecated and replaced by a subscription model.
+In the imminent future, `DataPoint`s will be deprecated and replaced by a subscription model.
 
-DataPoints provide a means for processes outside of the cardano-node to inquire about the node's runtime state. Essentially similar to metrics, DataPoints, however, have an Algebraic Data Type (ADT) structure, allowing them to represent structured information beyond simple metrics. This feature enables external processes to query and access specific runtime details of a cardano-node, such as the node's basic information.
+`DataPoint`s provide a means for processes outside of `cardano-node` to inquire about the node's runtime state. Essentially similar to metrics, `DataPoint`s, however, have an Algebraic Data Type (ADT) structure, allowing them to represent structured information beyond simple metrics. This feature enables external processes to query and access specific details of a running cardano-node, such as the node's basic information.
 
-Implemented as special tracers, DataPoints package objects into DataPoint constructors and necessitate a ToJSON instance for these objects. The set of DataPoints provided by the node follows the same namespace structure as metrics and log messages. While DataPoints operate independently of tracing, they are stored locally, facilitating on-demand queries for the latest values of specific DataPoints.
+Implemented as special tracers, `DataPoint`s package objects into `DataPoint` constructors and necessitate a `ToJSON` instance for these objects. The set of `DataPoint`s provided by the node follows the same namespace structure as metrics and log messages. While `DataPoint`s operate independently of tracing, they are stored locally, facilitating on-demand queries for the latest values of a specific `DataPoint`.
 
 It is important to note that DataPoints will soon be deprecated, and a subscription model will take their place. Additionally, detailed information on accepting DataPoints from an external process can be found in [this document](https://github.com/input-output-hk/cardano-node-wiki/wiki/cardano-node-and-DataPoints:-demo). The [`demo-acceptor`](https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/demo/acceptor.hs) application is available for requesting specific DataPoints by name and displaying their values.
 
@@ -702,15 +711,15 @@ mkDataPointTracer :: forall dp. (ToJSON dp, MetaTrace dp, NFData dp)
 
 ## References
 
-The following document is periodically regenerated to provide comprehensive documentation for all trace-messages, metrics, and data-points within cardano-node. It also outlines the handling of these messages based on the current default configuration:
+The following document is periodically regenerated to provide comprehensive documentation for all trace messages, metrics, and data points within `cardano-node`. It also outlines the handling of these messages based on the current default configuration:
 
 [Generated Cardano Trace Documentation](https://github.com/input-output-hk/cardano-node-wiki/wiki/tracers_doc_generated)
 
-For a quick start for administrators transitioning to new tracing methods, refer to the following document:
+For a quick start for administrators transitioning to new the new tracing system, refer to the following document:
 
 [New Tracing Quickstart](https://github.com/input-output-hk/cardano-node-wiki/wiki/New-Tracing-Quickstart)
 
-Additionally, this document delves into cardano-tracer, a separate application designed for logging and monitoring Cardano nodes:
+Additionally, this document delves into `cardano-tracer`, a separate application designed for logging and monitoring Cardano nodes:
 
 [Cardano Tracer](https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md)
 
@@ -718,7 +727,7 @@ Additionally, this document delves into cardano-tracer, a separate application d
 
 ### Versioning
 
-Versioning for trace messages stands as a crucial component that significantly contributes to the functionality and maintainability of our system. We acknowledge the importance of associating version numbers with log messages, ensuring transparency and consistency throughout the development lifecycle.
+Versioning for trace messages stands as a crucial component that significantly contributes to the functionality and maintainability of our system. We acknowledge the importance of associating version numbers with log messages, ensuring transparency and consistency throughout the application lifecycle.
 
 Adhering to a change protocol and establishing a clear correlation between node version numbers and trace version numbers is a prudent strategy. This approach aids in the effective management and communication of updates, alterations, and improvements to our tracing system. Such alignment guarantees that any modifications to the tracing system are accurately reflected and comprehended by both the development team and the broader Cardano community.
 
@@ -726,8 +735,8 @@ Anticipating the forthcoming development phase, we are eager to design and imple
 
 ### Trace Consumers
 
-We are excited to introduce the innovative concept of "trace-consumers" into the Cardano Tracer system. This novel approach empowers trace consumers to register with the Cardano Tracer and selectively receive messages based on their subscriptions. We anticipate that this concept will significantly improve the efficiency and flexibility of our tracing system.
+We are excited to introduce the innovative concept of "trace consumers" into the Cardano Tracer system. This novel approach empowers trace consumers to register with the `cardano-tracer` application and selectively receive messages based on their subscriptions. We anticipate that this concept will significantly improve the efficiency and flexibility of our tracing system.
 
-The introduction of trace-consumers represents a robust and tailored approach to message retrieval, aligning seamlessly with the evolving needs of our network. This concept provides consumers with the ability to specify their message preferences, ensuring that they receive only the data directly relevant to their operations.
+The introduction of trace consumers represents a robust and tailored approach to message retrieval, aligning seamlessly with the evolving needs of our network. This concept provides consumers with the ability to specify their message preferences, ensuring that they receive only the data directly relevant to their operations.
 
-As part of this development initiative, we plan to phase out the use of data points. We believe that this evolution will render data points redundant in future versions of the tracing system. The transition to trace-consumers aims to streamline our data retrieval processes, eliminating the need for unnecessary data points and offering a more sophisticated and focused mechanism for trace message consumption.
+As part of this development initiative, we plan to phase out the use of data points. We believe that this evolution will render data points redundant in future versions of the tracing system. The transition to trace consumers aims to streamline our data retrieval processes, eliminating the need for unnecessary data points and offering a more sophisticated and focused mechanism for trace message consumption.
