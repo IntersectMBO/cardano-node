@@ -1,0 +1,29 @@
+{
+    "contents": {
+        "contents": {
+            "contents": {
+                "era": "ShelleyBasedEraBabbage",
+                "error": [
+                    {
+                        "contents": {
+                            "contents": "AlonzoInBabbageUtxoPredFailure (ValueNotConservedUTxO (MaryValue (Coin 0) (MultiAsset (fromList []))) (MaryValue (Coin 300000000000) (MultiAsset (fromList []))))",
+                            "tag": "UtxoFailure"
+                        },
+                        "tag": "UtxowFailure"
+                    },
+                    {
+                        "contents": {
+                            "contents": "AlonzoInBabbageUtxoPredFailure (BadInputsUTxO (fromList [TxIn (TxId {unTxId = SafeHash \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}) (TxIx 0)]))",
+                            "tag": "UtxoFailure"
+                        },
+                        "tag": "UtxowFailure"
+                    }
+                ],
+                "kind": "ShelleyTxValidationError"
+            },
+            "tag": "TxValidationErrorInCardanoMode"
+        },
+        "tag": "TxCmdTxSubmitValidationError"
+    },
+    "tag": "TxSubmitFail"
+}

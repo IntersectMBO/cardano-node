@@ -84,6 +84,48 @@ startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
 
+-- | Setup a number of credentials and pools, like this:
+--
+-- > ├── byron
+-- > │   └── genesis.json
+-- > ├── byron-gen-command
+-- > │   └── genesis-keys.00{0,1,2}.key
+-- > ├── byron.genesis.spec.json
+-- > ├── configuration.yaml
+-- > ├── current-stake-pools.json
+-- > ├── delegate-keys
+-- > │   ├── delegate{1,2,3}.counter
+-- > │   ├── delegate{1,2,3}.kes.{skey,vkey}
+-- > │   ├── delegate{1,2,3}.{kes,vrf}.{skey,vkey}
+-- > │   └── opcert{1,2,3}.cert
+-- > ├── genesis.alonzo.spec.json
+-- > ├── genesis.conway.spec.json
+-- > ├── genesis-keys
+-- > │   └── genesis{1,2,3}.{skey,vkey}
+-- > ├── genesis.spec.json
+-- > ├── node-spo{1,2,3}
+-- > │   ├── byron-delegate.key
+-- > │   ├── byron-delegation.cert
+-- > │   ├── db
+-- > │   │   └── ...
+-- > │   ├── kes.skey
+-- > │   ├── opcert.cert
+-- > │   ├── port
+-- > │   ├── topology.json
+-- > │   └── vrf.skey
+-- > ├── pools
+-- > │   ├── cold{1,2,3}.{skey,vkey}
+-- > │   ├── kes{1,2,3}.vkey
+-- > │   ├── opcert{1,2,3}.counter
+-- > │   ├── staking-reward{1,2,3}.{skey,vkey}
+-- > │   └── vrf{1,2,3}.vkey
+-- > ├── shelley
+-- > │   ├── genesis.{alonzo,conway}.json
+-- > │   └── genesis.json
+-- > ├── socket
+-- > │   └── node-spo{1,2,3}
+-- > └── utxo-keys
+-- >     └── utxo{1,2,3}.{addr,skey,vkey}
 cardanoTestnet :: CardanoTestnetOptions -> Conf -> H.Integration TestnetRuntime
 cardanoTestnet testnetOptions Conf {tempAbsPath} = do
   testnetMinimumConfigurationRequirements testnetOptions
