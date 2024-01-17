@@ -31,7 +31,8 @@ tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
       [ T.testGroup "Ledger Events"
-          [ H.ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
+          [ H.ignoreOnWindows "Ledger state condition met" LedgerEvents.hprop_checkLedgerStateCondition_condition_met
+          , H.ignoreOnWindows "Ledger state termination epoch reaced" LedgerEvents.hprop_checkLedgerStateCondition_temination_epoch
           , T.testGroup "Governance"
              [ H.ignoreOnWindows "ProposeAndRatifyNewConstitution" LedgerEvents.hprop_ledger_events_propose_new_constitution]
           ]

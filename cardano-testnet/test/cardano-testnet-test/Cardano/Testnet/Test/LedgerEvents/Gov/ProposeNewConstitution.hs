@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -35,6 +36,7 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 
+import qualified Cardano.Ledger.Shelley.API as Ledger
 import           Testnet.Components.SPO
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
@@ -240,6 +242,17 @@ hprop_ledger_events_propose_new_constitution = H.integrationRetryWorkspace 2 "pr
     [ "transaction", "txid"
     , "--tx-file", txbodySignedFp
     ]
+
+  --conwayOnwards <- evalEither $ inEonForEra (Left undefined) (\c -> Right c)
+
+  -- !ret <- runExceptT
+  --           $ checkLedgerStateCondition
+  --               (File $ configurationFile testnetRuntime)
+  --               (File socketPath)
+  --               FullValidation
+  --               5
+  --               (satisfy ConwayEraOnwardsConway (fromString txidString))
+--
   !propSubmittedResult
     <- runExceptT $ handleIOExceptT IOE
                   $ runExceptT $ foldBlocks
@@ -343,6 +356,43 @@ hprop_ledger_events_propose_new_constitution = H.integrationRetryWorkspace 2 "pr
       H.failMessage callStack
         $ "foldBlocksCheckConstitutionWasRatified failed with: " <> Text.unpack (renderFoldBlocksError e)
     Right (Right _events) -> success
+
+-- ConwayEraOnwardsConway
+
+--satisfy :: ConwayEraOnwards era -> TxId -> Ledger.NewEpochState (ShelleyLedgerEra era) -> LedgerStateCondition
+--satisfy c a b = conwayEraOnwardsConstraints c $ conditionProposalWasSubmitted a b
+
+
+runStateCondition
+  :: FilePath -> TestnetRuntime
+  -> [Char] -> IO (Either FoldBlocksError LedgerStateCondition)
+runStateCondition socketPath testnetRuntime txidString =
+  runExceptT
+    $ checkLedgerStateCondition
+        (File $ configurationFile testnetRuntime)
+        (File socketPath)
+        FullValidation
+        5
+        undefined -- (satisfy e (fromString txidString))
+
+
+conditionProposalWasSubmitted
+  :: TxId -> AnyNewEpochState -> LedgerStateCondition
+conditionProposalWasSubmitted submittedTxId (AnyNewEpochState sbe nes) = do
+  let eState = Ledger.utxosGovState $ Ledger.lsUTxOState $ Ledger.esLState $ Ledger.nesEs nes
+      enactState = inEonForEra
+                     ConditionNotMet
+                     (\(cOnwards :: ConwayEraOnwards era) -> do
+                          let propState :: Ledger.Proposals (ShelleyLedgerEra era) = conwayEraOnwardsConstraints cOnwards $ eState ^. Ledger.proposalsGovStateL
+                              propIds = Ledger.proposalsIds propState -- TODO: Use gaidTxId to get the txid submitted
+                          ConditionMet
+                     )
+                     (toCardanoEra sbe)
+  undefined
+
+
+
+
 
 foldBlocksCheckProposalWasSubmitted
   :: TxId -- TxId of submitted tx
