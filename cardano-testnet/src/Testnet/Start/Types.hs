@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Start.Types
@@ -23,6 +24,8 @@ import           Data.Word
 
 import           Hedgehog.Extras.Test.Base (Integration)
 
+import           Cardano.Api.Ledger (StandardCrypto)
+import qualified Cardano.Ledger.Conway.Genesis as Ledger
 import           Testnet.Filepath
 
 
@@ -82,14 +85,27 @@ newtype NodeConfigurationYaml = NodeConfigurationYaml
   { unYamlFilePath :: FilePath
   } deriving (Eq, Show)
 
-newtype Conf = Conf
+data Conf = Conf
   { tempAbsPath :: TmpAbsolutePath
-  } deriving (Eq, Show)
+  , -- | Function to rewrite the Conway genesis file before creating the testnet
+    rewriteConway :: Ledger.ConwayGenesis StandardCrypto -> Ledger.ConwayGenesis StandardCrypto
+  }
+
+instance Show Conf where
+  -- We ignore rewriteConway
+  show Conf { tempAbsPath } =
+    unlines
+      ["Conf{"
+       , "  tempAbsPath=" ++ show tempAbsPath
+       , "  rewriteConway=unshowable"
+       , "}"
+      ]
 
 mkConf :: FilePath -> Integration Conf
 mkConf tempAbsPath' =
   return $ Conf
     { tempAbsPath = TmpAbsolutePath tempAbsPath'
+    , rewriteConway = id -- By default, don't change anything
     }
 
 

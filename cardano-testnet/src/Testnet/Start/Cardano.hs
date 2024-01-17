@@ -127,7 +127,7 @@ startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 -- > └── utxo-keys
 -- >     └── utxo{1,2,3}.{addr,skey,vkey}
 cardanoTestnet :: CardanoTestnetOptions -> Conf -> H.Integration TestnetRuntime
-cardanoTestnet testnetOptions Conf {tempAbsPath} = do
+cardanoTestnet testnetOptions Conf {tempAbsPath, rewriteConway} = do
   testnetMinimumConfigurationRequirements testnetOptions
   void $ H.note OS.os
   currentTime <- H.noteShowIO DTC.getCurrentTime
@@ -167,7 +167,8 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
     H.evalIO $ LBS.writeFile alonzoConwayTestGenesisJsonTargetFile $ Aeson.encode gen
 
     conwayConwayTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> "genesis.conway.spec.json"
-    H.evalIO $ LBS.writeFile conwayConwayTestGenesisJsonTargetFile $ Aeson.encode defaultConwayGenesis
+    let conwayGenesis = rewriteConway defaultConwayGenesis
+    H.evalIO $ LBS.writeFile conwayConwayTestGenesisJsonTargetFile $ Aeson.encode conwayGenesis
 
     configurationFile <- H.noteShow $ tempAbsPath' </> "configuration.yaml"
 
