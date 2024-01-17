@@ -16,9 +16,7 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.Except.Extra
 import qualified Data.Text as Text
-import           GHC.IO.Exception (IOException)
 import           GHC.Stack (callStack)
 import           System.FilePath ((</>))
 
@@ -29,10 +27,7 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
 
-newtype AdditionalCatcher
-  = IOE IOException
-  deriving Show
-
+-- TODO: Update
 -- Ledger events can be emitted upon the application of the various ledger rules.
 -- Event definition example: https://github.com/input-output-hk/cardano-ledger/blob/afedb7d519761ccdd9c013444aa4b3e0bf0e68ef/eras/conway/impl/src/Cardano/Ledger/Conway/Rules/Gov.hs#L198
 -- Event emission: https://github.com/input-output-hk/cardano-ledger/blob/afedb7d519761ccdd9c013444aa4b3e0bf0e68ef/eras/conway/impl/src/Cardano/Ledger/Conway/Rules/Gov.hs#L389
@@ -63,8 +58,6 @@ hprop_checkLedgerStateCondition_condition_met = H.integrationWorkspace "Ledger s
   H.note_ $ "Abs path: " <> tempAbsBasePath'
   H.note_ $ "Socketpath: " <> socketPath
   !ret <- runExceptT
-            $ handleIOExceptT IOE
-            $ runExceptT
             $ checkLedgerStateCondition
                 (File $ configurationFile testnetRuntime)
                 (File socketPath)
@@ -73,11 +66,9 @@ hprop_checkLedgerStateCondition_condition_met = H.integrationWorkspace "Ledger s
                 (const ConditionMet)
 
   case ret of
-    Left (IOE e) ->
-      H.failMessage callStack $ "checkLedgerStateCondition failed with: " <> show e
-    Right (Left e) ->
+    Left e ->
       H.failMessage callStack $ "checkLedgerStateCondition failed with: " <> Text.unpack (renderFoldBlocksError e)
-    Right (Right v) -> if ConditionMet == v
+    Right v -> if ConditionMet == v
                        then success
                        else H.failMessage callStack $ "Condition not met: " <> show v
 
@@ -104,8 +95,6 @@ hprop_checkLedgerStateCondition_temination_epoch = H.integrationWorkspace "Ledge
   H.note_ $ "Abs path: " <> tempAbsBasePath'
   H.note_ $ "Socketpath: " <> socketPath
   !ret <- runExceptT
-            $ handleIOExceptT IOE
-            $ runExceptT
             $ checkLedgerStateCondition
                 (File $ configurationFile testnetRuntime)
                 (File socketPath)
@@ -113,12 +102,10 @@ hprop_checkLedgerStateCondition_temination_epoch = H.integrationWorkspace "Ledge
                 terminationEpoch
                 (const ConditionNotMet)
   case ret of
-    Left (IOE e) ->
-      H.failMessage callStack $ "checkLedgerStateCondition failed with: " <> show e
-    Right (Left (FoldBlocksApplyBlockError (TerminationEpochReached termEpoch))) ->
+    Left (FoldBlocksApplyBlockError (TerminationEpochReached termEpoch)) ->
       termEpoch === terminationEpoch
-    Right (Left e) ->
+    Left e ->
       H.failMessage callStack $ "checkLedgerStateCondition failed with: " <> Text.unpack (renderFoldBlocksError e)
-    Right (Right v) ->
+    Right v ->
       H.failMessage callStack $ "checkLedgerStateCondition unexpectedly succeeded with: " <> show v
 
