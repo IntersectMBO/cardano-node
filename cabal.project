@@ -63,5 +63,5 @@ package plutus-scripts-bench
 source-repository-package
     type: git
     location: git@github.com:IntersectMBO/cardano-api.git
-    tag: 6b830772a92c41ec86800bba4ef3307692702da5
+    tag: 697a43cd9e6e53e6b810f55e71ba725baf575c51
     subdir: cardano-api
