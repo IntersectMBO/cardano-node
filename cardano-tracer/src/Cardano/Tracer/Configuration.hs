@@ -35,13 +35,16 @@ import qualified Cardano.Logging.Types as Log
 
 -- | Only local socket is supported, to avoid unauthorized connections.
 newtype Address = LocalSocket FilePath
-  deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Endpoint for internal services.
 data Endpoint = Endpoint
   { epHost :: !String
   , epPort :: !Word16
-  } deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  }
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Parameters of rotation mechanism for logs.
 data RotationParams = RotationParams
@@ -49,39 +52,47 @@ data RotationParams = RotationParams
   , rpLogLimitBytes :: !Word64  -- ^ Max size of log file in bytes.
   , rpMaxAgeHours   :: !Word16  -- ^ Max age of log file in hours.
   , rpKeepFilesNum  :: !Word32  -- ^ Number of log files to keep in any case.
-  } deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  }
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Logging mode.
 data LogMode
   = FileMode    -- ^ Store items in log file.
   | JournalMode -- ^ Store items in Linux journal service.
-  deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Format of log files.
 data LogFormat
   = ForHuman   -- ^ For human (text)
   | ForMachine -- ^ For machine (JSON)
-  deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Logging parameters.
 data LoggingParams = LoggingParams
   { logRoot   :: !FilePath  -- ^ Root directory where all subdirs with logs are created.
   , logMode   :: !LogMode   -- ^ Log mode.
   , logFormat :: !LogFormat -- ^ Log format.
-  } deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  }
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Connection mode.
 data Network
   = AcceptAt  !Address            -- ^ Server mode: accepts connections.
   | ConnectTo !(NonEmpty Address) -- ^ Client mode: initiates connections.
-  deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Tracer's verbosity.
 data Verbosity
   = Minimum    -- ^ Display minimum of messages.
   | ErrorsOnly -- ^ Display errors only.
   | Maximum    -- ^ Display all the messages (protocols tracing, errors).
-  deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Tracer configuration.
 data TracerConfig = TracerConfig
@@ -103,7 +114,10 @@ data TracerConfig = TracerConfig
   , verbosity      :: !(Maybe Verbosity)            -- ^ Verbosity of the tracer itself.
   , metricsComp    :: !(Maybe (Map Text Text))      -- ^ Metrics compatibility map from metrics name to metrics name
   , resourceFreq   :: !(Maybe Int)                  -- ^ Frequency (1/millisecond) for gathering resource data.
-  } deriving (Eq, Generic, FromJSON, ToJSON, Show)
+  , stuff          :: FilePath                      -- ^ Absolute root directory
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
 
 -- | Read the tracer's configuration file.
 readTracerConfig :: FilePath -> IO TracerConfig
@@ -113,7 +127,13 @@ readTracerConfig pathToConfig =
     Right (config :: TracerConfig) ->
       case checkMeaninglessValues config of
         Left problems -> die $ "Tracer's configuration is meaningless: " <> problems
-        Right _ -> return config
+        Right{} -> return (postprocess config) where
+
+  -- Remove duplicate logging parameters.
+  nubLogging :: TracerConfig -> TracerConfig
+  nubLogging tracerConfig@TracerConfig{logging} = tracerConfig
+    { logging = NE.nub logging
+    }
 
 checkMeaninglessValues :: TracerConfig -> Either String ()
 checkMeaninglessValues TracerConfig{network, hasEKG, hasPrometheus, hasRTView, logging} =

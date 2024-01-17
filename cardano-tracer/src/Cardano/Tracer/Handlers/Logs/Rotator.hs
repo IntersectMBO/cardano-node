@@ -45,8 +45,8 @@ launchRotator
   -> IO ()
 launchRotator [] _ _ _ = return ()
 launchRotator loggingParamsForFiles
-              rotParams@RotationParams{rpFrequencySecs} verb currentLogLock = forever $ do
-  showProblemIfAny verb $
+              rotParams@RotationParams{rpFrequencySecs} verb currentLogLock = forever do
+  showProblemIfAny verb do
     forM_ loggingParamsForFiles $ checkRootDir currentLogLock rotParams
   sleep $ fromIntegral rpFrequencySecs
 
@@ -63,7 +63,7 @@ checkRootDir
   -> IO ()
 checkRootDir currentLogLock rotParams LoggingParams{logRoot, logFormat} = do
   logRootAbs <- makeAbsolute logRoot
-  whenM (doesDirectoryExist logRootAbs) $
+  whenM (doesDirectoryExist logRootAbs) do
     listDirectories logRootAbs >>= \case
       [] ->
         -- There are no nodes' subdirs yet (or they were deleted),
@@ -71,7 +71,7 @@ checkRootDir currentLogLock rotParams LoggingParams{logRoot, logFormat} = do
         return ()
       logsSubDirs -> do
         let fullPathsToSubDirs = map (logRootAbs </>) logsSubDirs
-        forConcurrently_ fullPathsToSubDirs $
+        forConcurrently_ fullPathsToSubDirs do
           checkLogs currentLogLock rotParams logFormat
 
 -- | We check the log files:
@@ -86,7 +86,7 @@ checkLogs
 checkLogs currentLogLock
           RotationParams{rpLogLimitBytes, rpMaxAgeHours, rpKeepFilesNum} format subDirForLogs = do
   logs <- map (subDirForLogs </>) . filter (isItLog format) <$> listFiles subDirForLogs
-  unless (null logs) $ do
+  unless (null logs) do
     -- Since logs' names contain timestamps, we can sort them: the maximum one is the latest log,
     -- and this is the current log (i.e. the log we're writing 'TraceObject's in).
     let fromOldestToNewest = sort logs

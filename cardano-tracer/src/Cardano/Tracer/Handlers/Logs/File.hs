@@ -5,23 +5,27 @@ module Cardano.Tracer.Handlers.Logs.File
   ( writeTraceObjectsToFile
   ) where
 
-import           Control.Concurrent.Extra (Lock, withLock)
-import           Control.Monad (unless)
-import           Control.Monad.Extra (ifM)
-import qualified Data.ByteString as BS
-import           Data.Maybe (fromMaybe)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
-import           System.Directory (createDirectoryIfMissing, doesDirectoryExist, makeAbsolute)
-import           System.Directory.Extra (listFiles)
-import           System.FilePath ((</>))
+import Control.Concurrent.MVar
+import Control.Concurrent.Extra (Lock, withLock)
+import Control.Monad (unless)
+import Control.Monad.Extra (ifM)
+import Data.ByteString qualified as BS
+import Data.Maybe (fromMaybe)
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as TE
+import System.Directory (createDirectoryIfMissing, doesDirectoryExist, makeAbsolute)
+import System.Directory.Extra (listFiles)
+import System.FilePath ((</>))
+import System.IO (openFile, Handle, IOMode(AppendMode))
 
-import           Cardano.Logging (TraceObject (..))
+import Cardano.Logging (TraceObject (..))
 
-import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.Logs.Utils
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils (nl)
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Cardano.Tracer.Configuration
+import Cardano.Tracer.Handlers.Logs.Utils
+import Cardano.Tracer.Types
+import Cardano.Tracer.Utils (nl)
 
 -- | Append the list of 'TraceObject's to the latest log via symbolic link.
 --
@@ -30,23 +34,53 @@ import           Cardano.Tracer.Utils (nl)
 -- the symbolic link will be switched to the new log file and writing can
 -- be interrupted. To prevent it, we use 'Lock'.
 writeTraceObjectsToFile
-  :: NodeName
+  :: MVar (Map FilePath Handle)
+  -> NodeName
   -> Lock
   -> FilePath
   -> LogFormat
   -> [TraceObject]
   -> IO ()
-writeTraceObjectsToFile nodeName currentLogLock rootDir format traceObjects = do
+writeTraceObjectsToFile handleMapMVar nodeName currentLogLock rootDir format traceObjects = do
+  -- Store this in config (double check)
   rootDirAbs <- makeAbsolute rootDir
-  let converter = case format of
+
+  let converter :: TraceObject -> T.Text
+      converter = case format of
                     ForHuman   -> traceTextForHuman
                     ForMachine -> traceTextForMachine
-  let itemsToWrite = map converter traceObjects
-  unless (null itemsToWrite) $ do
+
+      itemsToWrite :: [T.Text]
+      itemsToWrite = map converter traceObjects
+
+      preparedLine :: BS.ByteString
+      preparedLine = TE.encodeUtf8 $ T.append nl (T.intercalate nl itemsToWrite)
+
+  unless (null itemsToWrite) do
     pathToCurrentLog <- getPathToCurrentlog nodeName rootDirAbs format
-    let preparedLine = TE.encodeUtf8 $ T.append nl (T.intercalate nl itemsToWrite)
-    withLock currentLogLock $
-      BS.appendFile pathToCurrentLog preparedLine
+
+    handleMap <- readMVar handleMapMVar
+    case Map.lookup pathToCurrentLog handleMap of
+      Nothing -> do
+        modifyMVar_ handleMapMVar \oldHandleMap -> do
+          newHandle <- openFile pathToCurrentLog AppendMode
+          let
+            newHandleMap :: Map FilePath Handle
+            newHandleMap = Map.insert pathToCurrentLog newHandle oldHandleMap
+          pure newHandleMap
+      Just handle -> do
+        BS.hPutStrLn handle preparedLine
+
+    -- withLock currentLogLock do
+    --   BS.appendFile pathToCurrentLog preparedLine
+
+-- Next Rotation / Filenames ... or Handles?
+
+-- + absolute root dir in tracer config?
+-- + handle set locked in MVar; replacing Lock
+-- + initialize handles (open files) upfront or lazily?
+-- + propagate handle set to all relevant functions (e.g. rotator)
+-- + Goal: don’t open/close logfile(s) on each write
 
 -- | Returns the path to the current log. Prepares the structure for the log files if needed:
 --
@@ -89,4 +123,3 @@ traceTextForHuman TraceObject{toHuman, toMachine} =
 
 traceTextForMachine :: TraceObject -> T.Text
 traceTextForMachine TraceObject{toMachine} = toMachine
-

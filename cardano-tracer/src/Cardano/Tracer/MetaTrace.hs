@@ -126,25 +126,6 @@ instance ToJSON TracerTrace where
         ("kind" .= ("TracerResource" :: Text)
       <> "Resource" .= ttResource)
   toJSON = AE.genericToJSON jsonEncodingOptions
-<<<<<<< HEAD
-=======
-
--- {"ConfigPath":"config.json","MinLogSeverity":null,"StateDir":null,"kind":"TracerParamsAre}"
-
-
---   toJSON = AE.genericToJSON jsonEncodingOptions
---   toEncoding = AE.genericToEncoding jsonEncodingOptions
--- instance ToJSON TracerTrace where
---   toJSON = AE.genericToJSON jsonEncodingOptions
-
--- instance ToJSON Person where
---     -- this generates a Value
---     toJSON (Person name age) =
---         object ["name" .= name, "age" .= age]
-
---     -- this encodes directly to a bytestring Builder
---     toEncoding (Person name age) =
->>>>>>> 7cd24553f (cardano-tracer: Add stm-containers.)
 
 jsonEncodingOptions :: AE.Options
 jsonEncodingOptions = AE.defaultOptions
