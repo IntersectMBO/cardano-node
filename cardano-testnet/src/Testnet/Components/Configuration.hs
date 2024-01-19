@@ -42,6 +42,7 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Data.Aeson.Lens as L
 import           Lens.Micro
 
+import           Cardano.Api.Ledger (StandardCrypto)
 import           Testnet.Defaults
 import           Testnet.Filepath
 import           Testnet.Process.Run (execCli_)
@@ -81,10 +82,12 @@ numSeededUTxOKeys = 3
 createSPOGenesisAndFiles
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => CardanoTestnetOptions
+  -> Maybe (ShelleyGenesis StandardCrypto) -- ^ The shelley genesis to use, otherwise a default is picked
+                                           --   Some fields are overridden by the accompanying 'CardanoTestnetOptions'
   -> UTCTime -- ^ Start time
   -> TmpAbsolutePath
   -> m FilePath -- ^ Shelley genesis directory
-createSPOGenesisAndFiles testnetOptions startTime (TmpAbsolutePath tempAbsPath') = do
+createSPOGenesisAndFiles testnetOptions mShelleyGenesis startTime (TmpAbsolutePath tempAbsPath') = do
   let genesisShelleyFpAbs = tempAbsPath' </> defaultShelleyGenesisFp
       genesisShelleyDirAbs = takeDirectory genesisShelleyFpAbs
   genesisShelleyDir <- H.createDirectoryIfMissing genesisShelleyDirAbs
@@ -100,11 +103,11 @@ createSPOGenesisAndFiles testnetOptions startTime (TmpAbsolutePath tempAbsPath')
 
   -- We create the initial genesis file to avoid having to re-write the genesis file later
   -- with the parameters we want. The user must provide genesis files or we will use a default.
-  -- We should *never* be modifying the genesis file after cardano-testnet is run because this
+  -- We should *never* be modifying the genesis file after @cardanoTestnet@ is run because this
   -- is sure to be a source of confusion if users provide genesis files and we are mutating them
   -- without their knowledge.
   let shelleyGenesis :: LBS.ByteString
-      shelleyGenesis = encode $ defaultShelleyGenesis startTime testnetOptions
+      shelleyGenesis = encode $ defaultShelleyGenesis startTime testnetOptions mShelleyGenesis
 
   H.evalIO $ LBS.writeFile genesisShelleyFpAbs shelleyGenesis
 

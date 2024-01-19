@@ -41,8 +41,14 @@ import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
+import           Cardano.Api
+import           Cardano.Api.Ledger (StandardCrypto)
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 import qualified Control.Monad.Class.MonadTimer.SI as MT
 import           Control.Monad.IO.Class
+import qualified Data.Aeson as Aeson
+import           Data.Bifunctor (first)
 import           Testnet.Components.Configuration
 import           Testnet.Defaults
 import           Testnet.Filepath
@@ -122,8 +128,17 @@ startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 -- > │   └── node-spo{1,2,3}
 -- > └── utxo-keys
 -- >     └── utxo{1,2,3}.{addr,skey,vkey}
-cardanoTestnet :: CardanoTestnetOptions -> Conf -> H.Integration TestnetRuntime
-cardanoTestnet testnetOptions Conf {tempAbsPath} = do
+cardanoTestnet :: ()
+  => CardanoTestnetOptions
+  -> Conf
+  -> Maybe (ShelleyGenesis StandardCrypto) -- ^ The shelley genesis to use, otherwise a default is picked
+                                           --   Some fields are overridden by the accompanying 'CardanoTestnetOptions'
+  -> Maybe AlonzoGenesis -- ^ The alonzo genesis to use, otherwise a default is picked
+  -> Maybe (ConwayGenesis StandardCrypto) -- ^ The conway genesis to use, otherwise a default is picked
+  -> H.Integration TestnetRuntime
+cardanoTestnet
+  testnetOptions Conf {tempAbsPath}
+  mShelleyGenesis mAlonzoGenesis mConwayGenesis = do
   testnetMinimumConfigurationRequirements testnetOptions
   void $ H.note OS.os
   currentTime <- H.noteShowIO DTC.getCurrentTime
@@ -154,10 +169,21 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
       (tempAbsPath' </> "byron.genesis.spec.json")
       (tempAbsPath' </> "byron-gen-command")
 
-    _ <- createSPOGenesisAndFiles testnetOptions startTime (TmpAbsolutePath tempAbsPath')
+    -- Write Alonzo genesis file
+    alonzoGenesisJsonFile <- H.noteShow $ tempAbsPath' </> "genesis.alonzo.spec.json"
+    alonzoGenesis <- case mAlonzoGenesis of
+      Nothing ->            H.evalEither $ first prettyError defaultAlonzoGenesis
+      Just alonzoGenesis -> pure alonzoGenesis
+    H.evalIO $ LBS.writeFile alonzoGenesisJsonFile $ Aeson.encode alonzoGenesis
+
+    -- Write Conway genesis file
+    conwayGenesisJsonFile <- H.noteShow $ tempAbsPath' </> "genesis.conway.spec.json"
+    let conwayGenesis = fromMaybe defaultConwayGenesis mConwayGenesis
+    H.evalIO $ LBS.writeFile conwayGenesisJsonFile $ Aeson.encode conwayGenesis
 
     configurationFile <- H.noteShow $ tempAbsPath' </> "configuration.yaml"
 
+    _ <- createSPOGenesisAndFiles testnetOptions mShelleyGenesis startTime (TmpAbsolutePath tempAbsPath')
 
     poolKeys <- H.noteShow $ flip fmap [1..numPoolNodes] $ \n ->
       PoolNodeKeys

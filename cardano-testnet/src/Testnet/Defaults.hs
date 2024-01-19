@@ -46,6 +46,7 @@ import           Data.Time (UTCTime)
 import qualified Data.Vector as Vector
 import           Data.Word
 
+import           Data.Maybe (fromMaybe)
 import           Testnet.Start.Types
 
 
@@ -412,13 +413,15 @@ defaultByronProtocolParamsJsonValue =
 defaultShelleyGenesis
   :: UTCTime
   -> CardanoTestnetOptions
+  -> Maybe (Api.ShelleyGenesis StandardCrypto) -- ^ The file to use. If not provided, a default one is used.
+                                               --   Some fields are overridden by the accompanying 'CardanoTestnetOptions'
   -> Api.ShelleyGenesis StandardCrypto
-defaultShelleyGenesis startTime testnetOptions =
+defaultShelleyGenesis startTime testnetOptions mBase =
   let testnetMagic = cardanoTestnetMagic testnetOptions
       slotLength = cardanoSlotLength testnetOptions
       epochLength = cardanoEpochLength testnetOptions
       maxLovelaceLovelaceSupply = cardanoMaxSupply testnetOptions
-  in Api.shelleyGenesisDefaults
+  in (fromMaybe Api.shelleyGenesisDefaults mBase)
         { Api.sgNetworkMagic = fromIntegral testnetMagic
         , Api.sgSlotLength = secondsToNominalDiffTimeMicro $ realToFrac slotLength
         , Api.sgEpochLength = EpochSize $ fromIntegral epochLength

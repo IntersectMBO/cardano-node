@@ -52,4 +52,4 @@ runTestnetCmd = \case
 
 runCardanoOptions :: CardanoTestnetOptions -> IO ()
 runCardanoOptions options =
-  runTestnet $ cardanoTestnet options
+  runTestnet (\c -> cardanoTestnet options c Nothing Nothing Nothing)
