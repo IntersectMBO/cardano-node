@@ -34,8 +34,8 @@ library
   build-depends:        aeson
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 8.37.0.0
-                      , cardano-cli ^>= 8.18.0.0
+                      , cardano-api ^>= 8.37.1.0
+                      , cardano-cli ^>= 8.19.0.0
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger-alonzo
@@ -55,7 +55,7 @@ library
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.5.1.0
+                      , hedgehog-extras ^>= 0.6.0.0
                       , microlens
                       , lens-aeson
                       , mtl
