@@ -42,7 +42,10 @@ import           Cardano.Logging.TraceDispatcherMessage
 import           Cardano.Logging.Types
 
 
--- | Call this function at initialisation, and later for reconfiguration
+-- | Call this function at initialisation, and later for reconfiguration.
+-- Config reflection is used to optimise the tracers and has to collect
+-- information about the tracers. Although it is possible to give more then
+-- one tracer of the same time, it is not a common case to do this.
 configureTracers :: forall a m.
      (MetaTrace a
   ,  MonadIO m)
