@@ -303,7 +303,7 @@ cardanoTestnet testnetOptions Conf {tempAbsPath} = do
     let spoNodesWithPortNos = L.zip poolKeysFps [3001..]
         nodeConfigFile = tempAbsPath' </> "configuration.yaml"
     ePoolNodes <- forM (L.zip spoNodesWithPortNos poolKeys) $ \((node, port),key) -> do
-      let nodeName = tail $ snd (break (== '/') node)
+      let nodeName = tail $ dropWhile (/= '/') node
       H.note_ $ "Node name: " <> nodeName
       eRuntime <- lift . lift . runExceptT $ startNode tempAbsPath nodeName port testnetMagic
                                   [ "run"
