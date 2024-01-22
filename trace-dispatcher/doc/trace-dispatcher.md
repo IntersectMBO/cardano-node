@@ -100,7 +100,7 @@ data TraceAddBlockEvent blk =
 --   * 'trStdout':  stdout tracing
 --   * 'trForward': trace forwarding
 --   * 'mbTrEkg':   (optional) EKG monitoring
--- The tracer is supplied with a 'name' as an array of text, which is appended to its namespace.
+-- The tracer is supplied with a 'name' as an array of text, which is prepended to its namespace.
 -- This function returns the new tracer.
 
 mkCardanoTracer :: forall evt.
@@ -142,7 +142,10 @@ To emit a trace, employing a message and its corresponding tracer, utilize the `
 ```haskell
 traceWith :: Trace m a -> a -> m ()
 -- For example:
-traceWith trAddBlock (IgnoreBlockOlderThanK p)
+addBlockTracer <- mkCardanoTracer trStdout trForward (Just trEkg) ["ChainDB"]
+configureTracers configReflect config [addBlockTracer]
+..
+traceWith addBlockTracer (IgnoreBlockOlderThanK p)
 ```
 
 ## Namespace Concept Explanation
@@ -160,6 +163,12 @@ data Namespace a = Namespace {
     nsPrefix :: [Text]
   , nsInner  :: [Text]}
 ```
+
+Every namespace is composed of:
+
+- system namespace (empty for cardano, but was cardano in old tracing)
+- tracer namespace (argument of mkCardanoTracer)
+- inner namespace (provided by the MetaTrace typeclass)
 
 The tracer namespace serves pivotal roles in:
 
@@ -179,7 +188,9 @@ The `LogFormatting` typeclass governs the presentation of trace messages, encomp
 
 - The `forMachine` method caters to a machine-readable representation, adaptable based on the detail level. Implementation is mandatory for the trace author.
 
-- The `forHuman` method renders the message in a human-readable form. Its default implementation is `forMachine`.
+- The `forHuman` method renders the message in a human-readable form. Its default implementation is an
+empty text, which will be replaced by forMachine in the rendering, if forHuman is empty. The forMachine
+will by default rendered with a DNormal detsil level, if no other information is provided.
 
 - The `asMetrics` method portrays the message as 0 to n metrics. The default implementation assumes no metrics. Each metric can optionally specify a hierarchical identifier as a `[Text]`.
 
@@ -222,7 +233,7 @@ The `MetaTrace` typeclass plays a pivotal role in providing meta-information for
 
 - __detailsFor__: Specifies the level of details for printing messages. Options include `DMinimal`, `DNormal`, `DDetailed`, and `DMaximum`. If no implementation is given, `DNormal` is chosen.
 
-- __documentFor__: Allows the addition of optional documentation for messages as text.
+- __documentFor__: Allows the addition of optional documentation for messages as text. See section [Documentation Generation](#documentation-generation) later in this document.
 
 - __metricsDocFor__: Enables the addition of documentation for metrics carried by the respective message. If no implementation is given, the default is no metrics.
 
@@ -264,7 +275,8 @@ The frequency limiter, in addition to controlling message frequency, emits a sup
 - Every 10 seconds during active limiting, providing the count of suppressed messages.
 - When message suppression concludes, indicating the total number of suppressed messages.
 
-Each frequency limiter is assigned a name for identification purposes:
+Usually frequency limiters can be just added by configuration, for special cases you
+can construct them in your code. Each frequency limiter is assigned a name for identification purposes:
 
 ```haskell
 limitFrequency
@@ -430,7 +442,7 @@ For instance, you can create a filter function to display only _Public_ messages
 ```haskell
 filterTrace (\(c, _) -> case lcPrivacy c of
                 Just s  -> s == Public
-                Nothing -> True)
+                Nothing -> False) -- privacy unknown, don't send out
 ```
 
 This capability allows for flexible and fine-grained control over the inclusion or exclusion of messages based on a variety of contextual criteria.
@@ -587,8 +599,8 @@ To generate the documentation within GHCi, load the `Cardano.Node.Tracing.Docume
 ```haskell
 data TraceDocumentationCmd
   = TraceDocumentationCmd
-    { tdcConfigFile :: FilePath
-    , tdcOutput     :: FilePath
+    { tdcConfigFile :: FilePath -- file path to a node config file
+    , tdcOutput     :: FilePath -- file path to output the documentation
     }
 
 runTraceDocumentationCmd
@@ -645,9 +657,11 @@ As namespaces are essentially strings, the type system doesn't inherently ensure
 -- Check the general structure of namespaces.
 -- An empty return list means everything is well.
 checkNodeTraceConfiguration ::
-     FilePath
+     FilePath -- path to a node configuration file
   -> IO [Text]
 ```
+
+An example text is "Config namespace error: i.am.an.invalid.namepace" .
 
 This check is performed within a `cardano-node` test case (`Test.Cardano.Tracing.NewTracing.Consistency.tests`), ensuring that it is automatically verified with each pull request.
 
