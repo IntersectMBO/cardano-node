@@ -51,7 +51,7 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
                           , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                           }
 
-  runtime <- cardanoTestnet options conf
+  runtime <- cardanoTestnet options conf Nothing Nothing Nothing
 
   -- Get socketPath
   socketPathAbs <- do
