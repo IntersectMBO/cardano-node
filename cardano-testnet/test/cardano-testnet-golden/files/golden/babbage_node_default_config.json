@@ -15,7 +15,7 @@
     "PBftSignatureThreshold": 0.6,
     "Protocol": "Cardano",
     "RequiresNetworkMagic": "RequiresMagic",
-    "ShelleyGenesisFile": "shelley/genesis.json",
+    "ShelleyGenesisFile": "shelley/genesis.shelley.json",
     "SocketPath": "db/node.socket",
     "TestAllegraHardForkAtEpoch": 0,
     "TestAlonzoHardForkAtEpoch": 0,

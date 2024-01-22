@@ -7,7 +7,7 @@
 ##### Locations #####
 
 ByronGenesisFile: byron/genesis.json
-ShelleyGenesisFile: shelley/genesis.json
+ShelleyGenesisFile: shelley/genesis.shelley.json
 AlonzoGenesisFile: shelley/genesis.alonzo.json
 AlonzoGenesisFile: shelley/genesis.conway.json
 SocketPath: db/node.socket
