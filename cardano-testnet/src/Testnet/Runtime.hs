@@ -199,12 +199,13 @@ startNode tp node port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
       socketDir = makeSocketDir tp
       logDir = makeLogDir tp
 
-  liftIO $ createDirectoryIfMissingNew_ logDir
-  void . liftIO $ createSubdirectoryIfMissingNew tempBaseAbsPath socketDir
+  liftIO $ createDirectoryIfMissingNew_ $ logDir </> node
+  void . liftIO $ createSubdirectoryIfMissingNew tempBaseAbsPath (socketDir </> node)
 
-  let nodeStdoutFile = logDir </> node <> ".stdout.log"
-      nodeStderrFile = logDir </> node <> ".stderr.log"
-      sprocket = Sprocket tempBaseAbsPath (socketDir </> node)
+  let nodeStdoutFile = logDir </> node </> "stdout.log"
+      nodeStderrFile = logDir </> node </> "stderr.log"
+      socketRelPath = socketDir </> node </> "sock"
+      sprocket = Sprocket tempBaseAbsPath socketRelPath
 
   hNodeStdout <- handleIOExceptT FileRelatedFailure $ IO.openFile nodeStdoutFile IO.WriteMode
   hNodeStderr <- handleIOExceptT FileRelatedFailure $ IO.openFile nodeStderrFile IO.ReadWriteMode

@@ -18,6 +18,8 @@ import           Cardano.Logging.Types
 
 ---------------------------------------------------------------------------
 
+-- | It is mandatory to construct only one forwardTracer tracer in any application!
+-- Throwing away a forwardTracer tracer and using a new one will result in an exception
 forwardTracer :: forall m. (MonadIO m)
   => ForwardSink TraceObject
   -> Trace m FormattedMessage

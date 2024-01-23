@@ -77,8 +77,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
 
   tr@TestnetRuntime
     { testnetMagic
-    -- , wallets
-    -- , delegators
+    , wallets
     } <- cardanoTestnet cTestnetOptions conf
 
   execConfig <- H.headM (poolSprockets tr) >>= H.mkExecConfig tempBaseAbsPath
@@ -87,33 +86,22 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   work <- H.note tempAbsPath'
 
   ----------------Need to register an SPO------------------
-
- -- We get our UTxOs from here
-  utxoVKeyFile <- H.note $ work </> "utxo-keys/utxo1.vkey"
-  utxoSKeyFile <- H.note $ work </> "utxo-keys/utxo1.skey"
-
-  utxoAddr <- execCli
-                [ "address", "build"
-                , "--testnet-magic", show @Int testnetMagic
-                , "--payment-verification-key-file", utxoVKeyFile
-                ]
-
-  void $ execCli' execConfig
-      [ "query", "utxo"
-      , "--address", utxoAddr
-      , "--cardano-mode"
-      , "--testnet-magic", show @Int testnetMagic
-      , "--out-file", work </> "utxo-1.json"
-      ]
-
-  H.cat $ work </> "utxo-1.json"
+  let utxoAddr = Text.unpack $ paymentKeyInfoAddr $ head wallets
+      utxoSKeyFile = paymentSKey . paymentKeyInfoPair $ head wallets
+  void $ H.execCli' execConfig
+    [ "conway", "query", "utxo"
+    , "--address", utxoAddr
+    , "--cardano-mode"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--out-file", work </> "utxo-1.json"
+    ]
 
   utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
   UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
-  txin <- H.noteShow =<< H.headM (Map.keys utxo1)
+  txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
 
   (stakePoolIdNewSpo, stakePoolColdSigningKey, stakePoolColdVKey, vrfSkey, _)
-    <- registerSingleSpo 1 tempAbsPath cTestnetOptions execConfig (txin, utxoSKeyFile, utxoAddr)
+    <- registerSingleSpo 1 tempAbsPath cTestnetOptions execConfig (txin1, utxoSKeyFile, utxoAddr)
 
   -- Create test stake address to delegate to the new stake pool
   -- NB: We need to fund the payment credential of the overall address
@@ -178,7 +166,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   H.cat $ work </> "utxo-2.json"
 
   utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
-  UTxO utxo2 <- H.noteShowM $ H.noteShowM $ decodeEraUTxO sbe utxo2Json
+  UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
   txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 
   let eraFlag = convertToEraFlag $ cardanoNodeEra cTestnetOptions

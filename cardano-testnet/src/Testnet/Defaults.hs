@@ -9,6 +9,7 @@ module Testnet.Defaults
   , defaultYamlConfig
   , defaultConwayGenesis
   , defaultShelleyGenesis
+  , defaultShelleyGenesisFp
   , defaultYamlHardforkViaConfig
   , defaultMainnetTopology
   ) where
@@ -40,6 +41,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Proxy
 import           Data.Ratio
 import           Data.Scientific
+import qualified Data.Text as Text
 import           Data.Time (UTCTime)
 import qualified Data.Vector as Vector
 import           Data.Word
@@ -359,7 +361,7 @@ defaultYamlConfig =
 
     -- Genesis filepaths
     , ("ByronGenesisFile", "byron/genesis.json")
-    , ("ShelleyGenesisFile", "shelley/genesis.json")
+    , ("ShelleyGenesisFile", Aeson.String $ Text.pack defaultShelleyGenesisFp)
     , ("AlonzoGenesisFile", "shelley/genesis.alonzo.json")
     , ("ConwayGenesisFile", "shelley/genesis.conway.json")
 
@@ -432,3 +434,10 @@ defaultMainnetTopology =
          , raValency  = 2
          }
   in RealNodeTopology [single]
+
+-- TODO: These filepaths should really be decoded from the output of
+-- create-testnet-data. We are still deciding the best way to pass this information
+-- to cardano-testnet.
+
+defaultShelleyGenesisFp :: FilePath
+defaultShelleyGenesisFp = "shelley/genesis.shelley.json"

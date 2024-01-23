@@ -315,7 +315,7 @@ contramapM' rFunc =
   Trace $ T.Tracer $ T.emit rFunc
 
 -- | Folds the monadic cata function with acc over a.
--- Uses an IORef to store the state
+-- Uses an MVar to store the state
 foldTraceM :: forall a acc m . (MonadUnliftIO m)
   => (acc -> LoggingContext -> a -> m acc)
   -> acc

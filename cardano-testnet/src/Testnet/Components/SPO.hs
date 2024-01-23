@@ -149,6 +149,8 @@ createStakeKeyRegistrationCertificate tempAbsP anyCEra stakeVerKey outputFp =
       , "--out-file", tempAbsPath' </> outputFp
       ]
 
+-- TODO: Remove me and replace with new era based commands
+-- i.e "conway", "babbage" etc
 convertToEraFlag :: AnyCardanoEra -> String
 convertToEraFlag (AnyCardanoEra e) =
   case e of
