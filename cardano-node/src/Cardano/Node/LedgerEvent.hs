@@ -90,7 +90,7 @@ import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Encoding as CBOR
 import qualified Codec.CBOR.Read as CBOR
 import qualified Codec.CBOR.Write as CBOR
-import           Control.Arrow ((&&&))
+import           Control.Arrow ((&&&), (***))
 import           Control.Concurrent.STM (newTChanIO, readTChan, writeTChan)
 import           Control.Monad.Fail (MonadFail (..))
 import           Control.State.Transition (Event)
@@ -159,7 +159,7 @@ instance Crypto crypto => DecCBOR (LedgerEvent crypto) where
         SumD LedgerBody
       decRaw n = Invalid n
 
-type LedgerEvents = NE.NonEmpty (LedgerEvent StandardCrypto) -- ^ convenient alias to refer to a list of LedgerEvents
+type LedgerEvents = [LedgerEvent StandardCrypto] -- ^ convenient alias to refer to a list of LedgerEvents
 
 -- TODO(KtorZ): Discuss that design choice; I believe we should favor a more
 -- 'flat' structure for events instead of preserving whatever the ledger imposes
@@ -711,7 +711,7 @@ data AnchoredEvents =
     , blockHeaderHash :: !ShortByteString
     , slotNo :: !SlotNo
     , blockNo :: !BlockNo
-    , ledgerEvents :: !(NonEmpty (LedgerEvent StandardCrypto))
+    , ledgerEvents :: ![LedgerEvent StandardCrypto]
     }
   deriving (Eq, Show)
 
@@ -850,5 +850,6 @@ mkVersionedAnchoredEvents prevHash headerHash slotNo blockNo auxEvents =
     chainHashToOriginHash :: ChainHash b -> WithOrigin (HeaderHash b)
     chainHashToOriginHash GenesisHash = Origin
     chainHashToOriginHash (BlockHash bh) = At bh
-    versionedEvents = mapMaybe (sequence . (eventCodecVersion &&& fromAuxLedgerEvent)) auxEvents
-    versionedGroups = map (first NE.head . NE.unzip) . NE.groupBy ((==) `on` fst) $ versionedEvents
+    versionedEvents = map (eventCodecVersion &&& fromAuxLedgerEvent) auxEvents
+    versionedGroups = map makeGroup $ NE.groupWith fst versionedEvents
+    makeGroup = (NE.head *** catMaybes . NE.toList) . NE.unzip

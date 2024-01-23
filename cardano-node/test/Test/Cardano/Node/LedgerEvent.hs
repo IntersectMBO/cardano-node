@@ -82,7 +82,7 @@ genAnchoredEvents =
     <*> genBlockHeaderHash
     <*> genSlotNo
     <*> genBlockNo
-    <*> Gen.nonEmpty
+    <*> Gen.list
           (Range.linear 0 20)
           (Gen.choice
             (mconcat
