@@ -130,8 +130,8 @@ createSPOGenesisAndFiles testnetOptions startTime (TmpAbsolutePath tempAbsPath')
     , "--spec-shelley", genesisShelleyFpAbs
     , "--testnet-magic", show @Int testnetMagic
     , "--pools", show @Int numPoolNodes
-    , "--supply", "1000000000000"
-    , "--supply-delegated", "1000000000000"
+    , "--total-supply", "2000000000000"
+    , "--delegated-supply", "1000000000000"
     , "--stake-delegators", show @Int numStakeDelegators
     , "--utxo-keys", show numSeededUTxOKeys
     , "--start-time", DTC.formatIso8601 startTime
