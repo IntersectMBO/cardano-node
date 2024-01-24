@@ -718,8 +718,8 @@ eventCodecVersion
   :: AuxExtLedgerEvent (ExtLedgerState (HardForkBlock xs)) (HardForkBlock xs)
   -> Version
 eventCodecVersion = \case
-  AuxLedgerEvent e -> undefined
-  AuxConsensusEvent e -> undefined
+  AuxLedgerEvent e -> eventCodecVersion' e
+  AuxConsensusEvent _ -> maxBound
 
 eventCodecVersion' ::
      forall crypto. Crypto crypto
