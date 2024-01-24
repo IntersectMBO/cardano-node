@@ -136,6 +136,7 @@ data LedgerEvent crypto
   -- | LedgerNewEpoch
   -- | LedgerRegisterPool
   -- | LedgerReRegisterPool
+  | LedgerEpochNonceEvent !Ledger.Nonce
   | LedgerBody
   deriving (Eq, Show)
 
@@ -148,8 +149,11 @@ instance Crypto crypto => EncCBOR (LedgerEvent crypto) where
     LedgerRewardUpdateEvent e ->
       Sum LedgerRewardUpdateEvent 1
         !> To e
+    LedgerEpochNonceEvent nonce ->
+      Sum LedgerEpochNonceEvent 2
+        !> To nonce
     LedgerBody ->
-      Sum LedgerBody 2
+      Sum LedgerBody 3
 
 instance Crypto crypto => DecCBOR (LedgerEvent crypto) where
   decCBOR = decode (Summands "LedgerEvent" decRaw)
@@ -161,6 +165,9 @@ instance Crypto crypto => DecCBOR (LedgerEvent crypto) where
         SumD LedgerRewardUpdateEvent
           <! From
       decRaw 2 =
+        SumD LedgerEpochNonceEvent
+          <! From
+      decRaw 3 =
         SumD LedgerBody
       decRaw n = Invalid n
 
@@ -332,12 +339,14 @@ toOrdering = \case
   LedgerNewEpochEvent LedgerRestrainedRewards {}      -> 5
   LedgerNewEpochEvent LedgerTotalRewards {}           -> 6
   LedgerNewEpochEvent LedgerTotalAdaPots {}           -> 8
-  LedgerBody                                          -> 9
+  LedgerEpochNonceEvent {}                            -> 9
+  LedgerBody                                          -> 10
 
 ledgerEventName :: LedgerEvent crypto -> Text
 ledgerEventName = \case
   LedgerNewEpochEvent e       -> ledgerNewEpochEventName e
   LedgerRewardUpdateEvent e   -> ledgerRewardUpdateEventName e
+  LedgerEpochNonceEvent {}    -> "LedgerEpochNonce"
   LedgerBody {}               -> "LedgerBody"
 
 ledgerNewEpochEventName :: LedgerNewEpochEvent crypto -> Text
@@ -359,7 +368,7 @@ fromAuxExtLedgerEvent
 fromAuxExtLedgerEvent event =
   case event of
     AuxLedgerEvent e -> fromAuxLedgerEvent e
-    AuxConsensusEvent (EpochNonce _nonce) -> undefined
+    AuxConsensusEvent (EpochNonce nonce) -> Just $ LedgerEpochNonceEvent nonce
 
 fromAuxLedgerEvent
   :: AuxLedgerEvent (LedgerState StandardCrypto)
