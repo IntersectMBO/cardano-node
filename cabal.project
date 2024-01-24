@@ -60,3 +60,10 @@ package plutus-scripts-bench
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
+
+source-repository-package
+    type: git
+    location: https://github.com/IntersectMBO/cardano-cli.git
+    tag: d0c60ea4651ae77bc96de44f0767a64048a350be
+    subdir: cardano-cli
+    --sha256: sha256-kIru2S7vmW73qpdCe/ao657OOpEiOl45538pj3m/24M=
