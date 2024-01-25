@@ -26,7 +26,7 @@ common project-config
     buildable: False
 
 common with-library
-  if impl(ghc >= 9)
+  if impl(ghc >= 10)
     build-depends:      plutus-scripts-bench
     cpp-options:        -DWITH_LIBRARY
 
