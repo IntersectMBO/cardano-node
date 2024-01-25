@@ -1,0 +1,33 @@
+name: Check for New Release
+
+on:
+  schedule:
+    - cron: '0 */24 * * *'  # Schedule to run every 24 hours
+
+jobs:
+  check-for-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: check for new release
+        run: |
+          upstreamTag=$(curl -s "https://api.github.com/repos/IntersectMBO/cardano-node/releases/latest" | jq -r '.tag_name')
+          forkedTag=$(git describe --tags --abbrev=0)
+
+          echo "Upstream Tag: $upstreamTag"
+          echo "Forked Tag: $forkedTag"
+
+          if [ "$upstreamTag" != "$forkedTag" ]; then
+            echo "New release detected. Triggering release workflow."
+            curl -X POST \
+              -H "Authorization: Bearer ${{ secrets.WORKFLOW_TOKEN }}" \
+              -H "Accept: application/vnd.github.everest-preview+json" \
+              -H "Content-Type: application/json" \
+              https://api.github.com/repos/emurgo/cardano-node/dispatches \
+              --data '{"event_type": "trigger-release"}'
+          else
+            echo "No new release detected."
+          fi
