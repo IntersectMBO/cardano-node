@@ -20,22 +20,8 @@ let
   extraShellPkgs = let
     # If we are going to use the `exec` driver we use the SRE patched version of
     # Nomad that allows to use `nix_installables` as artifacts.
-    nomad-sre = (pkgs.buildGo119Module rec {
-      pname = "nomad";
-      version = "1.4.3";
-      subPackages = [ "." ];
-      doCheck = true;
-      src = pkgs.fetchFromGitHub { # "github:input-output-hk/nomad/release/1.4.3"
-        owner = "input-output-hk";
-        repo = pname;
-        rev = "2b8a93390"; # Use to be "release/${version}" but it changes.
-        # nix-prefetch-url --unpack https://github.com/input-output-hk/nomad/archive/2b8a93390/1.4.3.tar.gz
-        sha256 = "0l2sfhpg0p5mjdbipib7q63wlsrczr2fkq9xi641vhgxsjmprvwm";
-      };
-      # error: either `vendorHash` or `vendorSha256` is required
-      # https://discourse.nixos.org/t/buildgomodule-how-to-get-vendorsha256/9317
-      vendorSha256 = "sha256-JQRpsQhq5r/QcgFwtnptmvnjBEhdCFrXFrTKkJioL3A=";
-    });
+    commit = "8f3b74796a8f56f38a812813c64dba995956a66e"; # Patched 1.6.3
+    nomad-sre = (__getFlake "github:input-output-hk/cardano-perf/${commit}").packages.x86_64-linux.nomad;
   in
     [ nomad-sre
       # The HTTP server to upload/download the genesis tar file in a local env.

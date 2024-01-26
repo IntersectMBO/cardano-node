@@ -3487,7 +3487,9 @@ client {
   servers = [ ${servers_addresses} ]
   # Sets the search path that is used for CNI plugin discovery. Multiple paths can
   # be searched using colon delimited paths
-  cni_path = "${cni_plugins_path}"
+# TODO: needed to allow having more than one Nomad profile running locally
+# Nomad 1.7.X fails somewhat silently when reading this configuration option.
+#  cni_path = "${cni_plugins_path}"
   # Specifies the maximum amount of time a job is allowed to wait to exit.
   # Individual jobs may customize their own kill timeout, but it may not exceed
   # this value.
