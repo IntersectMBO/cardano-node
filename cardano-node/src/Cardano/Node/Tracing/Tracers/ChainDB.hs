@@ -52,6 +52,7 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Util.Enclose
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
+import Data.Coerce (coerce)
 
 -- {-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
 
@@ -1567,15 +1568,21 @@ instance LogFormatting LedgerDB.BackingStoreTraceByBackend where
     mconcat [ "kind" .= String "BackingStore.InMemoryTrace"
             , "event" .= forMachine dtals ev
             ]
+  forMachine dtals (LedgerDB.InitEvent ev) =
+    mconcat [ "kind" .= String "BackingStore.InitEvent"
+            , "event" .= forMachine dtals ev
+            ]
 
   forHuman (LedgerDB.LMDBTrace ev) = forHuman ev
   forHuman (LedgerDB.InMemoryTrace ev) = forHuman ev
+  forHuman (LedgerDB.InitEvent ev) = forHuman ev
 
 instance MetaTrace LedgerDB.BackingStoreTraceByBackend where
   namespaceFor (LedgerDB.LMDBTrace ev) =
     nsPrependInner "LMDB" (namespaceFor ev)
   namespaceFor (LedgerDB.InMemoryTrace ev) =
     nsPrependInner "InMemory" (namespaceFor ev)
+  namespaceFor (LedgerDB.InitEvent ev) = coerce $ namespaceFor ev
 
   severityFor (Namespace out ("LMDB" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace BS.BackingStoreTrace) Nothing

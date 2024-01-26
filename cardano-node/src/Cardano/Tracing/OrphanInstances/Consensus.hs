@@ -497,6 +497,9 @@ instance HasTextFormatter LedgerDB.BackingStoreTraceByBackend where
     formatText ev _obj = case ev of
       LedgerDB.LMDBTrace ev' -> "LMDB: " <> showT ev'
       LedgerDB.InMemoryTrace ev' -> "InMemory: " <> showT ev'
+      LedgerDB.InitEvent ev' -> case ev' of
+        LedgerDB.BackingStoreInitialisedLMDB{}     -> "LMDB: " <> showT ev'
+        LedgerDB.BackingStoreInitialisedInMemory{} -> "InMemory: " <> showT ev'
 
 instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
@@ -1617,6 +1620,12 @@ instance ToObject BS.BackingStoreTrace where
                                                 , "to" .= show s2
                                                 ]
 
+instance ToObject BS.TraceBackingStoreInitEvent where
+  toObject _verb (BS.BackingStoreInitialisedLMDB limits) = mconcat [ "kind" .= String "BackingStoreInitialisedLMDB"
+                                                                   , "limits" .= show limits
+                                                                   ]
+  toObject _verb BS.BackingStoreInitialisedInMemory = mconcat [ "kind" .= String "BackingStoreInitialisedInMemory" ]
+
 instance ToObject BS.BackingStoreValueHandleTrace where
   toObject _verb BS.BSVHClosing       = mconcat [ "kind" .= String "BSVHClosing " ]
   toObject _verb BS.BSVHAlreadyClosed = mconcat [ "kind" .= String "BSVHAlreadyClosed" ]
@@ -1636,3 +1645,10 @@ instance ToObject LedgerDB.BackingStoreTraceByBackend where
     LedgerDB.InMemoryTrace ev' -> mconcat [ "backend" .= String "InMemory"
                                           , "event" .= toObject verb ev'
                                           ]
+    LedgerDB.InitEvent ev' -> case ev' of
+        BS.BackingStoreInitialisedLMDB{} -> mconcat [ "backend" .= String "LMDB"
+                                                    , "event" .= toObject verb ev'
+                                                    ]
+        BS.BackingStoreInitialisedInMemory{} -> mconcat [ "backend" .= String "InMemory"
+                                                        , "event" .= toObject verb ev'
+                                                        ]

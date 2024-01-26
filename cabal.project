@@ -67,8 +67,8 @@ if impl(ghc >= 9.6)
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: 7bb90dfd43e350a14423ddeedb372a51e0369fe6
-  --sha256: 10idxgzbvkmnmshpga4l8mj6hv4pxxl7bpgmjsbkjxlgh73p2kqs
+  tag: 063c5016997fe2ba0e5ac9ca5983360e095a73f2
+  --sha256: 1wswcsi1dlj2q0v89s7mf05s8mb3b2fs8njmnxzyxx7ywb26zysw
   subdir:
    ouroboros-consensus
    ouroboros-consensus-protocol
@@ -81,8 +81,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-api
-  tag: 4be11a4540a9c908fbbd2b6c55c891b913ba1036
-  --sha256: 15bwrf27jsgxn3pw6mxxdhkbvngcal1zwpyi1bvdh2p4g9mj0rhs
+  tag: fe6c975ee4297cb94029fdcd0b7c65077d07d4f8
+  --sha256: 0cdvgqkkszd472ia0w3zl3frip087kwv90ibdr1685f9f4w19if5
   subdir:
     cardano-api
 
