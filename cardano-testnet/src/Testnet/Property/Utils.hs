@@ -21,7 +21,6 @@ module Testnet.Property.Utils
   ) where
 
 import           Cardano.Api
-
 import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
 import           Cardano.CLI.Types.Output
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto

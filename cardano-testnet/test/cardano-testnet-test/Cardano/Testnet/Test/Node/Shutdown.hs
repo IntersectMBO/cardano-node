@@ -59,7 +59,7 @@ import           Testnet.Start.Byron
 -- TODO: Use cardanoTestnet in hprop_shutdown
 hprop_shutdown :: Property
 hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> do
-  conf <- H.noteShowM $ mkConf tempAbsBasePath'
+  conf <- mkConf tempAbsBasePath'
   let tempBaseAbsPath' = makeTmpBaseAbsPath $ tempAbsPath conf
       tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
       logDir' = makeLogDir $ tempAbsPath conf
@@ -183,7 +183,7 @@ hprop_shutdownOnSlotSynced :: Property
 hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> do
   -- Start a local test net
   -- TODO: Move yaml filepath specification into individual node options
-  conf <- H.noteShowM $  mkConf tempAbsBasePath'
+  conf <- mkConf tempAbsBasePath'
 
   let maxSlot = 150
       slotLen = 0.01
@@ -231,7 +231,7 @@ hprop_shutdownOnSigint :: Property
 hprop_shutdownOnSigint = H.integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tempAbsBasePath' -> do
   -- Start a local test net
   -- TODO: Move yaml filepath specification into individual node options
-  conf <- H.noteShowM $  mkConf tempAbsBasePath'
+  conf <- mkConf tempAbsBasePath'
 
   let fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 300
