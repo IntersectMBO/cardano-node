@@ -22,10 +22,12 @@ jobs:
         run: |
           latestTag=$(curl -s "https://api.github.com/repos/IntersecMBO/cardano-node/releases/latest" | jq -r '.tag_name')
           echo "{latestTag}={$latestTag}" >> $GITHUB_OUTPUT
+          echo $GITHUB_OUTPUT
           
 
 
       - name: Create release in forked repository
         run: |
+          echo $GITHUB_OUTPUT
           git tag -a "$GITHUB_OUTPUT" -m "Release notes for $GITHUB_OUTPUT"
           git push origin "$GITHUB_OUTPUT"
