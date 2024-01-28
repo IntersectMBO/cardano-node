@@ -15,7 +15,7 @@ jobs:
       - name: check for new release
         run: |
           upstreamTag=$(curl -s "https://api.github.com/repos/IntersectMBO/cardano-node/releases/latest" | jq -r '.tag_name')
-          forkedTag=$(git describe --tags --abbrev=0)
+          forkedTag=$(curl -s "https://api.github.com/repos/Emurgo/cardano-node/releases/latest" | jq -r '.tag_name')
 
           echo "Upstream Tag: $upstreamTag"
           echo "Forked Tag: $forkedTag"
