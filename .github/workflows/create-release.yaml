@@ -21,11 +21,10 @@ jobs:
         id: get-latest-release
         run: |
           latestTag=$(curl -s "https://api.github.com/repos/IntersecMBO/cardano-node/releases/latest" | jq -r '.tag_name')
-          echo "::set-output name=tag::$latestTag"
           echo "{latestTag}={$latestTag}" >> $GITHUB_OUTPUT
 
 
       - name: Create release in forked repository
         run: |
-          git tag -a "${{ steps.get-latest-release.outputs.tag }}" -m "Release notes for ${{ steps.get-latest-release.outputs.tag }}"
-          git push origin "${{ steps.get-latest-release.outputs.tag }}"
+          git tag -a "${{ GITHUB_OUTPUT }}" -m "Release notes for ${{ GITHUB_OUTPUT }}"
+          git push origin "${{ GITHUB_OUTPUT }}"
