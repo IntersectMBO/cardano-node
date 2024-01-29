@@ -113,38 +113,48 @@ cardanoTestnetDefault opts conf = do
 -- > ├── configuration.yaml
 -- > ├── current-stake-pools.json
 -- > ├── delegate-keys
--- > │   ├── delegate{1,2,3}.counter
--- > │   ├── delegate{1,2,3}.kes.{skey,vkey}
--- > │   ├── delegate{1,2,3}.{kes,vrf}.{skey,vkey}
--- > │   └── opcert{1,2,3}.cert
--- > ├── genesis.alonzo.spec.json
--- > ├── genesis.conway.spec.json
+-- > │   ├── delegate{1,2,3}
+-- > │   │   ├── kes.{skey,vkey}
+-- > │   │   ├── key.{skey,vkey}
+-- > │   │   ├── opcert.{cert,counter}
+-- > │   │   └── vrf.{skey,vkey}
+-- > │   └── README.md
+-- > ├── drep-keys
+-- > │   └── drep{1,2,3}
+-- > │       └── drep.{skey,vkey}
+-- > ├── genesis.{alonzo,conway}.spec.json
 -- > ├── genesis-keys
--- > │   └── genesis{1,2,3}.{skey,vkey}
--- > ├── genesis.spec.json
--- > ├── node-spo{1,2,3}
--- > │   ├── byron-delegate.key
--- > │   ├── byron-delegation.cert
--- > │   ├── db
--- > │   │   └── ...
--- > │   ├── kes.skey
--- > │   ├── opcert.cert
--- > │   ├── port
--- > │   ├── topology.json
--- > │   └── vrf.skey
--- > ├── pools
--- > │   ├── cold{1,2,3}.{skey,vkey}
--- > │   ├── kes{1,2,3}.vkey
--- > │   ├── opcert{1,2,3}.counter
--- > │   ├── staking-reward{1,2,3}.{skey,vkey}
--- > │   └── vrf{1,2,3}.vkey
+-- > │   ├── genesis{1,2,3}
+-- > │   │   └── key.{skey,vkey}
+-- > │   └── README.md
+-- > ├── logs
+-- > │   └── pool3
+-- > │       └── {stderr,stdout}.log
+-- > ├── module
+-- > ├── pools-keys
+-- > │   ├── pool{1,2,3}
+-- > │   │   ├── byron-delegate.key
+-- > │   │   ├── byron-delegation.cert
+-- > │   │   ├── cold.{skey,vkey}
+-- > │   │   ├── kes.{skey,vkey}
+-- > │   │   ├── opcert.{cert,counter}
+-- > │   │   ├── staking-reward.{skey,vkey}
+-- > │   │   ├── topology.json
+-- > │   │   └── vrf.{skey,vkey}
+-- > │   └── README.md
 -- > ├── shelley
--- > │   ├── genesis.{alonzo,conway}.json
--- > │   └── genesis.json
+-- > │   └── genesis.{alonzo,conway,shelley}.json
 -- > ├── socket
--- > │   └── node-spo{1,2,3}
--- > └── utxo-keys
--- >     └── utxo{1,2,3}.{addr,skey,vkey}
+-- > │   └── pool{1,2,3}
+-- > │       └── sock
+-- > ├── stake-delegators
+-- > │   └── delegator{1,2,3}
+-- > │       ├── payment.{skey,vkey}
+-- > │       └── staking.{skey,vkey}
+-- > └─── utxo-keys
+-- >     ├── README.md
+-- >     └── utxo{1,2,3}
+-- >         └── utxo.{addr,skey,vkey}
 cardanoTestnet :: ()
   => CardanoTestnetOptions -- ^ The options to use. Must be consistent with the genesis files.
   -> Conf
