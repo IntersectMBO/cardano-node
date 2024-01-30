@@ -687,6 +687,10 @@ updateBlockForging startupTracer blockType nodeKernel nc = do
     wasFileRemovedFromScope (CardanoProtocolInstantiationError
                               (CardanoProtocolInstantiationPraosLeaderCredentialsError
                                 (FileError fe))) = Just fe
+    wasFileRemovedFromScope (CardanoProtocolInstantiationError
+                              (CardanoProtocolInstantiationPraosLeaderCredentialsError
+                                (CredentialsReadError fp _))) =
+                                  Just (Api.FileDoesNotExistError fp)
     wasFileRemovedFromScope (ByronProtocolInstantiationError _)   = Nothing
     wasFileRemovedFromScope (ShelleyProtocolInstantiationError _) = Nothing
     wasFileRemovedFromScope (CardanoProtocolInstantiationError _) = Nothing
