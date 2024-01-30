@@ -157,3 +157,5 @@ checkMultiResults rootDir =
         subdirs -> do
           areDirsFull <- forM subdirs $ \sd -> notNull <$> listFiles (rootDir </> sd)
           return . property $ all (True ==) areDirsFull
+
+undefined 

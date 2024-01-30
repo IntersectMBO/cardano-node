@@ -410,7 +410,9 @@ benchmark cardano-tracer-bench
 
   build-depends:        cardano-tracer
                       , criterion
+                      , containers
                       , directory
+                      , deepseq
                       , extra
                       , filepath
                       , stm

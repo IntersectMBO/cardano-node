@@ -9,29 +9,33 @@ module Cardano.Tracer.Run
   , runCardanoTracer
   ) where
 
-import           Control.Concurrent.Async.Extra (sequenceConcurrently)
-import           Control.Concurrent.Extra (newLock)
-import           Control.Concurrent.STM.TVar (newTVarIO)
-import           Data.Foldable (for_)
+import Control.Concurrent.Async.Extra (sequenceConcurrently)
+import Control.Concurrent.Extra (newLock)
+import Control.Concurrent.STM.TVar (newTVarIO)
+import Data.Map (Map)
+import Data.Map qualified as Map
+import System.IO (Handle)
+import Control.Concurrent.MVar 
+import Data.Foldable (for_)
 
-import           Cardano.Logging.Resources
-import           Cardano.Tracer.Acceptors.Run
-import           Cardano.Tracer.CLI
-import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Logs.Rotator
-import           Cardano.Tracer.Handlers.Metrics.Servers
-import           Cardano.Tracer.Handlers.ReForwarder
-import           Cardano.Tracer.Handlers.RTView.Run
-import           Cardano.Tracer.Handlers.RTView.State.Historical
-import           Cardano.Tracer.Handlers.RTView.Update.Historical
-import           Cardano.Tracer.MetaTrace
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
+import Cardano.Logging.Resources
+import Cardano.Tracer.Acceptors.Run
+import Cardano.Tracer.CLI
+import Cardano.Tracer.Configuration
+import Cardano.Tracer.Environment
+import Cardano.Tracer.Handlers.Logs.Rotator
+import Cardano.Tracer.Handlers.Metrics.Servers
+import Cardano.Tracer.Handlers.ReForwarder
+import Cardano.Tracer.Handlers.RTView.Run
+import Cardano.Tracer.Handlers.RTView.State.Historical
+import Cardano.Tracer.Handlers.RTView.Update.Historical
+import Cardano.Tracer.MetaTrace
+import Cardano.Tracer.Types
+import Cardano.Tracer.Utils
 
-import           Control.Concurrent (threadDelay)
-import           Control.Concurrent.Async (async, link)
-import           Control.Monad
+import Control.Concurrent (threadDelay)
+import Control.Concurrent.Async (async, link)
+import Control.Monad
 
 -- | Top-level run function, called by 'cardano-tracer' app.
 runCardanoTracer :: TracerParams -> IO ()
@@ -84,6 +88,8 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
 
   (reforwardTraceObject,_trDataPoint) <- initReForwarder config tr
 
+  registry <- Registry <$> newMVar Map.empty
+
   -- Environment for all following functions.
   let tracerEnv =
         TracerEnv
@@ -104,6 +110,7 @@ doRunCardanoTracer config rtViewStateDir tr protocolsBrake dpRequestors = do
           , teRTViewStateDir        = rtViewStateDir
           , teTracer                = tr
           , teReforwardTraceObjects = reforwardTraceObject
+          , teRegistry              = registry
           }
 
   -- Specify what should be done before 'cardano-tracer' stops.

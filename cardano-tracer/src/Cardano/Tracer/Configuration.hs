@@ -60,14 +60,14 @@ data RotationParams = RotationParams
 data LogMode
   = FileMode    -- ^ Store items in log file.
   | JournalMode -- ^ Store items in Linux journal service.
-  deriving stock (Eq, Generic, Show)
+  deriving stock (Eq, Ord, Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
 
 -- | Format of log files.
 data LogFormat
   = ForHuman   -- ^ For human (text)
   | ForMachine -- ^ For machine (JSON)
-  deriving stock (Eq, Generic, Show)
+  deriving stock (Eq, Ord, Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
 
 -- | Logging parameters.
@@ -76,7 +76,7 @@ data LoggingParams = LoggingParams
   , logMode   :: !LogMode   -- ^ Log mode.
   , logFormat :: !LogFormat -- ^ Log format.
   }
-  deriving stock (Eq, Generic, Show)
+  deriving stock (Eq, Ord, Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
 
 -- | Connection mode.
@@ -114,7 +114,7 @@ data TracerConfig = TracerConfig
   , verbosity      :: !(Maybe Verbosity)            -- ^ Verbosity of the tracer itself.
   , metricsComp    :: !(Maybe (Map Text Text))      -- ^ Metrics compatibility map from metrics name to metrics name
   , resourceFreq   :: !(Maybe Int)                  -- ^ Frequency (1/millisecond) for gathering resource data.
-  , stuff          :: FilePath                      -- ^ Absolute root directory
+  , absLogRoot     :: FilePath                      -- ^ Absolute root directory
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -127,8 +127,9 @@ readTracerConfig pathToConfig =
     Right (config :: TracerConfig) ->
       case checkMeaninglessValues config of
         Left problems -> die $ "Tracer's configuration is meaningless: " <> problems
-        Right{} -> return (postprocess config) where
+        Right{} -> return (nubLogging config) 
 
+  where
   -- Remove duplicate logging parameters.
   nubLogging :: TracerConfig -> TracerConfig
   nubLogging tracerConfig@TracerConfig{logging} = tracerConfig

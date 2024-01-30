@@ -40,7 +40,7 @@ import           Cardano.Tracer.Acceptors.Utils (notifyAboutNodeDisconnected,
                    prepareDataPointRequestor, prepareMetricsStores, removeDisconnectedNode)
 import qualified Cardano.Tracer.Configuration as TC
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Logs.TraceObjects (traceObjectsHandler)
+import           Cardano.Tracer.Handlers.Logs.TraceObjects
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Utils (connIdToNodeId)
 
@@ -77,6 +77,7 @@ runAcceptorsClient tracerEnv p (ekgConfig, tfConfig, dpfConfig) = withIOManager 
       | (protocol, num) <- protocolsWithNums
       ]
   errorHandler connId = do
+    deregisterNodeId tracerEnv (connIdToNodeId connId)
     removeDisconnectedNode tracerEnv connId
     notifyAboutNodeDisconnected tracerEnv connId
 
@@ -130,7 +131,7 @@ runTraceObjectsAcceptorInit
                      (MinimalInitiatorContext LocalAddress)
                      responderCtx
                      LBS.ByteString IO () Void
-runTraceObjectsAcceptorInit tracerEnv tfConfig errorHandler =
+runTraceObjectsAcceptorInit tracerEnv tfConfig errorHandler = 
   acceptTraceObjectsInit
     tfConfig
     (traceObjectsHandler tracerEnv . connIdToNodeId . micConnectionId)

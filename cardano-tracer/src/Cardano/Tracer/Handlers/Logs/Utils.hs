@@ -1,23 +1,34 @@
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Handlers.Logs.Utils
-  ( createEmptyLog
+  ( createOrUpdateEmptyLog
   , createEmptyLogRotation
   , getTimeStampFromLog
   , isItLog
+  , logExtension
+  , logPrefix
+  , timeStampFormat
   ) where
 
-import           Control.Concurrent.Extra (Lock, withLock)
-import           Control.Monad (void)
-import qualified Data.ByteString as BS
-import           Data.Maybe (isJust)
-import qualified Data.Text as T
-import           Data.Time.Clock (UTCTime)
-import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
-import           Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
-import           System.FilePath (takeBaseName, takeExtension, takeFileName, (<.>), (</>))
+import Control.Concurrent.Extra (Lock, withLock)
+import Control.Concurrent.MVar (modifyMVar_, tryReadMVar)
+import Control.Monad (void)
+import Data.ByteString qualified as BS
+import Data.Maybe (isJust)
+import Data.Map qualified as Map
+import Data.Map (Map)
+import Data.Text qualified as T
+import Data.Time.Clock (UTCTime)
+import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
+import Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
+import System.Directory (createDirectoryIfMissing)
+import System.FilePath (takeBaseName, takeExtension, takeFileName, (<.>), (</>))
+import System.IO (openFile, Handle, IOMode (AppendMode, WriteMode), hClose)
 
-import           Cardano.Tracer.Configuration (LogFormat (..))
+import Cardano.Tracer.Configuration (LogFormat (..), LoggingParams (..))
+import Cardano.Tracer.Types (HandleRegistry, Registry(Registry), NodeName)
+import Cardano.Tracer.Utils
 
 logPrefix :: String
 logPrefix = "node-"
@@ -42,20 +53,35 @@ isItLog format pathToLog = hasProperPrefix && hasTimestamp && hasProperExt
 
 createEmptyLogRotation
   :: Lock
+  -> NodeName
+  -> LoggingParams
+  -> HandleRegistry
   -> FilePath
   -> LogFormat
   -> IO ()
-createEmptyLogRotation currentLogLock subDirForLogs format =
-  withLock currentLogLock $
-    void $ createEmptyLog subDirForLogs format
+createEmptyLogRotation currentLogLock nodeName loggingParams registry subDirForLogs format = do
+  -- The root directory (as a parent for subDirForLogs) will be created as well if needed.
+  createDirectoryIfMissing True subDirForLogs
+  createOrUpdateEmptyLog currentLogLock nodeName loggingParams registry subDirForLogs format
 
 -- | Create an empty log file (with the current timestamp in the name).
-createEmptyLog :: FilePath -> LogFormat -> IO FilePath
-createEmptyLog subDirForLogs format = do
-  ts <- formatTime defaultTimeLocale timeStampFormat . systemToUTCTime <$> getSystemTime
-  let pathToLog = subDirForLogs </> logPrefix <> ts <.> logExtension format
-  BS.writeFile pathToLog BS.empty
-  return pathToLog
+createOrUpdateEmptyLog :: Lock -> NodeName -> LoggingParams -> HandleRegistry -> FilePath -> LogFormat -> IO ()
+createOrUpdateEmptyLog currentLogLock nodeName loggingParams (Registry registry) subDirForLogs format = do
+  withLock currentLogLock do
+    ts <- formatTime defaultTimeLocale timeStampFormat . systemToUTCTime <$> getSystemTime
+    let pathToLog = subDirForLogs </> logPrefix <> ts <.> logExtension format
+
+    modifyMVar_ registry \handles -> do
+
+      case Map.lookup (nodeName, loggingParams) handles of
+        Nothing -> 
+          undefined 
+        Just (handle, _filePath) -> 
+          hClose handle
+
+      newHandle <- openFile pathToLog WriteMode
+      let newMap = Map.insert (nodeName, loggingParams) (newHandle, pathToLog) handles
+      pure newMap
 
 getTimeStampFromLog :: FilePath -> Maybe UTCTime
 getTimeStampFromLog pathToLog =

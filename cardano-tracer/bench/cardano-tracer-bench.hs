@@ -2,10 +2,15 @@
 
 import           Control.Concurrent.Extra (newLock)
 import           Control.Concurrent.STM.TVar (newTVarIO)
+import           Control.Concurrent.MVar (newMVar, readMVar)
+import           Control.DeepSeq
 import           Criterion.Main
+import           Data.Foldable (traverse_)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map as Map
 import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           System.Directory (getTemporaryDirectory, removePathForcibly)
+import           System.IO (hClose)
 import           System.FilePath ((</>))
 
 import           Cardano.Logging hiding (LocalSocket)
@@ -53,7 +58,9 @@ main = do
 
   tr <- mkTracerTracer $ SeverityF $ Just Warning
 
-  let te c =
+  registry <- Registry <$> newMVar Map.empty
+
+  let te c r =
         TracerEnv
           { teConfig                = c
           , teConnectedNodes        = connectedNodes
@@ -72,23 +79,33 @@ main = do
           , teRTViewStateDir        = Nothing
           , teTracer                = tr
           , teReforwardTraceObjects = \_-> pure ()
+          , teRegistry              = r
           }
-      te1 = te c1
+      te1 = te c1 
       te2 = te c2
 
   removePathForcibly root
 
+  -- perRunEnvWithCleanup :: (NFData env, NFData b) => IO env -> (env -> IO ()) -> (env -> IO b) -> Benchmarkable	 
+
+  let myBench :: TracerConfig -> [TraceObject] -> Benchmarkable
+      myBench config traceObjects = perRunEnvWithCleanup @TracerEnv
+        do te config . Registry <$> newMVar Map.empty
+        do \TracerEnv{teRegistry = Registry registry} -> do
+             readMVar registry >>= traverse_ hClose . map fst . Map.elems 
+        do \traceEnv -> beforeProgramStops do traceObjectsHandler traceEnv nId traceObjects
+
   defaultMainWith defaultConfig { Criterion.verbosity = Criterion.Verbose }
     [ bgroup "cardano-tracer"
       [  -- 10 'TraceObject's per request.
-        bench "Handle TraceObjects LOG,  10"   $ whnfIO $ beforeProgramStops do traceObjectsHandler te1 nId to10
-      , bench "Handle TraceObjects JSON, 10"   $ whnfIO $ beforeProgramStops do traceObjectsHandler te2 nId to10
+        bench "Handle TraceObjects LOG,  10"   $ myBench c1 to10
+      , bench "Handle TraceObjects JSON, 10"   $ myBench c2 to10
         -- 100 'TraceObject's per request.
-      , bench "Handle TraceObjects LOG,  100"  $ whnfIO $ beforeProgramStops do traceObjectsHandler te1 nId to100
-      , bench "Handle TraceObjects JSON, 100"  $ whnfIO $ beforeProgramStops do traceObjectsHandler te2 nId to100
+      , bench "Handle TraceObjects LOG,  100"  $ myBench c1 to100
+      , bench "Handle TraceObjects JSON, 100"  $ myBench c2 to100
         -- 1000 'TraceObject's per request.
-      , bench "Handle TraceObjects LOG,  1000" $ whnfIO $ beforeProgramStops do traceObjectsHandler te1 nId to1000
-      , bench "Handle TraceObjects JSON, 1000" $ whnfIO $ beforeProgramStops do traceObjectsHandler te2 nId to1000
+      , bench "Handle TraceObjects LOG,  1000" $ myBench c1 to1000
+      , bench "Handle TraceObjects JSON, 1000" $ myBench c2 to1000
       ]
     ]
  where
@@ -126,3 +143,7 @@ main = do
     , toHostname  = "nixos"
     , toThreadId  = "1"
     }
+
+-- Orphan instance: The `rnf' should reduce its argument to normal form.
+instance NFData TracerEnv where
+  rnf = rwhnf

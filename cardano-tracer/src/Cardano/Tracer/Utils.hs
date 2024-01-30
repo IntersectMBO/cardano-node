@@ -34,6 +34,7 @@ module Cardano.Tracer.Utils
   , fromSTMSet
   , toList
   , stmMapToList
+  , memberRegistry
   ) where
 
 #if MIN_VERSION_base(4,18,0)
@@ -45,6 +46,7 @@ import           Control.Applicative (liftA2, liftA3)
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
 import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM (atomically)
+import           Control.Concurrent.MVar (tryReadMVar)
 import           Control.Concurrent.STM.TVar (modifyTVar', newTVarIO, readTVarIO)
 import           Control.Exception (SomeAsyncException (..), SomeException, finally, fromException,
                    try, tryJust)
@@ -53,8 +55,11 @@ import           Control.Monad.Extra (whenJustM)
 import           "contra-tracer" Control.Tracer (showTracing, stdoutTracer, traceWith)
 import           Data.Bimap ((!>))
 import qualified Data.Bimap as BM
+import           Data.Functor ((<&>))
 import           Data.List.Extra (dropPrefix, dropSuffix, replace)
-import qualified Data.Map.Strict as M
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Set (Set)
 import qualified Data.Set as S
 import qualified Data.Text as T
 import           Data.Tuple.Extra (uncurry3)
@@ -244,11 +249,23 @@ fromSTMSet set = S.fromList <$> ListT.toList (STM.Set.listT set)
 toList :: Ord a => STM.Set.Set a -> STM [a]
 toList set = ListT.toList (STM.Set.listT set)
 
-fromSTMMap :: Ord k => STM.Map.Map k a -> STM (M.Map k a)
-fromSTMMap set = M.fromList <$> ListT.toList (STM.Map.listT set)
+fromSTMMap :: Ord k => STM.Map.Map k a -> STM (Map k a)
+fromSTMMap set = Map.fromList <$> ListT.toList (STM.Map.listT set)
 
 stmMapToList :: Ord k => STM.Map.Map k a -> STM [(k, a)]
 stmMapToList set = ListT.toList (STM.Map.listT set)
 
 fromSTMSetIO :: Ord a => STM.Set.Set a -> IO (S.Set a)
 fromSTMSetIO = atomically . fromSTMSet
+
+memberRegistry :: Ord a => a -> Registry a b -> IO Bool
+memberRegistry a (Registry registry) = do 
+  tryReadMVar registry <&> \case
+    Nothing -> False
+    Just set -> Map.member a set
+
+-- lookupRegistry :: Ord a => a -> Registry a b -> IO Bool
+-- lookupRegistry a (Registry registry) = do 
+--   tryReadMVar registry <&> \case
+--     Nothing -> False
+--     Just set -> Map.member a set

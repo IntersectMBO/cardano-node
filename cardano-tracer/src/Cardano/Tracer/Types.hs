@@ -1,3 +1,5 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
+
 module Cardano.Tracer.Types
   ( AcceptedMetrics
   , ConnectedNodes
@@ -7,18 +9,23 @@ module Cardano.Tracer.Types
   , NodeId (..)
   , NodeName
   , ProtocolsBrake
+  , Registry (..)
+  , HandleRegistry
   ) where
 
+import Control.Concurrent.MVar (MVar)
 import Control.Concurrent.STM.TVar (TVar)
 import Data.Bimap (Bimap)
+import Data.Kind
 import Data.Map.Strict (Map)
-import Data.Set (Set)
 import Data.Text (Text)
 import System.Metrics qualified as EKG
 import Data.Hashable (Hashable)
+import System.IO (Handle)
 
 import System.Metrics.Store.Acceptor (MetricsLocalStore)
 
+import Cardano.Tracer.Configuration
 import Trace.Forward.Utils.DataPoint (DataPointRequestor)
 
 import StmContainers.Map   qualified as STM
@@ -57,3 +64,9 @@ type ConnectedNodesNames = STM.Bimap NodeId NodeName
 
 -- | The flag we use to stop the protocols from their acceptor's side.
 type ProtocolsBrake = TVar Bool
+
+type    Registry :: Type -> Type -> Type
+newtype Registry a b = Registry { getRegistry :: MVar (Map a b) }
+
+type HandleRegistry :: Type
+type HandleRegistry = Registry (NodeName, LoggingParams) (Handle, FilePath)
