@@ -63,4 +63,5 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN || github.token }}
         publish_dir: haddocks
+        cname: cardano-node.cardano.intersectmbo.org
         force_orphan: true
