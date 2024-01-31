@@ -10,12 +10,11 @@ module Testnet.Components.Configuration
   , numSeededUTxOKeys
   ) where
 
+import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley hiding (cardanoEra)
-
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Cardano.Node.Types
-import           Data.Bifunctor
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers
@@ -25,12 +24,16 @@ import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.IO.Class (MonadIO)
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Lens as L
+import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Char (toLower)
 import qualified Data.List as List
 import           Data.String
 import           Data.Time
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
+import           Lens.Micro
 import           System.FilePath.Posix (takeDirectory, (</>))
 
 import           Hedgehog
@@ -38,9 +41,6 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Time as DTC
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
-
-import qualified Data.Aeson.Lens as L
-import           Lens.Micro
 
 import           Testnet.Defaults
 import           Testnet.Filepath
@@ -208,12 +208,4 @@ mkTopologyConfig numNodes allPorts port True = Aeson.encode topologyP2P
 
 
 convertToEraString :: AnyCardanoEra -> String
-convertToEraString (AnyCardanoEra e) =
-  case e of
-    ConwayEra -> "conway"
-    BabbageEra -> "babbage"
-    AlonzoEra -> "alonzo"
-    MaryEra -> "mary"
-    AllegraEra -> "allegra"
-    ShelleyEra -> "shelley"
-    ByronEra -> "byron"
+convertToEraString = map toLower . docToString . pretty

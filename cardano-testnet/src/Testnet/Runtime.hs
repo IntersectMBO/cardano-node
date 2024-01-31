@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Runtime
   ( LeadershipSlot(..)
@@ -26,11 +27,12 @@ module Testnet.Runtime
   , shelleyGenesis
   , getStartTime
   , fromNominalDiffTimeMicro
+  , startLedgerStateLogging
   ) where
 
 import           Cardano.Api
+import qualified Cardano.Api as Api
 import           Cardano.Api.Pretty
-
 import qualified Cardano.Chain.Genesis as G
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -39,10 +41,9 @@ import           Cardano.Node.Configuration.POM
 import qualified Cardano.Node.Protocol.Byron as Byron
 import           Cardano.Node.Types
 
-import           Prelude
-
-import           Control.Exception
+import           Control.Exception.Safe
 import           Control.Monad
+import qualified Control.Monad.Class.MonadTimer.SI as MT
 import           Control.Monad.Error.Class
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class (lift)
@@ -57,22 +58,24 @@ import           GHC.Generics (Generic)
 import qualified GHC.IO.Handle as IO
 import           GHC.Stack
 import qualified GHC.Stack as GHC
+import           Prelude
+import           Prettyprinter ((<+>))
 import qualified System.Directory as IO
 import           System.FilePath
 import qualified System.IO as IO
 import qualified System.Process as IO
 
+import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.Concurrent as H
 
 import           Testnet.Filepath
+import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run
 import           Testnet.Start.Types
-
-import qualified Control.Monad.Class.MonadTimer.SI as MT
-import           Prettyprinter ((<+>))
-import qualified Testnet.Ping as Ping
 
 data TestnetRuntime = TestnetRuntime
   { configurationFile :: FilePath
@@ -210,17 +213,17 @@ startNode tp node port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
   hNodeStdout <- handleIOExceptT FileRelatedFailure $ IO.openFile nodeStdoutFile IO.WriteMode
   hNodeStderr <- handleIOExceptT FileRelatedFailure $ IO.openFile nodeStderrFile IO.ReadWriteMode
 
-  unless (List.length (IO.sprocketArgumentName sprocket) <= IO.maxSprocketArgumentNameLength) $
+  unless (List.length (H.sprocketArgumentName sprocket) <= H.maxSprocketArgumentNameLength) $
      left MaxSprocketLengthExceededError
 
   let portString = show port
-      socketAbsPath = IO.sprocketSystemName sprocket
+      socketAbsPath = H.sprocketSystemName sprocket
 
   nodeProcess
     <- firstExceptT ExecutableRelatedFailure
          $ hoistExceptT lift $ procNode $ mconcat
                        [ nodeCmd
-                       , [ "--socket-path", IO.sprocketArgumentName sprocket
+                       , [ "--socket-path", H.sprocketArgumentName sprocket
                          , "--port", portString
                          ]
                        ]
@@ -278,7 +281,6 @@ createDirectoryIfMissingNew_ :: HasCallStack => FilePath -> IO ()
 createDirectoryIfMissingNew_ directory = GHC.withFrozenCallStack $
   void $ createDirectoryIfMissingNew directory
 
-
 createSubdirectoryIfMissingNew :: ()
   => HasCallStack
   => FilePath
@@ -287,3 +289,36 @@ createSubdirectoryIfMissingNew :: ()
 createSubdirectoryIfMissingNew parent subdirectory = GHC.withFrozenCallStack $ do
   IO.createDirectoryIfMissing True $ parent </> subdirectory
   pure subdirectory
+
+-- | Start ledger state logging for the first node in the background.
+-- Logs will be placed in <tmp workspace directory>/logs/ledger-state.log
+-- The logging thread will be cancelled when `MonadResource` releases all resources.
+startLedgerStateLogging
+  :: forall m. MonadCatch m
+  => MonadResource m
+  => MonadTest m
+  => TestnetRuntime
+  -> FilePath -- ^ tmp workspace directory
+  -> m ()
+startLedgerStateLogging testnetRuntime tmpWorkspace = do
+  socketPath <- H.noteM $ H.sprocketSystemName <$> H.headM (poolSprockets testnetRuntime)
+  let logFile = makeLogDir (TmpAbsolutePath tmpWorkspace) </> "ledger-state.log"
+  _ <- runInBackground . runExceptT $
+    foldBlocks
+      (File $ configurationFile testnetRuntime)
+      (Api.File socketPath)
+      Api.QuickValidation
+      ()
+      (handler logFile)
+  pure ()
+  where
+    -- handler :: FilePath -> Env -> LedgerState -> [LedgerEvent] -> BlockInMode -> () -> IO ((), FoldStatus)
+    handler outputFp _ ledgerState _ _ _ = do
+      appendFile outputFp $ "#### BLOCK ####" <> "\n"
+      appendFile outputFp $ show ledgerState <> "\n"
+      pure ((), ContinueFold)
+    -- | Runs an action in background, and registers cleanup to `MonadResource m`
+    -- The argument forces IO monad to prevent leaking of `MonadResource` to the child thread
+    runInBackground :: IO a -> m ()
+    runInBackground act = void $ allocate (H.async act) H.cancel
+

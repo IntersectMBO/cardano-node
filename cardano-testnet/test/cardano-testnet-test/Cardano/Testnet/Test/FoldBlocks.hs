@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
@@ -39,9 +40,8 @@ instance Show FoldBlocksException where
 -- that main thread blocks on.
 prop_foldBlocks :: H.Property
 prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath' -> do
-
   -- Start testnet
-  conf <- HE.noteShowM $ TN.mkConf (tempAbsBasePath' <> "/")
+  conf <- TN.mkConf tempAbsBasePath'
 
   let tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
       era = BabbageEra
@@ -51,14 +51,12 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
                           , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                           }
 
-  runtime <- cardanoTestnet options conf
+  runtime@TestnetRuntime{configurationFile} <- cardanoTestnet options conf
 
   -- Get socketPath
   socketPathAbs <- do
     socketPath' <- HE.sprocketArgumentName <$> HE.headM (nodeSprocket . poolRuntime <$>  poolNodes runtime)
     H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
-
-  configFile <- H.noteShow $ tempAbsPath' </> "configuration.yaml"
 
   -- Start foldBlocks in a separate thread
   lock <- H.evalIO IO.newEmptyMVar
@@ -71,7 +69,7 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
       forever $ do
         let handler :: Env -> LedgerState -> [Api.LedgerEvent] -> BlockInMode -> () -> IO ((), FoldStatus)
             handler _env _ledgerState _ledgerEvents _blockInCardanoMode _ = (, ContinueFold) <$> IO.putMVar lock ()
-        e <- runExceptT (Api.foldBlocks (File configFile) (Api.File socketPathAbs) Api.QuickValidation () handler)
+        e <- runExceptT (Api.foldBlocks (File configurationFile) (Api.File socketPathAbs) Api.QuickValidation () handler)
         either (throw . FoldBlocksException) (\_ -> pure ()) e
     link a -- Throw async thread's exceptions in main thread
 

@@ -16,13 +16,12 @@ module Testnet.Start.Types
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
-
-import           Prelude
-
 import           Data.Word
-
-import           Hedgehog.Extras.Test.Base (Integration)
-
+import           GHC.Stack
+import           Hedgehog (MonadTest)
+import qualified Hedgehog.Extras as H
+import           Prelude
+import           System.FilePath (addTrailingPathSeparator)
 import           Testnet.Filepath
 
 
@@ -86,10 +85,12 @@ newtype Conf = Conf
   { tempAbsPath :: TmpAbsolutePath
   } deriving (Eq, Show)
 
-mkConf :: FilePath -> Integration Conf
-mkConf tempAbsPath' =
-  return $ Conf
-    { tempAbsPath = TmpAbsolutePath tempAbsPath'
+-- | Create a 'Conf' from a temporary absolute path. Logs the argument in the test.
+mkConf :: (HasCallStack, MonadTest m) => FilePath -> m Conf
+mkConf tempAbsPath' = withFrozenCallStack $ do
+  H.note_ tempAbsPath'
+  pure $ Conf
+    { tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
     }
 
 

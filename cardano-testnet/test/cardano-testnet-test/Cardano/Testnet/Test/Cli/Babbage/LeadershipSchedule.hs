@@ -62,10 +62,8 @@ import           Testnet.Runtime
 hprop_leadershipSchedule :: Property
 hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
-  let tempAbsPath' = unTmpAbsPath tempAbsPath
-      tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-
+  conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } <- mkConf tempAbsBasePath'
+  let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   let era = BabbageEra
       cTestnetOptions = cardanoDefaultTestnetOptions
@@ -78,12 +76,12 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   tr@TestnetRuntime
     { testnetMagic
     , wallets
+    , configurationFile
     } <- cardanoTestnet cTestnetOptions conf
 
   execConfig <- H.headM (poolSprockets tr) >>= H.mkExecConfig tempBaseAbsPath
 
   let sbe = shelleyBasedEra @BabbageEra
-  work <- H.note tempAbsPath'
 
   ----------------Need to register an SPO------------------
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr $ head wallets
@@ -117,9 +115,9 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
       testDelegatorRegCertFp = testStakeDelegator </> "test-delegator.regcert"
       testDelegatorDelegCert = testStakeDelegator </> "test-delegator.delegcert"
 
-  _ <- cliStakeAddressKeyGen tempAbsPath'
+  _ <- cliStakeAddressKeyGen work
     $ KeyNames testDelegatorVkeyFp testDelegatorSKeyFp
-  _ <- cliAddressKeyGen tempAbsPath'
+  _ <- cliAddressKeyGen work
     $ KeyNames testDelegatorPaymentVKeyFp testDelegatorPaymentSKeyFp
 
   -- NB: We must include the stake credential
@@ -246,7 +244,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
       testSpoKesSKey = work </> "kes.skey"
 
 
-  _ <- cliNodeKeyGenKes tempAbsPath'
+  _ <- cliNodeKeyGenKes work
          $ KeyNames testSpoKesVKey testSpoKesSKey
   let testSpoOperationalCertFp = testSpoDir </> "node-operational.cert"
 
@@ -268,10 +266,10 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
       ]
 
   yamlBs <- createConfigYaml tempAbsPath (cardanoNodeEra cTestnetOptions)
-  H.lbsWriteFile (work </> "configuration.yaml") yamlBs
-  eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath tempAbsPath') "test-spo" 3005 testnetMagic
+  H.lbsWriteFile configurationFile yamlBs
+  eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath work) "test-spo" 3005 testnetMagic
         [ "run"
-        , "--config", work </> "configuration.yaml"
+        , "--config", configurationFile
         , "--topology", topologyFile
         , "--database-path", testSpoDir </> "db"
         , "--shelley-kes-key", testSpoKesSKey
@@ -304,7 +302,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
     H.assert $ currEpoch > 2
 
   id do
-    currentLeaderShipScheduleFile <- H.noteTempFile tempAbsPath' "current-schedule.log"
+    currentLeaderShipScheduleFile <- H.noteTempFile work "current-schedule.log"
 
     leadershipScheduleDeadline <- H.noteShowM $ DTC.addUTCTime 180 <$> H.noteShowIO DTC.getCurrentTime
 
@@ -355,7 +353,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
     {-
 
   id do
-    nextLeaderShipScheduleFile <- H.noteTempFile tempAbsPath' "next-schedule.log"
+    nextLeaderShipScheduleFile <- H.noteTempFile work "next-schedule.log"
 
     leadershipScheduleDeadline <- H.noteShowM $ DTC.addUTCTime 180 <$> H.noteShowIO DTC.getCurrentTime
     -- TODO: Current works, next is failing

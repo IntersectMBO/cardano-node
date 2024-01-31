@@ -45,7 +45,7 @@ newtype AdditionalCatcher
 hprop_ledger_events_sanity_check :: Property
 hprop_ledger_events_sanity_check = H.integrationWorkspace "ledger-events-sanity-check" $ \tempAbsBasePath' -> do
   -- Start a local test net
-  conf <- H.noteShowM $  mkConf tempAbsBasePath'
+  conf <- mkConf tempAbsBasePath'
 
   let fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 100

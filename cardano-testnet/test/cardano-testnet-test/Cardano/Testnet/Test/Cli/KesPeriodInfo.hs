@@ -50,12 +50,11 @@ import           Testnet.Runtime
 hprop_kes_period_info :: Property
 hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  conf@Conf { tempAbsPath }
+  conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     -- TODO: Move yaml filepath specification into individual node options
-    <- H.noteShowM $ mkConf tempAbsBasePath'
+    <- mkConf tempAbsBasePath'
 
-  let tempAbsPath' = unTmpAbsPath tempAbsPath
-      tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
+  let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
       sbe = ShelleyBasedEraBabbage
       era = toCardanoEra sbe
       anyEra = AnyCardanoEra era
@@ -66,11 +65,8 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
                           , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                           }
 
-  runTime@TestnetRuntime { testnetMagic, wallets } <- cardanoTestnet cTestnetOptions conf
+  runTime@TestnetRuntime { configurationFile, testnetMagic, wallets } <- cardanoTestnet cTestnetOptions conf
   execConfig <- H.headM (poolSprockets runTime) >>= H.mkExecConfig tempBaseAbsPath
-
-  -- First we note all the relevant files
-  work <- H.note tempAbsPath'
 
   -- We get our UTxOs from here
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr $ head wallets
@@ -104,9 +100,9 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
       testDelegatorRegCertFp = testStakeDelegator </> "test-delegator.regcert"
       testDelegatorDelegCert = testStakeDelegator </> "test-delegator.delegcert"
 
-  _ <- cliStakeAddressKeyGen tempAbsPath'
+  _ <- cliStakeAddressKeyGen work
     $ KeyNames testDelegatorVkeyFp testDelegatorSKeyFp
-  _ <- cliAddressKeyGen tempAbsPath'
+  _ <- cliAddressKeyGen work
     $ KeyNames testDelegatorPaymentVKeyFp testDelegatorPaymentSKeyFp
 
   -- NB: We must include the stake credential
@@ -232,9 +228,9 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
       testSpoKesVKey = work </> "kes.vkey"
       testSpoKesSKey = work </> "kes.skey"
 
-  _ <- cliNodeKeyGenVrf tempAbsPath'
+  _ <- cliNodeKeyGenVrf work
          $ KeyNames testSpoVrfVKey testSpoVrfSKey
-  _ <- cliNodeKeyGenKes tempAbsPath'
+  _ <- cliNodeKeyGenKes work
          $ KeyNames testSpoKesVKey testSpoKesSKey
   let testSpoOperationalCertFp = testSpoDir </> "node-operational.cert"
 
@@ -256,10 +252,10 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
       ]
 
   yamlBs <- createConfigYaml tempAbsPath (cardanoNodeEra cTestnetOptions)
-  H.lbsWriteFile (work </> "configuration.yaml") yamlBs
-  eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath tempAbsPath') "test-spo" 3005 testnetMagic
+  H.lbsWriteFile configurationFile yamlBs
+  eRuntime <- lift . lift . runExceptT $ startNode tempAbsPath "test-spo" 3005 testnetMagic
         [ "run"
-        , "--config", work </> "configuration.yaml"
+        , "--config", configurationFile
         , "--topology", topologyFile
         , "--database-path", testSpoDir </> "db"
         , "--shelley-kes-key", testSpoKesSKey
