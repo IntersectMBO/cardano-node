@@ -31,7 +31,16 @@ fi
 case "$op" in
     idle )
         backend start-tracers        "$dir"
+
+        scenario_setup_exit_trap              "$dir"
+        # Trap start
+        ############
         backend start-nodes          "$dir"
+        # Trap end
+        ##########
+        scenario_cleanup_termination
+
+        backend stop-all             "$dir"
         ;;
 
     tracer-only )

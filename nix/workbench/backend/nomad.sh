@@ -1415,17 +1415,17 @@ backend_nomad() {
         then
           if ! wait_kill_em_all "${jobs_array[@]}"
           then
-            # Don't use fatal here, let `start` decide!
             msg "$(red "Failed to start tracer(s)")"
-            return 1
+            backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
+            fatal "scenario.sh start-tracers failed!"
           else
             for node in ${nodes[*]}
             do
               if ! test -f "${dir}"/tracer/"${node}"/started
               then
-                # Don't use fatal here, let `start` decide!
                 msg "$(red "Tracer for \"${node}\" failed to start!")"
-                return 1
+                backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
+                fatal "scenario.sh start-tracers failed!"
               fi
             done
           fi

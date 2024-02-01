@@ -199,8 +199,8 @@ deploy-genesis-nomadexec() {
       if test "${nomad_agents_were_already_running}" = "false"
       then
         msg "$(red "Startup of webfs failed, cleaning up ...")"
+        # `stop-nomad-job` takes care of stopping the Nomad agents.
         backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
-        wb_nomad agents stop "${server_name}" "${client_name}" "exec"
       fi
       fatal "Failed to start a local HTTP server"
     fi
@@ -213,8 +213,8 @@ deploy-genesis-nomadexec() {
     if test "${nomad_agents_were_already_running}" = "false"
     then
       msg "$(red "Startup of webfs failed, cleaning up ...")"
+      # `stop-nomad-job` takes care of stopping the Nomad agents.
       backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
-      wb_nomad agents stop "${server_name}" "${client_name}" "exec"
     fi
     fatal "Failed to add genesis file to local HTTP server"
   else
@@ -225,8 +225,8 @@ deploy-genesis-nomadexec() {
   if ! backend_nomad deploy-genesis-wget "${dir}" "${uri}"
   then
     msg "$(red "Deploy of genesis failed, cleaning up ...")"
+    # `stop-nomad-job` takes care of stopping the Nomad agents.
     backend_nomad stop-nomad-job "${dir}" || msg "$(red "Failed to stop Nomad Job")"
-    wb_nomad agents stop "${server_name}" "${client_name}" "exec"
     fatal "Deploy of genesis \"${uri}\" failed"
   else
     msg "$(green "Genesis \"${uri}\" deployed successfully")"
