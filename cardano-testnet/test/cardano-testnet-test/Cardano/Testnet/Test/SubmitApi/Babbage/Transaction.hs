@@ -77,7 +77,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
     , testnetMagic
     , poolNodes
     , wallets
-    } <- cardanoTestnet options conf
+    } <- cardanoTestnetDefault options conf
 
   poolNode1 <- H.headM poolNodes
 

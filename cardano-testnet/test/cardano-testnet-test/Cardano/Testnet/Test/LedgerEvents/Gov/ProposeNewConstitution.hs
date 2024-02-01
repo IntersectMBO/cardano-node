@@ -68,7 +68,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     , poolNodes
     , wallets
     }
-    <- cardanoTestnet fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions conf
 
   poolNode1 <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1

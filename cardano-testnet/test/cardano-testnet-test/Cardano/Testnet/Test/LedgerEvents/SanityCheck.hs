@@ -53,7 +53,7 @@ hprop_ledger_events_sanity_check = H.integrationWorkspace "ledger-events-sanity-
         }
 
   !testnetRuntime
-    <- cardanoTestnet fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions conf
   NodeRuntime{nodeSprocket} <- H.headM $ poolRuntime <$> poolNodes testnetRuntime
   let socketName' = IO.sprocketName nodeSprocket
       socketBase = IO.sprocketBase nodeSprocket -- /tmp

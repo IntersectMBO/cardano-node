@@ -66,7 +66,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
     { testnetMagic
     , poolNodes
     , wallets
-    } <- cardanoTestnet options conf
+    } <- cardanoTestnetDefault options conf
 
   poolNode1 <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1

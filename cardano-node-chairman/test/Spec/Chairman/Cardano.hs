@@ -16,6 +16,6 @@ hprop_chairman :: H.Property
 hprop_chairman = H.integrationRetryWorkspace 2 "cardano-chairman" $ \tempAbsPath' -> do
   conf <- H.mkConf tempAbsPath'
 
-  allNodes <- fmap H.nodeName . H.allNodes <$> H.cardanoTestnet H.cardanoDefaultTestnetOptions conf
+  allNodes <- fmap H.nodeName . H.allNodes <$> H.cardanoTestnetDefault H.cardanoDefaultTestnetOptions conf
 
   chairmanOver 120 50 conf allNodes
