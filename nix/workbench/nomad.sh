@@ -83,6 +83,7 @@ usage_nomad() {
     $(helpcmd job monitor-alloc-id)
     $(helpcmd job monitor-alloc-id-task-name)
     $(helpcmd job task-name-allocation-id)
+    $(helpcmd job task-name-node-name)
 EOF
 }
 
@@ -2153,6 +2154,13 @@ EOF
           local job_file=${1:?$usage};  shift
           local task_name=${1:?$usage}; shift
           jq -r '.ID' "${job_file}".run/task.${task_name}.final.json
+        ;;
+####### job -> task-name-node-name )############################################
+        task-name-node-name )
+          local usage="USAGE:wb nomad ${op} ${subop} JOB-FILE TASK-NAME"
+          local job_file=${1:?$usage};  shift
+          local task_name=${1:?$usage}; shift
+          jq -r '.NodeName' "${job_file}".run/task.${task_name}.final.json
         ;;
 ####### job -> stop )###########################################################
         stop )
