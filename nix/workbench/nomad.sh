@@ -633,7 +633,7 @@ EOL
           # can represent an abnormal exit / uknown state!
           if wb_nomad server is-running "${name}"
           then
-            msg "$(red "FATAL: Nomad server \"${name}\" is already running or in an uknown state, call 'wb nomad server stop ${name}' or 'wb nomad nuke' first")"
+            msg "$(red "FATAL: Nomad server \"${name}\" is already running or in an unknown state, call 'wb nomad server stop ${name}' or 'wb nomad nuke' first")"
             return 1
           else
             local state_dir=$(wb_nomad server state-dir-path "${name}")
@@ -709,7 +709,7 @@ EOL
           # Checks
           if wb_nomad server is-running "${name}"
           then
-            msg "$(red "FATAL: Nomad server \"${name}\" is already running or in an uknown state, call 'wb nomad server stop ${name}' or 'wb nomad nuke' first")"
+            msg "$(red "FATAL: Nomad server \"${name}\" is already running or in an unknown state, call 'wb nomad server stop ${name}' or 'wb nomad nuke' first")"
             return 1
           fi
           # Start `nomad` server".
@@ -741,7 +741,7 @@ EOL
               msg "$(yellow "port \"127.0.0.1:${http_port}\" not ready")"
               msg "$(yellow "Check logs (${state_dir})")"
               # Let the "stop" subcommand clean everything!
-              wb_nomad server stop "${name}"
+              wb_nomad server stop "${name}" || true
               return 1
             fi
             echo -ne "\b\b\b"
@@ -755,30 +755,36 @@ EOL
           local name=${1:?$usage}; shift
           # Stop Nomad server by name
           local pids=$(wb_nomad server pids-array "${name}")
-          for pid_number in ${pids[@]}
-          do
-            msg "$(blue Stopping) Nomad $(yellow "server \"${name}\"") process PID ${pid_number} ..."
-            if ! kill -SIGINT "${pid_number}" >/dev/null 2>&1
-            then
-              msg "$(red "Killing PID ${pid_number} failed")"
-            else
-              # Wait 15 seconds for the process to fully exit or kill it.
-              msg "$(blue Wait) up to 15 seconds for PID ${pid_number} to exit"
-              timeout 15 tail --pid="${pid_number}" -f /dev/null || true
-              if kill -0 "${pid_number}" >/dev/null 2>&1
-              then
-                msg "$(yellow "Timeout killing PID ${pid_number}, trying SIGKILL")"
-                kill -SIGKILL "${pid_number}" >/dev/null 2>&1 || true
-              fi
-            fi
-          done
-          # Remove PID file if process was really killed (or wasn't running)!
-          if test -z "$(wb_nomad server pids-array "${name}")"
+          if test -z "${pids}"
           then
-            local pid_file=$(wb_nomad server pid-filepath "${name}")
-            if test -f "${pid_file}"
+            msg "$(red "Found no running Nomad server process to stop, manually clean possible remaining processes")"
+            return 1
+          else
+            for pid_number in ${pids[@]}
+            do
+              msg "$(blue Stopping) Nomad $(yellow "server \"${name}\"") process PID ${pid_number} ..."
+              if ! kill -SIGINT "${pid_number}" >/dev/null 2>&1
+              then
+                msg "$(red "Killing PID ${pid_number} failed")"
+              else
+                # Wait 15 seconds for the process to fully exit or kill it.
+                msg "$(blue Wait) up to 15 seconds for PID ${pid_number} to exit"
+                timeout 15 tail --pid="${pid_number}" -f /dev/null || true
+                if kill -0 "${pid_number}" >/dev/null 2>&1
+                then
+                  msg "$(yellow "Timeout killing PID ${pid_number}, trying SIGKILL")"
+                  kill -SIGKILL "${pid_number}" >/dev/null 2>&1 || true
+                fi
+              fi
+            done
+            # Remove PID file if all processes were killed!
+            if test -z "$(wb_nomad server pids-array "${name}")"
             then
-              rm "${pid_file}"
+              local pid_file=$(wb_nomad server pid-filepath "${name}")
+              if test -f "${pid_file}"
+              then
+                rm "${pid_file}"
+              fi
             fi
           fi
         ;;
@@ -997,7 +1003,7 @@ EOL
               msg "$(yellow "port \"127.0.0.1:${http_port}\" not ready")"
               msg "$(yellow "Check logs (${state_dir})")"
               # Let the "stop" subcommand clean everything!
-              wb_nomad client stop "${name}"
+              wb_nomad client stop "${name}" || true
               return 1
             fi
             echo -ne "\b\b\b"
@@ -1017,7 +1023,7 @@ EOL
               msg "$(yellow "Nomad client not connected to Nomad server")"
               msg "$(yellow "Check logs (${state_dir})")"
               # Let the "stop" subcommand clean everything!
-              wb_nomad client stop "${name}"
+              wb_nomad client stop "${name}" || true
               return 1
             fi
             echo -ne "\b\b\b"
@@ -1079,42 +1085,45 @@ EOL
           fi
           # Stop Nomad client by name
           local pids=$(wb_nomad client pids-array "${name}")
-          for pid_number in ${pids[@]}
-          do
-            msg "$(blue Stopping) Nomad $(yellow "client \"${name}\"") process PID ${pid_number} ..."
-            local cmd_array=("${root_prefix}" "bash" "-c")
-            if ! ${cmd_array[@]} "kill -SIGINT ${pid_number}" >/dev/null 2>&1
-            then
-              msg "Killing PID ${pid_number} failed"
-            else
-              # Wait 15 seconds for the process to fully exit or kill it.
-              msg "$(blue Wait) up to 30 seconds for PID ${pid_number} to exit"
-              timeout 30 tail --pid="${pid_number}" -f /dev/null || true
-              local cmd_array=("${root_prefix}" "bash" "-c")
-              if ${cmd_array[@]} "kill -0 ${pid_number}" >/dev/null 2>&1
-              then
-                msg "$(yellow "Timeout killing PID ${pid_number}, trying SIGKILL")"
-                local cmd_array=("${root_prefix}" "bash" "-c")
-                ${cmd_array[@]} "kill -SIGKILL ${pid_number}" >/dev/null 2>&1 || true
-              fi
-            fi
-          done
-          # Remove PID file if process was really killed (or wasn't running)!
-          if test -z "$(wb_nomad client pids-array "${name}")"
+          if test -z "${pids}"
           then
-            # WHY? The client is keeping some directories mounted!
-            # Maybe because of the 2 processes it creates (testes running
-            # only one client instance), I may be killing a child first?
-            # Or the timeout needs more time?
-            msg "Unmount any folders left by the client"
-            local cmd_array=("${root_prefix}" "bash" "-c")
-            # Command fails when there's nothing to umount!
-            grep "${state_dir}" /proc/mounts | cut -f2 -d" " | sort -r | ${cmd_array[@]} 'xargs -I "{}" umount -n "{}"' || true
-            # Now mark as "not running"
-            local pid_file=$(wb_nomad client pid-filepath "${name}")
-            if test -f "${pid_file}"
+            msg "$(red "Found no running Nomad client process to stop, manually clean possible remaining processes")"
+            return 1
+          else
+            for pid_number in ${pids[@]}
+            do
+              msg "$(blue Stopping) Nomad $(yellow "client \"${name}\"") process PID ${pid_number} ..."
+              local cmd_array=("${root_prefix}" "bash" "-c")
+              if ! ${cmd_array[@]} "kill -SIGINT ${pid_number}" >/dev/null 2>&1
+              then
+                msg "Killing PID ${pid_number} failed"
+              else
+                # Wait 15 seconds for the process to fully exit or kill it.
+                msg "$(blue Wait) up to 30 seconds for PID ${pid_number} to exit"
+                timeout 30 tail --pid="${pid_number}" -f /dev/null || true
+                local cmd_array=("${root_prefix}" "bash" "-c")
+                if ${cmd_array[@]} "kill -0 ${pid_number}" >/dev/null 2>&1
+                then
+                  msg "$(yellow "Timeout killing PID ${pid_number}, trying SIGKILL")"
+                  local cmd_array=("${root_prefix}" "bash" "-c")
+                  ${cmd_array[@]} "kill -SIGKILL ${pid_number}" >/dev/null 2>&1 || true
+                fi
+              fi
+            done
+            # Remove PID file if all processes were killed!
+            if test -z "$(wb_nomad client pids-array "${name}")"
             then
-              rm "${pid_file}"
+              # WHY? The client is keeping some directories mounted!
+              msg "Unmount any folders left by the client"
+              local cmd_array=("${root_prefix}" "bash" "-c")
+              # Command fails when there's nothing to umount!
+              grep "${state_dir}" /proc/mounts | cut -f2 -d" " | sort -r | ${cmd_array[@]} 'xargs -I "{}" umount -n "{}"' || true
+              # Now mark as "not running"
+              local pid_file=$(wb_nomad client pid-filepath "${name}")
+              if test -f "${pid_file}"
+              then
+                rm "${pid_file}"
+              fi
             fi
           fi
         ;;
@@ -1405,10 +1414,34 @@ EOF
       local nomad_clients_dir="$(wb_nomad dir-path client)"
       # Nuke all Nomad clients
       for client_name in $(ls "${nomad_clients_dir}"); do
+        msg "Config folder of Nomad client \"${client_name}\" found"
         if wb_nomad client is-running "${client_name}"
         then
-          wb_nomad client stop "${client_name}"
-          wb_nomad client cleanup "${client_name}"
+          msg "Nomad client \"${client_name}\" is running"
+          if wb_nomad client stop "${client_name}"
+          then
+            # Only call cleanup if stop did not fail
+            wb_nomad client cleanup "${client_name}"
+          else
+            msg "Failed to stop Nomad client \"${client_name}\", now in unknown state, manual cleanup of processes needed"
+          fi
+        else
+          msg "Nomad client \"${client_name}\" is not running"
+        fi
+        # Nuke the client's dir
+        local state_dir=$(wb_nomad client state-dir-path "${client_name}")
+        msg "Removing \"${state_dir}\" ..."
+        local root_prefix
+        if test -e "${state_dir}"/root
+        then
+          root_prefix=$(cat "${state_dir}"/root)
+        else
+          root_prefix=""
+        fi
+        local cmd_array=("${root_prefix}" "bash" "-c")
+        if ! ${cmd_array[@]} "rm -rf ${state_dir}" >/dev/null 2>&1
+        then
+          msg "Failed to remove config folder of Nomad client \"${client_name}\", now in unknown state, manual cleanup needed"
         fi
       done
       # Nuke the nomad-driver-podman plugin
@@ -1423,16 +1456,32 @@ EOF
       fi
       # Nuke all Nomad servers
       for server_name in $(ls "${nomad_servers_dir}"); do
+        msg "Config folder of Nomad server \"${server_name}\" found"
         if wb_nomad server is-running "${server_name}"
         then
-          wb_nomad server stop "${server_name}"
-          wb_nomad server cleanup "${server_name}"
+          msg "Nomad server \"${server_name}\" is running"
+          if wb_nomad server stop "${server_name}"
+          then
+            # Only call cleanup if stop did not fail
+            wb_nomad server cleanup "${server_name}"
+          else
+            msg "Failed to stop Nomad server \"${server_name}\", now in unknown state, manual cleanup of processes needed"
+          fi
+        else
+          msg "Nomad server \"${server_name}\" is not running"
+        fi
+        # Nuke the server's dir
+        local state_dir=$(wb_nomad server state-dir-path "${server_name}")
+        msg "Removing \"${state_dir}\" ..."
+        if ! rm -rf "${state_dir}" >/dev/null 2>&1
+        then
+          msg "Failed to remove config folder of Nomad server \"${server_name}\", now in unknown state, manual cleanup needed"
         fi
       done
       # Nuke the Nomad Agents' .cache dir
       # Keep top level Nomad cache dir because it includes Vault's dirs.
-      rm -rf "${nomad_servers_dir}" >/dev/null 2>&1
       rm -rf "${nomad_clients_dir}" >/dev/null 2>&1
+      rm -rf "${nomad_servers_dir}" >/dev/null 2>&1
       # Bye HTTP server
       if wb_nomad webfs is-running
       then

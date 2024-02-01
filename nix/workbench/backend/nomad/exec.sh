@@ -186,8 +186,6 @@ deploy-genesis-nomadexec() {
   local usage="USAGE: wb backend $op RUN-DIR"
   local dir=${1:?$usage}; shift
   local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-  local server_name=$(envjqr 'nomad_server_name')
-  local client_name=$(envjqr 'nomad_client_name')
 
   # Add genesis to HTTP cache server
   local nomad_agents_were_already_running=$(envjqr 'nomad_agents_were_already_running')
