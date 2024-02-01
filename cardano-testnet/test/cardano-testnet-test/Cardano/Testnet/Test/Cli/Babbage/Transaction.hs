@@ -69,10 +69,8 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
     } <- cardanoTestnet options conf
 
   poolNode1 <- H.headM poolNodes
-
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
-
-  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1
+  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 
 
   txbodyFp <- H.note $ work </> "tx.body"
@@ -82,7 +80,6 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
     [ "babbage", "query", "utxo"
     , "--address", Text.unpack $ paymentKeyInfoAddr $ head wallets
     , "--cardano-mode"
-    , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "utxo-1.json"
     ]
 
@@ -92,7 +89,6 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
 
   void $ execCli' execConfig
     [ "babbage", "transaction", "build"
-    , "--testnet-magic", show @Int testnetMagic
     , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
     , "--tx-in", Text.unpack $ renderTxIn txin1
     , "--tx-out", Text.unpack (paymentKeyInfoAddr (head wallets)) <> "+" <> show @Int 5_000_001
@@ -101,7 +97,6 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
 
   void $ execCli' execConfig
     [ "babbage", "transaction", "sign"
-    , "--testnet-magic", show @Int testnetMagic
     , "--tx-body-file", txbodyFp
     , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 0
     , "--out-file", txbodySignedFp
@@ -109,7 +104,6 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
 
   void $ execCli' execConfig
     [ "babbage", "transaction", "submit"
-    , "--testnet-magic", show @Int testnetMagic
     , "--tx-file", txbodySignedFp
     ]
 
@@ -118,7 +112,6 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
       [ "babbage", "query", "utxo"
       , "--address", Text.unpack $ paymentKeyInfoAddr $ head wallets
       , "--cardano-mode"
-      , "--testnet-magic", show @Int testnetMagic
       , "--out-file", work </> "utxo-2.json"
       ]
 

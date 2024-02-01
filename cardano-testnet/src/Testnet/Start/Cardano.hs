@@ -346,7 +346,8 @@ cardanoTestnet testnetOptions Conf {tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
 
       let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tmpAbsPath
 
-      execConfig <- H.headM (poolSprockets runtime) >>= H.mkExecConfig tempBaseAbsPath
+      node1sprocket <- H.headM $ poolSprockets runtime
+      execConfig <- H.mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
       forM_ wallets $ \wallet -> do
         H.cat $ paymentSKey $ paymentKeyInfoPair wallet
@@ -356,7 +357,6 @@ cardanoTestnet testnetOptions Conf {tempAbsPath=TmpAbsolutePath tmpAbsPath} = do
           [ "query", "utxo"
           , "--address", Text.unpack $ paymentKeyInfoAddr wallet
           , "--cardano-mode"
-          , "--testnet-magic", show @Int testnetMagic
           ]
 
         H.note_ utxos

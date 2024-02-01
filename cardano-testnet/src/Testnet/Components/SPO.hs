@@ -41,13 +41,11 @@ checkStakePoolRegistered
   => TmpAbsolutePath
   -> ExecConfig
   -> FilePath -- ^ Stake pool cold verification key file
-  -> CardanoTestnetOptions
   -> FilePath -- ^ Output file path of stake pool info
   -> m String -- ^ Stake pool ID
-checkStakePoolRegistered tempAbsP execConfig poolColdVkeyFp cTestnetOpts outputFp =
+checkStakePoolRegistered tempAbsP execConfig poolColdVkeyFp outputFp =
   GHC.withFrozenCallStack $ do
     let tempAbsPath' = unTmpAbsPath tempAbsP
-        testnetMag = cardanoTestnetMagic cTestnetOpts
         oFpAbs = tempAbsPath' </> outputFp
 
     stakePoolId' <- filter ( /= '\n') <$>
@@ -58,7 +56,6 @@ checkStakePoolRegistered tempAbsP execConfig poolColdVkeyFp cTestnetOpts outputF
     -- Check to see if stake pool was registered
     void $ execCli' execConfig
       [ "query", "stake-pools"
-      , "--testnet-magic", show @Int testnetMag
       , "--out-file", oFpAbs
       ]
 
@@ -78,14 +75,12 @@ checkStakeKeyRegistered
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
   -> ExecConfig
-  -> CardanoTestnetOptions
   -> String -- ^ Stake address
   -> FilePath -- ^ Output file path of stake address info
   -> m DelegationsAndRewards
-checkStakeKeyRegistered tempAbsP execConfig cTestnetOpts stakeAddr outputFp  =
+checkStakeKeyRegistered tempAbsP execConfig stakeAddr outputFp  =
   GHC.withFrozenCallStack $ do
     let tempAbsPath' = unTmpAbsPath tempAbsP
-        testnetMag = cardanoTestnetMagic cTestnetOpts
         oFpAbs = tempAbsPath' </> outputFp
 
     sAddr <- case deserialiseAddress AsStakeAddress $ Text.pack stakeAddr of
@@ -95,7 +90,6 @@ checkStakeKeyRegistered tempAbsP execConfig cTestnetOpts stakeAddr outputFp  =
     void $ execCli' execConfig
       [ "query", "stake-address-info"
       , "--address", stakeAddr
-      , "--testnet-magic", show @Int testnetMag
       , "--out-file", oFpAbs
       ]
 
@@ -273,7 +267,6 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') cTestnetOptions 
   void $ execCli' execConfig
     [ "transaction", "build"
     , eraFlag
-    , "--testnet-magic", show @Int testnetMag
     , "--change-address", changeAddr
     , "--tx-in", Text.unpack $ renderTxIn fundingInput
     , "--tx-out", poolowneraddresswstakecred <> "+" <> show @Int 5_000_000
@@ -300,7 +293,6 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') cTestnetOptions 
   void $ execCli' execConfig
            [ "transaction", "submit"
            , "--tx-file", pledgeAndPoolRegistrationTx
-           , "--testnet-magic", show @Int testnetMag
            ]
   -- TODO: Currently we can't propagate the error message thrown by checkStakeKeyRegistered when using byDurationM
   -- Instead we wait 15 seconds
@@ -310,7 +302,6 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') cTestnetOptions 
     checkStakeKeyRegistered
       tap
       execConfig
-      cTestnetOptions
       poolownerstakeaddr
       ("spo-"<> show identifier <> "-requirements" </> "pledger.stake.info")
 
@@ -324,7 +315,6 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') cTestnetOptions 
               tap
               execConfig
               poolColdVkeyFp
-              cTestnetOptions
               currentRegistedPoolsJson
   return (poolId, poolColdSkeyFp, poolColdVkeyFp, vrfSkeyFp, vrfVkeyFp)
 
