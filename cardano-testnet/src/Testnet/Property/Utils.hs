@@ -103,7 +103,6 @@ waitUntilEpoch fp testnetMagic execConfig desiredEpoch = do
 
   void $ H.execCli' execConfig
     [ "query",  "tip"
-    , "--testnet-magic", show @Int testnetMagic
     , "--out-file", fp
     ]
 
@@ -123,17 +122,14 @@ queryTip
   :: (MonadCatch m, MonadIO m, MonadTest m, HasCallStack)
   => QueryTipOutput
   -- ^ Output file
-  -> Int
-  -- ^ Testnet magic
   -> ExecConfig
   -> m QueryTipLocalStateOutput
-queryTip (QueryTipOutput fp) testnetMag execConfig = do
+queryTip (QueryTipOutput fp) execConfig = do
   exists <- H.evalIO $ doesFileExist fp
   when exists $ H.evalIO $ removeFile fp
 
   void $ H.execCli' execConfig
     [ "query",  "tip"
-    , "--testnet-magic", show @Int testnetMag
     , "--out-file", fp
     ]
 
