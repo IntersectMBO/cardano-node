@@ -46,7 +46,7 @@ import           Testnet.Runtime
 hprop_stakeSnapshot :: Property
 hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "conway-stake-snapshot" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
+  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 

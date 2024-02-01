@@ -48,7 +48,7 @@ newtype AdditionalCatcher
 hprop_ledger_events_propose_new_constitution :: Property
 hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-new-constitution" $ \tempAbsBasePath' -> do
   -- Start a local test net
-  conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
+  conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
