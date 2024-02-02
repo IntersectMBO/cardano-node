@@ -39,12 +39,10 @@ prop_spos_in_ledger_state
   -> m ()
 prop_spos_in_ledger_state output tNetOptions execConfig =
   GHC.withFrozenCallStack $ do
-    let testnetMag = cardanoTestnetMagic tNetOptions
-        numExpectedPools = length $ cardanoNodes tNetOptions
+    let numExpectedPools = length $ cardanoNodes tNetOptions
 
     void $ execCli' execConfig
         [ "query", "stake-pools"
-        , "--testnet-magic", show @Int testnetMag
         , "--out-file", output
         ]
 

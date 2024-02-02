@@ -196,7 +196,7 @@ hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-syn
           , SpoTestnetNodeOptions Nothing []
           ]
         }
-  testnetRuntime <- cardanoTestnet fastTestnetOptions conf
+  testnetRuntime <- cardanoTestnetDefault fastTestnetOptions conf
   let allNodes' = poolNodes testnetRuntime
   H.note_ $ "All nodes: " <>  show (map (nodeName . poolRuntime) allNodes')
 
@@ -238,7 +238,7 @@ hprop_shutdownOnSigint = H.integrationRetryWorkspace 2 "shutdown-on-sigint" $ \t
         , cardanoSlotLength = 0.01
         }
   testnetRuntime
-    <- cardanoTestnet fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions conf
   node@NodeRuntime{nodeProcessHandle} <- H.headM $ poolRuntime <$> poolNodes testnetRuntime
 
   -- send SIGINT

@@ -68,13 +68,11 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     , poolNodes
     , wallets
     }
-    <- cardanoTestnet fastTestnetOptions conf
+    <- cardanoTestnetDefault fastTestnetOptions conf
 
   poolNode1 <- H.headM poolNodes
-
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
-
-  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1
+  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 
   let socketName' = IO.sprocketName poolSprocket1
       socketBase = IO.sprocketBase poolSprocket1 -- /tmp
@@ -142,7 +140,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     [ "conway", "query", "utxo"
     , "--address", Text.unpack $ paymentKeyInfoAddr $ head wallets
     , "--cardano-mode"
-    , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "utxo-1.json"
     ]
 
@@ -155,7 +152,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   void $ H.execCli' execConfig
     [ "conway", "transaction", "build"
-    , "--testnet-magic", show @Int testnetMagic
     , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
     , "--tx-in", Text.unpack $ renderTxIn txin1
     , "--tx-out", Text.unpack (paymentKeyInfoAddr (wallets !! 1)) <> "+" <> show @Int 5_000_000
@@ -168,7 +164,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   void $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
-    , "--testnet-magic", show @Int testnetMagic
     , "--tx-body-file", drepRegTxbodyFp
     , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ head wallets
     , "--signing-key-file", drepSKeyFp 1
@@ -179,7 +174,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   void $ H.execCli' execConfig
     [ "conway", "transaction", "submit"
-    , "--testnet-magic", show @Int testnetMagic
     , "--tx-file", drepRegTxSignedFp
     ]
 
@@ -204,7 +198,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     [ "conway", "query", "utxo"
     , "--address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 1
     , "--cardano-mode"
-    , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "utxo-2.json"
     ]
 
@@ -214,7 +207,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   void $ H.execCli' execConfig
     [ "conway", "transaction", "build"
-    , "--testnet-magic", show @Int testnetMagic
     , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 1
     , "--tx-in", Text.unpack $ renderTxIn txin2
     , "--tx-out", Text.unpack (paymentKeyInfoAddr (head wallets)) <> "+" <> show @Int 5_000_000
@@ -224,7 +216,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   void $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
-    , "--testnet-magic", show @Int testnetMagic
     , "--tx-body-file", txbodyFp
     , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 1
     , "--out-file", txbodySignedFp
@@ -232,7 +223,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   void $ H.execCli' execConfig
     [ "conway", "transaction", "submit"
-    , "--testnet-magic", show @Int testnetMagic
     , "--tx-file", txbodySignedFp
     ]
 
@@ -280,7 +270,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
    [ "conway", "query", "utxo"
    , "--address", Text.unpack $ paymentKeyInfoAddr $ head wallets
    , "--cardano-mode"
-   , "--testnet-magic", show @Int testnetMagic
    , "--out-file", work </> "utxo-3.json"
    ]
 
@@ -294,7 +283,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   -- Submit votes
   void $ H.execCli' execConfig
     [ "conway", "transaction", "build"
-    , "--testnet-magic", show @Int testnetMagic
     , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
     , "--tx-in", Text.unpack $ renderTxIn txin3
     , "--tx-out", Text.unpack (paymentKeyInfoAddr (wallets !! 1)) <> "+" <> show @Int 3_000_000
@@ -308,7 +296,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   void $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
-    , "--testnet-magic", show @Int testnetMagic
     , "--tx-body-file", voteTxBodyFp
     , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ head wallets
     , "--signing-key-file", drepSKeyFp 1
@@ -319,7 +306,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   void $ H.execCli' execConfig
     [ "conway", "transaction", "submit"
-    , "--testnet-magic", show @Int testnetMagic
     , "--tx-file", voteTxFp
     ]
 

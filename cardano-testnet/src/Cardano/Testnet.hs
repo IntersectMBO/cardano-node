@@ -5,6 +5,7 @@ module Cardano.Testnet (
 
   -- ** Start a testnet
   cardanoTestnet,
+  cardanoTestnetDefault,
 
   -- ** Testnet options
   CardanoTestnetOptions(..),

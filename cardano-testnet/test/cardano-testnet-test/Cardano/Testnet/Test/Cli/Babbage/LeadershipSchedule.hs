@@ -77,9 +77,10 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
     { testnetMagic
     , wallets
     , configurationFile
-    } <- cardanoTestnet cTestnetOptions conf
+    } <- cardanoTestnetDefault cTestnetOptions conf
 
-  execConfig <- H.headM (poolSprockets tr) >>= H.mkExecConfig tempBaseAbsPath
+  node1sprocket <- H.headM $ poolSprockets tr
+  execConfig <- H.mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
   let sbe = shelleyBasedEra @BabbageEra
 
@@ -90,7 +91,6 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
     [ "conway", "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
-    , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "utxo-1.json"
     ]
 
@@ -157,7 +157,6 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
       [ "query", "utxo"
       , "--address", utxoAddr
       , "--cardano-mode"
-      , "--testnet-magic", show @Int testnetMagic
       , "--out-file", work </> "utxo-2.json"
       ]
 
@@ -173,7 +172,6 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   void $ execCli' execConfig
     [ "transaction", "build"
     , eraFlag
-    , "--testnet-magic", show @Int testnetMagic
     , "--change-address", testDelegatorPaymentAddr -- NB: A large balance ends up at our test delegator's address
     , "--tx-in", Text.unpack $ renderTxIn txin2
     , "--tx-out", utxoAddr <> "+" <> show @Int 5_000_000
@@ -198,7 +196,6 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   void $ execCli' execConfig
            [ "transaction", "submit"
            , "--tx-file", delegRegTestDelegatorTxFp
-           , "--testnet-magic", show @Int testnetMagic
            ]
 
   threadDelay 15_000000
@@ -209,7 +206,6 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   void $ checkStakeKeyRegistered
            tempAbsPath
            execConfig
-           cTestnetOptions
            testDelegatorStakeAddress
            testDelegatorStakeAddressInfoOutFp
 
@@ -287,7 +283,6 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   H.byDeadlineM 10 tipDeadline "Wait for two epochs" $ do
     void $ execCli' execConfig
       [ "query", "tip"
-      , "--testnet-magic", show @Int testnetMagic
       , "--out-file", work </> "current-tip.json"
       ]
 
@@ -309,7 +304,6 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
     H.byDeadlineM 5 leadershipScheduleDeadline "Failed to query for leadership schedule" $ do
       void $ execCli' execConfig
         [ "query", "leadership-schedule"
-        , "--testnet-magic", show @Int testnetMagic
         , "--genesis", shelleyGenesisFile tr
         , "--stake-pool-id", stakePoolIdNewSpo
         , "--vrf-signing-key-file", vrfSkey
@@ -361,7 +355,6 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
     H.byDeadlineM 5 leadershipScheduleDeadline "Failed to query for leadership schedule" $ do
       void $ execCli' execConfig
         [ "query", "leadership-schedule"
-        , "--testnet-magic", show @Int testnetMagic
         , "--genesis", shelleyGenesisFile tr
         , "--stake-pool-id", stakePoolIdNewSpo
         , "--vrf-signing-key-file", vrfSkey

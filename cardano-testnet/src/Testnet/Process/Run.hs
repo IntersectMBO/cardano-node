@@ -146,13 +146,15 @@ mkExecConfig :: ()
   => MonadIO m
   => FilePath
   -> IO.Sprocket
+  -> Int -- ^ Network id
   -> m ExecConfig
-mkExecConfig tempBaseAbsPath sprocket = do
+mkExecConfig tempBaseAbsPath sprocket networkId = do
   env' <- H.evalIO IO.getEnvironment
 
   noteShow H.ExecConfig
     { H.execConfigEnv = Last $ Just $
       [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName sprocket)
+      , ("CARDANO_NODE_NETWORK_ID", show networkId)
       ]
       -- The environment must be passed onto child process on Windows in order to
       -- successfully start that process.
@@ -184,9 +186,6 @@ resourceAndIOExceptionHandlers :: [Handler (ResourceT IO) ProcessError]
 resourceAndIOExceptionHandlers = [ Handler $ return . ProcessIOException
                                  , Handler $ return . ResourceException
                                  ]
-
-
-
 
 
 procFlexNew

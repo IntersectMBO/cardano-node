@@ -13,26 +13,19 @@ module Cardano.Testnet.Test.Cli.QuerySlotNumber
   ) where
 
 import           Cardano.Api
-
 import           Cardano.Testnet
 
-import           Prelude
-
 import           Data.Either
-import           Data.Monoid (Last (..))
 import qualified Data.Time.Clock as DT
 import qualified Data.Time.Format as DT
-import           System.Environment (getEnvironment)
+import           Prelude
 import qualified System.Info as SYS
 
 import           Hedgehog (Property)
-import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.Process as H
 import qualified Hedgehog.Internal.Property as H
-
+import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
@@ -54,7 +47,7 @@ hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tem
   tr@TestnetRuntime
     { testnetMagic
     , poolNodes
-    } <- cardanoTestnet options conf
+    } <- cardanoTestnetDefault options conf
   ShelleyGenesis{sgSlotLength, sgEpochLength} <- H.noteShowM $ shelleyGenesis tr
   startTime <- H.noteShowM $ getStartTime tempAbsBasePath' tr
 
@@ -66,23 +59,13 @@ hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tem
 
   poolNode1 <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
-  env <- H.evalIO getEnvironment
-  execConfig <- H.noteShow H.ExecConfig
-    { H.execConfigEnv = Last $ Just $
-      [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName poolSprocket1)
-      ]
-      -- The environment must be passed onto child process on Windows in order to
-      -- successfully start that process.
-      <> env
-    , H.execConfigCwd = Last $ Just tempBaseAbsPath'
-    }
+  execConfig <- H.mkExecConfig tempBaseAbsPath' poolSprocket1 testnetMagic
 
   id do
     H.note_ "Try to retrieve slot 5s before genesis"
     testTime <- H.note . formatTime $ (-5) `DT.addUTCTime` startTime
     (result, _) <- H.runTestT $ execCli' execConfig
       [ "query", "slot-number"
-      , "--testnet-magic", show @Int testnetMagic
       , testTime
       ]
     H.assertWith result isLeft
@@ -93,7 +76,6 @@ hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tem
     let expectedSlot = 0
     slot <- H.readNoteM =<< execCli' execConfig
       [ "query", "slot-number"
-      , "--testnet-magic", show @Int testnetMagic
       , testTime
       ]
     H.assertWithinTolerance slot expectedSlot slotPrecision
@@ -105,7 +87,6 @@ hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tem
     testTime <- H.note . formatTime $ passedTime `DT.addUTCTime` startTime
     slot <- H.readNoteM @Int =<< execCli' execConfig
       [ "query", "slot-number"
-      , "--testnet-magic", show @Int testnetMagic
       , testTime
       ]
     H.assertWithinTolerance slot expectedSlot slotPrecision
@@ -120,7 +101,6 @@ hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tem
     testTime <- H.note . formatTime $ passedTime `DT.addUTCTime` startTime
     slot <- H.readNoteM @Int =<< execCli' execConfig
       [ "query", "slot-number"
-      , "--testnet-magic", show @Int testnetMagic
       , testTime
       ]
     H.assertWithinTolerance slot expectedSlot slotPrecision
@@ -131,7 +111,6 @@ hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tem
     testTime <- H.note . formatTime $ timeOffset `DT.addUTCTime` startTime
     (result, _) <- H.runTestT $ execCli' execConfig
       [ "query", "slot-number"
-      , "--testnet-magic", show @Int testnetMagic
       , testTime
       ]
     H.assertWith result isLeft

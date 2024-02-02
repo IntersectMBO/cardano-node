@@ -65,8 +65,9 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
                           , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                           }
 
-  runTime@TestnetRuntime { configurationFile, testnetMagic, wallets } <- cardanoTestnet cTestnetOptions conf
-  execConfig <- H.headM (poolSprockets runTime) >>= H.mkExecConfig tempBaseAbsPath
+  runTime@TestnetRuntime { configurationFile, testnetMagic, wallets } <- cardanoTestnetDefault cTestnetOptions conf
+  node1sprocket <- H.headM $ poolSprockets runTime
+  execConfig <- H.mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
   -- We get our UTxOs from here
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr $ head wallets
@@ -75,7 +76,6 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
     [ convertToEraString anyEra, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
-    , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "utxo-1.json"
     ]
 
@@ -142,7 +142,6 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
     [ convertToEraString anyEra, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
-    , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "utxo-2.json"
     ]
 
@@ -158,7 +157,6 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   void $ execCli' execConfig
     [ "transaction", "build"
     , eraFlag
-    , "--testnet-magic", show @Int testnetMagic
     , "--change-address", testDelegatorPaymentAddr -- NB: A large balance ends up at our test delegator's address
     , "--tx-in", Text.unpack $ renderTxIn txin2
     , "--tx-out", utxoAddr <> "+" <> show @Int 5_000_000
@@ -183,7 +181,6 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   void $ execCli' execConfig
            [ "transaction", "submit"
            , "--tx-file", delegRegTestDelegatorTxFp
-           , "--testnet-magic", show @Int testnetMagic
            ]
 
   threadDelay 20_000_000
@@ -192,7 +189,6 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   void $ checkStakeKeyRegistered
            tempAbsPath
            execConfig
-           cTestnetOptions
            testDelegatorStakeAddress
            testDelegatorStakeAddressInfoOutFp
 
@@ -268,7 +264,6 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
 
   stakeSnapshot1 <- execCli' execConfig
      [ "query", "stake-snapshot"
-     , "--testnet-magic", show @Int testnetMagic
      , "--all-stake-pools"
      ]
   H.writeFile (work </> "stake-snapshot-1.json") stakeSnapshot1
@@ -276,14 +271,12 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   ledgerStateJson <- execCli' execConfig
     [ "query", "ledger-state"
     , "--cardano-mode"
-    , "--testnet-magic", show @Int testnetMagic
     ]
   H.writeFile (work </> "ledger-state-1.json") ledgerStateJson
 
   let kesPeriodInfoOutput = testSpoDir </> "kes-period-info-expected-success.json"
   void $ execCli' execConfig
     [ "query", "kes-period-info"
-    , "--testnet-magic", show @Int testnetMagic
     , "--op-cert-file", testSpoOperationalCertFp
     , "--out-file", kesPeriodInfoOutput
     ]
@@ -300,7 +293,6 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
 
   void $ execCli' execConfig
     [ "query",  "tip"
-    , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "current-tip.json"
     ]
 
@@ -330,7 +322,6 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
 
   void $ execCli' execConfig
     [ "query",  "tip"
-    , "--testnet-magic", show @Int testnetMagic
     , "--out-file", work </> "current-tip-2.json"
     ]
 
@@ -351,7 +342,6 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
     ]
   stakeSnapshot2 <- execCli' execConfig
      [ "query", "stake-snapshot"
-     , "--testnet-magic", show @Int testnetMagic
      , "--all-stake-pools"
      ]
   H.writeFile (work </> "stake-snapshot-2.json") stakeSnapshot2
@@ -359,7 +349,6 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   ledgerStateJson2 <- execCli' execConfig
     [ "query", "ledger-state"
     , "--cardano-mode"
-    , "--testnet-magic", show @Int testnetMagic
     ]
   H.writeFile (work </> "ledger-state-2.json") ledgerStateJson2
 

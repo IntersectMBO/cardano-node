@@ -62,20 +62,16 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \
   TestnetRuntime
     { testnetMagic
     , poolNodes
-    } <- cardanoTestnet options conf
+    } <- cardanoTestnetDefault options conf
 
   poolNode1 <- H.headM poolNodes
-
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
-
-  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1
-
+  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   tipDeadline <- H.noteShowM $ DTC.addUTCTime 210 <$> H.noteShowIO DTC.getCurrentTime
 
   H.byDeadlineM 10 tipDeadline "Wait for two epochs" $ do
     void $ execCli' execConfig
       [ "query", "tip"
-      , "--testnet-magic", show @Int testnetMagic
       , "--out-file", work </> "current-tip.json"
       ]
 
@@ -91,7 +87,6 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \
 
   result <- execCli' execConfig
     [ "query", "stake-snapshot"
-    , "--testnet-magic", show @Int testnetMagic
     , "--all-stake-pools"
     ]
 
