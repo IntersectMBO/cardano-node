@@ -44,7 +44,8 @@ newtype AdditionalCatcher
   = IOE IOException
   deriving Show
 
-
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/ProposeAndRatifyNewConstitution/"'@
 hprop_ledger_events_propose_new_constitution :: Property
 hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-new-constitution" $ \tempAbsBasePath' -> do
   -- Start a local test net
@@ -110,18 +111,10 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
                       }
 
   let drepVkeyFp :: Int -> FilePath
-      drepVkeyFp n = gov </> "drep-keys" <>"drep" <> show n <> ".vkey"
+      drepVkeyFp n = tempAbsPath' </> "drep-keys" </> ("drep" <> show n) </> "drep.vkey"
 
       drepSKeyFp :: Int -> FilePath
-      drepSKeyFp n = gov </> "drep-keys" <>"drep" <> show n <> ".skey"
-
-  -- Create DReps -- TODO: Refactor with shelleyKeyGen
-  forM_ [1..3] $ \n -> do
-   H.execCli' execConfig
-     [ "conway", "governance", "drep", "key-gen"
-     , "--verification-key-file", drepVkeyFp n
-     , "--signing-key-file", drepSKeyFp n
-     ]
+      drepSKeyFp n = tempAbsPath' </> "drep-keys" </> ("drep" <> show n) </> "drep.skey"
 
   -- Create Drep registration certificates
   let drepCertFile :: Int -> FilePath
