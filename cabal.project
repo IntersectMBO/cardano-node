@@ -31,7 +31,6 @@ packages:
   trace-dispatcher
   trace-resources
   trace-forward
-  ../ouroboros-network/ouroboros-network
 
 program-options
   ghc-options: -Werror
@@ -65,10 +64,10 @@ constraints:
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
 
---source-repository-package
---   type: git
---  location: https://github.com/IntersectMBO/ouroboros-network
---  tag: b252343ac8082e30a83c80efd378edde96707469
---  subdir:
---    ouroboros-network
-  --sha256: sha256-kDxWXtQBlFkfj/wIxVLfAz6ODt81O8UiGmQj3wUvQi0=
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-network
+  tag: 08119882f1a2313779d97a2f9840e8f6494115fc
+  subdir:
+    ouroboros-network
+  --sha256: sha256-34kZXleuO2K45F99gLLGWB/T3sHi2wIVmJD1qk7hFbs=
