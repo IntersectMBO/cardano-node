@@ -79,7 +79,8 @@ import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNode
                    NodeToNodeVersionData (..), RemoteAddress, TraceSendRecv (..), WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
-                   PeerSelectionCounters (..), PeerSelectionState (..), PeerSelectionTargets (..),
+                   DebugPeerSelectionState (..), PeerSelectionCounters (..),
+                   PeerSelectionState (..), PeerSelectionTargets (..),
                    TracePeerSelection (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
@@ -89,6 +90,7 @@ import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers
                    (TracePublicRootPeers (..))
 import qualified Ouroboros.Network.PeerSelection.State.EstablishedPeers as EstablishedPeers
+import           Ouroboros.Network.PeerSelection.State.KnownPeers (KnownPeerInfo (..))
 import qualified Ouroboros.Network.PeerSelection.State.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    LocalRootPeers, WarmValency (..))
@@ -465,6 +467,8 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceDemoteHotBigLedgerPeerDone {}   -> Info
 
       TraceDemoteBigLedgerPeersAsynchronous {} -> Warning
+
+      TraceDebugState                       {} -> Info
 
 instance HasPrivacyAnnotation (DebugPeerSelection addr)
 instance HasSeverityAnnotation (DebugPeerSelection addr) where
@@ -1532,6 +1536,26 @@ instance (Aeson.ToJSONKey peerAddr, ToJSON peerAddr, Ord peerAddr, Show peerAddr
                  , "groups" .= Aeson.toJSONList (LocalRootPeers.toGroups lrp)
                  ]
 
+instance ToJSON KnownPeerInfo where
+  toJSON (KnownPeerInfo
+            nKnownPeerFailCount
+            nKnownPeerTepid
+            nKnownPeerSharing
+            nKnownPeerAdvertise
+            nKnownLedgerPeer
+            nKnownSuccessfulConnection
+         ) =
+    Aeson.object [ "kind" .= String "KnownPeerInfo"
+                 , "failCount" .= nKnownPeerFailCount
+                 , "tepid" .= nKnownPeerTepid
+                 , "peerSharing" .= nKnownPeerSharing
+                 , "peerAdvertise" .= nKnownPeerAdvertise
+                 , "ledgerPeer" .= case nKnownLedgerPeer of
+                                        IsLedgerPeer    -> True
+                                        IsNotLedgerPeer -> False
+                 , "successfulConnection" .= nKnownSuccessfulConnection
+                 ]
+
 instance ToJSON PeerSelectionTargets where
   toJSON (PeerSelectionTargets
             nRootLedgerPeers
@@ -1839,6 +1863,30 @@ instance ToObject (TracePeerSelection SockAddr) where
     mconcat [ "kind" .= String "KnownInboundConnection"
              , "peer" .= show addr
              , "peerSharing" .= show sharing ]
+
+  toObject _verb (TraceDebugState mtime ds) =
+    mconcat [ "kind" .= String "DebugState"
+            , "monotonicTime" .= mtime
+            , "targets" .= peerSelectionTargetsToObject (dpssTargets ds)
+            , "localRootPeers" .= dpssLocalRootPeers ds
+            , "publicRootPeers" .= dpssPublicRootPeers ds
+            , "bigLedgerPeers" .= dpssBigLedgerPeers ds
+            , "knownPeers" .= (KnownPeers.allPeers $ dpssKnownPeers ds)
+            , "establishedPeers" .= dpssEstablishedPeers ds
+            , "activePeers" .= dpssActivePeers ds
+            , "publicRootBackoffs" .= dpssPublicRootBackoffs ds
+            , "bigLedgerPeerBackoffs" .= dpssBigLedgerPeerBackoffs ds
+            , "bigLedgerPeerRetryTime" .= dpssBigLedgerPeerRetryTime ds
+            , "inProgressBigLedgerPeersReq" .= dpssInProgressBigLedgerPeersReq ds
+            , "inProgressPeerShareReqs" .= dpssInProgressPeerShareReqs ds
+            , "inProgressPromoteCold" .= dpssInProgressPromoteCold ds
+            , "inProgressPromoteWarm" .= dpssInProgressPromoteWarm ds
+            , "inProgressDemoteWarm" .= dpssInProgressDemoteWarm ds
+            , "inProgressDemoteHot" .= dpssInProgressDemoteHot ds
+            , "inProgressDemoteToCold" .= dpssInProgressDemoteToCold ds
+            , "upstreamyness" .= dpssUpstreamyness ds
+            , "fetchynessBlocks" .= dpssFetchynessBlocks ds
+            ]
 
 -- Connection manager abstract state.  For explanation of each state see
 -- <https://hydra.iohk.io/job/Cardano/ouroboros-network/native.network-docs.x86_64-linux/latest/download/2>
@@ -2314,6 +2362,9 @@ instance ToJSON addr => ToJSON (OperationResult addr) where
 
 instance ToJSON RemoteSt where
   toJSON = String . pack . show
+
+instance ToJSON Time where
+  toJSON = String . pack . show 
 
 instance ToJSON addr => Aeson.ToJSONKey (ConnectionId addr) where
 

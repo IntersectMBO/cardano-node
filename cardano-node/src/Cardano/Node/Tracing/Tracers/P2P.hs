@@ -39,7 +39,8 @@ import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
-                   PeerSelectionCounters (..), PeerSelectionState (..), PeerSelectionTargets (..),
+                   DebugPeerSelectionState (..), PeerSelectionCounters (..),
+                   PeerSelectionState (..), PeerSelectionTargets (..),
                    TracePeerSelection (..))
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
@@ -494,6 +495,27 @@ instance LogFormatting (TracePeerSelection SockAddr) where
     mconcat [ "kind" .= String "KnownInboundConnection"
             , "peer" .= toJSON addr
             , "peerSharing" .= String (pack . show $ sharing) ]
+  forMachine _dtal (TraceDebugState mtime ds) =
+    mconcat [ "kind" .= String "DebugState"
+            , "monotonicTime" .= show mtime
+            , "targets" .= peerSelectionTargetsToObject (dpssTargets ds)
+            , "localRootPeers" .= dpssLocalRootPeers ds
+            , "publicRootPeers" .= dpssPublicRootPeers ds
+            , "bigLedgerPeers" .= dpssBigLedgerPeers ds
+            , "knownPeers" .= (KnownPeers.toSet $ dpssKnownPeers ds)
+            , "establishedPeers" .= dpssEstablishedPeers ds
+            , "activePeers" .= dpssActivePeers ds
+            , "publicRootBackoffs" .= dpssPublicRootBackoffs ds
+            , "bigLedgerPeerBackoffs" .= dpssBigLedgerPeerBackoffs ds
+            , "bigLedgerPeerRetryTime" .= dpssBigLedgerPeerRetryTime ds
+            , "inProgressBigLedgerPeersReq" .= dpssInProgressBigLedgerPeersReq ds
+            , "inProgressPeerShareReqs" .= dpssInProgressPeerShareReqs ds
+            , "inProgressPromoteCold" .= dpssInProgressPromoteCold ds
+            , "inProgressPromoteWarm" .= dpssInProgressPromoteWarm ds
+            , "inProgressDemoteWarm" .= dpssInProgressDemoteWarm ds
+            , "inProgressDemoteHot" .= dpssInProgressDemoteHot ds
+            , "inProgressDemoteToCold" .= dpssInProgressDemoteToCold ds ]
+
   forHuman = pack . show
 
 instance MetaTrace (TracePeerSelection SockAddr) where
@@ -595,6 +617,8 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["ChurnMode"]
     namespaceFor TraceKnownInboundConnection {} =
       Namespace [] ["KnownInboundConnection"]
+    namespaceFor TraceDebugState {} =
+      Namespace [] ["DebugState"]
 
     severityFor (Namespace [] ["LocalRootPeersChanged"]) _ = Just Notice
     severityFor (Namespace [] ["TargetsChanged"]) _ = Just Notice
@@ -626,6 +650,7 @@ instance MetaTrace (TracePeerSelection SockAddr) where
     severityFor (Namespace [] ["ChurnWait"]) _ = Just Info
     severityFor (Namespace [] ["ChurnMode"]) _ = Just Info
     severityFor (Namespace [] ["KnownInboundConnection"]) _ = Just Info
+    severityFor (Namespace [] ["DebugState"]) _ = Just Info
     severityFor _ _ = Nothing
 
     documentFor (Namespace [] ["LocalRootPeersChanged"]) = Just  ""
@@ -680,6 +705,8 @@ instance MetaTrace (TracePeerSelection SockAddr) where
     documentFor (Namespace [] ["ChurnMode"]) = Just  ""
     documentFor (Namespace [] ["KnownInboundConnection"]) = Just
       "An inbound connection was added to known set of outbound governor"
+    documentFor (Namespace [] ["DebugState"]) = Just
+      "Debug State for the outbound governor"
     documentFor _ = Nothing
 
     allNamespaces = [
@@ -713,6 +740,7 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       , Namespace [] ["ChurnWait"]
       , Namespace [] ["ChurnMode"]
       , Namespace [] ["KnownInboundConnection"]
+      , Namespace [] ["DebugState"]
       ]
 
 --------------------------------------------------------------------------------
