@@ -41,9 +41,9 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch
                    OneEraValidationErr (..), mkEraMismatch)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import           Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common
-                   (EraNodeToClientVersion (..), EraNodeToNodeVersion (..),
-                   HardForkNodeToClientVersion (..), HardForkNodeToNodeVersion (..),
-                   HardForkSpecificNodeToClientVersion (..), HardForkSpecificNodeToNodeVersion (..))
+                   (EraNodeToClientVersion (..), HardForkNodeToClientVersion (..),
+                   HardForkNodeToNodeVersion (..), HardForkSpecificNodeToClientVersion (..),
+                   HardForkSpecificNodeToNodeVersion (..))
 import           Ouroboros.Consensus.HardFork.History.EraParams (EraParams (..), SafeZone)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
@@ -406,7 +406,7 @@ instance (ToJSON (BlockNodeToClientVersion blk)) => ToJSON (EraNodeToClientVersi
 -- Instances for HardForkNodeToNodeVersion
 --
 instance ( ToJSON (BlockNodeToNodeVersion x)
-         , All (ToJSON `Compose` EraNodeToNodeVersion) (x ': xs)
+         , All (ToJSON `Compose` WrapNodeToNodeVersion) (x ': xs)
          ) => ToJSON (HardForkNodeToNodeVersion (x ': xs)) where
     toJSON (HardForkNodeToNodeDisabled blockNodeToNodeVersion) =
         object [ "tag" .= String "HardForkNodeToNodeDisabled"
@@ -419,16 +419,15 @@ instance ( ToJSON (BlockNodeToNodeVersion x)
                ]
       where
         eraNodeToNodeVersionsAsJSON :: NP (K Value) (x ': xs)
-        eraNodeToNodeVersionsAsJSON = hcmap (Proxy @(ToJSON `Compose` EraNodeToNodeVersion))
+        eraNodeToNodeVersionsAsJSON = hcmap (Proxy @(ToJSON `Compose` WrapNodeToNodeVersion))
                                             (K . toJSON)
                                             eraNodeToNodeVersions
 
 instance ToJSON HardForkSpecificNodeToNodeVersion where
     toJSON HardForkSpecificNodeToNodeVersion1 = "HardForkSpecificNodeToNodeVersion1"
 
-instance (ToJSON (BlockNodeToNodeVersion blk)) => ToJSON (EraNodeToNodeVersion blk) where
-    toJSON EraNodeToNodeDisabled = String "EraNodeToNodeDisabled"
-    toJSON (EraNodeToNodeEnabled blockNodeToNodeVersion) = toJSON blockNodeToNodeVersion
+instance (ToJSON (BlockNodeToNodeVersion blk)) => ToJSON (WrapNodeToNodeVersion blk) where
+    toJSON (WrapNodeToNodeVersion blockNodeToNodeVersion) = toJSON blockNodeToNodeVersion
 
 --
 -- instances for HardForkSelectView

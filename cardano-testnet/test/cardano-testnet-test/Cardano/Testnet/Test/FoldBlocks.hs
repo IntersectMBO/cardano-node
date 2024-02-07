@@ -6,6 +6,7 @@ module Cardano.Testnet.Test.FoldBlocks where
 
 import           Cardano.Api hiding (cardanoEra)
 import qualified Cardano.Api as Api
+import           Cardano.Api.Error (displayError)
 import qualified Cardano.Api.Shelley as Api
 
 import           Cardano.Testnet as TN
@@ -17,7 +18,6 @@ import           Control.Concurrent.Async (async, link)
 import           Control.Exception (Exception, throw)
 import           Control.Monad (forever)
 import           Control.Monad.Trans.Except (runExceptT)
-import qualified Data.Text as TS
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
@@ -32,7 +32,7 @@ import           Testnet.Runtime
 newtype FoldBlocksException = FoldBlocksException Api.FoldBlocksError
 instance Exception FoldBlocksException
 instance Show FoldBlocksException where
-  show (FoldBlocksException a) = TS.unpack $ Api.renderFoldBlocksError a
+  show (FoldBlocksException a) = displayError a
 
 -- | This test starts a testnet with wery short timing, then starts
 -- `foldBlocks` in another thread to listen for ledger state, ledger

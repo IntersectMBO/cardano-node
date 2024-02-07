@@ -109,8 +109,8 @@ $SED -i "${ROOT}/configuration.yaml" \
 $CARDANO_CLI genesis create-staked --genesis-dir "${ROOT}" \
   --testnet-magic "${NETWORK_MAGIC}" \
   --gen-pools 3 \
-  --supply 2000000000000 \
-  --supply-delegated 240000000002 \
+  --supply            2000000000000 \
+  --supply-delegated   240000000002 \
   --gen-stake-delegs 3 \
   --gen-utxo-keys 3
 

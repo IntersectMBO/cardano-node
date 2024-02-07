@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -e
 
 OUT=$(dirname $(realpath $0))
 ROOT=$(realpath ${OUT}/../..)
-nix build "${ROOT}"#cardano-deployment
+nix build "${ROOT}"#hydraJobs.cardano-deployment
 SRC="${ROOT}/result"
 
 copyFile() {

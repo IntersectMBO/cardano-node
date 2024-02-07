@@ -66,7 +66,7 @@ import           Ouroboros.Network.ConnectionManager.Types (AbstractState (..),
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnMgr
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.Driver.Limits (ProtocolLimitFailure (..))
-import           Ouroboros.Network.ExitPolicy (ReconnectDelay (..))
+import           Ouroboros.Network.ExitPolicy (RepromoteDelay (..))
 import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..), RemoteSt (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
@@ -1553,8 +1553,8 @@ instance ToJSON PeerSelectionTargets where
                  , "targetActiveBigLedgerPeers" .= nActiveBigLedgerPeers
                  ]
 
-instance ToJSON ReconnectDelay where
-  toJSON = toJSON . reconnectDelay
+instance ToJSON RepromoteDelay where
+  toJSON = toJSON . repromoteDelay
 
 instance ToJSON addr => ToJSON (PeerSharingResult addr) where
   toJSON (PeerSharingResult addrs) = Aeson.toJSONList addrs

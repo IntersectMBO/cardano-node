@@ -12,6 +12,7 @@ module Cardano.Testnet.Test.LedgerEvents.Gov.InfoAction
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Error (displayError)
 import           Cardano.Api.Shelley
 import           Cardano.Ledger.Conway.Governance (RatifyState (..))
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -210,7 +211,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
   newProposalEvents <- case propSubmittedResult of
                         Left e ->
                           H.failMessage callStack
-                            $ "foldBlocksCheckProposalWasSubmitted failed with: " <> Text.unpack (renderFoldBlocksError e)
+                            $ "foldBlocksCheckProposalWasSubmitted failed with: " <> displayError e
                         Right events -> return events
 
   governanceActionIndex <- retrieveGovernanceActionIndex newProposalEvents
@@ -267,7 +268,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
 
   -- We check that info action was succcessfully ratified
   !meInfoRatified
-    <- H.timeout 40_000_000 $ runExceptT $ foldBlocks
+    <- H.timeout 140_000_000 $ runExceptT $ foldBlocks
                       (File $ configurationFile testnetRuntime)
                       (File socketPath)
                       FullValidation
@@ -278,7 +279,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
   case eInfoRatified of
     Left e ->
       H.failMessage callStack
-        $ "foldBlocksCheckInfoAction failed with: " <> Text.unpack (renderFoldBlocksError e)
+        $ "foldBlocksCheckInfoAction failed with: " <> displayError e
     Right _events -> success
 
 foldBlocksCheckProposalWasSubmitted
@@ -306,7 +307,7 @@ retrieveGovernanceActionIndex mEvent = do
     Just (NewGovernanceProposals _ (AnyProposals props)) -> do
         -- In this test there will only be one
         let govActionStates = [i
-                              | L.GovActionIx i <- map L.gaidGovActionIx . Map.keys $ L.proposalsGovActionStates props
+                              | L.GovActionIx i <- map L.gaidGovActionIx . Map.keys $ L.proposalsActionsMap props
                               ]
         H.headM govActionStates
     Just unexpectedEvent ->
@@ -346,9 +347,9 @@ foldBlocksCheckInfoAction df govActionIdx _ ls allEvents _ acc = do
   where
     checkRatification :: InfoActionState -> LedgerEvent -> InfoActionState
     checkRatification !ias = \case
-      EpochBoundaryRatificationState (AnyRatificationState (RatifyState{rsRemoved})) -> do
+      EpochBoundaryRatificationState (AnyRatificationState RatifyState{rsExpired}) -> do
         -- find out if the action was removed
-        let w32indices = [i | L.GovActionIx i <- L.gaidGovActionIx <$> toList rsRemoved ]
+        let w32indices = [i | L.GovActionIx i <- L.gaidGovActionIx <$> toList rsExpired ]
         ias{isRemoved = isRemoved ias || govActionIdx `elem` w32indices}
       NewGovernanceProposals _ (AnyProposals proposals) -> do
         -- find out if the action was voted for 3 times
@@ -359,10 +360,9 @@ foldBlocksCheckInfoAction df govActionIdx _ ls allEvents _ acc = do
                   let (L.GovActionIx i) = L.gaidGovActionIx gai
                   i
                 ))
-              $ Map.assocs $ L.proposalsGovActionStates proposals
+              $ Map.assocs $ L.proposalsActionsMap proposals
         case actions of
           [L.GovActionState{L.gasDRepVotes=votes}]
             | length votes == 3 -> ias{hasReceivedVotes = True}
           _ -> ias
       _ -> ias
-

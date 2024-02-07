@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -41,7 +40,6 @@ module Cardano.Tracing.OrphanInstances.Common
 import           Data.Aeson hiding (Value)
 import           Data.Scientific (coefficient)
 import           Data.Text (Text)
-import qualified Data.Text as Text
 import           Data.Void (Void)
 import           Network.Socket (PortNumber)
 import           Text.Read (readMaybe)
@@ -61,18 +59,6 @@ import           Cardano.Node.Handlers.Shutdown ()
 --
 instance ToObject Void where
   toObject _verb x = case x of {}
-
-deriving instance Show TracingVerbosity
-
-instance FromJSON TracingVerbosity where
-  parseJSON (String str) = case str of
-    "MinimalVerbosity" -> pure MinimalVerbosity
-    "MaximalVerbosity" -> pure MaximalVerbosity
-    "NormalVerbosity" -> pure NormalVerbosity
-    invalid -> fail $ "Parsing of TracingVerbosity failed, "
-                    <> Text.unpack invalid <> " is not a valid TracingVerbosity"
-  parseJSON invalid  = fail $ "Parsing of TracingVerbosity failed due to type mismatch. "
-                            <> "Encountered: " <> show invalid
 
 instance FromJSON PortNumber where
   parseJSON (Number portNum) = case readMaybe . show $ coefficient portNum of

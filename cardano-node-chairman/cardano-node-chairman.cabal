@@ -44,7 +44,7 @@ executable cardano-node-chairman
   build-depends:        cardano-api
                       , cardano-crypto-class
                       , cardano-git-rev
-                      , cardano-node ^>= 8.7
+                      , cardano-node ^>= 8.8
                       , cardano-prelude
                       , containers
                       , contra-tracer
@@ -73,7 +73,7 @@ test-suite chairman-tests
                       , cardano-crypto-class ^>= 2.1.2
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.6.0.1
+                      , hedgehog-extras ^>= 0.6.0
                       , network
                       , process
                       , random
@@ -89,5 +89,5 @@ test-suite chairman-tests
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
   build-tool-depends:   cardano-node:cardano-node
-                      , cardano-cli:cardano-cli ^>= 8.19.0.0
+                      , cardano-cli:cardano-cli ^>= 8.20
                       , cardano-node-chairman:cardano-node-chairman

@@ -32,6 +32,7 @@ import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Tracing
 
 import           Ouroboros.Consensus.Block (Header)
+import           Ouroboros.Consensus.Util.NormalForm.StrictTVar (StrictTVar, readTVar)
 import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Network.ConnectionId (remoteAddress)
 
@@ -97,9 +98,9 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
   tuple3pop (a, b, _) = (a, b)
 
   getCandidates
-    :: STM.StrictTVar IO (Map peer (STM.StrictTVar IO (Net.AnchoredFragment (Header blk))))
+    :: StrictTVar IO (Map peer (StrictTVar IO (Net.AnchoredFragment (Header blk))))
     -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
-  getCandidates var = STM.readTVar var >>= traverse STM.readTVar
+  getCandidates var = readTVar var >>= traverse readTVar
 
   extractPeers :: NodeKernel IO RemoteAddress LocalConnectionId blk
                 -> IO [Peer blk]
