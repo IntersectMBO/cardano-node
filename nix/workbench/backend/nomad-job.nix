@@ -262,6 +262,74 @@ let
           unlimited = false;
         };
 
+        # Prevent allocations from being restarted:
+        ###########################################
+        # Nomad Clients periodically heartbeat to Nomad Servers to confirm they
+        # are operating as expected. By default, Nomad Clients which do not
+        # heartbeat in the specified amount of time are considered down and
+        # their allocations are marked as lost (or disconnected if
+        # "max_client_disconnect" is set) and rescheduled.
+        # This means that if not properly configured allocations running on a
+        # client that fails to heartbeat will be marked "lost" and when the
+        # client reconnects, its allocations, which may still be healthy,
+        # restarted because they have been marked "lost"!!!
+        # See:
+        # - https://developer.hashicorp.com/nomad/docs/configuration/server#client-heartbeats
+        # - https://developer.hashicorp.com/nomad/docs/job-specification/group#stop-after-client-disconnect
+        # - https://developer.hashicorp.com/nomad/docs/job-specification/group#max-client-disconnect
+        # We want these allocations to reconnect without a restart.
+        ### Nomad 1.6.X solution:
+        ### Specifies a duration during which a Nomad client will attempt to
+        ### reconnect allocations after it fails to heartbeat in the
+        ### "heartbeat_grace" window. See the example code below for more
+        ### details. This setting cannot be used with
+        ### "stop_after_client_disconnect".
+        ### When "max_client_disconnect" is specified, the Nomad server will
+        ### mark clients that fail to heartbeat as "disconnected" rather than
+        ### "down", and will mark allocations on a disconnected client as
+        ### "unknown" rather than "lost". These allocations may continue to run
+        ### on the disconnected client. Replacement allocations will be
+        ### scheduled according to the allocations' reschedule policy until the
+        ### disconnected client reconnects. Once a disconnected client
+        ### reconnects, Nomad will compare the "unknown" allocations with their
+        ### replacements and keep the one with the best node score. If the
+        ### "max_client_disconnect" duration expires before the client
+        ### reconnects, the allocations will be marked "lost". Clients that
+        ### contain "unknown" allocations will transition to "disconnected"
+        ### rather than "down" until the last "max_client_disconnect" duration
+        ### has expired.
+        ### https://developer.hashicorp.com/nomad/docs/v1.6.x/job-specification/group#max-client-disconnect
+        max_client_disconnect = "999h";
+        ### Nomad 1.7.X solution:
+        ### (TODO blocker issue https://github.com/hashicorp/nomad/issues/19506)
+        ### Defines the reschedule behaviour of an allocation when the node it
+        ### is running on misses heartbeats. When enabled, if the node it is
+        ### running on becomes disconnected or goes down, this allocations won't
+        ### be rescheduled and will show up as unknown until the node comes back
+        ### up or it is manually restarted.
+        ### This behaviour will only modify the reschedule process on the
+        ### server. To modify the allocation behaviour on the client, see
+        ### "stop_after_client_disconnect" below.
+        ### The unknown allocation has to be manually stopped to run it again.
+        ### Setting `max_client_disconnect` and
+        ### `prevent_reschedule_on_lost = true` at the same time requires that
+        ### rescheduling is disabled entirely (what is done above in the
+        ### reschedule stanza).
+        # prevent_reschedule_on_lost = true;
+        ### Specifies a duration after which a Nomad client will stop
+        ### allocations, if it cannot communicate with the servers. By default,
+        ### a client will not stop an allocation until explicitly told to by a
+        ### server. A client that fails to heartbeat to a server within the
+        ### "heartbeat_grace" window and any allocations running on it will be
+        ### marked "lost" and Nomad will schedule replacement allocations. The
+        ### replaced allocations will normally continue to run on the
+        ### non-responsive client. But you may want them to stop instead — for
+        ###  example, allocations requiring exclusive access to an external
+        ### resource. When specified, the Nomad client will stop them after this
+        ### duration. The Nomad client process must be running for this to
+        ### occur. This setting cannot be used with "max_client_disconnect".
+        # stop_after_client_disconnect = "999h";
+
         # Specifies the restart policy for all tasks in this group. If omitted,
         # a default policy exists for each job type, which can be found in the
         # restart stanza documentation.
