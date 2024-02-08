@@ -111,6 +111,7 @@ let
       cardano-cli
       bech32
       cardano-node
+      cardano-profile
       cardano-topology
       cardano-tracer
       locli

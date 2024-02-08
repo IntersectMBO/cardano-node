@@ -6,7 +6,7 @@
 
 let
   mkProfileJson = { profileName }:
-    runWorkbenchJqOnly "profile-${profileName}.json"
+    runWorkbench "profile-${profileName}.json"
       "profile json ${profileName}";
 
   mkTopologyFiles = { profileName, profileJson }:
@@ -22,8 +22,8 @@ let
   ;
 
   mkNodeSpecsJson = { profileName, profileJson }:
-    runWorkbenchJqOnly "node-specs-${profileName}.json"
-                       "profile node-specs ${profileJson} ${mkTopologyFiles {inherit profileName profileJson;}}";
+    runWorkbench "node-specs-${profileName}.json"
+                 "profile node-specs ${profileName} ${mkTopologyFiles {inherit profileName profileJson;}}";
 
   mkGenesisFiles = { profileName, profileJson, nodeSpecsJson }:
     pkgs.runCommand "workbench-profile-genesis-cache-${profileName}"
@@ -117,7 +117,7 @@ let
     };
 
   profile-names-json =
-    runWorkbenchJqOnly "profile-names.json" "profiles list";
+    runWorkbench "profile-names.json" "profiles list";
 
   profile-names =
     __fromJSON (__readFile profile-names-json);

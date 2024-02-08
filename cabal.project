@@ -23,6 +23,7 @@ packages:
   cardano-submit-api
   cardano-testnet
   cardano-tracer
+  bench/cardano-profile
   bench/cardano-topology
   bench/locli
   bench/plutus-scripts-bench
