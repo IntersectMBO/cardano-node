@@ -50,7 +50,8 @@ import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
+                   SnapshotInterval (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
@@ -100,8 +101,9 @@ data NodeConfiguration
        , ncProtocolConfig :: !NodeProtocolConfiguration
 
          -- Node parameters, not protocol-specific:
-       , ncDiffusionMode    :: !DiffusionMode
-       , ncSnapshotInterval :: !SnapshotInterval
+       , ncDiffusionMode      :: !DiffusionMode
+       , ncNumOfDiskSnapshots :: !NumOfDiskSnapshots
+       , ncSnapshotInterval   :: !SnapshotInterval
 
          -- | During the development and integration of new network protocols
          -- (node-to-node and node-to-client) we wish to be able to test them
@@ -181,8 +183,9 @@ data PartialNodeConfiguration
        , pncProtocolConfig :: !(Last NodeProtocolConfiguration)
 
          -- Node parameters, not protocol-specific:
-       , pncDiffusionMode    :: !(Last DiffusionMode)
-       , pncSnapshotInterval :: !(Last SnapshotInterval)
+       , pncDiffusionMode      :: !(Last DiffusionMode  )
+       , pncNumOfDiskSnapshots :: !(Last NumOfDiskSnapshots)
+       , pncSnapshotInterval   :: !(Last SnapshotInterval)
        , pncExperimentalProtocolsEnabled :: !(Last Bool)
 
          -- BlockFetch configuration
@@ -240,6 +243,8 @@ instance FromJSON PartialNodeConfiguration where
       pncSocketPath <- Last <$> v .:? "SocketPath"
       pncDiffusionMode
         <- Last . fmap getDiffusionMode <$> v .:? "DiffusionMode"
+      pncNumOfDiskSnapshots
+        <- Last . fmap RequestedNumOfDiskSnapshots <$> v .:? "NumOfDiskSnapshots"
       pncSnapshotInterval
         <- Last . fmap RequestedSnapshotInterval <$> v .:? "SnapshotInterval"
       pncExperimentalProtocolsEnabled <- fmap Last $ do
@@ -319,6 +324,7 @@ instance FromJSON PartialNodeConfiguration where
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
            , pncDiffusionMode
+           , pncNumOfDiskSnapshots
            , pncSnapshotInterval
            , pncExperimentalProtocolsEnabled
            , pncMaxConcurrencyBulkSync
@@ -489,6 +495,7 @@ defaultPartialNodeConfiguration =
     , pncLoggingSwitch = Last $ Just True
     , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
+    , pncNumOfDiskSnapshots = Last $ Just DefaultNumOfDiskSnapshots
     , pncSnapshotInterval = Last $ Just DefaultSnapshotInterval
     , pncExperimentalProtocolsEnabled = Last $ Just False
     , pncTopologyFile = Last . Just $ TopologyFile "configuration/cardano/mainnet-topology.json"
@@ -540,6 +547,7 @@ makeNodeConfiguration pnc = do
   logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
   traceConfig <- first Text.unpack $ partialTraceSelectionToEither $ pncTraceConfig pnc
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
+  numOfDiskSnapshots <- lastToEither "Missing NumOfDiskSnapshots" $ pncNumOfDiskSnapshots pnc
   snapshotInterval <- lastToEither "Missing SnapshotInterval" $ pncSnapshotInterval pnc
   shutdownConfig <- lastToEither "Missing ShutdownConfig" $ pncShutdownConfig pnc
   socketConfig <- lastToEither "Missing SocketConfig" $ pncSocketConfig pnc
@@ -608,6 +616,7 @@ makeNodeConfiguration pnc = do
              , ncProtocolConfig = protocolConfig
              , ncSocketConfig = socketConfig
              , ncDiffusionMode = diffusionMode
+             , ncNumOfDiskSnapshots = numOfDiskSnapshots
              , ncSnapshotInterval = snapshotInterval
              , ncExperimentalProtocolsEnabled = experimentalProtocols
              , ncMaxConcurrencyBulkSync = getLast $ pncMaxConcurrencyBulkSync pnc

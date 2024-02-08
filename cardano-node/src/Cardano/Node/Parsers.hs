@@ -27,7 +27,8 @@ import           Text.Read (readMaybe)
 
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
+                   SnapshotInterval (..))
 
 import           Cardano.Logging.Types
 import           Cardano.Node.Configuration.NodeAddress (File (..),
@@ -71,7 +72,8 @@ nodeRunParser = do
 
   -- NodeConfiguration filepath
   nodeConfigFp <- lastOption parseConfigFile
-  snapshotInterval <- lastOption parseSnapshotInterval
+  numOfDiskSnapshots <- lastOption parseNumOfDiskSnapshots
+  snapshotInterval   <- lastOption parseSnapshotInterval
 
   validate <- lastOption parseValidateDB
   shutdownIPC <- lastOption parseShutdownIPC
@@ -90,6 +92,7 @@ nodeRunParser = do
            , pncTopologyFile = TopologyFile <$> topFp
            , pncDatabaseFile = DbFile <$> dbFp
            , pncDiffusionMode = mempty
+           , pncNumOfDiskSnapshots = numOfDiskSnapshots
            , pncSnapshotInterval = snapshotInterval
            , pncExperimentalProtocolsEnabled = mempty
            , pncProtocolFiles = Last $ Just ProtocolFilepaths
@@ -329,6 +332,15 @@ parseStartAsNonProducingNode =
         ]
     ]
 
+parseNumOfDiskSnapshots :: Parser NumOfDiskSnapshots
+parseNumOfDiskSnapshots = fmap RequestedNumOfDiskSnapshots parseNum
+  where
+  parseNum = Opt.option auto
+    ( long "num-of-disk-snapshots"
+        <> metavar "NUMOFDISKSNAPSHOTS"
+        <> help "Number of ledger snapshots stored on disk."
+    )
+
 -- TODO revisit because it sucks
 parseSnapshotInterval :: Parser SnapshotInterval
 parseSnapshotInterval = fmap (RequestedSnapshotInterval . secondsToDiffTime) parseDifftime
@@ -336,7 +348,7 @@ parseSnapshotInterval = fmap (RequestedSnapshotInterval . secondsToDiffTime) par
   parseDifftime = Opt.option auto
     ( long "snapshot-interval"
         <> metavar "SNAPSHOTINTERVAL"
-        <> help "Snapshot Interval (in second)"
+        <> help "Snapshot Interval (in seconds)"
     )
 
 -- | Produce just the brief help header for a given CLI option parser,
