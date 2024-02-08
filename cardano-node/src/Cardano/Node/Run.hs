@@ -89,8 +89,8 @@ import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
-import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNodeArgs (..),
-                   StdRunNodeArgs (..), stdChainSyncTimeout)
+import           Ouroboros.Consensus.Node (DiskPolicyArgs (..), NetworkP2PMode (..),
+                   RunNodeArgs (..), StdRunNodeArgs (..), stdChainSyncTimeout)
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
@@ -483,7 +483,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
               , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride      = ncValidateDB nc
-              , srnSnapshotInterval             = ncSnapshotInterval nc
+              , srnDiskPolicyArgs               = diskPolicyArgs
               , srnDatabasePath                 = dbPath
               , srnDiffusionArguments           = diffusionArguments
               , srnDiffusionArgumentsExtra      = diffusionArgumentsExtra
@@ -533,7 +533,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               { srnBfcMaxConcurrencyBulkSync   = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
               , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride     = ncValidateDB nc
-              , srnSnapshotInterval            = ncSnapshotInterval nc
+              , srnDiskPolicyArgs              = diskPolicyArgs
               , srnDatabasePath                = dbPath
               , srnDiffusionArguments          = diffusionArguments
               , srnDiffusionArgumentsExtra     = mkNonP2PArguments ipProducers dnsProducers
@@ -601,6 +601,12 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
       case prj $ latestReleasedNodeVersion (Proxy @blk) of
         Nothing       -> id
         Just version_ -> Map.takeWhileAntitone (<= version_)
+
+  diskPolicyArgs :: DiskPolicyArgs
+  diskPolicyArgs =
+    DiskPolicyArgs
+      (ncSnapshotInterval nc)
+      (ncNumOfDiskSnapshots nc)
 
 --------------------------------------------------------------------------------
 -- SIGHUP Handlers
