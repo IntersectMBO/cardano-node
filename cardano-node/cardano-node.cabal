@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                8.7.2
+version:                8.8.0
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -144,7 +144,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.37.1.0
+                      , cardano-api ^>= 8.38
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev
@@ -183,14 +183,14 @@ library
                       , network-mux >= 0.4
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-consensus ^>= 0.14
-                      , ouroboros-consensus-cardano ^>= 0.12
-                      , ouroboros-consensus-diffusion ^>= 0.9
+                      , ouroboros-consensus ^>= 0.15
+                      , ouroboros-consensus-cardano ^>= 0.13
+                      , ouroboros-consensus-diffusion ^>= 0.10
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api
-                      , ouroboros-network ^>= 0.10
+                      , ouroboros-network ^>= 0.11
                       , ouroboros-network-framework
-                      , ouroboros-network-protocols ^>= 0.6
+                      , ouroboros-network-protocols ^>= 0.7
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
@@ -245,7 +245,7 @@ test-suite cardano-node-test
                       , bytestring
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
-                      , cardano-api
+                      , cardano-api:{cardano-api, internal}
                       , cardano-ledger-core
                       , cardano-node
                       , cardano-slotting

@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -116,11 +117,11 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
  -- 50 second epochs
  -- Epoch length should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"
   H.rewriteJsonFile genesisShelleyFpAbs $ \o -> o
-    & L.key "securityParam" . L._Integer .~ 5
-    & L.key "rho" . L._Double  .~ 0.1
-    & L.key "tau" . L._Double  .~ 0.1
-    & L.key "updateQuorum" . L._Integer .~ 2
+    & L.key "protocolParams" .  L.key "rho" . L._Number  .~ 0.1
+    & L.key "protocolParams" .  L.key "tau" . L._Number  .~ 0.1
     & L.key "protocolParams" . L.key "protocolVersion" . L.key "major" . L._Integer .~ 8
+    & L.key "securityParam" . L._Integer .~ 5
+    & L.key "updateQuorum" . L._Integer .~ 2
 
   -- TODO: create-testnet-data should have arguments for
   -- Alonzo and Conway genesis that are optional and if not
@@ -134,8 +135,8 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
     , "--spec-shelley", genesisShelleyFpAbs
     , "--testnet-magic", show @Word32 testnetMagic
     , "--pools", show @Int numPoolNodes
-    , "--supply", "1000000000000"
-    , "--supply-delegated", "1000000000000"
+    , "--total-supply",     show @Int 2_000_000_000_000
+    , "--delegated-supply", show @Int 1_000_000_000_000
     , "--stake-delegators", show @Int numStakeDelegators
     , "--utxo-keys", show numSeededUTxOKeys
     , "--drep-keys", "3"

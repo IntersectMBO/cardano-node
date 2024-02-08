@@ -10,6 +10,7 @@ module Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Error (displayError)
 import           Cardano.Api.Shelley
 import qualified Cardano.Ledger.Conway.Governance as Ledger
 import           Cardano.Testnet
@@ -222,7 +223,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
                             $ "foldBlocksCheckProposalWasSubmitted failed with: " <> show e
                         Right (Left e) ->
                           H.failMessage callStack
-                            $ "foldBlocksCheckProposalWasSubmitted failed with: " <> Text.unpack (renderFoldBlocksError e)
+                            $ "foldBlocksCheckProposalWasSubmitted failed with: " <> displayError e
                         Right (Right events) -> return events
 
   governanceActionIndex <- retrieveGovernanceActionIndex newProposalEvents
@@ -295,7 +296,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
         $ "foldBlocksCheckConstitutionWasRatified failed with: " <> show e
     Right (Left e) ->
       H.failMessage callStack
-        $ "foldBlocksCheckConstitutionWasRatified failed with: " <> Text.unpack (renderFoldBlocksError e)
+        $ "foldBlocksCheckConstitutionWasRatified failed with: " <> displayError e
     Right (Right _events) -> success
 
 foldBlocksCheckProposalWasSubmitted
@@ -322,7 +323,7 @@ retrieveGovernanceActionIndex mEvent = do
     Just (NewGovernanceProposals _ (AnyProposals props)) ->
     -- In this test there will only be one
         let govActionStates = [i
-                              | Ledger.GovActionIx i <- map Ledger.gaidGovActionIx . Map.keys $ Ledger.proposalsGovActionStates props
+                              | Ledger.GovActionIx i <- map Ledger.gaidGovActionIx . Map.keys $ Ledger.proposalsActionsMap props
                               ]
         in return $ head  govActionStates
     Just unexpectedEvent ->
@@ -334,7 +335,7 @@ retrieveGovernanceActionIndex mEvent = do
 
 filterNewGovProposals :: TxId -> LedgerEvent -> Bool
 filterNewGovProposals txid (NewGovernanceProposals eventTxId (AnyProposals props)) =
-  let _govActionStates = Ledger.proposalsGovActionStates props
+  let _govActionStates = Ledger.proposalsActionsMap props
   in fromShelleyTxId eventTxId == txid
 filterNewGovProposals _ _ = False
 

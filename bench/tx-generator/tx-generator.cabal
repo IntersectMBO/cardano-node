@@ -26,7 +26,7 @@ common project-config
     buildable: False
 
 common with-library
-  if impl(ghc >= 9)
+  if impl(ghc >= 9.6)
     build-depends:      plutus-scripts-bench
     cpp-options:        -DWITH_LIBRARY
 
@@ -98,9 +98,9 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.37.1.0
+                      , cardano-api ^>= 8.38
                       , cardano-binary
-                      , cardano-cli ^>= 8.19.0.0
+                      , cardano-cli ^>= 8.20.0.0
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data
