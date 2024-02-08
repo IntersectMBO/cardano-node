@@ -110,7 +110,7 @@ let
                   AlonzoGenesisFile            = "../genesis/genesis.alonzo.json";
                   ConwayGenesisFile            = "../genesis/genesis.conway.json";
                 })
-              (if __hasAttr "preset" profile
+              (if __hasAttr "preset" profile && profile.preset != null
                ## It's either an undisturbed preset,
                ## or a hardforked setup.
                then readJSONMay (../profile/presets + "/${profile.preset}/config.json")
