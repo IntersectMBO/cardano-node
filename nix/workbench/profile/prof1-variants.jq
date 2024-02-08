@@ -169,14 +169,6 @@ def all_profile_variants:
       }
     } as $chainsync_cluster
   |
-    # "qa" class Nodes of Cardano World Nomad cluster
-    { composition:
-      { locations:                      ["eu-central-1", "us-east-2"]
-      , topology:                       "torus"
-      , with_explorer:                  true
-      }
-    } as $nomad_cardano_world_qa
-  |
     # P&T exclusive Nomad cluster Nodes
     { composition:
       { locations:                      ["eu-central-1", "us-east-1", "ap-southeast-2"]
@@ -670,10 +662,6 @@ def all_profile_variants:
     { name: "default-p2p"
     , desc: "Default, as per nix/workbench/profile/prof0-defaults.jq with P2P enabled"
     }
-  , $nomad_cardano_world_qa *
-    { name: "default-nomadcwqa"
-    , desc: "Default on Cardano World QA"
-    }
   , $nomad_perf_torus * $p2p *
     { name: "default-nomadperf"
     , desc: "Default on P&T exclusive cluster"
@@ -697,10 +685,6 @@ def all_profile_variants:
   , $old_tracing *
     { name: "oldtracing"
     , desc: "Default in legacy tracing mode"
-    }
-  , $nomad_cardano_world_qa * $old_tracing *
-    { name: "oldtracing-nomadcwqa"
-    , desc: "Default in legacy tracing mode on Cardano World QA"
     }
   , $nomad_perf_torus * $p2p * $old_tracing *
     { name: "oldtracing-nomadperf"
@@ -752,14 +736,6 @@ def all_profile_variants:
   , $citest_base * $with_rtview *
     { name: "ci-test-rtview"
     }
-  , $citest_base * $nomad_cardano_world_qa *
-    { name: "ci-test-nomadcwqa"
-    , desc: "ci-test on Cardano World QA"
-    }
-  , $citest_base * $nomad_cardano_world_qa * $old_tracing *
-    { name: "ci-test-oldtracing-nomadcwqa"
-    , desc: "ci-test in legacy tracing mode on Cardano World QA"
-    }
   , $citest_base * $nomad_perf_torus * $p2p *
     { name: "ci-test-nomadperf"
     , desc: "ci-test on P&T exclusive cluster"
@@ -794,14 +770,6 @@ def all_profile_variants:
     }
   , $cibench_base * $with_rtview *
     { name: "ci-bench-rtview"
-    }
-  , $cibench_base * $nomad_cardano_world_qa *
-    { name: "ci-bench-nomadcwqa"
-    , desc: "ci-bench on Cardano World QA"
-    }
-  , $cibench_base * $nomad_cardano_world_qa * $old_tracing *
-    { name: "ci-bench-oldtracing-nomadcwqa"
-    , desc: "ci-bench in legacy tracing mode on Cardano World QA"
     }
   , $cibench_base * $nomad_perf_torus * $p2p *
     { name: "ci-bench-nomadperf"
