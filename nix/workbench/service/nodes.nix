@@ -113,7 +113,7 @@ let
               (if __hasAttr "preset" profile
                ## It's either an undisturbed preset,
                ## or a hardforked setup.
-               then readJSONMay (./presets + "/${profile.preset}/config.json")
+               then readJSONMay (../profile/presets + "/${profile.preset}/config.json")
                else configHardforksIntoEra profile.era))
             profile.node.verbatim);
 
