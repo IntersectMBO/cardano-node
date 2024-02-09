@@ -10,6 +10,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -28,8 +29,7 @@ import qualified Cardano.Crypto.VRF.Class as Crypto
 import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Allegra.Scripts as Allegra
-import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
-import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
+import qualified Cardano.Ledger.Alonzo.Plutus.Evaluate as Alonzo
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..), AlonzoUtxoPredFailure,
                    AlonzoUtxosPredFailure, AlonzoUtxowPredFailure (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
@@ -77,11 +77,11 @@ import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, block
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
 import           Cardano.Node.Tracing.Render (renderMissingRedeemers, renderScriptHash,
-                   renderScriptIntegrityHash, renderScriptPurpose)
+                   renderScriptIntegrityHash)
 import           Data.Aeson (Value (..), object)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base16 as B16
-import qualified Data.Map.Strict as Map
+import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
@@ -343,7 +343,7 @@ instance
 instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) where
   toObject _ (Conway.GovActionsDoNotExist govActionIds) =
     mconcat [ "kind" .= String "GovActionsDoNotExist"
-            , "govActionIds" .= map govActionIdToText (Set.toList govActionIds)
+            , "govActionIds" .= map govActionIdToText (NonEmpty.toList govActionIds)
             ]
   toObject _ (Conway.MalformedProposal govAction) =
     mconcat [ "kind" .= String "MalformedProposal"
@@ -366,7 +366,7 @@ instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) whe
             ]
   toObject _ (Conway.DisallowedVoters govActionIdToVoter) =
     mconcat [ "kind" .= String "DisallowedVoters"
-            , "govActionIdToVoter" .= Map.toList govActionIdToVoter
+            , "govActionIdToVoter" .= NonEmpty.toList govActionIdToVoter
             ]
   toObject _ (Conway.ConflictingCommitteeUpdate creds) =
     mconcat [ "kind" .= String "ConflictingCommitteeUpdate"
@@ -376,13 +376,24 @@ instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) whe
     mconcat [ "kind" .= String "ExpirationEpochTooSmall"
             , "credentialsToEpoch" .= credsToEpoch
             ]
-  toObject _ (Conway.InvalidPrevGovActionIdsInProposals proposals) =
-    mconcat [ "kind" .= String "InvalidPrevGovActionIdsInProposals"
-            , "proposals" .= proposals
+  toObject _ (Conway.InvalidPrevGovActionId proposalProcedure) =
+    mconcat [ "kind" .= String "InvalidPrevGovActionId"
+            , "proposalProcedure" .= proposalProcedure
             ]
   toObject _ (Conway.VotingOnExpiredGovAction actions) =
     mconcat [ "kind" .= String "VotingOnExpiredGovAction"
             , "action" .= actions
+            ]
+  toObject _ (Conway.ProposalCantFollow prevGovActionId protVer prevProtVer) =
+    mconcat [ "kind" .= String "ProposalCantFollow"
+            , "prevGovActionId" .= prevGovActionId
+            , "protVer" .= protVer
+            , "prevProtVer" .= prevProtVer
+            ]
+  toObject _ (Conway.InvalidPolicyHash actualPolicyHash expectedPolicyHash) =
+    mconcat [ "kind" .= String "InvalidPolicyHash"
+            , "actualPolicyHash" .= actualPolicyHash
+            , "expectedPolicyHash" .= expectedPolicyHash
             ]
 
 instance
@@ -398,7 +409,9 @@ instance
 
 
 instance
-  ( ToObject (PPUPPredFailure ledgerera)
+  ( Api.ShelleyLedgerEra era ~ ledgerera
+  , Api.IsShelleyBasedEra era
+  , ToObject (PPUPPredFailure ledgerera)
   , ToObject (PredicateFailure (Ledger.EraRule "UTXO" ledgerera))
   , Ledger.EraCrypto ledgerera ~ StandardCrypto
   , Show (Ledger.Value ledgerera)
@@ -409,7 +422,7 @@ instance
     toObject v utxoPredFail
   toObject _ (MissingRedeemers scripts) =
     mconcat [ "kind" .= String "MissingRedeemers"
-             , "scripts" .= renderMissingRedeemers scripts
+             , "scripts" .= renderMissingRedeemers Api.shelleyBasedEra scripts
              ]
   toObject _ (MissingRequiredDatums required received) =
     mconcat [ "kind" .= String "MissingRequiredDatums"
@@ -437,11 +450,15 @@ instance
              , "acceptable" .= Set.toList acceptable
              ]
   toObject _ (ExtraRedeemers rdmrs) =
-    mconcat
-      [ "kind" .= String "ExtraRedeemers"
-      , "rdmrs" .= map Api.fromAlonzoRdmrPtr rdmrs
-      ]
-
+    Api.caseShelleyToMaryOrAlonzoEraOnwards
+      (const mempty)
+      (\alonzoOnwards ->
+         mconcat
+           [ "kind" .= String "ExtraRedeemers"
+           , "rdmrs" .=  map (Api.toScriptIndex alonzoOnwards) rdmrs
+           ]
+      )
+      (Api.shelleyBasedEra :: Api.ShelleyBasedEra era)
 
 instance
   ( ToObject (PredicateFailure (ShelleyUTXO ledgerera))
@@ -1133,58 +1150,6 @@ instance
 
 deriving newtype instance ToJSON Alonzo.IsValid
 
-instance
-  ( Core.Crypto (Ledger.EraCrypto ledgerera)
-  , Ledger.EraCrypto ledgerera ~ StandardCrypto
-  ) => ToJSON (Alonzo.CollectError ledgerera) where
-  toJSON cError =
-    case cError of
-      Alonzo.NoRedeemer sPurpose ->
-        object
-          [ "kind" .= String "CollectError"
-          , "error" .= String "NoRedeemer"
-          , "scriptpurpose" .= renderScriptPurpose sPurpose
-          ]
-      Alonzo.NoWitness sHash ->
-        object
-          [ "kind" .= String "CollectError"
-          , "error" .= String "NoWitness"
-          , "scripthash" .= renderScriptHash sHash
-          ]
-      Alonzo.NoCostModel lang ->
-        object
-          [ "kind" .= String "CollectError"
-          , "error" .= String "NoCostModel"
-          , "language" .= toJSON lang
-          ]
-      Alonzo.BadTranslation err ->
-        object
-          [ "kind" .= String "PlutusTranslationError"
-          , "error" .= case err of
-              Alonzo.ByronTxOutInContext txOutSource ->
-                String $
-                  "Cannot construct a Plutus ScriptContext from this transaction "
-                    <> "due to a Byron UTxO being created or spent: "
-                    <> textShow txOutSource
-              Alonzo.TranslationLogicMissingInput txin ->
-                String $ "Transaction input does not exist in the UTxO: " <> textShow txin
-              Alonzo.RdmrPtrPointsToNothing ptr ->
-                object
-                  [ "kind" .= String "RedeemerPointerPointsToNothing"
-                  , "ptr" .= Api.fromAlonzoRdmrPtr ptr
-                  ]
-              Alonzo.LanguageNotSupported lang ->
-                String $ "Language not supported: " <> textShow lang
-              Alonzo.InlineDatumsNotSupported txOutSource ->
-                String $ "Inline datums not supported, output source: " <> textShow txOutSource
-              Alonzo.ReferenceScriptsNotSupported txOutSource ->
-                String $ "Reference scripts not supported, output source: " <> textShow txOutSource
-              Alonzo.ReferenceInputsNotSupported txins ->
-                String $ "Reference inputs not supported: " <> textShow txins
-              Alonzo.TimeTranslationPastHorizon msg ->
-                String $ "Time translation requested past the horizon: " <> textShow msg
-          ]
-
 instance ToJSON Alonzo.TagMismatchDescription where
   toJSON tmd = case tmd of
     Alonzo.PassedUnexpectedly ->
@@ -1246,7 +1211,9 @@ instance
                 ]
 
 instance
-  ( Ledger.Era ledgerera
+  ( Api.ShelleyLedgerEra era ~ ledgerera
+  , Api.IsShelleyBasedEra era
+  , Ledger.Era ledgerera
   , Ledger.EraCrypto ledgerera ~ StandardCrypto
   , Show (Ledger.Value ledgerera)
   , ToObject (PPUPPredFailure ledgerera)

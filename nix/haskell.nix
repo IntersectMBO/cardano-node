@@ -22,7 +22,7 @@ let
       name = "cardano-node";
       compiler-nix-name = lib.mkDefault "ghc8107";
       # extra-compilers
-      flake.variants = lib.genAttrs ["ghc928" "ghc963"] (x: {compiler-nix-name = x;});
+      flake.variants = lib.genAttrs ["ghc963"] (x: {compiler-nix-name = x;});
       cabalProjectLocal = ''
         repository cardano-haskell-packages-local
           url: file:${CHaP}
@@ -113,9 +113,12 @@ let
             packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
             packages.tx-generator.package.buildable = with pkgs.stdenv.hostPlatform; !isMusl;
 
+            packages.cardano-ledger-allegra.components.library.doHaddock = false;
             packages.cardano-ledger-alonzo.components.library.doHaddock = false;
+            packages.cardano-ledger-api.components.library.doHaddock = false;
             packages.cardano-ledger-babbage.components.library.doHaddock = false;
             packages.cardano-ledger-conway.components.library.doHaddock = false;
+            packages.cardano-ledger-shelley.components.library.doHaddock = false;
             packages.cardano-protocol-tpraos.components.library.doHaddock = false;
           })
           ({ lib, pkgs, ...}: lib.mkIf (pkgs.stdenv.hostPlatform.isWindows) {

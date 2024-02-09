@@ -10,13 +10,16 @@ with pkgs;
       ];
       services.cardano-node = {
         enable = true;
-        systemdSocketActivation = true;
         port = 3001;
         hostAddr = "127.0.0.1";
         environment = "mainnet";
-        topology = commonLib.mkEdgeTopology {
-          port = 3001;
-          edgeNodes = [ "127.0.0.1" ];
+        topology = commonLib.mkEdgeTopologyP2P {
+          edgeNodes = [
+            {
+              addr = "127.0.0.1";
+              port = 3001;
+            }
+          ];
         };
         nodeConfig = config.services.cardano-node.environments.${config.services.cardano-node.environment}.nodeConfig // {
           hasPrometheus = [ config.services.cardano-node.hostAddr 12798 ];
@@ -47,8 +50,7 @@ with pkgs;
   testScript = ''
     start_all()
     machine.wait_for_unit("cardano-node.service")
-    machine.succeed("stat /run/cardano-node")
-    machine.succeed("stat /run/cardano-node/node.socket")
+    machine.wait_for_file("/run/cardano-node/node.socket")
     machine.wait_for_open_port(12798)
     machine.wait_for_open_port(3001)
     machine.succeed("systemctl status cardano-node")

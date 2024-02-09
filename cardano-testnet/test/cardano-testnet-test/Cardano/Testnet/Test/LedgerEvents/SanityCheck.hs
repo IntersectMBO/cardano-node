@@ -9,6 +9,7 @@ module Cardano.Testnet.Test.LedgerEvents.SanityCheck
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Error
 import           Cardano.Api.Shelley
 
 import           Cardano.Testnet
@@ -17,7 +18,6 @@ import           Prelude
 
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
-import qualified Data.Text as Text
 import           GHC.IO.Exception (IOException)
 import           GHC.Stack (callStack)
 import           System.FilePath ((</>))
@@ -75,7 +75,7 @@ hprop_ledger_events_sanity_check = H.integrationWorkspace "ledger-events-sanity-
     Left (IOE e) ->
       H.failMessage callStack $ "foldBlocks failed with: " <> show e
     Right (Left e) ->
-      H.failMessage callStack $ "foldBlocks failed with: " <> Text.unpack (renderFoldBlocksError e)
+      H.failMessage callStack $ "foldBlocks failed with: " <> displayError e
     Right (Right _v) -> success
 
 
@@ -95,5 +95,3 @@ foldBlocksAccumulator _ _ allEvents _ _ =
   filterPoolReap :: LedgerEvent -> Bool
   filterPoolReap (PoolReap _) = True
   filterPoolReap _ = False
-
-

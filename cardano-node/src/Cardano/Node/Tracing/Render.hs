@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -38,7 +39,10 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
+import           Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AsItem (..),
+                   PlutusPurpose)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
+import           Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.SafeHash as SafeHash
@@ -179,34 +183,62 @@ renderScriptIntegrityHash (Just witPPDataHash) =
 renderScriptIntegrityHash Nothing = Aeson.Null
 
 
-renderMissingRedeemers :: ()
-  => Ledger.EraCrypto ledgerera ~ StandardCrypto
-  => [(Alonzo.ScriptPurpose ledgerera, Ledger.ScriptHash StandardCrypto)]
+renderMissingRedeemers :: forall era. ()
+  => Api.ShelleyBasedEra era
+  -> [(PlutusPurpose AsItem (Api.ShelleyLedgerEra era), Ledger.ScriptHash StandardCrypto)]
   -> Aeson.Value
-renderMissingRedeemers scripts = Aeson.object $ map renderTuple  scripts
+renderMissingRedeemers sbe scripts = Aeson.object $ map renderTuple  scripts
   where
     renderTuple :: ()
-      => Ledger.EraCrypto ledgerera ~ StandardCrypto
-      => (Alonzo.ScriptPurpose ledgerera, Ledger.ScriptHash StandardCrypto)
+      => (PlutusPurpose AsItem (Api.ShelleyLedgerEra era), Ledger.ScriptHash StandardCrypto)
       -> Aeson.Pair
     renderTuple (scriptPurpose, sHash) =
-      Aeson.fromText (renderScriptHash sHash) .= renderScriptPurpose scriptPurpose
+      Aeson.fromText (renderScriptHash sHash) .= renderScriptPurpose sbe scriptPurpose
 
 renderScriptHash :: Ledger.ScriptHash StandardCrypto -> Text
 renderScriptHash = Api.serialiseToRawBytesHexText . Api.fromShelleyScriptHash
 
 renderScriptPurpose :: ()
-  => Ledger.EraCrypto ledgerera ~ StandardCrypto
-  => Alonzo.ScriptPurpose ledgerera
+  => Api.ShelleyBasedEra era
+  -> PlutusPurpose AsItem (Api.ShelleyLedgerEra era)
   -> Aeson.Value
-renderScriptPurpose = \case
-  Alonzo.Minting pid ->
-    Aeson.object [ "minting" .= Aeson.toJSON pid]
-  Alonzo.Spending txin ->
-    Aeson.object [ "spending" .= Api.fromShelleyTxIn txin]
-  Alonzo.Rewarding rwdAcct ->
-    Aeson.object [ "rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
-  Alonzo.Certifying _cert ->
-    Aeson.object
-      [ "certifying" .= Aeson.toJSON @String "TODO CIP-1694 unimplemented" -- toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate sbe cert)
-      ]
+renderScriptPurpose =
+  Api.caseShelleyToMaryOrAlonzoEraOnwards
+    (const (const Aeson.Null))
+    (\case
+      Api.AlonzoEraOnwardsAlonzo -> renderAlonzoPlutusPurpose
+      Api.AlonzoEraOnwardsBabbage -> renderAlonzoPlutusPurpose
+      Api.AlonzoEraOnwardsConway -> renderConwayPlutusPurpose
+    )
+
+renderAlonzoPlutusPurpose :: ()
+  => (Ledger.EraCrypto era ~ StandardCrypto, Aeson.ToJSON (Ledger.TxCert era))
+  => AlonzoPlutusPurpose AsItem era
+  -> Aeson.Value
+renderAlonzoPlutusPurpose = \case
+  AlonzoSpending (AsItem txin) ->
+    Aeson.object ["spending" .= Api.fromShelleyTxIn txin]
+  AlonzoMinting pid ->
+    Aeson.object ["minting" .= Aeson.toJSON pid]
+  AlonzoRewarding (AsItem rwdAcct) ->
+    Aeson.object ["rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
+  AlonzoCertifying cert ->
+    Aeson.object ["certifying" .= Aeson.toJSON cert]
+
+renderConwayPlutusPurpose :: ()
+  => (Ledger.EraCrypto era ~ StandardCrypto, Ledger.EraPParams era, Aeson.ToJSON (Ledger.TxCert era))
+  => ConwayPlutusPurpose AsItem era
+  -> Aeson.Value
+renderConwayPlutusPurpose = \case
+  ConwaySpending (AsItem txin) ->
+    Aeson.object ["spending" .= Api.fromShelleyTxIn txin]
+  ConwayMinting pid ->
+    Aeson.object ["minting" .= Aeson.toJSON pid]
+  ConwayRewarding (AsItem rwdAcct) ->
+    Aeson.object ["rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
+  ConwayCertifying cert ->
+    Aeson.object ["certifying" .= Aeson.toJSON cert]
+  ConwayVoting voter ->
+    Aeson.object ["voting" .= Aeson.toJSON voter]
+  ConwayProposing proposal ->
+    Aeson.object ["proposing" .= Aeson.toJSON proposal]

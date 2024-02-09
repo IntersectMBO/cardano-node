@@ -867,7 +867,15 @@ instance
   forMachine dtal (TraceMempoolRemoveTxs txs mpSz) =
     mconcat
       [ "kind" .= String "TraceMempoolRemoveTxs"
-      , "txs" .= map (forMachine dtal . txForgetValidated) txs
+      , "txs"
+          .= map
+            ( \(tx, err) ->
+                Aeson.object
+                  [ "tx" .= forMachine dtal (txForgetValidated tx)
+                  , "reason" .= forMachine dtal err
+                  ]
+            )
+            txs
       , "mempoolSize" .= forMachine dtal mpSz
       ]
   forMachine dtal (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
@@ -1726,6 +1734,3 @@ instance MetaTrace (TraceKeepAliveClient remotePeer) where
   documentFor _ = Just ""
 
   allNamespaces = [Namespace [] ["KeepAliveClient"]]
-
-
-

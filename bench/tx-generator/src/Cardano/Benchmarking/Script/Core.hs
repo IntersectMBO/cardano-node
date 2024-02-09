@@ -73,6 +73,7 @@ import           Cardano.Benchmarking.Script.Env hiding (Error (TxGenError))
 import qualified Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Version as Version
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
 
 liftCoreWithEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM (Either TxGenError x)
 liftCoreWithEra era coreCall = withEra era ( liftIO . runExceptT . coreCall)
@@ -167,7 +168,7 @@ queryEra :: ActionM AnyCardanoEra
 queryEra = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
-  ret <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) QueryCurrentEra
+  ret <- liftIO $ queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) QueryCurrentEra
   case ret of
     Right era -> return era
     Left err -> liftTxGenError $ TxGenError $ show err
@@ -182,7 +183,7 @@ queryRemoteProtocolParameters = do
                  QueryInEra era (Ledger.PParams (ShelleyLedgerEra era))
               -> ActionM ProtocolParameters
     callQuery query@(QueryInShelleyBasedEra shelleyEra _) = do
-        res <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) (QueryInEra query)
+        res <- liftIO $ queryNodeLocalState localNodeConnectInfo (SpecificPoint $ chainTipToChainPoint chainTip) (QueryInEra query)
         case res of
           Right (Right pp) -> do
             let pp' = fromLedgerPParams shelleyEra pp

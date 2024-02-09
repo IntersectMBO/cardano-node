@@ -25,7 +25,7 @@ import qualified Cardano.Crypto.VRF.Class as Crypto
 import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import qualified Cardano.Ledger.Allegra.Scripts as Allegra
-import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
+import qualified Cardano.Ledger.Alonzo.Plutus.Evaluate as Alonzo
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure, AlonzoUtxoPredFailure,
                    AlonzoUtxosPredFailure, AlonzoUtxowPredFailure (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
@@ -72,7 +72,7 @@ import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
 import qualified Data.ByteString.Base16 as B16
-import qualified Data.Map.Strict as Map
+import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
@@ -341,16 +341,18 @@ instance
     DelegsFailure f -> forMachine dtal f
 
 instance
-  ( Consensus.ShelleyBasedEra era
-  , Ledger.EraCrypto era ~ StandardCrypto
-  , LogFormatting (PPUPPredFailure era)
-  , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" era))
-  ) => LogFormatting (AlonzoUtxowPredFailure era) where
+  ( Api.ShelleyLedgerEra era ~ ledgerera
+  , Api.IsShelleyBasedEra era
+  , Consensus.ShelleyBasedEra ledgerera
+  , Ledger.EraCrypto ledgerera ~ StandardCrypto
+  , LogFormatting (PPUPPredFailure ledgerera)
+  , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" ledgerera))
+  ) => LogFormatting (AlonzoUtxowPredFailure ledgerera) where
   forMachine dtal (ShelleyInAlonzoUtxowPredFailure utxoPredFail) =
     forMachine dtal utxoPredFail
   forMachine _ (MissingRedeemers scripts) =
     mconcat [ "kind" .= String "MissingRedeemers"
-             , "scripts" .= renderMissingRedeemers scripts
+             , "scripts" .= renderMissingRedeemers Api.shelleyBasedEra scripts
              ]
   forMachine _ (MissingRequiredDatums required received) =
     mconcat [ "kind" .= String "MissingRequiredDatums"
@@ -378,10 +380,15 @@ instance
              , "acceptable" .= Set.toList acceptable
              ]
   forMachine _ (ExtraRedeemers rdmrs) =
-    mconcat
-      [ "kind" .= String "ExtraRedeemers"
-      , "rdmrs" .= map Api.fromAlonzoRdmrPtr rdmrs
-      ]
+    Api.caseShelleyToMaryOrAlonzoEraOnwards
+      (const mempty)
+      (\alonzoOnwards ->
+         mconcat
+           [ "kind" .= String "ExtraRedeemers"
+           , "rdmrs" .=  map (Api.toScriptIndex alonzoOnwards) rdmrs
+           ]
+      )
+      (Api.shelleyBasedEra :: Api.ShelleyBasedEra era)
 
 instance
   ( Consensus.ShelleyBasedEra era
@@ -1054,13 +1061,15 @@ instance
                 ]
 
 instance
-  ( Ledger.Era era
-  , Ledger.EraCrypto era ~ StandardCrypto
-  , ShelleyBasedEra era
-  , LogFormatting (PPUPPredFailure era)
-  , LogFormatting (ShelleyUtxowPredFailure era)
-  , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" era))
-  ) => LogFormatting (BabbageUtxowPredFailure era) where
+  ( Api.ShelleyLedgerEra era ~ ledgerera
+  , Api.IsShelleyBasedEra era
+  , Ledger.Era ledgerera
+  , Ledger.EraCrypto ledgerera ~ StandardCrypto
+  , ShelleyBasedEra ledgerera
+  , LogFormatting (PPUPPredFailure ledgerera)
+  , LogFormatting (ShelleyUtxowPredFailure ledgerera)
+  , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" ledgerera))
+  ) => LogFormatting (BabbageUtxowPredFailure ledgerera) where
   forMachine v err =
     case err of
       Babbage.AlonzoInBabbageUtxowPredFailure alonzoFail ->
@@ -1102,7 +1111,7 @@ instance
   ) => LogFormatting (Conway.ConwayGovPredFailure era) where
   forMachine _ (Conway.GovActionsDoNotExist govActionIds) =
     mconcat [ "kind" .= String "GovActionsDoNotExist"
-            , "govActionId" .= map govActionIdToText (Set.toList govActionIds)
+            , "govActionId" .= map govActionIdToText (NonEmpty.toList govActionIds)
             ]
   forMachine _ (Conway.MalformedProposal govAction) =
     mconcat [ "kind" .= String "MalformedProposal"
@@ -1125,7 +1134,7 @@ instance
             ]
   forMachine _ (Conway.DisallowedVoters govActionIdToVoter) =
     mconcat [ "kind" .= String "DisallowedVoters"
-            , "govActionIdToVoter" .= Map.toList govActionIdToVoter
+            , "govActionIdToVoter" .= NonEmpty.toList govActionIdToVoter
             ]
   forMachine _ (Conway.ConflictingCommitteeUpdate creds) =
     mconcat [ "kind" .= String "ConflictingCommitteeUpdate"
@@ -1135,13 +1144,24 @@ instance
     mconcat [ "kind" .= String "ExpirationEpochTooSmall"
             , "credentialsToEpoch" .= credsToEpoch
             ]
-  forMachine _ (Conway.InvalidPrevGovActionIdsInProposals proposals) =
-    mconcat [ "kind" .= String "InvalidPrevGovActionIdsInProposals"
-            , "proposals" .= proposals
+  forMachine _ (Conway.InvalidPrevGovActionId proposalProcedure) =
+    mconcat [ "kind" .= String "InvalidPrevGovActionId"
+            , "proposalProcedure" .= proposalProcedure
             ]
   forMachine _ (Conway.VotingOnExpiredGovAction actions) =
     mconcat [ "kind" .= String "VotingOnExpiredGovAction"
             , "action" .= actions
+            ]
+  forMachine _ (Conway.ProposalCantFollow prevGovActionId protVer prevProtVer) =
+    mconcat [ "kind" .= String "ProposalCantFollow"
+            , "prevGovActionId" .= prevGovActionId
+            , "protVer" .= protVer
+            , "prevProtVer" .= prevProtVer
+            ]
+  forMachine _ (Conway.InvalidPolicyHash actualPolicyHash expectedPolicyHash) =
+    mconcat [ "kind" .= String "InvalidPolicyHash"
+            , "actualPolicyHash" .= actualPolicyHash
+            , "expectedPolicyHash" .= expectedPolicyHash
             ]
 
 instance

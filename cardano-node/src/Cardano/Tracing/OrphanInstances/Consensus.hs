@@ -1335,7 +1335,15 @@ instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
   toObject verb (TraceMempoolRemoveTxs txs mpSz) =
     mconcat
       [ "kind" .= String "TraceMempoolRemoveTxs"
-      , "txs" .= map (toObject verb . txForgetValidated) txs
+      , "txs"
+          .= map
+            ( \(tx, err) ->
+                Aeson.object
+                  [ "tx" .= toObject verb (txForgetValidated tx)
+                  , "reason" .= toObject verb err
+                  ]
+            )
+            txs
       , "mempoolSize" .= toObject verb mpSz
       ]
   toObject verb (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =

@@ -59,7 +59,6 @@ import qualified GHC.IO.Handle as IO
 import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           Prelude
-import           Prettyprinter ((<+>))
 import qualified System.Directory as IO
 import           System.FilePath
 import qualified System.IO as IO
@@ -321,4 +320,3 @@ startLedgerStateLogging testnetRuntime tmpWorkspace = do
     -- The argument forces IO monad to prevent leaking of `MonadResource` to the child thread
     runInBackground :: IO a -> m ()
     runInBackground act = void $ allocate (H.async act) H.cancel
-
