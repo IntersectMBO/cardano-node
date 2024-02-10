@@ -30,7 +30,7 @@ jobs:
         with:
           push: true
           file: Dockerfile.submitapi
-          tags: emurgornd/cardano-submit-api:latest,emurgornd/cardano-node:${{ github.ref_name }}
+          tags: emurgornd/cardano-submit-api:latest,emurgornd/cardano-submit-api:${{ github.ref_name }}
       - name: Build and push Cardano node blockproducer
         uses: docker/build-push-action@v4
         with:
