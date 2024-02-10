@@ -20,11 +20,26 @@ jobs:
       - name: Get latest release version
         id: get-latest-release
         run: |
-          latestTag=$(curl -s "https://api.github.com/repos/IntersecMBO/cardano-node/releases" | jq -r '.[0].tag_name')
-          echo "{latestTag}={$latestTag}" >> $GITHUB_OUTPUT
-          echo "$GITHUB_OUTPUT"
+          latestTag=$(curl -s "https://api.github.com/repos/IntersectMBO/cardano-node/releases/latest" |jq -r '.[0].tag_name')
+          echo "${latestTag}"
+          if [ -n "$latestTag" ]; then
+            echo "RELEASE_TAG=${latestTag}" >> $GITHUB_ENV
+          else
+            echo "Failed to retrieve the latest release tag. API response: $response"
+          fi
       - name: Create release in forked repository
         run: |
-          echo "${{ steps.get-latest-release.outputs.latestTag }}"
-          git tag -a "${{ steps.get-latest-release.outputs.latestTag }}" -m "Release notes for ${{ steps.get-latest-release.outputs.latestTag }}"
-          git push origin "${{ steps.get-latest-release.outputs.latestTag  }}"
+          if [ -n "${RELEASE_TAG}" ]; then
+            git tag -a "${RELEASE_TAG}" -m "Release notes for ${RELEASE_TAG}"
+            git push origin "${RELEASE_TAG}"
+            curl -X POST \
+              -H "Authorization: Bearer ${{ secrets.WORKFLOW_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/Emurgo/cardano-node/releases" \
+              -d '{"tag_name": "'"${RELEASE_TAG}"'", "name": "'"${RELEASE_TAG}"'", "body": "Release notes for '"${RELEASE_TAG}"'"}'
+          else
+            echo "No release tag available. Skipping release creation."
+          fi
+      - name: Display latest release version
+        run: |
+          echo "Latest Release: $RELEASE_TAG"
