@@ -14,8 +14,8 @@ jobs:
           fetch-depth: 0
       - name: check for new release
         run: |
-          upstreamTag=$(curl -s "https://api.github.com/repos/IntersectMBO/cardano-node/releases" | jq -r '.[0].tag_name)
-          forkedTag=$(curl -s "https://api.github.com/repos/Emurgo/cardano-node/releases" | jq -r '.[0].tag_name)
+          upstreamTag=$(curl -s "https://api.github.com/repos/IntersectMBO/cardano-node/releases" | jq -r '.[0].tag_name')
+          forkedTag=$(curl -s "https://api.github.com/repos/Emurgo/cardano-node/releases" | jq -r '.[0].tag_name')
 
           echo "Upstream Tag: $upstreamTag"
           echo "Forked Tag: $forkedTag"
