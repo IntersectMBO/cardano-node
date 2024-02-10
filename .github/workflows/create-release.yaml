@@ -20,7 +20,7 @@ jobs:
       - name: Get latest release version
         id: get-latest-release
         run: |
-          latestTag=$(curl -s "https://api.github.com/repos/IntersectMBO/cardano-node/releases/latest" |jq -r '.[0].tag_name')
+          latestTag=$(curl -s "https://api.github.com/repos/IntersectMBO/cardano-node/releases" |jq -r '.[0].tag_name')
           echo "${latestTag}"
           if [ -n "$latestTag" ]; then
             echo "RELEASE_TAG=${latestTag}" >> $GITHUB_ENV
