@@ -2,7 +2,7 @@ name: Check for New Release
 
 on:
   schedule:
-    - cron: '0 */12 * * *'  # Schedule to run every 24 hours
+    - cron: '30 0 * * *'  # Schedule to run at 00:30 after the sync fork at 00:00
 
 jobs:
   check-for-release:
