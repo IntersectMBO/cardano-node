@@ -53,10 +53,7 @@ import Cardano.Tracer.Handlers.RTView.Utils
 import Cardano.Tracer.Types
 import Cardano.Tracer.Utils
 
-import ListT qualified 
 import StmContainers.Map   qualified as STM.Map
-import StmContainers.Set   qualified as STM.Set
-import StmContainers.Bimap qualified as STM.Bimap
 
 updateNodesUI
   :: TracerEnv

@@ -15,7 +15,6 @@ module Cardano.Tracer.Types
 
 import Control.Concurrent.MVar (MVar)
 import Control.Concurrent.STM.TVar (TVar)
-import Data.Bimap (Bimap)
 import Data.Kind
 import Data.Map.Strict (Map)
 import Data.Text (Text)

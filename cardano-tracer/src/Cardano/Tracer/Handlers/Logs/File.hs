@@ -7,21 +7,18 @@ module Cardano.Tracer.Handlers.Logs.File
   ) where
 
 import Control.Concurrent.MVar
-import Control.Concurrent.Extra (Lock, withLock)
+import Control.Concurrent.Extra (Lock)
 import Control.Monad (unless)
-import Control.Monad.Extra (ifM)
-import Data.ByteString qualified as BS
+import Data.ByteString.Char8 qualified as BS8
 import Data.Maybe (fromMaybe, fromJust)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
-import System.Directory (createDirectoryIfMissing, doesDirectoryExist, makeAbsolute)
-import System.Directory.Extra (listFiles)
+import System.Directory (makeAbsolute)
 import System.FilePath ((</>))
-import System.IO (openFile, hFlush, Handle, IOMode(AppendMode))
+import System.IO (hFlush)
 
 import Cardano.Logging (TraceObject (..))
 
-import Data.Map (Map)
 import Data.Map qualified as Map
 import Cardano.Tracer.Configuration
 import Cardano.Tracer.Handlers.Logs.Utils
@@ -41,7 +38,7 @@ writeTraceObjectsToFile
   -> Lock
   -> [TraceObject]
   -> IO ()
-writeTraceObjectsToFile registry@(Registry registryMVar) loggingParams@LoggingParams{logRoot, logMode, logFormat} nodeName currentLogLock traceObjects = do
+writeTraceObjectsToFile registry@(Registry registryMVar) loggingParams@LoggingParams{logRoot, logFormat} nodeName currentLogLock traceObjects = do
   rootDirAbs <- makeAbsolute logRoot
 
   let converter :: TraceObject -> T.Text
@@ -52,11 +49,11 @@ writeTraceObjectsToFile registry@(Registry registryMVar) loggingParams@LoggingPa
       itemsToWrite :: [T.Text]
       itemsToWrite = map converter traceObjects
 
-      preparedLine :: BS.ByteString
+      preparedLine :: BS8.ByteString
       preparedLine = TE.encodeUtf8 $ T.append nl (T.intercalate nl itemsToWrite)
 
   unless (null itemsToWrite) do
-    readMVar registryMVar >>= \handleMap -> 
+    readMVar registryMVar >>= \handleMap ->
       case Map.lookup (nodeName, loggingParams) handleMap of
         Nothing -> do
 
@@ -64,12 +61,12 @@ writeTraceObjectsToFile registry@(Registry registryMVar) loggingParams@LoggingPa
               subDirForLogs = rootDirAbs </> T.unpack nodeName
 
           createEmptyLogRotation currentLogLock nodeName loggingParams registry subDirForLogs logFormat
-          handles <- readMVar registryMVar 
+          handles <- readMVar registryMVar
           let handle = fst (fromJust (Map.lookup (nodeName, loggingParams) handles))
-          BS.hPutStrLn handle preparedLine
+          BS8.hPutStrLn handle preparedLine
           hFlush handle
         Just (handle, _filePath) -> do
-          BS.hPutStrLn handle preparedLine
+          BS8.hPutStrLn handle preparedLine
           hFlush handle
 
 -- | Returns the path to the current log. Prepares the structure for the log files if needed:
@@ -95,9 +92,9 @@ writeTraceObjectsToFile registry@(Registry registryMVar) loggingParams@LoggingPa
 --     case Map.lookup nodeName handles of
 --       Nothing -> do
 --         createEmptyLogRotation currentLogLock nodeName reg subDirForLogs format
---         handles <- readMVar registry 
+--         handles <- readMVar registry
 --         pure $ snd (fromJust (Map.lookup nodeName handles))
---       Just (_handle, filePath) -> 
+--       Just (_handle, filePath) ->
 --         pure filePath
 --  where
 --   subDirForLogs = rootDirAbs </> T.unpack nodeName

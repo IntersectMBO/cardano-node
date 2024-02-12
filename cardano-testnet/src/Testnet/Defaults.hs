@@ -315,7 +315,7 @@ rotationObject =
     mconcat $ map (uncurry KeyMapAeson.singleton)
       [ ("rpLogLimitBytes", Aeson.Number 5000000)
       , ("rpKeepFilesNum", Aeson.Number 3)
-      , ("rpMaxAgeHours", Aeson.Number 24)
+      , ("rpMaxAgeMinutes", Aeson.Number (24 * 60))
       ]
 
 setupScribes :: Aeson.Value

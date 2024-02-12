@@ -12,10 +12,8 @@ module Cardano.Tracer.Run
 import Control.Concurrent.Async.Extra (sequenceConcurrently)
 import Control.Concurrent.Extra (newLock)
 import Control.Concurrent.STM.TVar (newTVarIO)
-import Data.Map (Map)
 import Data.Map qualified as Map
-import System.IO (Handle)
-import Control.Concurrent.MVar 
+import Control.Concurrent.MVar
 import Data.Foldable (for_)
 
 import Cardano.Logging.Resources

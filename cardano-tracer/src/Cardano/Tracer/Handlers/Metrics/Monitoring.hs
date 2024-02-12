@@ -8,13 +8,8 @@ module Cardano.Tracer.Handlers.Metrics.Monitoring
   ) where
 
 import Control.Concurrent (ThreadId)
-import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TMVar (TMVar, newEmptyTMVarIO, putTMVar, tryReadTMVar)
-import Control.Concurrent.STM.TVar (readTVarIO)
 import Control.Monad (forM, void)
 import Control.Monad.Extra (whenJust)
-import Data.Map.Strict qualified as M
-import Data.Set qualified as S
 import Data.Text qualified as T
 import Data.Text.Encoding (encodeUtf8)
 import Graphics.UI.Threepenny qualified as UI
@@ -28,7 +23,7 @@ import Cardano.Tracer.Handlers.RTView.SSL.Certs
 import Cardano.Tracer.Types
 
 import Control.Concurrent.STM
-import ListT             qualified 
+import ListT             qualified
 import StmContainers.Set qualified as STM.Set
 import StmContainers.Map qualified as STM.Map
 
@@ -113,7 +108,7 @@ restartEKGServer
 restartEKGServer TracerEnv{teAcceptedMetrics} newNodeId
                  (Endpoint monitorHost monitorPort) currentServer = liftIO do
   maybeMetrics <- atomically do
-    STM.Map.lookup newNodeId teAcceptedMetrics 
+    STM.Map.lookup newNodeId teAcceptedMetrics
 
   whenJust maybeMetrics \(storeForSelectedNode, _) ->
     atomically (tryReadTMVar currentServer) >>= \case
@@ -134,4 +129,3 @@ restartEKGServer TracerEnv{teAcceptedMetrics} newNodeId
                    (fromIntegral monitorPort)
     atomically do
       putTMVar currentServer (newNodeId, serverThreadId ekgServer)
-

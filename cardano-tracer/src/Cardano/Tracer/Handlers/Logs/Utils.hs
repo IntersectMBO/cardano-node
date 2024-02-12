@@ -12,23 +12,19 @@ module Cardano.Tracer.Handlers.Logs.Utils
   ) where
 
 import Control.Concurrent.Extra (Lock, withLock)
-import Control.Concurrent.MVar (modifyMVar_, tryReadMVar)
-import Control.Monad (void)
-import Data.ByteString qualified as BS
+import Control.Concurrent.MVar (modifyMVar_)
 import Data.Maybe (isJust)
 import Data.Map qualified as Map
-import Data.Map (Map)
 import Data.Text qualified as T
 import Data.Time.Clock (UTCTime)
 import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (takeBaseName, takeExtension, takeFileName, (<.>), (</>))
-import System.IO (openFile, Handle, IOMode (AppendMode, WriteMode), hClose)
+import System.IO (openFile, IOMode (WriteMode), hClose)
 
 import Cardano.Tracer.Configuration (LogFormat (..), LoggingParams (..))
 import Cardano.Tracer.Types (HandleRegistry, Registry(Registry), NodeName)
-import Cardano.Tracer.Utils
 
 logPrefix :: String
 logPrefix = "node-"
@@ -74,9 +70,9 @@ createOrUpdateEmptyLog currentLogLock nodeName loggingParams (Registry registry)
     modifyMVar_ registry \handles -> do
 
       case Map.lookup (nodeName, loggingParams) handles of
-        Nothing -> 
-          undefined 
-        Just (handle, _filePath) -> 
+        Nothing ->
+          undefined
+        Just (handle, _filePath) ->
           hClose handle
 
       newHandle <- openFile pathToLog WriteMode

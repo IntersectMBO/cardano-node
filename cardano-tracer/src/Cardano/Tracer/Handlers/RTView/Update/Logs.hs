@@ -10,7 +10,6 @@ module Cardano.Tracer.Handlers.RTView.Update.Logs
   ) where
 
 import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TVar (readTVarIO)
 import Control.Monad (forM_, void, when)
 import Control.Monad.Extra (whenJustM, whenM)
 import Data.Text qualified as T
@@ -20,7 +19,6 @@ import Graphics.UI.Threepenny.Core
 
 import Cardano.Logging (SeverityS (..), showT)
 
-import Cardano.Tracer.Utils (fromSTMSet)
 import Cardano.Tracer.Environment
 import Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import Cardano.Tracer.Handlers.RTView.UI.Charts
@@ -32,11 +30,6 @@ import Cardano.Tracer.Handlers.RTView.Update.Nodes
 import Cardano.Tracer.Handlers.RTView.Utils
 import Cardano.Tracer.Types
 import Cardano.Tracer.Utils
-
-import ListT qualified 
-import StmContainers.Map   qualified as STM.Map
-import StmContainers.Set   qualified as STM.Set
-import StmContainers.Bimap qualified as STM.Bimap
 
 updateLogsLiveViewItems
   :: TracerEnv

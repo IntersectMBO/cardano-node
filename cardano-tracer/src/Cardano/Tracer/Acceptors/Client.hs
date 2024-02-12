@@ -131,7 +131,7 @@ runTraceObjectsAcceptorInit
                      (MinimalInitiatorContext LocalAddress)
                      responderCtx
                      LBS.ByteString IO () Void
-runTraceObjectsAcceptorInit tracerEnv tfConfig errorHandler = 
+runTraceObjectsAcceptorInit tracerEnv tfConfig errorHandler =
   acceptTraceObjectsInit
     tfConfig
     (traceObjectsHandler tracerEnv . connIdToNodeId . micConnectionId)

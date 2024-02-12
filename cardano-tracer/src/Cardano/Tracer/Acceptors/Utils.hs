@@ -9,10 +9,7 @@ module Cardano.Tracer.Acceptors.Utils
   ) where
 
 import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO)
-import Data.Bimap qualified as BM
-import Data.Map.Strict qualified as M
-import Data.Set qualified as S
+import Control.Concurrent.STM.TVar (TVar, newTVarIO)
 import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import System.Metrics qualified as EKG
 
@@ -29,7 +26,6 @@ import Cardano.Tracer.Handlers.RTView.Notifications.Utils
 import Cardano.Tracer.Types
 import Cardano.Tracer.Utils
 
-import ListT qualified 
 import StmContainers.Map   qualified as STM.Map
 import StmContainers.Set   qualified as STM.Set
 import StmContainers.Bimap qualified as STM.Bimap

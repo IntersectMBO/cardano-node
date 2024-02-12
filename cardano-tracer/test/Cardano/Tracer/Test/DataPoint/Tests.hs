@@ -28,6 +28,12 @@ import           Cardano.Tracer.Test.Forwarder
 import           Cardano.Tracer.Test.TestSetup
 import           Cardano.Tracer.Test.Utils
 
+
+import           ListT qualified
+import           StmContainers.Map   qualified as STM.Map
+import           StmContainers.Set   qualified as STM.Set
+import           StmContainers.Bimap qualified as STM.Bimap
+
 tests :: TestSetup Identity -> TestTree
 tests ts = localOption (QuickCheckTests 1) $ testGroup "Test.DataPoint"
   [ testProperty "ask" $ propRunInLogsStructure ts (propDataPoint ts)
@@ -38,13 +44,13 @@ propDataPoint ts@TestSetup{..} rootDir localSock = do
   stopProtocols <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
   savedDPValues :: TVar DataPointValues <- newTVarIO []
-  withAsync (doRunCardanoTracer config (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) . const $ do
+  withAsync (doRunCardanoTracer config (Just $ rootDir <> "/../state") stderrShowTracer stopProtocols dpRequestors) \_ -> do
     sleep 1.0
-    withAsync (launchForwardersSimple ts Initiator localSock 1000 10000) . const $ do
+    withAsync (launchForwardersSimple ts Initiator localSock 1000 10000) \_ -> do
       sleep 1.5
       -- We know that there is one single "node" only (and one single requestor too).
       -- requestors ((_, dpRequestor):_) <- M.toList <$> readTVarIO dpRequestors
-      requestors <- M.toList <$> readTVarIO dpRequestors
+      requestors <- atomically $ ListT.toList (STM.Map.listT dpRequestors)
       case requestors of
         [] -> return ()
         ((_, dpRequestor):_) -> do

@@ -27,7 +27,7 @@ import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 import           Trace.Forward.Utils.DataPoint
 
-import ListT qualified 
+import ListT qualified
 import StmContainers.Map   qualified as STM.Map
 import StmContainers.Set   qualified as STM.Set
 import StmContainers.Bimap qualified as STM.Bimap

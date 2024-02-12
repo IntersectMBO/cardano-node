@@ -9,9 +9,6 @@ module Cardano.Tracer.Handlers.RTView.Utils
   , forConnectedUI_
   ) where
 
-import Control.Concurrent.STM.TVar (readTVarIO)
-import Data.Map.Strict qualified as M
-import Data.Set        qualified as S
 import Data.Foldable
 import Graphics.UI.Threepenny.Core
 
@@ -21,21 +18,19 @@ import Cardano.Tracer.Types
 import Control.Concurrent.STM
 import StmContainers.Set qualified as STM.Set
 import StmContainers.Map qualified as STM.Map
-import StmContainers.Set qualified as STM
-import StmContainers.Map qualified as STM
-import ListT             qualified 
+import ListT             qualified
 import ListT (ListT)
 
 forGeneral :: MonadIO io => (t -> ListT STM a) -> t -> (a -> io b) -> io [b]
-forGeneral f tracerEnv action = 
+forGeneral f tracerEnv action =
   traverse action =<< liftIO do
-    atomically do 
+    atomically do
       ListT.toList (f tracerEnv)
 
 forGeneral_ :: MonadIO io => (t -> ListT STM a) -> t -> (a -> io b) -> io ()
-forGeneral_ f tracerEnv action = 
-  traverse_ action =<< liftIO do 
-    atomically do 
+forGeneral_ f tracerEnv action =
+  traverse_ action =<< liftIO do
+    atomically do
       ListT.toList (f tracerEnv)
 
 forConnected :: forall b. TracerEnv -> (NodeId -> IO b) -> IO [b]
@@ -54,12 +49,12 @@ forAcceptedMetrics_
   :: TracerEnv
   -> (NodeId -> MetricsStores -> IO ())
   -> IO ()
-forAcceptedMetrics_ env = 
+forAcceptedMetrics_ env =
   forGeneral_ (STM.Map.listT . teAcceptedMetrics) env . uncurry
 
 forAcceptedMetricsUI_
   :: TracerEnv
   -> (NodeId -> MetricsStores -> UI ())
   -> UI ()
-forAcceptedMetricsUI_ env = 
+forAcceptedMetricsUI_ env =
   forGeneral_ (STM.Map.listT . teAcceptedMetrics) env . uncurry

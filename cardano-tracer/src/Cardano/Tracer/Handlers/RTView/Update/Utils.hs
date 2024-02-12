@@ -11,9 +11,7 @@ module Cardano.Tracer.Handlers.RTView.Update.Utils
   ) where
 
 import Control.Concurrent.Extra (Lock, withLock)
-import Control.Concurrent.STM.TVar (readTVarIO)
 import Data.Aeson (FromJSON, decode')
-import Data.Map.Strict qualified as M
 import Data.Text (Text)
 import Data.Text.Read (decimal)
 import Data.Time.Calendar (Day (..))
@@ -27,7 +25,6 @@ import Trace.Forward.Utils.DataPoint (askForDataPoints)
 import Cardano.Tracer.Types
 
 import Control.Concurrent.STM
-import StmContainers.Set qualified as STM.Set
 import StmContainers.Map qualified as STM.Map
 
 -- | There is a different information the node can provide us by explicit request.
@@ -49,7 +46,7 @@ askDataPoint dpRequestors currentDPLock nodeId dpName = withLock currentDPLock d
   requestor <- atomically do STM.Map.lookup nodeId dpRequestors
   case requestor of
     Nothing -> pure Nothing
-    Just dpRequestor -> 
+    Just dpRequestor ->
       askForDataPoints dpRequestor [dpName] >>= \case
         [(_, Just rawDPValue)] -> return $ decode' rawDPValue
         _ -> return Nothing

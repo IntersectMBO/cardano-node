@@ -12,7 +12,6 @@ import Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import Cardano.Tracer.Handlers.RTView.UI.Types
 import Cardano.Tracer.MetaTrace
 import Cardano.Tracer.Types
-import System.IO (Handle)
 
 -- | Environment for all functions.
 data TracerEnv = TracerEnv

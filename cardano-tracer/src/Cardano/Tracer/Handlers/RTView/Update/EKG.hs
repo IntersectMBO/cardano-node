@@ -5,10 +5,8 @@ module Cardano.Tracer.Handlers.RTView.Update.EKG
   ( updateEKGMetrics
   ) where
 
-import Control.Concurrent.STM.TVar (readTVarIO)
 import Control.Monad (forM_, unless)
 import Data.List (partition, sort)
-import Data.Map.Strict qualified as M
 import Data.Text (intercalate, isPrefixOf)
 import Graphics.UI.Threepenny.Core (UI, liftIO)
 
@@ -21,8 +19,6 @@ import Cardano.Tracer.Handlers.RTView.UI.Utils
 import Cardano.Tracer.Types
 
 import Control.Concurrent.STM
-import StmContainers.Map qualified as STM.Map
-import ListT qualified
 
 updateEKGMetrics :: TracerEnv -> UI ()
 updateEKGMetrics TracerEnv{teAcceptedMetrics} = do

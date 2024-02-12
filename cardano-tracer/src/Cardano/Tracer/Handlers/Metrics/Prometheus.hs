@@ -10,10 +10,8 @@ module Cardano.Tracer.Handlers.Metrics.Prometheus
 import Prelude hiding (head)
 
 import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TVar (readTVarIO)
 import Control.Monad (forever)
 import Control.Monad.IO.Class (liftIO)
-import Data.Bimap qualified as BM
 import Data.Functor ((<&>))
 import Data.HashMap.Strict qualified as HM
 import Data.Map.Strict qualified as M
@@ -35,9 +33,8 @@ import Cardano.Tracer.Environment
 import Cardano.Tracer.Types
 import Cardano.Tracer.Utils
 
-import ListT qualified 
+import ListT qualified
 import StmContainers.Map   qualified as STM.Map
-import StmContainers.Set   qualified as STM.Set
 import StmContainers.Bimap qualified as STM.Bimap
 
 -- | Runs simple HTTP server that listens host and port and returns
@@ -97,12 +94,12 @@ runPrometheusServer tracerEnv (Endpoint host port) = forever do
     -- TODO: duplicate atomically
     noNodes <- liftIO $ atomically do
       STM.Bimap.null teConnectedNodesNames
-    if noNodes 
+    if noNodes
     then writeText "There are no connected nodes yet."
     else do
       nodes <- liftIO $ atomically do
         ListT.toList $ STM.Bimap.listT teConnectedNodesNames
-      
+
       blaze $ mkPage $ map mkHref nodes
 
   mkHref (_, nodeName) =
@@ -138,7 +135,7 @@ getMetricsFromNode tracerEnv nodeId acceptedMetrics = do
   mmetricScores <- atomically do
     STM.Map.lookup nodeId acceptedMetrics
   case mmetricScores of
-    Nothing -> 
+    Nothing ->
       return "No such a node!"
     Just (ekgStore, _) ->
       sampleAll ekgStore <&> renderListOfMetrics . getListOfMetrics
@@ -178,4 +175,3 @@ getMetricsFromNode tracerEnv nodeId acceptedMetrics = do
                                                 Just rep -> p' : (rep,mv) : accu)
                             []
                             metricsList
-

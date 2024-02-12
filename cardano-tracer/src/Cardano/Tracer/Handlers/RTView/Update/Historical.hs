@@ -14,15 +14,12 @@ module Cardano.Tracer.Handlers.RTView.Update.Historical
   ) where
 
 import Control.Concurrent.Async (forConcurrently_)
-import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TVar (modifyTVar', readTVar, readTVarIO)
 import Control.Exception.Extra (ignore, try_)
 import Control.Monad (forM, forM_, forever)
 import Control.Monad.Extra (ifM, whenJust)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Csv qualified as CSV
 import Data.List (find, isInfixOf)
-import Data.Map.Strict (Map)
 import Data.Map.Strict as M
 import Data.Maybe (catMaybes)
 import Data.Set (Set)
@@ -52,10 +49,6 @@ import Cardano.Tracer.Utils
 import Cardano.Tracer.Utils qualified as STM.Set
 
 import Control.Concurrent.STM
-import ListT qualified 
-import StmContainers.Set   qualified as STM.Set
-import StmContainers.Bimap qualified as STM.Bimap
-import StmContainers.Map   qualified as STM.Map
 
 -- | A lot of information received from the node is useful as historical data.
 --   It means that such an information should be displayed on time charts,
@@ -96,7 +89,7 @@ runHistoricalBackup tracerEnv@TracerEnv{teRTViewPageOpened} = forever $ do
 
 backupAllHistory :: TracerEnv -> IO ()
 backupAllHistory tracerEnv@TracerEnv{teConnectedNodes} = do
-  connected <- atomically do 
+  connected <- atomically do
     STM.Set.toList teConnectedNodes
   nodesIdsWithNames <- getNodesIdsWithNames tracerEnv connected
   backupDir <- getPathToBackupDir tracerEnv

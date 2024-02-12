@@ -38,7 +38,6 @@ common project-config
                         -Wpartial-fields
                         -Wredundant-constraints
                         -Wunused-packages
-                        -w
 
 library
   import:               project-config
@@ -138,7 +137,6 @@ library
   build-depends:        aeson
                       , async
                       , async-extras
-                      , bimap >= 0.4.0
                       , blaze-html
                       , bytestring
                       , cardano-git-rev
@@ -327,10 +325,12 @@ test-suite cardano-tracer-test
                       , extra
                       , filepath
                       , generic-data
+                      , list-t
                       , optparse-applicative-fork
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , stm
+                      , stm-containers
                       , tasty
                       , tasty-quickcheck
                       , text

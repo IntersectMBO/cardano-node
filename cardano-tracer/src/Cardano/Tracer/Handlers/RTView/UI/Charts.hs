@@ -58,8 +58,6 @@ import           Cardano.Tracer.Utils
 
 import ListT qualified
 import StmContainers.Set   qualified as STM.Set
-import StmContainers.Bimap qualified as STM.Bimap
-import StmContainers.Map   qualified as STM.Map
 
 chartsIds :: [ChartId]
 chartsIds = [minBound .. maxBound]

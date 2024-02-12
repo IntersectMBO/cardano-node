@@ -1,7 +1,9 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Tracer.Configuration
@@ -17,17 +19,19 @@ module Cardano.Tracer.Configuration
   , readTracerConfig
   ) where
 
-import           Data.Aeson (FromJSON, ToJSON)
+import           Data.Aeson (ToJSON, FromJSON(..), (.:), withObject)
 import           Data.Fixed (Pico)
 import           Data.List (intercalate)
 import           Data.List.Extra (notNull)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import           Data.Map.Strict (Map)
+import           Data.Functor ((<&>))
 import           Data.Maybe (catMaybes)
 import           Data.Text (Text)
 import           Data.Word (Word16, Word32, Word64)
 import           Data.Yaml (decodeFileEither)
+import           Control.Applicative ((<|>))
 import           GHC.Generics (Generic)
 import           System.Exit (die)
 
@@ -50,11 +54,20 @@ data Endpoint = Endpoint
 data RotationParams = RotationParams
   { rpFrequencySecs :: !Word32  -- ^ Rotation period, in seconds.
   , rpLogLimitBytes :: !Word64  -- ^ Max size of log file in bytes.
-  , rpMaxAgeHours   :: !Word16  -- ^ Max age of log file in hours.
+  , rpMaxAgeMinutes :: !Word64  -- ^ Max age of log file in minutes.
   , rpKeepFilesNum  :: !Word32  -- ^ Number of log files to keep in any case.
   }
   deriving stock (Eq, Generic, Show)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass ToJSON
+
+instance FromJSON RotationParams where
+  parseJSON = withObject "RotationParams" \o -> do
+    rpFrequencySecs <- o .: "rpFrequencySecs"
+    rpLogLimitBytes <- o .: "rpLogLimitBytes"
+    rpMaxAgeMinutes <- o .: "rpMaxAgeMinutes"
+                   <|> o .: "rpMaxAgeHours" <&> (* 60)
+    rpKeepFilesNum  <- o .: "rpKeepFilesNum"
+    pure RotationParams{..}
 
 -- | Logging mode.
 data LogMode
@@ -114,7 +127,6 @@ data TracerConfig = TracerConfig
   , verbosity      :: !(Maybe Verbosity)            -- ^ Verbosity of the tracer itself.
   , metricsComp    :: !(Maybe (Map Text Text))      -- ^ Metrics compatibility map from metrics name to metrics name
   , resourceFreq   :: !(Maybe Int)                  -- ^ Frequency (1/millisecond) for gathering resource data.
-  , absLogRoot     :: FilePath                      -- ^ Absolute root directory
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -127,7 +139,7 @@ readTracerConfig pathToConfig =
     Right (config :: TracerConfig) ->
       case checkMeaninglessValues config of
         Left problems -> die $ "Tracer's configuration is meaningless: " <> problems
-        Right{} -> return (nubLogging config) 
+        Right{} -> return (nubLogging config)
 
   where
   -- Remove duplicate logging parameters.

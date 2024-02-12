@@ -58,8 +58,6 @@ main = do
 
   tr <- mkTracerTracer $ SeverityF $ Just Warning
 
-  registry <- Registry <$> newMVar Map.empty
-
   let te c r =
         TracerEnv
           { teConfig                = c
@@ -81,18 +79,16 @@ main = do
           , teReforwardTraceObjects = \_-> pure ()
           , teRegistry              = r
           }
-      te1 = te c1 
-      te2 = te c2
 
   removePathForcibly root
 
-  -- perRunEnvWithCleanup :: (NFData env, NFData b) => IO env -> (env -> IO ()) -> (env -> IO b) -> Benchmarkable	 
+  -- perRunEnvWithCleanup :: (NFData env, NFData b) => IO env -> (env -> IO ()) -> (env -> IO b) -> Benchmarkable
 
   let myBench :: TracerConfig -> [TraceObject] -> Benchmarkable
       myBench config traceObjects = perRunEnvWithCleanup @TracerEnv
         do te config . Registry <$> newMVar Map.empty
         do \TracerEnv{teRegistry = Registry registry} -> do
-             readMVar registry >>= traverse_ hClose . map fst . Map.elems 
+             readMVar registry >>= traverse_ hClose . map fst . Map.elems
         do \traceEnv -> beforeProgramStops do traceObjectsHandler traceEnv nId traceObjects
 
   defaultMainWith defaultConfig { Criterion.verbosity = Criterion.Verbose }
