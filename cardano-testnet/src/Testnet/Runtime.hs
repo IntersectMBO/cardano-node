@@ -27,7 +27,7 @@ module Testnet.Runtime
   , shelleyGenesis
   , getStartTime
   , fromNominalDiffTimeMicro
-  , startLedgerStateLogging
+  , startLedgerNewEpochStateLogging
   ) where
 
 import           Cardano.Api
@@ -71,6 +71,7 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
 
+import           System.Directory (doesDirectoryExist)
 import           Testnet.Filepath
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run
@@ -289,19 +290,28 @@ createSubdirectoryIfMissingNew parent subdirectory = GHC.withFrozenCallStack $ d
   IO.createDirectoryIfMissing True $ parent </> subdirectory
   pure subdirectory
 
--- | Start ledger state logging for the first node in the background.
--- Logs will be placed in <tmp workspace directory>/logs/ledger-state.log
+-- | Start ledger's new epoch state logging for the first node in the background.
+-- Logs will be placed in <tmp workspace directory>/logs/ledger-new-epoch-state.log
 -- The logging thread will be cancelled when `MonadResource` releases all resources.
-startLedgerStateLogging
-  :: forall m. MonadCatch m
+startLedgerNewEpochStateLogging
+  :: forall m. HasCallStack
+  => MonadCatch m
   => MonadResource m
   => MonadTest m
   => TestnetRuntime
   -> FilePath -- ^ tmp workspace directory
   -> m ()
-startLedgerStateLogging testnetRuntime tmpWorkspace = do
+startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStack $ do
+  let logDir = makeLogDir (TmpAbsolutePath tmpWorkspace)
+      logFile = logDir </> "ledger-epoch-state.log"
+
+  H.evalIO (doesDirectoryExist logDir) >>= \case
+    True -> pure ()
+    False -> do
+      H.note_ $ "Log directory does not exist: " <> logDir <> " - cannot start logging epoch states"
+      H.failure
+
   socketPath <- H.noteM $ H.sprocketSystemName <$> H.headM (poolSprockets testnetRuntime)
-  let logFile = makeLogDir (TmpAbsolutePath tmpWorkspace) </> "ledger-state.log"
   _ <- runInBackground . runExceptT $
     foldBlocks
       (File $ configurationFile testnetRuntime)
@@ -309,14 +319,31 @@ startLedgerStateLogging testnetRuntime tmpWorkspace = do
       Api.QuickValidation
       ()
       (handler logFile)
-  pure ()
+  H.note_ $ "Started logging epoch states to to: " <> logFile
   where
     -- handler :: FilePath -> Env -> LedgerState -> [LedgerEvent] -> BlockInMode -> () -> IO ((), FoldStatus)
-    handler outputFp _ ledgerState _ _ _ = do
-      appendFile outputFp $ "#### BLOCK ####" <> "\n"
-      appendFile outputFp $ show ledgerState <> "\n"
-      pure ((), ContinueFold)
+    handler outputFp _ ledgerState _ (BlockInMode era _) _ = handleException $ do
+      forEraInEon era (error "Byron not supported in ledger state logging") $ \sbe -> do
+        case getAnyNewEpochState sbe ledgerState of
+          Left err -> error $ "Error when logging ledger state: " <> show err
+          Right anyNewEpochState -> do
+            appendFile outputFp $ "#### BLOCK ####" <> "\n"
+            appendFile outputFp $ show anyNewEpochState <> "\n"
+            pure ((), ContinueFold)
+      where
+        -- | Handle all sync exceptions and log them into the log file. We don't want to fail the test just
+        -- because logging has failed.
+        handleException = handle $ \(e :: SomeException) -> do
+          appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
+            <> displayException e <> "\n"
+          pure ((), StopFold)
+
+
     -- | Runs an action in background, and registers cleanup to `MonadResource m`
     -- The argument forces IO monad to prevent leaking of `MonadResource` to the child thread
     runInBackground :: IO a -> m ()
-    runInBackground act = void $ allocate (H.async act) H.cancel
+    runInBackground act = void . H.evalM $ allocate (H.async act) cleanUp
+      where
+        cleanUp :: H.Async a -> IO ()
+        cleanUp a = H.cancel a >> void (H.link a)
+
