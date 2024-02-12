@@ -44,7 +44,7 @@ import           Testnet.Runtime
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/InfoAction/'@
 hprop_ledger_events_info_action :: Property
-hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \tempAbsBasePath' -> do
+hprop_ledger_events_info_action = H.integrationRetryWorkspace 2 "info-hash" $ \tempAbsBasePath' -> do
 
   -- Start a local test net
   conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'

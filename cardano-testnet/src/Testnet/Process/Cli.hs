@@ -4,6 +4,7 @@ module Testnet.Process.Cli
   , cliNodeKeyGenVrf
   , cliNodeKeyGenKes
   , cliStakeAddressKeyGen
+  , execCliStdoutToJson
   , pNetworkId
   , KeyGen
   , KeyNames (..)
@@ -31,6 +32,8 @@ import           Cardano.Api.Shelley (KesKey, StakePoolKey, VrfKey)
 
 import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.IO.Class (MonadIO)
+import qualified Data.Aeson as Aeson
+import qualified Data.String
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import           Options.Applicative hiding (command)
@@ -38,9 +41,9 @@ import qualified Options.Applicative as Opt
 import           System.FilePath.Posix
 
 import           Hedgehog (MonadTest)
+import           Hedgehog.Extras (ExecConfig)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H (writeFile)
-
 import           Testnet.Process.Run
 
 data KeyNames = KeyNames
@@ -115,6 +118,20 @@ cliNodeKeyGen tmpDir vkey skey counter = do
     , "--operational-certificate-issue-counter-file", counterPath
     ]
   return (File vkPath, File skPath, File counterPath)
+
+-- | Call a command of the CLI that returns JSON to stdout. Then parse it,
+-- and deserialize it to a Haskell value. Fail the test if a step fails.
+-- If your CLI command doesn't support
+-- returning JSON to stdout, and needs going through a file instead, probably
+-- you should add a similar function to this one.
+execCliStdoutToJson :: ()
+  => (Aeson.FromJSON a, MonadTest m, MonadCatch m, MonadIO m)
+  => ExecConfig -- ^ The configuration with which to call the CLI
+  -> [String] -- ^ The CLI command to execute
+  -> m a
+execCliStdoutToJson execConfig cmd = do
+  result <- execCli' execConfig cmd
+  H.leftFail $ Aeson.eitherDecode $ Data.String.fromString result
 
 -- | Verification keys
 data VKey a
