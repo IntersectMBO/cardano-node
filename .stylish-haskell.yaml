@@ -41,6 +41,18 @@ steps:
 
       space_surround: false
 
+      # Principle 10
+      group_imports: true
+
+      group_rules:
+        - match: ^Cardano.Api\>
+        - match: ^(Cardano|Ouroboros|PlutusCore|PlutusLedgerApi)\>
+        - match: ^Prelude\>
+        - match: ^(Control|Codec|Data|Formatting|GHC|Lens|Network|Numeric|Options|Prettyprinter|System|Text)\>
+        - match: ^(Test.Gen.Cardano.Api)\>
+        - match: ^(Test.Cardano|Test.Gen.Cardano|Testnet)\>
+        - match: ^(Hedgehog|HaskellWorks.Hspec|Test)\>
+
   - language_pragmas:
       style: vertical
 
