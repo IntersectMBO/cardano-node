@@ -858,11 +858,13 @@ instance
       , "mempoolSize" .= forMachine dtal mpSzAfter
       ]
   forMachine dtal (TraceMempoolRejectedTx tx txApplyErr mpSz) =
-    mconcat
+    mconcat $
       [ "kind" .= String "TraceMempoolRejectedTx"
-      , "err" .= forMachine dtal txApplyErr
       , "tx" .= forMachine dtal tx
       , "mempoolSize" .= forMachine dtal mpSz
+      ] <>
+      [ "err" .= forMachine dtal txApplyErr
+      | dtal >= DDetailed
       ]
   forMachine dtal (TraceMempoolRemoveTxs txs mpSz) =
     mconcat
@@ -870,9 +872,11 @@ instance
       , "txs"
           .= map
             ( \(tx, err) ->
-                Aeson.object
+                Aeson.object $
                   [ "tx" .= forMachine dtal (txForgetValidated tx)
-                  , "reason" .= forMachine dtal err
+                  ] <>
+                  [ "err" .= forMachine dtal err
+                  | dtal >= DDetailed
                   ]
             )
             txs
