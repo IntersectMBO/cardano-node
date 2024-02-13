@@ -255,7 +255,7 @@
                   roots.project = project.roots;
                   plan-nix.project = project.plan-nix;
                 };
-                profiled = lib.genAttrs (lib.filter (n: packages ? n) [ "cardano-node" "tx-generator" "locli" ]) (n:
+                profiled = lib.genAttrs (lib.filter (n: packages ? ${n}) [ "cardano-node" "tx-generator" "locli" ]) (n:
                   packages.${n}.passthru.profiled
                 );
                 asserted = lib.genAttrs [ "cardano-node" ] (n:
