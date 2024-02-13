@@ -1326,11 +1326,13 @@ instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
       , "mempoolSize" .= toObject verb mpSzAfter
       ]
   toObject verb (TraceMempoolRejectedTx tx txApplyErr mpSz) =
-    mconcat
+    mconcat $
       [ "kind" .= String "TraceMempoolRejectedTx"
-      , "err" .= toObject verb txApplyErr
       , "tx" .= toObject verb tx
       , "mempoolSize" .= toObject verb mpSz
+      ] <>
+      [ "err" .= toObject verb txApplyErr
+      | verb == MaximalVerbosity
       ]
   toObject verb (TraceMempoolRemoveTxs txs mpSz) =
     mconcat
@@ -1338,9 +1340,11 @@ instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
       , "txs"
           .= map
             ( \(tx, err) ->
-                Aeson.object
+                Aeson.object $
                   [ "tx" .= toObject verb (txForgetValidated tx)
-                  , "reason" .= toObject verb err
+                  ] <>
+                  [ "err" .= toObject verb err
+                  | verb == MaximalVerbosity
                   ]
             )
             txs
