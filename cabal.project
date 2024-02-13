@@ -27,10 +27,13 @@ packages:
   bench/cardano-topology
   bench/locli
   bench/plutus-scripts-bench
-  bench/tx-generator
   trace-dispatcher
   trace-resources
   trace-forward
+
+if !(impl(ghc <9.6) || impl(ghc >=9.7))
+  packages:
+    bench/tx-generator
 
 program-options
   ghc-options: -Werror
