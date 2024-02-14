@@ -31,7 +31,7 @@ tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
       [ T.testGroup "Plutus"
-        [ H.ignoreOnWindows "Plutus" Cardano.Testnet.Test.Cli.Conway.Plutus.hprop_plutus]
+        [ H.ignoreOnWindows "Plutus" Cardano.Testnet.Test.Cli.Conway.Plutus.hprop_plutus_v3]
       --, T.testGroup "Ledger Events"
       --    [ H.ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
       --    -- TODO: Replace foldBlocks with checkLedgerStateCondition

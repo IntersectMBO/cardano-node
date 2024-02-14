@@ -13,7 +13,7 @@
 {- HLINT ignore "Use let" -}
 
 module Cardano.Testnet.Test.Cli.Conway.Plutus
-  ( hprop_plutus
+  ( hprop_plutus_v3
   ) where
 
 import           Cardano.Api
@@ -51,14 +51,14 @@ import           Testnet.Runtime
 
 -- | Test all possible Plutus script purposes
 -- Currently tested:
--- Spending NO
+-- Spending YES
 -- Minting NO
 -- Rewarding NO
 -- Certifying NO
 -- Voting NO
 -- Proposing NO
-hprop_plutus :: Property
-hprop_plutus = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> do
+hprop_plutus_v3 :: Property
+hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -86,6 +86,7 @@ hprop_plutus = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBas
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr $ head wallets
       utxoAddr2 = Text.unpack $ paymentKeyInfoAddr $ wallets !! 1
       utxoSKeyFile = paymentSKey . paymentKeyInfoPair $ head wallets
+      utxoSKeyFile2 = paymentSKey . paymentKeyInfoPair $ wallets !! 1
 
   void $ H.execCli' execConfig
     [ convertToEraString anyEra, "query", "utxo"
@@ -100,16 +101,26 @@ hprop_plutus = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBas
   H.note_ $ "keys1: " <> show (length keys1)
   txin1 <- H.noteShow $ keys1 !! 0
 
-  plutusscriptinuse <- H.note "/home/jordan/Repos/Work/intersect-mbo/cardano-node/cardano-testnet/test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus"
+  plutusSpendingScript <- H.note "/home/jordan/Repos/Work/intersect-mbo/cardano-node/cardano-testnet/test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus"
+  plutusMintingScript <- H.note "/home/jordan/Repos/Work/intersect-mbo/cardano-node/cardano-testnet/test/cardano-testnet-test/files/plutus/v3/minting-script.plutus"
   datumFile <- H.note "/home/jordan/Repos/Work/intersect-mbo/cardano-node/cardano-testnet/test/cardano-testnet-test/files/plutus/v3/42.datum"
   let sendAdaToScriptAddressTxBody = work </> "send-ada-to-script-address-tx-body"
 
-  plutusScriptAddr <-
+  plutusSpendingScriptAddr <-
     H.execCli' execConfig
       [ "address", "build"
-      , "--payment-script-file", plutusscriptinuse
+      , "--payment-script-file", plutusSpendingScript
       ]
-  H.note_ $ "plutusScriptAddr: " <> plutusScriptAddr
+
+  mintingPolicyId <- filter (/= '\n') <$>
+    H.execCli' execConfig
+      [ convertToEraString anyEra, "transaction"
+      , "policyid"
+      , "--script-file", plutusMintingScript
+      ]
+  let assetName = "4D696C6C6172436F696E"
+  H.note_ $ "plutusSpendingScriptAddr: " <> plutusSpendingScriptAddr
+
   scriptdatumhash <- filter (/= '\n') <$>
     H.execCli' execConfig
       [ "transaction", "hash-script-data"
@@ -121,7 +132,7 @@ hprop_plutus = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBas
     [ convertToEraString anyEra, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
     , "--tx-in", Text.unpack $ renderTxIn txin1
-    , "--tx-out", plutusScriptAddr <> "+" <> show @Int 5_000_000
+    , "--tx-out", plutusSpendingScriptAddr <> "+" <> show @Int 5_000_000
     , "--tx-out-datum-hash", scriptdatumhash
     , "--out-file", sendAdaToScriptAddressTxBody
     ]
@@ -156,7 +167,7 @@ hprop_plutus = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBas
 
   void $ H.execCli' execConfig
     [ convertToEraString anyEra, "query", "utxo"
-    , "--address", plutusScriptAddr
+    , "--address", plutusSpendingScriptAddr
     , "--cardano-mode"
     , "--out-file", work </> "plutus-script-utxo.json"
     ]
@@ -168,18 +179,38 @@ hprop_plutus = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBas
 
   plutusScriptTxIn <- H.noteShow $ keys3 !! 0
   let spendScriptUTxOTxBody = work </> "spend-script-utxo-tx-body"
+      spendScriptUTxOTx = work </> "spend-script-utxo-tx"
+      mintValue = mconcat ["5 ", mintingPolicyId, ".", assetName]
+      txout = mconcat [ utxoAddr, "+", show @Int 2_000_000
+                      , "+", mintValue
+                      ]
+
   void $ execCli' execConfig
     [ convertToEraString anyEra, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 1
     , "--tx-in-collateral", Text.unpack $ renderTxIn txinCollateral
     , "--tx-in", Text.unpack $ renderTxIn plutusScriptTxIn
-    , "--tx-in-script-file", plutusscriptinuse
+    , "--tx-in-script-file", plutusSpendingScript
     , "--tx-in-datum-file", datumFile
     , "--tx-in-redeemer-file", datumFile -- We just reuse the datum file for the redeemer
-    , "--tx-out", utxoAddr <> "+" <> show @Int 2_000_000
+    , "--mint", mintValue
+    , "--mint-script-file", plutusMintingScript
+    , "--mint-redeemer-file", datumFile -- We just reuse the datum file for the redeemer
+    , "--tx-out", txout
     , "--out-file", spendScriptUTxOTxBody
     ]
 
+  void $ execCli' execConfig
+    [ "transaction", "sign"
+    , "--tx-body-file", spendScriptUTxOTxBody
+    , "--signing-key-file", utxoSKeyFile2
+    , "--out-file", spendScriptUTxOTx
+    ]
+
+  void $ execCli' execConfig
+    [ "transaction", "submit"
+    , "--tx-file", spendScriptUTxOTx
+    ]
   H.success
 
 
