@@ -79,7 +79,7 @@ fi
 
 if test -v "WB_REMOTE"
 then remote=$WB_REMOTE
-else remote='{"env":"bench","depl":"bench-1","dir":"runs"}'         # cardano-ops/bench-1 as fallback default
+else remote='{"env":"deployer","depl":"nomad-1"}'            # nomad/nomad-1 as fallback default
 fi
 
 local sargs=()
