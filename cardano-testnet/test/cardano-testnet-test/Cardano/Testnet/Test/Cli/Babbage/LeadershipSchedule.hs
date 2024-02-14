@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -7,6 +8,10 @@
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+#if __GLASGOW_HASKELL__ >= 908
+{-# OPTIONS_GHC -Wno-x-partial #-}
+#endif
 
 {- HLINT ignore "Redundant id" -}
 {- HLINT ignore "Redundant return" -}

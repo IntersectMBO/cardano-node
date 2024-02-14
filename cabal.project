@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2024-02-06T15:14:59Z
-  , cardano-haskell-packages 2024-02-07T07:51:35Z
+  , hackage.haskell.org 2024-02-13T22:43:14Z
+  , cardano-haskell-packages 2024-02-11T20:56:07Z
 
 packages:
   cardano-git-rev
@@ -63,3 +63,7 @@ package plutus-scripts-bench
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
+
+allow-newer:
+    -- https://github.com/ocharles/libsystemd-journal/pull/30
+    libsystemd-journal:*

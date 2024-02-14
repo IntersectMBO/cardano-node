@@ -30,6 +30,9 @@ common with-library
     build-depends:      plutus-scripts-bench
     cpp-options:        -DWITH_LIBRARY
 
+  -- This echos the ghc range in the plutus-tx-plugin cabal file.
+  if (impl(ghc <9.6) || impl(ghc >=9.7))
+    buildable: False
 
 library
   import:               project-config, with-library
@@ -98,7 +101,7 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.38
+                      , cardano-api ^>= 8.38.0.0
                       , cardano-binary
                       , cardano-cli ^>= 8.20.0.0
                       , cardano-crypto-class
@@ -176,6 +179,10 @@ executable tx-generator
                         -rtsopts
                         "-with-rtsopts=-T"
 
+  -- This echos the ghc range in the plutus-tx-plugin cabal file.
+  if (impl(ghc <9.6) || impl(ghc >=9.7))
+    buildable: False
+
   build-depends:        base
                       , tx-generator
 
@@ -190,6 +197,10 @@ test-suite tx-generator-apitest
                         -Wall
                         -rtsopts
                         "-with-rtsopts=-T"
+
+  -- This echos the ghc range in the plutus-tx-plugin cabal file.
+  if (impl(ghc <9.6) || impl(ghc >=9.7))
+    buildable: False
 
   build-depends:        base
                       , aeson
@@ -224,6 +235,10 @@ test-suite tx-generator-test
   hs-source-dirs:       test
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0
+
+  -- This echos the ghc range in the plutus-tx-plugin cabal file.
+  if (impl(ghc <9.6) || impl(ghc >=9.7))
+    buildable: False
 
   build-depends:        base
                       , tasty
