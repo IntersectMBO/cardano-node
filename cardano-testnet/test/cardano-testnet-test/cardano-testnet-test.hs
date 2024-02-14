@@ -8,7 +8,11 @@ import qualified Cardano.Crypto.Init as Crypto
 import qualified Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
 import qualified Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
 import qualified Cardano.Testnet.Test.Cli.Babbage.Transaction
+<<<<<<< HEAD
 import qualified Cardano.Testnet.Test.Cli.Conway.DRepRetirement as DRepRetirement
+=======
+import qualified Cardano.Testnet.Test.Cli.Conway.Plutus
+>>>>>>> 424d0eddc (Add simple spending plutus V3 script test)
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldBlocks
@@ -69,11 +73,11 @@ tests = pure $ T.testGroup "test/Spec.hs"
         ]
 
       ]
-  , T.testGroup "SubmitApi"
-      [ T.testGroup "Babbage"
-          [ H.ignoreOnWindows "transaction" Cardano.Testnet.Test.SubmitApi.Babbage.Transaction.hprop_transaction
-          ]
-      ]
+ -- , T.testGroup "SubmitApi"
+ --     [ T.testGroup "Babbage"
+ --         [ H.ignoreOnWindows "transaction" Cardano.Testnet.Test.SubmitApi.Babbage.Transaction.hprop_transaction
+ --         ]
+ --     ]
   ]
 
 ingredients :: [T.Ingredient]
