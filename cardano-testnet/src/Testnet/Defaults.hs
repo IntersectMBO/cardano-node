@@ -15,6 +15,8 @@ module Testnet.Defaults
   , defaultShelleyGenesisFp
   , defaultYamlHardforkViaConfig
   , defaultMainnetTopology
+  , plutusV3NonSpendingScript
+  , plutusV3SpendingScript
   ) where
 
 import           Cardano.Api (AnyCardanoEra (..), CardanoEra (..), pshow)
@@ -50,6 +52,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Proxy
 import           Data.Ratio
 import           Data.Scientific
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
 import qualified Data.Vector as Vector
@@ -495,3 +498,29 @@ defaultMainnetTopology =
 
 defaultShelleyGenesisFp :: FilePath
 defaultShelleyGenesisFp = "shelley/genesis.shelley.json"
+
+
+-- TODO: We should not hardcode a script like this. We need to move
+-- plutus-example from plutus apps to cardano-node-testnet. This will
+-- let us directly compile the plutus validators and avoid bit rotting of
+-- hardcoded plutus scripts.
+-- | Default plutus script that succeeds regardless of redeemer
+-- NB: This cannot be used as a spending script
+plutusV3NonSpendingScript :: Text
+plutusV3NonSpendingScript =
+  Text.unlines ["{"
+               , "\"type\": \"PlutusScriptV3\""
+               , ",\"description\": \"\""
+               , ",\"cborHex\": \"4746010100228001\""
+               , "}"
+               ]
+
+-- | Default plutus spending script that succeeds regardless of redeemer
+plutusV3SpendingScript :: Text
+plutusV3SpendingScript =
+  Text.unlines ["{"
+               , "\"type\": \"PlutusScriptV3\""
+               , ",\"description\": \"\""
+               , ",\"cborHex\": \"484701010022280001\""
+               , "}"
+               ]

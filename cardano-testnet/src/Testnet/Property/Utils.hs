@@ -17,6 +17,9 @@ module Testnet.Property.Utils
   -- ** Genesis
   , getByronGenesisHash
   , getShelleyGenesisHash
+
+  , convertToEraString
+  , decodeEraUTxO
   ) where
 
 import           Cardano.Api (MonadIO, runExceptT)

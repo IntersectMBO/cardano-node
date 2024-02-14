@@ -43,6 +43,7 @@ import qualified Hedgehog.Extras.Test.File as H
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.SPO
+import           Testnet.Defaults
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run
 import qualified Testnet.Property.Utils as H
@@ -52,9 +53,9 @@ import           Testnet.Runtime
 -- | Test all possible Plutus script purposes
 -- Currently tested:
 -- Spending YES
--- Minting NO
+-- Minting YES
 -- Rewarding NO
--- Certifying NO
+-- Certifying YES
 -- Voting NO
 -- Proposing NO
 hprop_plutus_v3 :: Property
@@ -101,9 +102,12 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
   H.note_ $ "keys1: " <> show (length keys1)
   txin1 <- H.noteShow $ keys1 !! 0
 
-  plutusSpendingScript <- H.note "/home/jordan/Repos/Work/intersect-mbo/cardano-node/cardano-testnet/test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus"
-  plutusMintingScript <- H.note "/home/jordan/Repos/Work/intersect-mbo/cardano-node/cardano-testnet/test/cardano-testnet-test/files/plutus/v3/minting-script.plutus"
-  datumFile <- H.note "/home/jordan/Repos/Work/intersect-mbo/cardano-node/cardano-testnet/test/cardano-testnet-test/files/plutus/v3/42.datum"
+  plutusMintingScript <- H.note $ work </> "always-succeeds-non-spending-script.plutusV3"
+  H.writeFile plutusMintingScript $ Text.unpack plutusV3NonSpendingScript
+
+  plutusSpendingScript <- H.note $ work </> "always-succeeds-spending-script.plutusV3"
+  H.writeFile plutusSpendingScript $ Text.unpack plutusV3SpendingScript
+
   let sendAdaToScriptAddressTxBody = work </> "send-ada-to-script-address-tx-body"
 
   plutusSpendingScriptAddr <-
@@ -124,10 +128,22 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
   scriptdatumhash <- filter (/= '\n') <$>
     H.execCli' execConfig
       [ "transaction", "hash-script-data"
-      , "--script-data-file", datumFile
+      , "--script-data-value", "0"
       ]
 
+  scriptStakeRegistrationCertificate
+    <- H.note $ work </> "script-stake-registration-certificate"
+
+  -- Create script stake registration certificate
+  createScriptStakeRegistrationCertificate
+    tempAbsPath
+    anyEra
+    plutusSpendingScript
+    0
+    scriptStakeRegistrationCertificate
+
   -- 1. Put UTxO and datum at Plutus spending script address
+  --    Register script stake address
   void $ execCli' execConfig
     [ convertToEraString anyEra, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
@@ -150,7 +166,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
     , "--tx-file", sendAdaToScriptAddressTx
     ]
 
-  H.threadDelay 5_000_000
+  H.threadDelay 10_000_000
   -- 2. Successfully spend conway spending script
   void $ H.execCli' execConfig
     [ convertToEraString anyEra, "query", "utxo"
@@ -191,11 +207,14 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
     , "--tx-in-collateral", Text.unpack $ renderTxIn txinCollateral
     , "--tx-in", Text.unpack $ renderTxIn plutusScriptTxIn
     , "--tx-in-script-file", plutusSpendingScript
-    , "--tx-in-datum-file", datumFile
-    , "--tx-in-redeemer-file", datumFile -- We just reuse the datum file for the redeemer
+    , "--tx-in-datum-value", "0"
+    , "--tx-in-redeemer-value", "0"
     , "--mint", mintValue
     , "--mint-script-file", plutusMintingScript
-    , "--mint-redeemer-file", datumFile -- We just reuse the datum file for the redeemer
+    , "--mint-redeemer-value", "0"
+    , "--certificate-file", scriptStakeRegistrationCertificate
+    , "--certificate-script-file", plutusSpendingScript
+    , "--certificate-redeemer-value", "0"
     , "--tx-out", txout
     , "--out-file", spendScriptUTxOTxBody
     ]
