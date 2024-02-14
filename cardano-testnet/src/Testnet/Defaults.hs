@@ -101,7 +101,7 @@ defaultAlonzoGenesis = do
     maxTxExUnits = Api.toAlonzoExUnits
                      $ Api.ExecutionUnits
                          { Api.executionSteps = 10000000000
-                         , Api.executionMemory = 14000000
+                         , Api.executionMemory = 140000000
                          }
     maxBlockExUnits = Api.toAlonzoExUnits
                         $ Api.ExecutionUnits
