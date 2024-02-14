@@ -1,5 +1,8 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- | All Byron and Shelley Genesis related functionality
@@ -17,10 +20,16 @@ module Testnet.Defaults
 import           Cardano.Api (AnyCardanoEra (..), CardanoEra (..), pshow)
 import qualified Cardano.Api.Shelley as Api
 
-import           Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
+import           Cardano.Ledger.Alonzo.Core (CoinPerWord (..), PParams (..))
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import           Cardano.Ledger.Alonzo.Scripts
 import           Cardano.Ledger.BaseTypes
+import qualified Cardano.Ledger.BaseTypes as Ledger
+import           Cardano.Ledger.Binary.Version ()
+import qualified Cardano.Ledger.Core as Ledger
+import qualified Cardano.Ledger.Shelley as Ledger
+
+
 import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Conway.Genesis
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -30,6 +39,7 @@ import           Cardano.Tracing.Config
 
 import           Prelude
 
+import           Control.Monad.Identity (Identity)
 import           Data.Aeson (ToJSON (..), Value, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Key
@@ -44,6 +54,8 @@ import qualified Data.Text as Text
 import           Data.Time (UTCTime)
 import qualified Data.Vector as Vector
 import           Data.Word
+import           Lens.Micro
+import           Numeric.Natural
 
 import           Testnet.Start.Types
 
@@ -99,8 +111,10 @@ defaultAlonzoGenesis = do
     apiCostModels =
       let pv1 = Api.AnyPlutusScriptVersion Api.PlutusScriptV1
           pv2 = Api.AnyPlutusScriptVersion Api.PlutusScriptV2
+          pv3 = Api.AnyPlutusScriptVersion Api.PlutusScriptV3
       in mconcat [ Map.singleton pv1 defaultV1CostModel
                  , Map.singleton pv2 defaultV2CostModel
+                 , Map.singleton pv3 defaultV3CostModel
                  ]
     defaultV1CostModel = Api.CostModel
                            [ 205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475, 4
@@ -129,7 +143,20 @@ defaultAlonzoGenesis = do
                            , 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32, 35892428, 10, 9462713, 1021, 10, 38887044
                            , 32947, 10
                            ]
-
+    defaultV3CostModel = Api.CostModel
+                           [ 205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475, 4, 117366, 10475, 4, 832808, 18
+                           , 3209094, 6, 331451, 1, 65990684, 23097, 18, 114242, 18, 94393407
+                           , 87060, 18, 16420089, 18, 2145798, 36, 3795345, 12, 889023, 1, 204237282, 23271, 36, 129165, 36, 189977790
+                           , 85902, 36, 33012864, 36, 388443360, 1, 401885761, 72, 2331379, 72, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000
+                           , 100, 23000, 100, 23000, 100, 23000, 100, 100, 100, 23000, 100
+                           , 19537, 32, 175354, 32, 46417, 4, 221973, 511, 0, 1, 89141, 32, 497525, 14068, 4, 2, 196500, 453240, 220, 0, 1, 1, 1000, 28662
+                           , 4, 2, 245000, 216773, 62, 1, 1060367, 12586, 1, 208512, 421, 1, 187000, 1000, 52998, 1, 80436, 32
+                           , 43249, 1000, 32, 32, 80556, 1, 57667, 4, 1927926, 82523, 4, 1000, 10, 197145, 156, 1, 197145, 156, 1, 204924, 473, 1, 208896
+                           , 511, 1, 52467, 32, 64832, 32, 65493, 32, 22558, 32, 16563, 32, 76511, 32, 196500, 453240, 220, 0
+                           , 1, 1, 69522, 11687, 0, 1, 60091, 32, 196500, 453240, 220, 0, 1, 1, 196500, 453240, 220, 0, 1, 1, 1159724, 392670, 0, 2, 806990
+                           , 30482, 4, 1927926, 82523, 4, 265318, 0, 4, 0, 85931, 32, 205665, 812, 1, 1, 41182
+                           , 32, 212342, 32, 31220, 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32, 35190005, 10, 57996947, 18975, 10, 39121781, 32260, 10
+                           ]
 
 defaultConwayGenesis :: ConwayGenesis StandardCrypto
 defaultConwayGenesis = DefaultClass.def
@@ -417,13 +444,41 @@ defaultShelleyGenesis startTime testnetOptions =
       slotLength = cardanoSlotLength testnetOptions
       epochLength = cardanoEpochLength testnetOptions
       maxLovelaceLovelaceSupply = cardanoMaxSupply testnetOptions
+      pVer = eraToProtocolVersion $ cardanoNodeEra testnetOptions
+      protocolParams = Api.sgProtocolParams Api.shelleyGenesisDefaults
+      protocolParamsWithPVer = protocolParams & ppProtocolVersionL' .~ pVer
   in Api.shelleyGenesisDefaults
         { Api.sgNetworkMagic = fromIntegral testnetMagic
         , Api.sgSlotLength = secondsToNominalDiffTimeMicro $ realToFrac slotLength
         , Api.sgEpochLength = EpochSize $ fromIntegral epochLength
         , Api.sgMaxLovelaceSupply = maxLovelaceLovelaceSupply
         , Api.sgSystemStart = startTime
+        , Api.sgProtocolParams = protocolParamsWithPVer
         }
+
+
+eraToProtocolVersion :: AnyCardanoEra -> ProtVer
+eraToProtocolVersion (AnyCardanoEra era) =
+  case era of
+    ByronEra -> error "eraToProtocolVersion: Byron not supported"
+    ShelleyEra -> mkProtVer (2, 0)
+    AllegraEra -> mkProtVer (3, 0)
+    MaryEra -> mkProtVer (4, 0)
+    -- Alonzo had an intra-era hardfork
+    AlonzoEra -> mkProtVer (6, 0)
+    -- Babbage had an intra-era hardfork
+    BabbageEra -> mkProtVer (8, 0)
+    ConwayEra -> mkProtVer (9, 0)
+
+-- TODO: Expose from cardano-api
+mkProtVer :: (Natural, Natural) -> ProtVer
+mkProtVer (majorProtVer, minorProtVer) =
+  case (`ProtVer` minorProtVer) <$> Ledger.mkVersion majorProtVer of
+    Just pVer -> pVer
+    Nothing -> error "mkProtVer: invalid protocol version"
+
+ppProtocolVersionL' ::  Lens' (PParams (Ledger.ShelleyEra StandardCrypto)) ProtVer
+ppProtocolVersionL' = Ledger.ppLens . Ledger.hkdProtocolVersionL @(Ledger.ShelleyEra StandardCrypto) @Identity
 
 defaultMainnetTopology :: NetworkTopology
 defaultMainnetTopology =

@@ -119,7 +119,6 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
   H.rewriteJsonFile @Value genesisShelleyFpAbs $ \o -> o
     & L.key "protocolParams" .  L.key "rho" . L._Number  .~ 0.1
     & L.key "protocolParams" .  L.key "tau" . L._Number  .~ 0.1
-    & L.key "protocolParams" . L.key "protocolVersion" . L.key "major" . L._Integer .~ 8
     & L.key "securityParam" . L._Integer .~ 5
     & L.key "updateQuorum" . L._Integer .~ 2
 
