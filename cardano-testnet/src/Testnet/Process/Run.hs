@@ -3,6 +3,7 @@ module Testnet.Process.Run
   , execCli
   , execCli_
   , execCli'
+  , execCliAny
   , execCreateScriptContext
   , execCreateScriptContext'
   , initiateProcess
@@ -49,6 +50,7 @@ import           Hedgehog.Extras.Test.Base
 import           Hedgehog.Extras.Test.Process (ExecConfig)
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified Hedgehog.Internal.Property as H
+import           System.Exit (ExitCode)
 
 -- | Path to the bash executable.  This is used on Windows so that the caller can supply a Windows
 -- path to the bash executable because there is no reliable way to invoke bash without the full
@@ -84,6 +86,16 @@ execCli'
   -> [String]
   -> m String
 execCli' execConfig = GHC.withFrozenCallStack $ H.execFlex' execConfig "cardano-cli" "CARDANO_CLI"
+
+-- | Run cardano-cli, returning the exit code, the stdout, and the stderr.
+-- Contrary to other functions from this module, this function doesn't fail the test
+-- if the call fails. So if you want to test something negative, this is the function to use.
+execCliAny
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => ExecConfig
+  -> [String]
+  -> m (ExitCode, String, String) -- ^ The exit code of the call, stdoud, stderr.
+execCliAny execConfig = GHC.withFrozenCallStack $ H.execFlexAny' execConfig "cardano-cli" "CARDANO_CLI"
 
 -- | Run create-script-context, returning the stdout.
 execCreateScriptContext
