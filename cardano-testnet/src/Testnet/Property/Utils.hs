@@ -19,9 +19,13 @@ module Testnet.Property.Utils
   -- ** Genesis
   , getByronGenesisHash
   , getShelleyGenesisHash
+
+  , convertToEraString
+  , decodeEraUTxO
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Pretty
 
 import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
 import           Cardano.CLI.Types.Output
@@ -37,6 +41,7 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Key
 import           Data.Aeson.KeyMap
 import qualified Data.ByteString as BS
+import           Data.Char (toLower)
 import           Data.IORef
 import           Data.Map.Strict (Map)
 import           Data.Text (Text)
@@ -194,3 +199,10 @@ getShelleyGenesisHash path key = do
   let genesisHash = Crypto.hashWith id content :: Crypto.Hash Crypto.Blake2b_256 BS.ByteString
   pure . singleton (fromText key) $ toJSON genesisHash
 
+
+convertToEraString :: AnyCardanoEra -> String
+convertToEraString = Prelude.map toLower . docToString . pretty
+
+
+decodeEraUTxO :: (IsShelleyBasedEra era, MonadTest m) => ShelleyBasedEra era -> Aeson.Value -> m (UTxO era)
+decodeEraUTxO _ = H.jsonErrorFail . Aeson.fromJSON

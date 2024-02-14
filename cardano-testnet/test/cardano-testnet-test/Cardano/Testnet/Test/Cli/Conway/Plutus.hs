@@ -52,9 +52,9 @@ import           Testnet.Runtime
 -- | Test all possible Plutus script purposes
 -- Currently tested:
 -- Spending YES
--- Minting NO
+-- Minting YES
 -- Rewarding NO
--- Certifying NO
+-- Certifying YES
 -- Voting NO
 -- Proposing NO
 hprop_plutus_v3 :: Property
@@ -127,7 +127,19 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
       , "--script-data-file", datumFile
       ]
 
+  scriptStakeRegistrationCertificate
+    <- H.note $ work </> "script-stake-registration-certificate"
+
+  -- Create script stake registration certificate
+  createScriptStakeRegistrationCertificate
+    tempAbsPath
+    anyEra
+    plutusSpendingScript
+    0
+    scriptStakeRegistrationCertificate
+
   -- 1. Put UTxO and datum at Plutus spending script address
+  --    Register script stake address
   void $ execCli' execConfig
     [ convertToEraString anyEra, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
@@ -150,7 +162,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
     , "--tx-file", sendAdaToScriptAddressTx
     ]
 
-  H.threadDelay 5_000_000
+  H.threadDelay 10_000_000
   -- 2. Successfully spend conway spending script
   void $ H.execCli' execConfig
     [ convertToEraString anyEra, "query", "utxo"
@@ -196,6 +208,9 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
     , "--mint", mintValue
     , "--mint-script-file", plutusMintingScript
     , "--mint-redeemer-file", datumFile -- We just reuse the datum file for the redeemer
+    , "--certificate-file", scriptStakeRegistrationCertificate
+    , "--certificate-script-file", plutusSpendingScript
+    , "--certificate-redeemer-file", datumFile
     , "--tx-out", txout
     , "--out-file", spendScriptUTxOTxBody
     ]
