@@ -605,6 +605,20 @@ def all_profile_variants:
     , desc: "Status-quo dataset size, four epochs."
     }) as $forge_stress_base
   |
+   ($scenario_fixed_loaded * $triplet * $dataset_current *
+    { node:
+      { shutdown_on_slot_synced:        1200
+      }
+    , desc: "Status-quo dataset size, two epochs."
+    }) as $forge_stress_short_base
+  |
+   ($scenario_fixed_loaded * $triplet * $dataset_oct2021 *
+    { node:
+      { shutdown_on_slot_synced:        1200
+      }
+    , desc: "Oct 2021 dataset size, two epochs."
+    }) as $forge_stress_light_base
+  |
    ($forge_stress_base * $hexagon *
     { analysis:
       { filters:                        ["epoch3+"] }
@@ -943,11 +957,6 @@ def all_profile_variants:
     { name: "forge-stress-large"
     }
 
-  ## Status-quo (huge) dataset, 1 node
-  , $forge_stress_base * $solo *
-    { name: "forge-stress-solo"
-    }
-
   ## Status-quo (huge) dataset, small cluster (2 nodes)
   , $forge_stress_base *
     { name: "forge-stress"
@@ -958,18 +967,11 @@ def all_profile_variants:
   , $forge_stress_base * $plutus_base * $plutus_loop_counter *
     { name: "forge-stress-plutus"
     }
-  , $forge_stress_base * $plutus_base * $plutus_loop_counter * $solo *
-    { name: "forge-stress-plutus-solo"
-    }
   , $forge_stress_base * $without_tracer *
     { name: "forge-stress-notracer"
     }
-
   , $forge_stress_pre_base *
     { name: "forge-stress-pre"
-    }
-  , $forge_stress_pre_base * $solo *
-    { name: "forge-stress-pre-solo"
     }
   , $forge_stress_pre_base * $plutus_base * $plutus_loop_counter *
     { name: "forge-stress-pre-plutus"
@@ -978,8 +980,29 @@ def all_profile_variants:
     { name: "forge-stress-pre-notracer"
     }
 
+  # single forger node, larger blocksize, various flavours
+  , $forge_stress_base * $solo * $costmodel_v8_preview *
+    { name: "forge-stress-solo"
+    , extra_desc: "with blocksize bumped to 88k"
+    }
+  , $forge_stress_base * $plutus_base * $plutus_loop_counter * $solo * $costmodel_v8_preview *
+    { name: "forge-stress-plutus-solo"
+    , extra_desc: "with blocksize bumped to 88k"
+    }
+  , $forge_stress_short_base * $solo * $costmodel_v8_preview *
+    { name: "forge-stress-solo-xs"
+    , extra_desc: "with blocksize bumped to 88k"
+    }
+  , $forge_stress_pre_base * $solo * $costmodel_v8_preview *
+    { name: "forge-stress-pre-solo"
+    , extra_desc: "with blocksize bumped to 88k"
+    }
   , $forge_stress_pre_large_base * $solo * $costmodel_v8_preview *
     { name: "forge-stress-pre-solo-xl"
+    , extra_desc: "with blocksize bumped to 88k"
+    }
+  , $forge_stress_light_base * $solo * $costmodel_v8_preview *
+    { name: "forge-stress-pre-solo-xs"
     , extra_desc: "with blocksize bumped to 88k"
     }
 
