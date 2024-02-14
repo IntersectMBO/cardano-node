@@ -14,7 +14,6 @@ module Testnet.Components.Configuration
   , numPools
   ) where
 
-import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley hiding (cardanoEra)
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
@@ -31,7 +30,6 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as L
 import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Char (toLower)
 import qualified Data.List as List
 import           Data.String
 import           GHC.Stack (HasCallStack)
@@ -210,7 +208,3 @@ mkTopologyConfig numNodes allPorts port True = Aeson.encode topologyP2P
         localRootPeerGroups
         []
         (UseLedger DontUseLedger)
-
-
-convertToEraString :: AnyCardanoEra -> String
-convertToEraString = map toLower . docToString . pretty

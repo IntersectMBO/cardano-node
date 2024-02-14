@@ -6,6 +6,7 @@
 module Testnet.Components.SPO
   ( checkStakeKeyRegistered
   , convertToEraFlag
+  , createScriptStakeRegistrationCertificate
   , createStakeDelegationCertificate
   , createStakeKeyRegistrationCertificate
   , decodeEraUTxO
@@ -34,6 +35,7 @@ import qualified Hedgehog.Extras.Test.File as H
 import           Testnet.Filepath
 import           Testnet.Process.Cli
 import           Testnet.Process.Run (execCli, execCli', execCli_)
+import           Testnet.Property.Utils
 import           Testnet.Start.Types
 
 checkStakePoolRegistered
@@ -142,6 +144,27 @@ createStakeKeyRegistrationCertificate tempAbsP anyCEra stakeVerKey outputFp =
       , "--stake-verification-key-file", stakeVerKey
       , "--out-file", tempAbsPath' </> outputFp
       ]
+
+createScriptStakeRegistrationCertificate
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => TmpAbsolutePath
+  -> AnyCardanoEra
+  -> FilePath -- ^ Script file
+  -> Int -- ^ Registration deposit amount
+  -> FilePath -- ^ Output file path
+  -> m ()
+createScriptStakeRegistrationCertificate tempAbsP anyCEra scriptFile deposit outputFp =
+  GHC.withFrozenCallStack $ do
+    let tempAbsPath' = unTmpAbsPath tempAbsP
+
+    void $ execCli
+      [ convertToEraString anyCEra
+      , "stake-address", "registration-certificate"
+      , "--stake-script-file", scriptFile
+      , "--key-reg-deposit-amt", show deposit
+      , "--out-file", tempAbsPath' </> outputFp
+      ]
+
 
 -- TODO: Remove me and replace with new era based commands
 -- i.e "conway", "babbage" etc
@@ -318,7 +341,3 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') cTestnetOptions 
               currentRegistedPoolsJson
   return (poolId, poolColdSkeyFp, poolColdVkeyFp, vrfSkeyFp, vrfVkeyFp)
 
-
-
-decodeEraUTxO :: (IsShelleyBasedEra era, MonadTest m) => ShelleyBasedEra era -> Aeson.Value -> m (UTxO era)
-decodeEraUTxO _ = H.jsonErrorFail . Aeson.fromJSON
