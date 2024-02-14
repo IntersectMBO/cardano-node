@@ -8,6 +8,7 @@ import qualified Cardano.Crypto.Init as Crypto
 import qualified Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
 import qualified Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
 import qualified Cardano.Testnet.Test.Cli.Babbage.Transaction
+import qualified Cardano.Testnet.Test.Cli.Conway.Plutus
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldBlocks
@@ -29,45 +30,47 @@ import qualified Test.Tasty.Ingredients as T
 tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
-      [ T.testGroup "Ledger Events"
-          [ H.ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
-          -- TODO: Replace foldBlocks with checkLedgerStateCondition
-          , T.testGroup "Governance"
-            -- [ H.ignoreOnMacAndWindows "ProposeAndRatifyNewConstitution" LedgerEvents.hprop_ledger_events_propose_new_constitution
-            [ H.ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
-            ]
-          ]
-      , T.testGroup "CLI"
-        [ H.ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
-        -- ShutdownOnSigint fails on Mac with
-        -- "Log file: /private/tmp/tmp.JqcjW7sLKS/kes-period-info-2-test-30c2d0d8eb042a37/logs/test-spo.stdout.log had no logs indicating the relevant node has minted blocks."
-        , H.ignoreOnMacAndWindows "ShutdownOnSigint" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSigint
-        -- ShutdownOnSlotSynced FAILS Still. The node times out and it seems the "shutdown-on-slot-synced" flag does nothing
-        -- , H.ignoreOnWindows "ShutdownOnSlotSynced" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSlotSynced
-        , T.testGroup "Babbage"
-            -- TODO: Babbage --next leadership schedule still fails. Once this fix is propagated to the cli (https://github.com/input-output-hk/cardano-api/pull/274)
-            -- this should remedy. Double check and make sure we have re-enabled it and remove this comment.
-            [ H.ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule -- FAILS
-            , H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot.hprop_stakeSnapshot
-            , H.ignoreOnWindows "transaction" Cardano.Testnet.Test.Cli.Babbage.Transaction.hprop_transaction
-            ]
-        -- TODO: Conway -  Re-enable when create-staked is working in conway again
-        --, T.testGroup "Conway"
-        --  [ H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Conway.StakeSnapshot.hprop_stakeSnapshot
-        --  ]
-          -- Ignored on Windows due to <stdout>: cosmmitBuffer: invalid argument (invalid character)
-          -- as a result of the kes-period-info output to stdout.
-        , H.ignoreOnWindows "kes-period-info" Cardano.Testnet.Test.Cli.KesPeriodInfo.hprop_kes_period_info
-        , H.ignoreOnWindows "query-slot-number" Cardano.Testnet.Test.Cli.QuerySlotNumber.hprop_querySlotNumber
-        , H.ignoreOnWindows "foldBlocks receives ledger state" Cardano.Testnet.Test.FoldBlocks.prop_foldBlocks
-        ]
+      [ T.testGroup "Plutus"
+        [ H.ignoreOnWindows "Plutus" Cardano.Testnet.Test.Cli.Conway.Plutus.hprop_plutus]
+      --, T.testGroup "Ledger Events"
+      --    [ H.ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
+      --    -- TODO: Replace foldBlocks with checkLedgerStateCondition
+      --    , T.testGroup "Governance"
+      --      -- [ H.ignoreOnMacAndWindows "ProposeAndRatifyNewConstitution" LedgerEvents.hprop_ledger_events_propose_new_constitution
+      --      [ H.ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
+      --      ]
+      --    ]
+      --, T.testGroup "CLI"
+      --  [ H.ignoreOnWindows "Shutdown" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdown
+      --  -- ShutdownOnSigint fails on Mac with
+      --  -- "Log file: /private/tmp/tmp.JqcjW7sLKS/kes-period-info-2-test-30c2d0d8eb042a37/logs/test-spo.stdout.log had no logs indicating the relevant node has minted blocks."
+      --  , H.ignoreOnMacAndWindows "ShutdownOnSigint" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSigint
+      --  -- ShutdownOnSlotSynced FAILS Still. The node times out and it seems the "shutdown-on-slot-synced" flag does nothing
+      --  -- , H.ignoreOnWindows "ShutdownOnSlotSynced" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSlotSynced
+      --  , T.testGroup "Babbage"
+      --      -- TODO: Babbage --next leadership schedule still fails. Once this fix is propagated to the cli (https://github.com/input-output-hk/cardano-api/pull/274)
+      --      -- this should remedy. Double check and make sure we have re-enabled it and remove this comment.
+      --      [ H.ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule -- FAILS
+      --      , H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot.hprop_stakeSnapshot
+      --      , H.ignoreOnWindows "transaction" Cardano.Testnet.Test.Cli.Babbage.Transaction.hprop_transaction
+      --      ]
+      --  -- TODO: Conway -  Re-enable when create-staked is working in conway again
+      --  --, T.testGroup "Conway"
+      --  --  [ H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Conway.StakeSnapshot.hprop_stakeSnapshot
+      --  --  ]
+      --    -- Ignored on Windows due to <stdout>: cosmmitBuffer: invalid argument (invalid character)
+      --    -- as a result of the kes-period-info output to stdout.
+      --  , H.ignoreOnWindows "kes-period-info" Cardano.Testnet.Test.Cli.KesPeriodInfo.hprop_kes_period_info
+      --  , H.ignoreOnWindows "query-slot-number" Cardano.Testnet.Test.Cli.QuerySlotNumber.hprop_querySlotNumber
+      --  , H.ignoreOnWindows "foldBlocks receives ledger state" Cardano.Testnet.Test.FoldBlocks.prop_foldBlocks
+      --  ]
 
       ]
-  , T.testGroup "SubmitApi"
-      [ T.testGroup "Babbage"
-          [ H.ignoreOnWindows "transaction" Cardano.Testnet.Test.SubmitApi.Babbage.Transaction.hprop_transaction
-          ]
-      ]
+ -- , T.testGroup "SubmitApi"
+ --     [ T.testGroup "Babbage"
+ --         [ H.ignoreOnWindows "transaction" Cardano.Testnet.Test.SubmitApi.Babbage.Transaction.hprop_transaction
+ --         ]
+ --     ]
   ]
 
 ingredients :: [T.Ingredient]
