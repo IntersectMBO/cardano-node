@@ -39,8 +39,8 @@ import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
-                   PeerSelectionCounters (..), PeerSelectionState (..), PeerSelectionTargets (..),
-                   TracePeerSelection (..))
+                   DebugPeerSelectionState (..), PeerSelectionCounters (..),
+                   PeerSelectionState (..), PeerSelectionTargets (..), TracePeerSelection (..))
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
@@ -511,9 +511,28 @@ instance LogFormatting (TracePeerSelection SockAddr) where
     mconcat [ "kind" .= String "OutboundGovernorCriticalFailure"
             , "reason" .= show err
             ]
-  forMachine _dtal (TraceDebugState _ dpst) =
+  forMachine _dtal (TraceDebugState mtime ds) =
     mconcat [ "kind" .= String "DebugState"
-            , "peerSelectionState" .= show dpst
+            , "monotonicTime" .= show mtime
+            , "targets" .= peerSelectionTargetsToObject (dpssTargets ds)
+            , "localRootPeers" .= dpssLocalRootPeers ds
+            , "publicRootPeers" .= dpssPublicRootPeers ds
+            , "knownPeers" .= (KnownPeers.allPeers $ dpssKnownPeers ds)
+            , "establishedPeers" .= dpssEstablishedPeers ds
+            , "activePeers" .= dpssActivePeers ds
+            , "publicRootBackoffs" .= dpssPublicRootBackoffs ds
+            , "publicRootRetryTime" .= dpssPublicRootRetryTime ds
+            , "bigLedgerPeerBackoffs" .= dpssBigLedgerPeerBackoffs ds
+            , "bigLedgerPeerRetryTime" .= dpssBigLedgerPeerRetryTime ds
+            , "inProgressBigLedgerPeersReq" .= dpssInProgressBigLedgerPeersReq ds
+            , "inProgressPeerShareReqs" .= dpssInProgressPeerShareReqs ds
+            , "inProgressPromoteCold" .= dpssInProgressPromoteCold ds
+            , "inProgressPromoteWarm" .= dpssInProgressPromoteWarm ds
+            , "inProgressDemoteWarm" .= dpssInProgressDemoteWarm ds
+            , "inProgressDemoteHot" .= dpssInProgressDemoteHot ds
+            , "inProgressDemoteToCold" .= dpssInProgressDemoteToCold ds
+            , "upstreamyness" .= dpssUpstreamyness ds
+            , "fetchynessBlocks" .= dpssFetchynessBlocks ds
             ]
 
   forHuman = pack . show
