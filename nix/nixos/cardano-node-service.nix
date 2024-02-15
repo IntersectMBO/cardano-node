@@ -39,10 +39,23 @@ let
     );
   };
 
+  assertNewTopology = i:
+    let
+      checkEval = tryEval (
+        assert
+          if cfg.useBootstrapPeers == [] && all (e: e.trustable != true) ((newTopology i).localRoots)
+          then false
+          else true;
+      newTopology i);
+    in
+      if checkEval.success
+      then checkEval.value
+      else abort "When useBootstrapPeers is an empty list, at least one localRoot must be trustable, otherwise cardano node will fail to start.";
+
   selectTopology = i:
     if cfg.topology != null
     then cfg.topology
-    else toFile "topology.yaml" (toJSON (if (cfg.useNewTopology) then newTopology i else oldTopology i));
+    else toFile "topology.yaml" (toJSON (if (cfg.useNewTopology) then assertNewTopology i else oldTopology i));
 
   topology = i:
     if cfg.useSystemdReload
