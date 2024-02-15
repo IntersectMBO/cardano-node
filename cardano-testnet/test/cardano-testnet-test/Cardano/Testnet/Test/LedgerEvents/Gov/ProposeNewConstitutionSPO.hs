@@ -31,7 +31,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           Data.Type.Equality
 import           Data.Word
-import           GHC.IORef (newIORef)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Lens.Micro
 import           System.Exit (ExitCode (ExitSuccess))
@@ -60,8 +59,6 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
-  utxoFileCounter <- liftIO $ newIORef 1
-
   let sbe = ShelleyBasedEraConway
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
@@ -85,7 +82,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
 
   let queryAnyUtxo :: Text.Text -> Integration TxIn
       queryAnyUtxo address = withFrozenCallStack $ do
-        utxos <- queryUtxos execConfig work utxoFileCounter sbe address
+        utxos <- queryUtxos execConfig sbe address
         H.noteShow =<< H.headM (Map.keys utxos)
       socketName' = IO.sprocketName poolSprocket1
       socketBase = IO.sprocketBase poolSprocket1 -- /tmp

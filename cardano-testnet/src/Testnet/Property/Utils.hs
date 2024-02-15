@@ -37,7 +37,6 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Key
 import           Data.Aeson.KeyMap
 import qualified Data.ByteString as BS
-import           Data.IORef
 import           Data.Map.Strict (Map)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -47,11 +46,11 @@ import qualified GHC.Stack as GHC
 import           Options.Applicative
 import           System.Directory (doesFileExist, removeFile)
 import qualified System.Environment as IO
-import           System.FilePath ((</>))
 import           System.Info (os)
 import qualified System.IO.Unsafe as IO
 
 import           Testnet.Components.SPO (decodeEraUTxO)
+import           Testnet.Process.Cli (execCliStdoutToJson)
 import qualified Testnet.Process.Run as H
 
 import qualified Hedgehog as H
@@ -149,22 +148,16 @@ newtype QueryTipOutput = QueryTipOutput { unQueryTipOutput :: FilePath}
 queryUtxos
   :: (HasCallStack, MonadIO m, MonadTest m, MonadCatch m, IsShelleyBasedEra era)
   => ExecConfig
-  -> FilePath -- ^ working directory
-  -> IORef Int -- ^ filename counter, initialize with 1 usually
   -> ShelleyBasedEra era
   -> Text -- ^ payment address
   -> m (Map TxIn (TxOut CtxUTxO era))
-queryUtxos execConfig work counter sbe address = withFrozenCallStack $ do
-  i <- liftIO $ atomicModifyIORef' counter (\i -> (i+1, i))
-  let utxoFp = work </> "utxo-" <> show i <> ".json"
-  void $ H.execCli' execConfig
-    [ "conway", "query", "utxo"
-    , "--address", Text.unpack address
-    , "--cardano-mode"
-    , "--out-file", utxoFp
-    ]
-
-  utxoJson <- H.leftFailM . H.readJsonFile $ utxoFp
+queryUtxos execConfig sbe address = withFrozenCallStack $ do
+  utxoJson <- execCliStdoutToJson execConfig
+                [ "conway", "query", "utxo"
+                , "--address", Text.unpack address
+                , "--cardano-mode"
+                , "--output-json"
+                ]
   H.noteShowM . fmap unUTxO $ decodeEraUTxO sbe utxoJson
 
 -- Parsers

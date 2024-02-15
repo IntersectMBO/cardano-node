@@ -21,10 +21,8 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad
-import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
-import           Data.IORef
 import qualified Data.Map.Strict as Map
 import           Data.String
 import           Data.Text (Text)
@@ -60,7 +58,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
-  utxoFileCounter <- liftIO $ newIORef 1
 
   let sbe = ShelleyBasedEraConway
       era = toCardanoEra sbe
@@ -84,7 +81,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   let queryAnyUtxo :: Text -> H.Integration TxIn
       queryAnyUtxo address = withFrozenCallStack $ do
-        utxos <- queryUtxos execConfig work utxoFileCounter sbe address
+        utxos <- queryUtxos execConfig sbe address
         H.noteShow =<< H.headM (Map.keys utxos)
       socketName' = IO.sprocketName poolSprocket1
       socketBase = IO.sprocketBase poolSprocket1 -- /tmp
