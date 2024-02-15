@@ -200,10 +200,11 @@
                     cardano-node-rev = pkgs.gitrev;
                   }).workbench-profile-run;
           in
-          {
+          ({
             "dockerImage/node" = pkgs.dockerImage;
             "dockerImage/submit-api" = pkgs.submitApiDockerImage;
 
+          } // optionalAttrs (exes ? tx-generator) {
             ## This is a very light profile, no caching&pinning needed.
             workbench-ci-test =
               workbenchTest { profileName        = "ci-test-bage";
@@ -212,6 +213,7 @@
               workbenchTest { profileName        = "ci-test-bage";
                               workbenchStartArgs = [ "--trace" ];
                             };
+          } // {
 
             inherit (pkgs) all-profiles-json;
 
@@ -235,7 +237,7 @@
                   nix develop --accept-flake-config .#base -c ./.github/regression.sh 2>&1
               '';
             };
-          })
+          }))
           # Add checks to be able to build them individually
           // (prefixNamesWith "checks/" checks);
 
@@ -250,7 +252,7 @@
               cardano-deployment = pkgs.cardanoLib.mkConfigHtml { inherit (pkgs.cardanoLib.environments) mainnet preview preprod; };
             } // optionalAttrs (system == "x86_64-linux") {
               native = packages // {
-                shells = devShells;
+                shells = removeAttrs devShells (lib.optional (!(exes ? tx-generator)) "devops");
                 internal = {
                   roots.project = project.roots;
                   plan-nix.project = project.plan-nix;
@@ -317,7 +319,7 @@
                   platform = "macos";
                   exes = lib.collect lib.isDerivation (collectExes project);
                 };
-                shells = removeAttrs devShells [ "profiled" ];
+                shells = removeAttrs devShells ([ "profiled" ] ++ lib.optional (!(exes ? tx-generator)) "devops");
                 internal = {
                   roots.project = project.roots;
                   plan-nix.project = project.plan-nix;
