@@ -22,12 +22,13 @@ common project-config
 
   default-extensions:   BlockArguments
                       , CPP
+                      , DerivingStrategies
+                      , GeneralizedNewtypeDeriving
                       , ImportQualifiedPost
                       , InstanceSigs
                       , ScopedTypeVariables
-                      , DerivingStrategies
-                      , GeneralizedNewtypeDeriving
                       , TypeApplications
+ 
 
   ghc-options:          -Wall
                         -Wcompat
@@ -137,6 +138,7 @@ library
   build-depends:        aeson
                       , async
                       , async-extras
+                      , bimap
                       , blaze-html
                       , bytestring
                       , cardano-git-rev
@@ -152,8 +154,6 @@ library
                       , ekg-forward ^>= 0.4
                       , extra
                       , filepath
-                      , hashable
-                      , list-t
                       , mime-mail
                       , optparse-applicative
                       , ouroboros-network ^>= 0.11
@@ -165,7 +165,6 @@ library
                       , snap-core
                       , snap-server
                       , stm
-                      , stm-containers
                       , string-qq
                       , text
                       , threepenny-gui
@@ -179,7 +178,6 @@ library
 
   if os(linux)
     build-depends:      libsystemd-journal >= 1.4.4
-
   if os(windows)
     build-depends:      Win32
   else
@@ -268,13 +266,11 @@ library demo-acceptor-lib
                       , extra
                       , filepath
                       , generic-data
-                      , list-t
                       , optparse-applicative-fork
                       , ouroboros-network-api
                       , stm
-                      , stm-containers
-                      , tasty-quickcheck
                       , text
+                      , tasty-quickcheck
                       , trace-forward
 
 executable demo-acceptor
@@ -422,3 +418,4 @@ benchmark cardano-tracer-bench
   ghc-options:          -threaded
                         -rtsopts
                         -with-rtsopts=-N
+

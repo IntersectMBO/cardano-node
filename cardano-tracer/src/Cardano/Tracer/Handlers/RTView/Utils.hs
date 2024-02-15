@@ -9,52 +9,40 @@ module Cardano.Tracer.Handlers.RTView.Utils
   , forConnectedUI_
   ) where
 
-import Data.Foldable
+import Control.Concurrent.STM.TVar (readTVarIO)
+import Data.Map.Strict qualified as M
+import Data.Set        qualified as S
 import Graphics.UI.Threepenny.Core
 
 import Cardano.Tracer.Environment
 import Cardano.Tracer.Types
 
-import Control.Concurrent.STM
-import StmContainers.Set qualified as STM.Set
-import StmContainers.Map qualified as STM.Map
-import ListT             qualified
-import ListT (ListT)
-
-forGeneral :: MonadIO io => (t -> ListT STM a) -> t -> (a -> io b) -> io [b]
-forGeneral f tracerEnv action =
-  traverse action =<< liftIO do
-    atomically do
-      ListT.toList (f tracerEnv)
-
-forGeneral_ :: MonadIO io => (t -> ListT STM a) -> t -> (a -> io b) -> io ()
-forGeneral_ f tracerEnv action =
-  traverse_ action =<< liftIO do
-    atomically do
-      ListT.toList (f tracerEnv)
-
-forConnected :: forall b. TracerEnv -> (NodeId -> IO b) -> IO [b]
-forConnected = forGeneral (STM.Set.listT . teConnectedNodes)
+forConnected :: TracerEnv -> (NodeId -> IO b) -> IO [b]
+forConnected TracerEnv{teConnectedNodes} action =
+  mapM action . S.toList =<< readTVarIO teConnectedNodes
 
 forConnected_ :: TracerEnv -> (NodeId -> IO ()) -> IO ()
-forConnected_ = forGeneral_ (STM.Set.listT . teConnectedNodes)
+forConnected_ TracerEnv{teConnectedNodes} action =
+  mapM_ action =<< readTVarIO teConnectedNodes
 
 forConnectedUI :: TracerEnv -> (NodeId -> UI b) -> UI [b]
-forConnectedUI = forGeneral (STM.Set.listT . teConnectedNodes)
+forConnectedUI TracerEnv{teConnectedNodes} action =
+  mapM action . S.toList =<< liftIO (readTVarIO teConnectedNodes)
 
 forConnectedUI_ :: TracerEnv -> (NodeId -> UI ()) -> UI ()
-forConnectedUI_ = forGeneral_ (STM.Set.listT . teConnectedNodes)
+forConnectedUI_ TracerEnv{teConnectedNodes} action =
+  mapM_ action =<< liftIO (readTVarIO teConnectedNodes)
 
 forAcceptedMetrics_
   :: TracerEnv
-  -> (NodeId -> MetricsStores -> IO ())
+  -> ((NodeId, MetricsStores) -> IO ())
   -> IO ()
-forAcceptedMetrics_ env =
-  forGeneral_ (STM.Map.listT . teAcceptedMetrics) env . uncurry
+forAcceptedMetrics_ TracerEnv{teAcceptedMetrics} action =
+  mapM_ action . M.toList =<< readTVarIO teAcceptedMetrics
 
 forAcceptedMetricsUI_
   :: TracerEnv
-  -> (NodeId -> MetricsStores -> UI ())
+  -> ((NodeId, MetricsStores) -> UI ())
   -> UI ()
-forAcceptedMetricsUI_ env =
-  forGeneral_ (STM.Map.listT . teAcceptedMetrics) env . uncurry
+forAcceptedMetricsUI_ TracerEnv{teAcceptedMetrics} action =
+  mapM_ action . M.toList =<< liftIO (readTVarIO teAcceptedMetrics)

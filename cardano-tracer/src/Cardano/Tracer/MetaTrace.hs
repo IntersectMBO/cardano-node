@@ -14,9 +14,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE InstanceSigs #-}
-
 module Cardano.Tracer.MetaTrace
   ( module Cardano.Tracer.MetaTrace
   , Trace, SeverityF (..), SeverityS (..)
@@ -32,9 +29,9 @@ import qualified Data.Text as T
 import           GHC.Generics
 import qualified System.IO as Sys
 
-import Cardano.Logging
+import           Cardano.Logging
 
-import Cardano.Tracer.Configuration
+import           Cardano.Tracer.Configuration
 
 import           Cardano.Logging.Resources
 

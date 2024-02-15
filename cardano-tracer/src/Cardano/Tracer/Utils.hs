@@ -29,11 +29,6 @@ module Cardano.Tracer.Utils
   , nl
   , runInLoop
   , showProblemIfAny
-  , fromSTMSetIO
-  , fromSTMMap
-  , fromSTMSet
-  , toList
-  , stmMapToList
   , memberRegistry
   ) where
 
@@ -46,6 +41,8 @@ import           Control.Applicative (liftA2, liftA3)
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
 import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.MVar (tryReadMVar)
+import           Control.Concurrent.STM (atomically)
+import           Control.Concurrent.STM.TVar (modifyTVar', newTVarIO, readTVarIO)
 import           Control.Exception (SomeAsyncException (..), SomeException, finally, fromException,
                    try, tryJust)
 import           Control.Monad (forM_)
@@ -53,7 +50,7 @@ import           Control.Monad.Extra (whenJustM)
 import           "contra-tracer" Control.Tracer (showTracing, stdoutTracer, traceWith)
 import           Data.Functor ((<&>))
 import           Data.List.Extra (dropPrefix, dropSuffix, replace)
-import           Data.Map.Strict (Map)
+import           Data.Bimap qualified as BM
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as S
 import qualified Data.Text as T
@@ -72,12 +69,6 @@ import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Types
-
-import ListT qualified
-import Control.Concurrent.STM
-import StmContainers.Set   qualified as STM.Set
-import StmContainers.Bimap qualified as STM.Bimap
-import StmContainers.Map   qualified as STM.Map
 
 -- | Run monadic action in a loop. If there's an exception,
 --   it will re-run the action again, after pause that grows.
@@ -142,16 +133,16 @@ connIdToNodeId ConnectionId{remoteAddress} = NodeId preparedAddress
     $ show remoteAddress
 
 initConnectedNodes :: IO ConnectedNodes
-initConnectedNodes = STM.Set.newIO
+initConnectedNodes = newTVarIO S.empty
 
 initConnectedNodesNames :: IO ConnectedNodesNames
-initConnectedNodesNames = STM.Bimap.newIO
+initConnectedNodesNames = newTVarIO BM.empty
 
 initAcceptedMetrics :: IO AcceptedMetrics
-initAcceptedMetrics = STM.Map.newIO
+initAcceptedMetrics = newTVarIO Map.empty
 
 initDataPointRequestors :: IO DataPointRequestors
-initDataPointRequestors = STM.Map.newIO
+initDataPointRequestors = newTVarIO Map.empty
 
 initProtocolsBrake :: IO ProtocolsBrake
 initProtocolsBrake = newTVarIO False
@@ -170,19 +161,17 @@ askNodeNameRaw
   -> NodeId
   -> IO NodeName
 askNodeNameRaw connectedNodesNames dpRequestors currentDPLock nodeId@(NodeId anId) = do
-  mnodesNames <- atomically do
-    STM.Bimap.lookupLeft nodeId connectedNodesNames
-  case mnodesNames of
+  nodesNames <- readTVarIO connectedNodesNames
+  case BM.lookup nodeId nodesNames of
     Just nodeName -> return nodeName
     Nothing -> do
       -- There is no name yet, so we have to ask for 'NodeInfo' datapoint to get the name.
       nodeName <-
         askDataPoint dpRequestors currentDPLock nodeId "NodeInfo" >>= \case
           Nothing -> return anId
-          Just NodeInfo{niName} -> return if T.null niName then anId else niName
+          Just NodeInfo{niName} -> return $ if T.null niName then anId else niName
       -- Store it in for the future using.
-      atomically do
-        STM.Bimap.insertRight nodeId nodeName connectedNodesNames
+      atomically . modifyTVar' connectedNodesNames $ BM.insert nodeId nodeName
       return nodeName
 
 askNodeId
@@ -190,14 +179,15 @@ askNodeId
   -> NodeName
   -> IO (Maybe NodeId)
 askNodeId TracerEnv{teConnectedNodesNames} nodeName = do
-  atomically do
-    STM.Bimap.lookupRight nodeName teConnectedNodesNames
+  nodesNames <- readTVarIO teConnectedNodesNames
+  return $! if nodeName `BM.memberR` nodesNames
+              then Just $ nodesNames BM.!> nodeName
+              else Nothing
 
 -- | Stop the protocols. As a result, 'MsgDone' will be sent and interaction
 --   between acceptor's part and forwarder's part will be finished.
 applyBrake :: ProtocolsBrake -> IO ()
-applyBrake stopProtocols = atomically do
-  modifyTVar' stopProtocols \_ -> True
+applyBrake stopProtocols = atomically $ modifyTVar' stopProtocols . const $ True
 
 -- | Like 'liftM2', but for monadic function.
 lift2M :: Monad m => (a -> b -> m c) -> m a -> m b -> m c
@@ -225,7 +215,7 @@ nl = "\r\n"
 beforeProgramStops :: IO () -> IO ()
 beforeProgramStops action = do
   mainThreadIdWk <- mkWeakThreadId =<< myThreadId
-  forM_ signals \sig ->
+  forM_ signals $ \sig ->
     S.installHandler sig . const $ do
       putStrLn " Program is stopping, please wait..."
       hFlush stdout
@@ -238,29 +228,8 @@ beforeProgramStops action = do
     , S.sigTERM
     ]
 
-fromSTMSet :: Ord a => STM.Set.Set a -> STM (S.Set a)
-fromSTMSet set = S.fromList <$> ListT.toList (STM.Set.listT set)
-
-toList :: STM.Set.Set a -> STM [a]
-toList set = ListT.toList (STM.Set.listT set)
-
-fromSTMMap :: Ord k => STM.Map.Map k a -> STM (Map k a)
-fromSTMMap set = Map.fromList <$> ListT.toList (STM.Map.listT set)
-
-stmMapToList :: STM.Map.Map k a -> STM [(k, a)]
-stmMapToList set = ListT.toList (STM.Map.listT set)
-
-fromSTMSetIO :: Ord a => STM.Set.Set a -> IO (S.Set a)
-fromSTMSetIO = atomically . fromSTMSet
-
 memberRegistry :: Ord a => a -> Registry a b -> IO Bool
 memberRegistry a (Registry registry) = do
   tryReadMVar registry <&> \case
     Nothing -> False
     Just set -> Map.member a set
-
--- lookupRegistry :: Ord a => a -> Registry a b -> IO Bool
--- lookupRegistry a (Registry registry) = do
---   tryReadMVar registry <&> \case
---     Nothing -> False
---     Just set -> Map.member a set

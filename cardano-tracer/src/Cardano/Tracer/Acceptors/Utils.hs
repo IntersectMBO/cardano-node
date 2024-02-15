@@ -9,7 +9,10 @@ module Cardano.Tracer.Acceptors.Utils
   ) where
 
 import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TVar (TVar, newTVarIO)
+import Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO)
+import Data.Bimap qualified as BM
+import Data.Map.Strict qualified as M
+import Data.Set qualified as S
 import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import System.Metrics qualified as EKG
 
@@ -26,10 +29,6 @@ import Cardano.Tracer.Handlers.RTView.Notifications.Utils
 import Cardano.Tracer.Types
 import Cardano.Tracer.Utils
 
-import StmContainers.Map   qualified as STM.Map
-import StmContainers.Set   qualified as STM.Set
-import StmContainers.Bimap qualified as STM.Bimap
-
 prepareDataPointRequestor
   :: TracerEnv
   -> ConnectionId LocalAddress
@@ -37,8 +36,8 @@ prepareDataPointRequestor
 prepareDataPointRequestor TracerEnv{teConnectedNodes, teDPRequestors} connId = do
   addConnectedNode teConnectedNodes connId
   dpRequestor <- initDataPointRequestor
-  atomically do
-    STM.Map.insert dpRequestor (connIdToNodeId connId) teDPRequestors
+  atomically $
+    modifyTVar' teDPRequestors $ M.insert (connIdToNodeId connId) dpRequestor
   return dpRequestor
 
 prepareMetricsStores
@@ -49,16 +48,16 @@ prepareMetricsStores TracerEnv{teConnectedNodes, teAcceptedMetrics} connId = do
   addConnectedNode teConnectedNodes connId
   storesForNewNode <- (,) <$> EKG.newStore
                           <*> newTVarIO emptyMetricsLocalStore
-  atomically do
-    STM.Map.insert storesForNewNode (connIdToNodeId connId) teAcceptedMetrics
+  atomically $
+    modifyTVar' teAcceptedMetrics $ M.insert (connIdToNodeId connId) storesForNewNode
   return storesForNewNode
 
 addConnectedNode
   :: ConnectedNodes
   -> ConnectionId LocalAddress
   -> IO ()
-addConnectedNode connectedNodes connId = atomically do
-  STM.Set.insert (connIdToNodeId connId) connectedNodes
+addConnectedNode connectedNodes connId = atomically $
+  modifyTVar' connectedNodes $ S.insert (connIdToNodeId connId)
 
 -- | This handler is called when 'runPeer' function throws an exception,
 --   which means that there is a problem with network connection.
@@ -67,12 +66,12 @@ removeDisconnectedNode
   -> ConnectionId LocalAddress
   -> IO ()
 removeDisconnectedNode tracerEnv connId =
-  atomically do
-    -- Remove all the stuff related to disconnected node.
-    STM.Set.delete       nodeId teConnectedNodes
-    STM.Bimap.deleteLeft nodeId teConnectedNodesNames
-    STM.Map.delete       nodeId teAcceptedMetrics
-    STM.Map.delete       nodeId teDPRequestors
+  -- Remove all the stuff related to disconnected node.
+  atomically $ do
+    modifyTVar' teConnectedNodes      $ S.delete  nodeId
+    modifyTVar' teConnectedNodesNames $ BM.delete nodeId
+    modifyTVar' teAcceptedMetrics     $ M.delete  nodeId
+    modifyTVar' teDPRequestors        $ M.delete  nodeId
  where
   TracerEnv{teConnectedNodes, teConnectedNodesNames, teAcceptedMetrics, teDPRequestors} = tracerEnv
   nodeId = connIdToNodeId connId

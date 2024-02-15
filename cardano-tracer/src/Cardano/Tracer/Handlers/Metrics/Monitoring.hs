@@ -8,8 +8,13 @@ module Cardano.Tracer.Handlers.Metrics.Monitoring
   ) where
 
 import Control.Concurrent (ThreadId)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TMVar (TMVar, newEmptyTMVarIO, putTMVar, tryReadTMVar)
+import Control.Concurrent.STM.TVar (readTVarIO)
 import Control.Monad (forM, void)
 import Control.Monad.Extra (whenJust)
+import Data.Map.Strict qualified as M
+import Data.Set qualified as S
 import Data.Text qualified as T
 import Data.Text.Encoding (encodeUtf8)
 import Graphics.UI.Threepenny qualified as UI
@@ -22,10 +27,6 @@ import Cardano.Tracer.Environment
 import Cardano.Tracer.Handlers.RTView.SSL.Certs
 import Cardano.Tracer.Types
 
-import Control.Concurrent.STM
-import ListT             qualified
-import StmContainers.Set qualified as STM.Set
-import StmContainers.Map qualified as STM.Map
 
 -- | 'ekg' package allows to run only one EKG server, to display only one web page
 --   for particular EKG.Store. Since 'cardano-tracer' can be connected to any number
@@ -72,10 +73,8 @@ mkPageBody
   -> TracerEnv
   -> Endpoint
   -> UI Element
-mkPageBody window tracerEnv@TracerEnv{teConnectedNodes} mEP@(Endpoint monitorHost monitorPort) = do
-  nodes <- liftIO do
-    atomically do
-      ListT.toList $ STM.Set.listT teConnectedNodes
+mkPageBody window tracerEnv mEP@(Endpoint monitorHost monitorPort) = do
+  nodes <- liftIO $ S.toList <$> readTVarIO teConnectedNodes
   nodesHrefs <-
     if null nodes
       then UI.string "There are no connected nodes yet"
@@ -95,6 +94,8 @@ mkPageBody window tracerEnv@TracerEnv{teConnectedNodes} mEP@(Endpoint monitorHos
             return $ UI.element nodeLink
         UI.ul #+ nodesLinks
   UI.getBody window #+ [ UI.element nodesHrefs ]
+ where
+  TracerEnv{teConnectedNodes} = tracerEnv
 
 -- | After clicking on the node's href, the user will be redirected to the monitoring page
 --   which is rendered by 'ekg' package. But before, we have to check if EKG server is
@@ -106,11 +107,9 @@ restartEKGServer
   -> CurrentEKGServer
   -> UI ()
 restartEKGServer TracerEnv{teAcceptedMetrics} newNodeId
-                 (Endpoint monitorHost monitorPort) currentServer = liftIO do
-  maybeMetrics <- atomically do
-    STM.Map.lookup newNodeId teAcceptedMetrics
-
-  whenJust maybeMetrics \(storeForSelectedNode, _) ->
+                 (Endpoint monitorHost monitorPort) currentServer = liftIO $ do
+  metrics <- readTVarIO teAcceptedMetrics
+  whenJust (metrics M.!? newNodeId) $ \(storeForSelectedNode, _) ->
     atomically (tryReadTMVar currentServer) >>= \case
       Just (_curNodeId, _sThread) ->
         -- TODO: Currently we cannot restart EKG server,

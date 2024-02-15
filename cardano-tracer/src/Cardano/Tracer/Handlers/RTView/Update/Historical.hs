@@ -14,12 +14,15 @@ module Cardano.Tracer.Handlers.RTView.Update.Historical
   ) where
 
 import Control.Concurrent.Async (forConcurrently_)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TVar (modifyTVar', readTVar, readTVarIO)
 import Control.Exception.Extra (ignore, try_)
 import Control.Monad (forM, forM_, forever)
 import Control.Monad.Extra (ifM, whenJust)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Csv qualified as CSV
 import Data.List (find, isInfixOf)
+import Data.List qualified as L
 import Data.Map.Strict as M
 import Data.Maybe (catMaybes)
 import Data.Set (Set)
@@ -46,9 +49,6 @@ import Cardano.Tracer.Handlers.RTView.Update.Utils
 import Cardano.Tracer.Handlers.RTView.Utils
 import Cardano.Tracer.Types
 import Cardano.Tracer.Utils
-import Cardano.Tracer.Utils qualified as STM.Set
-
-import Control.Concurrent.STM
 
 -- | A lot of information received from the node is useful as historical data.
 --   It means that such an information should be displayed on time charts,
@@ -69,7 +69,7 @@ runHistoricalUpdater
 runHistoricalUpdater tracerEnv lastResources = forever $ do
   sleep 1.0 -- TODO: should it be configured?
   now <- systemToUTCTime <$> getSystemTime
-  forAcceptedMetrics_ tracerEnv $ \nodeId (ekgStore, _) ->
+  forAcceptedMetrics_ tracerEnv $ \(nodeId, (ekgStore, _)) ->
     forMM_ (getListOfMetrics ekgStore) $ \(metricName, metricValue) -> do
       updateTransactionsHistory nodeId teTxHistory metricName metricValue now
       updateResourcesHistory nodeId teResourcesHistory lastResources metricName metricValue now
@@ -89,8 +89,7 @@ runHistoricalBackup tracerEnv@TracerEnv{teRTViewPageOpened} = forever $ do
 
 backupAllHistory :: TracerEnv -> IO ()
 backupAllHistory tracerEnv@TracerEnv{teConnectedNodes} = do
-  connected <- atomically do
-    STM.Set.toList teConnectedNodes
+  connected <- S.toList <$> readTVarIO teConnectedNodes
   nodesIdsWithNames <- getNodesIdsWithNames tracerEnv connected
   backupDir <- getPathToBackupDir tracerEnv
   (cHistory, rHistory, tHistory) <- atomically $ (,,)
@@ -176,8 +175,8 @@ getAllHistoryFromBackup
   -> DataName
   -> IO [(NodeId, [HistoricalPoint])]
 getAllHistoryFromBackup tracerEnv@TracerEnv{teConnectedNodes} dataName = do
-  connected <- atomically do fromSTMSet teConnectedNodes
-  nodesIdsWithNames <- getNodesIdsWithNames tracerEnv (S.toList connected)
+  connected <- S.toList <$> readTVarIO teConnectedNodes
+  nodesIdsWithNames <- getNodesIdsWithNames tracerEnv connected
   backupDir <- getPathToBackupDir tracerEnv
   forM nodesIdsWithNames $ \(nodeId, nodeName) -> do
     let nodeSubdir = backupDir </> T.unpack nodeName
@@ -203,10 +202,8 @@ getAllHistoryFromBackup tracerEnv@TracerEnv{teConnectedNodes} dataName = do
 getLastHistoryFromBackupsAll
   :: TracerEnv
   -> IO [(NodeId, [(DataName, [HistoricalPoint])])]
-getLastHistoryFromBackupsAll tracerEnv@TracerEnv{teConnectedNodes} = do
-  as <- atomically do
-      fromSTMSet teConnectedNodes
-  getLastHistoryFromBackups' tracerEnv (S.toList as)
+getLastHistoryFromBackupsAll tracerEnv@TracerEnv{teConnectedNodes} =
+  getLastHistoryFromBackups' tracerEnv . S.toList =<< readTVarIO teConnectedNodes
 
 getLastHistoryFromBackups
   :: TracerEnv
@@ -248,7 +245,7 @@ getLastHistoryFromBackups' tracerEnv nodeIds = do
                 -- Ok, take the points for the last 6 hours from now.
                 let sixHoursInS = 21600
                     !firstTSWeNeed = utc2s now - sixHoursInS
-                    pointsWeNeed = Prelude.filter (\(ts, _) -> ts >= firstTSWeNeed) $ V.toList pointsV
+                    pointsWeNeed = L.filter (\(ts, _) -> ts >= firstTSWeNeed) $ V.toList pointsV
                 return $ Just (dataName, pointsWeNeed)
 
 getNodesIdsWithNames

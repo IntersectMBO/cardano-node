@@ -9,9 +9,10 @@ module Cardano.Tracer.Handlers.Metrics.Prometheus
 
 import Prelude hiding (head)
 
-import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TVar (readTVarIO)
 import Control.Monad (forever)
 import Control.Monad.IO.Class (liftIO)
+import Data.Bimap qualified as BM
 import Data.Functor ((<&>))
 import Data.HashMap.Strict qualified as HM
 import Data.Map.Strict qualified as M
@@ -32,10 +33,6 @@ import Cardano.Tracer.Configuration
 import Cardano.Tracer.Environment
 import Cardano.Tracer.Types
 import Cardano.Tracer.Utils
-
-import ListT qualified
-import StmContainers.Map   qualified as STM.Map
-import StmContainers.Bimap qualified as STM.Bimap
 
 -- | Runs simple HTTP server that listens host and port and returns
 --   the list of currently connected nodes in such a format:
@@ -60,7 +57,7 @@ runPrometheusServer
   :: TracerEnv
   -> Endpoint
   -> IO ()
-runPrometheusServer tracerEnv (Endpoint host port) = forever do
+runPrometheusServer tracerEnv (Endpoint host port) = forever $ do
   -- Pause to prevent collision between "Listening"-notifications from servers.
   sleep 0.1
   -- If everything is okay, the function 'simpleHttpServe' never returns.
@@ -82,25 +79,12 @@ runPrometheusServer tracerEnv (Endpoint host port) = forever do
     . setErrorLog ConfigNoLog
     $ defaultConfig
 
-  -- renderListOfConnectedNodes :: Snap ()
-  -- renderListOfConnectedNodes = do
-  --   nIdsWithNames <- liftIO $ readTVarIO teConnectedNodesNames
-  --   if BM.null nIdsWithNames
-  --     then writeText "There are no connected nodes yet."
-  --     else blaze . mkPage . map mkHref $ BM.toList nIdsWithNames
-
   renderListOfConnectedNodes :: Snap ()
   renderListOfConnectedNodes = do
-    -- TODO: duplicate atomically
-    noNodes <- liftIO $ atomically do
-      STM.Bimap.null teConnectedNodesNames
-    if noNodes
-    then writeText "There are no connected nodes yet."
-    else do
-      nodes <- liftIO $ atomically do
-        ListT.toList $ STM.Bimap.listT teConnectedNodesNames
-
-      blaze $ mkPage $ map mkHref nodes
+    nIdsWithNames <- liftIO $ readTVarIO teConnectedNodesNames
+    if BM.null nIdsWithNames
+      then writeText "There are no connected nodes yet."
+      else blaze . mkPage . map mkHref $ BM.toList nIdsWithNames
 
   mkHref (_, nodeName) =
     a ! href (fromString $ "http://" <> host <> ":" <> show port <> "/" <> nodeName')
@@ -131,15 +115,14 @@ getMetricsFromNode
   -> NodeId
   -> AcceptedMetrics
   -> IO Text
-getMetricsFromNode tracerEnv nodeId acceptedMetrics = do
-  mmetricScores <- atomically do
-    STM.Map.lookup nodeId acceptedMetrics
-  case mmetricScores of
-    Nothing ->
-      return "No such a node!"
-    Just (ekgStore, _) ->
-      sampleAll ekgStore <&> renderListOfMetrics . getListOfMetrics
-
+getMetricsFromNode tracerEnv nodeId acceptedMetrics =
+  readTVarIO acceptedMetrics >>=
+    (\case
+        Nothing ->
+          return "No such a node!"
+        Just (ekgStore, _) ->
+          sampleAll ekgStore <&> renderListOfMetrics . getListOfMetrics
+    ) . M.lookup nodeId
  where
   getListOfMetrics :: Sample -> MetricsList
   getListOfMetrics =

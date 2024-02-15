@@ -56,9 +56,6 @@ import           Cardano.Tracer.Handlers.RTView.Update.Historical
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
-import ListT qualified
-import StmContainers.Set   qualified as STM.Set
-
 chartsIds :: [ChartId]
 chartsIds = [minBound .. maxBound]
 
@@ -159,7 +156,7 @@ doAddPointsToChart
   -> ChartId
   -> UI ()
 doAddPointsToChart replaceByAvg tracerEnv hist datasetIndices dataName chartId = do
-  connected <- liftIO do atomically do ListT.toList $ STM.Set.listT (teConnectedNodes tracerEnv)
+  connected <- liftIO $ S.toList <$> readTVarIO (teConnectedNodes tracerEnv)
   dataForPush <-
     forM connected $ \nodeId ->
       liftIO (getHistoricalData hist nodeId dataName) >>= \case

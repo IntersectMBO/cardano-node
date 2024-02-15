@@ -9,7 +9,7 @@ module Cardano.Tracer.Handlers.RTView.Update.Logs
   , updateLogsLiveViewNodes
   ) where
 
-import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TVar (readTVarIO)
 import Control.Monad (forM_, void, when)
 import Control.Monad.Extra (whenJustM, whenM)
 import Data.Text qualified as T
@@ -144,4 +144,4 @@ updateLogsLiveViewNodes tracerEnv@TracerEnv{teConnectedNodes} = do
     findByClassAndDo window "is-checkradio is-medium rt-view-ncb" delete'
 
   addNodesCheckboxesForConnected =
-    liftIO (atomically (fromSTMSet teConnectedNodes)) >>= doAddLiveViewNodesForConnected tracerEnv
+    liftIO (readTVarIO teConnectedNodes) >>= doAddLiveViewNodesForConnected tracerEnv
