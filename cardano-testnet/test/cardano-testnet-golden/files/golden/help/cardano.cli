@@ -6,7 +6,7 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   | --alonzo-era
   | --babbage-era
   ]
-  [--epoch-length MILLISECONDS]
+  [--epoch-length SLOTS]
   [--slot-length SECONDS]
   --testnet-magic INT
   [--active-slots-coeff DOUBLE]
@@ -26,8 +26,7 @@ Available options:
   --mary-era               Specify the Mary era
   --alonzo-era             Specify the Alonzo era
   --babbage-era            Specify the Babbage era (default)
-  --epoch-length MILLISECONDS
-                           Epoch length (default: 500)
+  --epoch-length SLOTS     Epoch length, in number of slots (default: 500)
   --slot-length SECONDS    Slot length (default: 0.1)
   --testnet-magic INT      Specify a testnet magic id.
   --active-slots-coeff DOUBLE
