@@ -12,6 +12,7 @@ import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldBlocks
 import qualified Cardano.Testnet.Test.LedgerEvents.Gov.InfoAction as LedgerEvents
+import qualified Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO as LedgerEvents
 import qualified Cardano.Testnet.Test.LedgerEvents.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
@@ -35,6 +36,7 @@ tests = pure $ T.testGroup "test/Spec.hs"
           , T.testGroup "Governance"
             -- [ H.ignoreOnMacAndWindows "ProposeAndRatifyNewConstitution" LedgerEvents.hprop_ledger_events_propose_new_constitution
             [ H.ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
+            , H.ignoreOnWindows "ProposeNewConstitutionSPO" LedgerEvents.hprop_ledger_events_propose_new_constitution_spo
             ]
           ]
       , T.testGroup "CLI"
