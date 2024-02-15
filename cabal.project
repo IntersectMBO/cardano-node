@@ -60,3 +60,40 @@ package plutus-scripts-bench
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
+
+source-repository-package
+    type: git
+    location: https://github.com/input-output-hk/ouroboros-network/
+    tag: b118f38677a0536db02da589324bd9a8644cfda5
+    subdir: ouroboros-network
+            ouroboros-network-framework
+            ouroboros-network-api
+            ouroboros-network-testing
+            ouroboros-network-protocols
+    --sha256: 0kmkf1jjml8jazif5fns8w56i9qy8kk2ppxmixkl5vc14yv0dlb5
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ouroboros-consensus/
+  tag: b022a2fc08885ad4985daa2982ec661de2028a05
+  subdir: ouroboros-consensus
+          ouroboros-consensus-diffusion
+          ouroboros-consensus-cardano
+          ouroboros-consensus-protocol
+          sop-extras
+          strict-sop-core
+  --sha256: sha256-W51BR6lbi1I0j+Ety/RfQOflnJxunlARfPUoN6m1HDU=
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-api
+  tag: ba12220d88e82af2515d3759a3042abf90cae67c
+  subdir: cardano-api
+  --sha256: sha256-NGqSdBlhd2vvrN9Sc+SPGq+3L88pLdSm4+kXHNO0KZE=
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-cli
+  tag: c5b4365c930c0053fdb25509a3962a346afe3450
+  subdir: cardano-cli
+  --sha256: sha256-Vh/ZVx7DKsQtwj9u9GIA2SAP1SXLbZ2rgaeCv8SVAaA=
