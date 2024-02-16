@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2024-02-06T15:14:59Z
-  , cardano-haskell-packages 2024-02-20T15:00:00Z
+  , hackage.haskell.org 2024-02-21T10:56:14Z
+  , cardano-haskell-packages 2024-02-21T14:57:01Z
 
 packages:
   cardano-git-rev
@@ -31,7 +31,7 @@ packages:
   trace-resources
   trace-forward
 
-if !(impl(ghc <9.6) || impl(ghc >=9.7))
+if impl(ghc >9.6) && impl(ghc <9.7)
   packages:
     bench/tx-generator
 
