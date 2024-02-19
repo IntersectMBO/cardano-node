@@ -17,6 +17,7 @@ let
       accessPoints = map (e: builtins.removeAttrs e ["valency"]) g.accessPoints;
       advertise = g.advertise or false;
       valency = g.valency or (length g.accessPoints);
+      trustable = g.trustable or false;
     }) (cfg.producers ++ (cfg.instanceProducers i));
     publicRoots = map (g: {
       accessPoints = map (e: builtins.removeAttrs e ["valency"]) g.accessPoints;
@@ -24,6 +25,8 @@ let
     }) (cfg.publicProducers ++ (cfg.instancePublicProducers i));
   } // optionalAttrs (cfg.usePeersFromLedgerAfterSlot != null) {
     useLedgerAfterSlot = cfg.usePeersFromLedgerAfterSlot;
+  } // optionalAttrs (cfg.bootstrapPeers != null) {
+    bootstrapPeers = cfg.bootstrapPeers;
   };
 
   oldTopology = i: {
@@ -510,6 +513,16 @@ in {
           If set, bootstraps from public roots until it reaches given slot,
           then it switches to using the ledger as a source of peers. It maintains a connection to its local roots.
           Default to null for block producers.
+        '';
+      };
+
+      bootstrapPeers = mkOption {
+        type = types.nullOr (types.either types.bool (types.listOf types.attrs));
+        default = false;
+        description = ''
+          If set, it will enable bootstrap peers.
+          To disable set this to false.
+          To enable set  this to [{ address = "addr"; port = 0; }]
         '';
       };
 
