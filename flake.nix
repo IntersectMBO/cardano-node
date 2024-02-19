@@ -214,7 +214,6 @@
                               workbenchStartArgs = [ "--trace" ];
                             };
           } // {
-
             inherit (pkgs) all-profiles-json;
 
             system-tests = pkgs.writeShellApplication {
