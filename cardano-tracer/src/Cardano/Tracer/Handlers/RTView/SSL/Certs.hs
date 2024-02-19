@@ -5,15 +5,15 @@ module Cardano.Tracer.Handlers.RTView.SSL.Certs
   ( placeDefaultSSLFiles
   ) where
 
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.RTView.System
+
 import           Control.Exception.Extra (ignore)
 import           Control.Monad.Extra (unlessM)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import           Data.String.QQ
 import qualified System.Directory as D
-
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.RTView.System
 
 placeDefaultSSLFiles :: TracerEnv -> IO (FilePath, FilePath)
 placeDefaultSSLFiles tracerEnv = do

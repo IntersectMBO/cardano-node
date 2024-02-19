@@ -40,11 +40,12 @@ import           Options.Applicative hiding (command)
 import qualified Options.Applicative as Opt
 import           System.FilePath.Posix
 
+import           Testnet.Process.Run
+
 import           Hedgehog (MonadTest)
 import           Hedgehog.Extras (ExecConfig)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H (writeFile)
-import           Testnet.Process.Run
 
 data KeyNames = KeyNames
   { verificationKeyFile :: FilePath

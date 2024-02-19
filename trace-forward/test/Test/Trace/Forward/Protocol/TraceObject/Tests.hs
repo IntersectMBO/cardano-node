@@ -5,6 +5,9 @@ module Test.Trace.Forward.Protocol.TraceObject.Tests
   ( tests
   ) where
 
+import           Ouroboros.Network.Channel
+import           Ouroboros.Network.Driver.Simple (runConnectedPeers)
+
 import qualified Codec.Serialise as CBOR
 import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadST
@@ -12,25 +15,21 @@ import           Control.Monad.Class.MonadThrow
 import           Control.Monad.IOSim (runSimOrThrow)
 import           Control.Monad.ST (runST)
 import           Control.Tracer (nullTracer)
-import           Test.Tasty
-import           Test.Tasty.QuickCheck
-
 import           Network.TypedProtocol.Codec
 import           Network.TypedProtocol.Proofs
-import           Ouroboros.Network.Channel
-import           Ouroboros.Network.Driver.Simple (runConnectedPeers)
 
-import           Trace.Forward.Protocol.TraceObject.Acceptor
-import           Trace.Forward.Protocol.TraceObject.Codec
-import           Trace.Forward.Protocol.TraceObject.Forwarder
-import           Trace.Forward.Protocol.TraceObject.Type
-
+import           Test.Tasty
+import           Test.Tasty.QuickCheck
+import           Test.Trace.Forward.Protocol.Common
 import           Test.Trace.Forward.Protocol.TraceObject.Codec ()
 import           Test.Trace.Forward.Protocol.TraceObject.Direct
 import           Test.Trace.Forward.Protocol.TraceObject.Examples
 import           Test.Trace.Forward.Protocol.TraceObject.Item
 
-import           Test.Trace.Forward.Protocol.Common
+import           Trace.Forward.Protocol.TraceObject.Acceptor
+import           Trace.Forward.Protocol.TraceObject.Codec
+import           Trace.Forward.Protocol.TraceObject.Forwarder
+import           Trace.Forward.Protocol.TraceObject.Type
 
 tests :: TestTree
 tests = testGroup "Trace.Forward.Protocol.TraceObject"

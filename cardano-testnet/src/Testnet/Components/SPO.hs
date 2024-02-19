@@ -26,15 +26,15 @@ import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import           System.FilePath.Posix ((</>))
 
-import           Hedgehog
-import           Hedgehog.Extras (ExecConfig, threadDelay)
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
-
 import           Testnet.Filepath
 import           Testnet.Process.Cli
 import           Testnet.Process.Run (execCli, execCli', execCli_)
 import           Testnet.Start.Types
+
+import           Hedgehog
+import           Hedgehog.Extras (ExecConfig, threadDelay)
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 
 checkStakePoolRegistered
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)

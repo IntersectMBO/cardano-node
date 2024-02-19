@@ -8,6 +8,7 @@ module Cardano.Logging.Test.Unit.Routing (
 import           Cardano.Logging
 import           Cardano.Logging.Test.Tracer
 import           Cardano.Logging.Test.Unit.TestObjects
+
 import           Data.IORef
 import           Data.Text (Text)
 

@@ -3,13 +3,12 @@
 
 module Test.Trace.Forward.Protocol.TraceObject.Codec () where
 
-import           Test.QuickCheck
-
 import           Network.TypedProtocol.Codec
 
-import           Trace.Forward.Protocol.TraceObject.Type
-
+import           Test.QuickCheck
 import           Test.Trace.Forward.Protocol.TraceObject.Item
+
+import           Trace.Forward.Protocol.TraceObject.Type
 
 instance Arbitrary NumberOfTraceObjects where
   arbitrary = oneof

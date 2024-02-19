@@ -4,6 +4,12 @@ module Cardano.Tracer.Handlers.RTView.Notifications.Send
   ( makeAndSendNotification
   ) where
 
+import           Cardano.Logging (showT)
+import           Cardano.Tracer.Handlers.RTView.Notifications.Email
+import           Cardano.Tracer.Handlers.RTView.Notifications.Types
+import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
+
 import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TBQueue (flushTBQueue)
@@ -15,13 +21,6 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
-
-import           Cardano.Logging (showT)
-
-import           Cardano.Tracer.Handlers.RTView.Notifications.Email
-import           Cardano.Tracer.Handlers.RTView.Notifications.Types
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
 
 makeAndSendNotification
   :: EmailSettings

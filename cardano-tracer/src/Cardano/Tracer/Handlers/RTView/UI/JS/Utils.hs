@@ -9,6 +9,7 @@ module Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 
 import           Data.String.QQ
 import           Data.Text (Text)
+
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 

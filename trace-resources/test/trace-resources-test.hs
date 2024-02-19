@@ -1,13 +1,14 @@
 {-# OPTIONS_GHC -Wno-unused-imports  #-}
 
-import           Control.Monad.IO.Class
-import           Data.IORef
-import           Test.Tasty
-import           Test.Tasty.QuickCheck
-
 import           Cardano.Logging
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types
+
+import           Control.Monad.IO.Class
+import           Data.IORef
+
+import           Test.Tasty
+import           Test.Tasty.QuickCheck
 
 
 main :: IO ()

@@ -16,13 +16,17 @@ module Testnet.Start.Types
   ) where
 
 import           Cardano.Api hiding (cardanoEra)
+
+import           Prelude
+
 import           Data.Word
 import           GHC.Stack
+import           System.FilePath (addTrailingPathSeparator)
+
+import           Testnet.Filepath
+
 import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras as H
-import           Prelude
-import           System.FilePath (addTrailingPathSeparator)
-import           Testnet.Filepath
 
 
 {- HLINT ignore "Redundant flip" -}

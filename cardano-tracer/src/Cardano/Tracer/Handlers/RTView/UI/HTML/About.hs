@@ -4,21 +4,21 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.About
   ( mkAboutInfo
   ) where
 
-import           Data.List.Extra (lower)
-import qualified Data.Text as T
-import           Data.Version (showVersion)
-import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core
-import           System.Directory (makeAbsolute)
-import           System.Environment (getArgs)
-import           System.Info (os)
-
 import           Cardano.Git.Rev (gitRev)
-
 import           Cardano.Tracer.Handlers.RTView.System
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
+
+import           Data.List.Extra (lower)
+import qualified Data.Text as T
+import           Data.Version (showVersion)
+import           System.Directory (makeAbsolute)
+import           System.Environment (getArgs)
+import           System.Info (os)
+
+import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Core
 import           Paths_cardano_tracer (version)
 
 mkAboutInfo :: UI Element

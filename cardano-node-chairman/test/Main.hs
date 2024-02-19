@@ -4,19 +4,19 @@ module Main
   ( main
   ) where
 
-import           Data.String (IsString (..))
+import qualified Cardano.Crypto.Init as Crypto
+
 import           Prelude
 
+import           Data.String (IsString (..))
 import qualified System.Environment as E
 import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
+
 import qualified Test.Tasty as T
 import qualified Test.Tasty.Hedgehog as H
 import qualified Test.Tasty.Ingredients as T
 
--- import qualified Spec.Chairman.Cardano
 import qualified Spec.Network
-
-import qualified Cardano.Crypto.Init as Crypto
 
 tests :: IO T.TestTree
 tests = do

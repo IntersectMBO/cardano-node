@@ -6,22 +6,21 @@
 
 module Cardano.Tracing.Startup where
 
-import           Data.Aeson (ToJSON)
-import           Data.Text (Text)
-import           Prelude
-
+import           Cardano.BM.Data.Tracer (HasTextFormatter (..), trStructuredText)
+import           Cardano.BM.Tracing (HasPrivacyAnnotation (..), HasSeverityAnnotation (..),
+                   Severity (..), ToObject (..), Transformable (..))
 import           Cardano.Logging (LogFormatting (..))
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.Compat
 import           Cardano.Node.Tracing.Tracers.Startup
 import           Cardano.Tracing.OrphanInstances.Network ()
-
-import           Cardano.BM.Data.Tracer (HasTextFormatter (..), trStructuredText)
-import           Cardano.BM.Tracing (HasPrivacyAnnotation (..), HasSeverityAnnotation (..),
-                   Severity (..), ToObject (..), Transformable (..))
-
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
                    BlockNodeToNodeVersion)
+
+import           Prelude
+
+import           Data.Aeson (ToJSON)
+import           Data.Text (Text)
 
 
 instance HasSeverityAnnotation (StartupTrace blk) where

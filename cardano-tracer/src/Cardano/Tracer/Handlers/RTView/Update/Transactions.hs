@@ -6,12 +6,12 @@ module Cardano.Tracer.Handlers.RTView.Update.Transactions
   ( updateTransactionsHistory
   ) where
 
-import           Data.Text.Read (decimal)
-import           Data.Time.Clock (UTCTime)
-
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Types
+
+import           Data.Text.Read (decimal)
+import           Data.Time.Clock (UTCTime)
 
 updateTransactionsHistory
   :: NodeId

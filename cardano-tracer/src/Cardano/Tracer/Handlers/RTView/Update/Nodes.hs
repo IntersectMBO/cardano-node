@@ -13,6 +13,23 @@ module Cardano.Tracer.Handlers.RTView.Update.Nodes
   , updateNodesUptime
   ) where
 
+import           Cardano.Logging (showT)
+import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.Metrics.Utils
+import           Cardano.Tracer.Handlers.RTView.State.Displayed
+import           Cardano.Tracer.Handlers.RTView.State.EraSettings
+import           Cardano.Tracer.Handlers.RTView.UI.Charts
+import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
+import           Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes
+import           Cardano.Tracer.Handlers.RTView.UI.Types
+import           Cardano.Tracer.Handlers.RTView.UI.Utils
+import           Cardano.Tracer.Handlers.RTView.Update.NodeInfo
+import           Cardano.Tracer.Handlers.RTView.Update.Utils
+import           Cardano.Tracer.Handlers.RTView.Utils
+import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
+
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar
 import           Control.Monad (forM_, unless, void, when)
@@ -30,28 +47,11 @@ import           Data.Time.Clock (UTCTime, addUTCTime, diffUTCTime, utctDay)
 import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
 import           Data.Word (Word64)
-import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core
 import           Text.Printf (printf)
 import           Text.Read (readMaybe)
 
-import           Cardano.Logging (showT)
-
-import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Metrics.Utils
-import           Cardano.Tracer.Handlers.RTView.State.Displayed
-import           Cardano.Tracer.Handlers.RTView.State.EraSettings
-import           Cardano.Tracer.Handlers.RTView.UI.Charts
-import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
-import           Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes
-import           Cardano.Tracer.Handlers.RTView.UI.Types
-import           Cardano.Tracer.Handlers.RTView.UI.Utils
-import           Cardano.Tracer.Handlers.RTView.Update.NodeInfo
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
-import           Cardano.Tracer.Handlers.RTView.Utils
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
+import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Core
 
 updateNodesUI
   :: TracerEnv

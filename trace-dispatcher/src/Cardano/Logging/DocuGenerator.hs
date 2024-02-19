@@ -23,8 +23,13 @@ module Cardano.Logging.DocuGenerator (
   , DocTracer(..)
 ) where
 
+import           Cardano.Logging.ConfigurationParser ()
+import           Cardano.Logging.Types
+
 import           Prelude hiding (lines, unlines)
 
+import           Control.Monad.IO.Class (MonadIO, liftIO)
+import qualified Control.Tracer as TR
 import qualified Data.Aeson.Encode.Pretty as AE
 import           Data.IORef (modifyIORef, newIORef, readIORef)
 import           Data.List (groupBy, intersperse, nub, sortBy)
@@ -35,11 +40,6 @@ import           Data.Text.Internal.Builder (toLazyText)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder (Builder, fromString, fromText, singleton)
 import           Data.Time (getZonedTime)
-
-import           Cardano.Logging.ConfigurationParser ()
-import           Cardano.Logging.Types
-import           Control.Monad.IO.Class (MonadIO, liftIO)
-import qualified Control.Tracer as TR
 
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
 

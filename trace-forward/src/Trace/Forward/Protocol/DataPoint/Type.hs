@@ -19,11 +19,11 @@ module Trace.Forward.Protocol.DataPoint.Type
   , NobodyHasAgency (..)
   ) where
 
+import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
+
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Text (Text)
-
 import           Network.TypedProtocol.Core (Protocol (..))
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
 -- | A kind to identify our protocol, and the types of the states in the state
 -- transition diagram of the protocol.

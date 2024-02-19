@@ -4,9 +4,6 @@
 
 module Cardano.Tracing.Shutdown () where
 
-import           Data.Text (Text)
-import           Prelude (IO)
-
 import           Cardano.BM.Data.Tracer (HasTextFormatter (..), trStructuredText)
 import           Cardano.BM.Tracing (HasPrivacyAnnotation (..), HasSeverityAnnotation (..),
                    Severity (..), ToObject (..), Transformable (..))
@@ -14,6 +11,10 @@ import           Cardano.Logging (LogFormatting (..))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Tracing.Compat
 import           Cardano.Node.Tracing.Tracers.Shutdown
+
+import           Prelude (IO)
+
+import           Data.Text (Text)
 
 instance HasPrivacyAnnotation  ShutdownTrace
 instance HasSeverityAnnotation ShutdownTrace where

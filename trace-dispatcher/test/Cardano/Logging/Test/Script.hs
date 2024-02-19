@@ -10,6 +10,11 @@ module Cardano.Logging.Test.Script
   , runScriptMultithreadedWithConstantReconfig
   ) where
 
+import           Cardano.Logging
+import           Cardano.Logging.Test.Config ()
+import           Cardano.Logging.Test.Tracer
+import           Cardano.Logging.Test.Types
+
 import           Control.Concurrent (ThreadId, forkFinally, threadDelay)
 import           Control.Concurrent.MVar
 import           Control.Exception.Base (SomeException, throw)
@@ -18,12 +23,8 @@ import           Data.IORef (newIORef, readIORef)
 import           Data.List (sort)
 import           Data.Maybe (mapMaybe)
 import           Data.Time.Clock.System
-import           Test.QuickCheck
 
-import           Cardano.Logging
-import           Cardano.Logging.Test.Config ()
-import           Cardano.Logging.Test.Tracer
-import           Cardano.Logging.Test.Types
+import           Test.QuickCheck
 
 
 -- | Run a script in a single thread and uses the oracle to test for correctness

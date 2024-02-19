@@ -19,11 +19,11 @@ import           Cardano.Logging.Formatter
 import           Cardano.Logging.Trace
 import           Cardano.Logging.TraceDispatcherMessage
 import           Cardano.Logging.Types
-import qualified Control.Tracer as T
 
 import           Control.Concurrent.MVar
 import           Control.Monad (when)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
+import qualified Control.Tracer as T
 import           Data.IORef
 import qualified Data.List as L
 import qualified Data.Map as Map

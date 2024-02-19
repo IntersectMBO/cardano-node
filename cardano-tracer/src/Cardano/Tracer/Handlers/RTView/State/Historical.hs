@@ -22,6 +22,9 @@ module Cardano.Tracer.Handlers.RTView.State.Historical
   , readValueD
   ) where
 
+import           Cardano.Tracer.Handlers.RTView.Update.Utils
+import           Cardano.Tracer.Types (NodeId)
+
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO, readTVarIO)
 import           Control.Monad (mzero)
@@ -37,9 +40,6 @@ import           Data.Text.Read (decimal, double)
 import           Data.Time.Clock (UTCTime)
 import           Data.Word (Word64)
 import           Text.Printf (printf)
-
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
-import           Cardano.Tracer.Types (NodeId)
 
 -- | A lot of information received from the node is useful as historical data.
 --   It means that such an information should be displayed on time charts,

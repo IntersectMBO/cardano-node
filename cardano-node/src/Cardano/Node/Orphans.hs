@@ -7,11 +7,10 @@ module Cardano.Node.Orphans () where
 
 import           Cardano.Api ()
 
-import           Data.Aeson.Types
-
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
+import           Data.Aeson.Types
 import           Text.Printf (PrintfArg (..))
 
 instance PrintfArg SizeInBytes where

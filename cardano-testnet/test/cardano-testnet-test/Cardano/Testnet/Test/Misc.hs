@@ -1,15 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Cardano.Testnet.Test.Misc where
 
+import           Cardano.Api.Pretty
+
+import           Cardano.CLI.EraBased.Run.Query (renderOpCertIntervalInformation)
+import           Cardano.CLI.Types.Common
+import           Cardano.CLI.Types.Output
+
 import           Prelude
 
 import           Data.List (isInfixOf)
 import qualified GHC.Stack as GHC
-
-import           Cardano.Api.Pretty
-import           Cardano.CLI.EraBased.Run.Query (renderOpCertIntervalInformation)
-import           Cardano.CLI.Types.Common
-import           Cardano.CLI.Types.Output
 
 import           Hedgehog (success)
 import qualified Hedgehog as H

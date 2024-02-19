@@ -11,11 +11,17 @@ module Cardano.Tracer.Test.ForwardingStressTest.Script
   , runScriptForwarding
   ) where
 
+import           Cardano.Logging
+import           Cardano.Tracer.Test.ForwardingStressTest.Config ()
+import           Cardano.Tracer.Test.ForwardingStressTest.Messages
+import           Cardano.Tracer.Test.ForwardingStressTest.Types
+import           Cardano.Tracer.Test.TestSetup
+import           Cardano.Tracer.Test.Utils
+
 import           Control.Concurrent (ThreadId, forkFinally, threadDelay)
 import           Control.Concurrent.MVar
 import           Control.Exception.Base (SomeException, throw)
 import           Control.Monad (when)
-import           Data.Functor.Identity
 import           Data.IORef
 import           Data.List (sort)
 import           Data.Map.Strict (fromList)
@@ -23,13 +29,6 @@ import           Data.Maybe
 import           System.FilePath.Glob
 
 import           Test.QuickCheck
-
-import           Cardano.Logging
-import           Cardano.Tracer.Test.ForwardingStressTest.Config ()
-import           Cardano.Tracer.Test.ForwardingStressTest.Messages
-import           Cardano.Tracer.Test.ForwardingStressTest.Types
-import           Cardano.Tracer.Test.TestSetup
-import           Cardano.Tracer.Test.Utils
 
 -- | configuration for testing
 simpleTestConfig :: TraceConfig

@@ -7,14 +7,6 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.Body
   ( mkPageBody
   ) where
 
-import           Control.Monad (unless, void, when)
-import           Control.Monad.Extra (whenJustM, whenM)
-import           Data.Text (Text)
-import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core
-import           Graphics.UI.Threepenny.JQuery (Easing (..), fadeIn, fadeOut)
-import           Text.Read (readMaybe)
-
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Historical
@@ -32,6 +24,15 @@ import           Cardano.Tracer.Handlers.RTView.UI.Theme
 import           Cardano.Tracer.Handlers.RTView.UI.Types
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.Update.Logs
+
+import           Control.Monad (unless, void, when)
+import           Control.Monad.Extra (whenJustM, whenM)
+import           Data.Text (Text)
+import           Text.Read (readMaybe)
+
+import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Core
+import           Graphics.UI.Threepenny.JQuery (Easing (..), fadeIn, fadeOut)
 
 mkPageBody
   :: TracerEnv

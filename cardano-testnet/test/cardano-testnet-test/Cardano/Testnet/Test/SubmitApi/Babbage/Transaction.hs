@@ -17,32 +17,14 @@ module Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
   ) where
 
 import           Cardano.Api
+import qualified Cardano.Api.Ledger as L
+import qualified Cardano.Api.Ledger.Lens as A
 
 import           Cardano.Testnet
 
 import           Prelude
 
 import           Control.Monad (void)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import           System.FilePath ((</>))
-import qualified System.Info as SYS
-
-import           Hedgehog (Property, (===))
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
-
-import qualified Cardano.Api.Ledger.Lens as A
-import qualified Data.Map as Map
-import           Network.HTTP.Simple
-import           Testnet.Components.SPO
-import qualified Testnet.Process.Run as H
-import           Testnet.Process.Run
-import qualified Testnet.Property.Utils as H
-import           Testnet.Runtime
-
-import qualified Cardano.Api.Ledger as L
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as Aeson
 import qualified Data.Aeson.Lens as Aeson
@@ -50,10 +32,27 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
-import qualified Hedgehog.Extras.Test.Golden as H
+import qualified Data.Map as Map
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import           Lens.Micro
-import           Testnet.SubmitApi
+import           Network.HTTP.Simple
+import           System.FilePath ((</>))
+import qualified System.Info as SYS
 import           Text.Regex (mkRegex, subRegex)
+
+import           Testnet.Components.SPO
+import qualified Testnet.Process.Run as H
+import           Testnet.Process.Run
+import qualified Testnet.Property.Utils as H
+import           Testnet.Runtime
+import           Testnet.SubmitApi
+
+import           Hedgehog (Property, (===))
+import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test.Golden as H
 
 hprop_transaction :: Property
 hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transaction" $ \tempAbsBasePath' -> do

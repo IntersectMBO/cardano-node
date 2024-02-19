@@ -11,6 +11,8 @@ module Cardano.Logging.ConfigurationParser
   , configToRepresentation
   ) where
 
+import           Cardano.Logging.Types
+
 import           Control.Applicative ((<|>))
 import           Control.Exception (throwIO)
 import qualified Data.Aeson as AE
@@ -21,8 +23,6 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, listToMaybe)
 import           Data.Text (Text, intercalate, split)
 import           Data.Yaml
-
-import           Cardano.Logging.Types
 
 -- -----------------------------------------------------------------------------
 -- Configuration file

@@ -5,10 +5,6 @@ module Test.Cardano.Node.POM
   ( tests
   ) where
 
-import           Data.Monoid (Last (..))
-import           Data.Text (Text)
-import           Data.Time.Clock (secondsToDiffTime)
-
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
@@ -22,6 +18,10 @@ import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
+
+import           Data.Monoid (Last (..))
+import           Data.Text (Text)
+import           Data.Time.Clock (secondsToDiffTime)
 
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog

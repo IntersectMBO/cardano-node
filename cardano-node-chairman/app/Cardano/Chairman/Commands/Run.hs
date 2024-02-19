@@ -8,10 +8,20 @@ module Cardano.Chairman.Commands.Run
   ( cmdRun
   ) where
 
-import           Cardano.Prelude (ConvertText (..))
-
+import           Cardano.Api
 import qualified Cardano.Api as Api
 import           Cardano.Api.Pretty
+
+import           Cardano.Chairman (chairmanTest)
+import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..),
+                   parseNodeConfigurationFP)
+import           Cardano.Node.Protocol
+import           Cardano.Node.Types
+import           Cardano.Prelude (ConvertText (..))
+import qualified Ouroboros.Consensus.Config as Consensus
+import           Ouroboros.Consensus.Config.SecurityParam (SecurityParam (..))
+import           Ouroboros.Consensus.Config.SupportsNode
+import           Ouroboros.Consensus.Node.ProtocolInfo
 
 import           Control.Monad.Class.MonadTime.SI (DiffTime)
 import           Control.Monad.IO.Class (MonadIO (..))
@@ -24,20 +34,6 @@ import           Options.Applicative
 import qualified Options.Applicative as Opt
 import           System.Exit (exitFailure)
 import qualified System.IO as IO
-
-import           Cardano.Node.Configuration.NodeAddress
-import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..),
-                   parseNodeConfigurationFP)
-import           Cardano.Node.Protocol
-import           Cardano.Node.Types
-import qualified Ouroboros.Consensus.Config as Consensus
-import           Ouroboros.Consensus.Config.SecurityParam (SecurityParam (..))
-import           Ouroboros.Consensus.Config.SupportsNode
-import           Ouroboros.Consensus.Node.ProtocolInfo
-
-
-import           Cardano.Api
-import           Cardano.Chairman (chairmanTest)
 
 data RunOpts = RunOpts
   { -- | Stop the test after given number of seconds. The chairman will

@@ -4,20 +4,20 @@ module Main
   ( main
   ) where
 
-import           Data.String
-import           Prelude
-import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
-import           Test.Tasty (TestTree)
-
-import qualified System.Environment as E
-import qualified Test.Tasty as T
-import qualified Test.Tasty.Hedgehog as H
-import qualified Test.Tasty.Ingredients as T
-
+import qualified Cardano.Crypto.Init as Crypto
 import qualified Cardano.Testnet.Test.Golden.Config
 import qualified Cardano.Testnet.Test.Golden.Help
 
-import qualified Cardano.Crypto.Init as Crypto
+import           Prelude
+
+import           Data.String
+import qualified System.Environment as E
+import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
+
+import qualified Test.Tasty as T
+import           Test.Tasty (TestTree)
+import qualified Test.Tasty.Hedgehog as H
+import qualified Test.Tasty.Ingredients as T
 
 tests :: IO TestTree
 tests = pure $ T.testGroup "Golden tests"

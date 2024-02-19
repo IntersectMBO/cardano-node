@@ -5,13 +5,14 @@ module Cardano.Chairman.Commands.Version
   ) where
 
 import           Cardano.Git.Rev (gitRev)
-import           Data.Version (showVersion)
-import           Options.Applicative
-import           Paths_cardano_node_chairman (version)
-import           System.Info (arch, compilerName, compilerVersion, os)
 
 import qualified Data.Text as T
+import           Data.Version (showVersion)
+import           Options.Applicative
+import           System.Info (arch, compilerName, compilerVersion, os)
 import qualified System.IO as IO
+
+import           Paths_cardano_node_chairman (version)
 
 data VersionOptions = VersionOptions deriving (Eq, Show)
 

@@ -3,11 +3,12 @@ module Cardano.Git.RevFromGit
   ) where
 
 import           Control.Exception (catch)
-import qualified Language.Haskell.TH as TH
 import           System.Exit (ExitCode (..))
 import qualified System.IO as IO
 import           System.IO.Error (isDoesNotExistError)
 import           System.Process (readProcessWithExitCode)
+
+import qualified Language.Haskell.TH as TH
 
 -- | Git revision found by running git rev-parse. If git could not be
 -- executed, then this will be an empty string.

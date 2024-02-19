@@ -50,6 +50,10 @@ module Cardano.Tracer.Handlers.RTView.UI.Utils
   , webPageIsClosed
   ) where
 
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.RTView.State.Displayed
+import           Cardano.Tracer.Types
+
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (TVar, modifyTVar')
 import           Control.Monad (unless, void)
@@ -57,15 +61,12 @@ import           Control.Monad.Extra (whenJustM)
 import           Data.String.QQ
 import           Data.Text (Text, unpack)
 import qualified Data.Text as T
+
 import qualified Foreign.JavaScript as JS
 import qualified Foreign.RemotePtr as Foreign
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 import           Graphics.UI.Threepenny.JQuery (Easing (..), fadeIn, fadeOut)
-
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.RTView.State.Displayed
-import           Cardano.Tracer.Types
 
 (##) :: UI Element -> String -> UI Element
 (##) el anId = el # set UI.id_ anId

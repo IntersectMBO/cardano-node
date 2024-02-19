@@ -10,15 +10,14 @@ module Cardano.Logging.Test.Tracer (
   , testLoggingMessagesEq
   ) where
 
-import           Cardano.Logging.Types
+import           Cardano.Logging
+
 import           Control.Monad.IO.Class
 import           Data.Aeson (FromJSON (..), Object, decodeStrict, withObject, (.:))
 import           Data.IORef
 import           Data.Text (Text, pack, unpack)
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Time (UTCTime)
-
-import           Cardano.Logging
 
 
 testTracer :: MonadIO m

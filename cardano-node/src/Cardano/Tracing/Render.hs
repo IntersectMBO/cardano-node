@@ -22,13 +22,8 @@ module Cardano.Tracing.Render
   , renderWithOrigin
   ) where
 
-import qualified Data.ByteString.Base16 as B16
-import           Data.Proxy (Proxy (..))
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-
 import           Cardano.BM.Tracing (TracingVerbosity (..))
+import           Cardano.Node.Queries (ConvertTxId (..))
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
 import           Ouroboros.Consensus.Block (BlockNo (..), ConvertRawHash (..), RealPoint (..))
 import           Ouroboros.Consensus.Block.Abstract (Point (..))
@@ -39,7 +34,11 @@ import           Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types (BlockOrEBB 
 import           Ouroboros.Network.Block (ChainHash (..), HeaderHash, StandardHash, Tip,
                    getTipPoint)
 
-import           Cardano.Node.Queries (ConvertTxId (..))
+import qualified Data.ByteString.Base16 as B16
+import           Data.Proxy (Proxy (..))
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 
 renderBlockOrEBB :: BlockOrEBB -> Text
 renderBlockOrEBB (Block slotNo) = "Block at " <> renderSlotNo slotNo

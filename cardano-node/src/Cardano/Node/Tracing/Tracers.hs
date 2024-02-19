@@ -16,17 +16,18 @@ module Cardano.Node.Tracing.Tracers
   ( mkDispatchTracers
   ) where
 
-import           Codec.CBOR.Read (DeserialiseFailure)
-import           Control.Monad (unless)
-import           Data.Proxy (Proxy (..))
-
 import           Cardano.Logging
+import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
+import           Cardano.Node.Queries (NodeKernelData)
+import           Cardano.Node.TraceConstraints
+import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration')
 import           Cardano.Node.Tracing.Formatting ()
+import           Cardano.Node.Tracing.Peers
+import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
 import           Cardano.Node.Tracing.Tracers.Diffusion ()
 import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (forgeThreadStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo
@@ -37,17 +38,6 @@ import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer ()
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
-
-import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
-import           Cardano.Node.Queries (NodeKernelData)
-import           Cardano.Node.TraceConstraints
-import           Cardano.Node.Tracing
-import           Cardano.Node.Tracing.Peers
-import qualified Cardano.Node.Tracing.StateRep as SR
-import           "contra-tracer" Control.Tracer (Tracer (..))
-
-import           Network.Mux.Trace (TraceLabelPeer (..))
-
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
@@ -60,7 +50,6 @@ import qualified Ouroboros.Consensus.Node.Run as Consensus
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
-
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.Diffusion as Diffusion
@@ -68,6 +57,12 @@ import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
 import qualified Ouroboros.Network.Diffusion.P2P as P2P
 import           Ouroboros.Network.NodeToClient (LocalAddress)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
+
+import           Codec.CBOR.Read (DeserialiseFailure)
+import           Control.Monad (unless)
+import           "contra-tracer" Control.Tracer (Tracer (..))
+import           Data.Proxy (Proxy (..))
+import           Network.Mux.Trace (TraceLabelPeer (..))
 
 import           Trace.Forward.Utils.DataPoint (DataPoint)
 

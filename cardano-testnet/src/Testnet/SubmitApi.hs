@@ -16,23 +16,23 @@ module Testnet.SubmitApi
   ) where
 
 import           Cardano.Testnet
+import qualified Cardano.Testnet as H
 
 import           Prelude
 
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Test.Base as H
+import           Data.Functor ((<&>))
+import qualified System.IO as IO
+import qualified System.Process as IO
 
 import qualified Testnet.Process.Run as H
 
-import qualified Cardano.Testnet as H
-import           Data.Functor ((<&>))
+import qualified Hedgehog as H
 import           Hedgehog.Extras (Integration)
 import           Hedgehog.Extras.Stock (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
+import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Process as H
-import qualified System.IO as IO
-import qualified System.Process as IO
 
 data SubmitApiConf = SubmitApiConf
   { tempAbsPath   :: FilePath

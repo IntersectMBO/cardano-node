@@ -6,12 +6,12 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers
   , deletePeerRow
   ) where
 
-import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core
-
 import           Cardano.Tracer.Handlers.RTView.State.Peers
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Types
+
+import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Core
 
 mkPeersTable :: String -> UI Element
 mkPeersTable anId = do

@@ -3,9 +3,11 @@ module Cardano.TxSubmit.Util
   ) where
 
 import           Cardano.Api (textShow)
-import           Prelude
 
 import           Cardano.BM.Trace (Trace, logError)
+
+import           Prelude
+
 import           Control.Exception (SomeException, catch, throwIO)
 import           Data.Text (Text)
 

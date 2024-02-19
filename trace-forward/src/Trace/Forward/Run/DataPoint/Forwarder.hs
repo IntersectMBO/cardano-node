@@ -5,11 +5,12 @@ module Trace.Forward.Run.DataPoint.Forwarder
   , forwardDataPointsResp
   ) where
 
+import           Ouroboros.Network.Driver.Simple (runPeer)
+import           Ouroboros.Network.Mux (MiniProtocolCb (..), MuxMode (..), RunMiniProtocol (..))
+
 import qualified Codec.Serialise as CBOR
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Void (Void)
-import           Ouroboros.Network.Driver.Simple (runPeer)
-import           Ouroboros.Network.Mux (MiniProtocolCb (..), MuxMode (..), RunMiniProtocol (..))
 
 import           Trace.Forward.Configuration.DataPoint (ForwarderConfiguration (..))
 import qualified Trace.Forward.Protocol.DataPoint.Codec as Forwarder

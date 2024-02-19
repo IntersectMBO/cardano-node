@@ -49,6 +49,8 @@ import qualified Cardano.Ledger.Crypto as Core
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import           Cardano.Ledger.Shelley.API
 import           Cardano.Ledger.Shelley.Rules
+import           Cardano.Node.Tracing.Render (renderMissingRedeemers, renderScriptHash,
+                   renderScriptIntegrityHash)
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
 import           Cardano.Protocol.TPraos.BHeader (LastAppliedBlock, labBlockNo)
@@ -76,8 +78,6 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
-import           Cardano.Node.Tracing.Render (renderMissingRedeemers, renderScriptHash,
-                   renderScriptIntegrityHash)
 import           Data.Aeson (Value (..), object)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base16 as B16

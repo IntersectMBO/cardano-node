@@ -10,13 +10,6 @@ module Cardano.Node.Tracing.Tracers.NonP2P
     () where
 
 import           Cardano.Logging
-
-import           Control.Exception (Exception (..), SomeException (..))
-import           Data.Aeson (Value (String), (.=))
-import qualified Data.IP as IP
-import           Data.Text (pack)
-import qualified Network.Socket as Socket
-
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.Snocket (LocalAddress (..))
@@ -24,6 +17,12 @@ import           Ouroboros.Network.Subscription.Dns (DnsTrace (..), WithDomainNa
 import           Ouroboros.Network.Subscription.Ip (SubscriptionTrace, WithIPList (..))
 import           Ouroboros.Network.Subscription.Worker (ConnectResult (..), SubscriberError,
                    SubscriptionTrace (..))
+
+import           Control.Exception (Exception (..), SomeException (..))
+import           Data.Aeson (Value (String), (.=))
+import qualified Data.IP as IP
+import           Data.Text (pack)
+import qualified Network.Socket as Socket
 
 
 --------------------------------------------------------------------------------

@@ -37,13 +37,6 @@ module Cardano.Tracing.OrphanInstances.Common
   , mkLOMeta
   ) where
 
-import           Data.Aeson hiding (Value)
-import           Data.Scientific (coefficient)
-import           Data.Text (Text)
-import           Data.Void (Void)
-import           Network.Socket (PortNumber)
-import           Text.Read (readMaybe)
-
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), PrivacyAnnotation (..),
                    mkLOMeta)
 import           Cardano.BM.Data.Tracer (HasTextFormatter (..), emptyObject, mkObject, trStructured,
@@ -53,6 +46,13 @@ import           Cardano.BM.Tracing (HasPrivacyAnnotation (..), HasSeverityAnnot
                    Severity (..), ToObject (..), Tracer (..), TracingVerbosity (..),
                    Transformable (..))
 import           Cardano.Node.Handlers.Shutdown ()
+
+import           Data.Aeson hiding (Value)
+import           Data.Scientific (coefficient)
+import           Data.Text (Text)
+import           Data.Void (Void)
+import           Network.Socket (PortNumber)
+import           Text.Read (readMaybe)
 -- | A bit of a weird one, but needed because some of the very general
 -- consensus interfaces are sometimes instantiated to 'Void', when there are
 -- no cases needed.

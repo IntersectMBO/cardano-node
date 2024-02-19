@@ -4,15 +4,16 @@ module Cardano.Tracer.Acceptors.Server
   ( runAcceptorsServer
   ) where
 
-import           Codec.CBOR.Term (Term)
-import           Control.Concurrent.Async (race_, wait)
-import qualified Data.ByteString.Lazy as LBS
-import           Data.Void (Void)
-import           Data.Word (Word32)
-
 import           Cardano.Logging (TraceObject)
 import           Cardano.Logging.Version (ForwardingVersion (..), ForwardingVersionData (..),
                    forwardingCodecCBORTerm, forwardingVersionCodec)
+import           Cardano.Tracer.Acceptors.Utils (notifyAboutNodeDisconnected,
+                   prepareDataPointRequestor, prepareMetricsStores, removeDisconnectedNode)
+import qualified Cardano.Tracer.Configuration as TC
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.Logs.TraceObjects (traceObjectsHandler)
+import           Cardano.Tracer.MetaTrace
+import           Cardano.Tracer.Utils (connIdToNodeId)
 import           Ouroboros.Network.Context (MinimalInitiatorContext (..), ResponderContext (..))
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
@@ -31,6 +32,12 @@ import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), ConnectionId (..),
                    HandshakeCallbacks (..), SomeResponderApplication (..), cleanNetworkMutableState,
                    newNetworkMutableState, nullNetworkServerTracers, withServerNode)
+
+import           Codec.CBOR.Term (Term)
+import           Control.Concurrent.Async (race_, wait)
+import qualified Data.ByteString.Lazy as LBS
+import           Data.Void (Void)
+import           Data.Word (Word32)
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Acceptor (acceptEKGMetricsResp)
 
@@ -38,14 +45,6 @@ import qualified Trace.Forward.Configuration.DataPoint as DPF
 import qualified Trace.Forward.Configuration.TraceObject as TF
 import           Trace.Forward.Run.DataPoint.Acceptor (acceptDataPointsResp)
 import           Trace.Forward.Run.TraceObject.Acceptor (acceptTraceObjectsResp)
-
-import           Cardano.Tracer.Acceptors.Utils (notifyAboutNodeDisconnected,
-                   prepareDataPointRequestor, prepareMetricsStores, removeDisconnectedNode)
-import qualified Cardano.Tracer.Configuration as TC
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Logs.TraceObjects (traceObjectsHandler)
-import           Cardano.Tracer.MetaTrace
-import           Cardano.Tracer.Utils (connIdToNodeId)
 
 runAcceptorsServer
   :: TracerEnv

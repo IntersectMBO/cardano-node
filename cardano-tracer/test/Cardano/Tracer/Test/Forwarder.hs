@@ -13,24 +13,13 @@ module Cardano.Tracer.Test.Forwarder
   , mkTestDataPoint
   ) where
 
-import           Codec.CBOR.Term (Term)
-import           Control.Concurrent (threadDelay)
-import           Control.Concurrent.Async
-import           Control.DeepSeq (NFData)
-import           Control.Monad (forever)
-import           "contra-tracer" Control.Tracer (contramap, nullTracer, stdoutTracer)
-import           Data.Aeson (FromJSON, ToJSON)
-import qualified Data.ByteString.Lazy as LBS
-import           Data.Time.Clock (getCurrentTime)
-import           Data.Void (Void)
-import           Data.Word (Word16)
-import           GHC.Generics
-import           System.Directory
-import qualified System.Metrics as EKG
-
 import           Cardano.Logging (DetailLevel (..), SeverityS (..), TraceObject (..))
 import           Cardano.Logging.Version (ForwardingVersion (..), ForwardingVersionData (..),
                    forwardingCodecCBORTerm, forwardingVersionCodec)
+import           Cardano.Tracer.Configuration (Verbosity (..))
+import           Cardano.Tracer.Test.TestSetup
+import           Cardano.Tracer.Test.Utils
+import           Cardano.Tracer.Utils
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
 import           Ouroboros.Network.IOManager (IOManager, withIOManager)
@@ -48,6 +37,21 @@ import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), Handsh
                    SomeResponderApplication (..), cleanNetworkMutableState, connectToNode,
                    newNetworkMutableState, nullNetworkConnectTracers, nullNetworkServerTracers,
                    withServerNode)
+
+import           Codec.CBOR.Term (Term)
+import           Control.Concurrent (threadDelay)
+import           Control.Concurrent.Async
+import           Control.DeepSeq (NFData)
+import           Control.Monad (forever)
+import           "contra-tracer" Control.Tracer (contramap, nullTracer, stdoutTracer)
+import           Data.Aeson (FromJSON, ToJSON)
+import qualified Data.ByteString.Lazy as LBS
+import           Data.Time.Clock (getCurrentTime)
+import           Data.Void (Void)
+import           Data.Word (Word16)
+import           GHC.Generics
+import           System.Directory
+import qualified System.Metrics as EKG
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Forwarder
 
@@ -57,11 +61,6 @@ import           Trace.Forward.Run.DataPoint.Forwarder
 import           Trace.Forward.Run.TraceObject.Forwarder
 import           Trace.Forward.Utils.DataPoint
 import           Trace.Forward.Utils.TraceObject
-
-import           Cardano.Tracer.Configuration (Verbosity (..))
-import           Cardano.Tracer.Test.TestSetup
-import           Cardano.Tracer.Test.Utils
-import           Cardano.Tracer.Utils
 
 data ForwardersMode = Initiator | Responder
 

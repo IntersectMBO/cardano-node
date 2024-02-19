@@ -9,13 +9,13 @@ module Cardano.Logging.Test.Unit.Aggregation (
 , testAggResult
 ) where
 
+import           Cardano.Logging
+import           Cardano.Logging.Test.Tracer
+
 import           Data.Aeson (Value (..), (.=))
 import           Data.IORef
 import           Data.Text (Text, pack)
 import           GHC.Generics (Generic)
-
-import           Cardano.Logging
-import           Cardano.Logging.Test.Tracer
 
 data BaseStats = BaseStats {
     bsMeasure :: Double,

@@ -10,11 +10,12 @@ module Cardano.Logging.Test.Types (
   , setMessageID
   ) where
 
+import           Cardano.Logging
+
 import           Data.Aeson (Value (..), (.=))
 import           Data.Text hiding (length)
-import           Test.QuickCheck
 
-import           Cardano.Logging
+import           Test.QuickCheck
 
 type MessageID = Int
 

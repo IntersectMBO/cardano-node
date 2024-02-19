@@ -4,6 +4,7 @@ module Cardano.Logging.Resources.Dummy
     ) where
 
 import           Cardano.Logging.Resources.Types
+
 import           Data.Word
 import qualified GHC.Stats as GhcStats
 import           System.CPUTime

@@ -4,12 +4,7 @@ module Cardano.Tracer.Handlers.Logs.TraceObjects
   ( traceObjectsHandler
   ) where
 
-import           Control.Concurrent.Async (forConcurrently_)
-import           Control.Monad.Extra (whenJust)
-import qualified Data.List.NonEmpty as NE
-
 import           Cardano.Logging (TraceObject)
-
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.File
@@ -17,6 +12,10 @@ import           Cardano.Tracer.Handlers.Logs.Journal
 import           Cardano.Tracer.Handlers.RTView.Run
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
+
+import           Control.Concurrent.Async (forConcurrently_)
+import           Control.Monad.Extra (whenJust)
+import qualified Data.List.NonEmpty as NE
 
 -- | This handler is called periodically by 'TraceObjectForward' protocol
 --   from 'trace-forward' library.

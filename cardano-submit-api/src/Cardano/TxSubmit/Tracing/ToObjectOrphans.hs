@@ -9,10 +9,10 @@ module Cardano.TxSubmit.Tracing.ToObjectOrphans () where
 import           Cardano.BM.Data.Severity (Severity (Debug, Error, Notice, Warning))
 import           Cardano.BM.Data.Tracer (HasPrivacyAnnotation, HasSeverityAnnotation (..),
                    HasTextFormatter, ToObject (toObject), Transformable (..), trStructured)
-import           Data.Aeson ((.=))
-import           Data.Text (Text)
 import           Ouroboros.Network.NodeToClient (ErrorPolicyTrace (..), WithAddr (..))
 
+import           Data.Aeson ((.=))
+import           Data.Text (Text)
 import qualified Network.Socket as Socket
 
 instance HasPrivacyAnnotation (WithAddr Socket.SockAddr ErrorPolicyTrace)

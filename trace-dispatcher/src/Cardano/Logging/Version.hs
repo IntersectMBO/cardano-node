@@ -8,16 +8,15 @@ module Cardano.Logging.Version
   , forwardingCodecCBORTerm
   ) where
 
-import           Data.Text (Text)
-import qualified Data.Text as T
-import           Data.Typeable (Typeable)
-
-import qualified Codec.CBOR.Term as CBOR
-
 import           Ouroboros.Network.CodecCBORTerm
 import           Ouroboros.Network.Magic
 import           Ouroboros.Network.Protocol.Handshake.Version (Accept (..), Acceptable (..),
                    Queryable (..))
+
+import qualified Codec.CBOR.Term as CBOR
+import           Data.Text (Text)
+import qualified Data.Text as T
+import           Data.Typeable (Typeable)
 
 data ForwardingVersion
   = ForwardingV_1

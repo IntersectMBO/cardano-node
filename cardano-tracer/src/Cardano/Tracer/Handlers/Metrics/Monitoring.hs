@@ -7,6 +7,11 @@ module Cardano.Tracer.Handlers.Metrics.Monitoring
   ( runMonitoringServer
   ) where
 
+import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.RTView.SSL.Certs
+import           Cardano.Tracer.Types
+
 import           Control.Concurrent (ThreadId)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TMVar (TMVar, newEmptyTMVarIO, putTMVar, tryReadTMVar)
@@ -17,15 +22,11 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Data.Text as T
 import           Data.Text.Encoding (encodeUtf8)
-import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core (Element, UI, liftIO, set, (#), (#+))
 import           System.Remote.Monitoring (forkServerWith, serverThreadId)
 import           System.Time.Extra (sleep)
 
-import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.RTView.SSL.Certs
-import           Cardano.Tracer.Types
+import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Core (Element, UI, liftIO, set, (#), (#+))
 
 -- | 'ekg' package allows to run only one EKG server, to display only one web page
 --   for particular EKG.Store. Since 'cardano-tracer' can be connected to any number

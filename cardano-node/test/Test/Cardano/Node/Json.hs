@@ -9,10 +9,10 @@ import           Cardano.Node.Configuration.TopologyP2P (NetworkTopology)
 import           Data.Aeson (decode, encode, fromJSON, toJSON)
 import           Data.Maybe (isJust)
 
+import           Test.Cardano.Node.Gen
+
 import           Hedgehog (Property, discover)
 import qualified Hedgehog
-
-import           Test.Cardano.Node.Gen
 
 prop_roundtrip_NodeIPv4Address_JSON :: Property
 prop_roundtrip_NodeIPv4Address_JSON =

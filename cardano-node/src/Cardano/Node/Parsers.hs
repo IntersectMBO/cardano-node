@@ -11,7 +11,18 @@ module Cardano.Node.Parsers
   , renderHelpDoc
   ) where
 
+import           Cardano.Logging.Types
+import           Cardano.Node.Configuration.NodeAddress (File (..),
+                   NodeHostIPv4Address (NodeHostIPv4Address),
+                   NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath)
+import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
+import           Cardano.Node.Configuration.Socket
+import           Cardano.Node.Handlers.Shutdown
+import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
+import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
+                   MempoolCapacityBytesOverride (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 
 import           Data.Foldable
 import           Data.Maybe (fromMaybe)
@@ -24,19 +35,6 @@ import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
 import           System.Posix.Types (Fd (..))
 import           Text.Read (readMaybe)
-
-import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
-                   MempoolCapacityBytesOverride (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
-
-import           Cardano.Logging.Types
-import           Cardano.Node.Configuration.NodeAddress (File (..),
-                   NodeHostIPv4Address (NodeHostIPv4Address),
-                   NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath)
-import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
-import           Cardano.Node.Configuration.Socket
-import           Cardano.Node.Handlers.Shutdown
-import           Cardano.Node.Types
 
 nodeCLIParser  :: Parser PartialNodeConfiguration
 nodeCLIParser = subparser

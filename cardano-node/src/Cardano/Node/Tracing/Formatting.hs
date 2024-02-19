@@ -7,17 +7,15 @@ module Cardano.Node.Tracing.Formatting
   (
   ) where
 
-import           Data.Aeson (Value (String), toJSON, (.=))
-import           Data.Proxy (Proxy (..))
-import           Data.Void (Void)
-
 import           Cardano.Logging (LogFormatting (..))
-
 import           Cardano.Node.Tracing.Render (renderHeaderHashForDetails)
-
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), RealPoint, realPointHash,
                    realPointSlot)
 import           Ouroboros.Network.Block
+
+import           Data.Aeson (Value (String), toJSON, (.=))
+import           Data.Proxy (Proxy (..))
+import           Data.Void (Void)
 
 -- | A bit of a weird one, but needed because some of the very general
 -- consensus interfaces are sometimes instantiated to 'Void', when there are

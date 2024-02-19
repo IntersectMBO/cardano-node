@@ -20,6 +20,10 @@ module Cardano.Tracer.MetaTrace
   , traceWith
   ) where
 
+import           Cardano.Logging
+import           Cardano.Logging.Resources
+import           Cardano.Tracer.Configuration
+
 import           Data.Aeson hiding (Error)
 import qualified Data.Aeson as AE
 import           Data.Function
@@ -28,12 +32,6 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import           GHC.Generics
 import qualified System.IO as Sys
-
-import           Cardano.Logging
-
-import           Cardano.Tracer.Configuration
-
-import           Cardano.Logging.Resources
 
 data TracerTrace
   = TracerParamsAre

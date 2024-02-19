@@ -36,6 +36,7 @@ import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import qualified System.Directory as IO
 import qualified System.Environment as IO
+import           System.Exit (ExitCode)
 import           System.FilePath
 import           System.IO
 import qualified System.IO.Unsafe as IO
@@ -50,7 +51,6 @@ import           Hedgehog.Extras.Test.Base
 import           Hedgehog.Extras.Test.Process (ExecConfig)
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified Hedgehog.Internal.Property as H
-import           System.Exit (ExitCode)
 
 -- | Path to the bash executable.  This is used on Windows so that the caller can supply a Windows
 -- path to the bash executable because there is no reliable way to invoke bash without the full

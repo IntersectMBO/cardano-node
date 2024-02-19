@@ -23,9 +23,23 @@ module Cardano.Node.Configuration.TopologyP2P
   )
 where
 
+import           Cardano.Node.Configuration.NodeAddress
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
+import           Cardano.Node.Configuration.Topology (TopologyError (..))
+import           Cardano.Node.Startup (StartupTrace (..))
+import           Cardano.Node.Types
+import           Cardano.Tracing.OrphanInstances.Network ()
+import           Ouroboros.Network.NodeToNode (PeerAdvertise (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
+                   WarmValency (..))
+
+import           Control.Applicative (Alternative (..))
 import           Control.Exception (IOException)
 import qualified Control.Exception as Exception
 import           Control.Exception.Base (Exception (..))
+import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 import           Data.Aeson
 import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString as BS
@@ -33,23 +47,6 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
-
-import           "contra-tracer" Control.Tracer (Tracer, traceWith)
-
-import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
-
-import           Cardano.Node.Configuration.NodeAddress
-import           Cardano.Node.Configuration.Topology (TopologyError (..))
-import           Cardano.Node.Startup (StartupTrace (..))
-import           Cardano.Node.Types
-
-import           Cardano.Tracing.OrphanInstances.Network ()
-import           Control.Applicative (Alternative (..))
-import           Ouroboros.Network.NodeToNode (PeerAdvertise (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
-                   WarmValency (..))
 
 data NodeSetup = NodeSetup
   { nodeId          :: !Word64

@@ -9,16 +9,7 @@ module Cardano.Tracer.Handlers.RTView.Update.Logs
   , updateLogsLiveViewNodes
   ) where
 
-import           Control.Concurrent.STM.TVar (readTVarIO)
-import           Control.Monad (forM_, void, when)
-import           Control.Monad.Extra (whenJustM, whenM)
-import qualified Data.Text as T
-import           Data.Time.Format (defaultTimeLocale, formatTime)
-import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core
-
 import           Cardano.Logging (SeverityS (..), showT)
-
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Handlers.RTView.UI.Charts
@@ -30,6 +21,15 @@ import           Cardano.Tracer.Handlers.RTView.Update.Nodes
 import           Cardano.Tracer.Handlers.RTView.Utils
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
+
+import           Control.Concurrent.STM.TVar (readTVarIO)
+import           Control.Monad (forM_, void, when)
+import           Control.Monad.Extra (whenJustM, whenM)
+import qualified Data.Text as T
+import           Data.Time.Format (defaultTimeLocale, formatTime)
+
+import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Core
 
 updateLogsLiveViewItems
   :: TracerEnv

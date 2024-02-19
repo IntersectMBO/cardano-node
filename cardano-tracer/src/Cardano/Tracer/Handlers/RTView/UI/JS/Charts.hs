@@ -15,17 +15,18 @@ module Cardano.Tracer.Handlers.RTView.UI.JS.Charts
   , setTimeRange
   ) where
 
+import           Cardano.Tracer.Handlers.RTView.State.Historical
+import           Cardano.Tracer.Handlers.RTView.UI.Types
+import           Cardano.Tracer.Handlers.RTView.Update.Utils
+
 import           Data.List (intercalate)
 import           Data.String.QQ
 import           Data.Text (Text)
 import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import           Data.Word (Word16)
+
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
-
-import           Cardano.Tracer.Handlers.RTView.State.Historical
-import           Cardano.Tracer.Handlers.RTView.UI.Types
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
 
 prepareChartsJS :: UI ()
 prepareChartsJS =

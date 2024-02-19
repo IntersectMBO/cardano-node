@@ -10,6 +10,11 @@ module Cardano.Node.Tracing.Tracers.ForgingThreadStats
   ) where
 
 import           Cardano.Logging
+import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck (ForgeTracerType)
+import           Cardano.Slotting.Slot (SlotNo (..))
+import           Ouroboros.Consensus.Node.Tracers
+import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import           Ouroboros.Consensus.Shelley.Node ()
 
 import           Control.Concurrent (ThreadId, myThreadId)
 import           Control.Monad.IO.Class (MonadIO (..))
@@ -17,12 +22,6 @@ import           Data.Aeson (Value (..), (.=))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
-
-import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck (ForgeTracerType)
-import           Cardano.Slotting.Slot (SlotNo (..))
-import           Ouroboros.Consensus.Node.Tracers
-import qualified Ouroboros.Consensus.Node.Tracers as Consensus
-import           Ouroboros.Consensus.Shelley.Node ()
 
 --------------------------------------------------------------------------------
 -- ForgeThreadStats Tracer

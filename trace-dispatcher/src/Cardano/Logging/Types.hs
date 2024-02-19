@@ -55,7 +55,10 @@ module Cardano.Logging.Types (
 ) where
 
 
+import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
+
 import           Codec.Serialise (Serialise (..))
+import qualified Control.Tracer as T
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.Encoding as AE
 import qualified Data.Aeson.KeyMap as AE
@@ -71,10 +74,6 @@ import           Data.Text.Lazy.Encoding (decodeUtf8)
 import           Data.Time (UTCTime)
 import           GHC.Generics
 import           Network.HostName (HostName)
-
-import qualified Control.Tracer as T
-
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
 
 -- | The Trace carries the underlying tracer Tracer from the contra-tracer package.

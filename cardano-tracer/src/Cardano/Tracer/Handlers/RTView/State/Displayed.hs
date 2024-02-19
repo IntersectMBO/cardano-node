@@ -12,6 +12,8 @@ module Cardano.Tracer.Handlers.RTView.State.Displayed
   , updateDisplayedElements
   ) where
 
+import           Cardano.Tracer.Types (NodeId)
+
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO, readTVarIO)
 import           Data.List ((\\))
@@ -20,8 +22,6 @@ import qualified Data.Map.Strict as M
 import           Data.Set (Set)
 import qualified Data.Set as S
 import           Data.Text (Text)
-
-import           Cardano.Tracer.Types (NodeId)
 
 type ElementId    = Text
 type ElementValue = Text

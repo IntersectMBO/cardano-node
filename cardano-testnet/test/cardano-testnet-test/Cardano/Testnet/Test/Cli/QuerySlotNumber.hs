@@ -13,22 +13,25 @@ module Cardano.Testnet.Test.Cli.QuerySlotNumber
   ) where
 
 import           Cardano.Api
+
 import           Cardano.Testnet
+
+import           Prelude
 
 import           Data.Either
 import qualified Data.Time.Clock as DT
 import qualified Data.Time.Format as DT
-import           Prelude
 import qualified System.Info as SYS
+
+import qualified Testnet.Process.Run as H
+import           Testnet.Process.Run
+import qualified Testnet.Property.Utils as H
+import           Testnet.Runtime
 
 import           Hedgehog (Property)
 import qualified Hedgehog.Extras.Stock as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Internal.Property as H
-import qualified Testnet.Process.Run as H
-import           Testnet.Process.Run
-import qualified Testnet.Property.Utils as H
-import           Testnet.Runtime
 
 -- | Tests @query slot-number@ cardano-cli command that it returns correct slot numbers for provided utc time
 hprop_querySlotNumber :: Property

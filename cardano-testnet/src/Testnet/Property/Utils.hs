@@ -22,6 +22,7 @@ module Testnet.Property.Utils
   ) where
 
 import           Cardano.Api
+
 import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
 import           Cardano.CLI.Types.Output
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto
@@ -50,14 +51,15 @@ import           System.FilePath ((</>))
 import           System.Info (os)
 import qualified System.IO.Unsafe as IO
 
+import           Testnet.Components.SPO (decodeEraUTxO)
+import qualified Testnet.Process.Run as H
+
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import           Hedgehog.Extras.Test.Process (ExecConfig)
 import           Hedgehog.Internal.Property (MonadTest)
-import           Testnet.Components.SPO (decodeEraUTxO)
-import qualified Testnet.Process.Run as H
 
 disableRetries :: Bool
 disableRetries = IO.unsafePerformIO $ do

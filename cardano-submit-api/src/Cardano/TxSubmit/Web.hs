@@ -26,14 +26,13 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.TxSubmit.Metrics (TxSubmitMetrics (..))
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig (..), toWarpSettings)
 import qualified Cardano.TxSubmit.Rest.Web as Web
-
+import           Cardano.TxSubmit.Types (EnvSocketError (..), RawCborDecodeError (..),
+                   TxCmdError (..), TxSubmitApi, TxSubmitApiRecord (..),
+                   TxSubmitWebApiError (TxSubmitFail), renderTxCmdError)
 import           Cardano.TxSubmit.Util (logException)
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 
-import           Cardano.TxSubmit.Types (EnvSocketError (..), RawCborDecodeError (..),
-                   TxCmdError (..), TxSubmitApi, TxSubmitApiRecord (..),
-                   TxSubmitWebApiError (TxSubmitFail), renderTxCmdError)
 import           Control.Applicative (Applicative (pure), (<$>))
 import           Control.Monad (Functor (fmap), Monad (return), (=<<))
 import           Control.Monad.Except (ExceptT, MonadError (throwError), runExceptT)
@@ -59,15 +58,16 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.IO as T
-import qualified Servant
-import           Servant (Application, Handler, ServerError (..), err400, throwError)
-import           Servant.API.Generic (toServant)
-import           Servant.Server.Generic (AsServerT)
 import           System.Environment (lookupEnv)
 import qualified System.IO as IO
 import           System.IO (IO)
 import qualified System.Metrics.Prometheus.Metric.Gauge as Gauge
 import           Text.Show (Show (show))
+
+import qualified Servant
+import           Servant (Application, Handler, ServerError (..), err400, throwError)
+import           Servant.API.Generic (toServant)
+import           Servant.Server.Generic (AsServerT)
 
 runTxSubmitServer
   :: Trace IO Text

@@ -15,7 +15,6 @@ import           Data.Map.Strict (Map)
 import           Data.Set (Set)
 import           Data.Text (Text)
 import qualified System.Metrics as EKG
-
 import           System.Metrics.Store.Acceptor (MetricsLocalStore)
 
 import           Trace.Forward.Utils.DataPoint (DataPointRequestor)

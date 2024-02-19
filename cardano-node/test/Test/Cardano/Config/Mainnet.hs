@@ -8,17 +8,18 @@ module Test.Cardano.Config.Mainnet
 
 import           Cardano.Api (File (..), initialLedgerState)
 import           Cardano.Api.Error (displayError)
-import           Control.Monad.Trans.Except
-import           Hedgehog (Property, (===))
-import           System.FilePath ((</>))
 
+import           Control.Monad.Trans.Except
 import qualified Data.Aeson as J
 import qualified Data.Yaml as Y
 import qualified GHC.Stack as GHC
+import qualified System.Directory as IO
+import           System.FilePath ((</>))
+
+import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Process as H
-import qualified System.Directory as IO
 
 hprop_configMainnetHash :: Property
 hprop_configMainnetHash = H.propertyOnce $ do

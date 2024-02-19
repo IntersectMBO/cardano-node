@@ -30,43 +30,27 @@ module Cardano.Tracing.Tracers
   , traceCounter
   ) where
 
-import           GHC.Clock (getMonotonicTimeNSec)
-
-import           Codec.CBOR.Read (DeserialiseFailure)
-import           Control.Concurrent (MVar, modifyMVar_)
-import           Control.Concurrent.STM (STM, atomically)
-import           Control.Monad (forM_, when)
-import           Data.Aeson (ToJSON (..), Value (..))
-import qualified Data.ByteString.Base16 as B16
-import           Data.Functor ((<&>))
-import           Data.Int (Int64)
-import           Data.IntPSQ (IntPSQ)
-import qualified Data.IntPSQ as Pq
-import qualified Data.Map.Strict as Map
-import           Data.Proxy (Proxy (..))
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import           Data.Time (NominalDiffTime, UTCTime)
-import           Data.Word (Word64)
-import           GHC.TypeLits (KnownNat, Nat, natVal)
-import qualified System.Metrics.Counter as Counter
-import qualified System.Metrics.Gauge as Gauge
-import qualified System.Metrics.Label as Label
-import qualified System.Remote.Monitoring as EKG
-
-import           "contra-tracer" Control.Tracer
-import           Control.Tracer.Transformers
-
-import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
-
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.Tracer (WithSeverity (..), annotateSeverity)
 import           Cardano.BM.Data.Transformers
 import           Cardano.BM.Internal.ElidingTracer
 import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Tracing
-
+import           Cardano.Node.Configuration.Logging
+import           Cardano.Node.Protocol.Byron ()
+import           Cardano.Node.Protocol.Shelley ()
+import           Cardano.Node.Queries
+import qualified Cardano.Node.STM as STM
+import           Cardano.Node.TraceConstraints
+import           Cardano.Node.Tracing
+import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
+import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
+import           Cardano.Tracing.Config
+import           Cardano.Tracing.HasIssuer (BlockIssuerVerificationKeyHash (..), HasIssuer (..))
+import           Cardano.Tracing.Metrics
+import           Cardano.Tracing.Render (renderChainHash, renderHeaderHash)
+import           Cardano.Tracing.Shutdown ()
+import           Cardano.Tracing.Startup ()
 import           Ouroboros.Consensus.Block (BlockConfig, BlockProtocol, CannotForge,
                    ConvertRawHash (..), ForgeStateInfo, ForgeStateUpdateError, Header,
                    realPointHash, realPointSlot)
@@ -81,6 +65,8 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, 
                    LedgerSupportsMempool)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
+import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import           Ouroboros.Consensus.Node (NetworkP2PMode (..))
@@ -88,8 +74,9 @@ import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import           Ouroboros.Consensus.Util.Enclose
-
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), HasHeader (..), Point,
                    StandardHash, blockNo, pointSlot, unBlockNo)
@@ -97,47 +84,47 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState
                    TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId)
-import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..))
-import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
-import           Ouroboros.Network.PeerSelection.Governor (PeerSelectionCounters (..))
-import           Ouroboros.Network.Point (fromWithOrigin)
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (ShowQuery)
-
 import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..),
                    ConnectionManagerTrace (..))
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
 import qualified Ouroboros.Network.Diffusion.P2P as P2P
+import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..))
+import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
 import           Ouroboros.Network.NodeToClient (LocalAddress)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
-
-import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
-
-import           Cardano.Tracing.Config
-import           Cardano.Tracing.HasIssuer (BlockIssuerVerificationKeyHash (..), HasIssuer (..))
-import           Cardano.Tracing.Metrics
-import           Cardano.Tracing.Render (renderChainHash, renderHeaderHash)
-import           Cardano.Tracing.Shutdown ()
-import           Cardano.Tracing.Startup ()
-
-import           Cardano.Node.Configuration.Logging
-import           Cardano.Node.TraceConstraints
-import           Cardano.Node.Tracing
-
--- For tracing instances
-import           Cardano.Node.Protocol.Byron ()
-import           Cardano.Node.Protocol.Shelley ()
-import           Cardano.Node.Queries
-import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
-import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
+import           Ouroboros.Network.PeerSelection.Governor (PeerSelectionCounters (..))
+import           Ouroboros.Network.Point (fromWithOrigin)
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type (ShowQuery)
 import           Ouroboros.Network.TxSubmission.Inbound
 
-import qualified Cardano.Node.STM as STM
+import           Codec.CBOR.Read (DeserialiseFailure)
+import           Control.Concurrent (MVar, modifyMVar_)
+import           Control.Concurrent.STM (STM, atomically)
 import qualified Control.Concurrent.STM as STM
-
-import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
+import           Control.Monad (forM_, when)
+import           "contra-tracer" Control.Tracer
+import           Control.Tracer.Transformers
+import           Data.Aeson (ToJSON (..), Value (..))
 import qualified Data.Aeson.KeyMap as KeyMap
+import qualified Data.ByteString.Base16 as B16
+import           Data.Functor ((<&>))
+import           Data.Int (Int64)
+import           Data.IntPSQ (IntPSQ)
+import qualified Data.IntPSQ as Pq
+import qualified Data.Map.Strict as Map
+import           Data.Proxy (Proxy (..))
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import           Data.Time (NominalDiffTime, UTCTime)
+import           Data.Word (Word64)
+import           GHC.Clock (getMonotonicTimeNSec)
+import           GHC.TypeLits (KnownNat, Nat, natVal)
+import qualified System.Metrics.Counter as Counter
+import qualified System.Metrics.Gauge as Gauge
+import qualified System.Metrics.Label as Label
+import qualified System.Remote.Monitoring as EKG
 
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 -- needs different instances on ghc8 and on ghc9

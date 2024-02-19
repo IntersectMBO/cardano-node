@@ -7,13 +7,13 @@ module Cardano.Logging.Tracer.Forward
     forwardTracer
   ) where
 
-import           Control.Monad.IO.Class
-
-import qualified Control.Tracer as T
-import           Trace.Forward.Utils.TraceObject (ForwardSink, writeToSink)
-
 import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Types
+
+import           Control.Monad.IO.Class
+import qualified Control.Tracer as T
+
+import           Trace.Forward.Utils.TraceObject (ForwardSink, writeToSink)
 
 
 ---------------------------------------------------------------------------

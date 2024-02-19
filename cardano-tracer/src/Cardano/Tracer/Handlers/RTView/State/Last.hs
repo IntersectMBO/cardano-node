@@ -6,13 +6,13 @@ module Cardano.Tracer.Handlers.RTView.State.Last
   , updateLastResources
   ) where
 
+import           Cardano.Tracer.Types (NodeId)
+
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.Word (Word64)
-
-import           Cardano.Tracer.Types (NodeId)
 
 -- | We have to store last received metric to be able to calculate
 --   the value based on next received metric. For example, calculate

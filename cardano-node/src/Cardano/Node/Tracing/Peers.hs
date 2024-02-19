@@ -7,14 +7,13 @@ module Cardano.Node.Tracing.Peers
   , traceNodePeers
   ) where
 
+import           Cardano.Logging
+import           Cardano.Node.Tracing.Tracers.Peer (PeerT, ppPeer)
+
 import           Control.DeepSeq (NFData)
 import           Data.Aeson (FromJSON, ToJSON)
 import           Data.Text (Text)
 import           GHC.Generics (Generic)
-
-import           Cardano.Logging
-
-import           Cardano.Node.Tracing.Tracers.Peer (PeerT, ppPeer)
 
 type PeerInfoPP = Text -- The result of 'ppPeer' function.
 

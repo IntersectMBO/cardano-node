@@ -11,6 +11,10 @@ module Cardano.Tracer.Handlers.RTView.Notifications.Types
   , EventsQueues
   ) where
 
+import           Cardano.Logging (SeverityS (..))
+import           Cardano.Tracer.Handlers.RTView.Notifications.Timer
+import           Cardano.Tracer.Types
+
 import           Control.Concurrent.STM.TBQueue (TBQueue)
 import           Control.Concurrent.STM.TVar (TVar)
 import           Data.Aeson (FromJSON, ToJSON)
@@ -18,11 +22,6 @@ import           Data.Map.Strict (Map)
 import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime)
 import           GHC.Generics (Generic)
-
-import           Cardano.Logging (SeverityS (..))
-
-import           Cardano.Tracer.Handlers.RTView.Notifications.Timer
-import           Cardano.Tracer.Types
 
 -- | Email settings for notifications.
 

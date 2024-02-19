@@ -8,6 +8,10 @@ module Trace.Forward.Run.TraceObject.Acceptor
   , acceptTraceObjectsResp
   ) where
 
+import           Ouroboros.Network.Driver.Simple (runPeer)
+import           Ouroboros.Network.Mux (MiniProtocolCb (..), MuxMode (..), RunMiniProtocol (..))
+import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
+
 import qualified Codec.Serialise as CBOR
 import           Control.Concurrent.Async (race)
 import           Control.Concurrent.STM.TVar (TVar, readTVar, readTVarIO, registerDelay)
@@ -17,10 +21,6 @@ import           Control.Monad.STM (atomically, check)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Typeable (Typeable)
 import           Data.Void (Void)
-
-import           Ouroboros.Network.Driver.Simple (runPeer)
-import           Ouroboros.Network.Mux (MiniProtocolCb (..), MuxMode (..), RunMiniProtocol (..))
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
 import           Trace.Forward.Configuration.TraceObject (AcceptorConfiguration (..))
 import qualified Trace.Forward.Protocol.TraceObject.Acceptor as Acceptor

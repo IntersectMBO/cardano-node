@@ -6,13 +6,14 @@ module Test.Trace.Forward.Protocol.TraceObject.Item
   ( TraceItem (..)
   ) where
 
+import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
+
 import           Codec.Serialise (Serialise (..))
 import           Data.List.NonEmpty (NonEmpty, fromList)
 import           Data.Text (Text)
 import           GHC.Generics
-import           Test.QuickCheck
 
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
+import           Test.QuickCheck
 
 data Severity = Debug | Info | Notice
   deriving (Show, Eq, Ord, Enum, Generic)

@@ -22,14 +22,14 @@ import qualified Data.Time.Clock as DTC
 import           GHC.Stack (callStack)
 import qualified System.Info as SYS
 
-import           Hedgehog (Property, (===))
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Test.Base as H
-
 import           Testnet.Process.Cli (execCliStdoutToJson)
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
+
+import           Hedgehog (Property, (===))
+import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Test.Base as H
 
 hprop_stakeSnapshot :: Property
 hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \tempAbsBasePath' -> do

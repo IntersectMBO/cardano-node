@@ -44,12 +44,6 @@ import qualified GHC.Stack as GHC
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
-import           Hedgehog (Property, (===))
-import qualified Hedgehog as H
-import           Hedgehog.Extras (threadDelay)
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
-
 import           Testnet.Components.Configuration
 import           Testnet.Components.SPO
 import           Testnet.Process.Cli
@@ -58,6 +52,12 @@ import           Testnet.Process.Run
 import           Testnet.Property.Assert
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
+
+import           Hedgehog (Property, (===))
+import qualified Hedgehog as H
+import           Hedgehog.Extras (threadDelay)
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/leadership-schedule/"'@
