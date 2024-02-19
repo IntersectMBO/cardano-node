@@ -16,8 +16,6 @@ import           Cardano.Testnet
 
 import           Prelude
 
-import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.Except.Extra
 import           GHC.IO.Exception (IOException)
 import           GHC.Stack (callStack)
 import           System.FilePath ((</>))

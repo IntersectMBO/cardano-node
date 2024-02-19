@@ -32,7 +32,6 @@ module Testnet.Runtime
 
 import           Cardano.Api
 import qualified Cardano.Api as Api
-import           Cardano.Api.Pretty
 
 import qualified Cardano.Chain.Genesis as G
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
@@ -47,11 +46,7 @@ import           Prelude
 import           Control.Exception.Safe
 import           Control.Monad
 import qualified Control.Monad.Class.MonadTimer.SI as MT
-import           Control.Monad.Error.Class
-import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Class (lift)
-import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.Except.Extra
+import           Control.Monad.State.Strict (StateT)
 import           Control.Monad.Trans.Resource
 import qualified Data.Aeson as A
 import qualified Data.List as List
@@ -70,6 +65,7 @@ import qualified System.Process as IO
 import           Testnet.Filepath
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run
+import           Testnet.Property.Utils (runInBackground)
 import           Testnet.Start.Types
 
 import           Hedgehog (MonadTest)
@@ -77,7 +73,6 @@ import qualified Hedgehog as H
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.Concurrent as H
 
 data TestnetRuntime = TestnetRuntime
   { configurationFile :: FilePath
@@ -315,37 +310,26 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
 
   socketPath <- H.noteM $ H.sprocketSystemName <$> H.headM (poolSprockets testnetRuntime)
   _ <- runInBackground . runExceptT $
-    foldBlocks
+    foldEpochState
       (File $ configurationFile testnetRuntime)
       (Api.File socketPath)
       Api.QuickValidation
+      (EpochNo maxBound)
       ()
       (handler logFile)
   H.note_ $ "Started logging epoch states to to: " <> logFile
   where
-    -- handler :: FilePath -> Env -> LedgerState -> [LedgerEvent] -> BlockInMode -> () -> IO ((), FoldStatus)
-    handler outputFp _ ledgerState _ (BlockInMode era _) _ = handleException $ do
-      forEraInEon era (error "Byron not supported in ledger state logging") $ \sbe -> do
-        case getAnyNewEpochState sbe ledgerState of
-          Left err -> error $ "Error when logging ledger state: " <> show err
-          Right anyNewEpochState -> do
-            appendFile outputFp $ "#### BLOCK ####" <> "\n"
-            appendFile outputFp $ show anyNewEpochState <> "\n"
-            pure ((), ContinueFold)
+    handler :: FilePath -> AnyNewEpochState -> StateT () IO LedgerStateCondition
+    handler outputFp anyNewEpochState = handleException . liftIO $ do
+      appendFile outputFp $ "#### BLOCK ####" <> "\n"
+      appendFile outputFp $ show anyNewEpochState <> "\n"
+      pure ConditionNotMet
       where
         -- | Handle all sync exceptions and log them into the log file. We don't want to fail the test just
         -- because logging has failed.
         handleException = handle $ \(e :: SomeException) -> do
-          appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
+          liftIO $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
             <> displayException e <> "\n"
-          pure ((), StopFold)
+          pure ConditionNotMet
 
-
-    -- | Runs an action in background, and registers cleanup to `MonadResource m`
-    -- The argument forces IO monad to prevent leaking of `MonadResource` to the child thread
-    runInBackground :: IO a -> m ()
-    runInBackground act = void . H.evalM $ allocate (H.async act) cleanUp
-      where
-        cleanUp :: H.Async a -> IO ()
-        cleanUp a = H.cancel a >> void (H.link a)
 

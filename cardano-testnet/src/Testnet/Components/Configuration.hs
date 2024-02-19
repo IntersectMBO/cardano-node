@@ -2,6 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Testnet.Components.Configuration
@@ -15,8 +16,7 @@ module Testnet.Components.Configuration
   ) where
 
 import           Cardano.Api.Ledger (StandardCrypto)
-import           Cardano.Api.Pretty
-import           Cardano.Api.Shelley hiding (cardanoEra)
+import           Cardano.Api.Shelley hiding (Value, cardanoEra)
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
@@ -27,7 +27,6 @@ import           Ouroboros.Network.PeerSelection.State.LocalRootPeers
 
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
-import           Control.Monad.IO.Class (MonadIO)
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as L
@@ -117,7 +116,7 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
   -- TODO: Remove this rewrite.
  -- 50 second epochs
  -- Epoch length should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"
-  H.rewriteJsonFile @Aeson.Value genesisShelleyFpAbs $ \o -> o
+  H.rewriteJsonFile @Value genesisShelleyFpAbs $ \o -> o
     & L.key "protocolParams" .  L.key "rho" . L._Number  .~ 0.1
     & L.key "protocolParams" .  L.key "tau" . L._Number  .~ 0.1
     & L.key "protocolParams" . L.key "protocolVersion" . L.key "major" . L._Integer .~ 8

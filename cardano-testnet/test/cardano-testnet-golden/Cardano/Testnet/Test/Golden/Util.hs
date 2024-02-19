@@ -11,12 +11,8 @@ module Cardano.Testnet.Test.Golden.Util
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Pretty
 
 import           Control.Monad.Catch
-import           Control.Monad.IO.Class (MonadIO (..))
-import           Control.Monad.Trans.Class (lift)
-import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Function ((&))
 import qualified Data.List as List
 import           Data.Monoid (Last (..))

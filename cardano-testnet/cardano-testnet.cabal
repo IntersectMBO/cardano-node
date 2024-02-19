@@ -34,8 +34,8 @@ library
   build-depends:        aeson
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 8.38
-                      , cardano-cli ^>= 8.20.1.0
+                      , cardano-api ^>= 8.39
+                      , cardano-cli ^>= 8.20.2.0
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger-alonzo
@@ -87,10 +87,10 @@ library
                         Testnet.Start.Types
                         Testnet.Components.Configuration
                         Testnet.Components.SPO
+                        Testnet.Components.Query
                         Testnet.Defaults
                         Testnet.Filepath
                         Testnet.Property.Assert
-                        Testnet.Property.Checks
                         Testnet.Property.Run
                         Testnet.Property.Utils
                         Testnet.Process.Cli
@@ -151,7 +151,6 @@ test-suite cardano-testnet-golden
                       , tasty
                       , tasty-hedgehog
                       , text
-                      , transformers
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 
@@ -213,7 +212,6 @@ test-suite cardano-testnet-test
                       , text
                       , time
                       , transformers
-                      , transformers-except
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 

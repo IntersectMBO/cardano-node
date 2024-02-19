@@ -16,7 +16,6 @@ import           Cardano.Api.Shelley hiding (cardanoEra)
 
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
-import           Control.Monad.IO.Class (MonadIO)
 import qualified Data.Aeson as Aeson
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)

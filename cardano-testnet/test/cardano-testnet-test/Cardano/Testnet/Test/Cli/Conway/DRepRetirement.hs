@@ -18,7 +18,6 @@ import           Cardano.Api
 import qualified Cardano.Api as Api
 import           Cardano.Api.Ledger
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Pretty (docToString)
 
 import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as L
@@ -28,29 +27,25 @@ import           Prelude
 
 import           Control.Monad (void)
 import           Control.Monad.Catch (MonadCatch)
-import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Except (runExceptT)
 import           Control.Monad.Trans.State.Strict (put)
 import           Data.Data
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           Data.Type.Equality (testEquality)
-import           GHC.IORef (newIORef)
-import           GHC.Stack (HasCallStack, withFrozenCallStack)
+import           GHC.Stack
 import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
 
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
-import           Testnet.Property.Utils (queryUtxos)
 import           Testnet.Runtime
 
 import           Hedgehog
 import qualified Hedgehog as H
-import           Hedgehog.Extras (Integration)
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
+import Testnet.Components.Query
 
 -- | The era in which this test runs
 sbe :: ShelleyBasedEra ConwayEra
@@ -66,8 +61,6 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
-
-  utxoFileCounter <- liftIO $ newIORef 1
 
   let era = toCardanoEra sbe
       cardanoNodeEra = AnyCardanoEra era
@@ -89,13 +82,11 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 
-  let queryAnyUtxo :: Text.Text -> Integration TxIn
-      queryAnyUtxo address = withFrozenCallStack $ do
-        utxos <- queryUtxos execConfig work utxoFileCounter sbe address
-        H.noteShow =<< H.headM (Map.keys utxos)
-      socketName' = IO.sprocketName poolSprocket1
+  let socketName' = IO.sprocketName poolSprocket1
       socketBase = IO.sprocketBase poolSprocket1 -- /tmp
       socketPath = socketBase </> socketName'
+
+  epochStateView <- getEpochStateView (File configurationFile) (File socketPath)
 
   H.note_ $ "Sprocket: " <> show poolSprocket1
   H.note_ $ "Abs path: " <> tempAbsBasePath'
@@ -129,7 +120,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
        , "--out-file", drepCertFile n
        ]
 
-  txin1 <- queryAnyUtxo . paymentKeyInfoAddr $ head wallets
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe $ head wallets
 
   -- Submit registration certificates
   drepRegTxbodyFp <- H.note $ work </> "drep.registration.txbody"
@@ -184,7 +175,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
     , "--out-file", work </> "utxo-11.json"
     ]
 
-  txin2 <- queryAnyUtxo . paymentKeyInfoAddr $ head wallets
+  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe $ head wallets
 
   drepRetirementRegTxbodyFp <- H.note $ work </> "drep.retirement.txbody"
   drepRetirementRegTxSignedFp <- H.note $ work </> "drep.retirement.tx"
@@ -245,7 +236,7 @@ waitDRepsNumber' ::
   -> Int -- ^ The expected numbers of DReps. If this number is not reached until the termination epoch, this function fails the test.
   -> m (Maybe [L.DRepState StandardCrypto]) -- ^ The DReps when the expected number of DReps was attained.
 waitDRepsNumber' nodeConfigFile socketPath maxEpoch expectedDRepsNb = do
-  result <- runExceptT $ checkLedgerStateCondition nodeConfigFile socketPath QuickValidation maxEpoch Nothing
+  result <- runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState) -> do
         case testEquality sbe actualEra of
           Just Refl -> do

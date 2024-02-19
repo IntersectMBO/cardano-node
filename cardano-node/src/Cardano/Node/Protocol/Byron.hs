@@ -13,7 +13,6 @@ module Cardano.Node.Protocol.Byron
   ) where
 
 import           Cardano.Api.Byron
-import           Cardano.Api.Pretty
 
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Update as Update
@@ -34,10 +33,6 @@ import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 
-import           Control.Monad.Except (throwError)
-import           Control.Monad.IO.Class (MonadIO (..))
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (bimapExceptT, firstExceptT, hoistEither, left)
 import qualified Data.ByteString.Lazy as LB
 import           Data.Maybe (fromMaybe)
 import           Data.Text (Text)

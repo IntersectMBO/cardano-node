@@ -7,11 +7,16 @@
 module Cardano.Benchmarking.Compiler
 where
 
+import           Cardano.Api
+
+import           Cardano.Benchmarking.Script.Types
+import           Cardano.TxGenerator.Setup.NixService
+import           Cardano.TxGenerator.Setup.SigningKey
+import           Cardano.TxGenerator.Types
+
 import           Prelude
 
 import           Control.Monad
-import           Control.Monad.Trans.Class (lift)
-import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.RWS.CPS
 import           Data.ByteString as BS (ByteString)
 import           Data.DList (DList)
@@ -20,12 +25,6 @@ import           Data.Functor ((<&>))
 import           Data.Maybe
 import           Data.Text (Text)
 import qualified Data.Text as Text
-
-import           Cardano.Api
-import           Cardano.Benchmarking.Script.Types
-import           Cardano.TxGenerator.Setup.NixService
-import           Cardano.TxGenerator.Setup.SigningKey
-import           Cardano.TxGenerator.Types
 
 data CompileError where
   SomeCompilerError :: String -> CompileError

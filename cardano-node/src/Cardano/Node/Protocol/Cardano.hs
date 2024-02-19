@@ -39,9 +39,6 @@ import qualified Ouroboros.Consensus.Shelley.Node.Praos as Praos
 
 import           Prelude
 
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT)
-
 ------------------------------------------------------------------------------
 -- Real Cardano protocol
 --
