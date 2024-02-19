@@ -152,7 +152,7 @@ library
                       , filepath
                       , mime-mail
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.11
+                      , ouroboros-network ^>= 0.12
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal

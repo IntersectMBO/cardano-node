@@ -20,9 +20,9 @@ import           Cardano.Api.Shelley hiding (cardanoEra)
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Cardano.Node.Types
+import           Ouroboros.Network.PeerSelection.Bootstrap
 import           Ouroboros.Network.PeerSelection.LedgerPeers
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint
+import           Ouroboros.Network.PeerSelection.PeerTrustable
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers
 
 import           Control.Monad
@@ -53,7 +53,6 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Time as DTC
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
-
 
 createConfigYaml
   :: (MonadTest m, MonadIO m, HasCallStack)
@@ -204,6 +203,7 @@ mkTopologyConfig numNodes allPorts port True = Aeson.encode topologyP2P
         [ P2P.LocalRootPeersGroup rootConfig
                                   (HotValency (numNodes - 1))
                                   (WarmValency (numNodes - 1))
+                                  IsNotTrustable
         ]
 
     topologyP2P :: P2P.NetworkTopology
@@ -211,8 +211,8 @@ mkTopologyConfig numNodes allPorts port True = Aeson.encode topologyP2P
       P2P.RealNodeTopology
         localRootPeerGroups
         []
-        (UseLedger DontUseLedger)
-
+        DontUseLedgerPeers
+        DontUseBootstrapPeers
 
 convertToEraString :: AnyCardanoEra -> String
 convertToEraString = map toLower . docToString . pretty

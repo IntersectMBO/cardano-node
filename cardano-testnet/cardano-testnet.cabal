@@ -34,7 +34,7 @@ library
   build-depends:        aeson
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 8.38
+                      , cardano-api ^>= 8.39.2.0
                       , cardano-cli ^>= 8.20.1.0
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
@@ -55,14 +55,14 @@ library
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.6.1.0
+                      , hedgehog-extras < 0.6.2
                       , microlens
                       , lens-aeson
                       , mtl
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.11
+                      , ouroboros-network ^>= 0.12
                       , ouroboros-network-api
                       , prettyprinter
                       , process
