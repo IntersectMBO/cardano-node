@@ -1564,9 +1564,11 @@ instance ToJSON PeerSelectionTargets where
             nKnownBigLedgerPeers
             nEstablishedBigLedgerPeers
             nActiveBigLedgerPeers
+            nBootstrapPeers
          ) =
     Aeson.object [ "kind" .= String "PeerSelectionTargets"
                  , "targetRootLedgerPeers" .= nRootLedgerPeers
+                 , "targetBootstrapPeers" .= nBootstrapPeers
                  , "targetKnownLedgerPeers" .= nKnownLedgerPeers
                  , "targetEstablishedLedgerPeers" .= nEstablishedLedgerPeers
                  , "targetActiveLedgerPeers" .= nActiveLedgerPeers
@@ -1892,7 +1894,7 @@ instance ToObject (TracePeerSelection SockAddr) where
             , "targets" .= peerSelectionTargetsToObject (dpssTargets ds)
             , "localRootPeers" .= dpssLocalRootPeers ds
             , "publicRootPeers" .= dpssPublicRootPeers ds
-            , "knownPeers" .= (KnownPeers.allPeers $ dpssKnownPeers ds)
+            , "knownPeers" .= KnownPeers.allPeers (dpssKnownPeers ds)
             , "establishedPeers" .= dpssEstablishedPeers ds
             , "activePeers" .= dpssActivePeers ds
             , "publicRootBackoffs" .= dpssPublicRootBackoffs ds
@@ -1954,9 +1956,12 @@ peerSelectionTargetsToObject
   PeerSelectionTargets { targetNumberOfRootPeers,
                          targetNumberOfKnownPeers,
                          targetNumberOfEstablishedPeers,
-                         targetNumberOfActivePeers } =
+                         targetNumberOfActivePeers,
+                         targetNumberOfBootstrapPeers
+                       } =
     Object $
       mconcat [ "roots" .= targetNumberOfRootPeers
+               , "bootstrapPeers" .= targetNumberOfBootstrapPeers
                , "knownPeers" .= targetNumberOfKnownPeers
                , "established" .= targetNumberOfEstablishedPeers
                , "active" .= targetNumberOfActivePeers

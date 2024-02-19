@@ -64,13 +64,13 @@ package plutus-scripts-bench
 source-repository-package
     type: git
     location: https://github.com/input-output-hk/ouroboros-network/
-    tag: 56a16200e2f76729773a158bb983e1bf45a44dea
+    tag: 83518587f598351d5f4f1a98b78532102dc2733b
     subdir: ouroboros-network
             ouroboros-network-framework
             ouroboros-network-api
             ouroboros-network-testing
             ouroboros-network-protocols
-    --sha256: sha256-YHE/mjHJp21wHpB+fQO65mhTeZjkgX+GMYfLLS9k/lo=
+    --sha256: sha256-b8Ky5f20U8L5ytsCQSokzyOFmy/NAzHueKnU8evLo8k=
 
 source-repository-package
   type: git

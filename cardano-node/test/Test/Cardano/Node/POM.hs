@@ -140,6 +140,7 @@ testPartialYamlConfig =
     , pncTargetNumberOfKnownBigLedgerPeers = mempty
     , pncTargetNumberOfEstablishedBigLedgerPeers = mempty
     , pncTargetNumberOfActiveBigLedgerPeers = mempty
+    , pncTargetNumberOfBootstrapPeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     }
@@ -179,6 +180,7 @@ testPartialCliConfig =
     , pncTargetNumberOfKnownBigLedgerPeers = mempty
     , pncTargetNumberOfEstablishedBigLedgerPeers = mempty
     , pncTargetNumberOfActiveBigLedgerPeers = mempty
+    , pncTargetNumberOfBootstrapPeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
     }
@@ -224,6 +226,7 @@ eExpectedConfig = do
     , ncTargetNumberOfKnownBigLedgerPeers = 15
     , ncTargetNumberOfEstablishedBigLedgerPeers = 10
     , ncTargetNumberOfActiveBigLedgerPeers = 5
+    , ncTargetNumberOfBootstrapPeers = 10
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = PeerSharingDisabled
     }

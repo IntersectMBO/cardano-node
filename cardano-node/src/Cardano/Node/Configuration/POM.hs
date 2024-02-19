@@ -154,6 +154,7 @@ data NodeConfiguration
        , ncTargetNumberOfKnownBigLedgerPeers       :: Int
        , ncTargetNumberOfEstablishedBigLedgerPeers :: Int
        , ncTargetNumberOfActiveBigLedgerPeers      :: Int
+       , ncTargetNumberOfBootstrapPeers :: Int
 
          -- Enable experimental P2P mode
        , ncEnableP2P :: SomeNetworkP2PMode
@@ -216,6 +217,7 @@ data PartialNodeConfiguration
        , pncTargetNumberOfKnownBigLedgerPeers       :: !(Last Int)
        , pncTargetNumberOfEstablishedBigLedgerPeers :: !(Last Int)
        , pncTargetNumberOfActiveBigLedgerPeers      :: !(Last Int)
+       , pncTargetNumberOfBootstrapPeers :: !(Last Int)
 
          -- Enable experimental P2P mode
        , pncEnableP2P :: !(Last NetworkP2PMode)
@@ -301,6 +303,7 @@ instance FromJSON PartialNodeConfiguration where
       pncTargetNumberOfKnownBigLedgerPeers       <- Last <$> v .:? "TargetNumberOfKnownBigLedgerPeers"
       pncTargetNumberOfEstablishedBigLedgerPeers <- Last <$> v .:? "TargetNumberOfEstablishedBigLedgerPeers"
       pncTargetNumberOfActiveBigLedgerPeers      <- Last <$> v .:? "TargetNumberOfActiveBigLedgerPeers"
+      pncTargetNumberOfBootstrapPeers <- Last <$> v .:? "TargetNumberOfBootstrapPeers"
 
       pncChainSyncIdleTimeout      <- Last <$> v .:? "ChainSyncIdleTimeout"
 
@@ -347,6 +350,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncTargetNumberOfKnownBigLedgerPeers
            , pncTargetNumberOfEstablishedBigLedgerPeers
            , pncTargetNumberOfActiveBigLedgerPeers
+           , pncTargetNumberOfBootstrapPeers
            , pncEnableP2P
            , pncPeerSharing
            }
@@ -522,6 +526,7 @@ defaultPartialNodeConfiguration =
     , pncTargetNumberOfKnownBigLedgerPeers       = Last (Just 15)
     , pncTargetNumberOfEstablishedBigLedgerPeers = Last (Just 10)
     , pncTargetNumberOfActiveBigLedgerPeers      = Last (Just 5)
+    , pncTargetNumberOfBootstrapPeers   = Last (Just 10)
     , pncEnableP2P                      = Last (Just DisabledP2PMode)
     , pncPeerSharing                    = Last (Just PeerSharingDisabled)
     }
@@ -566,6 +571,9 @@ makeNodeConfiguration pnc = do
   ncTargetNumberOfActiveBigLedgerPeers <-
     lastToEither "Missing TargetNumberOfActiveBigLedgerPeers"
     $ pncTargetNumberOfActiveBigLedgerPeers pnc
+  ncTargetNumberOfBootstrapPeers <-
+    lastToEither "Missing TargetNumberOfBootstrapPeers"
+    $ pncTargetNumberOfBootstrapPeers pnc
   ncProtocolIdleTimeout <-
     lastToEither "Missing ProtocolIdleTimeout"
     $ pncProtocolIdleTimeout pnc
@@ -630,6 +638,7 @@ makeNodeConfiguration pnc = do
              , ncTargetNumberOfKnownBigLedgerPeers
              , ncTargetNumberOfEstablishedBigLedgerPeers
              , ncTargetNumberOfActiveBigLedgerPeers
+             , ncTargetNumberOfBootstrapPeers
              , ncEnableP2P = case enableP2P of
                  EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
                  DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode

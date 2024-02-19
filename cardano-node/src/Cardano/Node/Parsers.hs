@@ -121,6 +121,7 @@ nodeRunParser = do
            , pncTargetNumberOfKnownBigLedgerPeers = mempty
            , pncTargetNumberOfEstablishedBigLedgerPeers = mempty
            , pncTargetNumberOfActiveBigLedgerPeers = mempty
+           , pncTargetNumberOfBootstrapPeers = mempty
            , pncEnableP2P = mempty
            , pncPeerSharing = mempty
            }

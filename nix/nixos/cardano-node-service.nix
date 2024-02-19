@@ -62,6 +62,7 @@ let
               TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
               TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
               TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
+              TargetNumberOfBootstrapPeers = cfg.targetNumberOfBootstrapPeers;
               MaxConcurrencyBulkSync = 2;
             })) cfg.extraNodeConfig;
         baseInstanceConfig =
@@ -586,6 +587,15 @@ in {
         default = cfg.nodeConfig.TargetNumberOfActivePeers or (2 * cfg.targetNumberOfEstablishedPeers / 5);
         description = ''Number of peers your node is actively downloading headers and blocks from.
           Default to 2/5 of targetNumberOfEstablishedPeers.
+        '';
+      };
+
+      targetNumberOfBootstrapPeers = mkOption {
+        type = types.int;
+        default = cfg.nodeConfig.TargetNumberOfBootstrapPeers or (cfg.targetNumberOfRootPeers / 20);
+        description = ''Number of maximum bootstrap peers when in bootstrap
+          phase.
+          Defaults to 1/20 of targetNumberOfRootPeers.
         '';
       };
 
