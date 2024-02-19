@@ -4,7 +4,9 @@ module Test.Cardano.Node.Json
   ( tests
   ) where
 
-import           Cardano.Node.Configuration.TopologyP2P (NetworkTopology)
+import           Cardano.Node.Configuration.TopologyP2P (NetworkTopology (..), NodeSetup (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
+                   UseLedgerPeers (..))
 
 import           Data.Aeson (decode, encode, fromJSON, toJSON)
 import           Data.Maybe (isJust)
@@ -13,6 +15,7 @@ import           Test.Cardano.Node.Gen
 
 import           Hedgehog (Property, discover)
 import qualified Hedgehog
+
 
 prop_roundtrip_NodeIPv4Address_JSON :: Property
 prop_roundtrip_NodeIPv4Address_JSON =
@@ -46,8 +49,14 @@ prop_roundtrip_NodeSetup_JSON :: Property
 prop_roundtrip_NodeSetup_JSON =
   Hedgehog.property $ do
     ns <- Hedgehog.forAll genNodeSetup
-    Hedgehog.tripping ns toJSON fromJSON
-    Hedgehog.tripping ns encode decode
+    Hedgehog.tripping ns toJSON (adjustUseLedger . fromJSON)
+    Hedgehog.tripping ns encode (adjustUseLedger . decode)
+  where
+    -- 'useLedger' will be parsed as 'Always' instead of 'After 0'
+    adjustUseLedger :: Functor f => f NodeSetup -> f NodeSetup
+    adjustUseLedger = fmap $ \x -> x { useLedger = fixUseLedger $ useLedger x }
+    fixUseLedger (UseLedgerPeers Always) = UseLedgerPeers (After 0)
+    fixUseLedger ulp                     = ulp
 
 prop_roundtrip_NetworkTopology_JSON :: Property
 prop_roundtrip_NetworkTopology_JSON =

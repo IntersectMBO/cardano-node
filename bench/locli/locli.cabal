@@ -121,7 +121,7 @@ library
                       , optparse-generic
                       , ouroboros-consensus
                       -- for Data.SOP.Strict:
-                      , ouroboros-network ^>= 0.11
+                      , ouroboros-network ^>= 0.12
                       , ouroboros-network-api
                       , process
                       , quiet
@@ -175,7 +175,7 @@ test-suite test-locli
   build-depends:        cardano-prelude
                       , containers
                       , hedgehog
-                      , hedgehog-extras ^>= 0.6.1.0
+                      , hedgehog-extras < 0.6.2
                       , locli
                       , text
 
