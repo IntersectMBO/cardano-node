@@ -17,7 +17,6 @@ module Cardano.Node.Types
   , MaxConcurrencyBulkSync(..)
   , MaxConcurrencyDeadline(..)
     -- * Networking
-  , UseLedger(..)
   , TopologyFile(..)
   , NodeDiffusionMode (..)
     -- * Consensus protocol configuration
@@ -37,10 +36,8 @@ import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 
 import           Control.Exception
-import           Control.Monad (MonadPlus (..))
 import           Data.Aeson
 import           Data.ByteString (ByteString)
 import           Data.Monoid (Last)
@@ -282,25 +279,6 @@ data NodeHardForkProtocolConfiguration =
      , npcTestConwayHardForkAtVersion       :: Maybe Word
      }
   deriving (Eq, Show)
-
--- | A newtype wrapper around 'UseLedgerAfter' which provides 'FromJSON' and
--- 'ToJSON' instances.
---
--- 'UseLedgerAfter' is used to configure from which slot a p2p node can use on
--- chain root peers.
---
-newtype UseLedger = UseLedger UseLedgerAfter deriving (Eq, Show)
-
-instance FromJSON UseLedger where
-  parseJSON (Data.Aeson.Number n) =
-    if n >= 0 then return $ UseLedger $ UseLedgerAfter $ SlotNo $ floor n
-              else return $ UseLedger   DontUseLedger
-  parseJSON _ = mzero
-
-instance ToJSON UseLedger where
-  toJSON (UseLedger (UseLedgerAfter (SlotNo n))) = Number $ fromIntegral n
-  toJSON (UseLedger DontUseLedger)               = Number (-1)
-
 
 newtype TopologyFile = TopologyFile
   { unTopology :: FilePath }
