@@ -343,7 +343,7 @@ chainSyncClient tracer sockPath chainsVar secParam = ChainSyncClient $ pure $
     }
   where
     clientStIdle :: ClientStIdle BlockInMode ChainPoint ChainTip IO ()
-    clientStIdle = SendMsgRequestNext clientStNext (pure clientStNext)
+    clientStIdle = SendMsgRequestNext (pure ()) clientStNext
 
     clientStNext :: ClientStNext BlockInMode ChainPoint ChainTip IO ()
     clientStNext = ClientStNext

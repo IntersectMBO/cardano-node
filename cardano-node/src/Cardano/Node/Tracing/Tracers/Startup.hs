@@ -25,7 +25,6 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (SomeConsensusProtocol (..))
 import           Cardano.Node.Startup
-import           Cardano.Node.Types (UseLedger (..))
 import           Cardano.Slotting.Slot (EpochSize (..))
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Byron.Ledger.Conversions (fromByronEpochSlots,
@@ -41,7 +40,8 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
+                   UseLedgerPeers (..))
 
 import           Prelude
 
@@ -220,11 +220,11 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal (NetworkConfigUpdateError err) =
       mconcat [ "kind" .= String "NetworkConfigUpdateError"
                , "error" .= String err ]
-  forMachine _dtal (NetworkConfig localRoots publicRoots useLedgerAfter) =
+  forMachine _dtal (NetworkConfig localRoots publicRoots useLedgerPeers) =
       mconcat [ "kind" .= String "NetworkConfig"
                , "localRoots" .= toJSON localRoots
                , "publicRoots" .= toJSON publicRoots
-               , "useLedgerAfter" .= UseLedger useLedgerAfter
+               , "useLedgerAfter" .= useLedgerPeers
                ]
   forMachine _dtal NetworkConfigLegacy =
       mconcat [ "kind" .= String "NetworkConfigLegacy"
@@ -507,7 +507,7 @@ ppStartupInfoTrace NetworkConfigUpdate = "Performing topology configuration upda
 ppStartupInfoTrace NetworkConfigUpdateUnsupported =
   "Network topology reconfiguration is not supported in non-p2p mode"
 ppStartupInfoTrace (NetworkConfigUpdateError err) = err
-ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerAfter) =
+ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers) =
     pack
   $ intercalate "\n"
   [ "\nLocal Root Groups:"
@@ -515,10 +515,14 @@ ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerAfter) =
                                     localRoots)
   , "Public Roots:"
   , "  " ++ intercalate "\n  " (map show $ Map.assocs publicRoots)
-  , case useLedgerAfter of
-      UseLedgerAfter slotNo -> "Get root peers from the ledger after slot "
-                            ++ show (unSlotNo slotNo)
-      DontUseLedger         -> "Don't use ledger to get root peers."
+  , case useLedgerPeers of
+      DontUseLedgerPeers            ->
+        "Don't use ledger to get root peers."
+      UseLedgerPeers (After slotNo) ->
+        "Get root peers from the ledger after slot "
+        ++ show (unSlotNo slotNo)
+      UseLedgerPeers Always         ->
+        "Use ledger peers in any slot."
   ]
 ppStartupInfoTrace NetworkConfigLegacy = p2pNetworkConfigLegacyMessage
 
