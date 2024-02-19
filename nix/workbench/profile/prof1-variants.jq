@@ -553,6 +553,10 @@ def all_profile_variants:
       , desc: "AWS c5-2xlarge cluster dataset, 9 epochs"
     }) as $nomad_perf_plutus_base
   |
+   ($scenario_idle * $compose_fiftytwo * $dataset_empty *
+    { desc: "AWS c5-2xlarge cluster, deploy and start run only"
+    }) as $nomad_perf_idle_base
+  |
    ($scenario_model * $quadruplet * $dataset_current * $for_7ep *
     { node:
         { shutdown_on_slot_synced:        56000
@@ -854,6 +858,9 @@ def all_profile_variants:
     }
   , $nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "plutus-nomadperf"
+    }
+  , $nomad_perf_idle_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
+    { name: "idle-nomadperf"
     }
 
 ## P&T Nomad cluster: 52 nodes, 3 regions, value-only (with old tracing variant) and Plutus, no P2P flavour
