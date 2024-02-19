@@ -4,20 +4,19 @@ module Cardano.Node.Protocol
   , ProtocolInstantiationError(..)
   ) where
 
-import           Control.Exception
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT)
-
 import           Cardano.Api
 import           Cardano.Api.Pretty
-
-import           Cardano.Node.Types
 
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Protocol.Byron
 import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Shelley
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
+import           Cardano.Node.Types
+
+import           Control.Exception
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 
 ------------------------------------------------------------------------------

@@ -5,20 +5,18 @@ module Cardano.Node.Tracing.Tracers.BlockReplayProgress
    , ReplayBlockStats(..)
   ) where
 
-import           Control.Monad.IO.Class (MonadIO)
-import           Data.Aeson (Value (String), (.=))
-import           Data.Text (pack)
-
 import           Cardano.Api (textShow)
 
 import           Cardano.Logging
-
 import           Ouroboros.Consensus.Block (realPointSlot)
+import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import           Ouroboros.Network.Block (pointSlot, unSlotNo)
 import           Ouroboros.Network.Point (withOrigin)
 
-import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
+import           Control.Monad.IO.Class (MonadIO)
+import           Data.Aeson (Value (String), (.=))
+import           Data.Text (pack)
 
 data ReplayBlockStats = ReplayBlockStats
   { rpsDisplay      :: Bool

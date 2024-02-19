@@ -3,9 +3,9 @@ module Cardano.Tracer.CLI
   , parseTracerParams
   ) where
 
-import           Options.Applicative
-
 import           Cardano.Logging
+
+import           Options.Applicative
 
 
 -- | CLI parameters required for the tracer.

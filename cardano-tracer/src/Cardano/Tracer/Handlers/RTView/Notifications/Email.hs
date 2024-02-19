@@ -9,6 +9,8 @@ module Cardano.Tracer.Handlers.RTView.Notifications.Email
   , statusIsOK
   ) where
 
+import           Cardano.Tracer.Handlers.RTView.Notifications.Types
+
 import           Control.Concurrent.Async (race)
 import           Control.Exception.Extra (try_)
 import           Data.Text (Text)
@@ -17,8 +19,6 @@ import qualified Data.Text.Lazy as LT
 import           Network.Mail.Mime (Address (..), Mail (..), simpleMail')
 import qualified Network.Mail.SMTP as SMTP
 import           System.Time.Extra (sleep)
-
-import           Cardano.Tracer.Handlers.RTView.Notifications.Types
 
 type StatusMessage = Text
 

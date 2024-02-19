@@ -5,15 +5,6 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
   , deleteNodeColumn
   ) where
 
-import           Control.Monad (forM, void)
-import           Control.Monad.Extra (whenJustM)
-import           Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as NE
-import           Data.Text (unpack)
-import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core
-import           System.FilePath ((</>))
-
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.EKG
@@ -23,6 +14,16 @@ import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
+
+import           Control.Monad (forM, void)
+import           Control.Monad.Extra (whenJustM)
+import           Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
+import           Data.Text (unpack)
+import           System.FilePath ((</>))
+
+import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Core
 
 -- | For every connected node the new column should be added.
 addNodeColumn

@@ -8,6 +8,15 @@ module Cardano.Tracer.Acceptors.Utils
   , removeDisconnectedNode
   ) where
 
+import           Cardano.Logging (SeverityS (..))
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.RTView.Notifications.Types
+import           Cardano.Tracer.Handlers.RTView.Notifications.Utils
+import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
+import           Ouroboros.Network.Snocket (LocalAddress)
+import           Ouroboros.Network.Socket (ConnectionId (..))
+
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO)
 import qualified Data.Bimap as BM
@@ -15,19 +24,9 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import qualified System.Metrics as EKG
-
-import           Ouroboros.Network.Snocket (LocalAddress)
-import           Ouroboros.Network.Socket (ConnectionId (..))
 import           System.Metrics.Store.Acceptor (MetricsLocalStore, emptyMetricsLocalStore)
+
 import           Trace.Forward.Utils.DataPoint (DataPointRequestor, initDataPointRequestor)
-
-import           Cardano.Logging (SeverityS (..))
-
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.RTView.Notifications.Types
-import           Cardano.Tracer.Handlers.RTView.Notifications.Utils
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
 
 prepareDataPointRequestor
   :: TracerEnv

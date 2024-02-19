@@ -15,6 +15,12 @@ module Cardano.Logging.Formatter (
   , humanFormatter'
 ) where
 
+import           Cardano.Logging.Trace (contramapM)
+import           Cardano.Logging.Types
+import           Cardano.Logging.Utils (showT)
+
+import           Control.Concurrent (myThreadId)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as AE
@@ -26,12 +32,6 @@ import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder as TB
 import           Data.Text.Lazy.Encoding (decodeUtf8)
 import           Data.Time (UTCTime, defaultTimeLocale, formatTime, getCurrentTime)
-
-import           Cardano.Logging.Trace (contramapM)
-import           Cardano.Logging.Types
-import           Cardano.Logging.Utils (showT)
-import           Control.Concurrent (myThreadId)
-import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Network.HostName
 
 

@@ -21,20 +21,22 @@ module Cardano.TxSubmit.Types
 
 import           Cardano.Api (Error (..), TxId, TxValidationErrorInCardanoMode (..), textShow)
 import           Cardano.Api.Pretty
+
 import           Cardano.Binary (DecoderError)
 import           Cardano.TxSubmit.Orphans ()
+
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
 import qualified Data.Aeson as Aeson
 import           Data.ByteString.Char8 (ByteString)
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Text (Text)
+import qualified Data.Text as T
 import           GHC.Generics (Generic)
 import           Network.HTTP.Media ((//))
+
 import           Servant (Accept (..), JSON, MimeRender (..), MimeUnrender (..), PostAccepted,
                    ReqBody, (:>))
 import           Servant.API.Generic (ToServantApi, (:-))
-
-import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.Text as T
 
 newtype TxSubmitPort = TxSubmitPort Int
 

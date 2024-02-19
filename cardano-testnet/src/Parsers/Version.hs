@@ -4,15 +4,16 @@ module Parsers.Version
   , runVersionOptions
   ) where
 
+import           Cardano.CLI.EraBased.Options.Common
 import           Cardano.Git.Rev (gitRev)
+
 import qualified Data.Text as T
 import           Data.Version (showVersion)
 import           Options.Applicative
-import           Paths_cardano_testnet (version)
 import           System.Info (arch, compilerName, compilerVersion, os)
 import qualified System.IO as IO
 
-import           Cardano.CLI.EraBased.Options.Common
+import           Paths_cardano_testnet (version)
 
 
 data VersionOptions = VersionOptions

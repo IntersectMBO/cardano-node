@@ -17,6 +17,8 @@ module Cardano.Tracer.Configuration
   , readTracerConfig
   ) where
 
+import qualified Cardano.Logging.Types as Log
+
 import           Data.Aeson (FromJSON, ToJSON)
 import           Data.Fixed (Pico)
 import           Data.List (intercalate)
@@ -30,8 +32,6 @@ import           Data.Word (Word16, Word32, Word64)
 import           Data.Yaml (decodeFileEither)
 import           GHC.Generics (Generic)
 import           System.Exit (die)
-
-import qualified Cardano.Logging.Types as Log
 
 -- | Only local socket is supported, to avoid unauthorized connections.
 newtype Address = LocalSocket FilePath

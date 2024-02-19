@@ -14,8 +14,12 @@ module Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
 import           Cardano.Api
 import           Cardano.Api.Error (displayError)
 import           Cardano.Api.Shelley
+
 import qualified Cardano.Ledger.Conway.Governance as Ledger
 import           Cardano.Testnet
+
+import           Prelude
+
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
@@ -28,17 +32,18 @@ import qualified Data.Text as Text
 import           Data.Word
 import           GHC.IO.Exception (IOException)
 import           GHC.Stack (HasCallStack, callStack, withFrozenCallStack)
-import           Hedgehog
-import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import           Lens.Micro
-import           Prelude
 import           System.FilePath ((</>))
+
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
 import           Testnet.Property.Utils (queryUtxos)
 import           Testnet.Runtime
+
+import           Hedgehog
+import qualified Hedgehog.Extras as H
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 
 newtype AdditionalCatcher

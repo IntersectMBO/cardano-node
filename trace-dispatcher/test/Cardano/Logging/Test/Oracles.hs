@@ -6,13 +6,14 @@ module Cardano.Logging.Test.Oracles (
   , occurrences
   ) where
 
-import           Data.Maybe (fromMaybe)
-import qualified Data.Text as T
-import           Test.QuickCheck
-import           Text.Read (readMaybe)
-
 import           Cardano.Logging
 import           Cardano.Logging.Test.Types
+
+import           Data.Maybe (fromMaybe)
+import qualified Data.Text as T
+import           Text.Read (readMaybe)
+
+import           Test.QuickCheck
 
 
 -- | Checks for every message that it appears or does not appear at the right

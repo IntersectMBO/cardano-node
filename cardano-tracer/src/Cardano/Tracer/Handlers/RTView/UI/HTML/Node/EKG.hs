@@ -5,10 +5,10 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.Node.EKG
   ( mkEKGMetricsWindow
   ) where
 
+import           Cardano.Tracer.Handlers.RTView.UI.Utils
+
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
-
-import           Cardano.Tracer.Handlers.RTView.UI.Utils
 
 mkEKGMetricsWindow :: String -> UI Element
 mkEKGMetricsWindow anId = do

@@ -1,13 +1,14 @@
-import           Criterion.Main
-import           Data.IORef
-
 import           Cardano.Logging
 import           Cardano.Logging.Test.Config
 import           Cardano.Logging.Test.Oracles
 import           Cardano.Logging.Test.Script
 import           Cardano.Logging.Test.Tracer
 import           Cardano.Logging.Test.Types
+
+import           Data.IORef
 import           System.Remote.Monitoring (forkServer)
+
+import           Criterion.Main
 
 
 -- Can be run with:

@@ -5,15 +5,15 @@ module Cardano.Logging.Test.Unit.Configuration (
   , testConfigResult
 ) where
 
+import           Cardano.Logging
+import           Cardano.Logging.Test.Tracer
+
 import           Control.Monad.IO.Class
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.IORef (IORef, newIORef, readIORef)
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
-
-import           Cardano.Logging
-import           Cardano.Logging.Test.Tracer
 
 newtype TestMessage = TestMessage Text
   deriving Show

@@ -9,11 +9,6 @@ module Cardano.Tracer.Run
   , runCardanoTracer
   ) where
 
-import           Control.Concurrent.Async.Extra (sequenceConcurrently)
-import           Control.Concurrent.Extra (newLock)
-import           Control.Concurrent.STM.TVar (newTVarIO)
-import           Data.Foldable (for_)
-
 import           Cardano.Logging.Resources
 import           Cardano.Tracer.Acceptors.Run
 import           Cardano.Tracer.CLI
@@ -31,7 +26,11 @@ import           Cardano.Tracer.Utils
 
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async, link)
+import           Control.Concurrent.Async.Extra (sequenceConcurrently)
+import           Control.Concurrent.Extra (newLock)
+import           Control.Concurrent.STM.TVar (newTVarIO)
 import           Control.Monad
+import           Data.Foldable (for_)
 
 -- | Top-level run function, called by 'cardano-tracer' app.
 runCardanoTracer :: TracerParams -> IO ()

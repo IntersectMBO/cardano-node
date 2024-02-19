@@ -7,6 +7,11 @@ module Cardano.Tracer.Handlers.Metrics.Prometheus
   ( runPrometheusServer
   ) where
 
+import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
+
 import           Prelude hiding (head)
 
 import           Control.Concurrent.STM.TVar (readTVarIO)
@@ -20,19 +25,15 @@ import           Data.String (IsString (..))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import           Snap.Blaze (blaze)
-import           Snap.Core (Snap, getRequest, route, rqParams, writeText)
-import           Snap.Http.Server (Config, ConfigLog (..), defaultConfig, setAccessLog, setBind,
-                   setErrorLog, setPort, simpleHttpServe)
 import           System.Metrics (Sample, Value (..), sampleAll)
 import           System.Time.Extra (sleep)
 import           Text.Blaze.Html5 hiding (map)
 import           Text.Blaze.Html5.Attributes hiding (title)
 
-import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
+import           Snap.Blaze (blaze)
+import           Snap.Core (Snap, getRequest, route, rqParams, writeText)
+import           Snap.Http.Server (Config, ConfigLog (..), defaultConfig, setAccessLog, setBind,
+                   setErrorLog, setPort, simpleHttpServe)
 
 -- | Runs simple HTTP server that listens host and port and returns
 --   the list of currently connected nodes in such a format:

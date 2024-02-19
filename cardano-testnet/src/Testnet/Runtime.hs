@@ -33,6 +33,7 @@ module Testnet.Runtime
 import           Cardano.Api
 import qualified Cardano.Api as Api
 import           Cardano.Api.Pretty
+
 import qualified Cardano.Chain.Genesis as G
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -40,6 +41,8 @@ import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Node.Configuration.POM
 import qualified Cardano.Node.Protocol.Byron as Byron
 import           Cardano.Node.Types
+
+import           Prelude
 
 import           Control.Exception.Safe
 import           Control.Monad
@@ -58,11 +61,16 @@ import           GHC.Generics (Generic)
 import qualified GHC.IO.Handle as IO
 import           GHC.Stack
 import qualified GHC.Stack as GHC
-import           Prelude
 import qualified System.Directory as IO
+import           System.Directory (doesDirectoryExist)
 import           System.FilePath
 import qualified System.IO as IO
 import qualified System.Process as IO
+
+import           Testnet.Filepath
+import qualified Testnet.Ping as Ping
+import           Testnet.Process.Run
+import           Testnet.Start.Types
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
@@ -70,12 +78,6 @@ import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
-
-import           System.Directory (doesDirectoryExist)
-import           Testnet.Filepath
-import qualified Testnet.Ping as Ping
-import           Testnet.Process.Run
-import           Testnet.Start.Types
 
 data TestnetRuntime = TestnetRuntime
   { configurationFile :: FilePath

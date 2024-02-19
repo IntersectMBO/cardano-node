@@ -6,20 +6,20 @@ module Cardano.TxSubmit
   , opts
   ) where
 
+import qualified Cardano.BM.Setup as Logging
 import           Cardano.BM.Trace (Trace, logInfo)
+import qualified Cardano.BM.Trace as Logging
 import           Cardano.TxSubmit.CLI.Parsers (opts)
 import           Cardano.TxSubmit.CLI.Types (ConfigFile (unConfigFile), TxSubmitNodeParams (..))
 import           Cardano.TxSubmit.Config (GenTxSubmitNodeConfig (..), ToggleLogging (..),
                    TxSubmitNodeConfig, readTxSubmitNodeConfig)
 import           Cardano.TxSubmit.Metrics (registerMetricsServer)
 import           Cardano.TxSubmit.Web (runTxSubmitServer)
+
+import qualified Control.Concurrent.Async as Async
 import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO (liftIO))
 import           Data.Text (Text)
-
-import qualified Cardano.BM.Setup as Logging
-import qualified Cardano.BM.Trace as Logging
-import qualified Control.Concurrent.Async as Async
 
 runTxSubmitWebapi :: TxSubmitNodeParams -> IO ()
 runTxSubmitWebapi tsnp = do

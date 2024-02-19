@@ -23,23 +23,22 @@ module Cardano.Logging.Configuration
   , getBackends
   ) where
 
+import           Cardano.Logging.DocuGenerator (addFiltered, addLimiter, addSilent)
+import           Cardano.Logging.FrequencyLimiter (limitFrequency)
+import           Cardano.Logging.Trace
+import           Cardano.Logging.TraceDispatcherMessage
+import           Cardano.Logging.Types
+
 import           Control.Monad (unless)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.IO.Unlift (MonadUnliftIO)
+import qualified Control.Tracer as T
 import           Data.IORef (IORef, modifyIORef, newIORef, readIORef, writeIORef)
 import           Data.List (maximumBy, nub)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
 import           Data.Text (Text, intercalate, unpack)
-
-import qualified Control.Tracer as T
-
-import           Cardano.Logging.DocuGenerator (addFiltered, addLimiter, addSilent)
-import           Cardano.Logging.FrequencyLimiter (limitFrequency)
-import           Cardano.Logging.Trace
-import           Cardano.Logging.TraceDispatcherMessage
-import           Cardano.Logging.Types
 
 
 -- | Call this function at initialisation, and later for reconfiguration.

@@ -26,6 +26,18 @@ module Cardano.Tracer.Handlers.RTView.UI.Charts
   , restoreLastHistoryOnCharts
   ) where
 
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.RTView.State.Historical
+import           Cardano.Tracer.Handlers.RTView.System
+import           Cardano.Tracer.Handlers.RTView.UI.CSS.Own
+import qualified Cardano.Tracer.Handlers.RTView.UI.JS.Charts as Chart
+import qualified Cardano.Tracer.Handlers.RTView.UI.JS.Utils as JS
+import           Cardano.Tracer.Handlers.RTView.UI.Types
+import           Cardano.Tracer.Handlers.RTView.UI.Utils
+import           Cardano.Tracer.Handlers.RTView.Update.Historical
+import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
+
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TBQueue (newTBQueueIO, tryReadTBQueue, writeTBQueue)
 import           Control.Concurrent.STM.TVar (modifyTVar', newTVarIO, readTVarIO)
@@ -39,22 +51,11 @@ import qualified Data.Map.Strict as M
 import           Data.Maybe (catMaybes)
 import qualified Data.Set as S
 import           Data.Text (pack, unpack)
-import           Graphics.UI.Threepenny.Core
 import           System.Directory.Extra (listFiles)
 import           System.FilePath (takeBaseName, (</>))
 import           Text.Read (readMaybe)
 
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.RTView.State.Historical
-import           Cardano.Tracer.Handlers.RTView.System
-import           Cardano.Tracer.Handlers.RTView.UI.CSS.Own
-import qualified Cardano.Tracer.Handlers.RTView.UI.JS.Charts as Chart
-import qualified Cardano.Tracer.Handlers.RTView.UI.JS.Utils as JS
-import           Cardano.Tracer.Handlers.RTView.UI.Types
-import           Cardano.Tracer.Handlers.RTView.UI.Utils
-import           Cardano.Tracer.Handlers.RTView.Update.Historical
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
+import           Graphics.UI.Threepenny.Core
 
 chartsIds :: [ChartId]
 chartsIds = [minBound .. maxBound]

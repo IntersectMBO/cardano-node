@@ -5,6 +5,7 @@ module Cardano.TxSubmit.CLI.Types
   ) where
 
 import           Cardano.Api (ConsensusModeParams, NetworkId (..), SocketPath)
+
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig)
 
 -- | The product type of all command line arguments

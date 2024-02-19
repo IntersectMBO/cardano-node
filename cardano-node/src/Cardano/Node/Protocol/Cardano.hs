@@ -15,23 +15,10 @@ module Cardano.Node.Protocol.Cardano
   , CardanoProtocolInstantiationError(..)
   ) where
 
-import           Prelude
-
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT)
-
-import           Ouroboros.Consensus.Cardano
-import qualified Ouroboros.Consensus.Cardano as Consensus
-import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
-import           Ouroboros.Consensus.Cardano.Condense ()
-import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
-import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
-import qualified Ouroboros.Consensus.Shelley.Node.Praos as Praos
-
 import           Cardano.Api
 import           Cardano.Api.Byron as Byron
-import qualified Cardano.Chain.Update as Update
 
+import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Ledger.Api.Transition as Ledger
 import           Cardano.Ledger.BaseTypes (natVersion)
 import qualified Cardano.Node.Protocol.Alonzo as Alonzo
@@ -42,6 +29,18 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
+import           Ouroboros.Consensus.Cardano
+import qualified Ouroboros.Consensus.Cardano as Consensus
+import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
+import           Ouroboros.Consensus.Cardano.Condense ()
+import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
+import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
+import qualified Ouroboros.Consensus.Shelley.Node.Praos as Praos
+
+import           Prelude
+
+import           Control.Monad.Trans.Except (ExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 ------------------------------------------------------------------------------
 -- Real Cardano protocol

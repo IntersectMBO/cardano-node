@@ -22,22 +22,6 @@ module Cardano.Node.Configuration.POM
   )
 where
 
-import           Control.Monad (when)
-import           Data.Aeson
-import qualified Data.Aeson.Types as Aeson
-import           Data.Bifunctor (Bifunctor (..))
-import           Data.Maybe
-import           Data.Monoid (Last (..))
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import           Data.Time.Clock (DiffTime)
-import           Data.Yaml (decodeFileThrow)
-import           Generic.Data (gmappend)
-import           Generic.Data.Orphans ()
-import           GHC.Generics (Generic)
-import           Options.Applicative
-import           System.FilePath (takeDirectory, (</>))
-
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
 import           Cardano.Node.Configuration.NodeAddress (SocketPath)
@@ -53,6 +37,23 @@ import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
+
+import           Control.Monad (when)
+import           Data.Aeson
+import qualified Data.Aeson.Types as Aeson
+import           Data.Bifunctor (Bifunctor (..))
+import           Data.Maybe
+import           Data.Monoid (Last (..))
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import           Data.Time.Clock (DiffTime)
+import           Data.Yaml (decodeFileThrow)
+import           GHC.Generics (Generic)
+import           Options.Applicative
+import           System.FilePath (takeDirectory, (</>))
+
+import           Generic.Data (gmappend)
+import           Generic.Data.Orphans ()
 
 data NetworkP2PMode = EnabledP2PMode | DisabledP2PMode
   deriving (Eq, Show, Generic)

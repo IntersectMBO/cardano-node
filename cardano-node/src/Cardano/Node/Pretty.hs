@@ -15,14 +15,13 @@ module Cardano.Node.Pretty
     white,
   ) where
 
+import qualified Control.Concurrent.QSem as IO
 import           Control.Exception (bracket_)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
-import           Prettyprinter
-import           Prettyprinter.Render.Terminal
-
-import qualified Control.Concurrent.QSem as IO
 import qualified Data.Text.Lazy as TextLazy
 import qualified Data.Text.Lazy.IO as TextLazy
+import           Prettyprinter
+import           Prettyprinter.Render.Terminal
 import qualified System.IO as IO
 import qualified System.IO.Unsafe as IO
 

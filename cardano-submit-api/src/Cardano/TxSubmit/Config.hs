@@ -13,16 +13,16 @@ module Cardano.TxSubmit.Config
 
 import           Cardano.Api
 
-import           Control.Exception (IOException, catch)
-import           Data.Aeson (FromJSON (..), Object, Value (..), (.:))
-import           Data.Aeson.Types (Parser)
-import           Data.Bool (bool)
-import           Data.ByteString (ByteString)
-
 import qualified Cardano.BM.Configuration as Logging
 import qualified Cardano.BM.Configuration.Model as Logging
 import qualified Cardano.BM.Data.Configuration as Logging
+
+import           Control.Exception (IOException, catch)
+import           Data.Aeson (FromJSON (..), Object, Value (..), (.:))
 import qualified Data.Aeson as Aeson
+import           Data.Aeson.Types (Parser)
+import           Data.Bool (bool)
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.Yaml as Yaml
 

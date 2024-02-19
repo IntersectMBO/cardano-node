@@ -18,18 +18,9 @@
 
 module Cardano.Tracing.OrphanInstances.Consensus () where
 
+import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
+                   (ConsensusStartupException (..))
 import           Cardano.Prelude (maximumDef)
-import           Data.Aeson (Value (..))
-import qualified Data.Aeson as Aeson
-import           Data.Data (Proxy (..))
-import           Data.Foldable (Foldable (..))
-import           Data.Text (Text, pack)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import           Data.Word (Word32)
-import           GHC.Generics (Generic)
-import           Numeric (showFFloat)
-
 import           Cardano.Slotting.Slot (fromWithOrigin)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Network ()
@@ -37,10 +28,6 @@ import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderH
                    renderHeaderHashForVerbosity, renderPoint, renderPointAsPhrase,
                    renderPointForVerbosity, renderRealPoint, renderRealPointAsPhrase,
                    renderTipBlockNo, renderTipHash, renderWithOrigin)
-
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
-                   (ConsensusStartupException (..))
-
 import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol, CannotForge,
                    ConvertRawHash (..), ForgeStateUpdateError, Header, RealPoint, blockNo,
                    blockPoint, blockPrevHash, getHeader, headerPoint, pointHash, realPointHash,
@@ -67,28 +54,35 @@ import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract
 import qualified Ouroboros.Consensus.Protocol.BFT as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
+import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import qualified Ouroboros.Consensus.Storage.ImmutableDB.API as ImmDB
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkNo (..),
                    chunkNoToInt)
+import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import           Ouroboros.Consensus.Storage.LedgerDB (PushGoal (..), PushStart (..), Pushing (..))
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
-import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
-
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Enclose
 import           Ouroboros.Consensus.Util.Orphans ()
-
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), SlotNo (..), StandardHash,
                    Tip (..), blockHash, pointSlot, tipFromHeader)
+import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
-import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
--- TODO: 'TraceCacheEvent' should be exported by the 'Impl' module
+import           Data.Aeson (Value (..))
+import qualified Data.Aeson as Aeson
+import           Data.Data (Proxy (..))
+import           Data.Foldable (Foldable (..))
 import           Data.Function (on)
-import qualified Ouroboros.Consensus.Storage.ImmutableDB.API as ImmDB
-import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
+import           Data.Text (Text, pack)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import           Data.Word (Word32)
+import           GHC.Generics (Generic)
+import           Numeric (showFFloat)
 
 
 {- HLINT ignore "Use const" -}

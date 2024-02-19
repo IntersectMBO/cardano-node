@@ -14,11 +14,12 @@ import           Data.Foldable
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
+import           Testnet.Property.Run
+import           Testnet.Start.Cardano
+
 import           Parsers.Cardano
 import           Parsers.Help
 import           Parsers.Version
-import           Testnet.Property.Run
-import           Testnet.Start.Cardano
 
 pref :: ParserPrefs
 pref = Opt.prefs $ showHelpOnEmpty <> showHelpOnError

@@ -6,14 +6,14 @@ module Cardano.Logging.TraceDispatcherMessage
   , TraceDispatcherMessage (..)
   ) where
 
+import           Cardano.Logging.ConfigurationParser ()
+import           Cardano.Logging.Types
+
 import           Data.Aeson hiding (Error)
 import           Data.ByteString.Lazy (toStrict)
 import qualified Data.Map as Map
 import           Data.Text
 import           Data.Text.Encoding
-
-import           Cardano.Logging.ConfigurationParser ()
-import           Cardano.Logging.Types
 
 data UnknownNamespaceKind =
     UKFSeverity

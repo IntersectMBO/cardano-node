@@ -6,14 +6,15 @@ module Cardano.Tracer.Handlers.RTView.UI.Logs
   , saveLogsLiveViewFont
   ) where
 
-import           Control.Exception.Extra (ignore, try_)
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
-import           Graphics.UI.Threepenny.Core
-
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.System
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
+
+import           Control.Exception.Extra (ignore, try_)
+import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
+
+import           Graphics.UI.Threepenny.Core
 
 -- | When the user opened the logs live view window,
 --   the previous font's size should be restored from the disk.

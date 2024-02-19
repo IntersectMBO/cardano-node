@@ -11,21 +11,19 @@ module Cardano.Tracer.Handlers.RTView.Notifications.Settings
   , saveEventsSettingsOnDisk
   ) where
 
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.RTView.Notifications.Types
+import           Cardano.Tracer.Handlers.RTView.System
+
 import           Control.Exception.Extra (ignore, try_)
-import           Crypto.Cipher.AES ()
-import           Crypto.Cipher.Types ()
-import           Crypto.Error ()
--- import           Crypto.Cipher.AES (AES256)
--- import           Crypto.Cipher.Types (BlockCipher (..), cipherInit, ctrCombine, nullIV)
--- import           Crypto.Error (CryptoError, eitherCryptoError)
 import           Data.Aeson (decodeStrict', encode, encodeFile)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.RTView.Notifications.Types
-import           Cardano.Tracer.Handlers.RTView.System
+import           Crypto.Cipher.AES ()
+import           Crypto.Cipher.Types ()
+import           Crypto.Error ()
 
 readSavedEmailSettings :: Maybe FilePath -> IO EmailSettings
 readSavedEmailSettings rtvSD = do

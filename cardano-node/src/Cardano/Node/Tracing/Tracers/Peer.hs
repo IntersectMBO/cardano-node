@@ -10,14 +10,26 @@ module Cardano.Node.Tracing.Tracers.Peer
   , ppPeer
   ) where
 
+import           Cardano.Logging hiding (traceWith)
 import           Cardano.Node.Orphans ()
-
-import qualified Control.Concurrent.Class.MonadSTM.Strict as STM
-import           "contra-tracer" Control.Tracer
+import           Cardano.Node.Queries
+import           Ouroboros.Consensus.Block (Header)
+import           Ouroboros.Consensus.Util.NormalForm.StrictTVar (StrictTVar, readTVar)
+import           Ouroboros.Consensus.Util.Orphans ()
+import qualified Ouroboros.Network.AnchoredFragment as Net
+import           Ouroboros.Network.Block (unSlotNo)
+import qualified Ouroboros.Network.Block as Net
+import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
+import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..),
+                   PeerFetchStatus (..), readFetchClientState)
+import           Ouroboros.Network.ConnectionId (remoteAddress)
+import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async
+import qualified Control.Concurrent.Class.MonadSTM.Strict as STM
 import           Control.Monad (forever)
+import           "contra-tracer" Control.Tracer
 import           Data.Aeson (ToJSON (..), Value (..), toJSON, (.=))
 import           Data.Functor ((<&>))
 import qualified Data.List as List
@@ -27,22 +39,6 @@ import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Text.Printf (printf)
-
-import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.Util.NormalForm.StrictTVar (StrictTVar, readTVar)
-import           Ouroboros.Consensus.Util.Orphans ()
-import           Ouroboros.Network.ConnectionId (remoteAddress)
-
-import qualified Ouroboros.Network.AnchoredFragment as Net
-import           Ouroboros.Network.Block (unSlotNo)
-import qualified Ouroboros.Network.Block as Net
-import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
-import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..),
-                   PeerFetchStatus (..), readFetchClientState)
-import           Ouroboros.Network.NodeToNode (RemoteAddress)
-
-import           Cardano.Logging hiding (traceWith)
-import           Cardano.Node.Queries
 
 {- HLINT ignore "Use =<<" -}
 {- HLINT ignore "Use <=<" -}

@@ -6,6 +6,14 @@ module Cardano.Tracer.Test.DataPoint.Tests
   ( tests
   ) where
 
+import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.MetaTrace
+import           Cardano.Tracer.Run (doRunCardanoTracer)
+import           Cardano.Tracer.Test.Forwarder
+import           Cardano.Tracer.Test.TestSetup
+import           Cardano.Tracer.Test.Utils
+import           Cardano.Tracer.Utils (applyBrake, initDataPointRequestors, initProtocolsBrake)
+
 import           Control.Concurrent.Async (withAsync)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO, readTVarIO)
@@ -13,20 +21,12 @@ import           Data.Aeson (decode')
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import           System.Time.Extra
+
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 
 import           Trace.Forward.Protocol.DataPoint.Type
 import           Trace.Forward.Utils.DataPoint (askForDataPoints)
-
-import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.MetaTrace
-import           Cardano.Tracer.Run (doRunCardanoTracer)
-import           Cardano.Tracer.Utils (applyBrake, initDataPointRequestors, initProtocolsBrake)
-
-import           Cardano.Tracer.Test.Forwarder
-import           Cardano.Tracer.Test.TestSetup
-import           Cardano.Tracer.Test.Utils
 
 tests :: TestSetup Identity -> TestTree
 tests ts = localOption (QuickCheckTests 1) $ testGroup "Test.DataPoint"

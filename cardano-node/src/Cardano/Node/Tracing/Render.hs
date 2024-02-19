@@ -32,13 +32,8 @@ module Cardano.Node.Tracing.Render
   ) where
 
 import qualified Cardano.Api.Shelley as Api
-import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Data.ByteString.Base16 as B16
-import           Data.Proxy (Proxy (..))
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
 
+import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AsItem (..),
                    PlutusPurpose)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
@@ -49,10 +44,6 @@ import qualified Cardano.Ledger.SafeHash as SafeHash
 import           Cardano.Logging
 import           Cardano.Node.Queries (ConvertTxId (..))
 import           Cardano.Slotting.Slot (SlotNo (..), WithOrigin (..))
-import           Data.Aeson ((.=))
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Key as Aeson
-import qualified Data.Aeson.Types as Aeson
 import           Ouroboros.Consensus.Block (BlockNo (..), ConvertRawHash (..), RealPoint (..))
 import           Ouroboros.Consensus.Block.Abstract (Point (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, TxId)
@@ -61,6 +52,16 @@ import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkN
 import           Ouroboros.Consensus.Util.Condense (Condense, condense)
 import           Ouroboros.Network.Block (ChainHash (..), HeaderHash, StandardHash, Tip,
                    getTipPoint)
+
+import           Data.Aeson ((.=))
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Aeson
+import qualified Data.Aeson.Types as Aeson
+import qualified Data.ByteString.Base16 as B16
+import           Data.Proxy (Proxy (..))
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 
 condenseT :: Condense a => a -> Text
 condenseT = Text.pack . condense

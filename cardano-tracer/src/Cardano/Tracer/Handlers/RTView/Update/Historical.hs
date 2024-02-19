@@ -13,6 +13,20 @@ module Cardano.Tracer.Handlers.RTView.Update.Historical
   , runHistoricalUpdater
   ) where
 
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.Metrics.Utils
+import           Cardano.Tracer.Handlers.RTView.State.Historical
+import           Cardano.Tracer.Handlers.RTView.State.Last
+import           Cardano.Tracer.Handlers.RTView.System
+import           Cardano.Tracer.Handlers.RTView.Update.Chain
+import           Cardano.Tracer.Handlers.RTView.Update.Leadership
+import           Cardano.Tracer.Handlers.RTView.Update.Resources
+import           Cardano.Tracer.Handlers.RTView.Update.Transactions
+import           Cardano.Tracer.Handlers.RTView.Update.Utils
+import           Cardano.Tracer.Handlers.RTView.Utils
+import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
+
 import           Control.Concurrent.Async (forConcurrently_)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (modifyTVar', readTVar, readTVarIO)
@@ -35,20 +49,6 @@ import           System.Directory.Extra (listFiles)
 import           System.FilePath (takeBaseName, (</>))
 import           System.Time.Extra (sleep)
 import           Text.Read (readMaybe)
-
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Metrics.Utils
-import           Cardano.Tracer.Handlers.RTView.State.Historical
-import           Cardano.Tracer.Handlers.RTView.State.Last
-import           Cardano.Tracer.Handlers.RTView.System
-import           Cardano.Tracer.Handlers.RTView.Update.Chain
-import           Cardano.Tracer.Handlers.RTView.Update.Leadership
-import           Cardano.Tracer.Handlers.RTView.Update.Resources
-import           Cardano.Tracer.Handlers.RTView.Update.Transactions
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
-import           Cardano.Tracer.Handlers.RTView.Utils
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
 
 -- | A lot of information received from the node is useful as historical data.
 --   It means that such an information should be displayed on time charts,

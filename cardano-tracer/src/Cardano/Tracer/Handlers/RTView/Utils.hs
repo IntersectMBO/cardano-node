@@ -9,13 +9,14 @@ module Cardano.Tracer.Handlers.RTView.Utils
   , forConnectedUI_
   ) where
 
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Types
+
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import           Graphics.UI.Threepenny.Core
 
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Types
+import           Graphics.UI.Threepenny.Core
 
 forConnected :: TracerEnv -> (NodeId -> IO b) -> IO [b]
 forConnected TracerEnv{teConnectedNodes} action =

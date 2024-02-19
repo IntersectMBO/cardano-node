@@ -6,14 +6,15 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.Logs
   ( mkLogsLiveView
   ) where
 
-import           Control.Monad (void)
-import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core
-
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.Logs
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
+
+import           Control.Monad (void)
+
+import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Core
 
 mkLogsLiveView :: TracerEnv -> UI Element
 mkLogsLiveView tracerEnv = do

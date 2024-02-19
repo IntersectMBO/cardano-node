@@ -5,20 +5,20 @@ module Cardano.Tracer.Handlers.RTView.Update.NodeInfo
   ( askNSetNodeInfo
   ) where
 
-import           Control.Monad (forM_)
-import           Control.Monad.Extra (whenJustM)
-import           Data.Set (Set)
-import qualified Data.Text as T
-import           Data.Time.Format (defaultTimeLocale, formatTime)
-import           Graphics.UI.Threepenny.Core
-
 import           Cardano.Node.Startup (NodeInfo (..))
-
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Types
+
+import           Control.Monad (forM_)
+import           Control.Monad.Extra (whenJustM)
+import           Data.Set (Set)
+import qualified Data.Text as T
+import           Data.Time.Format (defaultTimeLocale, formatTime)
+
+import           Graphics.UI.Threepenny.Core
 
 askNSetNodeInfo
   :: TracerEnv

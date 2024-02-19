@@ -6,14 +6,6 @@ module Cardano.Tracer.Handlers.RTView.Run
   , module Cardano.Tracer.Handlers.RTView.State.TraceObjects
   ) where
 
-import           Control.Concurrent.Async.Extra (sequenceConcurrently)
-import           Control.Monad (void)
-import           Control.Monad.Extra (whenJust)
-import qualified Data.Text as T
-import           Data.Text.Encoding (encodeUtf8)
-import qualified Graphics.UI.Threepenny as UI
-import           System.Time.Extra (sleep)
-
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.Notifications.Utils
@@ -26,6 +18,15 @@ import           Cardano.Tracer.Handlers.RTView.UI.HTML.Main
 import           Cardano.Tracer.Handlers.RTView.Update.EraSettings
 import           Cardano.Tracer.Handlers.RTView.Update.Historical
 import           Cardano.Tracer.MetaTrace
+
+import           Control.Concurrent.Async.Extra (sequenceConcurrently)
+import           Control.Monad (void)
+import           Control.Monad.Extra (whenJust)
+import qualified Data.Text as T
+import           Data.Text.Encoding (encodeUtf8)
+import           System.Time.Extra (sleep)
+
+import qualified Graphics.UI.Threepenny as UI
 
 -- | RTView is a part of 'cardano-tracer' that provides an ability
 --   to monitor Cardano nodes in a real-time. The core idea is simple:

@@ -75,10 +75,10 @@ module Control.Tracer
 
 import           Control.Arrow (arr, runKleisli, (&&&), (|||))
 import           Control.Category ((>>>))
-import           Data.Functor.Contravariant (Contravariant (..))
-import           Debug.Trace (traceM)
-
 import qualified Control.Tracer.Arrow as Arrow
+import           Data.Functor.Contravariant (Contravariant (..))
+
+import           Debug.Trace (traceM)
 
 -- | This type describes some effect in @m@ which depends upon some value of
 -- type @a@, for which the /output value/ is not of interest (only the effects).

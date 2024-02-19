@@ -13,14 +13,6 @@ module Cardano.Tracer.Handlers.RTView.UI.Notifications
   , setStatusTestEmailButton
   ) where
 
-import           Control.Monad (unless, when)
-import           Data.Maybe (fromMaybe)
-import           Data.Text (pack, unpack)
-import qualified Data.Text as T
-import           Data.Text.Read (decimal)
-import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core
-
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.Notifications.Settings
 import           Cardano.Tracer.Handlers.RTView.Notifications.Timer
@@ -29,6 +21,15 @@ import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
+
+import           Control.Monad (unless, when)
+import           Data.Maybe (fromMaybe)
+import           Data.Text (pack, unpack)
+import qualified Data.Text as T
+import           Data.Text.Read (decimal)
+
+import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Core
 
 restoreEmailSettings :: TracerEnv -> UI ()
 restoreEmailSettings TracerEnv{teRTViewStateDir} = do

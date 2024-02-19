@@ -18,19 +18,12 @@ module Cardano.Node.Tracing.Documentation
   , docTracersFirstPhase
   ) where
 
-import           Control.Exception (SomeException)
-import           Data.Aeson.Types (ToJSON)
-import           Data.Proxy (Proxy (..))
-import qualified Data.Text.IO as T
-import           GHC.Generics (Generic)
-import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
-import qualified Network.Socket as Socket
-import qualified Options.Applicative as Opt
-
 import           Cardano.Logging
 import           Cardano.Logging.Resources
 import           Cardano.Logging.Resources.Types ()
-
+import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
+import           Cardano.Node.Startup
+import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.Formatting ()
 import qualified Cardano.Node.Tracing.StateRep as SR
@@ -47,11 +40,6 @@ import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer
 import           Cardano.Node.Tracing.Tracers.Shutdown ()
 import           Cardano.Node.Tracing.Tracers.Startup ()
-
-import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
-import           Cardano.Node.Startup
-import           Cardano.Node.TraceConstraints
-
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
@@ -67,8 +55,6 @@ import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-
-
 import           Ouroboros.Network.Block (Point (..), Serialised, SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
@@ -107,6 +93,15 @@ import           Ouroboros.Network.Subscription.Ip (WithIPList (..))
 import           Ouroboros.Network.Subscription.Worker (SubscriptionTrace (..))
 import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
+
+import           Control.Exception (SomeException)
+import           Data.Aeson.Types (ToJSON)
+import           Data.Proxy (Proxy (..))
+import qualified Data.Text.IO as T
+import           GHC.Generics (Generic)
+import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
+import qualified Network.Socket as Socket
+import qualified Options.Applicative as Opt
 
 data TraceDocumentationCmd
   = TraceDocumentationCmd

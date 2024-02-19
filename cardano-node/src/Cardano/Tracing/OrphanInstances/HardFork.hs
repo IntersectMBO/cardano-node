@@ -18,17 +18,9 @@
 
 module Cardano.Tracing.OrphanInstances.HardFork () where
 
-import           Data.Aeson
-import qualified Data.ByteString.Base16 as Base16
-import qualified Data.ByteString.Short as SBS
-import           Data.Proxy (Proxy (..))
-import           Data.SOP (All, Compose, K (..))
-import           Data.SOP.Strict
-
+import           Cardano.Slotting.Slot (EpochSize (..))
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
-
-import           Cardano.Slotting.Slot (EpochSize (..))
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateInfo,
                    ForgeStateUpdateError)
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
@@ -54,6 +46,13 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToCli
 import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
+
+import           Data.Aeson
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Short as SBS
+import           Data.Proxy (Proxy (..))
+import           Data.SOP (All, Compose, K (..))
+import           Data.SOP.Strict
 
 
 --

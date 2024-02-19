@@ -22,14 +22,14 @@ module Trace.Forward.Protocol.TraceObject.Type
   , BlockingReplyList (..)
   ) where
 
+import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
+
 import           Codec.Serialise (Serialise (..))
 import           Data.List.NonEmpty (NonEmpty)
 import           Data.Proxy (Proxy (..))
 import           Data.Word (Word16)
 import           GHC.Generics (Generic)
-
 import           Network.TypedProtocol.Core (Protocol (..))
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
 -- | A kind to identify our protocol, and the types of the states in the state
 -- transition diagram of the protocol.

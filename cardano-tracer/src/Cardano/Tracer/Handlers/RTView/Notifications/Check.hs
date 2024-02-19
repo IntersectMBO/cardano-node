@@ -6,7 +6,6 @@ module Cardano.Tracer.Handlers.RTView.Notifications.Check
 --import qualified Data.Text as T
 
 import           Cardano.Logging (SeverityS (..))
-
 import           Cardano.Tracer.Handlers.RTView.Notifications.Types
 import           Cardano.Tracer.Handlers.RTView.Notifications.Utils
 import           Cardano.Tracer.Handlers.RTView.State.TraceObjects

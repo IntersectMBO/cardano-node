@@ -14,9 +14,13 @@ module Cardano.Testnet.Test.LedgerEvents.Gov.InfoAction
 import           Cardano.Api
 import           Cardano.Api.Error (displayError)
 import           Cardano.Api.Shelley
+
 import           Cardano.Ledger.Conway.Governance (RatifyState (..))
 import qualified Cardano.Ledger.Conway.Governance as L
 import           Cardano.Testnet
+
+import           Prelude
+
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
@@ -29,17 +33,18 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
-import           Hedgehog
-import           Hedgehog.Extras (Integration)
-import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import           Prelude
 import           System.FilePath ((</>))
+
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
 import           Testnet.Property.Utils (queryUtxos)
 import           Testnet.Runtime
+
+import           Hedgehog
+import           Hedgehog.Extras (Integration)
+import qualified Hedgehog.Extras as H
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/InfoAction/'@

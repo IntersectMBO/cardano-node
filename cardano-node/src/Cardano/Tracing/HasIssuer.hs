@@ -11,22 +11,21 @@ module Cardano.Tracing.HasIssuer
   , HasIssuer (..)
   ) where
 
-import           Data.ByteString (ByteString)
-import           Data.SOP
-
 import           Cardano.Api (serialiseToRawBytes, verificationKeyHash)
 import           Cardano.Api.Byron (VerificationKey (ByronVerificationKey))
 import           Cardano.Api.Shelley (VerificationKey (StakePoolVerificationKey))
+
 import qualified Cardano.Chain.Block as Byron
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley.API as Shelley
-
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock, Header (..))
 import           Ouroboros.Consensus.HardFork.Combinator (HardForkBlock, Header (..),
                    OneEraHeader (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Block (Header (..), ShelleyBlock)
-
 import           Ouroboros.Consensus.Shelley.Protocol.Abstract
+
+import           Data.ByteString (ByteString)
+import           Data.SOP
 
 -- | Block issuer verification key hash.
 data BlockIssuerVerificationKeyHash

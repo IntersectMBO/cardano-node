@@ -1,6 +1,8 @@
 -- | Check namespace consistencies agains configurations
 module Test.Cardano.Tracing.NewTracing.Consistency (tests) where
 
+import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration)
+
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Text
 
@@ -8,8 +10,6 @@ import           Hedgehog (Property)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H.Base
 import           Hedgehog.Internal.Property (PropertyName (PropertyName))
-
-import           Cardano.Node.Tracing.Consistency (checkNodeTraceConfiguration)
 
 tests :: IO Bool
 tests = H.checkSequential

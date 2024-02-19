@@ -10,23 +10,14 @@
 module Cardano.Node.Startup where
 
 import qualified Cardano.Api as Api
-import           Control.DeepSeq (NFData)
-import           Prelude
 
-import           Data.Aeson (FromJSON, ToJSON)
-import           Data.Map.Strict (Map)
-import           Data.Monoid (Last (..), getLast)
-import           Data.Text (Text, pack)
-import           Data.Time.Clock (NominalDiffTime, UTCTime)
-import           Data.Version (showVersion)
-import           Data.Word (Word64)
-import           GHC.Generics (Generic)
-
-import           Network.HostName (getHostName)
-import qualified Network.Socket as Socket
-
+import           Cardano.Git.Rev (gitRev)
 import           Cardano.Ledger.Shelley.Genesis (sgSystemStart)
-
+import           Cardano.Logging
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
+import           Cardano.Node.Configuration.Socket
+import           Cardano.Node.Protocol (ProtocolInstantiationError)
+import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.CanHardFork (shelleyLedgerConfig)
@@ -37,24 +28,30 @@ import           Ouroboros.Consensus.Node (pInfoConfig)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
                    BlockNodeToNodeVersion)
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
-
 import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket,
                    NodeToClientVersion)
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
 import           Ouroboros.Network.Subscription.Dns (DnsSubscriptionTarget (..))
 import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
 
-import           Cardano.Logging
-import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
-import           Cardano.Node.Configuration.Socket
-import           Cardano.Node.Protocol (ProtocolInstantiationError)
-import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
+import           Prelude
 
-import           Cardano.Git.Rev (gitRev)
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
+import           Control.DeepSeq (NFData)
+import           Data.Aeson (FromJSON, ToJSON)
+import           Data.Map.Strict (Map)
+import           Data.Monoid (Last (..), getLast)
+import           Data.Text (Text, pack)
+import           Data.Time.Clock (NominalDiffTime, UTCTime)
+import           Data.Version (showVersion)
+import           Data.Word (Word64)
+import           GHC.Generics (Generic)
+import           Network.HostName (getHostName)
+import qualified Network.Socket as Socket
+
 import           Paths_cardano_node (version)
 
 data StartupTrace blk =

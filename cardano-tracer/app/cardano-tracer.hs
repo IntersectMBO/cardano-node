@@ -1,8 +1,9 @@
+import           Cardano.Tracer.CLI (TracerParams, parseTracerParams)
+import           Cardano.Tracer.Run (runCardanoTracer)
+
 import           Data.Version (showVersion)
 import           Options.Applicative
 
-import           Cardano.Tracer.CLI (TracerParams, parseTracerParams)
-import           Cardano.Tracer.Run (runCardanoTracer)
 import           Paths_cardano_tracer (version)
 
 main :: IO ()

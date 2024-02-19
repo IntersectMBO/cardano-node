@@ -10,25 +10,27 @@ module Spec.Network
   , hprop_isPortOpen_True
   ) where
 
+import           Prelude (error)
+
 import           Control.Exception (IOException)
 import           Control.Monad
+import qualified Control.Monad.Trans.Resource as IO
 import           Data.Bool
 import           Data.Either
 import           Data.Function
 import           Data.Int
-import           Hedgehog (Property, (===))
-import           Network.Socket (Socket)
-import           Prelude (error)
-import           System.IO (IO)
-
-import qualified Control.Monad.Trans.Resource as IO
 import qualified Data.List as L
+import           Network.Socket (Socket)
+import qualified Network.Socket as IO
+import           System.IO (IO)
+import qualified System.Random as IO
+
+import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Network as H
-import qualified Network.Socket as IO
-import qualified System.Random as IO
+
 import qualified UnliftIO.Exception as IO
 
 hprop_isPortOpen_False :: Property

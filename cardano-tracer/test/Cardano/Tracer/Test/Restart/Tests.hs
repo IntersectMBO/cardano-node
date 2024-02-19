@@ -6,6 +6,16 @@ module Cardano.Tracer.Test.Restart.Tests
   ( tests
   ) where
 
+import           Cardano.Logging (Trace (..))
+import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.MetaTrace
+import           Cardano.Tracer.Run
+import           Cardano.Tracer.Test.Forwarder
+import           Cardano.Tracer.Test.TestSetup
+import           Cardano.Tracer.Test.Utils
+import           Cardano.Tracer.Utils
+import           Ouroboros.Network.Magic (NetworkMagic (..))
+
 import           Control.Concurrent.Async (asyncBound, uninterruptibleCancel)
 import           Control.Monad (forM_)
 import           Control.Monad.Extra (ifM)
@@ -13,23 +23,11 @@ import qualified Data.List.NonEmpty as NE
 import           System.Directory (removePathForcibly)
 import           System.Directory.Extra (listDirectories)
 import           System.FilePath ((</>))
+import qualified System.IO as Sys
 import           System.Time.Extra (sleep)
+
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
-
-import           Ouroboros.Network.Magic (NetworkMagic (..))
-
-import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.MetaTrace
-import           Cardano.Tracer.Run
-import           Cardano.Tracer.Utils
-
-import           Cardano.Tracer.Test.Forwarder
-import           Cardano.Tracer.Test.TestSetup
-import           Cardano.Tracer.Test.Utils
-
-import           Cardano.Logging (Trace (..))
-import qualified System.IO as Sys
 
 tests :: TestSetup Identity -> TestTree
 tests ts = localOption (QuickCheckTests 1) $ testGroup "Test.Restart"

@@ -14,6 +14,9 @@ module Cardano.Tracer.Handlers.RTView.State.TraceObjects
   , saveTraceObjects
   ) where
 
+import           Cardano.Logging (SeverityS, TraceObject (..))
+import           Cardano.Tracer.Types (NodeId)
+
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO, readTVar, readTVarIO)
@@ -23,10 +26,6 @@ import qualified Data.Map.Strict as M
 import           Data.Maybe (mapMaybe)
 import           Data.Text (Text, intercalate)
 import           Data.Time.Clock (UTCTime)
-
-import           Cardano.Logging (SeverityS, TraceObject (..))
-
-import           Cardano.Tracer.Types (NodeId)
 
 type Namespace       = Text
 type TraceObjectInfo = (Text, SeverityS, UTCTime)

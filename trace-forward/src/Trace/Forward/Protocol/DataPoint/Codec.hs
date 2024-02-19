@@ -13,11 +13,10 @@ import qualified Codec.CBOR.Encoding as CBOR
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad.Class.MonadST (MonadST)
 import qualified Data.ByteString.Lazy as LBS
-import           Text.Printf (printf)
-
 import           Network.TypedProtocol.Codec (Codec, PeerHasAgency (..), PeerRole (..),
                    SomeMessage (..))
 import           Network.TypedProtocol.Codec.CBOR (mkCodecCborLazyBS)
+import           Text.Printf (printf)
 
 import           Trace.Forward.Protocol.DataPoint.Type
 

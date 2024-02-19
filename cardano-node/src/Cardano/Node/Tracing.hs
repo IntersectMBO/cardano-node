@@ -9,28 +9,25 @@ module Cardano.Node.Tracing
   , ConsensusStartupException (..)
   ) where
 
-import           Prelude (IO)
-
-import           Codec.CBOR.Read (DeserialiseFailure)
-import           "contra-tracer" Control.Tracer (Tracer (..))
-
+import           Cardano.Logging.Resources
+import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
+import           Cardano.Node.Startup (NodeInfo, NodeStartupInfo, StartupTrace (..))
+import           Cardano.Node.Tracing.StateRep (NodeState)
+import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
+                   (ConsensusStartupException (..))
+import           Cardano.Node.Tracing.Tracers.Peer (PeerT)
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Network.Diffusion as Diffusion
-
 import           Ouroboros.Network.NodeToClient (LocalAddress, NodeToClientVersion)
 import           Ouroboros.Network.NodeToNode (NodeToNodeVersion, RemoteAddress)
 
-import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
-import           Cardano.Node.Startup (NodeInfo, NodeStartupInfo, StartupTrace (..))
+import           Prelude (IO)
 
-import           Cardano.Logging.Resources
-import           Cardano.Node.Tracing.StateRep (NodeState)
-import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
-                   (ConsensusStartupException (..))
-import           Cardano.Node.Tracing.Tracers.Peer (PeerT)
+import           Codec.CBOR.Read (DeserialiseFailure)
+import           "contra-tracer" Control.Tracer (Tracer (..))
 
 data Tracers peer localPeer blk p2p = Tracers
   { -- | Trace the ChainDB

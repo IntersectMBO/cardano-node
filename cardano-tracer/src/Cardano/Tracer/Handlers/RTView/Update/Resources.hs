@@ -7,17 +7,17 @@ module Cardano.Tracer.Handlers.RTView.Update.Resources
   ( updateResourcesHistory
   ) where
 
-import           Control.Concurrent.STM.TVar (readTVarIO)
-import qualified Data.Map.Strict as M
-import           Data.Text.Read (decimal)
-import           Data.Time.Clock (UTCTime)
-import           Data.Word (Word64)
-
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.State.Last
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Types
+
+import           Control.Concurrent.STM.TVar (readTVarIO)
+import qualified Data.Map.Strict as M
+import           Data.Text.Read (decimal)
+import           Data.Time.Clock (UTCTime)
+import           Data.Word (Word64)
 
 updateResourcesHistory
   :: NodeId

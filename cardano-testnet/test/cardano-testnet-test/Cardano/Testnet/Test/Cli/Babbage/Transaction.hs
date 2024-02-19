@@ -18,32 +18,31 @@ module Cardano.Testnet.Test.Cli.Babbage.Transaction
   ) where
 
 import           Cardano.Api
+import qualified Cardano.Api.Ledger as L
+import qualified Cardano.Api.Ledger.Lens as A
 
 import           Cardano.Testnet
 
 import           Prelude
 
 import           Control.Monad (void)
+import qualified Data.List as List
+import qualified Data.Map as Map
 import qualified Data.Text as Text
+import           Lens.Micro
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
-import           Hedgehog (Property)
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
-
-import qualified Cardano.Api.Ledger.Lens as A
-import qualified Data.Map as Map
 import           Testnet.Components.SPO
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
 
-import qualified Cardano.Api.Ledger as L
-import qualified Data.List as List
-import           Lens.Micro
+import           Hedgehog (Property)
+import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 
 hprop_transaction :: Property
 hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbsBasePath' -> do

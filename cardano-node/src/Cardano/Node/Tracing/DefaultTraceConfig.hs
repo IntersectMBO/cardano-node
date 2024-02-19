@@ -2,10 +2,11 @@ module Cardano.Node.Tracing.DefaultTraceConfig
   ( defaultCardanoConfig
   ) where
 
-import qualified Data.Map.Strict as Map
+import           Cardano.Logging
+
 import           Prelude
 
-import           Cardano.Logging
+import qualified Data.Map.Strict as Map
 
 
 defaultCardanoConfig :: TraceConfig

@@ -5,25 +5,24 @@ module Cardano.Tracer.Acceptors.Run
   ( runAcceptors
   ) where
 
-import           Control.Concurrent.Async (forConcurrently_)
-import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
-import qualified Data.List.NonEmpty as NE
-import           Data.Maybe (fromMaybe)
-import           Data.Time.Clock (secondsToNominalDiffTime)
-
-import qualified System.Metrics.Configuration as EKGF
-import qualified System.Metrics.ReqResp as EKGF
-
-import qualified Trace.Forward.Configuration.DataPoint as DPF
-import qualified Trace.Forward.Configuration.TraceObject as TOF
-import qualified Trace.Forward.Protocol.TraceObject.Type as TOF
-
 import           Cardano.Tracer.Acceptors.Client
 import           Cardano.Tracer.Acceptors.Server
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Utils
+
+import           Control.Concurrent.Async (forConcurrently_)
+import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
+import qualified Data.List.NonEmpty as NE
+import           Data.Maybe (fromMaybe)
+import           Data.Time.Clock (secondsToNominalDiffTime)
+import qualified System.Metrics.Configuration as EKGF
+import qualified System.Metrics.ReqResp as EKGF
+
+import qualified Trace.Forward.Configuration.DataPoint as DPF
+import qualified Trace.Forward.Configuration.TraceObject as TOF
+import qualified Trace.Forward.Protocol.TraceObject.Type as TOF
 
 -- | Run acceptors for all supported protocols.
 --

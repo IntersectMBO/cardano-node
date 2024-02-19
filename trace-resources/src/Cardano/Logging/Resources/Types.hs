@@ -11,6 +11,7 @@ module Cardano.Logging.Resources.Types
 
 
 import           Cardano.Logging
+
 import           Data.Aeson
 import           Data.Text (pack)
 import           Data.Word

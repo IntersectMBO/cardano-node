@@ -5,6 +5,8 @@ module Cardano.Testnet.Test.Golden.Config
   ( goldenDefaultConfigYaml
   ) where
 
+import           Cardano.Api
+
 import           Prelude
 
 import           Data.Aeson
@@ -13,8 +15,6 @@ import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           System.FilePath ((</>))
-
-import           Cardano.Api
 
 import           Testnet.Defaults
 

@@ -5,13 +5,12 @@
 module Test.Trace.Forward.Protocol.DataPoint.Codec () where
 
 import qualified Data.Aeson as A
-import           Test.QuickCheck
-
 import           Network.TypedProtocol.Codec
 
-import           Trace.Forward.Protocol.DataPoint.Type
-
+import           Test.QuickCheck
 import           Test.Trace.Forward.Protocol.DataPoint.Item
+
+import           Trace.Forward.Protocol.DataPoint.Type
 
 instance Arbitrary (AnyMessageAndAgency DataPointForward) where
   arbitrary = oneof

@@ -4,14 +4,14 @@ module Cardano.Tracer.Test.Utils
   , module Data.Functor.Identity
   ) where
 
-import           Data.Functor.Identity
+import           Cardano.Tracer.Test.TestSetup
 
+import           Data.Functor.Identity
 import           System.Directory.Extra (listDirectories)
 import           System.FilePath (dropDrive, dropExtension)
 import           System.Info.Extra (isMac, isWindows)
 import           System.IO.Extra (newTempDirWithin)
 
-import           Cardano.Tracer.Test.TestSetup
 import           Test.Tasty.QuickCheck
 
 unI :: Identity a -> a

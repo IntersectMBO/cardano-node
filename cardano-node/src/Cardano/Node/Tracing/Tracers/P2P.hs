@@ -13,22 +13,10 @@ module Cardano.Node.Tracing.Tracers.P2P
   () where
 
 import           Cardano.Logging
-import           Data.Aeson (Object, ToJSON, ToJSONKey, Value (..), object, toJSON, toJSONList,
-                   (.=))
-import           Data.Aeson.Types (listValue)
-import           Data.Bifunctor (Bifunctor (..))
-import           Data.Foldable (Foldable (..))
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import           Data.Text (pack)
-import           Network.Socket (SockAddr (..))
-
 import           Cardano.Node.Configuration.TopologyP2P ()
-import           Cardano.Tracing.OrphanInstances.Network ()
-
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
-
+import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..),
@@ -53,6 +41,16 @@ import           Ouroboros.Network.PeerSelection.Types ()
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 (ServerTrace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
+
+import           Data.Aeson (Object, ToJSON, ToJSONKey, Value (..), object, toJSON, toJSONList,
+                   (.=))
+import           Data.Aeson.Types (listValue)
+import           Data.Bifunctor (Bifunctor (..))
+import           Data.Foldable (Foldable (..))
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import           Data.Text (pack)
+import           Network.Socket (SockAddr (..))
 
 
 

@@ -1,17 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
-import           Options.Applicative
-import qualified Options.Applicative as Opt
-import           Options.Applicative.Help ((<$$>))
-
+import qualified Cardano.Crypto.Init as Crypto
 import           Cardano.Git.Rev (gitRev)
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
-import           Data.Version (showVersion)
-import           Paths_cardano_node (version)
-import           System.Info (arch, compilerName, compilerVersion, os)
-
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration)
 import           Cardano.Node.Handlers.TopLevel
 import           Cardano.Node.Parsers (nodeCLIParser, parserHelpHeader, parserHelpOptions,
@@ -20,7 +11,15 @@ import           Cardano.Node.Run (runNode)
 import           Cardano.Node.Tracing.Documentation (TraceDocumentationCmd (..),
                    parseTraceDocumentationCmd, runTraceDocumentationCmd)
 
-import qualified Cardano.Crypto.Init as Crypto
+import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
+import           Data.Version (showVersion)
+import           Options.Applicative
+import qualified Options.Applicative as Opt
+import           Options.Applicative.Help ((<$$>))
+import           System.Info (arch, compilerName, compilerVersion, os)
+
+import           Paths_cardano_node (version)
 
 main :: IO ()
 main = do

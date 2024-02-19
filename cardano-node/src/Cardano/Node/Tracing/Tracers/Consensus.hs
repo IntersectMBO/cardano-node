@@ -22,19 +22,6 @@ module Cardano.Node.Tracing.Tracers.Consensus
   ) where
 
 
-import           Control.Monad.Class.MonadTime.SI (Time (..))
-import           Data.Aeson (ToJSON, Value (Number, String), toJSON, (.=))
-import qualified Data.Aeson as Aeson
-import           Data.Foldable (Foldable (..))
-import           Data.Int (Int64)
-import           Data.IntPSQ (IntPSQ)
-import qualified Data.IntPSQ as Pq
-import qualified Data.Text as Text
-import           Data.Time (DiffTime, NominalDiffTime)
-import           Data.Word (Word32, Word64)
-
-import           Cardano.Slotting.Slot (WithOrigin (..))
-
 import           Cardano.Logging
 import           Cardano.Node.Queries (HasKESInfo (..))
 import           Cardano.Node.Tracing.Era.Byron ()
@@ -43,22 +30,8 @@ import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException ()
 import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck
-
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
-
-import qualified Ouroboros.Network.AnchoredFragment as AF
-import qualified Ouroboros.Network.AnchoredSeq as AS
-import           Ouroboros.Network.Block hiding (blockPrevHash)
-import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
-import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
-import           Ouroboros.Network.BlockFetch.Decision
-import           Ouroboros.Network.ConnectionId (ConnectionId (..))
-import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
-import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
-import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
-import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
-import           Ouroboros.Network.TxSubmission.Outbound
-
+import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
@@ -78,6 +51,29 @@ import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, e
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import           Ouroboros.Consensus.Util.Enclose
+import qualified Ouroboros.Network.AnchoredFragment as AF
+import qualified Ouroboros.Network.AnchoredSeq as AS
+import           Ouroboros.Network.Block hiding (blockPrevHash)
+import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
+import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
+import           Ouroboros.Network.BlockFetch.Decision
+import           Ouroboros.Network.ConnectionId (ConnectionId (..))
+import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
+import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
+import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
+import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
+import           Ouroboros.Network.TxSubmission.Outbound
+
+import           Control.Monad.Class.MonadTime.SI (Time (..))
+import           Data.Aeson (ToJSON, Value (Number, String), toJSON, (.=))
+import qualified Data.Aeson as Aeson
+import           Data.Foldable (Foldable (..))
+import           Data.Int (Int64)
+import           Data.IntPSQ (IntPSQ)
+import qualified Data.IntPSQ as Pq
+import qualified Data.Text as Text
+import           Data.Time (DiffTime, NominalDiffTime)
+import           Data.Word (Word32, Word64)
 
 
 instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
