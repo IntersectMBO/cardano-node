@@ -106,6 +106,8 @@ import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPo
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
+import           Ouroboros.Network.PeerSelection.Bootstrap
+                     (UseBootstrapPeers (..))
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                    gatherConfiguredSockets, getSocketOrSocketInfoAddr)
@@ -412,28 +414,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                          ))
 
   withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $
-    let nodeArgs = RunNodeArgs
-          { rnTraceConsensus = consensusTracers tracers
-          , rnTraceNTN       = nodeToNodeTracers tracers
-          , rnTraceNTC       = nodeToClientTracers tracers
-          , rnProtocolInfo   = pInfo
-          , rnNodeKernelHook = \registry nodeKernel -> do
-              -- set the initial block forging
-              blockForging <- snd (Api.protocolInfo runP)
-
-              unless (ncStartAsNonProducingNode nc) $
-                setBlockForging nodeKernel blockForging
-
-              maybeSpawnOnSlotSyncedShutdownHandler
-                (ncShutdownConfig nc)
-                (shutdownTracer tracers)
-                registry
-                (Node.getChainDB nodeKernel)
-              onKernel nodeKernel
-          , rnEnableP2P      = p2pMode
-          , rnPeerSharing    = ncPeerSharing nc
-          }
-    in case p2pMode of
+    case p2pMode of
       EnabledP2PMode -> do
         traceWith (startupTracer tracers)
                   (StartupP2PInfo (ncDiffusionMode nc))
@@ -450,6 +431,28 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
         publicRootsVar <- newTVarIO publicRoots
         useLedgerVar   <- newTVarIO ntUseLedgerPeers
         useBootstrapVar <- newTVarIO ntUseBootstrapPeers
+        let nodeArgs = RunNodeArgs
+              { rnTraceConsensus = consensusTracers tracers
+              , rnTraceNTN       = nodeToNodeTracers tracers
+              , rnTraceNTC       = nodeToClientTracers tracers
+              , rnProtocolInfo   = pInfo
+              , rnNodeKernelHook = \registry nodeKernel -> do
+                  -- set the initial block forging
+                  blockForging <- snd (Api.protocolInfo runP)
+
+                  unless (ncStartAsNonProducingNode nc) $
+                    setBlockForging nodeKernel blockForging
+
+                  maybeSpawnOnSlotSyncedShutdownHandler
+                    (ncShutdownConfig nc)
+                    (shutdownTracer tracers)
+                    registry
+                    (Node.getChainDB nodeKernel)
+                  onKernel nodeKernel
+              , rnEnableP2P      = p2pMode
+              , rnPeerSharing    = ncPeerSharing nc
+              , rnGetUseBootstrapPeers = readTVar useBootstrapVar
+              }
 #ifdef UNIX
         -- initial `SIGHUP` handler, which only rereads the topology file but
         -- doesn't update block forging.  The latter is only possible once
@@ -510,6 +513,29 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                            | (NodeAddress (NodeHostIPAddress addr) port) <- ipProducerAddrs
                            ]
                            (length ipProducerAddrs)
+
+            nodeArgs = RunNodeArgs
+                { rnTraceConsensus = consensusTracers tracers
+                , rnTraceNTN       = nodeToNodeTracers tracers
+                , rnTraceNTC       = nodeToClientTracers tracers
+                , rnProtocolInfo   = pInfo
+                , rnNodeKernelHook = \registry nodeKernel -> do
+                    -- set the initial block forging
+                    blockForging <- snd (Api.protocolInfo runP)
+
+                    unless (ncStartAsNonProducingNode nc) $
+                      setBlockForging nodeKernel blockForging
+
+                    maybeSpawnOnSlotSyncedShutdownHandler
+                      (ncShutdownConfig nc)
+                      (shutdownTracer tracers)
+                      registry
+                      (Node.getChainDB nodeKernel)
+                    onKernel nodeKernel
+                , rnEnableP2P      = p2pMode
+                , rnPeerSharing    = ncPeerSharing nc
+                , rnGetUseBootstrapPeers = pure DontUseBootstrapPeers
+                }
 #ifdef UNIX
         -- initial `SIGHUP` handler; it only warns that neither updating of
         -- topology is supported nor updating block forging is yet possible.
