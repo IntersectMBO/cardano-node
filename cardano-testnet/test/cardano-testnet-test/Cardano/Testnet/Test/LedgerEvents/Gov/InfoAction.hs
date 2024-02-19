@@ -274,15 +274,14 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
 
   -- We check that info action was succcessfully ratified
   !meInfoRatified
-    <- H.timeout 720_000_000 $ runExceptT $ foldBlocks
+    <- H.timeout 120_000_000 $ runExceptT $ foldBlocks
                       (File configurationFile)
                       (File socketPath)
                       FullValidation
                       (InfoActionState False False)  -- Initial accumulator state
                       (foldBlocksCheckInfoAction (tempAbsPath' </> "events.log") governanceActionIndex )
 
-  eInfoRatified <- H.nothingFail meInfoRatified
-  case eInfoRatified of
+  H.nothingFail meInfoRatified >>= \case
     Left e ->
       H.failMessage callStack
         $ "foldBlocksCheckInfoAction failed with: " <> displayError e

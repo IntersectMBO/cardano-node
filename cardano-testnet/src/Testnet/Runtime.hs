@@ -50,12 +50,13 @@ import           Control.Monad.State.Strict (StateT)
 import           Control.Monad.Trans.Resource
 import qualified Data.Aeson as A
 import qualified Data.List as List
-import           Data.Text (Text)
+import           Data.Text (Text, unpack)
 import           Data.Time.Clock (UTCTime)
 import           GHC.Generics (Generic)
 import qualified GHC.IO.Handle as IO
 import           GHC.Stack
 import qualified GHC.Stack as GHC
+import           Network.Socket (PortNumber)
 import qualified System.Directory as IO
 import           System.Directory (doesDirectoryExist)
 import           System.FilePath
@@ -85,6 +86,8 @@ data TestnetRuntime = TestnetRuntime
 
 data NodeRuntime = NodeRuntime
   { nodeName :: String
+  , nodeIpv4 :: Text
+  , nodePort :: PortNumber
   , nodeSprocket :: Sprocket
   , nodeStdinHandle :: IO.Handle
   , nodeStdout :: FilePath
@@ -187,14 +190,16 @@ startNode
   -- ^ The temporary absolute path
   -> String
   -- ^ The name of the node
-  -> Int
+  -> Text
+  -- ^ Node IPv4 address
+  -> PortNumber
   -- ^ Node port
   -> Int
   -- ^ Testnet magic
   -> [String]
   -- ^ The command --socket-path will be added automatically.
   -> ExceptT NodeStartFailure (ResourceT IO) NodeRuntime
-startNode tp node port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
+startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
   let tempBaseAbsPath = makeTmpBaseAbsPath tp
       socketDir = makeSocketDir tp
       logDir = makeLogDir tp
@@ -213,15 +218,15 @@ startNode tp node port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
   unless (List.length (H.sprocketArgumentName sprocket) <= H.maxSprocketArgumentNameLength) $
      left MaxSprocketLengthExceededError
 
-  let portString = show port
-      socketAbsPath = H.sprocketSystemName sprocket
+  let socketAbsPath = H.sprocketSystemName sprocket
 
   nodeProcess
     <- firstExceptT ExecutableRelatedFailure
          $ hoistExceptT lift $ procNode $ mconcat
                        [ nodeCmd
                        , [ "--socket-path", H.sprocketArgumentName sprocket
-                         , "--port", portString
+                         , "--port", show port
+                         , "--host-addr", unpack ipv4
                          ]
                        ]
 
@@ -266,7 +271,7 @@ startNode tp node port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
   Ping.pingNode (fromIntegral testnetMagic) sprocket
     >>= (firstExceptT (NodeExecutableError . docToString . ("Ping error:" <+>) . prettyError) . hoistEither)
 
-  pure $ NodeRuntime node sprocket stdIn nodeStdoutFile nodeStderrFile hProcess
+  pure $ NodeRuntime node ipv4 port sprocket stdIn nodeStdoutFile nodeStderrFile hProcess
 
 
 createDirectoryIfMissingNew :: HasCallStack => FilePath -> IO FilePath

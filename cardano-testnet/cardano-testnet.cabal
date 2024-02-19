@@ -199,6 +199,7 @@ test-suite cardano-testnet-test
                       , cardano-crypto-class
                       , cardano-ledger-conway
                       , cardano-ledger-shelley
+                      , cardano-node
                       , cardano-testnet
                       , containers
                       , directory
