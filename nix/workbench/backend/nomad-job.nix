@@ -190,23 +190,45 @@ let
     # namespace can be specified either with the flag -namespace or read from
     # the NOMAD_NAMESPACE environment variable."
     # https://developer.hashicorp.com/nomad/tutorials/manage-clusters/namespaces
-    namespace = "perf"; # Default to "perf" to avoid errors were possible.
+    namespace = null;
 
     # The region in which to execute the job.
     region = "global"; # SRE: They are actually using global.
 
-    #  A list of datacenters in the region which are eligible for task
+    # A list of datacenters in the region which are eligible for task
     # placement. This must be provided, and does not have a default.
-    # What we currently have available:
-    # - Cardano World cluster: "eu-central-1", "us-east-2"
-    # - Dedicated P&T cluster: "eu-central-1", "us-east-1", and "ap-southeast-2"
-    datacenters = [ "ap-southeast-2" "eu-central-1" "us-east-1" "us-east-2" ];
+    datacenters = lib.lists.unique # The regions of the nodes to deploy.
+      (lib.attrsets.mapAttrsToList
+        (name: value: value.region)
+        profileData.node-specs.value
+      )
+    ;
 
     # Specifies user-defined constraints on the task. This can be provided
     # multiple times to define additional constraints.
-    # Cloud runs set the distinct hosts constraint here but local runs can't
-    # because we are only starting one Nomad client.
-    constraint = null; # Values are appended inside the workbench (bash).
+    # Cloud runs set the distinct hosts constraint, not for local runs because
+    # we are only starting one Nomad client.
+    constraint = # A list, values are appended inside the workbench (bash).
+      if builtins.all (r: r == "loopback")
+          (lib.attrsets.mapAttrsToList
+            (name: value: value.region)
+            profileData.node-specs.value
+          )
+      then []
+      # Unique placement:
+      ## "distinct_hosts": Instructs the scheduler to not co-locate any groups
+      ## on the same machine. When specified as a job constraint, it applies
+      ## to all groups in the job. When specified as a group constraint, the
+      ## effect is constrained to that group. This constraint can not be
+      ## specified at the task level. Note that the attribute parameter should
+      ## be omitted when using this constraint.
+      ## https://developer.hashicorp.com/nomad/docs/job-specification/constraint#distinct_hosts
+      else [
+             { operator =  "distinct_hosts";
+               value =     "true";
+             }
+           ]
+    ;
 
     # The reschedule stanza specifies the group's rescheduling strategy. If
     # specified at the job level, the configuration will apply to all groups
@@ -347,30 +369,22 @@ let
         # for a set of nodes. Affinities may be expressed on attributes or
         # client metadata. Additionally affinities may be specified at the
         # job, group, or task levels for ultimate flexibility.
-        affinity =
-          let region = nodeSpec.region;
-          in if region == null || region == "loopback"
-            then null
-            else
-              { attribute = "\${node.datacenter}";
-                value     = region;
-              }
-        ;
+        affinity = null; # Remember: AFFINITY != CONSTRAINT
 
         # This can be provided multiple times to define additional constraints.
         # See the Nomad constraint reference for more details.
         # https://developer.hashicorp.com/nomad/docs/job-specification/constraint
-        constraint = {
-          attribute = "\${node.class}";
-          operator = "=";
-          # Cloud jobs can run in the dedicated P&T Nomad cluster on AWS or in
-          # Cardano World Nomad cluster's "qa" class nodes.
-          # This default is just a precaution, like the top level namespace,
-          # because "qa" Class nodes usage must be limited to short test and
-          # "infra" Class nodes, that are used for HA jobs, must be avoided
-          # entirely.
-          value = "perf";
-        };
+        constraint = # A list, values are appended inside the workbench (bash).
+          let region = nodeSpec.region;
+          in if region == null || region == "loopback"
+            then []
+            else
+              [
+                { attribute = "\${node.datacenter}";
+                  value     = region;
+                }
+              ]
+        ;
 
         # The network stanza specifies the networking requirements for the task
         # group, including the network mode and port allocations.
@@ -500,12 +514,16 @@ let
             SSL_CERT_FILE = "${containerSpecs.containerPkgs.cacert.nix-store-path}/etc/ssl/certs/ca-bundle.crt";
           };
 
-          # Sensible defaults to run cloud version of "default", "ci-test" and
-          # "ci-bench" in Cardano World Nomad cluster's "qa" class nodes.
-          # For benchmarking the dedicated P&T Nomad cluster on AWS is used and
-          # this value should be updated accordingly.
+          # Sensible defaults.
+          # These values were set to run cloud version of "default", "ci-test"
+          # and "ci-bench" profiles in Cardano World Nomad cluster's "qa" class
+          # nodes that is not available anymore but were kept as a precaution
+          # because the Nomad Cloud workbench backend can be used with
+          # custom/private Nomad clusters.
+          # For benchmarking on the dedicated P&T Nomad cluster this value
+          # should be updated accordingly.
           resources = {
-            # Task can only ask for 'cpu' or 'cores' resource but not both.
+            # Tasks can only ask for 'cpu' or 'cores' resource but not both.
             cores = 2;       # cpu = 512;
             memory = 1024*4; # memory_max = 32768;
           };
