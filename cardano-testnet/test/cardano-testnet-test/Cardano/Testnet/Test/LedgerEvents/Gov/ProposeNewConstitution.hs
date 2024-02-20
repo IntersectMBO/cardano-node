@@ -130,6 +130,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
                       , P.signingKeyFile = stakeSKeyFp
                       }
 
+  -- TODO share this piece of code that is duplicated in multiple tests
   let drepVkeyFp :: Int -> FilePath
       drepVkeyFp n = tempAbsPath' </> "drep-keys" </> ("drep" <> show n) </> "drep.vkey"
 
