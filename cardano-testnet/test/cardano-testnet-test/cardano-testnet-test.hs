@@ -4,6 +4,7 @@ module Main
   ( main
   ) where
 
+import qualified Cardano.Testnet.Test.Cli.Queries
 import qualified Cardano.Crypto.Init as Crypto
 import qualified Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
 import qualified Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
@@ -50,6 +51,7 @@ tests = pure $ T.testGroup "test/Spec.hs"
         , H.ignoreOnMacAndWindows "ShutdownOnSigint" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSigint
         -- ShutdownOnSlotSynced FAILS Still. The node times out and it seems the "shutdown-on-slot-synced" flag does nothing
         -- , H.ignoreOnWindows "ShutdownOnSlotSynced" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSlotSynced
+        , H.ignoreOnWindows "CliQueries" Cardano.Testnet.Test.Cli.Queries.hprop_cli_queries
         , T.testGroup "Babbage"
             -- TODO: Babbage --next leadership schedule still fails. Once this fix is propagated to the cli (https://github.com/input-output-hk/cardano-api/pull/274)
             -- this should remedy. Double check and make sure we have re-enabled it and remove this comment.
