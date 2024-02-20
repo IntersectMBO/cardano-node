@@ -76,6 +76,7 @@ backend_nomad() {
           * ) break;; esac; shift; done
 
       # Create the dispatcher's local directories hierarchy.
+      mkdir "${dir}"/nomad
       backend_nomad allocate-run-directory-nomad        "${dir}"
       backend_nomad allocate-run-directory-supervisor   "${dir}"
       backend_nomad allocate-run-directory-tracers      "${dir}"
@@ -88,13 +89,6 @@ backend_nomad() {
       local nomad_task_driver=$(envjqr 'nomad_task_driver')
       # TODO: Store them on disk for later subcommands run from a different shell.
       # echo "{\"nomad_environment\": $nomad_environment, }" > "$dir"/env.json
-
-      # Update the Nomad Job specs file accordingly
-      ## - Job Name
-      ### Must match `^[a-zA-Z0-9-]{1,128}$)` or it won't be possible to use it
-      ### as namespace.: "invalid name "2023-02-10-06.34.f178b.ci-test-bage.nom"".
-      local nomad_job_name=$(basename "${dir}")
-      backend_nomad allocate-run-nomad-job-patch-name "${dir}" "${nomad_job_name}"
     ;;
 
     allocate-run-directory-nomad )
@@ -3339,8 +3333,7 @@ nomad_create_client_config() {
 region = "global"
 # Specifies the data center of the local agent. All members of a datacenter
 # should share a local LAN connection.
-# Use one of "eu-central-1", "eu-west-1" or "us-east-2" to mimic SRE
-datacenter = "eu-central-1"
+datacenter = "loopback"
 # Specifies the name of the local node. This value is used to identify
 # individual agents. When specified on a server, the name must be unique within
 # the region.

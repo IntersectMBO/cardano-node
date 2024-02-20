@@ -42,9 +42,9 @@ backend_nomadexec() {
     ;;
 
     allocate-run )
-      allocate-run-nomadexec                "$@"
-      # Does a pre allocation before calling the default/common allocation.
+      # Default allocation before calling the backend specific allocation.
       backend_nomad allocate-run            "$@"
+      allocate-run-nomadexec                "$@"
     ;;
 
     # Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
@@ -167,13 +167,17 @@ allocate-run-nomadexec() {
   # Create a nicely sorted and indented copy
   jq . "${profile_container_specs_file}" > "${dir}"/container-specs.json
 
-  # Create nomad folder and copy the Nomad job spec file to run.
-  mkdir -p "${dir}"/nomad
   # Select which version of the Nomad job spec file we are running and
   # create a nicely sorted and indented copy it "nomad/nomad-job.json".
   jq -r ".nomadJob.exec.oneTracerPerNode"      \
     "${dir}"/container-specs.json              \
   > "${dir}"/nomad/nomad-job.json
+  # Update the Nomad Job specs file accordingly
+  ## - Job Name
+  ### Must match `^[a-zA-Z0-9-]{1,128}$)` or it won't be possible to use it
+  ### as namespace.: "invalid name "2023-02-10-06.34.f178b.ci-test-bage.nom"".
+  local nomad_job_name=$(basename "${dir}")
+  backend_nomad allocate-run-nomad-job-patch-name "${dir}" "${nomad_job_name}"
   # The job file is "slightly" modified (jq) to suit the running environment.
   ## Empty the global namespace. Local runs ignore "${NOMAD_NAMESPACE:-}"
   backend_nomad allocate-run-nomad-job-patch-namespace "${dir}"
