@@ -87,21 +87,17 @@ PROFILES_PLUTUSCALL       += plutuscall-loop-double plutuscall-secp-ecdsa-double
 PROFILES_MODEL		        := model-value model-secp-ecdsa-plain model-secp-ecdsa-half model-secp-ecdsa-double
 PROFILES_MODEL		       	+= model-value-test
 PROFILES_10               := 10 10-p2p 10-plutus 10-notracer
-PROFILES_FORGE_STRESS     := forge-stress forge-stress-p2p forge-stress-plutus forge-stress-plutus-solo forge-stress-notracer forge-stress-large forge-stress-solo forge-stress-light
-PROFILES_FORGE_STRESS_PRE := forge-stress-pre forge-stress-pre-plutus forge-stress-pre-notracer forge-stress-pre-solo
+PROFILES_FORGE_STRESS     := forge-stress forge-stress-p2p forge-stress-plutus forge-stress-plutus-solo forge-stress-notracer forge-stress-large forge-stress-solo forge-stress-solo-xs
+PROFILES_FORGE_STRESS_PRE := forge-stress-pre forge-stress-pre-plutus forge-stress-pre-notracer forge-stress-pre-solo forge-stress-pre-solo-xl forge-stress-pre-solo-xs
 PROFILES_FORGE_STRESS_RTS := forge-stress-pre-rtsA4m forge-stress-pre-rtsA64m forge-stress-pre-rtsN3 forge-stress-pre-rtsA4mN3 forge-stress-pre-rtsA64mN3 forge-stress-pre-rtsxn
 PROFILES_CHAINSYNC        := chainsync-early-byron  chainsync-early-byron-notracer  chainsync-early-byron-oldtracing
 PROFILES_CHAINSYNC        += chainsync-early-alonzo chainsync-early-alonzo-notracer chainsync-early-alonzo-oldtracing chainsync-early-alonzo-p2p
 PROFILES_VENDOR           := dish dish-plutus dish-10M dish-10M-plutus
-# Cardano World (world.dev.cardano.org) Nomad cluster's "qa" class nodes
-# Cloud version of "default", "ci-test" and "ci-bench"
-# Not all local profiles are compatible or tested (yet) with a cloud runs
-PROFILES_NOMAD_CW_QA      := default-nomadcwqa ci-test-nomadcwqa ci-bench-nomadcwqa oldtracing-nomadcwqa ci-test-oldtracing-nomadcwqa ci-bench-oldtracing-nomadcwqa
 # The dedicated P&T Nomad cluster on AWS
 # Cloud version of "default", "ci-test" and "ci-bench" plus value (52+explorer)
 # Not all local profiles are compatible or tested (yet) with a cloud runs
 PROFILES_NOMAD_PERF       := default-nomadperf ci-test-nomadperf ci-bench-nomadperf value-nomadperf oldtracing-nomadperf ci-test-oldtracing-nomadperf ci-bench-oldtracing-nomadperf value-oldtracing-nomadperf
-PROFILES_NOMAD_PERF       += plutus-nomadperf
+PROFILES_NOMAD_PERF       += plutus-nomadperf idle-nomadperf
 PROFILES_NOMAD_PERF_NOP2P := default-nomadperf-nop2p oldtracing-nomadperf-nop2p ci-test-nomadperf-nop2p ci-bench-nomadperf-nop2p
 PROFILES_NOMAD_PERF_NOP2P += value-nomadperf-nop2p value-oldtracing-nomadperf-nop2p plutus-nomadperf-nop2p
 
@@ -120,7 +116,7 @@ LOCAL_PROFILES += $(PROFILES_FORGE_STRESS_PRE)
 LOCAL_PROFILES += $(PROFILES_FORGE_STRESS_RTS)
 LOCAL_PROFILES += $(PROFILES_CHAINSYNC)
 LOCAL_PROFILES += $(PROFILES_VENDOR)
-CLOUD_PROFILES += $(PROFILES_NOMAD_CW_QA) $(PROFILES_NOMAD_PERF)
+CLOUD_PROFILES += $(PROFILES_NOMAD_PERF)
 CLOUD_PROFILES += $(PROFILES_NOMAD_PERF_NOP2P)
 
 
