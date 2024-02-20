@@ -37,14 +37,15 @@ module Cardano.Logging.Trace (
   , withInnerNames
   ) where
 
+import           Cardano.Logging.Types
+
 import           Control.Monad (forM_, join)
 import           Control.Monad.IO.Unlift
 import qualified Control.Tracer as T
 import           Data.Maybe (isJust)
 import           Data.Text (Text)
-import           UnliftIO.MVar
 
-import           Cardano.Logging.Types
+import           UnliftIO.MVar
 
 -- | Adds a message object to a trace
 traceWith :: Monad m => Trace m a -> a -> m ()

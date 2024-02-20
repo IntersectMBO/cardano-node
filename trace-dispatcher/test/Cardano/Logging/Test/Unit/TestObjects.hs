@@ -20,6 +20,7 @@ module Cardano.Logging.Test.Unit.TestObjects (
 ) where
 
 import           Cardano.Logging
+
 import qualified Data.Aeson as AE
 import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Kind (Type)

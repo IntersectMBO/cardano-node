@@ -4,15 +4,6 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.Main
   ( mkMainPage
   ) where
 
-import           Control.Concurrent.STM.TVar (readTVarIO)
-import           Control.Monad (void)
-import           Control.Monad.Extra (whenM)
-import           Data.List.NonEmpty (NonEmpty)
-import           Data.Text (pack)
-import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core
-import           System.Time.Extra (sleep)
-
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
@@ -35,6 +26,16 @@ import           Cardano.Tracer.Handlers.RTView.Update.NodeState
 import           Cardano.Tracer.Handlers.RTView.Update.Peers
 import           Cardano.Tracer.Handlers.RTView.Update.Reload
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
+
+import           Control.Concurrent.STM.TVar (readTVarIO)
+import           Control.Monad (void)
+import           Control.Monad.Extra (whenM)
+import           Data.List.NonEmpty (NonEmpty)
+import           Data.Text (pack)
+import           System.Time.Extra (sleep)
+
+import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Core
 
 mkMainPage
   :: TracerEnv

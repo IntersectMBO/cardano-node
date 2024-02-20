@@ -4,11 +4,6 @@ module Cardano.Tracer.Handlers.RTView.Update.Reload
   ( updateUIAfterReload
   ) where
 
-import           Control.Concurrent.STM.TVar (readTVarIO)
-import           Data.List.NonEmpty (NonEmpty)
-import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core
-
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
@@ -16,6 +11,12 @@ import           Cardano.Tracer.Handlers.RTView.UI.Charts
 import           Cardano.Tracer.Handlers.RTView.UI.Types
 import           Cardano.Tracer.Handlers.RTView.Update.NodeInfo
 import           Cardano.Tracer.Handlers.RTView.Update.Nodes
+
+import           Control.Concurrent.STM.TVar (readTVarIO)
+import           Data.List.NonEmpty (NonEmpty)
+
+import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Core
 
 updateUIAfterReload
   :: TracerEnv

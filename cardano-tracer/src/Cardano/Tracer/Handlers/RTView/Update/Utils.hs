@@ -10,6 +10,8 @@ module Cardano.Tracer.Handlers.RTView.Update.Utils
   , nullTime
   ) where
 
+import           Cardano.Tracer.Types
+
 import           Control.Concurrent.Extra (Lock, withLock)
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Data.Aeson (FromJSON, decode')
@@ -23,8 +25,6 @@ import           Data.Word (Word64)
 
 import           Trace.Forward.Protocol.DataPoint.Type (DataPointName)
 import           Trace.Forward.Utils.DataPoint (askForDataPoints)
-
-import           Cardano.Tracer.Types
 
 -- | There is a different information the node can provide us by explicit request.
 --   This is a structured data about internal state of the node (for example, its

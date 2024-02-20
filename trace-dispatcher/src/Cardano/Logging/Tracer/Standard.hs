@@ -5,22 +5,21 @@ module Cardano.Logging.Tracer.Standard (
     standardTracer
 ) where
 
+import           Cardano.Logging.DocuGenerator
+import           Cardano.Logging.Types
+
 import           Control.Concurrent (myThreadId)
 import           Control.Concurrent.Async
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Monad (forever, when)
 import           Control.Monad.IO.Class
+import qualified Control.Tracer as T
 import           Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import           Data.Maybe (isNothing)
 import           Data.Text (Text)
 import qualified Data.Text.IO as TIO
 import           GHC.Conc (labelThread)
 import           System.IO (hFlush, stdout)
-
-import           Cardano.Logging.DocuGenerator
-import           Cardano.Logging.Types
-
-import qualified Control.Tracer as T
 
 -- | The state of a standard tracer
 newtype StandardTracerState =  StandardTracerState {

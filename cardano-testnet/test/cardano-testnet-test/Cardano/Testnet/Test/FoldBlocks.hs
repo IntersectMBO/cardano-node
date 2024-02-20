@@ -21,13 +21,13 @@ import           Control.Monad.Trans.Except (runExceptT)
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
+import qualified Testnet.Property.Utils as H
+import           Testnet.Runtime
+
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as HE
 import qualified Hedgehog.Extras.Test as HE
 import qualified Hedgehog.Extras.Test.Base as H
-
-import qualified Testnet.Property.Utils as H
-import           Testnet.Runtime
 
 newtype FoldBlocksException = FoldBlocksException Api.FoldBlocksError
 instance Exception FoldBlocksException

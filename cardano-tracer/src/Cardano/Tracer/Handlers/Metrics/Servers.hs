@@ -4,14 +4,14 @@ module Cardano.Tracer.Handlers.Metrics.Servers
   ( runMetricsServers
   ) where
 
-import           Control.Concurrent.Async.Extra (sequenceConcurrently)
-import           Control.Monad (void)
-
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Metrics.Monitoring
 import           Cardano.Tracer.Handlers.Metrics.Prometheus
 import           Cardano.Tracer.MetaTrace
+
+import           Control.Concurrent.Async.Extra (sequenceConcurrently)
+import           Control.Monad (void)
 
 -- | Runs metrics servers if needed:
 --

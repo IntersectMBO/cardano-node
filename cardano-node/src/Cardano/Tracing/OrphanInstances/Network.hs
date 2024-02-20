@@ -16,36 +16,10 @@
 
 module Cardano.Tracing.OrphanInstances.Network () where
 
-import           Control.Exception (Exception (..), SomeException (..))
-import           Control.Monad.Class.MonadTime.SI (DiffTime, Time (..))
-import           Data.Aeson (FromJSON (..), Value (..))
-import qualified Data.Aeson as Aeson
-import           Data.Aeson.Types (listValue)
-import qualified Data.Aeson.Types as Aeson
-import           Data.Bifunctor (Bifunctor (first))
-import           Data.Data (Proxy (..))
-import           Data.Foldable (Foldable (..))
-import           Data.Functor.Identity (Identity (..))
-import qualified Data.IP as IP
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import           Data.Text (Text, pack)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import qualified Text.Read as Text
-
-import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
-import           Network.TypedProtocol.Core (PeerHasAgency (..))
-
-
-import           Network.Mux (MiniProtocolNum (..), MuxTrace (..), WithMuxBearer (..))
-import           Network.Socket (SockAddr (..))
-
 import           Cardano.Node.Queries (ConvertTxId)
 import           Cardano.Node.Types (UseLedger (..))
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.Render
-
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), Header, getHeader)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery, Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId,
@@ -65,6 +39,7 @@ import           Ouroboros.Network.ConnectionManager.Types (AbstractState (..),
                    OperationResult (..))
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnMgr
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
+import qualified Ouroboros.Network.Diffusion as ND
 import           Ouroboros.Network.Driver.Limits (ProtocolLimitFailure (..))
 import           Ouroboros.Network.ExitPolicy (RepromoteDelay (..))
 import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..), RemoteSt (..))
@@ -82,6 +57,7 @@ import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (.
                    PeerSelectionCounters (..), PeerSelectionState (..), PeerSelectionTargets (..),
                    TracePeerSelection (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers
+import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
@@ -119,8 +95,27 @@ import           Ouroboros.Network.TxSubmission.Inbound (ProcessedTxCount (..),
                    TraceTxSubmissionInbound (..))
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
 
-import qualified Ouroboros.Network.Diffusion as ND
-import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing)
+import           Control.Exception (Exception (..), SomeException (..))
+import           Control.Monad.Class.MonadTime.SI (DiffTime, Time (..))
+import           Data.Aeson (FromJSON (..), Value (..))
+import qualified Data.Aeson as Aeson
+import           Data.Aeson.Types (listValue)
+import qualified Data.Aeson.Types as Aeson
+import           Data.Bifunctor (Bifunctor (first))
+import           Data.Data (Proxy (..))
+import           Data.Foldable (Foldable (..))
+import           Data.Functor.Identity (Identity (..))
+import qualified Data.IP as IP
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import           Data.Text (Text, pack)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import           Network.Mux (MiniProtocolNum (..), MuxTrace (..), WithMuxBearer (..))
+import           Network.Socket (SockAddr (..))
+import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
+import           Network.TypedProtocol.Core (PeerHasAgency (..))
+import qualified Text.Read as Text
 
 {- HLINT ignore "Use record patterns" -}
 

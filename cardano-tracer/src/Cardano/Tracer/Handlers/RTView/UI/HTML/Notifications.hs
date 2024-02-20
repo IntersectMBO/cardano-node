@@ -6,13 +6,6 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.Notifications
   , mkNotificationsSettings
   ) where
 
-import           Control.Monad (void)
-import           Control.Monad.Extra (whenJustM)
-import qualified Data.Text as T
-import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core
-import           Text.Read (readMaybe)
-
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.Notifications.Email
 import           Cardano.Tracer.Handlers.RTView.Notifications.Timer
@@ -21,6 +14,14 @@ import           Cardano.Tracer.Handlers.RTView.Notifications.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.Notifications
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
+
+import           Control.Monad (void)
+import           Control.Monad.Extra (whenJustM)
+import qualified Data.Text as T
+import           Text.Read (readMaybe)
+
+import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Core
 
 mkNotificationsEvents :: TracerEnv -> EventsQueues -> UI Element
 mkNotificationsEvents tracerEnv eventsQueues = do

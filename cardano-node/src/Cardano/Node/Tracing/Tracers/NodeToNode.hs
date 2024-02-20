@@ -13,23 +13,21 @@ module Cardano.Node.Tracing.Tracers.NodeToNode
    ) where
 
 import           Cardano.Logging
-import           Data.Aeson (ToJSON (..), Value (String), (.=))
-import           Data.Proxy (Proxy (..))
-import           Data.Text (pack)
-import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
-
 import           Cardano.Node.Queries (ConvertTxId)
 import           Cardano.Node.Tracing.Render (renderHeaderHash, renderTxIdForDetails)
-
 import           Ouroboros.Consensus.Block (ConvertRawHash, GetHeader, StandardHash, getHeader)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, HasTxId, HasTxs,
                    LedgerSupportsMempool, extractTxs, txId)
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
-
 import           Ouroboros.Network.Block (Point, Serialised (..), blockHash)
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..), Message (..))
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
+
+import           Data.Aeson (ToJSON (..), Value (String), (.=))
+import           Data.Proxy (Proxy (..))
+import           Data.Text (pack)
+import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
 
 --------------------------------------------------------------------------------
 -- BlockFetch Tracer

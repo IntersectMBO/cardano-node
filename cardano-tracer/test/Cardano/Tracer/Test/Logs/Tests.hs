@@ -7,6 +7,15 @@ module Cardano.Tracer.Test.Logs.Tests
   ( tests
   ) where
 
+import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Handlers.Logs.Utils (isItLog)
+import           Cardano.Tracer.MetaTrace
+import           Cardano.Tracer.Run (doRunCardanoTracer)
+import           Cardano.Tracer.Test.Forwarder
+import           Cardano.Tracer.Test.TestSetup
+import           Cardano.Tracer.Test.Utils
+import           Cardano.Tracer.Utils (applyBrake, initDataPointRequestors, initProtocolsBrake)
+
 import           Control.Concurrent.Async (withAsync)
 import           Control.Monad (forM)
 import           Data.List.Extra (notNull)
@@ -15,18 +24,9 @@ import           System.Directory
 import           System.Directory.Extra
 import           System.FilePath
 import           System.Time.Extra
+
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
-
-import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.Logs.Utils (isItLog)
-import           Cardano.Tracer.MetaTrace
-import           Cardano.Tracer.Run (doRunCardanoTracer)
-import           Cardano.Tracer.Utils (applyBrake, initDataPointRequestors, initProtocolsBrake)
-
-import           Cardano.Tracer.Test.Forwarder
-import           Cardano.Tracer.Test.TestSetup
-import           Cardano.Tracer.Test.Utils
 
 tests :: TestSetup Identity -> TestTree
 tests ts = localOption (QuickCheckTests 1) $ testGroup "Test.Logs"

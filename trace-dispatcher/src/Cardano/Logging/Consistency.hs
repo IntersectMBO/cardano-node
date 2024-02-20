@@ -4,14 +4,13 @@ module Cardano.Logging.Consistency (
   , checkTraceConfiguration'
 ) where
 
+import           Cardano.Logging.ConfigurationParser
+import           Cardano.Logging.Types
+
 import           Data.Foldable (foldl')
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import qualified Data.Text as T
-
-
-import           Cardano.Logging.ConfigurationParser
-import           Cardano.Logging.Types
 
 -- | Warnings as a list of text
 type NSWarnings = [T.Text]

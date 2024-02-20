@@ -15,7 +15,6 @@ import           Cardano.Logging (LogFormatting)
 import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..), HasKESInfo (..),
                    HasKESMetricsData (..), LedgerQueries)
 import           Cardano.Tracing.HasIssuer (HasIssuer)
-
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateUpdateError,
                    GetHeader, HasHeader, Header)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
@@ -27,7 +26,6 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.Run (RunNode, SerialiseNodeToNodeConstraints)
 import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
-
 import           Ouroboros.Network.Block (Serialised)
 
 import           Data.Aeson

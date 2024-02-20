@@ -1,16 +1,16 @@
 module Node where
 
+import           Cardano.Node.Parsers (nodeCLIParser, parserHelpHeader, parserHelpOptions,
+                   renderHelpDoc)
 import           Cardano.Node.Run (runNode)
-import           Data.Aeson (eitherDecodeStrict)
 
+import           Data.Aeson (eitherDecodeStrict)
 import           Data.ByteString.Char8 (pack)
+import           Options.Applicative
+
 import           Foreign.C (CString, peekCString)
 import           Foreign.Marshal.Array (peekArray)
 import           Foreign.Ptr (Ptr)
-
-import           Cardano.Node.Parsers (nodeCLIParser, parserHelpHeader, parserHelpOptions,
-                   renderHelpDoc)
-import           Options.Applicative
 
 -- | @crunNode@ is an exported C entry point to start a node.
 -- We parese the same arguments as the node CLI, but allow to

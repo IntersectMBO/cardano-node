@@ -18,9 +18,10 @@ module Control.Tracer.Arrow
   , nat
   ) where
 
+import           Prelude hiding (id, (.))
+
 import           Control.Arrow
 import           Control.Category
-import           Prelude hiding (id, (.))
 
 -- | Formal representation of a tracer arrow as a Kleisli arrow over some
 -- monad, but tagged so that we know whether it has any effects which will emit

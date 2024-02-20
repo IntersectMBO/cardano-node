@@ -5,12 +5,13 @@ module Trace.Forward.Run.TraceObject.Forwarder
   , forwardTraceObjectsResp
   ) where
 
-import qualified Codec.Serialise as CBOR
-import qualified Data.ByteString.Lazy as LBS
-import           Data.Void (Void)
 import           Ouroboros.Network.Driver.Simple (runPeer)
 import           Ouroboros.Network.Mux (MiniProtocolCb (..), MuxMode (..), RunMiniProtocol (..))
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
+
+import qualified Codec.Serialise as CBOR
+import qualified Data.ByteString.Lazy as LBS
+import           Data.Void (Void)
 
 import           Trace.Forward.Configuration.TraceObject (ForwarderConfiguration (..))
 import qualified Trace.Forward.Protocol.TraceObject.Codec as Forwarder

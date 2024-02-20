@@ -18,4 +18,5 @@ import           Cardano.Logging.Tracer.Forward as X
 import           Cardano.Logging.Tracer.Standard as X
 import           Cardano.Logging.Types as X
 import           Cardano.Logging.Utils as X
+
 import           Control.Tracer as X hiding (Tracer, nullTracer, traceWith)

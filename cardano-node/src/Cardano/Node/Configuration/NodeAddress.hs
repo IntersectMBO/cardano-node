@@ -32,6 +32,8 @@ module Cardano.Node.Configuration.NodeAddress
 
 import           Cardano.Api
 
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (DomainAccessPoint (..))
+
 import           Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, (.:), (.=))
 import           Data.IP (IP (..), IPv4, IPv6)
 import qualified Data.IP as IP
@@ -41,8 +43,6 @@ import qualified Data.Text.Encoding as Text
 import qualified Network.DNS as DNS (Domain)
 import           Network.Socket (PortNumber, SockAddr (..))
 import           Text.Read (readMaybe)
-
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (DomainAccessPoint (..))
 
 
 -- | IPv4 or IPv6 address with a port number.

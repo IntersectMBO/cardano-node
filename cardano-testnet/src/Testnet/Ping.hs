@@ -13,10 +13,23 @@ module Testnet.Ping
   , PingClientError(..)
   ) where
 
+import           Cardano.Api (Error (..))
+import           Cardano.Api.Pretty
+
+import           Cardano.Network.Ping (HandshakeFailure, NodeVersion (..), handshakeDec,
+                   handshakeReq, isSameVersionAndMagic, supportedNodeToClientVersions)
+
+import qualified Codec.CBOR.Read as CBOR
 import           Control.Exception.Safe
 import           Control.Monad (when)
 import           Control.Monad.Class.MonadTime.SI (Time)
+import qualified Control.Monad.Class.MonadTimer.SI as MT
+import           Control.Monad.IO.Class
 import           Control.Tracer (nullTracer)
+import qualified Data.ByteString.Lazy as LBS
+import           Data.Either (isLeft)
+import           Data.IORef
+import qualified Data.List as L
 import           Data.Word (Word32)
 import           Network.Mux.Bearer (MakeBearer (..), makeSocketBearer)
 import           Network.Mux.Timeout (TimeoutFn, withTimeoutSerial)
@@ -24,21 +37,10 @@ import           Network.Mux.Types (MiniProtocolDir (InitiatorDir), MiniProtocol
                    MuxBearer (read, write), MuxSDU (..), MuxSDUHeader (..),
                    RemoteClockModel (RemoteClockModel))
 import           Network.Socket (AddrInfo (..), StructLinger (..))
-
-import           Cardano.Api (Error (..))
-import           Cardano.Api.Pretty
-import           Cardano.Network.Ping (HandshakeFailure, NodeVersion (..), handshakeDec,
-                   handshakeReq, isSameVersionAndMagic, supportedNodeToClientVersions)
-import qualified Codec.CBOR.Read as CBOR
-import qualified Control.Monad.Class.MonadTimer.SI as MT
-import           Control.Monad.IO.Class
-import qualified Data.ByteString.Lazy as LBS
-import           Data.Either (isLeft)
-import           Data.IORef
-import qualified Data.List as L
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Network.Socket as Socket
 import           Prettyprinter
+
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 type TestnetMagic = Word32
 

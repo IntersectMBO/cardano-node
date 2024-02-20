@@ -11,16 +11,17 @@ module Cardano.Logging.Test.Unit.DataPoint (
   , testDataPointResult
 ) where
 
+import           Cardano.Logging
+
 import           Control.DeepSeq (NFData)
 import qualified Data.Aeson as A
 import           Data.ByteString.Lazy.UTF8
 import qualified Data.Map.Strict as M
 import           GHC.Conc
 import           GHC.Generics (Generic)
+
 import           Trace.Forward.Protocol.DataPoint.Type (DataPointName)
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
-
-import           Cardano.Logging
 
 
 data BaseStats = BaseStats {

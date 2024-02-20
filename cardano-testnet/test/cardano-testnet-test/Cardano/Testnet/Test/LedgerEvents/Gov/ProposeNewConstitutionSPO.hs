@@ -10,46 +10,45 @@ module Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO
   ) where
 
 import           Cardano.Api
-
-import           Cardano.Testnet
-
-import           Prelude
-
-import           Control.Monad.Trans.Except
-import qualified Data.Map.Strict as Map
-import qualified Data.Text as Text
-import           Data.Word
-import           GHC.Stack (HasCallStack, withFrozenCallStack)
-import           System.FilePath ((</>))
-
-import           Hedgehog
-import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import qualified Testnet.Process.Cli as P
-import qualified Testnet.Process.Run as H
-
-import           Control.Monad.IO.Class
-import           Data.Data
-import           Data.List (isInfixOf)
-import           Data.Type.Equality
-import           GHC.IORef (newIORef)
-import qualified Hedgehog as H
-import           Hedgehog.Extras (Integration)
-import           System.Exit (ExitCode (ExitSuccess))
-import           Testnet.Process.Cli (execCliStdoutToJson)
-import qualified Testnet.Property.Utils as H
-import           Testnet.Property.Utils (queryUtxos)
-import           Testnet.Runtime
-
 import qualified Cardano.Api as Api
 import           Cardano.Api.Ledger
+
 import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (QueryTipLocalStateOutput),
                    mEpoch)
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
+import           Cardano.Testnet
+
+import           Prelude
+
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.State.Strict (put)
 import           Data.Bifunctor (Bifunctor (..))
+import           Data.Data
+import           Data.List (isInfixOf)
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
+import           Data.Type.Equality
+import           Data.Word
+import           GHC.IORef (newIORef)
+import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Lens.Micro
+import           System.Exit (ExitCode (ExitSuccess))
+import           System.FilePath ((</>))
+
+import qualified Testnet.Process.Cli as P
+import           Testnet.Process.Cli (execCliStdoutToJson)
+import qualified Testnet.Process.Run as H
+import qualified Testnet.Property.Utils as H
+import           Testnet.Property.Utils (queryUtxos)
+import           Testnet.Runtime
+
+import           Hedgehog
+import qualified Hedgehog as H
+import           Hedgehog.Extras (Integration)
+import qualified Hedgehog.Extras as H
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 -- | Test that SPO cannot vote on a new constitution
 -- Execute me with:

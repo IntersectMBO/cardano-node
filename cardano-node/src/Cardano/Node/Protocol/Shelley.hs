@@ -21,45 +21,36 @@ module Cardano.Node.Protocol.Shelley
   , validateGenesis
   ) where
 
-import           Control.Exception (IOException)
-import           Control.Monad.Except (ExceptT, MonadError (..))
-
 import qualified Cardano.Api as Api
 import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley hiding (FileError)
 
-import qualified Data.Aeson as Aeson
-import qualified Data.ByteString as BS
-import qualified Data.Text as T
-
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
-                   newExceptT)
-
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import           Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Keys (coerceKeyRole)
-
+import qualified Cardano.Ledger.Shelley.Genesis as Shelley
+import           Cardano.Node.Protocol.Types
+import           Cardano.Node.Tracing.Era.HardFork ()
+import           Cardano.Node.Tracing.Era.Shelley ()
+import           Cardano.Node.Tracing.Formatting ()
+import           Cardano.Node.Tracing.Tracers.ChainDB ()
+import           Cardano.Node.Types
+import           Cardano.Tracing.OrphanInstances.HardFork ()
+import           Cardano.Tracing.OrphanInstances.Shelley ()
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..))
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParams (..),
                    ProtocolParamsShelleyBased (..), ShelleyLeaderCredentials (..))
 
-import           Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
-import qualified Cardano.Ledger.Shelley.Genesis as Shelley
-
-
-import           Cardano.Node.Types
-
-import           Cardano.Tracing.OrphanInstances.HardFork ()
-import           Cardano.Tracing.OrphanInstances.Shelley ()
-
-import           Cardano.Node.Tracing.Era.HardFork ()
-import           Cardano.Node.Tracing.Era.Shelley ()
-import           Cardano.Node.Tracing.Formatting ()
-import           Cardano.Node.Tracing.Tracers.ChainDB ()
-
-import           Cardano.Node.Protocol.Types
+import           Control.Exception (IOException)
+import           Control.Monad.Except (ExceptT, MonadError (..))
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
+                   newExceptT)
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString as BS
+import qualified Data.Text as T
 
 ------------------------------------------------------------------------------
 -- Shelley protocol

@@ -16,11 +16,13 @@ import qualified Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO
 import qualified Cardano.Testnet.Test.LedgerEvents.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
-import qualified Testnet.Property.Run as H
 
 import           Prelude
+
 import qualified System.Environment as E
 import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
+
+import qualified Testnet.Property.Run as H
 
 import qualified Test.Tasty as T
 import           Test.Tasty (TestTree)

@@ -5,13 +5,13 @@ module Cardano.Tracer.Handlers.RTView.State.EraSettings
   , initErasSettings
   ) where
 
+import           Cardano.Tracer.Types (NodeId)
+
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.Text (Text)
-
-import           Cardano.Tracer.Types (NodeId)
 
 data EraSettings = EraSettings
   { esEra             :: !Text

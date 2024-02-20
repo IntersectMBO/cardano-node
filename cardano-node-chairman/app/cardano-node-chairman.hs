@@ -1,10 +1,10 @@
 module Main where
 
 import           Cardano.Chairman.Commands
+import qualified Cardano.Crypto.Init as Crypto
+
 import           Control.Monad
 import           Options.Applicative
-
-import qualified Cardano.Crypto.Init as Crypto
 
 main :: IO ()
 main = do

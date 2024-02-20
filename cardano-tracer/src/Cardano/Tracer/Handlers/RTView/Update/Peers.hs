@@ -6,6 +6,16 @@ module Cardano.Tracer.Handlers.RTView.Update.Peers
   ( updateNodesPeers
   ) where
 
+import           Cardano.Logging (showT)
+import           Cardano.Node.Tracing.Peers
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.RTView.State.Peers
+import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers
+import           Cardano.Tracer.Handlers.RTView.UI.Utils
+import           Cardano.Tracer.Handlers.RTView.Update.Utils
+import           Cardano.Tracer.Handlers.RTView.Utils
+import           Cardano.Tracer.Types
+
 import           Control.Monad (forM_, void)
 import           Control.Monad.Extra (whenJustM)
 import           Data.List (find)
@@ -15,20 +25,9 @@ import           Data.Set ((\\))
 import qualified Data.Set as S
 import           Data.Text (unpack)
 import qualified Data.Text as T
+
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
-
-import           Cardano.Logging (showT)
-
-import           Cardano.Node.Tracing.Peers
-
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.RTView.State.Peers
-import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers
-import           Cardano.Tracer.Handlers.RTView.UI.Utils
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
-import           Cardano.Tracer.Handlers.RTView.Utils
-import           Cardano.Tracer.Types
 
 updateNodesPeers
   :: TracerEnv

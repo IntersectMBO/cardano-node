@@ -11,6 +11,17 @@
 
 module Cardano.Chairman (chairmanTest) where
 
+import           Cardano.Api
+import           Cardano.Api.Shelley
+
+import           Ouroboros.Consensus.Block.Abstract
+import           Ouroboros.Consensus.Cardano.Block
+import           Ouroboros.Consensus.Config.SecurityParam
+import           Ouroboros.Network.AnchoredFragment (Anchor, AnchoredFragment)
+import qualified Ouroboros.Network.AnchoredFragment as AF
+import qualified Ouroboros.Network.Block as Block
+import           Ouroboros.Network.Protocol.ChainSync.Client
+
 import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Monad (void)
 import           Control.Monad.Class.MonadAsync
@@ -23,18 +34,6 @@ import qualified Data.Map.Strict as Map
 import           Data.Ord (comparing)
 import           Data.Proxy (Proxy (..))
 import           Data.Word (Word64)
-
-import           Ouroboros.Consensus.Block.Abstract
-import           Ouroboros.Consensus.Cardano.Block
-import           Ouroboros.Consensus.Config.SecurityParam
-
-import           Ouroboros.Network.AnchoredFragment (Anchor, AnchoredFragment)
-import qualified Ouroboros.Network.AnchoredFragment as AF
-import qualified Ouroboros.Network.Block as Block
-import           Ouroboros.Network.Protocol.ChainSync.Client
-
-import           Cardano.Api
-import           Cardano.Api.Shelley
 
 -- | The chairman checks for consensus and progress.
 --

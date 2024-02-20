@@ -19,24 +19,25 @@ import           Control.Monad.IO.Class (MonadIO)
 import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Trans.Resource (ResourceT)
 import           Data.Aeson (FromJSON (..), Value, (.:))
-import           Data.Text (Text)
-import           Data.Word (Word8)
-import           GHC.Stack (HasCallStack)
-import qualified GHC.Stack as GHC
-import           Hedgehog (MonadTest)
-import           Hedgehog.Extras.Internal.Test.Integration (IntegrationState)
-
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as L
 import           Data.Maybe (mapMaybe)
 import qualified Data.Maybe as Maybe
+import           Data.Text (Text)
 import qualified Data.Time.Clock as DTC
+import           Data.Word (Word8)
+import           GHC.Stack (HasCallStack)
+import qualified GHC.Stack as GHC
+
+import           Testnet.Runtime (NodeLoggingFormat (..))
+
+import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
+import           Hedgehog.Extras.Internal.Test.Integration (IntegrationState)
 import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Test.Base as H
-import           Testnet.Runtime (NodeLoggingFormat (..))
 
 newlineBytes :: Word8
 newlineBytes = 10

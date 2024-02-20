@@ -13,14 +13,14 @@ module Cardano.Tracer.Handlers.RTView.UI.Types
   , WebPageStatus
   ) where
 
+import           Cardano.Tracer.Types
+
 import           Control.Concurrent.STM.TBQueue (TBQueue)
 import           Control.Concurrent.STM.TVar (TVar)
 import           Data.Aeson (FromJSON, ToJSON)
 import           Data.Map.Strict (Map)
 import           Data.Word (Word16)
 import           GHC.Generics (Generic)
-
-import           Cardano.Tracer.Types
 
 data ChartId
   = CPUChart

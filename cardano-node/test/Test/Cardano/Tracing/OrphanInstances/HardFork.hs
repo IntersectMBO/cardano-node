@@ -11,6 +11,15 @@
 -- The examples can be best viewed using a tool like 'jq'.
 module Test.Cardano.Tracing.OrphanInstances.HardFork (tests) where
 
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Tracing.OrphanInstances.Byron ()
+import           Cardano.Tracing.OrphanInstances.HardFork ()
+import           Cardano.Tracing.OrphanInstances.Shelley ()
+import           Ouroboros.Consensus.Byron.Ledger.NetworkProtocolVersion as Consensus.Cardano
+import qualified Ouroboros.Consensus.Cardano.Block as Consensus.Cardano
+import qualified Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common as Consensus
+import           Ouroboros.Consensus.Shelley.Ledger.NetworkProtocolVersion as Consensus.Cardano
+
 import qualified Data.Aeson as Aeson
 import           Data.ByteString.Lazy.Char8 (unpack)
 import           Data.SOP.Strict (NP (Nil, (:*)))
@@ -20,17 +29,6 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H.Base
 import qualified Hedgehog.Extras.Test.Golden as H.Golden
 import           Hedgehog.Internal.Property (PropertyName (PropertyName))
-
-import           Cardano.Ledger.Crypto (StandardCrypto)
-
-import           Ouroboros.Consensus.Byron.Ledger.NetworkProtocolVersion as Consensus.Cardano
-import qualified Ouroboros.Consensus.Cardano.Block as Consensus.Cardano
-import qualified Ouroboros.Consensus.HardFork.Combinator.Serialisation.Common as Consensus
-import           Ouroboros.Consensus.Shelley.Ledger.NetworkProtocolVersion as Consensus.Cardano
-
-import           Cardano.Tracing.OrphanInstances.Byron ()
-import           Cardano.Tracing.OrphanInstances.HardFork ()
-import           Cardano.Tracing.OrphanInstances.Shelley ()
 
 tests :: IO Bool
 tests = H.checkSequential

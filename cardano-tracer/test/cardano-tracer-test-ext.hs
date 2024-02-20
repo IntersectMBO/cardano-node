@@ -3,11 +3,17 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 
+import           Cardano.Logging
+import           Cardano.Tracer.Test.ForwardingStressTest.Script
+import           Cardano.Tracer.Test.ForwardingStressTest.Types
+import           Cardano.Tracer.Test.Utils
+import           Ouroboros.Network.Magic (NetworkMagic (..))
+import           Ouroboros.Network.NodeToClient (withIOManager)
+
 import           Control.Concurrent (threadDelay)
 import           Control.Exception
 import           Control.Monad.Extra
 import           Data.Functor ((<&>))
-import           Data.Functor.Identity
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.List as L
 import           Data.Maybe (fromMaybe)
@@ -17,15 +23,9 @@ import           System.Environment (lookupEnv, setEnv, unsetEnv)
 import qualified System.IO as Sys
 import           System.PosixCompat.Files (fileExist)
 import qualified System.Process as Sys
+
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
-
-import           Cardano.Logging
-import           Cardano.Tracer.Test.ForwardingStressTest.Script
-import           Cardano.Tracer.Test.ForwardingStressTest.Types
-import           Cardano.Tracer.Test.Utils
-import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.NodeToClient (withIOManager)
 
 main :: IO ()
 main = do

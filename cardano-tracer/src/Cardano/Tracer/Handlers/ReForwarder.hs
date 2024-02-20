@@ -15,22 +15,21 @@ module Cardano.Tracer.Handlers.ReForwarder
   ( initReForwarder
   ) where
 
-import           Control.Monad (when)
-import           Data.List (isPrefixOf)
-import qualified Data.Text as Text
-
-import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.NodeToClient (withIOManager)
-
 import           Cardano.Logging.Forwarding
 import           Cardano.Logging.Trace
 import           Cardano.Logging.Tracer.DataPoint
 import qualified Cardano.Logging.Types as Log
-import           Trace.Forward.Utils.DataPoint
-import           Trace.Forward.Utils.TraceObject (ForwardSink, writeToSink)
-
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.MetaTrace
+import           Ouroboros.Network.Magic (NetworkMagic (..))
+import           Ouroboros.Network.NodeToClient (withIOManager)
+
+import           Control.Monad (when)
+import           Data.List (isPrefixOf)
+import qualified Data.Text as Text
+
+import           Trace.Forward.Utils.DataPoint
+import           Trace.Forward.Utils.TraceObject (ForwardSink, writeToSink)
 
 -- | Initialize the reforwarding service if configured to be active.
 --   Returns

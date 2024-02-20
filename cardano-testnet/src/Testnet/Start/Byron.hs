@@ -16,10 +16,10 @@ import           Control.Monad.IO.Class (MonadIO)
 import           Data.Time.Clock (UTCTime)
 import           GHC.Stack
 
+import           Testnet.Process.Run
+
 import           Hedgehog.Extras.Stock.Time (showUTCTimeSeconds)
 import           Hedgehog.Internal.Property (MonadTest)
-
-import           Testnet.Process.Run
 
 data ByronGenesisOptions = ByronGenesisOptions
   { byronNumBftNodes :: Int

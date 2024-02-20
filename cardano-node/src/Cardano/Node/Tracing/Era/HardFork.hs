@@ -15,16 +15,9 @@
 module Cardano.Node.Tracing.Era.HardFork ()
   where
 
-import           Cardano.Tracing.OrphanInstances.HardFork ()
-
-import           Data.Aeson
-import           Data.Proxy (Proxy (..))
-import           Data.SOP (All, Compose, K (K))
-import           Data.SOP.Strict
-
 import           Cardano.Logging
-
 import           Cardano.Slotting.Slot (EpochSize (..))
+import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateInfo,
                    ForgeStateUpdateError)
 import           Ouroboros.Consensus.BlockchainTime (getSlotLength)
@@ -46,6 +39,11 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import           Ouroboros.Consensus.Protocol.Abstract (SelectView, ValidationErr)
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
+
+import           Data.Aeson
+import           Data.Proxy (Proxy (..))
+import           Data.SOP (All, Compose, K (K))
+import           Data.SOP.Strict
 
 
 --

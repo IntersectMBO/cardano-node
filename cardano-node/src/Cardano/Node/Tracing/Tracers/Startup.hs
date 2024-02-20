@@ -16,28 +16,17 @@ module Cardano.Node.Tracing.Tracers.Startup
 
 import           Cardano.Api (NetworkMagic (..), SlotNo (..))
 import qualified Cardano.Api as Api
-import           Prelude
-
-import           Data.Aeson (ToJSON (..), Value (..), (.=))
-import qualified Data.Aeson as Aeson
-import           Data.List (intercalate)
-import qualified Data.Map.Strict as Map
-import           Data.Text (Text, pack)
-import           Data.Time (getCurrentTime)
-import           Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
-import           Data.Version (showVersion)
-import           Network.Socket (SockAddr)
-import           Paths_cardano_node (version)
 
 import qualified Cardano.Chain.Genesis as Gen
-import           Cardano.Slotting.Slot (EpochSize (..))
-
+import           Cardano.Git.Rev (gitRev)
 import           Cardano.Ledger.Shelley.API as SL
-
-import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
-
+import           Cardano.Logging
+import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
+import           Cardano.Node.Configuration.Socket
+import           Cardano.Node.Protocol (SomeConsensusProtocol (..))
+import           Cardano.Node.Startup
+import           Cardano.Node.Types (UseLedger (..))
+import           Cardano.Slotting.Slot (EpochSize (..))
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Byron.Ledger.Conversions (fromByronEpochSlots,
                    fromByronSlotLength, genesisSlotLength)
@@ -50,16 +39,23 @@ import           Ouroboros.Consensus.HardFork.Combinator.Degenerate (HardForkLed
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
+import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
+import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 
-import           Cardano.Logging
+import           Prelude
 
-import           Cardano.Git.Rev (gitRev)
+import           Data.Aeson (ToJSON (..), Value (..), (.=))
+import qualified Data.Aeson as Aeson
+import           Data.List (intercalate)
+import qualified Data.Map.Strict as Map
+import           Data.Text (Text, pack)
+import           Data.Time (getCurrentTime)
+import           Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
+import           Data.Version (showVersion)
+import           Network.Socket (SockAddr)
 
-import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
-import           Cardano.Node.Configuration.Socket
-import           Cardano.Node.Protocol (SomeConsensusProtocol (..))
-import           Cardano.Node.Startup
-import           Cardano.Node.Types (UseLedger (..))
+import           Paths_cardano_node (version)
 
 
 getStartupInfo

@@ -7,13 +7,13 @@ module Cardano.Logging.Test.Unit.Documentation (
     docTracers
 ) where
 
-import           Data.IORef
-import qualified Data.Map as Map
-import qualified Data.Text as T
-
 import           Cardano.Logging
 import           Cardano.Logging.Test.Tracer
 import           Cardano.Logging.Test.Unit.TestObjects
+
+import           Data.IORef
+import qualified Data.Map as Map
+import qualified Data.Text as T
 
 docTracers :: IO T.Text
 docTracers = do

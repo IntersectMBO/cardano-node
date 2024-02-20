@@ -6,6 +6,13 @@ module Cardano.Tracer.Handlers.Logs.Rotator
   ( runLogsRotator
   ) where
 
+import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.Logs.Utils (createEmptyLogRotation, getTimeStampFromLog,
+                   isItLog)
+import           Cardano.Tracer.MetaTrace
+import           Cardano.Tracer.Utils (showProblemIfAny)
+
 import           Control.Concurrent.Async (forConcurrently_)
 import           Control.Concurrent.Extra (Lock)
 import           Control.Monad (forM_, forever, unless, when)
@@ -19,13 +26,6 @@ import           System.Directory (doesDirectoryExist, getFileSize, makeAbsolute
 import           System.Directory.Extra (listDirectories, listFiles)
 import           System.FilePath (takeDirectory, (</>))
 import           System.Time.Extra (sleep)
-
-import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Logs.Utils (createEmptyLogRotation, getTimeStampFromLog,
-                   isItLog)
-import           Cardano.Tracer.MetaTrace
-import           Cardano.Tracer.Utils (showProblemIfAny)
 
 -- | Runs rotation mechanism for the log files.
 runLogsRotator :: TracerEnv -> IO ()

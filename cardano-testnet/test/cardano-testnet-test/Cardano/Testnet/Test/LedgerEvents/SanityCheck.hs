@@ -22,12 +22,12 @@ import           GHC.IO.Exception (IOException)
 import           GHC.Stack (callStack)
 import           System.FilePath ((</>))
 
+import qualified Testnet.Property.Utils as H
+import           Testnet.Runtime
+
 import           Hedgehog
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
-
-import qualified Testnet.Property.Utils as H
-import           Testnet.Runtime
 
 newtype AdditionalCatcher
   = IOE IOException

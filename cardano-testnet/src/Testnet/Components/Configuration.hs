@@ -14,8 +14,10 @@ module Testnet.Components.Configuration
   , numPools
   ) where
 
+import           Cardano.Api.Ledger (StandardCrypto)
 import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley hiding (cardanoEra)
+
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Cardano.Node.Types
@@ -34,24 +36,23 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Char (toLower)
 import qualified Data.List as List
 import           Data.String
+import           Data.Word (Word32)
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import           Lens.Micro
 import           System.FilePath.Posix (takeDirectory, (</>))
+
+import           Testnet.Defaults
+import           Testnet.Filepath
+import           Testnet.Process.Run (execCli_)
+import           Testnet.Property.Utils
+import           Testnet.Start.Types (CardanoTestnetOptions (..))
 
 import           Hedgehog
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Time as DTC
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
-
-import           Cardano.Api.Ledger (StandardCrypto)
-import           Data.Word (Word32)
-import           Testnet.Defaults
-import           Testnet.Filepath
-import           Testnet.Process.Run (execCli_)
-import           Testnet.Property.Utils
-import           Testnet.Start.Types (CardanoTestnetOptions (..))
 
 
 createConfigYaml

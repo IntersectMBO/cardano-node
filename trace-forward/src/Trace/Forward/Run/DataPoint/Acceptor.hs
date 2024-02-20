@@ -6,6 +6,9 @@ module Trace.Forward.Run.DataPoint.Acceptor
   , acceptDataPointsResp
   ) where
 
+import           Ouroboros.Network.Driver.Simple (runPeer)
+import           Ouroboros.Network.Mux (MiniProtocolCb (..), MuxMode (..), RunMiniProtocol (..))
+
 import qualified Codec.Serialise as CBOR
 import           Control.Concurrent.STM.TMVar (putTMVar)
 import           Control.Concurrent.STM.TVar (modifyTVar', readTVar, readTVarIO)
@@ -15,8 +18,6 @@ import           Control.Monad.Extra (ifM)
 import           Control.Monad.STM (atomically, check)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Void (Void)
-import           Ouroboros.Network.Driver.Simple (runPeer)
-import           Ouroboros.Network.Mux (MiniProtocolCb (..), MuxMode (..), RunMiniProtocol (..))
 
 import           Trace.Forward.Configuration.DataPoint (AcceptorConfiguration (..))
 import qualified Trace.Forward.Protocol.DataPoint.Acceptor as Acceptor

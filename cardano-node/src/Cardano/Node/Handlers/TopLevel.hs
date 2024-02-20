@@ -46,16 +46,15 @@ module Cardano.Node.Handlers.TopLevel
 -- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 -- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import qualified Ouroboros.Network.Diffusion as Network
+
 import           Prelude
 
 import           Control.Exception
-
 import           Control.Monad.Class.MonadAsync (ExceptionInLinkedThread (..))
 import           System.Environment
 import           System.Exit
 import           System.IO
-
-import qualified Ouroboros.Network.Diffusion as Network
 
 -- | An exception handler to use for a program top level, as an alternative to
 -- the default top level handler provided by GHC.

@@ -11,17 +11,13 @@ module Cardano.Node.Protocol.Conway
 import           Cardano.Api
 import           Cardano.Api.Pretty
 
-import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
-
 import qualified Cardano.Ledger.Conway.Genesis as Conway
-
 import           Cardano.Node.Orphans ()
+import           Cardano.Node.Protocol.Shelley (GenesisReadError, readGenesisAny)
 import           Cardano.Node.Types
-
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
-
-import           Cardano.Node.Protocol.Shelley (GenesisReadError, readGenesisAny)
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 
 import           Control.Monad.Except (ExceptT)
 

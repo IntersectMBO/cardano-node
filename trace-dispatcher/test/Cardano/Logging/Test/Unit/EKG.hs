@@ -5,8 +5,8 @@ module Cardano.Logging.Test.Unit.EKG (
 ) where
 
 import           Cardano.Logging
-import           Control.Concurrent
 
+import           Control.Concurrent
 import qualified Data.Aeson as AE
 import           Data.Text (pack)
 import           System.Metrics (newStore)

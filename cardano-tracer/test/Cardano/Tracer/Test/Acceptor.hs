@@ -6,6 +6,15 @@ module Cardano.Tracer.Test.Acceptor
   , launchAcceptorsSimple
   ) where
 
+import           Cardano.Tracer.Acceptors.Run
+import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.RTView.Run
+import           Cardano.Tracer.Handlers.RTView.State.Historical
+import           Cardano.Tracer.MetaTrace
+import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
+
 import           Control.Concurrent.Async.Extra (sequenceConcurrently)
 import           Control.Concurrent.Extra (newLock)
 import           Control.Concurrent.STM.TVar (newTVarIO, readTVarIO)
@@ -16,14 +25,6 @@ import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import           System.Time.Extra (sleep)
 
-import           Cardano.Tracer.Acceptors.Run
-import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.RTView.Run
-import           Cardano.Tracer.Handlers.RTView.State.Historical
-import           Cardano.Tracer.MetaTrace
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
 import           Trace.Forward.Utils.DataPoint
 
 data AcceptorsMode = Initiator | Responder

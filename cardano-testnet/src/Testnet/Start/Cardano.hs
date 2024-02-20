@@ -20,40 +20,36 @@ module Testnet.Start.Cardano
   ) where
 
 
+import           Cardano.Api
+import           Cardano.Api.Ledger (StandardCrypto)
+
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
+
+import           Prelude hiding (lines)
+
 import           Control.Monad
+import qualified Control.Monad.Class.MonadTimer.SI as MT
+import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Aeson
+import qualified Data.Aeson as Aeson
+import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either
 import qualified Data.List as L
 import           Data.Maybe
 import qualified Data.Text as Text
+import           Data.Time (UTCTime)
 import qualified Data.Time.Clock as DTC
+import           Data.Word (Word32)
 import qualified GHC.Stack as GHC
-import           Prelude hiding (lines)
 import           System.FilePath ((</>))
 import qualified System.Info as OS
 
-import qualified Hedgehog as H
-import           Hedgehog.Extras (failMessage)
-import qualified Hedgehog.Extras.Stock.OS as OS
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
-
-import qualified Testnet.Defaults as Defaults
-
-import           Cardano.Api
-import           Cardano.Api.Ledger (StandardCrypto)
-import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
-import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
-import qualified Control.Monad.Class.MonadTimer.SI as MT
-import           Control.Monad.IO.Class
-import qualified Data.Aeson as Aeson
-import           Data.Bifunctor (first)
-import           Data.Time (UTCTime)
-import           Data.Word (Word32)
 import           Testnet.Components.Configuration
+import qualified Testnet.Defaults as Defaults
 import           Testnet.Filepath
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run
@@ -62,6 +58,12 @@ import           Testnet.Property.Checks
 import           Testnet.Runtime as TR hiding (shelleyGenesis)
 import qualified Testnet.Start.Byron as Byron
 import           Testnet.Start.Types
+
+import qualified Hedgehog as H
+import           Hedgehog.Extras (failMessage)
+import qualified Hedgehog.Extras.Stock.OS as OS
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
 
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Redundant id" -}

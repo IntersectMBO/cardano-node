@@ -23,6 +23,9 @@ import qualified System.Exit as IO
 import qualified System.Info as SYS
 import qualified System.IO as IO
 
+import qualified Testnet.Property.Utils as H
+import           Testnet.Start.Types
+
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 import           Hedgehog.Extras.Stock.OS (isWin32)
@@ -31,9 +34,6 @@ import           Test.Tasty.ExpectedFailure (wrapTest)
 import qualified Test.Tasty.Hedgehog as H
 import           Test.Tasty.Providers (testPassed)
 import           Test.Tasty.Runners (Result (resultShortDescription), TestTree)
-
-import qualified Testnet.Property.Utils as H
-import           Testnet.Start.Types
 
 runTestnet :: (Conf -> H.Integration a) -> IO ()
 runTestnet tn = do

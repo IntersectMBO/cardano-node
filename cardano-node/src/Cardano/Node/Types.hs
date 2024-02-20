@@ -31,7 +31,17 @@ module Cardano.Node.Types
   , renderVRFPrivateKeyFilePermissionError
   ) where
 
+import           Cardano.Api
+import           Cardano.Api.Pretty
+
+import           Cardano.Crypto (RequiresNetworkMagic (..))
+import qualified Cardano.Crypto.Hash as Crypto
+import           Cardano.Node.Configuration.Socket (SocketConfig (..))
+import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+
 import           Control.Exception
+import           Control.Monad (MonadPlus (..))
 import           Data.Aeson
 import           Data.ByteString (ByteString)
 import           Data.Monoid (Last)
@@ -39,19 +49,6 @@ import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word16, Word8)
-
-import           Control.Monad (MonadPlus (..))
-
-import           Cardano.Api
-import           Cardano.Api.Pretty
-import           Cardano.Crypto (RequiresNetworkMagic (..))
-import qualified Cardano.Crypto.Hash as Crypto
-import           Cardano.Node.Configuration.Socket (SocketConfig (..))
-
---TODO: things will probably be clearer if we don't use these newtype wrappers and instead
--- use records with named fields in the CLI code.
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 
 -- | Errors for the cardano-config module.
 data ConfigError =

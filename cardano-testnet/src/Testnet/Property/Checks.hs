@@ -21,14 +21,14 @@ import qualified Data.Set as Set
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 
+import           Testnet.Process.Run
+import           Testnet.Start.Types
+
 import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
 import           Hedgehog.Extras.Test.Base (failMessage)
 import qualified Hedgehog.Extras.Test.File as H
 import           Hedgehog.Extras.Test.Process (ExecConfig)
-
-import           Testnet.Process.Run
-import           Testnet.Start.Types
 
 -- | A sanity check that confirms that there are the expected number of SPOs in the ledger state
 prop_spos_in_ledger_state

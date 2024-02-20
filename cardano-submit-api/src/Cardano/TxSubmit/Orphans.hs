@@ -9,10 +9,12 @@ module Cardano.TxSubmit.Orphans
   ) where
 
 import           Cardano.Api
+
 import           Cardano.Binary (DecoderError)
+import           Ouroboros.Consensus.Cardano.Block
+
 import           Data.Aeson (ToJSON (..))
 import qualified Data.Aeson as Aeson
-import           Ouroboros.Consensus.Cardano.Block
 
 instance ToJSON DecoderError where
   toJSON = Aeson.String . textShow

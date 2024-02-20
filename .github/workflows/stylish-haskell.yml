@@ -26,22 +26,19 @@ jobs:
       fail-fast: false
 
     env:
-      # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2023-11-20-3"
-
-      STYLISH_HASKELL_VERSION: "0.14.4.0"
+      STYLISH_HASKELL_VERSION: "0.14.6.0"
 
       STYLISH_HASKELL_PATHS: >
-        cardano-testnet
         cardano-git-rev
         cardano-node
-        cardano-node-chairman
-        cardano-tracer
-        trace-resources
         cardano-node-capi
+        cardano-node-chairman
+        cardano-submit-api
+        cardano-testnet
+        cardano-tracer
         trace-dispatcher
         trace-forward
-        cardano-submit-api
+        trace-resources
 
     steps:
     - name: Download stylish-haskell

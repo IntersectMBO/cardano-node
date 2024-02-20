@@ -9,18 +9,19 @@ module Cardano.Tracer.Handlers.RTView.UI.Theme
   , isCurrentThemeDark
   ) where
 
-import           Control.Exception.Extra (ignore, try_)
-import           Control.Monad (void)
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
-import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core
-
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.System
 import           Cardano.Tracer.Handlers.RTView.UI.Charts
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
+
+import           Control.Exception.Extra (ignore, try_)
+import           Control.Monad (void)
+import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
+
+import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Core
 
 restoreTheme, switchTheme :: TracerEnv -> UI ()
 restoreTheme tracerEnv = readSavedTheme tracerEnv >>= setThemeAndSave tracerEnv

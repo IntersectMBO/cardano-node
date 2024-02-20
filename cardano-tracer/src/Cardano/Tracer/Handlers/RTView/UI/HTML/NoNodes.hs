@@ -8,15 +8,16 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes
   , showNoNodes
   ) where
 
-import           Data.List (intercalate)
-import qualified Data.List.NonEmpty as NE
-import           Data.String.QQ
-import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core
-
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
+
+import           Data.List (intercalate)
+import qualified Data.List.NonEmpty as NE
+import           Data.String.QQ
+
+import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Core
 
 -- | If the user doesn't see connected nodes - possible reason of it is
 --   misconfiguration of 'cardano-tracer' and/or 'cardano-node'.

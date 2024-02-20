@@ -3,10 +3,10 @@ module Trace.Forward.Configuration.DataPoint
   , ForwarderConfiguration (..)
   ) where
 
+import           Ouroboros.Network.Driver (TraceSendRecv)
+
 import           Control.Concurrent.STM.TVar (TVar)
 import           Control.Tracer (Tracer)
-
-import           Ouroboros.Network.Driver (TraceSendRecv)
 
 import           Trace.Forward.Protocol.DataPoint.Type
 

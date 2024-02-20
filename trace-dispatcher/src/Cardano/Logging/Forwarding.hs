@@ -9,16 +9,9 @@ module Cardano.Logging.Forwarding
     initForwarding
   ) where
 
-import           Codec.CBOR.Term (Term)
-import           Control.Concurrent.Async (async, race_, wait)
-import           Control.Monad (void)
-import           Control.Monad.IO.Class
-
-import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
-import qualified Data.ByteString.Lazy as LBS
-import           Data.Void (Void)
-import           Data.Word (Word16)
-
+import           Cardano.Logging.Types
+import           Cardano.Logging.Utils (runInLoop)
+import           Cardano.Logging.Version
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
 import           Ouroboros.Network.IOManager (IOManager)
@@ -38,20 +31,25 @@ import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), Handsh
                    newNetworkMutableState, nullNetworkConnectTracers, nullNetworkServerTracers,
                    withServerNode)
 
+import           Codec.CBOR.Term (Term)
+import           Control.Concurrent.Async (async, race_, wait)
+import           Control.Monad (void)
+import           Control.Monad.IO.Class
+import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer, stdoutTracer)
+import qualified Data.ByteString.Lazy as LBS
+import           Data.Void (Void)
+import           Data.Word (Word16)
 import           System.IO (hPutStrLn, stderr)
 import qualified System.Metrics as EKG
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Forwarder
+
 import qualified Trace.Forward.Configuration.DataPoint as DPF
 import qualified Trace.Forward.Configuration.TraceObject as TF
 import           Trace.Forward.Run.DataPoint.Forwarder
 import           Trace.Forward.Run.TraceObject.Forwarder
 import           Trace.Forward.Utils.DataPoint
 import           Trace.Forward.Utils.TraceObject
-
-import           Cardano.Logging.Types
-import           Cardano.Logging.Utils (runInLoop)
-import           Cardano.Logging.Version
 
 initForwarding :: forall m. (MonadIO m)
   => IOManager

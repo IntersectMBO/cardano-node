@@ -6,24 +6,24 @@ module Spec.Chairman.Chairman
   ( chairmanOver
   ) where
 
+import           Cardano.Testnet (TmpAbsolutePath (TmpAbsolutePath), makeLogDir)
+import qualified Cardano.Testnet as H
+
 import           Control.Monad (when)
 import           Data.Functor ((<&>))
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
-import           Hedgehog.Extras.Test.Base (Integration)
+import qualified System.Environment as IO
 import           System.Exit (ExitCode (..))
 import           System.FilePath.Posix ((</>))
-
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
-import qualified Hedgehog.Extras.Test.Process as H
-import qualified System.Environment as IO
 import qualified System.IO as IO
 import qualified System.Process as IO
 
-import           Cardano.Testnet (TmpAbsolutePath (TmpAbsolutePath), makeLogDir)
-import qualified Cardano.Testnet as H
+import qualified Hedgehog as H
+import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
+import           Hedgehog.Extras.Test.Base (Integration)
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test.Process as H
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}

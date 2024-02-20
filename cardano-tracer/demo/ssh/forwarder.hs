@@ -1,10 +1,10 @@
 {-# LANGUAGE LambdaCase #-}
 
-import           Data.Functor.Identity
-import           System.Environment (getArgs)
-
 import           Cardano.Tracer.Test.Forwarder
 import           Cardano.Tracer.Test.TestSetup
+
+import           Data.Functor.Identity
+import           System.Environment (getArgs)
 
 main :: IO ()
 main = getArgs >>=

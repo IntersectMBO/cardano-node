@@ -7,6 +7,13 @@ module Cardano.Tracer.Handlers.RTView.Notifications.Utils
   , updateNotificationsPeriods
   ) where
 
+import           Cardano.Tracer.Handlers.RTView.Notifications.Send
+import           Cardano.Tracer.Handlers.RTView.Notifications.Settings
+import           Cardano.Tracer.Handlers.RTView.Notifications.Timer
+import           Cardano.Tracer.Handlers.RTView.Notifications.Types
+import           Cardano.Tracer.Handlers.RTView.Update.Utils
+import           Cardano.Tracer.Types
+
 import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TBQueue (flushTBQueue, isFullTBQueue, newTBQueueIO,
@@ -14,13 +21,6 @@ import           Control.Concurrent.STM.TBQueue (flushTBQueue, isFullTBQueue, ne
 import           Control.Concurrent.STM.TVar (newTVarIO, readTVarIO)
 import           Control.Monad.Extra (unlessM, whenJust)
 import qualified Data.Map.Strict as M
-
-import           Cardano.Tracer.Handlers.RTView.Notifications.Send
-import           Cardano.Tracer.Handlers.RTView.Notifications.Settings
-import           Cardano.Tracer.Handlers.RTView.Notifications.Timer
-import           Cardano.Tracer.Handlers.RTView.Notifications.Types
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
-import           Cardano.Tracer.Types
 
 initEventsQueues
   :: Maybe FilePath

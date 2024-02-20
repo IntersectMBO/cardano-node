@@ -5,6 +5,8 @@ module Parsers.Help
   , runHelpOptions
   ) where
 
+import           Cardano.CLI.EraBased.Options.Common
+
 import           Control.Monad (forM_)
 import qualified Data.List as List
 import           Options.Applicative
@@ -12,8 +14,6 @@ import           Options.Applicative.Help.Core
 import           Options.Applicative.Help.Types (renderHelp)
 import           Options.Applicative.Types (OptReader (..), Option (..), Parser (..))
 import qualified System.IO as IO
-
-import           Cardano.CLI.EraBased.Options.Common
 
 data HelpOptions = HelpOptions
   deriving (Eq, Show)

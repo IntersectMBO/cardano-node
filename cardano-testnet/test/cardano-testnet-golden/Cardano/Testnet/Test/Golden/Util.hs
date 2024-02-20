@@ -18,22 +18,22 @@ import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Function ((&))
-import           GHC.Stack (CallStack, HasCallStack)
-import           Hedgehog.Extras (ExecConfig)
-import           Hedgehog.Internal.Property (Diff, MonadTest, liftTest, mkTest)
-import           Hedgehog.Internal.Show (ValueDiff (ValueSame), mkValue, showPretty, valueDiff)
-import           Hedgehog.Internal.Source (getCaller)
-
 import qualified Data.List as List
 import           Data.Monoid (Last (..))
+import           GHC.Stack (CallStack, HasCallStack)
 import qualified GHC.Stack as GHC
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras as H
-import           Hedgehog.Extras.Test (ExecConfig (..))
-import qualified Hedgehog.Internal.Property as H
 import qualified System.Exit as IO
 import qualified System.Process as IO
 import           System.Process (CreateProcess)
+
+import qualified Hedgehog as H
+import           Hedgehog.Extras (ExecConfig)
+import qualified Hedgehog.Extras as H
+import           Hedgehog.Extras.Test (ExecConfig (..))
+import           Hedgehog.Internal.Property (Diff, MonadTest, liftTest, mkTest)
+import qualified Hedgehog.Internal.Property as H
+import           Hedgehog.Internal.Show (ValueDiff (ValueSame), mkValue, showPretty, valueDiff)
+import           Hedgehog.Internal.Source (getCaller)
 
 -- | Execute cardano-testnet via the command line.
 --

@@ -9,17 +9,17 @@ module Cardano.Logging.Tracer.DataPoint
   , mkDataPointTracer
   ) where
 
-import           Control.DeepSeq (NFData)
-import           Control.Monad.IO.Class
-import           Data.Aeson.Types (ToJSON)
-import           Data.Text (Text, intercalate)
-
-import qualified Control.Tracer as NT
-import           Trace.Forward.Utils.DataPoint (DataPoint (..), DataPointStore, writeToStore)
-
 import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Trace
 import           Cardano.Logging.Types
+
+import           Control.DeepSeq (NFData)
+import           Control.Monad.IO.Class
+import qualified Control.Tracer as NT
+import           Data.Aeson.Types (ToJSON)
+import           Data.Text (Text, intercalate)
+
+import           Trace.Forward.Utils.DataPoint (DataPoint (..), DataPointStore, writeToStore)
 
 ---------------------------------------------------------------------------
 

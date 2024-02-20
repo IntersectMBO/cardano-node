@@ -9,6 +9,8 @@ module Cardano.Tracer.Handlers.RTView.State.Peers
   , removePeer
   ) where
 
+import           Cardano.Tracer.Types (NodeId)
+
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar
 import           Data.Map.Strict (Map)
@@ -16,8 +18,6 @@ import qualified Data.Map.Strict as M
 import           Data.Set (Set)
 import qualified Data.Set as S
 import           Data.Text (Text)
-
-import           Cardano.Tracer.Types (NodeId)
 
 type PeerAddress  = Text
 type PeersForNode = Set PeerAddress

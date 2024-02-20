@@ -4,19 +4,20 @@ module Cardano.Tracer.Test.Queue.Tests
   ( tests
   ) where
 
+import           Cardano.Tracer.Test.Forwarder
+import           Cardano.Tracer.Test.TestSetup
+import           Cardano.Tracer.Test.Utils
+
 import           Control.Concurrent.Async (withAsyncBound)
-import           GHC.IO.Handle (hDuplicate, hDuplicateTo)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import           Test.Tasty
-import           Test.Tasty.QuickCheck
+import           GHC.IO.Handle (hDuplicate, hDuplicateTo)
 import           System.Directory (removeFile)
 import           System.IO
 import           System.Time.Extra (sleep)
 
-import           Cardano.Tracer.Test.Forwarder
-import           Cardano.Tracer.Test.TestSetup
-import           Cardano.Tracer.Test.Utils
+import           Test.Tasty
+import           Test.Tasty.QuickCheck
 
 tests :: TestSetup Identity -> TestTree
 tests ts = localOption (QuickCheckTests 1) $ testGroup "Test.Queue"

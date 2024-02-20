@@ -8,11 +8,12 @@ module Cardano.Tracer.Test.ForwardingStressTest.Types (
   , emptyScriptRes
   ) where
 
+import           Cardano.Logging
+
 import           Data.Aeson (Value (..), (.=))
 import           Data.Text hiding (length)
-import           Test.QuickCheck
 
-import           Cardano.Logging
+import           Test.QuickCheck
 
 type MessageID = Int
 

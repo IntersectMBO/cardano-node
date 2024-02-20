@@ -2,6 +2,8 @@ module Testnet.Run
   ( runTestnet
   ) where
 
+import qualified Control.Concurrent as IO
+import qualified Control.Concurrent.STM as STM
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource
@@ -9,19 +11,18 @@ import           Data.Bool
 import           Data.Function
 import           Data.Int
 import           Data.Maybe
+import qualified System.Console.ANSI as ANSI
 import           System.Console.ANSI (Color (..), ColorIntensity (..), ConsoleLayer (..), SGR (..))
+import qualified System.Exit as IO
+import qualified System.IO as IO
 import           System.IO (IO)
 
-import qualified Control.Concurrent as IO
-import qualified Control.Concurrent.STM as STM
+import qualified Testnet.Conf as H
+
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Process as H
-import qualified System.Console.ANSI as ANSI
-import qualified System.Exit as IO
-import qualified System.IO as IO
 import qualified Test.Base as H
-import qualified Testnet.Conf as H
 
 testnetProperty :: (H.Conf -> H.Integration ()) -> H.Property
 testnetProperty tn = H.integrationRetryWorkspace 2 "testnet-chairman" $ \tempAbsPath' -> do

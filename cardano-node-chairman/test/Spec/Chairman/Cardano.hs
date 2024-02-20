@@ -6,10 +6,11 @@ module Spec.Chairman.Cardano where
 
 import qualified Cardano.Testnet as H
 
+import qualified Testnet.Property.Utils as H
+
 import qualified Hedgehog as H
 
 import           Spec.Chairman.Chairman (chairmanOver)
-import qualified Testnet.Property.Utils as H
 
 -- TODO: Conway broken in conway
 hprop_chairman :: H.Property

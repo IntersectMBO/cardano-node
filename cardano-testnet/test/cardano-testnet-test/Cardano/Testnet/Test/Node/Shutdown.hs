@@ -38,6 +38,13 @@ import qualified System.IO as IO
 import qualified System.Process as IO
 import           System.Process (interruptProcessGroupOf)
 
+import           Testnet.Defaults
+import           Testnet.Process.Run
+import qualified Testnet.Property.Utils as H
+import           Testnet.Property.Utils
+import           Testnet.Runtime
+import           Testnet.Start.Byron
+
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
@@ -47,13 +54,6 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
-
-import           Testnet.Defaults
-import           Testnet.Process.Run
-import qualified Testnet.Property.Utils as H
-import           Testnet.Property.Utils
-import           Testnet.Runtime
-import           Testnet.Start.Byron
 
 {- HLINT ignore "Redundant <&>" -}
 -- TODO: Use cardanoTestnet in hprop_shutdown

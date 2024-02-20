@@ -17,10 +17,7 @@ module Test.Cardano.Node.Gen
   , genNodeSetup
   ) where
 
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.KeyMap as Aeson.KeyMap
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Vector as Vector
+import           Cardano.Api (textShow)
 
 import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..), NodeHostIPAddress (..),
                    NodeHostIPv4Address (..), NodeHostIPv6Address (..), NodeIPAddress,
@@ -36,12 +33,13 @@ import           Ouroboros.Network.PeerSelection.RelayAccessPoint (DomainAccessP
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    WarmValency (..))
 
-
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.KeyMap as Aeson.KeyMap
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.IP as IP
-
-import           Cardano.Api (textShow)
-
+import qualified Data.Vector as Vector
 import           Data.Word (Word32)
+
 import           Hedgehog (Gen)
 import           Hedgehog.Corpus (cooking)
 import qualified Hedgehog.Gen as Gen

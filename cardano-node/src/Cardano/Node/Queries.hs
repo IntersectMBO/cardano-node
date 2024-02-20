@@ -36,27 +36,18 @@ module Cardano.Node.Queries
   , fromSMaybe
   ) where
 
-import           Control.Monad.STM (atomically)
-import           Data.ByteString (ByteString)
-import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
-import qualified Data.Map.Strict as Map
-import           Data.SOP
-import           Data.Word (Word64)
-
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Byron.Crypto
 import           Cardano.Crypto.KES.Class (Period)
-import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
-
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
 import qualified Cardano.Ledger.SafeHash as Ledger
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 import qualified Cardano.Ledger.TxIn as Ledger
 import qualified Cardano.Ledger.UMap as UM
-
+import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Ouroboros.Consensus.Block (ForgeStateInfo, ForgeStateUpdateError)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
@@ -79,10 +70,16 @@ import           Ouroboros.Consensus.Shelley.Node ()
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Consensus.Util.Orphans ()
-
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
 import           Ouroboros.Network.NodeToNode (RemoteAddress, RemoteConnectionId)
+
+import           Control.Monad.STM (atomically)
+import           Data.ByteString (ByteString)
+import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import qualified Data.Map.Strict as Map
+import           Data.SOP
+import           Data.Word (Word64)
 
 --
 -- * TxId -> ByteString projection

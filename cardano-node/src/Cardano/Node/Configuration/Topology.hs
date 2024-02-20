@@ -15,6 +15,11 @@ module Cardano.Node.Configuration.Topology
   )
 where
 
+import           Cardano.Node.Configuration.NodeAddress
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
+import           Cardano.Node.Types
+import           Ouroboros.Consensus.Util.Condense (Condense (..))
+
 import           Control.Exception (Exception (..), IOException)
 import qualified Control.Exception as Exception
 import           Data.Aeson
@@ -26,12 +31,6 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
 import           Text.Read (readMaybe)
-
-import           Cardano.Node.Configuration.NodeAddress
-import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
-import           Cardano.Node.Types
-
-import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
 
 newtype TopologyError

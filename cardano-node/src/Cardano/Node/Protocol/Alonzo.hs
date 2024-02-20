@@ -12,14 +12,11 @@ import           Cardano.Api
 import           Cardano.Api.Pretty
 
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
-
 import           Cardano.Node.Orphans ()
+import           Cardano.Node.Protocol.Shelley (GenesisReadError, readGenesisAny)
 import           Cardano.Node.Types
-
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
-
-import           Cardano.Node.Protocol.Shelley (GenesisReadError, readGenesisAny)
 
 import           Control.Monad.Except (ExceptT)
 
