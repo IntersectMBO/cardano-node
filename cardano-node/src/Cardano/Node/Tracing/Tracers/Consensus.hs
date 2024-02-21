@@ -47,6 +47,7 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
+import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
@@ -74,7 +75,6 @@ import qualified Data.IntPSQ as Pq
 import qualified Data.Text as Text
 import           Data.Time (DiffTime, NominalDiffTime)
 import           Data.Word (Word32, Word64)
-
 
 instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
   forMachine _dtal (ConnectionId local' remote) =
@@ -1734,3 +1734,59 @@ instance MetaTrace (TraceKeepAliveClient remotePeer) where
   documentFor _ = Just ""
 
   allNamespaces = [Namespace [] ["KeepAliveClient"]]
+
+--------------------------------------------------------------------------------
+-- Gsm Tracer
+--------------------------------------------------------------------------------
+
+instance ( LogFormatting selection
+         , Show selection
+         ) => LogFormatting (TraceGsmEvent selection) where
+  forMachine dtal (GsmEventEnterCaughtUp i s) =
+    mconcat
+      [ "kind" .= String "GsmEventEnterCaughtUp"
+      , "peerNumber" .= i
+      , "currentSelection" .= forMachine dtal s
+      ]
+  forMachine dtal (GsmEventLeaveCaughtUp s a) =
+    mconcat
+      [ "kind" .= String "GsmEventLeaveCaughtUp"
+      , "currentSelection" .= forMachine dtal s
+      , "age" .= toJSON (show a)
+      ]
+
+  forHuman = showT
+
+instance MetaTrace (TraceGsmEvent selection) where
+  namespaceFor GsmEventEnterCaughtUp {} = Namespace [] ["EnterCaughtUp"]
+  namespaceFor GsmEventLeaveCaughtUp {} = Namespace [] ["LeaveCaughtUp"]
+
+  severityFor (Namespace _ ["EnterCaughtUp"]) _ = Just Info
+  severityFor (Namespace _ ["LeaveCaughtUp"]) _ = Just Info
+  severityFor (Namespace _ _                ) _ = Nothing
+
+  documentFor (Namespace _ ["EnterCaughtUp"]) = Just
+    "Node is caught up"
+  documentFor (Namespace _ ["LeaveCaughtUp"]) = Just
+    "Node is not caught up"
+  documentFor (Namespace _                 _) = Nothing
+
+  allNamespaces =
+    [
+      Namespace [] ["EnterCaughtUp"]
+    , Namespace [] ["LeaveCaughtUp"]
+    ]
+
+instance ( StandardHash blk
+         , ConvertRawHash blk
+         ) => LogFormatting (Tip blk) where
+  forMachine _dtal TipGenesis =
+    mconcat [ "kind" .= String "TipGenesis" ]
+  forMachine _dtal (Tip slotNo hash bNo) =
+    mconcat [ "kind" .= String "Tip"
+            , "tipSlotNo" .= toJSON (unSlotNo slotNo)
+            , "tipHash" .= renderHeaderHash (Proxy @blk) hash
+            , "tipBlockNo" .= toJSON bNo
+            ]
+
+  forHuman = showT

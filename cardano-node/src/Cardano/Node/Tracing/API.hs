@@ -24,6 +24,8 @@ import           Cardano.Node.Types
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import           Ouroboros.Consensus.Node (NetworkP2PMode)
+import           Ouroboros.Consensus.Node.GSM
+import           Ouroboros.Network.Block
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import           Ouroboros.Network.Magic (NetworkMagic)
 import           Ouroboros.Network.NodeToClient (withIOManager)
@@ -46,6 +48,7 @@ initTraceDispatcher ::
   , LogFormatting (LedgerEvent blk)
   , LogFormatting
     (TraceLabelPeer (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
+  , LogFormatting (TraceGsmEvent (Tip blk))
   )
   => NodeConfiguration
   -> SomeConsensusProtocol
