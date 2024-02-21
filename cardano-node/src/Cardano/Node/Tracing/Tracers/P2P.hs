@@ -515,7 +515,7 @@ instance LogFormatting (TracePeerSelection SockAddr) where
             , "targets" .= peerSelectionTargetsToObject (dpssTargets ds)
             , "localRootPeers" .= dpssLocalRootPeers ds
             , "publicRootPeers" .= dpssPublicRootPeers ds
-            , "knownPeers" .= (KnownPeers.allPeers $ dpssKnownPeers ds)
+            , "knownPeers" .= KnownPeers.allPeers (dpssKnownPeers ds)
             , "establishedPeers" .= dpssEstablishedPeers ds
             , "activePeers" .= dpssActivePeers ds
             , "publicRootBackoffs" .= dpssPublicRootBackoffs ds
@@ -804,12 +804,19 @@ peerSelectionTargetsToObject
   PeerSelectionTargets { targetNumberOfRootPeers,
                          targetNumberOfKnownPeers,
                          targetNumberOfEstablishedPeers,
-                         targetNumberOfActivePeers } =
+                         targetNumberOfActivePeers,
+                         targetNumberOfKnownBigLedgerPeers,
+                         targetNumberOfEstablishedBigLedgerPeers,
+                         targetNumberOfActiveBigLedgerPeers
+                       } =
     Object $
       mconcat [ "roots" .= targetNumberOfRootPeers
                , "knownPeers" .= targetNumberOfKnownPeers
                , "established" .= targetNumberOfEstablishedPeers
                , "active" .= targetNumberOfActivePeers
+               , "knownBigLedgerPeers" .= targetNumberOfKnownBigLedgerPeers
+               , "establishedBigLedgerPeers" .= targetNumberOfEstablishedBigLedgerPeers
+               , "activeBigLedgerPeers" .= targetNumberOfActiveBigLedgerPeers
                ]
 
 instance MetaTrace (DebugPeerSelection SockAddr) where

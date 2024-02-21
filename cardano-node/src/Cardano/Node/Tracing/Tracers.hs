@@ -45,11 +45,13 @@ import qualified Ouroboros.Consensus.Network.NodeToClient as NtC
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import qualified Ouroboros.Consensus.Network.NodeToNode as NtN
 import           Ouroboros.Consensus.Node (NetworkP2PMode (..))
+import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import qualified Ouroboros.Consensus.Node.Run as Consensus
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
+import           Ouroboros.Network.Block
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.Diffusion as Diffusion
@@ -76,6 +78,8 @@ mkDispatchTracers
   , LogFormatting
     (TraceLabelPeer
       (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
+  , LogFormatting (TraceGsmEvent (Tip blk))
+  , MetaTrace (TraceGsmEvent (Tip blk))
   )
   => NodeKernelData blk
   -> Trace IO FormattedMessage
@@ -194,6 +198,8 @@ mkConsensusTracers :: forall blk.
   , TraceConstraints blk
   , LogFormatting (TraceLabelPeer
                     (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
+  , LogFormatting (TraceGsmEvent (Tip blk))
+  , MetaTrace (TraceGsmEvent (Tip blk))
   )
   => ConfigReflection
   -> Trace IO FormattedMessage
@@ -302,6 +308,11 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
     !consensusStartupErrorTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 ["Consensus", "Startup"]
+
+    !consensusGsmTr <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Consensus", "GSM"]
+
     configureTracers configReflection trConfig [consensusStartupErrorTr]
 
     pure $ Consensus.Tracers
@@ -339,6 +350,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith keepAliveClientTr
       , Consensus.consensusErrorTracer = Tracer $
           traceWith consensusStartupErrorTr . ConsensusStartupException
+      , Consensus.gsmTracer = Tracer $
+          traceWith consensusGsmTr
       }
 
 mkNodeToClientTracers :: forall blk.
