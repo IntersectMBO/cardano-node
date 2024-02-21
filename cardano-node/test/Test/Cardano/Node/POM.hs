@@ -13,7 +13,8 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
                    partialTraceSelectionToEither)
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
+                   SnapshotInterval (..))
 import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
@@ -115,6 +116,7 @@ testPartialYamlConfig =
     , pncShutdownConfig = Last Nothing
     , pncStartAsNonProducingNode = Last $ Just False
     , pncDiffusionMode = Last Nothing
+    , pncNumOfDiskSnapshots = Last Nothing
     , pncSnapshotInterval = mempty
     , pncExperimentalProtocolsEnabled = Last Nothing
     , pncMaxConcurrencyBulkSync = Last Nothing
@@ -156,6 +158,7 @@ testPartialCliConfig =
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
     , pncDiffusionMode = mempty
+    , pncNumOfDiskSnapshots = Last Nothing
     , pncSnapshotInterval = Last . Just . RequestedSnapshotInterval $ secondsToDiffTime 100
     , pncExperimentalProtocolsEnabled = Last $ Just True
     , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
@@ -199,6 +202,7 @@ eExpectedConfig = do
     , ncValidateDB = True
     , ncProtocolConfig = testNodeProtocolConfiguration
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
+    , ncNumOfDiskSnapshots = DefaultNumOfDiskSnapshots
     , ncSnapshotInterval = RequestedSnapshotInterval $ secondsToDiffTime 100
     , ncExperimentalProtocolsEnabled = True
     , ncMaxConcurrencyBulkSync = Nothing

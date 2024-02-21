@@ -461,6 +461,7 @@ mkTracers _ _ _ _ _ enableP2P =
       , Consensus.forgeTracer = nullTracer
       , Consensus.blockchainTimeTracer = nullTracer
       , Consensus.consensusErrorTracer = nullTracer
+      , Consensus.gsmTracer = nullTracer
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
@@ -739,6 +740,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
           traceWith (toLogObject tr) (readableTraceBlockchainTimeEvent ev)
     , Consensus.consensusErrorTracer =
         Tracer $ \err -> traceWith (toLogObject tr) (ConsensusStartupException err)
+    , Consensus.gsmTracer = tracerOnOff (traceGsm trSel) verb "GSM" tr
     }
  where
    mkForgeTracers :: IO ForgeTracers

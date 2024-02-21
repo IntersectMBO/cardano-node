@@ -48,6 +48,7 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (BlockingType
                    TraceChainSyncServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
+import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
@@ -1509,3 +1510,33 @@ instance ( RunNode blk
 instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
   toObject _verb _ =
     mconcat [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
+
+instance HasPrivacyAnnotation (TraceGsmEvent selection) where
+instance HasSeverityAnnotation (TraceGsmEvent selection) where
+  getSeverityAnnotation _ = Info
+instance ToObject selection => Transformable Text IO (TraceGsmEvent selection) where
+  trTransformer = trStructured
+
+instance ToObject selection => ToObject (TraceGsmEvent selection) where
+  toObject verb (GsmEventEnterCaughtUp i s) =
+    mconcat
+      [ "kind" .= String "GsmEventEnterCaughtUp"
+      , "peerNumber" .= toJSON i
+      , "currentSelection" .= toObject verb s
+      ]
+  toObject verb (GsmEventLeaveCaughtUp s a) =
+    mconcat
+      [ "kind" .= String "GsmEventLeaveCaughtUp"
+      , "currentSelection" .= toObject verb s
+      , "age" .= toJSON (show a)
+      ]
+
+instance ConvertRawHash blk => ToObject (Tip blk) where
+  toObject _verb TipGenesis =
+    mconcat [ "kind" .= String "TipGenesis" ]
+  toObject _verb (Tip slotNo hash bNo) =
+    mconcat [ "kind" .= String "Tip"
+            , "tipSlotNo" .= toJSON (unSlotNo slotNo)
+            , "tipHash" .= renderHeaderHash (Proxy @blk) hash
+            , "tipBlockNo" .= toJSON bNo
+            ]
