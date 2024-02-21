@@ -73,7 +73,7 @@ test-suite chairman-tests
                       , cardano-crypto-class ^>= 2.1.2
                       , filepath
                       , hedgehog
-                      , hedgehog-extras < 0.6.1
+                      , hedgehog-extras ^>= 0.6.1.0
                       , network
                       , process
                       , random
