@@ -602,6 +602,13 @@ EOL
 ####### perf-clients -> ssh )###################################################
         esac
       ;;
+####### perf-clients -> storage-kb-available )##################################
+      storage-kb-available )
+        local usage="USAGE: wb nomad perf-clients ${subop} NAME"
+        local node_name=${1:?$usage}; shift
+          wb nomad perf-clients ssh "${node_name}" df \
+        | grep /dev/disk/by-label/nixos | tr -s " " | cut -d" " -f4
+      ;;
 ####### perf-clients -> * )#####################################################
         * )
           usage_nomad
