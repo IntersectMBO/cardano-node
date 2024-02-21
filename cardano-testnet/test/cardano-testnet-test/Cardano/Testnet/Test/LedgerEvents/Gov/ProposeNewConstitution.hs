@@ -77,7 +77,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   TestnetRuntime
     { testnetMagic
     , poolNodes
-    , wallets=wallet0:wallet1:_
+    , wallets=wallet0:wallet1:wallet2:_
     , configurationFile
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
@@ -175,22 +175,21 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     ]
 
   -- Create constitution proposal
-
-  guardRailScriptFp <- H.note $ work </> "guard-rail-script.plutusV3"
-  H.writeFile guardRailScriptFp $ Text.unpack plutusV3NonSpendingScript
+  guardRailScript <- H.note $ work </> "guard-rail-script.plutusV3"
+  H.writeFile guardRailScript $ Text.unpack plutusV3NonSpendingScript
   -- TODO: Update help text for policyid. The script hash is not
   -- only useful for minting scripts
   constitutionScriptHash <- filter (/= '\n') <$>
     H.execCli' execConfig
       [ anyEraToString cEra, "transaction"
       , "policyid"
-      , "--script-file", guardRailScriptFp
+      , "--script-file", guardRailScript
       ]
   void $ H.execCli' execConfig
     [ "conway", "governance", "action", "create-constitution"
     , "--testnet"
-    , "--governance-action-deposit", show @Int 1_000_000 -- TODO: Get this from the node
-    , "--deposit-return-stake-verification-key-file", stakeVkeyFp
+    , "--governance-action-deposit", show @Int 1_000_000 -- TODO: retrieve this from conway genesis.
+    , "--deposit-return-stake-script-file", guardRailScript
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
     , "--constitution-url", "https://tinyurl.com/2pahcy6z"
@@ -298,7 +297,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     [ "conway", "transaction", "submit"
     , "--tx-file", voteTxFp
     ]
-
+  H.threadDelay 10_000_000
   -- We check that constitution was succcessfully ratified
 
   !eConstitutionAdopted
@@ -311,6 +310,53 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
                       (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
 
   void $ evalEither eConstitutionAdopted
+
+  -- TODO: Attempt a protocol parameters update (witnessed with guard rail script)
+  pparamsUpdateFp <- H.note $ work </> "protocol-parameters-upate.action"
+  void $ H.execCli' execConfig
+      [ anyEraToString cEra, "governance", "action", "create-protocol-parameters-update"
+      , "--testnet"
+      , "--governance-action-deposit", show @Int 1_000_000 -- TODO: retrieve this from conway genesis.
+      , "--deposit-return-stake-verification-key-file", stakeVkeyFp
+      , "--anchor-url", "https://tinyurl.com/3wrwb2as"
+      , "--anchor-data-hash", proposalAnchorDataHash
+      , "--constitution-script-hash", constitutionScriptHash
+      , "--committee-term-length", show @Int 1000
+      , "--out-file", pparamsUpdateFp
+      ]
+  updateProposalTxBody <- H.note $ work </> "update-proposal.txbody"
+  txin4 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
+  txin5 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
+  txinColl <- findLargestUtxoForPaymentKey epochStateView sbe wallet2
+
+  void $ H.execCli' execConfig
+    [ anyEraToString cEra, "transaction", "build"
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
+    , "--tx-in", Text.unpack $ renderTxIn txin4
+    , "--tx-in", Text.unpack $ renderTxIn txin5
+    , "--tx-in-collateral", Text.unpack $ renderTxIn txinColl
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show @Int 5_000_000
+    , "--proposal-file", pparamsUpdateFp
+    , "--proposal-script-file", guardRailScript
+    , "--proposal-redeemer-value", "0"
+    , "--witness-override", show @Int 12
+    , "--out-file", updateProposalTxBody
+    ]
+
+  updateProposalTx <- H.note $ work </> "update-proposal.tx"
+  void $ H.execCli' execConfig
+    [ "conway", "transaction", "sign"
+    , "--tx-body-file", updateProposalTxBody
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet1
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet2
+    , "--out-file", updateProposalTx
+    ]
+
+  void $ H.execCli' execConfig
+    [ "conway", "transaction", "submit"
+    , "--tx-file", updateProposalTx
+    ]
 
 foldBlocksCheckProposalWasSubmitted
   :: TxId -- TxId of submitted tx
