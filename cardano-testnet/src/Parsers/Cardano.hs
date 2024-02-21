@@ -26,8 +26,8 @@ optsTestnet envCli = CardanoTestnetOptions
   <*> pLegacyCardanoEra envCli
   <*> OA.option auto
       (   OA.long "epoch-length"
-      <>  OA.help "Epoch length"
-      <>  OA.metavar "MILLISECONDS"
+      <>  OA.help "Epoch length, in number of slots"
+      <>  OA.metavar "SLOTS"
       <>  OA.showDefault
       <>  OA.value (cardanoEpochLength cardanoDefaultTestnetOptions)
       )

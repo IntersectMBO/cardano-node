@@ -8,7 +8,7 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   | --alonzo-era
   | --babbage-era
   ]
-  [--epoch-length MILLISECONDS]
+  [--epoch-length SLOTS]
   [--slot-length SECONDS]
   --testnet-magic INT
   [--active-slots-coeff DOUBLE]

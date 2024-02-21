@@ -8,6 +8,7 @@ import qualified Cardano.Crypto.Init as Crypto
 import qualified Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
 import qualified Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
 import qualified Cardano.Testnet.Test.Cli.Babbage.Transaction
+import qualified Cardano.Testnet.Test.Cli.Conway.DRepRetirement as DRepRetirement
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldBlocks
@@ -39,6 +40,7 @@ tests = pure $ T.testGroup "test/Spec.hs"
             -- [ H.ignoreOnMacAndWindows "ProposeAndRatifyNewConstitution" LedgerEvents.hprop_ledger_events_propose_new_constitution
             [ H.ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
             , H.ignoreOnWindows "ProposeNewConstitutionSPO" LedgerEvents.hprop_ledger_events_propose_new_constitution_spo
+            , H.ignoreOnWindows "DRepRetirement" DRepRetirement.hprop_drep_retirement
             ]
           ]
       , T.testGroup "CLI"
