@@ -19,6 +19,7 @@ backend_nomadpodman() {
 
     # Overrided backend "methods"
 
+    # All sub-backends set these same jq envars.
     setenv-defaults )
       local usage="USAGE: wb backend $op BACKEND-DIR"
       local backend_dir=${1:?$usage}; shift
@@ -156,9 +157,7 @@ backend_nomadpodman() {
 
 }
 
-# Sets jq envars "profile_container_specs_file" ,"nomad_environment",
-# "nomad_task_driver" and "one_tracer_per_node".
-# It "overrides" completely `backend_nomad`'s `setenv-defaults`.
+# Sets the envars not shared by all the other sub-backends.
 setenv-defaults-nomadpodman() {
   local backend_dir="${1}"
 
