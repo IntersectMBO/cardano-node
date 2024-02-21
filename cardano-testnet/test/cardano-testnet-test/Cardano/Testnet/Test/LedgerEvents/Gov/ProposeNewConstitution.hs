@@ -39,7 +39,9 @@ import           GHC.Stack (HasCallStack, callStack)
 import           Lens.Micro
 import           System.FilePath ((</>))
 
+import           Testnet.Components.Configuration
 import           Testnet.Components.Query
+import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
@@ -175,6 +177,16 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   -- Create constitution proposal
 
+  guardRailScriptFp <- H.note $ work </> "guard-rail-script.plutusV3"
+  H.writeFile guardRailScriptFp $ Text.unpack plutusV3NonSpendingScript
+  -- TODO: Update help text for policyid. The script hash is not
+  -- only useful for minting scripts
+  constitutionScriptHash <- filter (/= '\n') <$>
+    H.execCli' execConfig
+      [ convertToEraString cEra, "transaction"
+      , "policyid"
+      , "--script-file", guardRailScriptFp
+      ]
   void $ H.execCli' execConfig
     [ "conway", "governance", "action", "create-constitution"
     , "--testnet"
@@ -184,6 +196,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     , "--anchor-data-hash", proposalAnchorDataHash
     , "--constitution-url", "https://tinyurl.com/2pahcy6z"
     , "--constitution-hash", constitutionHash
+    , "--constitution-script-hash", constitutionScriptHash
     , "--out-file", constitutionActionFp
     ]
 
