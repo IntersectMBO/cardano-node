@@ -614,7 +614,19 @@ allocate-run-nomadcloud() {
             " \
             "${NOMAD_CLIENTS_FILE}" \
           )
-          local instance_id availability_zone public_ipv4 mac_address cpu_model kernel_version
+          local node_id node_name instance_id availability_zone public_ipv4 mac_address cpu_model kernel_version
+          node_id="$( \
+             echo "${actual_client}" \
+            | \
+              jq -r \
+                '.id' \
+          )"
+          node_name="$( \
+             echo "${actual_client}" \
+            | \
+              jq -r \
+                '.name' \
+          )"
           instance_id="$( \
              echo "${actual_client}" \
             | \
@@ -658,6 +670,7 @@ allocate-run-nomadcloud() {
           # changes something related to Nomad Clients or AWS instances we
           # may hopefully notice it when the job fails to start (placement
           # errors).
+          msg "$(blue "INFO:") Nomad Task $(yellow "\"${task_name}\"") will be constrainted to $(yellow "AWS Instance ID \"${instance_id}\" with AZ \"${availability_zone}\"") that is currently running $(yellow "Nomad node \"${node_name}\" (${node_id})")"
           local group_constraints_array_plus="
             [ \
                 { \
@@ -706,6 +719,26 @@ allocate-run-nomadcloud() {
               "${dir}"/nomad/nomad-job.json \
           | \
             sponge "${dir}"/nomad/nomad-job.json
+          # Check if there is enough free storage space available!
+          local kb_free kb_needed
+          kb_free="$(wb nomad perf-clients storage-kb-available "${node_name}")"
+          # We are requiring 10.5GB on the explorer node and 9GB on the others.
+          if test "${task_name}" = "explorer"
+          then
+            # 9 GB for the explorer node, that includes the tx-generator.
+            # Plus giving 3 GB for the Nix Store and 1.5GB of margin.
+            kb_needed=14155776 # 13.5×1024×1024
+          else
+            # 7.5 GB for the nodes without the tx-generator.
+            # Plus giving 3 GB for the Nix Store and 1.5GB of margin.
+            kb_needed=12582912 # 12×1024×1024
+          fi
+          # This is just a warning message!
+          if test "${kb_free}" -lt "${kb_needed}"
+          then
+            msg "$(yellow "WARNING: Nomad node \"${node_name}\" (${node_id}) has less than ${kb_needed} bytes of storage available")"
+            read -p "Hit enter to continue ..."
+          fi
         done
         # Store this group's reproducibility constraints for debugging purposes.
           jq \
