@@ -169,14 +169,6 @@ def all_profile_variants:
       }
     } as $chainsync_cluster
   |
-    # "qa" class Nodes of Cardano World Nomad cluster
-    { composition:
-      { locations:                      ["eu-central-1", "us-east-2"]
-      , topology:                       "torus"
-      , with_explorer:                  true
-      }
-    } as $nomad_cardano_world_qa
-  |
     # P&T exclusive Nomad cluster Nodes
     { composition:
       { locations:                      ["eu-central-1", "us-east-1", "ap-southeast-2"]
@@ -561,6 +553,10 @@ def all_profile_variants:
       , desc: "AWS c5-2xlarge cluster dataset, 9 epochs"
     }) as $nomad_perf_plutus_base
   |
+   ($scenario_idle * $compose_fiftytwo * $dataset_empty *
+    { desc: "AWS c5-2xlarge cluster, deploy and start run only"
+    }) as $nomad_perf_idle_base
+  |
    ($scenario_model * $quadruplet * $dataset_current * $for_7ep *
     { node:
         { shutdown_on_slot_synced:        56000
@@ -590,6 +586,14 @@ def all_profile_variants:
     , desc: "Oct 2021 dataset size, four epochs."
     }) as $forge_stress_pre_base
   |
+   ($forge_stress_pre_base * $hexagon *
+    { analysis:
+      { filters:                        ["epoch3+"] }
+    , node:
+      { shutdown_on_slot_synced:        4800 }
+    , desc: "Status-quo dataset size, eight epochs, six nodes."
+    }) as $forge_stress_pre_large_base
+  |
    ($scenario_fixed_loaded * $triplet * $dataset_current *
     { node:
       { shutdown_on_slot_synced:        2400
@@ -597,11 +601,18 @@ def all_profile_variants:
     , desc: "Status-quo dataset size, four epochs."
     }) as $forge_stress_base
   |
+   ($scenario_fixed_loaded * $triplet * $dataset_current *
+    { node:
+      { shutdown_on_slot_synced:        1200
+      }
+    , desc: "Status-quo dataset size, two epochs."
+    }) as $forge_stress_short_base
+  |
    ($scenario_fixed_loaded * $triplet * $dataset_oct2021 *
     { node:
-      { shutdown_on_slot_synced:        2400
+      { shutdown_on_slot_synced:        1200
       }
-    , desc: "Status-quo dataset size, four epochs, smaller UTxO/delegation."
+    , desc: "Oct 2021 dataset size, two epochs."
     }) as $forge_stress_light_base
   |
    ($forge_stress_base * $hexagon *
@@ -655,10 +666,6 @@ def all_profile_variants:
     { name: "default-p2p"
     , desc: "Default, as per nix/workbench/profile/prof0-defaults.jq with P2P enabled"
     }
-  , $nomad_cardano_world_qa *
-    { name: "default-nomadcwqa"
-    , desc: "Default on Cardano World QA"
-    }
   , $nomad_perf_torus * $p2p *
     { name: "default-nomadperf"
     , desc: "Default on P&T exclusive cluster"
@@ -682,10 +689,6 @@ def all_profile_variants:
   , $old_tracing *
     { name: "oldtracing"
     , desc: "Default in legacy tracing mode"
-    }
-  , $nomad_cardano_world_qa * $old_tracing *
-    { name: "oldtracing-nomadcwqa"
-    , desc: "Default in legacy tracing mode on Cardano World QA"
     }
   , $nomad_perf_torus * $p2p * $old_tracing *
     { name: "oldtracing-nomadperf"
@@ -737,14 +740,6 @@ def all_profile_variants:
   , $citest_base * $with_rtview *
     { name: "ci-test-rtview"
     }
-  , $citest_base * $nomad_cardano_world_qa *
-    { name: "ci-test-nomadcwqa"
-    , desc: "ci-test on Cardano World QA"
-    }
-  , $citest_base * $nomad_cardano_world_qa * $old_tracing *
-    { name: "ci-test-oldtracing-nomadcwqa"
-    , desc: "ci-test in legacy tracing mode on Cardano World QA"
-    }
   , $citest_base * $nomad_perf_torus * $p2p *
     { name: "ci-test-nomadperf"
     , desc: "ci-test on P&T exclusive cluster"
@@ -779,14 +774,6 @@ def all_profile_variants:
     }
   , $cibench_base * $with_rtview *
     { name: "ci-bench-rtview"
-    }
-  , $cibench_base * $nomad_cardano_world_qa *
-    { name: "ci-bench-nomadcwqa"
-    , desc: "ci-bench on Cardano World QA"
-    }
-  , $cibench_base * $nomad_cardano_world_qa * $old_tracing *
-    { name: "ci-bench-oldtracing-nomadcwqa"
-    , desc: "ci-bench in legacy tracing mode on Cardano World QA"
     }
   , $cibench_base * $nomad_perf_torus * $p2p *
     { name: "ci-bench-nomadperf"
@@ -872,6 +859,9 @@ def all_profile_variants:
   , $nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "plutus-nomadperf"
     }
+  , $nomad_perf_idle_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
+    { name: "idle-nomadperf"
+    }
 
 ## P&T Nomad cluster: 52 nodes, 3 regions, value-only (with old tracing variant) and Plutus, no P2P flavour
   , $nomad_perf_base * $nomad_perf_dense * $costmodel_v8_preview *
@@ -942,17 +932,9 @@ def all_profile_variants:
     { name: "forge-stress-large"
     }
 
-  ## Status-quo (huge) dataset, 1 node
-  , $forge_stress_base * $solo *
-    { name: "forge-stress-solo"
-    }
-
   ## Status-quo (huge) dataset, small cluster (2 nodes)
   , $forge_stress_base *
     { name: "forge-stress"
-    }
-  , $forge_stress_light_base *
-    { name: "forge-stress-light"
     }
   , $forge_stress_base * $plutus_base * $plutus_loop_counter *
     { name: "forge-stress-p2p"
@@ -960,24 +942,43 @@ def all_profile_variants:
   , $forge_stress_base * $plutus_base * $plutus_loop_counter *
     { name: "forge-stress-plutus"
     }
-  , $forge_stress_base * $plutus_base * $plutus_loop_counter * $solo *
-    { name: "forge-stress-plutus-solo"
-    }
   , $forge_stress_base * $without_tracer *
     { name: "forge-stress-notracer"
     }
-
   , $forge_stress_pre_base *
     { name: "forge-stress-pre"
-    }
-  , $forge_stress_pre_base * $solo *
-    { name: "forge-stress-pre-solo"
     }
   , $forge_stress_pre_base * $plutus_base * $plutus_loop_counter *
     { name: "forge-stress-pre-plutus"
     }
   , $forge_stress_pre_base * $without_tracer *
     { name: "forge-stress-pre-notracer"
+    }
+
+  # single forger node, larger blocksize, various flavours
+  , $forge_stress_base * $solo * $costmodel_v8_preview *
+    { name: "forge-stress-solo"
+    , extra_desc: "with blocksize bumped to 88k"
+    }
+  , $forge_stress_base * $plutus_base * $plutus_loop_counter * $solo * $costmodel_v8_preview *
+    { name: "forge-stress-plutus-solo"
+    , extra_desc: "with blocksize bumped to 88k"
+    }
+  , $forge_stress_short_base * $solo * $costmodel_v8_preview *
+    { name: "forge-stress-solo-xs"
+    , extra_desc: "with blocksize bumped to 88k"
+    }
+  , $forge_stress_pre_base * $solo * $costmodel_v8_preview *
+    { name: "forge-stress-pre-solo"
+    , extra_desc: "with blocksize bumped to 88k"
+    }
+  , $forge_stress_pre_large_base * $solo * $costmodel_v8_preview *
+    { name: "forge-stress-pre-solo-xl"
+    , extra_desc: "with blocksize bumped to 88k"
+    }
+  , $forge_stress_light_base * $solo * $costmodel_v8_preview *
+    { name: "forge-stress-pre-solo-xs"
+    , extra_desc: "with blocksize bumped to 88k"
     }
 
   ## Large dataset, small cluster (3 nodes), variants for RTS parametrization

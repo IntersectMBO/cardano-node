@@ -122,6 +122,7 @@ in project.shellFor {
     sqlite-interactive
     tmux
     pkgs.cairo
+    pkgs.dyff
     pkgs.git
     pkgs.hlint
     pkgs.moreutils
