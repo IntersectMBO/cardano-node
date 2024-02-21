@@ -19,6 +19,7 @@ backend_nomadcloud() {
 
     # Overrided backend "methods"
 
+    # All sub-backends set these same jq envars.
     setenv-defaults )
       local usage="USAGE: wb backend $op BACKEND-DIR"
       local backend_dir=${1:?$usage}; shift
@@ -190,9 +191,7 @@ backend_nomadcloud() {
 
 }
 
-# Sets jq envars ("profile_container_specs_file" ,"nomad_environment",
-# "nomad_task_driver" and "one_tracer_per_node") and checks Nomad envars
-# (NOMAD_ADDR, NOMAD_NAMESPACE, NOMAD_TOKEN).
+# Sets the envars not shared by all the other sub-backends.
 setenv-defaults-nomadcloud() {
   local backend_dir="${1}"
 
@@ -683,9 +682,19 @@ allocate-run-nomadcloud() {
           # changes something related to Nomad Clients or AWS instances we
           # may hopefully notice it when the job fails to start (placement
           # errors).
-          msg "$(blue "INFO:") Nomad Task $(yellow "\"${task_name}\"") will be constrainted to $(yellow "AWS Instance ID \"${instance_id}\" with AZ \"${availability_zone}\"") that is currently running $(yellow "Nomad node \"${node_name}\" (${node_id})")"
+          msg "$(blue "INFO:") Nomad Task $(yellow "\"${task_name}\"") will be constrainted to $(yellow "AWS Instance ID \"${instance_id}\" with AZ \"${availability_zone}\"") running $(yellow "Nomad node \"${node_name}\" (${node_id})")"
           local group_constraints_array_plus="
             [ \
+                { \
+                  \"attribute\": \"\${node.unique.id}\" \
+                , \"value\":     \"${node_id}\" \
+                } \
+              ,
+                { \
+                  \"attribute\": \"\${node.unique.name}\" \
+                , \"value\":     \"${node_name}\" \
+                } \
+              ,
                 { \
                   \"attribute\": \"\${attr.platform.aws.instance-type}\" \
                 , \"value\":     \"${instance_type}\" \
@@ -856,7 +865,7 @@ check-deployment() {
   then
     echo "${node_specs_ante}" > "${dir}"/node-specs.ante.json
     echo "${node_specs_post}" > "${dir}"/node-specs.post.json
-    diff --side-by-side "${dir}"/node-specs.ante.json "${dir}"/node-specs.post.json
+    dyff between "${dir}"/node-specs.ante.json "${dir}"/node-specs.post.json
     msg "$(red "----------")"
     msg "$(red "REQUESTED AND DEPLOYED node-specs.json DO NOT MATCH")"
     msg "$(red "----------")"
@@ -877,7 +886,7 @@ check-deployment() {
   then
     echo "${topology_ante}" > "${dir}"/topology.ante.json
     echo "${topology_post}" > "${dir}"/topology.post.json
-    diff --side-by-side "${dir}"/topology.ante.json "${dir}"/topology.post.json
+    dyff between "${dir}"/topology.ante.json "${dir}"/topology.post.json
     msg "$(red "----------")"
     msg "$(red "REQUESTED AND DEPLOYED topology.json DO NOT MATCH")"
     msg "$(red "----------")"
