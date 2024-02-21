@@ -3,11 +3,11 @@
     "CHaP": {
       "flake": false,
       "locked": {
-        "lastModified": 1707293988,
-        "narHash": "sha256-UAa4nL8qhPyI133IJOPMBgLECa91CPPwwhypFXKm7Fw=",
+        "lastModified": 1708424080,
+        "narHash": "sha256-qeMLKu0E99UycbvXNEjtaVFRaB8NLIEQROwgQcEthFQ=",
         "owner": "intersectmbo",
         "repo": "cardano-haskell-packages",
-        "rev": "501510e79f9cf76012cba0e86f88fa0b8b053fbd",
+        "rev": "75c63f31a47341bfc64fb4985da2b93cc70dd1bc",
         "type": "github"
       },
       "original": {
@@ -66,17 +66,17 @@
     "blst": {
       "flake": false,
       "locked": {
-        "lastModified": 1656163412,
-        "narHash": "sha256-xero1aTe2v4IhWIJaEDUsVDOfE77dOV5zKeHWntHogY=",
+        "lastModified": 1691598027,
+        "narHash": "sha256-oqljy+ZXJAXEB/fJtmB8rlAr4UXM+Z2OkDa20gpILNA=",
         "owner": "supranational",
         "repo": "blst",
-        "rev": "03b5124029979755c752eec45f3c29674b558446",
+        "rev": "3dd0f804b1819e5d03fb22ca2e6fac105932043a",
         "type": "github"
       },
       "original": {
         "owner": "supranational",
+        "ref": "v0.3.11",
         "repo": "blst",
-        "rev": "03b5124029979755c752eec45f3c29674b558446",
         "type": "github"
       }
     },
@@ -922,11 +922,11 @@
         "sodium": "sodium"
       },
       "locked": {
-        "lastModified": 1707337252,
-        "narHash": "sha256-sliOZlzvx3sG+YqkgcXqK7Va0OyYFD+VPWiEK+qeoNI=",
+        "lastModified": 1708437078,
+        "narHash": "sha256-EUsAEG0LmnMmX7Z6JW2LX8/VhpAJ2dXVwVGXWn5LmxQ=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "3358489541bdc1228afaa678c2adf4bb891f560e",
+        "rev": "5ab7134bb21d7bd858dbe1c702761aa7e15eaf88",
         "type": "github"
       },
       "original": {
