@@ -117,7 +117,7 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
   -- TODO: Remove this rewrite.
  -- 50 second epochs
  -- Epoch length should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"
-  H.rewriteJsonFile genesisShelleyFpAbs $ \o -> o
+  H.rewriteJsonFile @Aeson.Value genesisShelleyFpAbs $ \o -> o
     & L.key "protocolParams" .  L.key "rho" . L._Number  .~ 0.1
     & L.key "protocolParams" .  L.key "tau" . L._Number  .~ 0.1
     & L.key "protocolParams" . L.key "protocolVersion" . L.key "major" . L._Integer .~ 8
