@@ -38,10 +38,10 @@ tests = do
   pure $ testGroup "test/Spec.hs"
     [ testGroup "Spec"
         [ testGroup "Ledger Events"
-            [ H.ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
-            , H.ignoreOnWindows "Treasury Growth" LedgerEvents.prop_check_if_treasury_is_growing
+            [ --H.ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
+           -- , H.ignoreOnWindows "Treasury Growth" LedgerEvents.prop_check_if_treasury_is_growing
             -- TODO: Replace foldBlocks with checkLedgerStateCondition
-            , testGroup "Governance"
+              testGroup "Governance"
                 [ H.ignoreOnMacAndWindows "ProposeAndRatifyNewConstitution" Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution.hprop_ledger_events_propose_new_constitution
                   -- FIXME Those tests are flaky
                   -- , H.ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
