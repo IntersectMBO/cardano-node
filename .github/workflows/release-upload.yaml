@@ -46,7 +46,9 @@ jobs:
     needs: [wait-for-hydra]
     strategy:
       matrix:
-        arch: [linux, macos, win64]
+        # Disable windows until libblst works for windows cross compilation builds 
+        # arch: [linux, macos, win64]
+        arch: [linux, macos]
     name: "Download Asset from the Cache"
     runs-on: ubuntu-latest
     steps:
@@ -95,14 +97,16 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: ${{ github.sha }}-macos
-      - uses: actions/download-artifact@v3
-        with:
-          name: ${{ github.sha }}-win64
+      # Disable windows until libblst works for windows cross compilation builds 
+      # - uses: actions/download-artifact@v3
+      #   with:
+      #     name: ${{ github.sha }}-win64
       - name: Release
         uses: input-output-hk/action-gh-release@v1
         with:
           draft: true
           files: |
-            cardano-node-*-win64.zip
+            # Disable windows until libblst works for windows cross compilation builds 
+            # cardano-node-*-win64.zip
             cardano-node-*-macos.tar.gz
             cardano-node-*-linux.tar.gz
