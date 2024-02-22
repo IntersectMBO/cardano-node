@@ -23,10 +23,9 @@ let
       accessPoints = map (e: builtins.removeAttrs e ["valency"]) g.accessPoints;
       advertise = g.advertise or false;
     }) (cfg.publicProducers ++ (cfg.instancePublicProducers i));
+    bootstrapPeers = cfg.bootstrapPeers;
   } // optionalAttrs (cfg.usePeersFromLedgerAfterSlot != null) {
     useLedgerAfterSlot = cfg.usePeersFromLedgerAfterSlot;
-  } // optionalAttrs (cfg.bootstrapPeers != null) {
-    bootstrapPeers = cfg.bootstrapPeers;
   };
 
   oldTopology = i: {
@@ -43,14 +42,14 @@ let
     let
       checkEval = tryEval (
         assert
-          if cfg.useBootstrapPeers == [] && all (e: e.trustable != true) ((newTopology i).localRoots)
+          if cfg.bootstrapPeers == [] && all (e: e.trustable != true) ((newTopology i).localRoots)
           then false
           else true;
       newTopology i);
     in
       if checkEval.success
       then checkEval.value
-      else abort "When useBootstrapPeers is an empty list, at least one localRoot must be trustable, otherwise cardano node will fail to start.";
+      else abort "When bootstrapPeers is an empty list, at least one localRoot must be trustable, otherwise cardano node will fail to start.";
 
   selectTopology = i:
     if cfg.topology != null
