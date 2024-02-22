@@ -1,0 +1,71 @@
+            102 ┃   -- stake-pools to stdout
+            103 ┃   stakePoolsOut <- H.execCli' execConfig [ "conway", "query", "stake-pools" ]
+                ┃   │ ━━━━ command ━━━━
+                ┃   │ /home/churlin/dev/cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.10.7/cardano-cli-8.20.0.0/x/cardano-cli/build/cardano-cli/cardano-cli conway query stake-pools
+            104 ┃   H.note_ stakePoolsOut
+                ┃   │ pool19eqkmh8xcs3d9f7zcvc6fdkeef2yhr07lj6ztt2e0vfv23guf63
+                ┃   │ pool1hccwz53rd4e0t4cf0h89t2hxadxta7val2d2qrsqmn4kvgfjuct
+                ┃   │ pool16lkzjfdjlar9mmj7jpwm2vrwhcr7zc8aty0mfpke7jwnvaa548q
+            105 ┃ 
+            106 ┃   stakePoolsOutJSON <- H.execCli' execConfig [ "conway", "query", "stake-pools", "--output-json" ]
+                ┃   │ ━━━━ command ━━━━
+                ┃   │ /home/churlin/dev/cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.10.7/cardano-cli-8.20.0.0/x/cardano-cli/build/cardano-cli/cardano-cli conway query stake-pools --output-json
+            107 ┃   H.note_ stakePoolsOutJSON
+                ┃   │ [
+                ┃   │     "pool19eqkmh8xcs3d9f7zcvc6fdkeef2yhr07lj6ztt2e0vfv23guf63",
+                ┃   │     "pool1hccwz53rd4e0t4cf0h89t2hxadxta7val2d2qrsqmn4kvgfjuct",
+                ┃   │     "pool16lkzjfdjlar9mmj7jpwm2vrwhcr7zc8aty0mfpke7jwnvaa548q"
+                ┃   │ ]
+            108 ┃ 
+            109 ┃   stakePoolsOutText <- H.execCli' execConfig [ "conway", "query", "stake-pools", "--output-text" ]
+                ┃   │ ━━━━ command ━━━━
+                ┃   │ /home/churlin/dev/cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.10.7/cardano-cli-8.20.0.0/x/cardano-cli/build/cardano-cli/cardano-cli conway query stake-pools --output-text
+            110 ┃   H.note_ stakePoolsOutText
+                ┃   │ pool19eqkmh8xcs3d9f7zcvc6fdkeef2yhr07lj6ztt2e0vfv23guf63
+                ┃   │ pool1hccwz53rd4e0t4cf0h89t2hxadxta7val2d2qrsqmn4kvgfjuct
+                ┃   │ pool16lkzjfdjlar9mmj7jpwm2vrwhcr7zc8aty0mfpke7jwnvaa548q
+            111 ┃ 
+            112 ┃   -- stake-pools to a file
+            113 ┃   let stakePoolsOutFile = work </> "stake-pools-out.json"
+            114 ┃   H.noteM_ $ H.execCli' execConfig [ "conway", "query", "stake-pools"
+            115 ┃                                    , "--out-file", stakePoolsOutFile]
+                ┃                                    │ ━━━━ command ━━━━
+                ┃                                    │ /home/churlin/dev/cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.10.7/cardano-cli-8.20.0.0/x/cardano-cli/build/cardano-cli/cardano-cli conway query stake-pools --out-file /tmp/nix-shell.cM7l1B/cli-queries-test-c7668c97f355408d/stake-pools-out.json
+            116 ┃   stakePoolsOutFileContent <- H.evalEitherM $ H.readJsonFile @Aeson.Value stakePoolsOutFile
+                ┃   │ Reading JSON file: /tmp/nix-shell.cM7l1B/cli-queries-test-c7668c97f355408d/stake-pools-out.json
+            117 ┃   H.note_ $ Text.unpack $ TL.decodeUtf8 $ LBS.toStrict $ Aeson.encodePretty stakePoolsOutFileContent
+                ┃   │ [
+                ┃   │     "pool19eqkmh8xcs3d9f7zcvc6fdkeef2yhr07lj6ztt2e0vfv23guf63",
+                ┃   │     "pool1hccwz53rd4e0t4cf0h89t2hxadxta7val2d2qrsqmn4kvgfjuct",
+                ┃   │     "pool16lkzjfdjlar9mmj7jpwm2vrwhcr7zc8aty0mfpke7jwnvaa548q"
+                ┃   │ ]
+            118 ┃ 
+            119 ┃   -- stake-pools to a file - JSON
+            120 ┃   let stakePoolsOutFileJSON = work </> "stake-pools-out-new.json"
+            121 ┃   H.noteM_ $ H.execCli' execConfig [ "conway", "query", "stake-pools"
+            122 ┃                                    , "--output-json"
+            123 ┃                                    , "--out-file", stakePoolsOutFileJSON]
+                ┃                                    │ ━━━━ command ━━━━
+                ┃                                    │ /home/churlin/dev/cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.10.7/cardano-cli-8.20.0.0/x/cardano-cli/build/cardano-cli/cardano-cli conway query stake-pools --output-json --out-file /tmp/nix-shell.cM7l1B/cli-queries-test-c7668c97f355408d/stake-pools-out-new.json
+            124 ┃   stakePoolsOutFileJSONContent <- H.evalEitherM $ H.readJsonFile @Aeson.Value stakePoolsOutFileJSON
+                ┃   │ Reading JSON file: /tmp/nix-shell.cM7l1B/cli-queries-test-c7668c97f355408d/stake-pools-out-new.json
+            125 ┃   H.note_ $ Text.unpack $ TL.decodeUtf8 $ LBS.toStrict $ Aeson.encodePretty stakePoolsOutFileJSONContent
+                ┃   │ [
+                ┃   │     "pool19eqkmh8xcs3d9f7zcvc6fdkeef2yhr07lj6ztt2e0vfv23guf63",
+                ┃   │     "pool1hccwz53rd4e0t4cf0h89t2hxadxta7val2d2qrsqmn4kvgfjuct",
+                ┃   │     "pool16lkzjfdjlar9mmj7jpwm2vrwhcr7zc8aty0mfpke7jwnvaa548q"
+                ┃   │ ]
+            126 ┃ 
+            127 ┃   -- stake-pools to a file - TEXT
+            128 ┃   let stakePoolsOutFileText = work </> "stake-pools-out.json"
+            129 ┃   H.noteM_ $ H.execCli' execConfig [ "conway", "query", "stake-pools"
+            130 ┃                                    , "--output-text"
+            131 ┃                                    , "--out-file", stakePoolsOutFileText]
+                ┃                                    │ ━━━━ command ━━━━
+                ┃                                    │ /home/churlin/dev/cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.10.7/cardano-cli-8.20.0.0/x/cardano-cli/build/cardano-cli/cardano-cli conway query stake-pools --output-text --out-file /tmp/nix-shell.cM7l1B/cli-queries-test-c7668c97f355408d/stake-pools-out.json
+            132 ┃   stakePoolsOutFileTextContent <- H.readFile stakePoolsOutFileText
+                ┃   │ Reading file: /tmp/nix-shell.cM7l1B/cli-queries-test-c7668c97f355408d/stake-pools-out.json
+            133 ┃   H.note_ stakePoolsOutFileTextContent
+                ┃   │ pool19eqkmh8xcs3d9f7zcvc6fdkeef2yhr07lj6ztt2e0vfv23guf63
+                ┃   │ pool1hccwz53rd4e0t4cf0h89t2hxadxta7val2d2qrsqmn4kvgfjuct
+                ┃   │ pool16lkzjfdjlar9mmj7jpwm2vrwhcr7zc8aty0mfpke7jwnvaa548q
