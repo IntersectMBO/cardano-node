@@ -1,0 +1,23 @@
+            102 ┃   -- stake-pools to stdout
+            103 ┃   stakePoolsOut <- H.execCli' execConfig [ "conway", "query", "stake-pools" ]
+                ┃   │ ━━━━ command ━━━━
+                ┃   │ /home/churlin/dev/cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.10.7/cardano-cli-8.20.1.0/x/cardano-cli/build/cardano-cli/cardano-cli conway query stake-pools
+            104 ┃   H.note_ stakePoolsOut
+                ┃   │ pool1zg6ugkqs960ycs2c6d8pdefv8puhlcfcxptpj434tpl4jlzvv8r
+                ┃   │ pool13hf3uspd52xgyqtmscmnlesr2ahyq0znkp9ucrtaecx7wd3prpg
+                ┃   │ pool1mpnz8vwesxuz0zh0e4adp2ac0ze8yh7lyjzjq5xn9urygun9n8r
+            105 ┃ 
+            106 ┃   -- stake-pools to a file
+            107 ┃   let stakePoolsOutFile = work </> "stake-pools-out.json"
+            108 ┃   H.noteM_ $ H.execCli' execConfig [ "conway", "query", "stake-pools"
+            109 ┃                                    , "--out-file", stakePoolsOutFile]
+                ┃                                    │ ━━━━ command ━━━━
+                ┃                                    │ /home/churlin/dev/cardano-node/dist-newstyle/build/x86_64-linux/ghc-8.10.7/cardano-cli-8.20.1.0/x/cardano-cli/build/cardano-cli/cardano-cli conway query stake-pools --out-file /tmp/nix-shell.CAki1i/cli-queries-test-f8c599751c1657cf/stake-pools-out.json
+            110 ┃   stakePoolsOutFileContent <- H.evalEitherM $ H.readJsonFile @Aeson.Value stakePoolsOutFile
+                ┃   │ Reading JSON file: /tmp/nix-shell.CAki1i/cli-queries-test-f8c599751c1657cf/stake-pools-out.json
+            111 ┃   H.note_ $ Text.unpack $ TL.decodeUtf8 $ LBS.toStrict $ Aeson.encodePretty stakePoolsOutFileContent
+                ┃   │ [
+                ┃   │     "pool1zg6ugkqs960ycs2c6d8pdefv8puhlcfcxptpj434tpl4jlzvv8r",
+                ┃   │     "pool13hf3uspd52xgyqtmscmnlesr2ahyq0znkp9ucrtaecx7wd3prpg",
+                ┃   │     "pool1mpnz8vwesxuz0zh0e4adp2ac0ze8yh7lyjzjq5xn9urygun9n8r"
+                ┃   │ ]
