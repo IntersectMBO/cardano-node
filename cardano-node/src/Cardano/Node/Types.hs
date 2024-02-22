@@ -32,7 +32,7 @@ module Cardano.Node.Types
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Pretty
+
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto

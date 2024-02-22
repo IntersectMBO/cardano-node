@@ -5,7 +5,7 @@ module Cardano.Node.Protocol
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Pretty
+
 
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Protocol.Byron

@@ -22,7 +22,7 @@ module Cardano.Node.Protocol.Shelley
   ) where
 
 import qualified Cardano.Api as Api
-import           Cardano.Api.Pretty
+
 import           Cardano.Api.Shelley hiding (FileError)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto

@@ -9,7 +9,7 @@ module Cardano.Node.Protocol.Conway
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Pretty
+
 
 import qualified Cardano.Ledger.Conway.Genesis as Conway
 import           Cardano.Node.Orphans ()

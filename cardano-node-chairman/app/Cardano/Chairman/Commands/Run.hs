@@ -10,7 +10,7 @@ module Cardano.Chairman.Commands.Run
 
 import           Cardano.Api
 import qualified Cardano.Api as Api
-import           Cardano.Api.Pretty
+
 
 import           Cardano.Chairman (chairmanTest)
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..),

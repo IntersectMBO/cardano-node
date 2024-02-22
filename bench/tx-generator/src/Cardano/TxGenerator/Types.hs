@@ -18,7 +18,7 @@ import           GHC.Natural
 import           Prettyprinter
 
 import           Cardano.Api
-import           Cardano.Api.Pretty
+
 
 import           Cardano.Api.Shelley (ProtocolParameters)
 import           Cardano.Ledger.Crypto (StandardCrypto)

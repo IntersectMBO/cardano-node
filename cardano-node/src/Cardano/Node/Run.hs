@@ -23,7 +23,7 @@ module Cardano.Node.Run
 
 import           Cardano.Api (File (..), FileDirection (..))
 import qualified Cardano.Api as Api
-import           Cardano.Api.Pretty
+
 
 import           Cardano.Prelude (FatalError (..), bool, (:~:) (..))
 

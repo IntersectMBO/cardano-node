@@ -20,7 +20,7 @@ module Cardano.TxSubmit.Types
   ) where
 
 import           Cardano.Api (Error (..), TxId, TxValidationErrorInCardanoMode (..), textShow)
-import           Cardano.Api.Pretty
+
 
 import           Cardano.Binary (DecoderError)
 import           Cardano.TxSubmit.Orphans ()
@@ -46,7 +46,7 @@ newtype RawCborDecodeError = RawCborDecodeError [DecoderError]
   deriving (Eq, Generic, Show)
 
 instance Error RawCborDecodeError where
-  prettyError (RawCborDecodeError decodeErrors) = "RawCborDecodeError decode error: " <> pshow (fmap pshow decodeErrors)
+  prettyError (RawCborDecodeError decodeErrors) = error "" -- "RawCborDecodeError decode error: " <> show (fmap show decodeErrors)
 
 deriving anyclass instance ToJSON RawCborDecodeError
 

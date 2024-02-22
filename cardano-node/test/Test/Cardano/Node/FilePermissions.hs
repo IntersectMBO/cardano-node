@@ -18,7 +18,7 @@ import           Data.Foldable
 import           System.Directory (removeFile)
 
 import           Cardano.Api
-import           Cardano.Api.Pretty
+
 import           Cardano.Node.Run (checkVRFFilePermissions)
 import           Control.Exception (bracket)
 import           Control.Monad (Monad (..))
