@@ -103,11 +103,33 @@ hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> 
   stakePoolsOut <- H.execCli' execConfig [ "conway", "query", "stake-pools" ]
   H.note_ stakePoolsOut
 
+  stakePoolsOutJSON <- H.execCli' execConfig [ "conway", "query", "stake-pools", "--output-json" ]
+  H.note_ stakePoolsOutJSON
+
+  stakePoolsOutText <- H.execCli' execConfig [ "conway", "query", "stake-pools", "--output-text" ]
+  H.note_ stakePoolsOutText
+
   -- stake-pools to a file
   let stakePoolsOutFile = work </> "stake-pools-out.json"
   H.noteM_ $ H.execCli' execConfig [ "conway", "query", "stake-pools"
                                    , "--out-file", stakePoolsOutFile]
   stakePoolsOutFileContent <- H.evalEitherM $ H.readJsonFile @Aeson.Value stakePoolsOutFile
   H.note_ $ Text.unpack $ TL.decodeUtf8 $ LBS.toStrict $ Aeson.encodePretty stakePoolsOutFileContent
+
+  -- stake-pools to a file - JSON
+  let stakePoolsOutFileJSON = work </> "stake-pools-out-new.json"
+  H.noteM_ $ H.execCli' execConfig [ "conway", "query", "stake-pools"
+                                   , "--output-json"
+                                   , "--out-file", stakePoolsOutFileJSON]
+  stakePoolsOutFileJSONContent <- H.evalEitherM $ H.readJsonFile @Aeson.Value stakePoolsOutFileJSON
+  H.note_ $ Text.unpack $ TL.decodeUtf8 $ LBS.toStrict $ Aeson.encodePretty stakePoolsOutFileJSONContent
+
+  -- stake-pools to a file - TEXT
+  let stakePoolsOutFileText = work </> "stake-pools-out.json"
+  H.noteM_ $ H.execCli' execConfig [ "conway", "query", "stake-pools"
+                                   , "--output-text"
+                                   , "--out-file", stakePoolsOutFileText]
+  stakePoolsOutFileTextContent <- H.readFile stakePoolsOutFileText
+  H.note_ stakePoolsOutFileTextContent
 
   H.assert False
