@@ -90,6 +90,7 @@ jobs:
     - name: Build dry run
       run: |
         cabal build all --dry-run --minimize-conflict-set
+        jq < dist-newstyle/cache/plan.json
 
     # For users who fork cardano-node and want to define a writable cache, then can set up their own
     # S3 bucket then define in their forked repository settings the following secrets:
