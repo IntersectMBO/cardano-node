@@ -14,7 +14,7 @@ module Testnet.Ping
   ) where
 
 import           Cardano.Api (Error (..))
-import           Cardano.Api.Pretty
+
 
 import           Cardano.Network.Ping (HandshakeFailure, NodeVersion (..), handshakeDec,
                    handshakeReq, isSameVersionAndMagic, supportedNodeToClientVersions)

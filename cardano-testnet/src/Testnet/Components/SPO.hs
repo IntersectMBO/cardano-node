@@ -156,14 +156,18 @@ createScriptStakeRegistrationCertificate
 createScriptStakeRegistrationCertificate tempAbsP anyCEra scriptFile deposit outputFp =
   GHC.withFrozenCallStack $ do
     let tempAbsPath' = unTmpAbsPath tempAbsP
-
-    void $ execCli
+        depositFlag = if anyCEra == AnyCardanoEra ConwayEra
+                      then ["--key-reg-deposit-amt", show deposit]
+                      else []
+        
+        
+    -- TODO: adjust key-reg-deposit-amt to be a function of the era
+    void $ execCli $ 
       [ convertToEraString anyCEra
       , "stake-address", "registration-certificate"
       , "--stake-script-file", scriptFile
-      , "--key-reg-deposit-amt", show deposit
       , "--out-file", tempAbsPath' </> outputFp
-      ]
+      ] ++ depositFlag
 
 
 -- TODO: Remove me and replace with new era based commands

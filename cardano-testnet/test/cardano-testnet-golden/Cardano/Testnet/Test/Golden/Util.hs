@@ -11,7 +11,7 @@ module Cardano.Testnet.Test.Golden.Util
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Pretty
+
 
 import           Control.Monad.Catch
 import           Control.Monad.IO.Class (MonadIO (..))

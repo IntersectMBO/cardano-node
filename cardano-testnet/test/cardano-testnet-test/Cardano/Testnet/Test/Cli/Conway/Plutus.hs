@@ -17,6 +17,7 @@ module Cardano.Testnet.Test.Cli.Conway.Plutus
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (..))
 import           Cardano.Testnet
@@ -29,6 +30,8 @@ import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
+import qualified Data.Set as Set
+import Data.Set (Set)
 import qualified Data.Text.Encoding as Text
 import qualified Data.Time.Clock as DTC
 import           GHC.Stack (callStack)
@@ -57,6 +60,9 @@ import           Testnet.Runtime
 -- Certifying YES
 -- Voting NO
 -- Proposing NO
+
+-- Script stake registration and delegation in a single tx works in Conway! (tried with spending and minting script) 
+-- Try Babbage
 hprop_plutus_v3 :: Property
 hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
@@ -134,9 +140,27 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
   createScriptStakeRegistrationCertificate
     tempAbsPath
     anyEra
-    plutusSpendingScript
+    plutusMintingScript
     0
     scriptStakeRegistrationCertificate
+  -- Create script stake delegation certificate 
+
+  void $ execCli' execConfig
+    [ "query", "stake-pools"
+    , "--out-file", work </> "stake-pools.json"
+    ]
+
+  currRegPools <- H.leftFailM $ H.readJsonFile $ work </> "stake-pools.json"
+  poolIds <- H.noteShowM $ H.jsonErrorFail $ Aeson.fromJSON @(Set PoolId) currRegPools
+  scriptStakeDelegationCertFp <- H.note $ work </> "script-stake-delegation.cert"
+  void $ execCli
+      [ convertToEraString anyEra
+      , "stake-address", "stake-delegation-certificate"
+      , "--stake-script-file", plutusMintingScript
+      , "--stake-pool-id", Text.unpack $ serialiseToBech32 (Set.elemAt 0 poolIds)
+      , "--out-file", scriptStakeDelegationCertFp
+      ]
+
 
   -- 1. Put UTxO and datum at Plutus spending script address
   --    Register script stake address
@@ -196,7 +220,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
       txout = mconcat [ utxoAddr, "+", show @Int 2_000_000
                       , "+", mintValue
                       ]
-
+  -- Try to delegate here as well
   void $ execCli' execConfig
     [ convertToEraString anyEra, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 1
@@ -209,7 +233,10 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
     , "--mint-script-file", plutusMintingScript
     , "--mint-redeemer-file", datumFile -- We just reuse the datum file for the redeemer
     , "--certificate-file", scriptStakeRegistrationCertificate
-    , "--certificate-script-file", plutusSpendingScript
+    , "--certificate-script-file", plutusMintingScript
+    , "--certificate-redeemer-file", datumFile
+    , "--certificate-file", scriptStakeDelegationCertFp
+    , "--certificate-script-file", plutusMintingScript
     , "--certificate-redeemer-file", datumFile
     , "--tx-out", txout
     , "--out-file", spendScriptUTxOTxBody

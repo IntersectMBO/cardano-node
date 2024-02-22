@@ -15,7 +15,7 @@ module Testnet.Components.Configuration
   ) where
 
 import           Cardano.Api.Ledger (StandardCrypto)
-import           Cardano.Api.Pretty
+
 import           Cardano.Api.Shelley hiding (cardanoEra)
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P

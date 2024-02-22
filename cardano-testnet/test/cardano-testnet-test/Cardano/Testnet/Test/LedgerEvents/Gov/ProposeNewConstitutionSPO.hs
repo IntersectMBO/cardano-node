@@ -239,7 +239,7 @@ getConstitutionProposal ::
   -> EpochNo -- ^ The termination epoch: the constitution proposal must be found *before* this epoch
   -> m (Maybe (L.GovActionId StandardCrypto))
 getConstitutionProposal nodeConfigFile socketPath maxEpoch = do
-  result <- runExceptT $ checkLedgerStateCondition nodeConfigFile socketPath QuickValidation maxEpoch Nothing
+  result <- runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState) -> do
         case testEquality expectedEra actualEra of
           Just Refl -> do

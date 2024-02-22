@@ -25,7 +25,7 @@ module Testnet.Property.Utils
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Pretty
+
 
 import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
 import           Cardano.CLI.Types.Output
@@ -56,7 +56,6 @@ import           System.FilePath ((</>))
 import           System.Info (os)
 import qualified System.IO.Unsafe as IO
 
-import           Testnet.Components.SPO (decodeEraUTxO)
 import qualified Testnet.Process.Run as H
 
 import qualified Hedgehog as H

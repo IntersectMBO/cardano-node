@@ -11,7 +11,7 @@ module Cardano.Testnet.Test.Node.Shutdown
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Pretty
+
 
 import           Cardano.Testnet
 

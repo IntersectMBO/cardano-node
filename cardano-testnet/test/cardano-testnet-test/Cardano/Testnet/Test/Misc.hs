@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Cardano.Testnet.Test.Misc where
 
-import           Cardano.Api.Pretty
+
 
 import           Cardano.CLI.EraBased.Run.Query (renderOpCertIntervalInformation)
 import           Cardano.CLI.Types.Common
@@ -21,18 +21,18 @@ prop_op_cert_valid_kes_period :: GHC.HasCallStack => FilePath -> QueryKesPeriodI
 prop_op_cert_valid_kes_period opCertFp output =
     case qKesOpCertIntervalInformation output of
       OpCertWithinInterval{} -> success
-      info@OpCertStartingKesPeriodIsInTheFuture{} ->
-        failMessage GHC.callStack . docToString
-          $ "Expected OpCertWithinInterval but got: OpCertStartingKesPeriodIsInTheFuture\n"
-          <> renderOpCertIntervalInformation opCertFp info
-      info@OpCertExpired{} ->
-        failMessage GHC.callStack . docToString
-          $ "Expected OpCertWithinInterval but got: OpCertExpired\n"
-          <> renderOpCertIntervalInformation opCertFp info
-      info@OpCertSomeOtherError{} ->
-        failMessage GHC.callStack . docToString
-          $ "Expected OpCertWithinInterval but got: OpCertSomeOtherError\n"
-          <> renderOpCertIntervalInformation opCertFp info
+      info@OpCertStartingKesPeriodIsInTheFuture{} -> error ""
+       -- failMessage GHC.callStack . docToString
+       --   $ "Expected OpCertWithinInterval but got: OpCertStartingKesPeriodIsInTheFuture\n"
+       --   <> renderOpCertIntervalInformation opCertFp info
+      info@OpCertExpired{} -> error ""
+        --failMessage GHC.callStack . docToString
+        --  $ "Expected OpCertWithinInterval but got: OpCertExpired\n"
+        --  <> renderOpCertIntervalInformation opCertFp info
+      info@OpCertSomeOtherError{} -> error ""
+        --failMessage GHC.callStack . docToString
+        --  $ "Expected OpCertWithinInterval but got: OpCertSomeOtherError\n"
+        --  <> renderOpCertIntervalInformation opCertFp info
 
 
 -- | This property parses the node's logs for the output "TraceForgedBlock" to confirm that

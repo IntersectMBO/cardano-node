@@ -32,7 +32,7 @@ module Testnet.Runtime
 
 import           Cardano.Api
 import qualified Cardano.Api as Api
-import           Cardano.Api.Pretty
+
 
 import qualified Cardano.Chain.Genesis as G
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))

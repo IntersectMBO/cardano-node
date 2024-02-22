@@ -13,7 +13,6 @@ import           Cardano.Api
 import qualified Cardano.Api as Api
 import           Cardano.Api.Ledger
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Pretty (docToString)
 
 import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as L
@@ -240,7 +239,7 @@ waitDRepsNumber' ::
   -> Int -- ^ The expected numbers of DReps. If this number is not reached until the termination epoch, this function fails the test.
   -> m (Maybe [L.DRepState StandardCrypto]) -- ^ The DReps when the expected number of DReps was attained.
 waitDRepsNumber' nodeConfigFile socketPath maxEpoch expectedDRepsNb = do
-  result <- runExceptT $ checkLedgerStateCondition nodeConfigFile socketPath QuickValidation maxEpoch Nothing
+  result <- runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState) -> do
         case testEquality sbe actualEra of
           Just Refl -> do
