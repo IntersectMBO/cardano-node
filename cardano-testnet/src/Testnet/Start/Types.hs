@@ -37,9 +37,9 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | List of node options. Each option will result in a single node being
     -- created.
     cardanoNodes :: [TestnetNodeOptions]
-  , cardanoNodeEra :: AnyCardanoEra
-  , cardanoEpochLength :: Int
-  , cardanoSlotLength :: Double
+  , cardanoNodeEra :: AnyCardanoEra -- ^ The era to start at
+  , cardanoEpochLength :: Int -- ^ An epoch's duration, in number of slots
+  , cardanoSlotLength :: Double -- ^ Slot length, in seconds
   , cardanoTestnetMagic :: Int
   , cardanoActiveSlotsCoeff :: Double
   , cardanoMaxSupply :: Word64 -- ^ The amount of ADA you are starting your testnet with
