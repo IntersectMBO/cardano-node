@@ -1,0 +1,8 @@
+tests: True
+program-options
+  ghc-options: -Wno-unused-packages
+packages:
+  ../cardano-cli/cardano-cli/
+-- /media/vgubuntu256-root/home/churlin/dev/cardano-cli/cardano-cli
+--  ../cardano-api/cardano-api/
+-- ../hedgehog-extras
