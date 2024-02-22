@@ -72,7 +72,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
 
   let
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
-    sbe = ShelleyBasedEraConway
+    sbe = ShelleyBasedEraBabbage
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era
     options = cardanoDefaultTestnetOptions
@@ -109,6 +109,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
 
   plutusSpendingScript <- H.note "/home/jordan/Repos/Work/intersect-mbo/cardano-node/cardano-testnet/test/cardano-testnet-test/files/plutus/v3/always-succeeds.plutus"
   plutusMintingScript <- H.note "/home/jordan/Repos/Work/intersect-mbo/cardano-node/cardano-testnet/test/cardano-testnet-test/files/plutus/v3/minting-script.plutus"
+  plutusMintingScriptV2 <- H.note "/home/jordan/Repos/Work/intersect-mbo/cardano-node/cardano-testnet/test/cardano-testnet-test/files/plutus/v2/minting-script.plutus"
   datumFile <- H.note "/home/jordan/Repos/Work/intersect-mbo/cardano-node/cardano-testnet/test/cardano-testnet-test/files/plutus/v3/42.datum"
   let sendAdaToScriptAddressTxBody = work </> "send-ada-to-script-address-tx-body"
 
@@ -122,7 +123,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
     H.execCli' execConfig
       [ convertToEraString anyEra, "transaction"
       , "policyid"
-      , "--script-file", plutusMintingScript
+      , "--script-file", plutusMintingScriptV2
       ]
   let assetName = "4D696C6C6172436F696E"
   H.note_ $ "plutusSpendingScriptAddr: " <> plutusSpendingScriptAddr
@@ -140,7 +141,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
   createScriptStakeRegistrationCertificate
     tempAbsPath
     anyEra
-    plutusMintingScript
+    plutusMintingScriptV2
     0
     scriptStakeRegistrationCertificate
   -- Create script stake delegation certificate 
@@ -156,7 +157,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
   void $ execCli
       [ convertToEraString anyEra
       , "stake-address", "stake-delegation-certificate"
-      , "--stake-script-file", plutusMintingScript
+      , "--stake-script-file", plutusMintingScriptV2
       , "--stake-pool-id", Text.unpack $ serialiseToBech32 (Set.elemAt 0 poolIds)
       , "--out-file", scriptStakeDelegationCertFp
       ]
@@ -164,27 +165,27 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
 
   -- 1. Put UTxO and datum at Plutus spending script address
   --    Register script stake address
-  void $ execCli' execConfig
-    [ convertToEraString anyEra, "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
-    , "--tx-in", Text.unpack $ renderTxIn txin1
-    , "--tx-out", plutusSpendingScriptAddr <> "+" <> show @Int 5_000_000
-    , "--tx-out-datum-hash", scriptdatumhash
-    , "--out-file", sendAdaToScriptAddressTxBody
-    ]
-
-  let sendAdaToScriptAddressTx = work </> "send-ada-to-script-address-tx"
-  void $ execCli' execConfig
-    [ "transaction", "sign"
-    , "--tx-body-file", sendAdaToScriptAddressTxBody
-    , "--signing-key-file", utxoSKeyFile
-    , "--out-file", sendAdaToScriptAddressTx
-    ]
-
-  void $ execCli' execConfig
-    [ "transaction", "submit"
-    , "--tx-file", sendAdaToScriptAddressTx
-    ]
+ -- void $ execCli' execConfig
+ --   [ convertToEraString anyEra, "transaction", "build"
+ --   , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
+ --   , "--tx-in", Text.unpack $ renderTxIn txin1
+ --   , "--tx-out", plutusSpendingScriptAddr <> "+" <> show @Int 5_000_000
+ --   , "--tx-out-datum-hash", scriptdatumhash
+ --   , "--out-file", sendAdaToScriptAddressTxBody
+ --   ]
+--
+ -- let sendAdaToScriptAddressTx = work </> "send-ada-to-script-address-tx"
+ -- void $ execCli' execConfig
+ --   [ "transaction", "sign"
+ --   , "--tx-body-file", sendAdaToScriptAddressTxBody
+ --   , "--signing-key-file", utxoSKeyFile
+ --   , "--out-file", sendAdaToScriptAddressTx
+ --   ]
+--
+ -- void $ execCli' execConfig
+ --   [ "transaction", "submit"
+ --   , "--tx-file", sendAdaToScriptAddressTx
+ --   ]
 
   H.threadDelay 10_000_000
   -- 2. Successfully spend conway spending script
@@ -213,30 +214,31 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
   let keys3 = Map.keys utxoPlutus
   H.note_ $ "keys3: " <> show (length keys3)
 
-  plutusScriptTxIn <- H.noteShow $ keys3 !! 0
+ -- plutusScriptTxIn <- H.noteShow $ keys3 !! 0
   let spendScriptUTxOTxBody = work </> "spend-script-utxo-tx-body"
       spendScriptUTxOTx = work </> "spend-script-utxo-tx"
       mintValue = mconcat ["5 ", mintingPolicyId, ".", assetName]
       txout = mconcat [ utxoAddr, "+", show @Int 2_000_000
-                      , "+", mintValue
+                    ---  , "+", mintValue
                       ]
   -- Try to delegate here as well
   void $ execCli' execConfig
     [ convertToEraString anyEra, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 1
+    , "--tx-in", Text.unpack $ renderTxIn txin1
     , "--tx-in-collateral", Text.unpack $ renderTxIn txinCollateral
-    , "--tx-in", Text.unpack $ renderTxIn plutusScriptTxIn
-    , "--tx-in-script-file", plutusSpendingScript
-    , "--tx-in-datum-file", datumFile
-    , "--tx-in-redeemer-file", datumFile -- We just reuse the datum file for the redeemer
-    , "--mint", mintValue
-    , "--mint-script-file", plutusMintingScript
-    , "--mint-redeemer-file", datumFile -- We just reuse the datum file for the redeemer
+  --  , "--tx-in", Text.unpack $ renderTxIn plutusScriptTxIn
+ --   , "--tx-in-script-file", plutusSpendingScript
+ --   , "--tx-in-datum-file", datumFile
+ --   , "--tx-in-redeemer-file", datumFile -- We just reuse the datum file for the redeemer
+    --, "--mint", mintValue
+    --, "--mint-script-file", plutusMintingScript
+    --, "--mint-redeemer-file", datumFile -- We just reuse the datum file for the redeemer
     , "--certificate-file", scriptStakeRegistrationCertificate
-    , "--certificate-script-file", plutusMintingScript
+    , "--certificate-script-file", plutusMintingScriptV2
     , "--certificate-redeemer-file", datumFile
     , "--certificate-file", scriptStakeDelegationCertFp
-    , "--certificate-script-file", plutusMintingScript
+    , "--certificate-script-file", plutusMintingScriptV2
     , "--certificate-redeemer-file", datumFile
     , "--tx-out", txout
     , "--out-file", spendScriptUTxOTxBody
@@ -246,6 +248,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
     [ "transaction", "sign"
     , "--tx-body-file", spendScriptUTxOTxBody
     , "--signing-key-file", utxoSKeyFile2
+    , "--signing-key-file", utxoSKeyFile
     , "--out-file", spendScriptUTxOTx
     ]
 
