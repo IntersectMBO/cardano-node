@@ -285,27 +285,26 @@
                   internal.roots.project = muslProject.roots;
                   variants = mapAttrs (_: v: removeAttrs v.musl ["variants"]) ciJobsVariants;
                 };
-              # Disable windows until libblst works for windows cross compilation builds
-              #windows =
-              #  let
-              #    windowsProject = project.projectCross.mingwW64;
-              #    projectExes = collectExes windowsProject;
-              #  in
-              #  projectExes
-              #    // (removeRecurse {
-              #    inherit (windowsProject) checks tests benchmarks;
-              #    cardano-node-win64 = import ./nix/binary-release.nix {
-              #      inherit pkgs;
-              #      inherit (exes.cardano-node.identifier) version;
-              #      platform = "win64";
-              #      exes = lib.collect lib.isDerivation (
-              #        # FIXME: restore tx-generator once plutus-scripts-bench is fixed for windows:
-              #        removeAttrs projectExes [ "tx-generator" ]
-              #      );
-              #    };
-              #    internal.roots.project = windowsProject.roots;
-              #    variants = mapAttrs (_: v: removeAttrs v.windows ["variants"]) ciJobsVariants;
-              #  });
+              windows =
+                let
+                  windowsProject = project.projectCross.mingwW64;
+                  projectExes = collectExes windowsProject;
+                in
+                projectExes
+                  // (removeRecurse {
+                  inherit (windowsProject) checks tests benchmarks;
+                  cardano-node-win64 = import ./nix/binary-release.nix {
+                    inherit pkgs;
+                    inherit (exes.cardano-node.identifier) version;
+                    platform = "win64";
+                    exes = lib.collect lib.isDerivation (
+                      # FIXME: restore tx-generator once plutus-scripts-bench is fixed for windows:
+                      removeAttrs projectExes [ "tx-generator" ]
+                    );
+                  };
+                  internal.roots.project = windowsProject.roots;
+                  variants = mapAttrs (_: v: removeAttrs v.windows ["variants"]) ciJobsVariants;
+                });
             } // optionalAttrs (system == "x86_64-darwin") {
               native = lib.filterAttrs
                 (n: _:
