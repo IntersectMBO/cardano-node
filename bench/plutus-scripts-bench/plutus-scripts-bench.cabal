@@ -1,6 +1,6 @@
 cabal-version:          3.0
 name:                   plutus-scripts-bench
-version:                1.0.1.0
+version:                1.0.2.0
 synopsis:               Plutus scripts used for benchmarking
 description:            Plutus scripts used for benchmarking.
 category:               Cardano,
@@ -27,7 +27,7 @@ common project-config
   if os(windows)
     buildable: False
 
-  -- This echos the ghc range in the plutus-tx-plugin cabal file.
+  -- This echoes the ghc range in the plutus-tx-plugin cabal file.
   if (impl(ghc <9.6) || impl(ghc >=9.7))
     buildable: False
 
