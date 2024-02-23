@@ -553,9 +553,9 @@ def all_profile_variants:
       , desc: "AWS c5-2xlarge cluster dataset, 9 epochs"
     }) as $nomad_perf_plutus_base
   |
-   ($scenario_idle * $compose_fiftytwo * $dataset_empty *
-    { desc: "AWS c5-2xlarge cluster, deploy and start run only"
-    }) as $nomad_perf_idle_base
+   ($scenario_fixed_loaded * $compose_fiftytwo * $dataset_empty * $for_1blk * $no_filtering *
+    { desc: "AWS c5-2xlarge cluster, stop as soon as we've seen a single block"
+    }) as $nomad_perf_fast_base
   |
    ($scenario_model * $quadruplet * $dataset_current * $for_7ep *
     { node:
@@ -859,8 +859,8 @@ def all_profile_variants:
   , $nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "plutus-nomadperf"
     }
-  , $nomad_perf_idle_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
-    { name: "idle-nomadperf"
+  , $nomad_perf_fast_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
+    { name: "fast-nomadperf"
     }
 
 ## P&T Nomad cluster: 52 nodes, 3 regions, value-only (with old tracing variant) and Plutus, no P2P flavour
@@ -872,6 +872,9 @@ def all_profile_variants:
     }
   , $nomad_perf_plutus_base * $nomad_perf_dense * $costmodel_v8_preview *
     { name: "plutus-nomadperf-nop2p"
+    }
+  , $nomad_perf_fast_base * $nomad_perf_dense * $costmodel_v8_preview *
+    { name: "fast-nomadperf-nop2p"
     }
 
 ## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)
