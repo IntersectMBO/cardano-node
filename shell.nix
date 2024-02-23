@@ -114,7 +114,6 @@ let
       cardano-topology
       cardano-tracer
       locli
-      tx-generator
       pkgs.graphviz
       python3Packages.supervisor
       python3Packages.ipython
@@ -125,7 +124,7 @@ let
       workbench-interactive-start
       workbench-interactive-stop
       workbench-interactive-restart
-    ];
+    ] ++ lib.optional (cardanoNodePackages ? tx-generator) cardanoNodePackages.tx-generator;
 
     # Disable build tools for all of hsPkgs (would include duplicates for cardano-cli, cardano-node, etc.)
     allToolDeps = false;

@@ -26,7 +26,7 @@ jobs:
       fail-fast: false
       matrix:
         # If you edit these versions, make sure the version in the lonely macos-latest job below is updated accordingly
-        ghc: ["9.6.4"]
+        ghc: ["9.6.4", "9.8.1"]
         cabal: ["3.10.2.1"]
         os: [windows-latest, ubuntu-latest]
         include:
@@ -38,7 +38,7 @@ jobs:
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2024-02-07"
+      CABAL_CACHE_VERSION: "2024-02-15"
 
     concurrency:
       group: >

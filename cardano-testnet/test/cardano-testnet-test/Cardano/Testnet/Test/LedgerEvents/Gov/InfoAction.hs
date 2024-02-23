@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE LambdaCase #-}
@@ -6,6 +7,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+
+#if __GLASGOW_HASKELL__ >= 908
+-- Data.List has a lot of partial functions and GHC >= 9.8 warns about these.
+{-# OPTIONS_GHC -Wno-x-partial #-}
+#endif
 
 module Cardano.Testnet.Test.LedgerEvents.Gov.InfoAction
   ( hprop_ledger_events_info_action
@@ -371,3 +377,4 @@ foldBlocksCheckInfoAction df govActionIdx _ ls allEvents _ acc = do
             | length votes == 3 -> ias{hasReceivedVotes = True}
           _ -> ias
       _ -> ias
+
