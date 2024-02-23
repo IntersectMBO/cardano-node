@@ -64,6 +64,7 @@ import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyEvent (ShelleyInAlonzoE
                    AlonzoUtxoEvent (UtxosEvent), AlonzoUtxosEvent,
                    AlonzoUtxowEvent (WrappedShelleyEraEvent))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
+import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Version, decodeFull', fromCBOR,
                    serialize', toCBOR)
 import           Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
@@ -106,19 +107,19 @@ import           GHC.IO.Exception (IOErrorType (ResourceVanished), IOException (
 import           Network.Socket (Family (AF_INET), PortNumber, SockAddr (..), SocketType (Stream),
                    accept, bind, close, defaultProtocol, listen, socket, socketToHandle,
                    withSocketsDo)
-import           Ouroboros.Consensus.Block.Abstract (BlockProtocol)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.Cardano.Block (AllegraEra, AlonzoEra, BabbageEra, CardanoEras,
                    ConwayEra, HardForkBlock, MaryEra, ShelleyEra)
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraHash,
-                   OneEraLedgerEvent (..), getOneEraHash, getOneEraLedgerEvent)
 import           Ouroboros.Consensus.HardFork.Combinator.Basics (HardForkProtocol)
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (
+                   OneEraLedgerEvent (..), getOneEraHash, getOneEraLedgerEvent,
+                   OneEraConsensusEvent (getOneEraConsensusEvent))
 import           Ouroboros.Consensus.Ledger.Abstract (AuxLedgerEvent, LedgerEventHandler (..))
 import qualified Ouroboros.Consensus.Ledger.Abstract as Abstract
 import           Ouroboros.Consensus.Ledger.Extended
                    (AuxExtLedgerEvent (AuxConsensusEvent, AuxLedgerEvent), ExtLedgerState)
 import qualified Ouroboros.Consensus.Protocol.Abstract as Abstract
-import           Ouroboros.Consensus.Protocol.TPraos (TPraosEvent (..))
+import           Ouroboros.Consensus.Protocol.TPraos (TPraos, TPraosEvent (..))
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock, ShelleyLedgerEvent (..))
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Ouroboros.Network.Block (ChainHash (BlockHash, GenesisHash), HeaderHash)
@@ -126,7 +127,10 @@ import           Prelude hiding (MonadFail (..), String, map, print, putStrLn, s
 import           System.IO (hIsEOF)
 
 type LedgerState crypto =
-  ExtLedgerState (HardForkBlock (CardanoEras crypto))
+  Abstract.LedgerState (HardForkBlock (CardanoEras crypto))
+
+type ConsensusEvent crypto =
+  Abstract.ConsensusEvent (HardForkProtocol (CardanoEras crypto))
 
 data LedgerEvent crypto
   = LedgerNewEpochEvent !(LedgerNewEpochEvent crypto)
@@ -363,7 +367,7 @@ ledgerRewardUpdateEventName = \case
   LedgerIncrementalRewards {} -> "LedgerIncrementalRewards"
 
 fromAuxExtLedgerEvent
-  :: AuxExtLedgerEvent (LedgerState StandardCrypto) (HardForkBlock (CardanoEras StandardCrypto))
+  :: AuxExtLedgerEvent (LedgerState StandardCrypto) (ConsensusEvent StandardCrypto)
   -> Maybe (LedgerEvent StandardCrypto)
 fromAuxExtLedgerEvent event =
   case event of
@@ -715,7 +719,8 @@ instance ConvertLedgerEvent (ShelleyBlock proto (ConwayEra StandardCrypto)) wher
   toLedgerEvent = toConwayEventShelley
 
 eventCodecVersion
-  :: AuxExtLedgerEvent (ExtLedgerState (HardForkBlock xs)) (HardForkBlock xs)
+  :: forall crypto. Crypto crypto
+  => AuxExtLedgerEvent (LedgerState crypto) (ConsensusEvent crypto)
   -> Version
 eventCodecVersion = \case
   AuxLedgerEvent e -> eventCodecVersion' e
@@ -807,7 +812,7 @@ foldEvent h st0 fn =
         st' <- fn st event
         go st' events
 
-type StandardLedgerEventHandler = LedgerEventHandler IO (LedgerState StandardCrypto) (HardForkBlock (CardanoEras StandardCrypto))
+type StandardLedgerEventHandler = LedgerEventHandler IO (ExtLedgerState (HardForkBlock (CardanoEras StandardCrypto))) (HardForkBlock (CardanoEras StandardCrypto))
 
 withLedgerEventsServerStream
   :: PortNumber
@@ -862,7 +867,7 @@ mkVersionedAnchoredEvents
   -> HeaderHash (HardForkBlock (CardanoEras StandardCrypto))
   -> SlotNo
   -> BlockNo
-  -> [AuxLedgerEvent (LedgerState StandardCrypto)]
+  -> [AuxExtLedgerEvent (LedgerState StandardCrypto) (ConsensusEvent StandardCrypto)]
   -> [Versioned AnchoredEvents]
 mkVersionedAnchoredEvents prevHash headerHash slotNo blockNo auxEvents =
   [ Versioned version $
@@ -878,6 +883,6 @@ mkVersionedAnchoredEvents prevHash headerHash slotNo blockNo auxEvents =
     chainHashToOriginHash :: ChainHash b -> WithOrigin (HeaderHash b)
     chainHashToOriginHash GenesisHash = Origin
     chainHashToOriginHash (BlockHash bh) = At bh
-    versionedEvents = map ((eventCodecVersion &&& fromAuxExtLedgerEvent) . AuxLedgerEvent) auxEvents
+    versionedEvents = map (eventCodecVersion &&& fromAuxExtLedgerEvent) auxEvents
     versionedGroups = map makeGroup $ NE.groupWith fst versionedEvents
     makeGroup = (NE.head *** catMaybes . NE.toList) . NE.unzip
