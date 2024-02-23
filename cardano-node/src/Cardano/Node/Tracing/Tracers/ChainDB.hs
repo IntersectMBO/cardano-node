@@ -29,6 +29,7 @@ import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
 
+import Ouroboros.Network.Block (MaxSlotNo(..))
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.HeaderValidation (HeaderEnvelopeError (..), HeaderError (..),
                    OtherHeaderEnvelopeError)
@@ -43,10 +44,7 @@ import qualified Ouroboros.Consensus.Storage.ImmutableDB as ImmDB
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (chunkNoToInt)
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB.BackingStore as BS
-import           Ouroboros.Consensus.Storage.LedgerDB.DbChangelog
-                   (UpdateLedgerDbTraceEvent (..))
-import qualified Ouroboros.Consensus.Storage.LedgerDB.DbChangelog as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.Impl.Snapshots as LedgerDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Util.Enclose
@@ -92,7 +90,6 @@ instance (  LogFormatting (Header blk)
   forHuman (ChainDB.TraceOpenEvent v)              = forHuman v
   forHuman (ChainDB.TraceIteratorEvent v)          = forHuman v
   forHuman (ChainDB.TraceLedgerDBEvent v)          = forHuman v
-  forHuman (ChainDB.TraceLedgerReplayEvent v)      = forHuman v
   forHuman (ChainDB.TraceImmutableDBEvent v)       = forHuman v
   forHuman (ChainDB.TraceVolatileDBEvent v)        = forHuman v
 
@@ -112,8 +109,6 @@ instance (  LogFormatting (Header blk)
     forMachine details v
   forMachine details (ChainDB.TraceLedgerDBEvent v) =
     forMachine details v
-  forMachine details (ChainDB.TraceLedgerReplayEvent v) =
-    forMachine details v
   forMachine details (ChainDB.TraceImmutableDBEvent v) =
     forMachine details v
   forMachine details (ChainDB.TraceVolatileDBEvent v) =
@@ -127,7 +122,6 @@ instance (  LogFormatting (Header blk)
   asMetrics (ChainDB.TraceOpenEvent v)              = asMetrics v
   asMetrics (ChainDB.TraceIteratorEvent v)          = asMetrics v
   asMetrics (ChainDB.TraceLedgerDBEvent v)          = asMetrics v
-  asMetrics (ChainDB.TraceLedgerReplayEvent v)      = asMetrics v
   asMetrics (ChainDB.TraceImmutableDBEvent v)       = asMetrics v
   asMetrics (ChainDB.TraceVolatileDBEvent v)        = asMetrics v
 
@@ -149,8 +143,6 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     nsPrependInner "IteratorEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceLedgerDBEvent ev) =
     nsPrependInner "LedgerEvent" (namespaceFor ev)
-  namespaceFor (ChainDB.TraceLedgerReplayEvent ev) =
-     nsPrependInner "LedgerReplay" (namespaceFor ev)
   namespaceFor (ChainDB.TraceImmutableDBEvent ev) =
     nsPrependInner "ImmDbEvent" (namespaceFor ev)
   namespaceFor (ChainDB.TraceVolatileDBEvent ev) =
@@ -188,10 +180,6 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("LedgerEvent" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (LedgerDB.TraceLedgerDBEvent blk)) Nothing
-  severityFor (Namespace out ("LedgerReplay" : tl)) (Just (ChainDB.TraceLedgerReplayEvent ev')) =
-    severityFor (Namespace out tl) (Just ev')
-  severityFor (Namespace out ("LedgerReplay" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace (LedgerDB.TraceReplayEvent blk)) Nothing
   severityFor (Namespace out ("ImmDbEvent" : tl)) (Just (ChainDB.TraceImmutableDBEvent ev')) =
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("ImmDbEvent" : tl)) Nothing =
@@ -234,10 +222,6 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("LedgerEvent" : tl)) Nothing =
     privacyFor (Namespace out tl :: Namespace (LedgerDB.TraceLedgerDBEvent blk)) Nothing
-  privacyFor (Namespace out ("LedgerReplay" : tl)) (Just (ChainDB.TraceLedgerReplayEvent ev')) =
-    privacyFor (Namespace out tl) (Just ev')
-  privacyFor (Namespace out ("LedgerReplay" : tl)) Nothing =
-    privacyFor (Namespace out tl :: Namespace (LedgerDB.TraceReplayEvent blk)) Nothing
   privacyFor (Namespace out ("ImmDbEvent" : tl)) (Just (ChainDB.TraceImmutableDBEvent ev')) =
     privacyFor (Namespace out tl) (Just ev')
   privacyFor (Namespace out ("ImmDbEvent" : tl)) Nothing =
@@ -279,10 +263,6 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
   detailsFor (Namespace out ("LedgerEvent" : tl)) (Just (ChainDB.TraceLedgerDBEvent ev')) =
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("LedgerEvent" : tl)) Nothing =
-    detailsFor (Namespace out tl :: Namespace (LedgerDB.TraceReplayEvent blk)) Nothing
-  detailsFor (Namespace out ("LedgerReplay" : tl)) (Just (ChainDB.TraceLedgerReplayEvent ev')) =
-    detailsFor (Namespace out tl) (Just ev')
-  detailsFor (Namespace out ("LedgerReplay" : tl)) Nothing =
     detailsFor (Namespace out tl :: Namespace (LedgerDB.TraceReplayEvent blk)) Nothing
   detailsFor (Namespace out ("ImmDbEvent" : tl)) (Just (ChainDB.TraceImmutableDBEvent ev')) =
     detailsFor (Namespace out tl) (Just ev')
@@ -1032,7 +1012,7 @@ instance ( LedgerSupportsProtocol blk
           renderPointAsPhrase (AF.headPoint c) <> ", slots " <>
           Text.intercalate ", " (map (renderPoint . headerPoint) hdrs)
     forHuman (ChainDB.UpdateLedgerDbTraceEvent
-                (StartedPushingBlockToTheLedgerDb
+                (LedgerDB.StartedPushingBlockToTheLedgerDb
                   (LedgerDB.PushStart start)
                   (LedgerDB.PushGoal goal)
                   (LedgerDB.Pushing curr))) =
@@ -1061,7 +1041,7 @@ instance ( LedgerSupportsProtocol blk
                      , "block"   .= renderPointForDetails dtal (AF.headPoint c)
                      , "headers" .= map (renderPointForDetails dtal . headerPoint) hdrs ]
     forMachine _dtal (ChainDB.UpdateLedgerDbTraceEvent
-                        (StartedPushingBlockToTheLedgerDb
+                        (LedgerDB.StartedPushingBlockToTheLedgerDb
                           (LedgerDB.PushStart start)
                           (LedgerDB.PushGoal goal)
                           (LedgerDB.Pushing curr))) =
@@ -1134,7 +1114,9 @@ instance ConvertRawHash blk
   forHuman (ChainDB.OpenedImmutableDB immTip chunk) =
           "Opened imm db with immutable tip at " <> renderPointAsPhrase immTip <>
           " and chunk " <> showT chunk
-  forHuman ChainDB.OpenedVolatileDB = "Opened vol db"
+  forHuman (ChainDB.OpenedVolatileDB mx) = "Opened " <> case mx of
+          NoMaxSlotNo -> "empty Volatile DB"
+          MaxSlotNo mxx -> "Volatile DB with max slot seen " <> showT mxx
   forHuman ChainDB.OpenedLgrDB = "Opened lgr db"
   forHuman ChainDB.StartedOpeningDB = "Started opening Chain DB"
   forHuman ChainDB.StartedOpeningImmutableDB = "Started opening Immutable DB"
@@ -1153,7 +1135,7 @@ instance ConvertRawHash blk
     mconcat [ "kind" .= String "OpenedImmutableDB"
              , "immtip" .= forMachine dtal immTip
              , "epoch" .= String ((Text.pack . show) epoch) ]
-  forMachine _dtal ChainDB.OpenedVolatileDB =
+  forMachine _dtal ChainDB.OpenedVolatileDB {} =
       mconcat [ "kind" .= String "OpenedVolatileDB" ]
   forMachine _dtal ChainDB.OpenedLgrDB =
       mconcat [ "kind" .= String "OpenedLgrDB" ]
@@ -1439,38 +1421,50 @@ instance ( StandardHash blk
     mconcat [ "kind" .= String "SnapshotEvent"
             , "event" .= forMachine dtals ev
             ]
-  forMachine dtals (LedgerDB.BackingStoreInitEvent ev) =
-    mconcat [ "kind" .= String "BackingStoreInit"
+  forMachine dtals (LedgerDB.LedgerReplayEvent ev) =
+    mconcat [ "kind" .= String "ReplayEvent"
             , "event" .= forMachine dtals ev
+            ]
+  forMachine _dtals (LedgerDB.LedgerDBForkerEvent (LedgerDB.TraceForkerEventWithKey k ev)) =
+    mconcat [ "kind" .= String "ForkerEvent"
+            , "key" .= show k
+            , "event" .= show ev
+            ]
+  forMachine _dtals (LedgerDB.LedgerDBFlavorImplEvent ev) =
+    mconcat [ "kind" .= String "FlavorEvent"
+            , "event" .= show ev
             ]
 
   forHuman (LedgerDB.LedgerDBSnapshotEvent ev) = forHuman ev
-  forHuman (LedgerDB.BackingStoreInitEvent ev) = forHuman ev
+  forHuman (LedgerDB.LedgerReplayEvent ev) = forHuman ev
+  forHuman (LedgerDB.LedgerDBForkerEvent (LedgerDB.TraceForkerEventWithKey k ev)) = "Forker " <> showT k <> ": " <> showT ev
+  forHuman (LedgerDB.LedgerDBFlavorImplEvent ev) = showT ev
 
 instance MetaTrace (LedgerDB.TraceLedgerDBEvent blk) where
 
   namespaceFor (LedgerDB.LedgerDBSnapshotEvent ev) =
     nsPrependInner "Snapshot" (namespaceFor ev)
-  namespaceFor (LedgerDB.BackingStoreInitEvent ev) =
-    nsPrependInner "BackingStoreInit" (namespaceFor ev)
+  namespaceFor (LedgerDB.LedgerReplayEvent ev) =
+    nsPrependInner "Replay" (namespaceFor ev)
+  namespaceFor (LedgerDB.LedgerDBForkerEvent _ev) =
+    Namespace [] ["Forker"]
+  namespaceFor (LedgerDB.LedgerDBFlavorImplEvent _ev) =
+    Namespace [] ["Flavor"]
 
   severityFor (Namespace out ("Snapshot" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (LedgerDB.TraceSnapshotEvent blk)) Nothing
-  severityFor (Namespace out ("BackingStoreInit" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace LedgerDB.TraceBackingStoreInitEvent) Nothing
+  severityFor (Namespace _out ("Replay" : _tl)) Nothing = Just Info
+  severityFor (Namespace _out (["Forker"])) Nothing = Just Debug
+  severityFor (Namespace _out (["Flavor"])) Nothing = Just Debug
   severityFor _ _ = Nothing
 
   documentFor (Namespace o ("Snapshot" : tl)) =
     documentFor (Namespace o tl :: Namespace (LedgerDB.TraceSnapshotEvent blk))
-  documentFor (Namespace out ("BackingStoreInit" : tl)) =
-    documentFor (Namespace out tl :: Namespace LedgerDB.TraceBackingStoreInitEvent)
   documentFor _ = Nothing
 
   allNamespaces =
        map (nsPrependInner "Snapshot")
          (allNamespaces :: [Namespace (LedgerDB.TraceSnapshotEvent blk)])
-    ++ map (nsPrependInner "BackingStoreInit")
-         (allNamespaces :: [Namespace LedgerDB.TraceBackingStoreInitEvent])
 
 instance ( StandardHash blk
          , ConvertRawHash blk)
@@ -1522,346 +1516,37 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
     , Namespace [] ["InvalidSnapshot"]
     ]
 
-instance LogFormatting LedgerDB.TraceBackingStoreInitEvent where
-
-  forMachine _dtals LedgerDB.BackingStoreInitialisedInMemory =
-      mconcat [ "kind" .= String "InMemoryBackingStoreInit" ]
-  forMachine _dtals (LedgerDB.BackingStoreInitialisedLMDB limits) =
-      mconcat [ "kind" .= String "LMDBBackingStoreInit"
-              , "limits" .= show limits]
-
-  forHuman LedgerDB.BackingStoreInitialisedInMemory =
-    "Initialising in-memory backing store"
-  forHuman (LedgerDB.BackingStoreInitialisedLMDB limits) =
-    "Initialising LMDB backing store: " <> showT limits
-
-instance MetaTrace LedgerDB.TraceBackingStoreInitEvent where
-
-  namespaceFor LedgerDB.BackingStoreInitialisedLMDB {} =
-    Namespace [] ["LMDB"]
-  namespaceFor LedgerDB.BackingStoreInitialisedInMemory {} =
-    Namespace [] ["InMemory"]
-
-  severityFor (Namespace _ ["InMemory"]) _ = Just Info
-  severityFor (Namespace _ ["LMDB"]) _ = Just Info
-  severityFor _ _ = Nothing
-
-  documentFor (Namespace _ ["InMemory"]) = Just
-    "Initialization of the InMemory backing store."
-  documentFor (Namespace _ ["LMDB"]) = Just
-    "Initialization of the LMDB backing store."
-  documentFor _ = Nothing
-
-  allNamespaces =
-    [ Namespace [] ["InMemory"]
-    , Namespace [] ["LMDB"]
-    ]
-
-instance LogFormatting LedgerDB.BackingStoreTraceByBackend where
-
-  forMachine dtals (LedgerDB.LMDBTrace ev) =
-    mconcat [ "kind" .= String "BackingStore.LMDBTrace"
-            , "event" .= forMachine dtals ev
-            ]
-  forMachine dtals (LedgerDB.InMemoryTrace ev) =
-    mconcat [ "kind" .= String "BackingStore.InMemoryTrace"
-            , "event" .= forMachine dtals ev
-            ]
-
-  forHuman (LedgerDB.LMDBTrace ev) = forHuman ev
-  forHuman (LedgerDB.InMemoryTrace ev) = forHuman ev
-
-instance MetaTrace LedgerDB.BackingStoreTraceByBackend where
-  namespaceFor (LedgerDB.LMDBTrace ev) =
-    nsPrependInner "LMDB" (namespaceFor ev)
-  namespaceFor (LedgerDB.InMemoryTrace ev) =
-    nsPrependInner "InMemory" (namespaceFor ev)
-
-  severityFor (Namespace out ("LMDB" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace BS.BackingStoreTrace) Nothing
-  severityFor (Namespace out ("InMemory" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace BS.BackingStoreTrace) Nothing
-  severityFor _ _ = Nothing
-
-  documentFor (Namespace out ("LMDB" : tl)) =
-    documentFor (Namespace out tl :: Namespace BS.BackingStoreTrace)
-  documentFor (Namespace out ("InMemory" : tl)) =
-    documentFor (Namespace out tl :: Namespace BS.BackingStoreTrace)
-  documentFor _ = Nothing
-
-  allNamespaces =
-       map (nsPrependInner "LMDB")
-         (allNamespaces :: [Namespace BS.BackingStoreTrace])
-    ++ map (nsPrependInner "InMemory")
-         (allNamespaces :: [Namespace BS.BackingStoreTrace])
-
-
-instance LogFormatting BS.BackingStoreTrace where
-
-  forMachine _dtals BS.BSOpening =
-    mconcat [ "kind" .= String "BSOpening" ]
-  forMachine _dtals (BS.BSOpened p) =
-    mconcat ("kind" .= String "BSOpened" : maybe [] (\p' -> ["path" .= show p']) p)
-  forMachine _dtals (BS.BSInitialisingFromCopy p) =
-    mconcat [ "kind" .= String "BSInitialisingFromCopy"
-            , "path" .= show p
-            ]
-  forMachine _dtals (BS.BSInitialisedFromCopy p) =
-    mconcat [ "kind" .= String "BSInitialisedFromCopy"
-            , "path" .= show p
-            ]
-  forMachine _dtals (BS.BSInitialisingFromValues s) =
-    mconcat [ "kind" .= String "BSInitialisingFromValues"
-            , "slot" .= show s
-            ]
-  forMachine _dtals (BS.BSInitialisedFromValues s) =
-    mconcat [ "kind" .= String "BSInitialisedFromValues"
-            , "slot" .= show s
-            ]
-  forMachine _dtals BS.BSClosing =
-    mconcat [ "kind" .= String "BSClosing" ]
-  forMachine _dtals BS.BSAlreadyClosed =
-    mconcat [ "kind" .= String "BSAlreadyClosed" ]
-  forMachine _dtals BS.BSClosed =
-    mconcat [ "kind" .= String "BSClosed" ]
-  forMachine _dtals (BS.BSCopying p) =
-    mconcat [ "kind" .= String "BSCopying"
-            , "path" .= show p
-            ]
-  forMachine _dtals (BS.BSCopied p) =
-    mconcat [ "kind" .= String "BSCopied"
-            , "path" .= show p
-            ]
-  forMachine _dtals BS.BSCreatingValueHandle =
-    mconcat [ "kind" .= String "BSCreatingValueHandle" ]
-  forMachine dtals (BS.BSValueHandleTrace i p) =
-    mconcat ([ "kind" .= String "BSValueHandleTrace"
-             , "event" .= forMachine dtals p
-             ] ++ maybe [] (\i' -> [ "index" .= show i' ]) i)
-  forMachine _dtals BS.BSCreatedValueHandle =
-    mconcat [ "kind" .= String "BSCreatedValueHandle" ]
-  forMachine _dtals (BS.BSWriting s) =
-    mconcat [ "kind" .= String "BSWriting"
-            , "slot" .= show s
-            ]
-  forMachine _dtals (BS.BSWritten s1 s2) =
-    mconcat [ "kind" .= String "BSWritten"
-            , "from" .= show s1
-            , "to" .= show s2
-            ]
-
-  forHuman BS.BSOpening =
-    "Opening backing store"
-  forHuman (BS.BSOpened s) =
-    "Opened backing store" <> maybe mempty ((" at path: " <>) . showT) s
-  forHuman (BS.BSInitialisingFromCopy p) =
-    "Initialising from copy at " <> showT p
-  forHuman (BS.BSInitialisedFromCopy p) =
-    "Initialised from copy at " <> showT p
-  forHuman (BS.BSInitialisingFromValues s) =
-    "Initialising from values at slot " <> showT s
-  forHuman (BS.BSInitialisedFromValues s) =
-    "Initialised from values at slot " <> showT s
-  forHuman BS.BSClosing =
-    "Closing"
-  forHuman BS.BSAlreadyClosed =
-    "Attempting to close an already closed backing store"
-  forHuman BS.BSClosed =
-    "Closed"
-  forHuman (BS.BSCopying p) =
-    "Copying into path " <> showT p
-  forHuman (BS.BSCopied p) =
-    "Copied into path " <> showT p
-  forHuman BS.BSCreatingValueHandle =
-    "Creating value handle"
-  forHuman (BS.BSValueHandleTrace i t) =
-    "Value handle " <> maybe mempty showT i <> ": " <> forHuman t
-  forHuman BS.BSCreatedValueHandle =
-    "Created value handle"
-  forHuman (BS.BSWriting s2) =
-    "Writing to backing store, advancing the last written slot to " <> showT s2
-  forHuman (BS.BSWritten s1 s2) =
-       "Wrote to backing store, advancing the last written slot from "
-    <> showT s1
-    <> " to "
-    <> showT s2
-
-instance MetaTrace BS.BackingStoreTrace where
-  namespaceFor BS.BSOpening = Namespace [] ["Opening"]
-  namespaceFor BS.BSOpened{} = Namespace [] ["Opened"]
-  namespaceFor BS.BSInitialisingFromCopy{} = Namespace [] ["InitialisingFromCopy"]
-  namespaceFor BS.BSInitialisedFromCopy{} = Namespace [] ["InitialisedFromCopy"]
-  namespaceFor BS.BSInitialisingFromValues{} = Namespace [] ["InitialisingFromValues"]
-  namespaceFor BS.BSInitialisedFromValues{} = Namespace [] ["InitialisedFromValues"]
-  namespaceFor BS.BSClosing = Namespace [] ["Closing"]
-  namespaceFor BS.BSClosed = Namespace [] ["Closed"]
-  namespaceFor BS.BSAlreadyClosed = Namespace [] ["AlreadyClosed"]
-  namespaceFor BS.BSCopying{} = Namespace [] ["Copying"]
-  namespaceFor BS.BSCopied{} = Namespace [] ["Copied"]
-  namespaceFor BS.BSCreatingValueHandle = Namespace [] ["CreatingValueHandle"]
-  namespaceFor BS.BSCreatedValueHandle = Namespace [] ["CreatedValueHandle"]
-  namespaceFor BS.BSWriting{} = Namespace [] ["Writing"]
-  namespaceFor BS.BSWritten{} = Namespace [] ["Written"]
-  namespaceFor (BS.BSValueHandleTrace _ t) = nsPrependInner "ValueHandle" (namespaceFor t)
-
-  severityFor (Namespace _ ["Opening"]) _ = Just Debug
-  severityFor (Namespace _ ["Opened"]) _ = Just Debug
-  severityFor (Namespace _ ["InitialisingFromCopy"]) _ = Just Debug
-  severityFor (Namespace _ ["InitialisedFromCopy"]) _ = Just Debug
-  severityFor (Namespace _ ["InitialisingFromValues"]) _ = Just Debug
-  severityFor (Namespace _ ["InitialisedFromValues"]) _ = Just Debug
-  severityFor (Namespace _ ["Closing"]) _ = Just Debug
-  severityFor (Namespace _ ["Closed"]) _ = Just Debug
-  severityFor (Namespace _ ["AlreadyClosed"]) _ = Just Debug
-  severityFor (Namespace _ ["Copying"]) _ = Just Debug
-  severityFor (Namespace _ ["Copied"]) _ = Just Debug
-  severityFor (Namespace _ ["Writing"]) _ = Just Debug
-  severityFor (Namespace _ ["CreatingValueHandle"]) _ = Just Debug
-  severityFor (Namespace _ ["CreatedValueHandle"]) _ = Just Debug
-  severityFor (Namespace out ("ValueHandle" : tl)) Nothing =
-    severityFor (Namespace out tl :: Namespace BS.BackingStoreValueHandleTrace) Nothing
-  severityFor (Namespace _ ["Written"]) _ = Just Debug
-  severityFor _ _ = Nothing
-
-  documentFor (Namespace [] ["Opening"]) =
-    Just "Backing store is opening."
-  documentFor (Namespace [] ["Opened"]) =
-    Just "Backing store is opened."
-  documentFor (Namespace [] ["InitialisingFromCopy"]) =
-    Just "Backing store is being initialised from a copy."
-  documentFor (Namespace [] ["InitialisedFromCopy"]) =
-    Just "Backing store was initialised from a copy."
-  documentFor (Namespace [] ["InitialisingFromValues"]) =
-    Just "Backing store is being initialised from a set of values."
-  documentFor (Namespace [] ["InitialisedFromValues"]) =
-    Just "Backing store was initialised from a set of values."
-  documentFor (Namespace [] ["Closing"]) =
-    Just "Backing store is closing."
-  documentFor (Namespace [] ["Closed"]) =
-    Just "Backing store is closed."
-  documentFor (Namespace [] ["AlreadyClosed"]) =
-    Just "Backing store was already closed."
-  documentFor (Namespace [] ["Copying"]) =
-    Just "Backing store is creating a copy of itself."
-  documentFor (Namespace [] ["Copied"]) =
-    Just "Backing store created a copy of itself."
-  documentFor (Namespace [] ["Writing"]) =
-    Just "Backing store is being extended with newer deltas."
-  documentFor (Namespace [] ["CreatingValueHandle"]) =
-    Just "Backing store is creating a new value handle."
-  documentFor (Namespace [] ["CreatedValueHandle"]) =
-    Just "Backing store created a new value handle."
-  documentFor (Namespace [] ["Written"]) =
-    Just "Backing store was extended with newer deltas."
-  documentFor (Namespace o ("ValueHandle" : tl)) =
-    documentFor (Namespace o tl :: Namespace BS.BackingStoreValueHandleTrace)
-  documentFor _ = Nothing
-
-  allNamespaces = [
-      Namespace [] ["Opening"]
-    , Namespace [] ["Opened"]
-    , Namespace [] ["InitialisingFromCopy"]
-    , Namespace [] ["InitialisedFromCopy"]
-    , Namespace [] ["InitialisingFromValues"]
-    , Namespace [] ["InitialisedFromValues"]
-    , Namespace [] ["Closing"]
-    , Namespace [] ["Closed"]
-    , Namespace [] ["AlreadyClosed"]
-    , Namespace [] ["Copying"]
-    , Namespace [] ["Copied"]
-    , Namespace [] ["Writing"]
-    , Namespace [] ["CreatingValueHandle"]
-    , Namespace [] ["CreatedValueHandle"]
-    , Namespace [] ["Written"]
-    ] ++ map (nsPrependInner "ValueHandle")
-           (allNamespaces :: [Namespace BS.BackingStoreValueHandleTrace])
-
-instance LogFormatting BS.BackingStoreValueHandleTrace where
-  forMachine _dtals BS.BSVHClosing       = mconcat [ "kind" .= String "BSVHClosing " ]
-  forMachine _dtals BS.BSVHAlreadyClosed = mconcat [ "kind" .= String "BSVHAlreadyClosed" ]
-  forMachine _dtals BS.BSVHClosed        = mconcat [ "kind" .= String "BSVHClosed" ]
-  forMachine _dtals BS.BSVHRangeReading  = mconcat [ "kind" .= String "BSVHRangeReading" ]
-  forMachine _dtals BS.BSVHRangeRead     = mconcat [ "kind" .= String "BSVHRangeRead" ]
-  forMachine _dtals BS.BSVHReading       = mconcat [ "kind" .= String "BSVHReading" ]
-  forMachine _dtals BS.BSVHRead          = mconcat [ "kind" .= String "BSVHRead" ]
-  forMachine _dtals BS.BSVHStatting      = mconcat [ "kind" .= String "BSVHStatting" ]
-  forMachine _dtals BS.BSVHStatted       = mconcat [ "kind" .= String "BSVHStatted" ]
-
-  forHuman BS.BSVHClosing       = "Closing"
-  forHuman BS.BSVHAlreadyClosed = "Attempting to close and already closed value handle"
-  forHuman BS.BSVHClosed        = "Closed"
-  forHuman BS.BSVHRangeReading  = "Range reading"
-  forHuman BS.BSVHRangeRead     = "Range read"
-  forHuman BS.BSVHReading       = "Reading"
-  forHuman BS.BSVHRead          = "Read"
-  forHuman BS.BSVHStatting      = "Statting"
-  forHuman BS.BSVHStatted       = "Stat"
-
-instance MetaTrace BS.BackingStoreValueHandleTrace where
-  namespaceFor BS.BSVHClosing       = Namespace [] ["Closing"]
-  namespaceFor BS.BSVHAlreadyClosed = Namespace [] ["AlreadyClosed"]
-  namespaceFor BS.BSVHClosed        = Namespace [] ["Closed"]
-  namespaceFor BS.BSVHRangeReading  = Namespace [] ["RangeReading"]
-  namespaceFor BS.BSVHRangeRead     = Namespace [] ["RangeRead"]
-  namespaceFor BS.BSVHReading       = Namespace [] ["Reading"]
-  namespaceFor BS.BSVHRead          = Namespace [] ["Read"]
-  namespaceFor BS.BSVHStatting      = Namespace [] ["Statting"]
-  namespaceFor BS.BSVHStatted       = Namespace [] ["Stat"]
-
-  severityFor (Namespace _ ["Closing"]) _ = Just Debug
-  severityFor (Namespace _ ["AlreadyClosed"]) _ = Just Debug
-  severityFor (Namespace _ ["Closed"]) _ = Just Debug
-  severityFor (Namespace _ ["RangeReading"]) _ = Just Debug
-  severityFor (Namespace _ ["RangeRead"]) _ = Just Debug
-  severityFor (Namespace _ ["Reading"]) _ = Just Debug
-  severityFor (Namespace _ ["Read"]) _ = Just Debug
-  severityFor (Namespace _ ["Statting"]) _ = Just Debug
-  severityFor (Namespace _ ["Stat"]) _ = Just Debug
-  severityFor _ _ = Nothing
-
-  documentFor (Namespace [] ["Closing"]) =
-    Just "Value handle is being closed."
-  documentFor (Namespace [] ["AlreadyClosed"]) =
-    Just "Value handle was already closed."
-  documentFor (Namespace [] ["Closed"]) =
-    Just "Value handle was closed."
-  documentFor (Namespace [] ["RangeReading"]) =
-    Just "Value handle is doing a range read."
-  documentFor (Namespace [] ["RangeRead"]) =
-    Just "Value handle finished a range read."
-  documentFor (Namespace [] ["Reading"]) =
-    Just "Value handle is doing a read."
-  documentFor (Namespace [] ["Read"]) =
-    Just "Value handle finished a read."
-  documentFor (Namespace [] ["Statting"]) =
-    Just "Value handle is doing a stat."
-  documentFor (Namespace [] ["Stat"]) =
-    Just "Value handle finished a stat."
-  documentFor _ = Nothing
-
-  allNamespaces =
-    [ Namespace [] ["Closing"]
-    , Namespace [] ["AlreadyClosed"]
-    , Namespace [] ["Closed"]
-    , Namespace [] ["RangeReading"]
-    , Namespace [] ["RangeRead"]
-    , Namespace [] ["Reading"]
-    , Namespace [] ["Read"]
-    , Namespace [] ["Statting"]
-    , Namespace [] ["Stat"]
-    ]
 
 --------------------------------------------------------------------------------
 -- LedgerDB TraceReplayEvent
 --------------------------------------------------------------------------------
 
 instance (StandardHash blk, ConvertRawHash blk)
-          => LogFormatting (LedgerDB.TraceReplayEvent blk) where
-  forHuman (LedgerDB.ReplayFromGenesis _replayTo) =
+          => LogFormatting (LedgerDB.TraceReplayStartEvent blk) where
+  forHuman LedgerDB.ReplayFromGenesis =
       "Replaying ledger from genesis"
-  forHuman (LedgerDB.ReplayFromSnapshot snap tip' _ _) =
+  forHuman (LedgerDB.ReplayFromSnapshot snap (LedgerDB.ReplayStart tip')) =
       "Replaying ledger from snapshot " <> showT snap <> " at " <>
-        renderRealPointAsPhrase tip'
+        renderPointAsPhrase tip'
+
+  forMachine _dtal LedgerDB.ReplayFromGenesis =
+      mconcat [ "kind" .= String "ReplayFromGenesis" ]
+  forMachine dtal (LedgerDB.ReplayFromSnapshot snap tip') =
+      mconcat [ "kind" .= String "ReplayFromSnapshot"
+               , "snapshot" .= forMachine dtal snap
+               , "tip" .= show tip' ]
+
+instance (StandardHash blk, ConvertRawHash blk)
+          => LogFormatting (LedgerDB.TraceReplayEvent blk) where
+
+  forHuman (LedgerDB.TraceReplayStartEvent ev') = forHuman ev'
+  forHuman (LedgerDB.TraceReplayProgressEvent ev') = forHuman ev'
+
+  forMachine dtal (LedgerDB.TraceReplayStartEvent ev') = forMachine dtal ev'
+  forMachine dtal (LedgerDB.TraceReplayProgressEvent ev') = forMachine dtal ev'
+
+instance (StandardHash blk, ConvertRawHash blk)
+          => LogFormatting (LedgerDB.TraceReplayProgressEvent blk) where
   forHuman (LedgerDB.ReplayedBlock
               pt
               _ledgerEvents
@@ -1881,12 +1566,6 @@ instance (StandardHash blk, ConvertRawHash blk)
           <> showProgressT (fromIntegral atDiff) (fromIntegral toDiff)
           <> "%"
 
-  forMachine _dtal (LedgerDB.ReplayFromGenesis _replayTo) =
-      mconcat [ "kind" .= String "ReplayFromGenesis" ]
-  forMachine dtal (LedgerDB.ReplayFromSnapshot snap tip' _ _) =
-      mconcat [ "kind" .= String "ReplayFromSnapshot"
-               , "snapshot" .= forMachine dtal snap
-               , "tip" .= show tip' ]
   forMachine _dtal (LedgerDB.ReplayedBlock
                       pt
                       _ledgerEvents
@@ -1896,14 +1575,12 @@ instance (StandardHash blk, ConvertRawHash blk)
                , "slot" .= unSlotNo (realPointSlot pt)
                , "tip"  .= withOrigin 0 unSlotNo (pointSlot replayTo) ]
 
-instance MetaTrace (LedgerDB.TraceReplayEvent blk) where
+instance MetaTrace (LedgerDB.TraceReplayStartEvent blk) where
     namespaceFor LedgerDB.ReplayFromGenesis {} = Namespace [] ["ReplayFromGenesis"]
     namespaceFor LedgerDB.ReplayFromSnapshot {} = Namespace [] ["ReplayFromSnapshot"]
-    namespaceFor LedgerDB.ReplayedBlock {} = Namespace [] ["ReplayedBlock"]
 
     severityFor  (Namespace _ ["ReplayFromGenesis"]) _ = Just Info
     severityFor  (Namespace _ ["ReplayFromSnapshot"]) _ = Just Info
-    severityFor  (Namespace _ ["ReplayedBlock"]) _ = Just Info
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["ReplayFromGenesis"]) = Just $ mconcat
@@ -1918,6 +1595,44 @@ instance MetaTrace (LedgerDB.TraceReplayEvent blk) where
       , " The @replayTo@ parameter corresponds to the block at the tip of the"
       , " ImmDB, i.e., the last block to replay."
       ]
+    documentFor _ = Nothing
+
+    allNamespaces = [Namespace [] ["ReplayFromGenesis"]
+      , Namespace [] ["ReplayFromSnapshot"]
+      ]
+
+instance MetaTrace (LedgerDB.TraceReplayEvent blk) where
+    namespaceFor LedgerDB.TraceReplayStartEvent {} = Namespace [] ["ReplayStart"]
+    namespaceFor LedgerDB.TraceReplayProgressEvent {} = Namespace [] ["ReplayProgress"]
+
+    severityFor  (Namespace _ ["ReplayStart"]) _ = Just Info
+    severityFor  (Namespace _ ["ReplayProgress"]) _ = Just Info
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["ReplayFromGenesis"]) = Just $ mconcat
+      [ "There were no LedgerDB snapshots on disk, so we're replaying all"
+      , " blocks starting from Genesis against the initial ledger."
+      , " The @replayTo@ parameter corresponds to the block at the tip of the"
+      , " ImmDB, i.e., the last block to replay."
+      ]
+    documentFor (Namespace _ ["ReplayFromSnapshot"]) = Just $ mconcat
+      [ "There was a LedgerDB snapshot on disk corresponding to the given tip."
+      , " We're replaying more recent blocks against it."
+      , " The @replayTo@ parameter corresponds to the block at the tip of the"
+      , " ImmDB, i.e., the last block to replay."
+      ]
+    documentFor _ = Nothing
+
+    allNamespaces = [Namespace [] ["ReplayFromGenesis"]
+      , Namespace [] ["ReplayFromSnapshot"]
+      ]
+
+instance MetaTrace (LedgerDB.TraceReplayProgressEvent blk) where
+    namespaceFor LedgerDB.ReplayedBlock {} = Namespace [] ["ReplayedBlock"]
+
+    severityFor  (Namespace _ ["ReplayedBlock"]) _ = Just Info
+    severityFor _ _ = Nothing
+
     documentFor (Namespace _ ["ReplayedBlock"]) = Just $ mconcat
       [ "We replayed the given block (reference) on the genesis snapshot"
       , " during the initialisation of the LedgerDB."
@@ -1929,9 +1644,7 @@ instance MetaTrace (LedgerDB.TraceReplayEvent blk) where
     documentFor _ = Nothing
 
     allNamespaces =
-      [ Namespace [] ["ReplayFromGenesis"]
-      , Namespace [] ["ReplayFromSnapshot"]
-      , Namespace [] ["ReplayedBlock"]
+      [ Namespace [] ["ReplayedBlock"]
       ]
 
 --------------------------------------------------------------------------------
@@ -2316,17 +2029,22 @@ instance StandardHash blk => LogFormatting (VolDB.TraceEvent blk) where
       mconcat [ "kind" .= String "InvalidFileNames"
                , "files" .= String (Text.pack . show $ map show fsPaths)
               ]
+    forMachine _dtal VolDB.DBClosed =
+      mconcat [ "kind" .= String "DBClosed"
+              ]
 
 instance MetaTrace (VolDB.TraceEvent blk) where
     namespaceFor VolDB.DBAlreadyClosed {} = Namespace [] ["DBAlreadyClosed"]
     namespaceFor VolDB.BlockAlreadyHere {} = Namespace [] ["BlockAlreadyHere"]
     namespaceFor VolDB.Truncate {} = Namespace [] ["Truncate"]
     namespaceFor VolDB.InvalidFileNames {} = Namespace [] ["InvalidFileNames"]
+    namespaceFor VolDB.DBClosed {} = Namespace [] ["DBClosed"]
 
     severityFor  (Namespace _ ["DBAlreadyClosed"]) _ = Just Debug
     severityFor  (Namespace _ ["BlockAlreadyHere"]) _ = Just Debug
     severityFor  (Namespace _ ["Truncate"]) _ = Just Debug
     severityFor  (Namespace _ ["InvalidFileNames"]) _ = Just Debug
+    severityFor  (Namespace _ ["DBClosed"]) _ = Just Info
     severityFor _ _ = Nothing
 
     documentFor  (Namespace _ ["DBAlreadyClosed"]) = Just
@@ -2337,6 +2055,8 @@ instance MetaTrace (VolDB.TraceEvent blk) where
       "Truncates a file up to offset because of the error."
     documentFor  (Namespace _ ["InvalidFileNames"]) = Just
       "Reports a list of invalid file paths."
+    documentFor  (Namespace _ ["DBClosed"]) = Just
+      "Closing the Volatile DB."
     documentFor _ = Nothing
 
     allNamespaces =
@@ -2344,6 +2064,7 @@ instance MetaTrace (VolDB.TraceEvent blk) where
       , Namespace [] ["BlockAlreadyHere"]
       , Namespace [] ["Truncate"]
       , Namespace [] ["InvalidFileNames"]
+      , Namespace [] ["DBClosed"]
       ]
 
 

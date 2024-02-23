@@ -110,8 +110,6 @@ import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
-import           Ouroboros.Consensus.Storage.LedgerDB.BackingStore (BackingStoreTraceByBackend)
-import qualified Ouroboros.Consensus.Storage.LedgerDB.DbChangelog as LedgerDB
 
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.HasIssuer (BlockIssuerVerificationKeyHash (..), HasIssuer (..))
@@ -195,16 +193,8 @@ indexGCType :: ChainDB.TraceGCEvent a -> Int
 indexGCType ChainDB.ScheduledGC{} = 1
 indexGCType ChainDB.PerformedGC{} = 2
 
-indexReplType :: ChainDB.TraceReplayEvent a -> Int
-indexReplType LedgerDB.ReplayFromGenesis{} = 1
-indexReplType LedgerDB.ReplayFromSnapshot{} = 2
-indexReplType LedgerDB.ReplayedBlock{} = 3
-
 instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   -- equivalent by type and severity
-  isEquivalent (WithSeverity s1 (ChainDB.TraceLedgerReplayEvent ev1))
-               (WithSeverity s2 (ChainDB.TraceLedgerReplayEvent ev2)) =
-                  s1 == s2 && indexReplType ev1 == indexReplType ev2
   isEquivalent (WithSeverity s1 (ChainDB.TraceGCEvent ev1))
                (WithSeverity s2 (ChainDB.TraceGCEvent ev2)) =
                   s1 == s2 && indexGCType ev1 == indexGCType ev2
@@ -224,6 +214,12 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
                (WithSeverity _s2 (ChainDB.TraceCopyToImmutableDBEvent _)) = True
   isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmutableDBEvent _))
                (WithSeverity _s2 (ChainDB.TraceCopyToImmutableDBEvent _)) = True
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceLedgerDBEvent
+                                  (LedgerDB.LedgerReplayEvent
+                                   (LedgerDB.TraceReplayProgressEvent _))))
+               (WithSeverity _s2 (ChainDB.TraceLedgerDBEvent
+                                  (LedgerDB.LedgerReplayEvent
+                                   (LedgerDB.TraceReplayProgressEvent _)))) = True
   isEquivalent (WithSeverity _s1 (ChainDB.TraceInitChainSelEvent ev1))
                (WithSeverity _s2 (ChainDB.TraceInitChainSelEvent ev2)) =
     case (ev1, ev2) of
@@ -236,7 +232,9 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
       _ -> False
   isEquivalent _ _ = False
   -- the types to be elided
-  doelide (WithSeverity _ (ChainDB.TraceLedgerReplayEvent _)) = True
+  doelide (WithSeverity _ (ChainDB.TraceLedgerDBEvent
+                                  (LedgerDB.LedgerReplayEvent
+                                   (LedgerDB.TraceReplayProgressEvent _)))) = True
   doelide (WithSeverity _ (ChainDB.TraceGCEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.IgnoreBlockOlderThanK _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.IgnoreInvalidBlock _ _))) = False
@@ -269,7 +267,9 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
       return (Just ev, count)
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceGCEvent _)) (_old, count) =
       return (Just ev, count)
-  conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock {}))) (_old, count) = do
+  conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceLedgerDBEvent
+                                  (LedgerDB.LedgerReplayEvent
+                                   (LedgerDB.TraceReplayProgressEvent _)))) (_old, count) = do
       return (Just ev, count)
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceInitChainSelEvent
                                              (ChainDB.InitChainSelValidation
@@ -284,7 +284,9 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
            else (Just ev, count)
   conteliding _ _ _ _ = return (Nothing, 0)
 
-  reportelided _tverb _tr (WithSeverity _ (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock{}))) _count = pure ()
+  reportelided _tverb _tr (WithSeverity _ (ChainDB.TraceLedgerDBEvent
+                                  (LedgerDB.LedgerReplayEvent
+                                   (LedgerDB.TraceReplayProgressEvent _)))) _count = pure ()
   reportelided t tr ev count = defaultelidedreporting  t tr ev count
 
 instance (StandardHash header, Eq peer) => ElidingTracer
@@ -466,7 +468,6 @@ mkTracers _ _ _ _ _ enableP2P =
       , Consensus.txOutboundTracer = nullTracer
       , Consensus.localTxSubmissionServerTracer = nullTracer
       , Consensus.mempoolTracer = nullTracer
-      , Consensus.backingStoreTracer = nullTracer
       , Consensus.forgeTracer = nullTracer
       , Consensus.blockchainTimeTracer = nullTracer
       , Consensus.consensusErrorTracer = nullTracer
@@ -735,7 +736,6 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.txOutboundTracer = tracerOnOff (traceTxOutbound trSel) verb "TxOutbound" tr
     , Consensus.localTxSubmissionServerTracer = tracerOnOff (traceLocalTxSubmissionServer trSel) verb "LocalTxSubmissionServer" tr
     , Consensus.mempoolTracer = tracerOnOff' (traceMempool trSel) $ mempoolTracer trSel tr fStats
-    , Consensus.backingStoreTracer = tracerOnOff' (traceBackingStore trSel) $ backingStoreTracer trSel tr
     , Consensus.forgeTracer = tracerOnOff' (traceForge trSel) $
         Tracer $ \tlcev@Consensus.TraceLabelCreds{} -> do
           traceWith (annotateSeverity
@@ -1236,21 +1236,6 @@ mpTracer :: ( ToJSON (GenTxId blk)
             )
          => TraceSelection -> Trace IO Text -> Tracer IO (TraceEventMempool blk)
 mpTracer tc tr = annotateSeverity $ toLogObject' (traceVerbosity tc) tr
-
--------------------------------------------------------------------------------
--- BackingStore Tracer
--------------------------------------------------------------------------------
-
-backingStoreTracer
-  :: TraceSelection
-  -> Trace IO Text
-  -> Tracer IO BackingStoreTraceByBackend
-backingStoreTracer tc tracer = Tracer $ \ev -> do
-    let tr = appendName "BackingStore" tracer
-    traceWith (bsTracer tc tr) ev
-
-bsTracer :: TraceSelection -> Trace IO Text -> Tracer IO BackingStoreTraceByBackend
-bsTracer tc tr = annotateSeverity $ toLogObject' (traceVerbosity tc) tr
 
 --------------------------------------------------------------------------------
 -- ForgeStateInfo Tracers

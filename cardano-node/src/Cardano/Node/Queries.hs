@@ -69,7 +69,7 @@ import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..),
                    OneEraForgeStateUpdateError (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
-import           Ouroboros.Consensus.Ledger.Abstract (EmptyMK, IsLedger)
+import           Ouroboros.Consensus.Ledger.Abstract (EmptyMK)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import           Ouroboros.Consensus.Node (NodeKernel (..))
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
@@ -306,8 +306,7 @@ mapNodeKernelDataIO f (NodeKernelData ref) =
   readIORef ref >>= traverse f
 
 nkQueryLedger ::
-     IsLedger (LedgerState blk)
-  => (ExtLedgerState blk EmptyMK -> a)
+     (ExtLedgerState blk EmptyMK -> a)
   -> NodeKernel IO RemoteAddress LocalConnectionId blk
   -> IO a
 nkQueryLedger f NodeKernel{getChainDB} =

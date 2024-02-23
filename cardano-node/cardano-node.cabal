@@ -192,6 +192,7 @@ library
                       , si-timers
                       , stm
                       , strict-stm
+                      , sop-core
                       , text >= 2.0
                       , time
                       , trace-dispatcher ^>= 2.0

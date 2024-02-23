@@ -13,7 +13,7 @@ module Cardano.Node.Configuration.LedgerDB (
 import           Prelude
 
 import qualified Data.Aeson.Types as Aeson (FromJSON)
-import           Ouroboros.Consensus.Storage.LedgerDB.BackingStore.Impl.LMDB (LMDBLimits (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB (LMDBLimits (..))
 
 -- | Choose the LedgerDB Backend
 --

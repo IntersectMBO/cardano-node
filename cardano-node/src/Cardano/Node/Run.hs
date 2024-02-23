@@ -21,6 +21,7 @@ module Cardano.Node.Run
   , checkVRFFilePermissions
   ) where
 
+import qualified Ouroboros.Consensus.Storage.LedgerDB.Impl.Args as LDBArgs
 import           Cardano.Api (File (..), FileDirection (..))
 import qualified Cardano.Api as Api
 
@@ -44,6 +45,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, mapMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Proxy (Proxy (..))
+import           Data.SOP.Dict
 import           Data.Text (Text, breakOn, pack)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -125,8 +127,8 @@ import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency, War
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
 import           Cardano.Node.Configuration.LedgerDB
-import           Ouroboros.Consensus.Storage.LedgerDB.BackingStore
-import           Ouroboros.Consensus.Storage.LedgerDB.BackingStore.Impl.LMDB (LMDBLimits (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.V2.Args
+import           Ouroboros.Consensus.Util.Args
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -429,10 +431,6 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               onKernel nodeKernel
           , rnEnableP2P      = p2pMode
           , rnPeerSharing    = ncPeerSharing nc
-          , rnBackingStoreSelector = case ncLedgerDBBackend nc of
-              LMDB newLimit -> LMDBBackingStore $
-                maybe id (\y x -> x { lmdbMapSize = toBytes y }) newLimit defaultLMDBLimits
-              InMemory      -> InMemoryBackingStore
           }
     in case p2pMode of
       EnabledP2PMode -> do
@@ -467,6 +465,10 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                   (readTVar localRootsVar)
                   (readTVar publicRootsVar)
                   (readTVar useLedgerVar)
+
+              srnL :: Complete LedgerDbFlavorArgs IO
+              srnL = V2Args InMemoryHandleArgs
+
           in
           Node.run
             nodeArgs {
@@ -487,11 +489,9 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnDiffusionTracersExtra        = diffusionTracersExtra tracers
               , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
               , srnTraceChainDB                 = chainDBTracer tracers
-              , srnTraceBackingStore           = Consensus.backingStoreTracer $ consensusTracers tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               , srnSnapshotInterval             = ncSnapshotInterval nc
-              , srnFlushFrequency               = ncFlushFrequency nc
-              , srnQueryBatchSize               = ncQueryBatchSize nc
+              , srnLdbFlavorArgs = LDBArgs.LedgerDbFlavorArgsV2 srnL
               }
       DisabledP2PMode -> do
         nt <- TopologyNonP2P.readTopologyFileOrError nc
@@ -508,6 +508,9 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                            | (NodeAddress (NodeHostIPAddress addr) port) <- ipProducerAddrs
                            ]
                            (length ipProducerAddrs)
+
+            srnL :: Complete LedgerDbFlavorArgs IO
+            srnL = V2Args InMemoryHandleArgs
 #ifdef UNIX
         -- initial `SIGHUP` handler; it only warns that neither updating of
         -- topology is supported nor updating block forging is yet possible.
@@ -539,11 +542,9 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnDiffusionTracersExtra       = diffusionTracersExtra tracers
               , srnEnableInDevelopmentVersions = ncExperimentalProtocolsEnabled nc
               , srnTraceChainDB                = chainDBTracer tracers
-              , srnTraceBackingStore           = Consensus.backingStoreTracer $ consensusTracers tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               , srnSnapshotInterval            = ncSnapshotInterval nc
-              , srnFlushFrequency              = ncFlushFrequency nc
-              , srnQueryBatchSize              = ncQueryBatchSize nc
+              , srnLdbFlavorArgs               = LDBArgs.LedgerDbFlavorArgsV2 srnL
               }
  where
   logStartupWarnings :: IO ()

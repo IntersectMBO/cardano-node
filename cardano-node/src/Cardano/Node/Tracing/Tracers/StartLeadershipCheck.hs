@@ -27,13 +27,13 @@ import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import           Ouroboros.Consensus.Block (SlotNo (..))
 import           Ouroboros.Consensus.HardFork.Combinator
-import           Ouroboros.Consensus.Ledger.Abstract (EmptyMK, IsLedger)
+import           Ouroboros.Consensus.Ledger.Abstract (EmptyMK)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState, ledgerState)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
 import           Ouroboros.Consensus.Node (NodeKernel (..))
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-import qualified Ouroboros.Consensus.Storage.LedgerDB.BackingStore as Stats
+import qualified Ouroboros.Consensus.Storage.LedgerDB.API as LedgerDB
 
 import           Cardano.Node.Queries (LedgerQueries (..), NodeKernelData (..))
 import           Cardano.Slotting.Slot (fromWithOrigin)
@@ -65,7 +65,7 @@ forgeTracerTransform nodeKern (Trace tr) = pure $ Trace $ T.arrow $ T.emit $
         query <- mapNodeKernelDataIO
                     (\nk ->
                        (,,)
-                         <$> fmap Stats.numEntries (ChainDB.getStatistics (getChainDB nk))
+                         <$> fmap (maybe 0 LedgerDB.ledgerTableSize) (ChainDB.getStatistics (getChainDB nk))
                          <*> nkQueryLedger (ledgerDelegMapSize . ledgerState) nk
                          <*> nkQueryChain fragmentChainDensity nk)
                     nodeKern
@@ -84,8 +84,7 @@ forgeTracerTransform nodeKern (Trace tr) = pure $ Trace $ T.arrow $ T.emit $
           T.traceWith tr (lc, Left control)
 
 nkQueryLedger ::
-     IsLedger (LedgerState blk)
-  => (ExtLedgerState blk EmptyMK -> a)
+     (ExtLedgerState blk EmptyMK -> a)
   -> NodeKernel IO RemoteAddress LocalConnectionId blk
   -> IO a
 nkQueryLedger f NodeKernel{getChainDB} =
