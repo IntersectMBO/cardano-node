@@ -200,11 +200,10 @@
                     cardano-node-rev = pkgs.gitrev;
                   }).workbench-profile-run;
           in
-          ({
+          {
             "dockerImage/node" = pkgs.dockerImage;
             "dockerImage/submit-api" = pkgs.submitApiDockerImage;
 
-          } // optionalAttrs (exes ? tx-generator) {
             ## This is a very light profile, no caching&pinning needed.
             workbench-ci-test =
               workbenchTest { profileName        = "ci-test-bage";
@@ -213,7 +212,7 @@
               workbenchTest { profileName        = "ci-test-bage";
                               workbenchStartArgs = [ "--trace" ];
                             };
-          } // {
+
             inherit (pkgs) all-profiles-json;
 
             system-tests = pkgs.writeShellApplication {
@@ -236,7 +235,7 @@
                   nix develop --accept-flake-config .#base -c ./.github/regression.sh 2>&1
               '';
             };
-          }))
+          })
           # Add checks to be able to build them individually
           // (prefixNamesWith "checks/" checks);
 
@@ -251,12 +250,12 @@
               cardano-deployment = pkgs.cardanoLib.mkConfigHtml { inherit (pkgs.cardanoLib.environments) mainnet preview preprod; };
             } // optionalAttrs (system == "x86_64-linux") {
               native = packages // {
-                shells = removeAttrs devShells (lib.optional (!(exes ? tx-generator)) "devops");
+                shells = devShells;
                 internal = {
                   roots.project = project.roots;
                   plan-nix.project = project.plan-nix;
                 };
-                profiled = lib.genAttrs (lib.filter (n: packages ? ${n}) [ "cardano-node" "tx-generator" "locli" ]) (n:
+                profiled = lib.genAttrs [ "cardano-node" "tx-generator" "locli" ] (n:
                   packages.${n}.passthru.profiled
                 );
                 asserted = lib.genAttrs [ "cardano-node" ] (n:
@@ -319,7 +318,7 @@
                   platform = "macos";
                   exes = lib.collect lib.isDerivation (collectExes project);
                 };
-                shells = removeAttrs devShells ([ "profiled" ] ++ lib.optional (!(exes ? tx-generator)) "devops");
+                shells = removeAttrs devShells [ "profiled" ];
                 internal = {
                   roots.project = project.roots;
                   plan-nix.project = project.plan-nix;

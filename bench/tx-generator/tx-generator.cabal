@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   tx-generator
-version:                2.10
+version:                2.11
 synopsis:               A transaction workload generator for Cardano clusters
 description:            A transaction workload generator for Cardano clusters.
 category:               Cardano,
@@ -26,13 +26,12 @@ common project-config
     buildable: False
 
 common with-library
-  if impl(ghc >= 9.6)
-    build-depends:      plutus-scripts-bench
+  -- This is the inverse to the "buildable" GHC version constraint in plutus-scripts-bench.
+  -- It makes sure, we only depend on that package if it is buildable.
+  -- The tx-generator will fall back to pre-serialized Plutus scripts if this package is not present.
+  if !(impl(ghc <9.6) || impl(ghc >=9.7))
+    build-depends:      plutus-scripts-bench ^>= 1.0.2
     cpp-options:        -DWITH_LIBRARY
-
-  -- This echos the ghc range in the plutus-tx-plugin cabal file.
-  if (impl(ghc <9.6) || impl(ghc >=9.7))
-    buildable: False
 
 library
   import:               project-config, with-library
@@ -179,10 +178,6 @@ executable tx-generator
                         -rtsopts
                         "-with-rtsopts=-T"
 
-  -- This echos the ghc range in the plutus-tx-plugin cabal file.
-  if (impl(ghc <9.6) || impl(ghc >=9.7))
-    buildable: False
-
   build-depends:        base
                       , tx-generator
 
@@ -197,10 +192,6 @@ test-suite tx-generator-apitest
                         -Wall
                         -rtsopts
                         "-with-rtsopts=-T"
-
-  -- This echos the ghc range in the plutus-tx-plugin cabal file.
-  if (impl(ghc <9.6) || impl(ghc >=9.7))
-    buildable: False
 
   build-depends:        base
                       , aeson
@@ -235,10 +226,6 @@ test-suite tx-generator-test
   hs-source-dirs:       test
   main-is:              Main.hs
   type:                 exitcode-stdio-1.0
-
-  -- This echos the ghc range in the plutus-tx-plugin cabal file.
-  if (impl(ghc <9.6) || impl(ghc >=9.7))
-    buildable: False
 
   build-depends:        base
                       , tasty
