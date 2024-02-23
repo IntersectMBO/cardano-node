@@ -43,7 +43,7 @@ main = do
       (BlockInMode (Block (BlockHeader _slotNo _blockHeaderHash (BlockNo blockNoI)) _transactions) _era)
       blockCount -> do
         case ledgerState of
-            LedgerStateShelley (Shelley.ShelleyLedgerState shelleyTipWO _ _) -> case shelleyTipWO of
+            LedgerStateShelley (Shelley.ShelleyLedgerState shelleyTipWO _ _ _) -> case shelleyTipWO of
               Origin -> putStrLn "."
               At (Shelley.ShelleyTip _ _ hash) -> print hash
             _ -> when (blockNoI `mod` 100 == 0) (print blockNoI)

@@ -16,11 +16,13 @@ import           Control.Monad.Trans.Except
 import           Data.Kind
 import           Data.Proxy
 import qualified Data.SOP as SOP
+import           Data.SOP.Functors
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time
 import           Data.Word (Word32)
 import qualified GHC.TypeLits as GHC
+import           Ouroboros.Consensus.Ledger.Tables (EmptyMK)
 import           System.Environment (getArgs)
 import           System.FilePath ((</>))
 
@@ -127,7 +129,7 @@ chainSyncClient = ChainSyncClient $ do
             return clientStIdle
         }
 
-    printLedgerState :: TSP.Telescope (SOP.K C.Past) (C.Current C.LedgerState) xs -> IO ()
+    printLedgerState :: TSP.Telescope (SOP.K C.Past) (C.Current (Flip C.LedgerState EmptyMK)) xs -> IO ()
     printLedgerState ls = case ls of
       TSP.TZ (C.Current bound _) -> putStrLn $ "curren't era bounds: " <> show bound
       TSP.TS _ ls' -> printLedgerState ls'

@@ -72,6 +72,7 @@ jobs:
           mingw-w64-x86_64-pkg-config
           mingw-w64-x86_64-libsodium
           mingw-w64-x86_64-openssl
+          mingw-w64-x86_64-lmdb
           base-devel
           autoconf-wrapper
           autoconf
@@ -94,7 +95,8 @@ jobs:
     - name: "MAC: Install build environment (brew)"
       if: runner.os == 'macOS'
       run: |
-        brew install libsodium
+        brew install libsodium pkg-config lmdb
+        sudo cp ./.github/workflows/lmdb.pc /usr/local/lib/pkgconfig
 
     - name: "MAC: Install build environment (for secp256k1)"
       if: runner.os == 'macOS'

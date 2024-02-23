@@ -21,6 +21,7 @@ module Cardano.Node.Run
   , checkVRFFilePermissions
   ) where
 
+import qualified Ouroboros.Consensus.Storage.LedgerDB.Impl.Args as LDBArgs
 import           Cardano.Api (File (..), FileDirection (..))
 import qualified Cardano.Api as Api
 
@@ -44,6 +45,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, mapMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Proxy (Proxy (..))
+import           Data.SOP.Dict
 import           Data.Text (Text, breakOn, pack)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -92,6 +94,7 @@ import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNodeArgs (..)
                    StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
+import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.Diffusion as Diffusion
@@ -122,6 +125,10 @@ import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Tracing.Tracers
 import           Ouroboros.Network.PeerSelection.LocalRootPeers (HotValency, WarmValency)
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
+
+import           Cardano.Node.Configuration.LedgerDB
+import           Ouroboros.Consensus.Storage.LedgerDB.V2.Args
+import           Ouroboros.Consensus.Util.Args
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -458,6 +465,10 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                   (readTVar localRootsVar)
                   (readTVar publicRootsVar)
                   (readTVar useLedgerVar)
+
+              srnL :: Complete LedgerDbFlavorArgs IO
+              srnL = V2Args InMemoryHandleArgs
+
           in
           Node.run
             nodeArgs {
@@ -471,7 +482,6 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
               , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride      = ncValidateDB nc
-              , srnSnapshotInterval             = ncSnapshotInterval nc
               , srnDatabasePath                 = dbPath
               , srnDiffusionArguments           = diffusionArguments
               , srnDiffusionArgumentsExtra      = diffusionArgumentsExtra
@@ -480,6 +490,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnEnableInDevelopmentVersions  = ncExperimentalProtocolsEnabled nc
               , srnTraceChainDB                 = chainDBTracer tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
+              , srnSnapshotInterval             = ncSnapshotInterval nc
+              , srnLdbFlavorArgs = LDBArgs.LedgerDbFlavorArgsV2 srnL
               }
       DisabledP2PMode -> do
         nt <- TopologyNonP2P.readTopologyFileOrError nc
@@ -496,6 +508,9 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                            | (NodeAddress (NodeHostIPAddress addr) port) <- ipProducerAddrs
                            ]
                            (length ipProducerAddrs)
+
+            srnL :: Complete LedgerDbFlavorArgs IO
+            srnL = V2Args InMemoryHandleArgs
 #ifdef UNIX
         -- initial `SIGHUP` handler; it only warns that neither updating of
         -- topology is supported nor updating block forging is yet possible.
@@ -520,7 +535,6 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               { srnBfcMaxConcurrencyBulkSync   = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
               , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride     = ncValidateDB nc
-              , srnSnapshotInterval            = ncSnapshotInterval nc
               , srnDatabasePath                = dbPath
               , srnDiffusionArguments          = diffusionArguments
               , srnDiffusionArgumentsExtra     = mkNonP2PArguments ipProducers dnsProducers
@@ -529,6 +543,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnEnableInDevelopmentVersions = ncExperimentalProtocolsEnabled nc
               , srnTraceChainDB                = chainDBTracer tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
+              , srnSnapshotInterval            = ncSnapshotInterval nc
+              , srnLdbFlavorArgs               = LDBArgs.LedgerDbFlavorArgsV2 srnL
               }
  where
   logStartupWarnings :: IO ()

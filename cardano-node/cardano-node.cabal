@@ -64,6 +64,7 @@ library
   exposed-modules:      Cardano.Node.Configuration.Logging
                         Cardano.Node.Configuration.NodeAddress
                         Cardano.Node.Configuration.POM
+                        Cardano.Node.Configuration.LedgerDB
                         Cardano.Node.Configuration.Socket
                         Cardano.Node.Configuration.Topology
                         Cardano.Node.Configuration.TopologyP2P
@@ -191,6 +192,7 @@ library
                       , si-timers
                       , stm
                       , strict-stm
+                      , sop-core
                       , text >= 2.0
                       , time
                       , trace-dispatcher ^>= 2.0
