@@ -29,11 +29,6 @@ local op=${1:-$(usage_genesis)}; shift
 case "$op" in
     prepare-cache-entry )
         local usage="USAGE:  wb genesis $op [--force] PROFILE-JSON NODE-SPECS OUTDIR CACHEDIR"
-
-        local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
-        local node_specs=${2:-$WB_SHELL_PROFILE_DATA/node-specs.json}
-        local cacheDir=${3:-$(envjqr 'cacheDir')}
-
         local regenesis_causes=()
 
         while test $# -gt 0; do
@@ -48,6 +43,9 @@ case "$op" in
           shift
         done
 
+        local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
+        local node_specs=${2:-$WB_SHELL_PROFILE_DATA/node-specs.json}
+        local cacheDir=${3:-$(envjqr 'cacheDir')}
         local cache_key_input cache_key cache_path
 
         mkdir -p "$cacheDir"
