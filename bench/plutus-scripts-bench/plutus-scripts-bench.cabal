@@ -1,6 +1,6 @@
 cabal-version:          3.0
 name:                   plutus-scripts-bench
-version:                1.0.1.0
+version:                1.0.2.0
 synopsis:               Plutus scripts used for benchmarking
 description:            Plutus scripts used for benchmarking.
 category:               Cardano,
@@ -27,9 +27,9 @@ common project-config
   if os(windows)
     buildable: False
 
-  if impl(ghc < 9.6)
+  -- This echoes the ghc range in the plutus-tx-plugin cabal file.
+  if (impl(ghc <9.6) || impl(ghc >=9.7))
     buildable: False
-
 
 common common-definitions
   build-depends:      base >= 4.14 && < 5
@@ -73,10 +73,10 @@ library
   -- IOG dependencies
   --------------------------
   build-depends:
-    , cardano-api             ^>= 8.38
+    , cardano-api             ^>= 8.38.0.0
     , plutus-ledger-api       >=1.0.0
     , plutus-tx               >=1.0.0
-    , plutus-tx-plugin        >=1.0.0
+    , plutus-tx-plugin        ^>=1.21
 
   ------------------------
   -- Non-IOG dependencies

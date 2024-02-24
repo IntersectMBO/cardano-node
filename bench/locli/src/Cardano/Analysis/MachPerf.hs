@@ -1,5 +1,11 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE MultiWayIf #-}
+
+#if __GLASGOW_HASKELL__ >= 908
+{-# OPTIONS_GHC -Wno-x-partial #-}
+#endif
+
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
 {- HLINT ignore "Use head" -}
 {- HLINT ignore "Evaluate" -}

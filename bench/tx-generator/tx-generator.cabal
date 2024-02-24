@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   tx-generator
-version:                2.10
+version:                2.11
 synopsis:               A transaction workload generator for Cardano clusters
 description:            A transaction workload generator for Cardano clusters.
 category:               Cardano,
@@ -26,10 +26,12 @@ common project-config
     buildable: False
 
 common with-library
-  if impl(ghc >= 9.6)
-    build-depends:      plutus-scripts-bench
+  -- This is the inverse to the "buildable" GHC version constraint in plutus-scripts-bench.
+  -- It makes sure, we only depend on that package if it is buildable.
+  -- The tx-generator will fall back to pre-serialized Plutus scripts if this package is not present.
+  if !(impl(ghc <9.6) || impl(ghc >=9.7))
+    build-depends:      plutus-scripts-bench ^>= 1.0.2
     cpp-options:        -DWITH_LIBRARY
-
 
 library
   import:               project-config, with-library
@@ -98,7 +100,7 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.38
+                      , cardano-api ^>= 8.38.0.0
                       , cardano-binary
                       , cardano-cli ^>= 8.20.1.0
                       , cardano-crypto-class
