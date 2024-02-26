@@ -48,6 +48,11 @@ def all_profile_variants:
     } as $dataset_miniature
   |
     { genesis:
+      { initial_dreps:                      1000
+      }
+    } as $dataset_with_dreps
+  |
+    { genesis:
       { utxo:                               (1   * $M)
       , delegators:                         (0.2 * $M)
       }
@@ -665,6 +670,10 @@ def all_profile_variants:
   , $p2p *
     { name: "default-p2p"
     , desc: "Default, as per nix/workbench/profile/prof0-defaults.jq with P2P enabled"
+    }
+  , $dataset_with_dreps *
+    { name: "default-dreps"
+    , desc: "Default, as per nix/workbench/profile/prof0-defaults.jq with 1000 initial DReps enabled"
     }
   , $nomad_perf_torus * $p2p *
     { name: "default-nomadperf"
