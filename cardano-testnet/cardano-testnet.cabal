@@ -55,7 +55,7 @@ library
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras < 0.6.1
+                      , hedgehog-extras ^>= 0.6.1.0
                       , microlens
                       , lens-aeson
                       , mtl
