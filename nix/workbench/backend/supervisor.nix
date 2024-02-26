@@ -40,6 +40,7 @@ let
       let supervisorConf = import ./supervisor-conf.nix
         { inherit pkgs lib stateDir;
           # Create a `supervisord.conf`
+          inherit profileData;
           nodeSpecs = profileData.node-specs.value;
           withGenerator = true;
           withTracer = profileData.value.node.tracer;
