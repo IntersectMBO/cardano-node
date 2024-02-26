@@ -1,6 +1,7 @@
 { pkgs
 , lib
 , stateDir
+, profileData
 , nodeSpecs
 , withGenerator
 , withTracer
@@ -118,7 +119,25 @@ let
         # Don't attempt any restart!
         startretries   = 0;
         # Seconds it needs to stay running to consider the start successful
-        startsecs      = 5;
+        # In cases with a big genesis file, like the "value" profile with ~600
+        # mega, if this file has an error the node can fail after the 5 seconds
+        # we use as default for the other programs and the error will be catched
+        # later by the healthcheck service with a misleading message.
+        # We found with our reference machines (c5.2xlarge, 16 MB and 8 cores),
+        # when running the "value" profile, that with 50 seconds at least one
+        # node was assummed successful (its socket was created). So to the
+        # default 5 we add 45 seconds when the UTxO size is the one of the
+        # "value" profile and seconds proportionaly to this for the others.
+        ### derived.utxo_generated
+        ### - fast:                      18000 (Default of 5s is OK)
+        ### - ci-test:                   18000 (Default of 5s is OK)
+        ### - default:                   43200 (Default of 5s is OK)
+        ### - plutus:                    61200 (Default of 5s is OK)
+        ### - forge-stress-pre:          72000
+        ### - forge-stress-large:       144000
+        ### - value:                   1536000 (30s more needed)
+        ### - chainsync-early-alonzo: 31104000
+        startsecs      = 5 + (profileData.derived.utxo_generated / (1536000 / 50));
       })
     nodeSpecs))
     //
