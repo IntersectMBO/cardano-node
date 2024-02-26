@@ -1,5 +1,5 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -90,8 +90,8 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   let sbe = shelleyBasedEra @BabbageEra
 
   ----------------Need to register an SPO------------------
-  let utxoAddr = Text.unpack $ paymentKeyInfoAddr $ head wallets
-      utxoSKeyFile = paymentSKey . paymentKeyInfoPair $ head wallets
+  let utxoAddr = Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
+      utxoSKeyFile = paymentSKey . paymentKeyInfoPair $ wallets !! 0
   void $ H.execCli' execConfig
     [ "conway", "query", "utxo"
     , "--address", utxoAddr

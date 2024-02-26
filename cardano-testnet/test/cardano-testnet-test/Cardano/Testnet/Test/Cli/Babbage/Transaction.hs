@@ -82,7 +82,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
 
   void $ execCli' execConfig
     [ "babbage", "query", "utxo"
-    , "--address", Text.unpack $ paymentKeyInfoAddr $ head wallets
+    , "--address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
     , "--cardano-mode"
     , "--out-file", work </> "utxo-1.json"
     ]
@@ -93,9 +93,9 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
 
   void $ execCli' execConfig
     [ "babbage", "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
     , "--tx-in", Text.unpack $ renderTxIn txin1
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr (head wallets)) <> "+" <> show @Int 5_000_001
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr (wallets !! 0)) <> "+" <> show @Int 5_000_001
     , "--out-file", txbodyFp
     ]
 
@@ -114,7 +114,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
   H.byDurationM 1 15 "Expected UTxO found" $ do
     void $ execCli' execConfig
       [ "babbage", "query", "utxo"
-      , "--address", Text.unpack $ paymentKeyInfoAddr $ head wallets
+      , "--address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
       , "--cardano-mode"
       , "--out-file", work </> "utxo-2.json"
       ]

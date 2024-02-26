@@ -74,9 +74,9 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
   poolNode1 <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
-  let utxoAddr = Text.unpack $ paymentKeyInfoAddr $ head wallets
+  let utxoAddr = Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
       utxoAddr2 = Text.unpack $ paymentKeyInfoAddr $ wallets !! 1
-      utxoSKeyFile = paymentSKey . paymentKeyInfoPair $ head wallets
+      utxoSKeyFile = paymentSKey . paymentKeyInfoPair $ wallets !! 0
       utxoSKeyFile2 = paymentSKey . paymentKeyInfoPair $ wallets !! 1
 
   void $ H.execCli' execConfig
@@ -136,7 +136,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
   --    Register script stake address
   void $ execCli' execConfig
     [ convertToEraString anyEra, "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
     , "--tx-in", Text.unpack $ renderTxIn txin1
     , "--tx-out", plutusSpendingScriptAddr <> "+" <> show @Int 5_000_000
     , "--tx-out-datum-hash", scriptdatumhash
