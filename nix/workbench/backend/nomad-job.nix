@@ -707,6 +707,7 @@ let
               data = escapeTemplate (__readFile (
                 let supervisorConf = import ./supervisor-conf.nix
                   { inherit pkgs lib stateDir;
+                    inherit profileData;
                     # Include only this taks' node
                     nodeSpecs = if taskName == "tracer"
                       then {}
