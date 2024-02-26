@@ -9,7 +9,6 @@ module Cardano.Node.Protocol.Conway
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Pretty
 
 import qualified Cardano.Ledger.Conway.Genesis as Conway
 import           Cardano.Node.Orphans ()
@@ -18,8 +17,6 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
-
-import           Control.Monad.Except (ExceptT)
 
 --
 -- Conway genesis

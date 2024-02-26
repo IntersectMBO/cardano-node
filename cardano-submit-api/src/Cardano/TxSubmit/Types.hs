@@ -19,8 +19,8 @@ module Cardano.TxSubmit.Types
   , renderTxCmdError
   ) where
 
-import           Cardano.Api (Error (..), TxId, TxValidationErrorInCardanoMode (..), textShow)
-import           Cardano.Api.Pretty
+import           Cardano.Api (Error (..), TxId, TxValidationErrorInCardanoMode (..), pshow,
+                   textShow)
 
 import           Cardano.Binary (DecoderError)
 import           Cardano.TxSubmit.Orphans ()

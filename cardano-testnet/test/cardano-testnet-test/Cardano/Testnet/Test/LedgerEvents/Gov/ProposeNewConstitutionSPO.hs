@@ -26,32 +26,26 @@ import           Cardano.Testnet
 
 import           Prelude
 
-import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.State.Strict (put)
 import           Data.Bifunctor (Bifunctor (..))
-import           Data.Data
 import           Data.List (isInfixOf)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import           Data.Type.Equality
 import           Data.Word
-import           GHC.IORef (newIORef)
-import           GHC.Stack (HasCallStack, withFrozenCallStack)
+import           GHC.Stack (HasCallStack)
 import           Lens.Micro
 import           System.Exit (ExitCode (ExitSuccess))
 import           System.FilePath ((</>))
 
+import           Testnet.Components.Query
 import qualified Testnet.Process.Cli as P
 import           Testnet.Process.Cli (execCliStdoutToJson)
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
-import           Testnet.Property.Utils (queryUtxos)
 import           Testnet.Runtime
 
 import           Hedgehog
 import qualified Hedgehog as H
-import           Hedgehog.Extras (Integration)
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
@@ -64,8 +58,6 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
     <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
-
-  utxoFileCounter <- liftIO $ newIORef 1
 
   let sbe = ShelleyBasedEraConway
       era = toCardanoEra sbe
@@ -88,13 +80,11 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 
-  let queryAnyUtxo :: Text.Text -> Integration TxIn
-      queryAnyUtxo address = withFrozenCallStack $ do
-        utxos <- queryUtxos execConfig work utxoFileCounter sbe address
-        H.noteShow =<< H.headM (Map.keys utxos)
-      socketName' = IO.sprocketName poolSprocket1
+  let socketName' = IO.sprocketName poolSprocket1
       socketBase = IO.sprocketBase poolSprocket1 -- /tmp
       socketPath = socketBase </> socketName'
+
+  epochStateView <- getEpochStateView (File configurationFile) (File socketPath)
 
   H.note_ $ "Sprocket: " <> show poolSprocket1
   H.note_ $ "Abs path: " <> tempAbsBasePath'
@@ -149,7 +139,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   txbodyFp <- H.note $ work </> "tx.body"
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
-  txin1 <- queryAnyUtxo . paymentKeyInfoAddr $ head wallets
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe $ head wallets
 
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "transaction", "build"
@@ -201,7 +191,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
       ]
 
   -- We need more UTxOs
-  txin2 <- queryAnyUtxo . paymentKeyInfoAddr $ head wallets
+  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe $ head wallets
 
   voteTxFp <- H.note $ work </> gov </> "vote.tx"
   voteTxBodyFp <- H.note $ work </> gov </> "vote.txbody"
@@ -237,18 +227,21 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   exitCode H./== ExitSuccess -- Dit it fail?
   H.assert $ "DisallowedVoters" `isInfixOf` stderr -- Did it fail for the expected reason?
 
-getConstitutionProposal ::
-  (HasCallStack, MonadIO m, MonadTest m)
+getConstitutionProposal
+  :: HasCallStack
+  => MonadIO m
+  => MonadTest m
   => NodeConfigFile In
   -> SocketPath
   -> EpochNo -- ^ The termination epoch: the constitution proposal must be found *before* this epoch
   -> m (Maybe (L.GovActionId StandardCrypto))
 getConstitutionProposal nodeConfigFile socketPath maxEpoch = do
-  result <- runExceptT $ checkLedgerStateCondition nodeConfigFile socketPath QuickValidation maxEpoch Nothing
-      $ \(AnyNewEpochState actualEra newEpochState) -> do
-        case testEquality expectedEra actualEra of
-          Just Refl -> do
-            let proposals = shelleyBasedEraConstraints expectedEra newEpochState
+  result <- runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
+      $ \(AnyNewEpochState actualEra newEpochState) ->
+        caseShelleyToBabbageOrConwayEraOnwards
+          (error $ "Expected Conway era onwards, got state in " <> docToString (pretty actualEra))
+          (\cEra -> conwayEraOnwardsConstraints cEra $ do
+            let proposals = newEpochState
                       ^. L.nesEsL
                       . L.esLStateL
                       . L.lsUTxOStateL
@@ -261,9 +254,6 @@ getConstitutionProposal nodeConfigFile socketPath maxEpoch = do
                 pure ConditionMet
               _ ->
                 pure ConditionNotMet
-          Nothing -> do
-            error $ "Eras mismatch! expected: " <> show expectedEra <> ", actual: " <> show actualEra
+          ) actualEra
   (_, mGovAction) <- H.evalEither result
   return mGovAction
-  where
-    expectedEra = ShelleyBasedEraConway

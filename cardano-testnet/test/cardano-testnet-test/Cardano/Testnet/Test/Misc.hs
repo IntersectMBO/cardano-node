@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Cardano.Testnet.Test.Misc where
 
-import           Cardano.Api.Pretty
+import           Cardano.Api (docToString)
 
 import           Cardano.CLI.EraBased.Run.Query (renderOpCertIntervalInformation)
 import           Cardano.CLI.Types.Common

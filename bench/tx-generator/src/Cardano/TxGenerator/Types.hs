@@ -13,18 +13,16 @@ module  Cardano.TxGenerator.Types
         (module Cardano.TxGenerator.Types)
         where
 
+import           Cardano.Api
+import           Cardano.Api.Shelley (ProtocolParameters)
+
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyGenesis)
+import           Cardano.TxGenerator.Fund (Fund)
+
 import           GHC.Generics (Generic)
 import           GHC.Natural
 import           Prettyprinter
-
-import           Cardano.Api
-import           Cardano.Api.Pretty
-
-import           Cardano.Api.Shelley (ProtocolParameters)
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyGenesis)
-
-import           Cardano.TxGenerator.Fund (Fund)
 
 -- convenience alias for use trhougout the API
 type ShelleyGenesis       = Ledger.ShelleyGenesis StandardCrypto

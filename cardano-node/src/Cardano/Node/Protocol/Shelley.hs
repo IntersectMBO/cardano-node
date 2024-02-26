@@ -22,7 +22,6 @@ module Cardano.Node.Protocol.Shelley
   ) where
 
 import qualified Cardano.Api as Api
-import           Cardano.Api.Pretty
 import           Cardano.Api.Shelley hiding (FileError)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -45,9 +44,6 @@ import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParams (.
                    ProtocolParamsShelleyBased (..), ShelleyLeaderCredentials (..))
 
 import           Control.Exception (IOException)
-import           Control.Monad.Except (ExceptT, MonadError (..))
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left,
-                   newExceptT)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.Text as T

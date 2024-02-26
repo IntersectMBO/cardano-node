@@ -11,16 +11,12 @@ module Cardano.Testnet.Test.Node.Shutdown
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Pretty
 
 import           Cardano.Testnet
 
 import           Prelude
 
 import           Control.Monad
-import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Class (lift)
-import           Control.Monad.Trans.Except
 import           Data.Aeson
 import           Data.Aeson.Types
 import           Data.Bifunctor

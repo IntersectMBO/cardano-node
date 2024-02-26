@@ -11,13 +11,10 @@ import qualified Cardano.Api.Shelley as Api
 
 import           Cardano.Testnet as TN
 
-import           Prelude
-
 import qualified Control.Concurrent as IO
 import           Control.Concurrent.Async (async, link)
 import           Control.Exception (Exception, throw)
 import           Control.Monad (forever)
-import           Control.Monad.Trans.Except (runExceptT)
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
