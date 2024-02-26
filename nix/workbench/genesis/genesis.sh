@@ -4,9 +4,10 @@ global_genesis_format_version=March-14-2023
 
 usage_genesis() {
      usage "genesis" "Genesis" <<EOF
-    $(helpcmd prepare-cache-entry [--force] PROFILE-JSON CACHEDIR NODE-SPECS OUTDIR)
+    $(helpcmd prepare-cache-entry [--force] [--initial-dreps N] PROFILE-JSON CACHEDIR NODE-SPECS OUTDIR)
                      Prepare a genesis cache entry for the specified profile.
                        Cache entry regeneration can be $(yellow --force)'d
+                       The number of initial DReps can be set by $(yellow N).
 
     $(helpcmd derive-from-cache PROFILE-DIR TIMING-JSON-EXPR CACHE-ENTRY-DIR OUTDIR)
                      Instantiate genesis from a cache entry
@@ -28,13 +29,18 @@ local op=${1:-$(usage_genesis)}; shift
 
 case "$op" in
     prepare-cache-entry )
-        local usage="USAGE:  wb genesis $op [--force] PROFILE-JSON NODE-SPECS OUTDIR CACHEDIR"
+        local usage="USAGE:  wb genesis $op [--force] [--initial-dreps N] PROFILE-JSON NODE-SPECS OUTDIR CACHEDIR"
         local regenesis_causes=()
+	local initial_drep_count=0
 
         while test $# -gt 0; do
           case "$1" in
             --force )
               regenesis_causes+=('has--force')
+              ;;
+            --initial-dreps )
+              initial_drep_count=$2
+              shift
               ;;
             * )
               break
@@ -175,11 +181,34 @@ case "$op" in
         local dir=${3:-$(mktemp -d)}
         local cache_key_input=${4:-$(genesis profile-cache-key-input "$WB_SHELL_PROFILE_DATA"/profile.json)}
         local cache_key=${5:-$(genesis profile-cache-key "$WB_SHELL_PROFILE_DATA"/profile.json)}
+        local initialdreps=$(mktemp)
 
         progress "genesis" "new one: $(yellow profile) $(blue "$profile_json") $(yellow node_specs) $(blue "$node_specs") $(yellow dir) $(blue "$dir") $(yellow cache_key) $(blue "$cache_key") $(yellow cache_key_input) $(blue "$cache_key_input")"
 
         rm -rf   "$dir"/{*-keys,byron,pools,nodes,*.json,*.params,*.version}
         mkdir -p "$dir"
+
+        (
+                 echo '['
+                 local nmax=${initial_drep_count:-0}
+                 local tmp=$(mktemp)
+                 for n in $(seq 1 $nmax)
+                 do
+                          cardano-cli conway governance drep key-gen \
+                                   --verification-key-file $tmp      \
+                                   --signing-key-file /dev/null
+                          cardano-cli conway governance drep id      \
+                                   --drep-verification-key-file $tmp \
+                                   --output-format hex               \
+                                   | jq -R '{ ("keyHash-" + .): { "expiry": 1000, "deposit": 5000 } }'
+                          if [ $n -lt $nmax ]
+                          then
+                                   echo ","
+                          fi
+                 done
+		 rm -f $tmp
+                 echo ']'
+        ) | jq 'add | { "initialDReps": . }' > $initialdreps
 
         # We pass the network magic as an argument to cardano-cli, but, despite being required,
         # it is only used to amend a default template while we are bringing our own. So we put it into
@@ -197,10 +226,12 @@ case "$op" in
           "$global_basedir"/profile/presets/mainnet/genesis/genesis.alonzo.json \
           >"$dir"/genesis.alonzo.spec.json
 
-        jq '$prof[0] as $p | . * ($p.genesis.conway // {})' \
+	jq '$prof[0] as $p | (. * ($p.genesis.conway // {})) + $initialdreps[0]' \
           --slurpfile prof "$profile_json" \
+          --slurpfile initialdreps "$initialdreps" \
           "$global_basedir"/profile/presets/mainnet/genesis/genesis.conway.json \
           >"$dir"/genesis.conway.spec.json
+        rm -f $initialdreps
 
         jq '
           to_entries
