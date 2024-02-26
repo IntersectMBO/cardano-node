@@ -463,7 +463,8 @@ in {
 
       publicProducers = mkOption {
         type = types.listOf types.attrs;
-        default = [{
+        default = [];
+        example = [{
           accessPoints = [{
             address = envConfig.relaysNew;
             port = envConfig.edgePort;
@@ -530,7 +531,17 @@ in {
 
       bootstrapPeers = mkOption {
         type = types.nullOr (types.listOf types.attrs);
-        default = null;
+        default =
+          # Until legacy mainnet relays are deprecated and replaced by IOG bootstrap peers for relaysNew,
+          # filter the legacy relaysNew definition from the mainnet bootstrapPeers list.
+          #
+          # All other envs can use the edgeNodes list as bootstrapPeers.
+          if envConfig.name == "mainnet"
+          then
+            map (e: {address = e.addr; inherit (e) port;})
+              (builtins.filter (e: e.addr != envConfig.relaysNew) envConfig.edgeNodes)
+          else
+            map (e: {address = e.addr; inherit (e) port;}) envConfig.edgeNodes;
         description = ''
           If set, it will enable bootstrap peers.
           To disable set this to null.
