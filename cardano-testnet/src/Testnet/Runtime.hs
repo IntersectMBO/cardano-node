@@ -330,6 +330,6 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
         handleException = handle $ \(e :: SomeException) -> do
           liftIO $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
             <> displayException e <> "\n"
-          pure ConditionNotMet
+          pure ConditionMet
 
 

@@ -5,8 +5,9 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Testnet.Components.Query
-  ( QueryTipOutput(..)
+  ( QueryTip
   , EpochStateView
+  , getEpochState
   , queryTip
   , waitUntilEpoch
   , getEpochStateView
@@ -26,7 +27,6 @@ import qualified Cardano.Ledger.UTxO as L
 
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
-import           Control.Monad.State.Class
 import           Control.Monad.Trans.Resource
 import           Data.Aeson
 import           Data.Bifunctor (bimap)
@@ -50,6 +50,7 @@ import           Testnet.Property.Utils (runInBackground)
 import           Testnet.Runtime
 
 import qualified Hedgehog as H
+import           Hedgehog.Extras (MonadAssertion)
 import qualified Hedgehog.Extras as H
 import           Hedgehog.Extras.Test.Process (ExecConfig)
 import           Hedgehog.Internal.Property (MonadTest)
@@ -72,17 +73,17 @@ waitUntilEpoch nodeConfigFile socketPath desiredEpoch = withFrozenCallStack $ do
       H.note_ $ "waitUntilEpoch: could not reach termination epoch, " <> docToString (prettyError err)
       H.failure
     Right res -> do
-      H.note_ $ "waitUntilEpoch: could not reach terminatinon epoch - no error returned "
+      H.note_ $ "waitUntilEpoch: could not reach termination epoch - no error returned "
         <> "- invalid foldEpochState behaviour, result: " <> show res
       H.failure
 
 queryTip
   :: (MonadCatch m, MonadIO m, MonadTest m, HasCallStack)
-  => QueryTipOutput
+  => File QueryTip Out
   -- ^ Output file
   -> ExecConfig
   -> m QueryTipLocalStateOutput
-queryTip (QueryTipOutput fp) execConfig = do
+queryTip (File fp) execConfig = do
   exists <- H.evalIO $ doesFileExist fp
   when exists $ H.evalIO $ removeFile fp
 
@@ -94,10 +95,24 @@ queryTip (QueryTipOutput fp) execConfig = do
   tipJSON <- H.leftFailM $ H.readJsonFile fp
   H.noteShowM $ H.jsonErrorFail $ fromJSON @QueryTipLocalStateOutput tipJSON
 
-newtype QueryTipOutput = QueryTipOutput { unQueryTipOutput :: FilePath }
+-- | Type level tag for a file storing query tip
+data QueryTip
 
 -- | A read-only mutable pointer to an epoch state, updated automatically
-newtype EpochStateView = EpochStateView (IORef AnyNewEpochState)
+newtype EpochStateView = EpochStateView (IORef (Maybe AnyNewEpochState))
+
+-- | Get epoch state from the view. If the state isn't available, retry waiting up to 15 seconds. Fails when
+-- the state is not available after 15 seconds.
+getEpochState :: MonadTest m
+              => MonadAssertion m
+              => MonadIO m
+              => EpochStateView
+              -> m AnyNewEpochState
+getEpochState (EpochStateView esv) =
+  withFrozenCallStack $
+    H.byDurationM 0.5 15 "EpochStateView has not been initialized within 15 seconds" $
+      liftIO (readIORef esv) >>= maybe H.failure pure
+
 
 -- | Create a background thread listening for new epoch states. New epoch states are available to access
 -- through 'EpochStateView', using query functions.
@@ -110,29 +125,24 @@ getEpochStateView
   -> SocketPath -- ^ node socket path
   -> m EpochStateView
 getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
-  -- get some epoch state to initialize view
-  (_, mZeroEpochState) <- H.leftFailM . runExceptT . foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) Nothing
-    $ \epochState -> do
-        put $ Just epochState
-        pure ConditionMet
-  epochStateView <- (liftIO . newIORef) =<< H.nothingFail mZeroEpochState
-
+  epochStateView <- liftIO $ newIORef Nothing
   runInBackground . runExceptT . foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) Nothing
     $ \epochState -> do
-        liftIO $ writeIORef epochStateView epochState
+        liftIO $ writeIORef epochStateView (Just epochState)
         pure ConditionNotMet
   pure . EpochStateView $ epochStateView
 
 -- | Retrieve all UTxOs map from the epoch state view.
 findAllUtxos
   :: forall era m. HasCallStack
+  => MonadAssertion m
   => MonadIO m
   => MonadTest m
   => EpochStateView
   -> ShelleyBasedEra era
   -> m (Map TxIn (TxOut CtxUTxO era))
-findAllUtxos (EpochStateView epochStateView) sbe = withFrozenCallStack $ do
-  AnyNewEpochState sbe' newEpochState <- liftIO $ readIORef epochStateView
+findAllUtxos epochStateView sbe = withFrozenCallStack $ do
+  AnyNewEpochState sbe' newEpochState <- getEpochState epochStateView
   Refl <- H.leftFail $ assertErasEqual sbe sbe'
   pure $ fromLedgerUTxO $ newEpochState ^. L.nesEsL . L.esLStateL . L.lsUTxOStateL . L.utxosUtxoL
   where
@@ -150,6 +160,7 @@ findAllUtxos (EpochStateView epochStateView) sbe = withFrozenCallStack $ do
 -- | Retrieve utxos from the epoch state view for an address.
 findUtxosWithAddress
   :: forall era m. HasCallStack
+  => MonadAssertion m
   => MonadIO m
   => MonadTest m
   => EpochStateView
@@ -175,6 +186,7 @@ findUtxosWithAddress epochStateView sbe address = withFrozenCallStack $ do
 -- | Retrieve a one largest utxo
 findLargestUtxoWithAddress
   :: forall era m. HasCallStack
+  => MonadAssertion m
   => MonadIO m
   => MonadTest m
   => EpochStateView
@@ -191,6 +203,7 @@ findLargestUtxoWithAddress epochStateView sbe address = withFrozenCallStack $ do
 -- 'findLargestUtxoForPaymentKey'.
 findLargestUtxoForPaymentKey
   :: MonadTest m
+  => MonadAssertion m
   => MonadCatch m
   => MonadIO m
   => HasCallStack
