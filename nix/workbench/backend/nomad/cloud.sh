@@ -87,7 +87,7 @@ backend_nomadcloud() {
       if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
       then
         # It "overrides" completely `backend_nomad`'s `fetch-logs`.
-        fetch-logs-nomadcloud               "$@"
+        fetch-logs-nomadperf                "$@"
       else
         # Generic backend sub-commands, shared code between Nomad sub-backends.
         backend_nomad fetch-logs            "$@"
@@ -945,50 +945,44 @@ deploy-genesis-nomadcloud() {
   fi
 }
 
-fetch-logs-nomadcloud() {
+# Only if running on dedicated P&T Nomad cluster on AWS we use SSH, if not
+# `nomad exec`, because we need to have an exclusive port open for us.
+fetch-logs-nomadperf() {
   local usage="USAGE: wb backend $op RUN-DIR"
   local dir=${1:?$usage}; shift
 
   msg "Fetch logs ..."
-
   msg "First start the sandboxed SSH servers ..."
-  # Only if running on dedicated P&T Nomad cluster on AWS we use SSH, if not
-  # `nomad exec`, because we need to have an exclusive port open for us.
-  if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
+  local jobs_array=()
+  local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+  for node in ${nodes[*]}
+  do
+    # TODO: Do it in parallel ?
+    backend_nomad task-program-start "${dir}" "${node}" ssh &
+    jobs_array+=("$!")
+  done
+  # Wait and check!
+  if test -n "${jobs_array}"
   then
-    local jobs_array=()
-    local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
-    for node in ${nodes[*]}
-    do
-      # TODO: Do it in parallel ?
-      backend_nomad task-program-start "${dir}" "${node}" ssh &
-      jobs_array+=("$!")
-    done
-    # Wait and check!
-    if test -n "${jobs_array}"
+    if ! wait_kill_em_all "${jobs_array[@]}"
     then
-      if ! wait_kill_em_all "${jobs_array[@]}"
-      then
-        fatal "Failed to start ssh server(s)"
-      else
-        msg "Sandboxed ssh server(s) should be now ready"
-        # Make sure the SSH config file used to connect is already created.
-        # Ugly but if `ssh` is called inmediately after `wb nomad ssh config`
-        # race conditions can happen because the file contents are still in the
-        # cache.
-        local ssh_config_path
-        ssh_config_path="$(wb nomad ssh config)"
-        msg "Used ssh config file: $(realpath ${ssh_config_path})"
-      fi
+      fatal "Failed to start ssh server(s)"
+    else
+      msg "Sandboxed ssh server(s) should be now ready"
+      # Make sure the SSH config file used to connect is already created.
+      # Ugly but if `ssh` is called inmediately after `wb nomad ssh config`
+      # race conditions can happen because the file contents are still in the
+      # cache.
+      local ssh_config_path
+      ssh_config_path="$(wb nomad ssh config)"
+      msg "Used ssh config file: $(realpath ${ssh_config_path})"
     fi
   fi
-
-  fetch-logs-nomadcloud-retry "${dir}"
-
+  fetch-logs-nomadperf-retry "${dir}"
   msg "Sandboxed SSH servers will be kept running for debugging purposes"
 }
 
-fetch-logs-nomadcloud-retry() {
+fetch-logs-nomadperf-retry() {
   local usage="USAGE: wb backend $op RUN-DIR"
   local dir=${1:?$usage}; shift
 
@@ -997,7 +991,7 @@ fetch-logs-nomadcloud-retry() {
   do
     if ! test -f "${dir}"/nomad/"${node}"/download_ok
     then
-      fetch-logs-nomadcloud-node "${dir}" "${node}" &
+      fetch-logs-nomadperf-node "${dir}" "${node}" &
       jobs_array+=("$!")
     else
       msg "Skipping \"${node}\": check file \"${dir}/nomad/${node}/download_ok\""
@@ -1012,7 +1006,7 @@ fetch-logs-nomadcloud-retry() {
       msg "$(red "Failed to fetch some logs")"
       msg "Check files \"${dir}/nomad/NODE/download_ok\" and \"${dir}/nomad/NODE/download_failed\""
       read -p "Hit enter to retry ..."
-      fetch-logs-nomadcloud-retry "${dir}"
+      fetch-logs-nomadperf-retry "${dir}"
     else
       msg "$(green "Finished fetching logs")"
     fi
@@ -1021,10 +1015,23 @@ fetch-logs-nomadcloud-retry() {
   fi
 }
 
-fetch-logs-nomadcloud-node() {
+fetch-logs-nomadperf-node() {
   local dir=${1}
   local node=${2}
 
+  local node_ok="true"
+  # Non SSH logs
+  ##############
+  # These files are not downloaded using SSH.
+  # Job's entrypoints logs (supervisord stdout and stderr) as Nomad sees them.
+  if ! backend_nomad download-logs-entrypoint "${dir}" "${node}"
+  then
+    # Generic `download-logs-entrypoint` already provides error messages.
+    node_ok="false"
+    touch "${dir}"/nomad/"${node}"/download_failed
+  fi
+  # SSH logs ###
+  ##############
   local node_id public_ipv4
   node_id="$( \
     jq -r .NodeID "${dir}"/nomad/nomad-job.json.run/task."${node}".final.json \
@@ -1037,7 +1044,6 @@ fetch-logs-nomadcloud-node() {
   local ssh_config_path ssh_command
   ssh_config_path="$(wb nomad ssh config)"
   ssh_command="ssh -F ${ssh_config_path} -p 32000 -l nobody"
-  local node_ok="true"
   # Download healthcheck(s) logs. ##############################################
   ##############################################################################
   msg "$(blue "Fetching") $(yellow "program \"healthcheck\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
