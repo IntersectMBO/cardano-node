@@ -22,7 +22,7 @@ module Testnet.Property.Utils
   , decodeEraUTxO
   ) where
 
-import           Cardano.Api (MonadIO, runExceptT)
+import           Cardano.Api
 
 import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto
@@ -36,6 +36,7 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Key
 import           Data.Aeson.KeyMap hiding (map)
 import qualified Data.ByteString as BS
+import           Data.Char (toLower)
 import           Data.Text (Text)
 import           Data.Word
 import           GHC.Stack
@@ -121,3 +122,8 @@ runInBackground act = void . H.evalM $ allocate (H.async act) cleanUp
     cleanUp :: H.Async a -> IO ()
     cleanUp a = H.cancel a >> void (H.link a)
 
+convertToEraString :: AnyCardanoEra -> String
+convertToEraString = map toLower . docToString . pretty
+
+decodeEraUTxO :: (IsShelleyBasedEra era, MonadTest m) => ShelleyBasedEra era -> Aeson.Value -> m (UTxO era)
+decodeEraUTxO _ = H.jsonErrorFail . Aeson.fromJSON

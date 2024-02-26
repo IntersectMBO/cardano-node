@@ -28,13 +28,11 @@ import           Cardano.Ledger.Alonzo.Scripts
 import           Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Binary.Version ()
-import qualified Cardano.Ledger.Core as Ledger
-import qualified Cardano.Ledger.Shelley as Ledger
-
-
 import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Conway.Genesis
+import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Shelley as Ledger
 import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Tracing.Config

@@ -18,28 +18,15 @@ module Cardano.Testnet.Test.Cli.Conway.Plutus
 
 import           Cardano.Api
 
-import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (..))
 import           Cardano.Testnet
 
 import           Prelude
 
 import           Control.Monad (void)
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.KeyMap as KM
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import qualified Data.Time.Clock as DTC
-import           GHC.Stack (callStack)
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
-
-import           Hedgehog (Property, (===))
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.SPO
@@ -49,6 +36,9 @@ import           Testnet.Process.Run
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
 
+import           Hedgehog (Property)
+import qualified Hedgehog as H
+import qualified Hedgehog.Extras as H
 
 -- | Test all possible Plutus script purposes
 -- Currently tested:

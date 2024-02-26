@@ -73,11 +73,11 @@ tests = pure $ T.testGroup "test/Spec.hs"
         ]
 
       ]
- -- , T.testGroup "SubmitApi"
- --     [ T.testGroup "Babbage"
- --         [ H.ignoreOnWindows "transaction" Cardano.Testnet.Test.SubmitApi.Babbage.Transaction.hprop_transaction
- --         ]
- --     ]
+  , T.testGroup "SubmitApi"
+      [ T.testGroup "Babbage"
+          [ H.ignoreOnWindows "transaction" Cardano.Testnet.Test.SubmitApi.Babbage.Transaction.hprop_transaction
+          ]
+      ]
   ]
 
 ingredients :: [T.Ingredient]
