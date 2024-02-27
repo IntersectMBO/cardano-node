@@ -544,8 +544,8 @@ in {
             map (e: {address = e.addr; inherit (e) port;}) envConfig.edgeNodes;
         description = ''
           If set, it will enable bootstrap peers.
-          To disable set this to null.
-          To enable set  this to [{ address = "addr"; port = 0; }]
+          To disable, set this to null.
+          To enable, set this to a list of attributes of address and port, example: [{ address = "addr"; port = 3001; }]
         '';
       };
 
