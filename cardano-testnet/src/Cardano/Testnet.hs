@@ -35,6 +35,7 @@ module Cardano.Testnet (
 
   ) where
 
+import           Testnet.Components.Query
 import           Testnet.Filepath
 import           Testnet.Process.Run (procChairman)
 import           Testnet.Property.Utils

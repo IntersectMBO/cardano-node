@@ -35,9 +35,6 @@ import           Prelude hiding (lines)
 
 import           Control.Monad
 import qualified Control.Monad.Class.MonadTimer.SI as MT
-import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Class (lift)
-import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (first)
@@ -59,7 +56,6 @@ import           Testnet.Filepath
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run
 import qualified Testnet.Property.Assert as H
-import           Testnet.Property.Checks
 import           Testnet.Runtime as TR hiding (shelleyGenesis)
 import qualified Testnet.Start.Byron as Byron
 import           Testnet.Start.Types
@@ -433,7 +429,7 @@ cardanoTestnet
 
       stakePoolsFp <- H.note $ tmpAbsPath </> "current-stake-pools.json"
 
-      prop_spos_in_ledger_state stakePoolsFp testnetOptions execConfig
+      H.assertExpectedSposInLedgerState stakePoolsFp testnetOptions execConfig
 
       pure runtime
 

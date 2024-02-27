@@ -9,7 +9,6 @@ module Cardano.Node.Protocol.Alonzo
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Pretty
 
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import           Cardano.Node.Orphans ()
@@ -18,7 +17,6 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
-import           Control.Monad.Except (ExceptT)
 
 --
 -- Alonzo genesis

@@ -17,7 +17,7 @@ module Cardano.Testnet.Test.LedgerEvents.Gov.InfoAction
   ( hprop_ledger_events_info_action
   ) where
 
-import           Cardano.Api
+import           Cardano.Api as Api
 import           Cardano.Api.Error (displayError)
 import           Cardano.Api.Shelley
 
@@ -28,34 +28,29 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad
-import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Except
 import           Data.Bifunctor (first)
 import           Data.Foldable
-import           Data.IORef
 import qualified Data.Map.Strict as Map
 import           Data.String
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack
 import           System.FilePath ((</>))
 
+import           Testnet.Components.Query
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
-import           Testnet.Property.Utils (queryUtxos)
 import           Testnet.Runtime
 
 import           Hedgehog
-import           Hedgehog.Extras (Integration)
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/InfoAction/'@
 hprop_ledger_events_info_action :: Property
-hprop_ledger_events_info_action = H.integrationRetryWorkspace 2 "info-hash" $ \tempAbsBasePath' -> do
+hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \tempAbsBasePath' -> do
 
   -- Start a local test net
   conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
@@ -63,7 +58,6 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 2 "info-hash" $ \t
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
-  utxoFileCounter <- liftIO $ newIORef 1
 
   let sbe = ShelleyBasedEraConway
       era = toCardanoEra sbe
@@ -77,6 +71,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 2 "info-hash" $ \t
     { testnetMagic
     , poolNodes
     , wallets
+    , configurationFile
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
 
@@ -84,19 +79,18 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 2 "info-hash" $ \t
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 
-  let queryAnyUtxo :: Text -> Integration TxIn
-      queryAnyUtxo address = withFrozenCallStack $ do
-        utxos <- queryUtxos execConfig work utxoFileCounter sbe address
-        H.noteShow =<< H.headM (Map.keys utxos)
-
-      socketName' = IO.sprocketName poolSprocket1
+  let socketName' = IO.sprocketName poolSprocket1
       socketBase = IO.sprocketBase poolSprocket1 -- /tmp
       socketPath = socketBase </> socketName'
+
+  epochStateView <- getEpochStateView (File configurationFile) (File socketPath)
+
+  startLedgerNewEpochStateLogging testnetRuntime tempAbsPath'
 
   H.note_ $ "Sprocket: " <> show poolSprocket1
   H.note_ $ "Abs path: " <> tempAbsBasePath'
   H.note_ $ "Socketpath: " <> socketPath
-  H.note_ $ "Foldblocks config file: " <> configurationFile testnetRuntime
+  H.note_ $ "Foldblocks config file: " <> configurationFile
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
   proposalAnchorFile <- H.note $ work </> gov </> "sample-proposal-anchor"
@@ -136,7 +130,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 2 "info-hash" $ \t
        ]
 
   -- Retrieve UTxOs for registration submission
-  txin1 <- queryAnyUtxo . paymentKeyInfoAddr $ head wallets
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe $ head wallets
 
   drepRegTxbodyFp <- H.note $ work </> "drep.registration.txbody"
   drepRegTxSignedFp <- H.note $ work </> "drep.registration.tx"
@@ -183,7 +177,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 2 "info-hash" $ \t
   txbodyFp <- H.note $ work </> "tx.body"
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
-  txin2 <- queryAnyUtxo . paymentKeyInfoAddr $ wallets !! 1
+  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe $ wallets !! 1
 
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "transaction", "build"
@@ -213,7 +207,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 2 "info-hash" $ \t
 
   !propSubmittedResult
     <- runExceptT $ foldBlocks
-                      (File $ configurationFile testnetRuntime)
+                      (File configurationFile)
                       (File socketPath)
                       FullValidation
                       Nothing -- Initial accumulator state
@@ -242,8 +236,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 2 "info-hash" $ \t
       ]
 
   -- We need more UTxOs
-
-  txin3 <- queryAnyUtxo . paymentKeyInfoAddr $ head wallets
+  txin3 <- findLargestUtxoForPaymentKey epochStateView sbe $ head wallets
 
   voteTxFp <- H.note $ work </> gov </> "vote.tx"
   voteTxBodyFp <- H.note $ work </> gov </> "vote.txbody"
@@ -279,8 +272,8 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 2 "info-hash" $ \t
 
   -- We check that info action was succcessfully ratified
   !meInfoRatified
-    <- H.timeout 140_000_000 $ runExceptT $ foldBlocks
-                      (File $ configurationFile testnetRuntime)
+    <- H.timeout 720_000_000 $ runExceptT $ foldBlocks
+                      (File configurationFile)
                       (File socketPath)
                       FullValidation
                       (InfoActionState False False)  -- Initial accumulator state

@@ -1,0 +1,25 @@
+# catch-all
+
+* @intersectmbo/cardano-node-maintainers
+
+# Specific reviewers for code pieces
+# NB - The last matching pattern takes precedence
+
+# Perf/Tracing
+bench/                                                        @intersectmbo/performance-and-tracing
+nix/workbench/                                                @intersectmbo/performance-and-tracing
+trace-dispatcher/                                             @intersectmbo/performance-and-tracing
+trace-forward/                                                @intersectmbo/performance-and-tracing
+trace-resources/                                              @intersectmbo/performance-and-tracing
+Makefile                                                      @intersectmbo/performance-and-tracing
+*.mk                                                          @intersectmbo/performance-and-tracing
+
+# DevOps
+nix/                                                          @intersectmbo/core-tech-devx @intersectmbo/core-tech-release-1
+*.nix                                                         @intersectmbo/core-tech-devx @intersectmbo/core-tech-release-1
+flake.lock                                                    @intersectmbo/core-tech-devx @intersectmbo/core-tech-release-1
+.github/workflows                                             @intersectmbo/core-tech-devx @intersectmbo/core-tech-release-1 @intersectmbo/cardano-node-maintainers
+ci/                                                           @intersectmbo/core-tech-devx @intersectmbo/core-tech-release-1
+configuration/                                                @intersectmbo/core-tech-devx @intersectmbo/core-tech-release-1
+docker-compose.yml                                            @intersectmbo/core-tech-devx @intersectmbo/core-tech-release-1
+

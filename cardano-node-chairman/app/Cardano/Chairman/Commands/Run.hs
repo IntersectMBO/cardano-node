@@ -10,7 +10,6 @@ module Cardano.Chairman.Commands.Run
 
 import           Cardano.Api
 import qualified Cardano.Api as Api
-import           Cardano.Api.Pretty
 
 import           Cardano.Chairman (chairmanTest)
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..),
@@ -24,8 +23,6 @@ import           Ouroboros.Consensus.Config.SupportsNode
 import           Ouroboros.Consensus.Node.ProtocolInfo
 
 import           Control.Monad.Class.MonadTime.SI (DiffTime)
-import           Control.Monad.IO.Class (MonadIO (..))
-import           Control.Monad.Trans.Except (runExceptT)
 import           Control.Tracer (Tracer (..), stdoutTracer)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)

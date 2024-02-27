@@ -139,7 +139,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
 
   withSubmitApi submitApiConf [] $ \uriBase -> do
     H.byDurationM 1 5 "Expected UTxO found" $ do
-      txBodySigned <- H.leftFailM $ H.readJsonFile txbodySignedFp
+      txBodySigned <- H.leftFailM $ H.readJsonFile @Aeson.Value txbodySignedFp
 
       cborHex <- H.nothingFail $ txBodySigned ^? Aeson.key "cborHex" . Aeson._String
 
@@ -172,7 +172,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
       H.assert $ 5_000_001 `List.elem` txouts2
 
     response <- H.byDurationM 1 5 "Expected UTxO found" $ do
-      txBodySigned <- H.leftFailM $ H.readJsonFile txbodySignedFp
+      txBodySigned <- H.leftFailM $ H.readJsonFile @Aeson.Value txbodySignedFp
 
       cborHex <- H.nothingFail $ txBodySigned ^? Aeson.key "cborHex" . Aeson._String
 

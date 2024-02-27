@@ -5,7 +5,6 @@ module Cardano.Node.Protocol
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Pretty
 
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Protocol.Byron
@@ -15,9 +14,6 @@ import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Cardano.Node.Types
 
 import           Control.Exception
-import           Control.Monad.Trans.Except (ExceptT)
-import           Control.Monad.Trans.Except.Extra (firstExceptT)
-
 
 ------------------------------------------------------------------------------
 -- Conversions from configuration into specific protocols and their params

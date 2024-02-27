@@ -14,8 +14,7 @@ module Testnet.Defaults
   , defaultMainnetTopology
   ) where
 
-import           Cardano.Api (AnyCardanoEra (..), CardanoEra (..))
-import           Cardano.Api.Pretty
+import           Cardano.Api (AnyCardanoEra (..), CardanoEra (..), pshow)
 import qualified Cardano.Api.Shelley as Api
 
 import           Cardano.Ledger.Alonzo.Core (CoinPerWord (..))

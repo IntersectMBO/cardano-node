@@ -16,7 +16,7 @@ module Cardano.Testnet.Test.Cli.KesPeriodInfo
   ( hprop_kes_period_info
   ) where
 
-import           Cardano.Api
+import           Cardano.Api as Api
 
 import           Cardano.CLI.Types.Output
 import           Cardano.Testnet
@@ -25,8 +25,6 @@ import           Cardano.Testnet.Test.Misc
 import           Prelude
 
 import           Control.Monad
-import           Control.Monad.Trans.Class (lift)
-import           Control.Monad.Trans.Except (runExceptT)
 import           Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
@@ -47,6 +45,7 @@ import           Testnet.Runtime
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 import           Hedgehog.Extras (threadDelay)
+import           Hedgehog.Extras.Stock (sprocketSystemName)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
@@ -311,9 +310,8 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
 
   let nodeHasMintedEpoch = currEpoch + 3
   currentEpoch <- waitUntilEpoch
-                   (work </> "current-tip.json")
-                   testnetMagic
-                   execConfig
+                   (Api.File configurationFile)
+                   (Api.File $ sprocketSystemName node1sprocket)
                    nodeHasMintedEpoch
 
   H.note_ "Check we have reached at least 3 epochs ahead"
