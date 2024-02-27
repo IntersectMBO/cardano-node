@@ -915,6 +915,20 @@ let
             }
           ]
           ++
+          # latency
+          [
+            ## Latency start.sh script.
+            {
+              env = false;
+              destination = "local/${stateDir}/latency/start.sh";
+              data = escapeTemplate
+                profileData.latency-service.start.value;
+              change_mode = "noop";
+              error_on_missing_key = true;
+              perms = "744"; # Only for every "start.sh" script. Default: "644"
+            }
+          ]
+          ++
           # ssh
           (lib.optionals withSsh (
             let
