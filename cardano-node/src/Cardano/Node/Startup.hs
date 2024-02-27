@@ -116,9 +116,6 @@ data StartupTrace blk =
   -- | Warn when 'EnableP2P' is set.
   | P2PWarning
 
-  -- | Warn when 'EnableP2P' is set.
-  | PeerSharingWarning
-
   -- | Warn when 'ExperimentalProtocolsEnabled' is set and affects
   -- node-to-node protocol.
   --
