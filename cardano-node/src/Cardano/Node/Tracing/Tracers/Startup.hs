@@ -233,9 +233,6 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal P2PWarning =
       mconcat [ "kind" .= String "P2PWarning"
                , "message" .= String p2pWarningMessage ]
-  forMachine _dtal PeerSharingWarning =
-      mconcat [ "kind" .= String "PeerSharingWarning"
-               , "message" .= String peerSharingWarningMessage ]
   forMachine _ver (WarningDevelopmentNodeToNodeVersions ntnVersions) =
       mconcat [ "kind" .= String "WarningDevelopmentNodeToNodeVersions"
                , "message" .= String "enabled development network protocols"
@@ -308,8 +305,6 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["NetworkConfigLegacy"]
   namespaceFor P2PWarning {}  =
     Namespace [] ["P2PWarning"]
-  namespaceFor PeerSharingWarning {}  =
-    Namespace [] ["PeerSharingWarning"]
   namespaceFor WarningDevelopmentNodeToNodeVersions {}  =
     Namespace [] ["WarningDevelopmentNodeToNodeVersions"]
   namespaceFor WarningDevelopmentNodeToClientVersions {}  =
@@ -528,8 +523,6 @@ ppStartupInfoTrace NetworkConfigLegacy = p2pNetworkConfigLegacyMessage
 
 ppStartupInfoTrace P2PWarning = p2pWarningMessage
 
-ppStartupInfoTrace PeerSharingWarning = peerSharingWarningMessage
-
 ppStartupInfoTrace (WarningDevelopmentNodeToNodeVersions ntnVersions) =
      "enabled development node-to-node versions: "
   <> showT ntnVersions
@@ -576,16 +569,6 @@ p2pNetworkConfigLegacyMessage =
   , "See https://github.com/intersectmbo/cardano-node/issues/4559"
   , "Note that the legacy p2p format will be removed in `1.37` release."
   ]
-
-peerSharingWarningMessage :: Text
-peerSharingWarningMessage =
-    "Warning: Enabling PeerSharing can expose you to significant risks, including "
-  <> "the possibility of eclipse attacks. By turning on this feature, you may "
-  <> "inadvertently give malicious actors the ability to isolate your device, "
-  <> "manipulate your view of the network, and compromise your data integrity. "
-  <> "It is crucial to carefully consider the potential consequences before "
-  <> "enabling PeerSharing. If you are unsure, it is strongly advised to consult "
-  <> "a security expert for guidance. Proceed with caution."
 
 -- | Pretty print 'SocketOrSocketInfo'.
 --
