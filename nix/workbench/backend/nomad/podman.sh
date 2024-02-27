@@ -59,7 +59,16 @@ backend_nomadpodman() {
       # unnecesary Nomad specific traffic (~99% happens waiting for node-0, the
       # first one it waits to stop inside a loop) and at the same time be less
       # sensitive to network failures.
-      backend_nomad wait-pools-stopped    1 "$@"
+      backend_nomad wait-pools-stopped      1 "$@"
+    ;;
+
+    wait-latencies-stopped )
+      # It passes the sleep time (in seconds) required argument.
+      # This time is different between local and cloud backends to avoid
+      # unnecesary Nomad specific traffic (~99% happens waiting for node-0, the
+      # first one it waits to stop inside a loop) and at the same time be less
+      # sensitive to network failures.
+      backend_nomad wait-latencies-stopped  1 "$@"
     ;;
 
     # All or clean up everything!
@@ -101,6 +110,10 @@ backend_nomadpodman() {
 
     start-healthchecks )
       backend_nomad start-healthchecks      "$@"
+    ;;
+
+    start-latencies )
+      backend_nomad start-latencies         "$@"
     ;;
 
     start-node )

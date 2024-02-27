@@ -184,6 +184,27 @@ let
       };
     }
     //
+    {
+      "program:latency" = {
+        # "command" below assumes "directory" is set accordingly.
+        directory      = "${stateDir}/latency";
+        command        = "${command}";
+        stdout_logfile = "${stateDir}/latency/stdout";
+        stderr_logfile = "${stateDir}/latency/stderr";
+        # Set these values to 0 to indicate an unlimited log size / no rotation.
+        stdout_logfile_maxbytes = 0;
+        stderr_logfile_maxbytes = 0;
+        stopasgroup    = false;
+        killasgroup    = false;
+        autostart      = false;
+        autorestart    = false;
+        # Don't attempt any restart!
+        startretries   = 0;
+        # Seconds it needs to stay running to consider the start successful
+        startsecs      = 5;
+      };
+    }
+    //
     lib.attrsets.optionalAttrs withSsh
     {
       "program:ssh" = {

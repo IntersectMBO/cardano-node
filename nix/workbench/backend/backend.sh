@@ -51,6 +51,7 @@ case "${op}" in
     start-nodes )                backend_$WB_BACKEND "$@";;
     start-generator )            backend_$WB_BACKEND "$@";;
     start-healthchecks )         backend_$WB_BACKEND "$@";;
+    start-latencies )            backend_$WB_BACKEND "$@";;
     # Fine grained
     start-node )                 backend_$WB_BACKEND "$@";;
     stop-node )                  backend_$WB_BACKEND "$@";;
@@ -58,6 +59,7 @@ case "${op}" in
     wait-node-stopped )          backend_$WB_BACKEND "$@";;
     get-node-socket-path )       backend_$WB_BACKEND "$@";;
     wait-pools-stopped )         backend_$WB_BACKEND "$@";;
+    wait-latencies-stopped )     backend_$WB_BACKEND "$@";;
     # Stop functions
     stop-all )                   backend_$WB_BACKEND "$@";;
     fetch-logs )                 backend_$WB_BACKEND "$@";;
