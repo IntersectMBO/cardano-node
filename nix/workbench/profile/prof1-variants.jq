@@ -481,6 +481,9 @@ def all_profile_variants:
    ({ scenario:                        "tracer-only"
     }) as $scenario_tracer_only
   |
+   ({ scenario:                        "latency"
+    }) as $scenario_latency
+  |
   ##
   ### Definition vocabulary:  base variant
   ##
@@ -556,6 +559,10 @@ def all_profile_variants:
    ($scenario_fixed_loaded * $compose_fiftytwo * $dataset_empty * $for_1blk * $no_filtering *
     { desc: "AWS c5-2xlarge cluster, stop as soon as we've seen a single block"
     }) as $nomad_perf_fast_base
+  |
+   ($scenario_latency * $compose_fiftytwo * $dataset_empty * $no_filtering *
+    { desc: "AWS c5-2xlarge cluster, stop when all latency services stop"
+    }) as $nomad_perf_latency_base
   |
    ($scenario_model * $quadruplet * $dataset_current * $for_7ep *
     { node:
@@ -861,6 +868,9 @@ def all_profile_variants:
     }
   , $nomad_perf_fast_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "fast-nomadperf"
+    }
+  , $nomad_perf_latency_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
+    { name: "latency-nomadperf"
     }
 
 ## P&T Nomad cluster: 52 nodes, 3 regions, value-only (with old tracing variant) and Plutus, no P2P flavour

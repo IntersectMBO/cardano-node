@@ -97,7 +97,7 @@ PROFILES_VENDOR           := dish dish-plutus dish-10M dish-10M-plutus
 # Cloud version of "default", "ci-test" and "ci-bench" plus value (52+explorer)
 # Not all local profiles are compatible or tested (yet) with a cloud runs
 PROFILES_NOMAD_PERF       := default-nomadperf ci-test-nomadperf ci-bench-nomadperf value-nomadperf oldtracing-nomadperf ci-test-oldtracing-nomadperf ci-bench-oldtracing-nomadperf value-oldtracing-nomadperf
-PROFILES_NOMAD_PERF       += plutus-nomadperf fast-nomadperf
+PROFILES_NOMAD_PERF       += plutus-nomadperf fast-nomadperf latency-nomadperf
 PROFILES_NOMAD_PERF_NOP2P := default-nomadperf-nop2p oldtracing-nomadperf-nop2p ci-test-nomadperf-nop2p ci-bench-nomadperf-nop2p
 PROFILES_NOMAD_PERF_NOP2P += value-nomadperf-nop2p value-oldtracing-nomadperf-nop2p plutus-nomadperf-nop2p fast-nomadperf-nop2p
 

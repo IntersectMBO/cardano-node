@@ -84,6 +84,8 @@ case "$op" in
         local hche_dir="$dir"/healthcheck
         mkdir -p                                    "$hche_dir"
         cp $(jq '."start"'                        -r $hche) "$hche_dir"/start.sh
+
+        mkdir -p                                    "$dir"/latency
         ;;
 
     deploy-genesis )

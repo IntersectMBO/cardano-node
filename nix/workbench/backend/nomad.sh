@@ -35,6 +35,7 @@ backend_nomad() {
     # - allocate-run-directory-nodes           RUN-DIR              (Nomad only)
     # - allocate-run-directory-generator       RUN-DIR              (Nomad only)
     # - allocate-run-directory-healthchecks    RUN-DIR              (Nomad only)
+    # - allocate-run-directory-latencies       RUN-DIR              (Nomad only)
     # - allocate-run-nomad-job-patch-name      RUN-DIR NAME         (Nomad only)
     # - allocate-run-nomad-job-patch-namespace RUN-DIR NAME         (Nomad only)
     # - allocate-run-nomad-job-patch-nix       RUN-DIR              (Nomad only)
@@ -51,10 +52,10 @@ backend_nomad() {
     # After `allocate-run` the Nomad job is running (supervisord) waiting for
     # genesis to be deployed and tracer/cardano-nodes/generator to be started.
     #
-    # "generator", "tracer", "node" and "healthcheck" folder contents (start.sh,
-    # config files, etc) are included in the Nomad Job spec file as "template"
-    # stanzas and are materialized inside the container when the job is started.
-    # This is how it works for every environment combination
+    # "generator", "tracer", "node", "healthcheck" and "latency" folder contents
+    #  (start.sh, config files, etc) are included in the Nomad Job spec file as
+    # "template" stanzas and are materialized inside the container when the job
+    # is started. This is how it works for every environment combination
     # (podman/exec-(local/cloud)).
     #
     # But "genesis" and "CARDANO_MAINNET_MIRROR" are the deployment exceptions:
@@ -83,6 +84,7 @@ backend_nomad() {
       backend_nomad allocate-run-directory-nodes        "${dir}"
       backend_nomad allocate-run-directory-generator    "${dir}"
       backend_nomad allocate-run-directory-healthchecks "${dir}"
+      backend_nomad allocate-run-directory-latencies    "${dir}"
 
       # These ones are decided at "setenv-defaults" of each sub-backend.
       local nomad_environment=$(envjqr 'nomad_environment')
@@ -208,6 +210,22 @@ backend_nomad() {
         # patched using Nomad's "template" stanza in the job spec and we want to
         # hold a copy of what was actually run.
         mkdir "${dir}"/healthcheck/"${node}"
+      done
+    ;;
+
+    allocate-run-directory-latencies )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      mkdir "${dir}"/latency
+      # For every node ...
+      local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+      for node in ${nodes[*]}
+      do
+        # File "start.sh" that usually goes in here is copied from the
+        # Task/container once it's started because the contents are created or
+        # patched using Nomad's "template" stanza in the job spec and we want to
+        # hold a copy of what was actually run.
+        mkdir "${dir}"/latency/"${node}"
       done
     ;;
 
@@ -417,6 +435,18 @@ backend_nomad() {
         backend_nomad download-config-healthcheck "${dir}" "${node}" &
         jobs_tasks+=("$!")
       done
+      # DO NOT DOWNLOAD THE latency SCRIPTS/CONFIG EVERY TIME
+      if echo "${WB_SHELL_PROFILE}" | grep --quiet "latency"
+      then
+        # For every node (not including a possible tracer Task) ...
+        local nodes=($(jq_tolist keys "$dir"/node-specs.json))
+        for node in ${nodes[*]}
+        do
+          # Only used for debugging!
+          backend_nomad download-config-latency "${dir}" "${node}" &
+          jobs_tasks+=("$!")
+        done
+      fi
       # Wait and check!
       if test -n "${jobs_tasks}"
       then
@@ -747,6 +777,7 @@ backend_nomad() {
     # Functions to stop the cluster:
     # - stop-all              RUN-DIR
     # - stop-all-healthchecks RUN-DIR                               (Nomad only)
+    # - stop-all-latencies    RUN-DIR                               (Nomad only)
     # - stop-all-generator    RUN-DIR                               (Nomad only)
     # - stop-all-nodes        RUN-DIR                               (Nomad only)
     # - stop-all-tracers      RUN-DIR                               (Nomad only)
@@ -762,6 +793,18 @@ backend_nomad() {
       local dir=${1:?$usage}; shift
       local generator_task=$(envjqr 'generator_task_name')
 
+      # Stop latency(s).
+      ##################
+      local jobs_latencies_array=()
+      for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
+      do
+        backend_nomad stop-all-latencies "${dir}" "${node}" &
+        jobs_latencies_array+=("$!")
+      done
+      if ! wait_all "${jobs_latencies_array[@]}"
+      then
+        msg "$(red "Failed to stop latency(ies)")"
+      fi
       # Stop healthcheck(s).
       #####################
       local jobs_healthchecks_array=()
@@ -809,6 +852,44 @@ backend_nomad() {
         if ! backend_nomad stop-all-tracers "${dir}" "tracer"
         then
           msg "$(red "Failed to stop tracer")"
+        fi
+      fi
+    ;;
+
+    stop-all-latencies )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
+      local task_dir="${dir}"/latency/"${task}"
+      if test -f "${task_dir}"/started && !(test -f "${task_dir}"/stopped || test -f "${task_dir}"/quit)
+      then
+        if backend_nomad is-task-program-running "${dir}" "${task}" latency
+        then
+          if ! backend_nomad task-program-stop "${dir}" "${task}" latency
+          then
+            msg "$(yellow "WARNING: Program \"latency\" inside Task \"${task}\" failed to stop")"
+          else
+            touch "${task_dir}"/stopped
+            msg "$(green "supervisord program \"latency\" inside Nomad Task \"${task}\" down!")"
+          fi
+        else
+          touch "${task_dir}"/quit
+          if backend_nomad is-task-program-failed "${dir}" "${task}" latency
+          then
+            local generator_task=$(envjqr 'generator_task_name')
+            # If the node quits (due to `--shutdown_on_slot_synced X` or
+            # `--shutdown_on_block_synced X`) the generator quits with an error.
+            local generator_can_fail=$(jq ".\"${task}\".shutdown_on_slot_synced or .\"${task}\".shutdown_on_block_synced" "${dir}"/node-specs.json)
+            if test "${generator_task}" != "${task}" || test "${generator_can_fail}" = "false" || backend_nomad is-task-program-running "${dir}" "${task}" "${task}"
+            then
+              # Do not fail here, because nobody will be able to stop the cluster!
+              msg "$(red "FATAL: \"latency\" inside Task \"${task}\" quit unexpectedly")"
+            else
+              msg "$(yellow "INFO: Program \"latency\" inside Task \"${task}\" failed, but expected when \"${task}\" automatically exits first and makes \"generator\" fail")"
+            fi
+          else
+            msg "$(yellow "WARNING: Program \"latency\" inside Task \"${task}\" was not running, should it?")"
+          fi
         fi
       fi
     ;;
@@ -1018,6 +1099,35 @@ backend_nomad() {
 
       msg "Fetch logs ..."
 
+      # Download latency(ies) logs. ############################################
+      ##########################################################################
+      # Download retry "infinite" loop.
+      local latencies_array
+      # Fetch the nodes that don't have all the log files in its directory
+      latencies_array="$(jq_tolist 'keys' "$dir"/node-specs.json)"
+      while test -n "${latencies_array:-}"
+      do
+        local latencies_jobs_array=()
+        for node in ${latencies_array[*]}
+        do
+          backend_nomad download-logs-latency "${dir}" "${node}" &
+          latencies_jobs_array+=("$!")
+        done
+        if test -n "${latencies_jobs_array:-}" # If = () "unbound variable" error
+        then
+          # Wait until all jobs finish, don't use `wait_kill_em_all` that kills
+          # Returns the exit code of the last failed job, we ignore it!
+          wait_all "${latencies_jobs_array[@]}" || true
+        fi
+        # Fetch the nodes that don't have all the log files in its directory
+        latencies_array="$(backend_nomad fetch-logs-latencies "${dir}")"
+        if test -n "${latencies_array:-}"
+        then
+          msg "Retrying latency(ies) [${latencies_array[@]}] logs download"
+          read -p "Hit enter to continue ..."
+        fi
+      done
+      msg "$(green "Finished downloading latency(ies) logs")"
       # Download healthcheck(s) logs. ##########################################
       ##########################################################################
       # Download retry "infinite" loop.
@@ -1180,6 +1290,7 @@ backend_nomad() {
       # ls run/current/{node-{0..51},explorer}/{exit_code,stdout,stderr}             || msg ""
       # ls run/current/generator/{exit_code,stdout,stderr}                           || msg ""
       # ls run/current/healthcheck/{node-{0..51},explorer}/{exit_code,stdout,stderr} || msg ""
+      # ls run/current/latency/{node-{0..51},explorer}/{exit_code,stdout,stderr}     || msg ""
 
       msg "$(green "Finished fetching logs")"
     ;;
@@ -1314,6 +1425,50 @@ backend_nomad() {
     ;;
 
     # Array of nodes that don't have all the required log files in its directory
+    fetch-logs-latencies )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local latencies_array=()
+      for node in $(jq_tolist 'keys' "${dir}"/node-specs.json)
+      do
+        # Only if the latency was started.
+        if test -f "${dir}"/latency/"${node}"/started
+        then
+          local latency_ok="true"
+          # Check the existance of all the wanted files:
+          if ! test -f "${dir}"/latency/"${node}"/exit_code
+          then
+            latency_ok="false"
+          fi
+          if ! test -f "${dir}"/latency/"${node}"/stdout
+          then
+            latency_ok="false"
+          fi
+          if ! test -f "${dir}"/latency/"${node}"/stderr
+          then
+            latency_ok="false"
+          fi
+          # Below like errors can end in truncated files, a proper flag is used!
+          # failed to exec into task: read tcp 10.0.0.115:33840->3.72.231.105:443: read: connection reset by  peer
+          # tar: Unexpected EOF in archive
+          # tar: Unexpected EOF in archive
+          # tar: Error is not recoverable: exiting now
+          if test -f "${dir}"/latency/"${node}"/download_failed
+          then
+            latency_ok="false"
+          fi
+          # If any error add this latency to the array
+          if test "${latency_ok}" = "false"
+          then
+            latencies_array+=("${node}")
+          fi
+        fi
+      done
+      # Return array
+      echo "${latencies_array[@]}"
+    ;;
+
+    # Array of nodes that don't have all the required log files in its directory
     fetch-logs-healthchecks )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
@@ -1377,6 +1532,7 @@ backend_nomad() {
     # - start-tracers      RUN-DIR
     # - start-nodes        RUN-DIR
     # - start-healthchecks RUN-DIR
+    # - start-latencies    RUN-DIR
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
 
@@ -1517,12 +1673,45 @@ backend_nomad() {
       return 0
     ;;
 
+    # Called by `scenario.sh` with the exit trap (`scenario_setup_exit_trap`) set!
+    start-latencies )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local jobs_array=()
+      # explorer node is ignored, it will ping every other node.
+      local nodes=($(jq_tolist 'map(select(.isProducer) | .name)' "$dir"/node-specs.json))
+      for node in ${nodes[*]}
+      do
+        backend_nomad start-latency "${dir}" "${node}" &
+        jobs_array+=("$!")
+      done
+      # Wait and check!
+      if test -n "${jobs_array}"
+      then
+        if ! wait_kill_em_all "${jobs_array[@]}"
+        then
+          fatal "Failed to start latency(ies)"
+          return 1
+        else
+          for node in ${nodes[*]}
+          do
+            if ! test -f "${dir}"/latency/"${node}"/started
+            then
+              fatal "Latency for \"${node}\" failed to start!"
+            fi
+          done
+        fi
+      fi
+      return 0
+    ;;
+
     ############################################################################
     # Functions to start/stop individual cluster "programs":
     # - start-tracer       RUN-DIR           (Nomad backend specific subcommand)
     # - start-node         RUN-DIR NODE-NAME
     # - start-generator    RUN-DIR
     # - start-healthcheck  RUN-DIR TASK-NAME (Nomad backend specific subcommand)
+    # - start-latency      RUN-DIR TASK-NAME (Nomad backend specific subcommand)
     # - wait-tracer        RUN-DIR TASK-NAME (Nomad backend specific subcommand)
     # - wait-node          RUN-DIR NODE_NAME (Nomad backend specific subcommand)
     # - stop-node          RUN-DIR NODE-NAME
@@ -1531,6 +1720,7 @@ backend_nomad() {
     # - stop-generator     RUN-DIR TASK-NAME (Nomad backend specific subcommand)
     # - stop-tracer        RUN-DIR TASK-NAME (Nomad backend specific subcommand)
     # - stop-healthcheck   RUN-DIR TASK-NAME (Nomad backend specific subcommand)
+    # - stop-latency       RUN-DIR TASK-NAME (Nomad backend specific subcommand)
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
 
@@ -1866,6 +2056,69 @@ backend_nomad() {
       fi
     ;;
 
+    # Called by "start-latencies" that has no exit trap, don't use fatal here!
+    start-latency ) # Nomad backend specific subcommands
+      local usage="USAGE: wb backend $op RUN-DIR TASK"
+      local dir=${1:?$usage};  shift
+      local task=${1:?$usage}; shift
+
+      if ! backend_nomad task-program-start "${dir}" "${task}" latency
+      then
+        msg "$(red "FATAL: Program \"latency\" inside Nomad Task \"${task}\" startup failed")"
+        # TODO: Let the download fail when everything fails?
+        backend_nomad download-logs-entrypoint  "${dir}" "${task}" || true
+        backend_nomad download-logs-latency     "${dir}" "${task}" || true
+        # Should show the output/log of `supervisord` (runs as "entrypoint").
+        msg "$(yellow "${dir}/nomad/${task}/stdout:")"
+        cat                                                             \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/nomad/"${task}"/stdout                               \
+          <(echo "-------------------- log end   --------------------")
+        msg "$(yellow "${dir}/nomad/${task}/stderr:")"
+        cat                                                             \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/nomad/"${task}"/stderr                               \
+          <(echo "-------------------- log end   --------------------")
+        # Depending on when the start command failed, logs may not be available!
+        if test -f "${dir}"/latency/"${task}"/stdout
+        then
+          msg "$(yellow "${dir}/latency/${task}/stdout:")"
+          cat                                                           \
+          <(echo "-------------------- log start --------------------") \
+          "${dir}"/latency/"${task}"/stdout                         \
+          <(echo "-------------------- log end   --------------------")
+        fi
+        # Depending on when the start command failed, logs may not be available!
+        if test -f "${dir}"/latency/"${task}"/stderr
+        then
+          msg "$(yellow "${dir}/latency/${task}/stderr:")"
+          cat                                                             \
+            <(echo "-------------------- log start --------------------") \
+            "${dir}"/latency/"${task}"/stderr                         \
+            <(echo "-------------------- log end   --------------------")
+        fi
+        # Let "start" parse the response code and handle the cleanup!
+        msg "$(red "Failed to start program \"latency\" inside Nomad Task \"${task}\"")"
+        return 1
+      else
+        local nomad_environment=$(envjqr 'nomad_environment')
+        if test "${nomad_environment}" != "cloud"
+        then
+          ln -s                                                                 \
+            ../../nomad/alloc/"${task}"/local/run/current/latency/stdout    \
+            "${dir}"/latency/"${task}"/stdout
+          ln -s                                                                 \
+            ../../nomad/alloc/"${task}"/local/run/current/latency/stderr    \
+            "${dir}"/latency/"${task}"/stderr
+          ln -s                                                                 \
+            ../../nomad/alloc/"${task}"/local/run/current/latency/exit_code \
+            "${dir}"/latency/"${task}"/exit_code
+        fi
+        # It was "intentionally started and should not automagically stop" flag!
+        touch "${dir}"/latency/"${task}"/started
+      fi
+    ;;
+
     # Called by "start-tracer" that has no exit trap, don't use fatal here!
     wait-tracer )
       local usage="USAGE: wb backend $op RUN-DIR TASK"
@@ -1987,6 +2240,7 @@ backend_nomad() {
     # - get-node-socket-path    RUN-DIR NODE-NAME (Will break when cloud running)
     # - wait-node-stopped       RUN-DIR NODE-NAME
     # - wait-pools-stopped      RUN-DIR
+    # - wait-latencies-stopped  RUN-DIR
     # - cluster-exited-programs RUN-DIR      (Nomad backend specific subcommand)
     ############################################################################
     # * Functions in the backend "interface" must use `fatal` when errors!
@@ -2126,6 +2380,55 @@ backend_nomad() {
       fi
     ;;
 
+    wait-latencies-stopped )
+      local usage="USAGE: wb backend $op SLEEP-SECONDS RUN-DIR"
+      # This parameters is added by the nomad backend being used.
+      local sleep_seconds=${1:?$usage}; shift
+      local dir=${1:?$usage}; shift
+
+      local start_time=$(date +%s)
+      # explorer node is ignored, it will ping every other node.
+      local nodes=($(jq_tolist 'map(select(.isProducer) | .name)' "${dir}"/node-specs.json))
+      msg_ne "nomad: $(blue Waiting) until all latency services are stopped: 000000"
+      for node in ${nodes[*]}
+      do
+        while \
+            ! test -f "${dir}"/flag/cluster-stopping \
+          && \
+            backend_nomad is-task-program-running "${dir}" "${node}" "latency" 5 > /dev/null
+        do
+          local elapsed="$(($(date +%s) - start_time))"
+          echo -ne "\b\b\b\b\b\b"
+          printf "%6d" "${elapsed}"
+          # This time is different between local and cloud backends to avoid
+          # unnecesary Nomad specific traffic and at the same time be less
+          # sensitive to network failures.
+          sleep "${sleep_seconds}"
+        done # While
+        if ! test -f "${dir}"/flag/cluster-stopping
+        then
+          echo -ne "\n"
+          msg "$(yellow "supervisord program \"latency\" of \"${node}\" stopped")"
+          msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
+        fi
+        local elapsed="$(($(date +%s) - start_time))"
+        echo -ne "\b\b\b\b\b\b"
+        printf "%6d" "${elapsed}"
+      done >&2 # For
+      echo -ne "\b\b\b\b\b\b"
+
+      local elapsed=$(($(date +%s) - start_time))
+      if test -f "${dir}"/flag/cluster-stopping
+      then
+        echo -ne "\n"
+        msg "Termination requested -- after $(yellow ${elapsed})s"
+      else
+        touch "${dir}"/flag/cluster-stopping
+        echo -ne "\n"
+        msg "All latency services exited      -- after $(yellow ${elapsed})s"
+      fi
+    ;;
+
     cluster-exited-programs )
       local usage="USAGE: wb backend $op RUN-DIR"
       local dir=${1:?$usage}; shift
@@ -2166,6 +2469,42 @@ backend_nomad() {
         fi
       fi
       echo "${array[@]}"
+    ;;
+
+    # For debugging when something fails, downloads and prints details!
+    download-logs-latency )
+      local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
+      local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
+      local download_ok="true"
+      # Remove "live" symlinks before downloading the "originals"
+      local nomad_environment=$(envjqr 'nomad_environment')
+      if test "${nomad_environment}" != "cloud"
+      then
+        rm -f "${dir}"/latency/"${task}"/{stdout,stderr,exit_code}
+      fi
+      # Downloads "exit_code", "stdout", "stderr" and GHC files.
+      # Depending on when the start command failed, logs may not be available!
+      backend_nomad download-zstd-latency "${dir}" "${task}" \
+      || download_ok="false"
+      # Return
+      if test "${download_ok}" = "false"
+      then
+        msg "$(red "Failed to download \"latency\" run files from \"${task}\"")"
+        # Below like errors can end in truncated files, a proper flag is needed!
+        # failed to exec into task: read tcp 10.0.0.115:33840->3.72.231.105:443: read: connection reset by peer
+        # tar: Unexpected EOF in archive
+        # tar: Unexpected EOF in archive
+        # tar: Error is not recoverable: exiting now
+        touch "${dir}"/latency/"${task}"/download_failed
+        return 1
+      else
+        if test -f "${dir}"/latency/"${task}"/download_failed
+        then
+          rm "${dir}"/latency/"${task}"/download_failed
+        fi
+        return 0
+      fi
     ;;
 
     # For debugging when something fails, downloads and prints details!
@@ -2392,6 +2731,20 @@ backend_nomad() {
       fi
     ;;
 
+    download-zstd-latency )
+      local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
+      local dir=${1:?$usage}; shift
+      local task=${1:?$usage}; shift
+
+      msg "$(blue Fetching) $(yellow "\"latency\"") run files from Nomad $(yellow "Task \"${task}\"") ..."
+      # TODO: Add compression, either "--zstd" or "--xz"
+        backend_nomad task-exec-program-run-files-tar-zstd        \
+          "${dir}" "${task}" "latency"                            \
+      | tar --extract                                             \
+          --directory="${dir}"/latency/"${task}"/ --file=-        \
+          --no-same-owner --no-same-permissions
+    ;;
+
     download-zstd-healthcheck )
       local usage="USAGE: wb backend pass $op RUN-DIR TASK-NAME"
       local dir=${1:?$usage}; shift
@@ -2611,6 +2964,15 @@ backend_nomad() {
       backend_nomad task-file-contents "${dir}" "${node}" \
         run/current/healthcheck/start.sh                  \
       > "${dir}"/healthcheck/"${node}"/start.sh
+    ;;
+
+    download-config-latency )
+      local usage="USAGE: wb backend pass $op RUN-DIR NODE-NAME"
+      local dir=${1:?$usage}; shift
+      local node=${1:?$usage}; shift
+      backend_nomad task-file-contents "${dir}" "${node}" \
+        run/current/latency/start.sh                      \
+      > "${dir}"/latency/"${node}"/start.sh
     ;;
 
     ## Nomad Job's Tasks supervisord queries
