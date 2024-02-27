@@ -12,6 +12,8 @@
 {-# OPTIONS_GHC -Wno-x-partial #-}
 #endif
 
+{- HLINT ignore "Use head" -}
+
 module Cardano.Testnet.Test.Cli.KesPeriodInfo
   ( hprop_kes_period_info
   ) where
@@ -74,8 +76,8 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   execConfig <- H.mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
   -- We get our UTxOs from here
-  let utxoAddr = Text.unpack $ paymentKeyInfoAddr $ head wallets
-      utxoSKeyFile = paymentSKey . paymentKeyInfoPair $ head wallets
+  let utxoAddr = Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
+      utxoSKeyFile = paymentSKey . paymentKeyInfoPair $ wallets !! 0
   void $ H.execCli' execConfig
     [ convertToEraString anyEra, "query", "utxo"
     , "--address", utxoAddr

@@ -32,7 +32,6 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as L
 import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Char (toLower)
 import qualified Data.List as List
 import           Data.String
 import           Data.Word (Word32)
@@ -119,7 +118,6 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
   H.rewriteJsonFile @Value genesisShelleyFpAbs $ \o -> o
     & L.key "protocolParams" .  L.key "rho" . L._Number  .~ 0.1
     & L.key "protocolParams" .  L.key "tau" . L._Number  .~ 0.1
-    & L.key "protocolParams" . L.key "protocolVersion" . L.key "major" . L._Integer .~ 8
     & L.key "securityParam" . L._Integer .~ 5
     & L.key "updateQuorum" . L._Integer .~ 2
 
@@ -211,7 +209,3 @@ mkTopologyConfig numNodes allPorts port True = Aeson.encode topologyP2P
         localRootPeerGroups
         []
         (UseLedger DontUseLedger)
-
-
-convertToEraString :: AnyCardanoEra -> String
-convertToEraString = map toLower . docToString . pretty
