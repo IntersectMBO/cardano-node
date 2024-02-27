@@ -85,7 +85,7 @@ test-suite chairman-tests
                         Spec.Chairman.Cardano
                         Spec.Network
 
-  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
 
   build-tool-depends:   cardano-node:cardano-node
                       , cardano-cli:cardano-cli ^>= 8.20.2.0

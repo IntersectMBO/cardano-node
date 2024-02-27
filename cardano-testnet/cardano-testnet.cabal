@@ -122,7 +122,7 @@ executable cardano-testnet
                       , cardano-testnet
                       , optparse-applicative-fork
 
-  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
 
 test-suite cardano-testnet-golden
   import:               project-config
@@ -153,7 +153,7 @@ test-suite cardano-testnet-golden
                       , tasty-hedgehog
                       , text
 
-  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
 
   build-tool-depends:   cardano-node:cardano-node
                       , cardano-cli:cardano-cli
@@ -215,7 +215,7 @@ test-suite cardano-testnet-test
                       , time
                       , transformers
 
-  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
 
   build-tool-depends:   cardano-node:cardano-node
                       , cardano-cli:cardano-cli
