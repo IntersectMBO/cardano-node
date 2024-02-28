@@ -1052,7 +1052,7 @@ instance LogFormatting TraceStartLeadershipCheckPlus where
         mconcat [ "kind" .= String "TraceStartLeadershipCheck"
                 , "slot" .= toJSON (unSlotNo tsSlotNo)
                 , "utxoSize" .= Number (fromIntegral tsUtxoSize)
-                , "delegMapSize" .= Number (fromIntegral tsUtxoSize)
+                , "delegMapSize" .= Number (fromIntegral tsDelegMapSize)
                 , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
                 ]
   forHuman TraceStartLeadershipCheckPlus {..} =
