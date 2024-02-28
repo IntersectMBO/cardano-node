@@ -10,6 +10,8 @@
 {-# OPTIONS_GHC -Wno-x-partial #-}
 #endif
 
+{- HLINT ignore "Use head" -}
+
 module Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO
   ( hprop_ledger_events_propose_new_constitution_spo
   ) where
@@ -139,12 +141,12 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   txbodyFp <- H.note $ work </> "tx.body"
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
-  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe $ head wallets
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe $ wallets !! 0
 
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "transaction", "build"
     , "--tx-in", Text.unpack $ renderTxIn txin1
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
     , "--proposal-file", constitutionActionFp
     , "--out-file", txbodyFp
     ]
@@ -152,7 +154,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", txbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ head wallets
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 0
     , "--out-file", txbodySignedFp
     ]
 
@@ -191,7 +193,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
       ]
 
   -- We need more UTxOs
-  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe $ head wallets
+  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe $ wallets !! 0
 
   voteTxFp <- H.note $ work </> gov </> "vote.tx"
   voteTxBodyFp <- H.note $ work </> gov </> "vote.txbody"
@@ -200,7 +202,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "transaction", "build"
     , "--tx-in", Text.unpack $ renderTxIn txin2
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
     , "--vote-file", voteFp 1
     , "--vote-file", voteFp 2
     , "--vote-file", voteFp 3
@@ -211,7 +213,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", voteTxBodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ head wallets
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 0
     , "--signing-key-file", spoColdSkeyFp 1
     , "--signing-key-file", spoColdSkeyFp 2
     , "--signing-key-file", spoColdSkeyFp 3
