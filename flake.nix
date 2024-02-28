@@ -138,18 +138,23 @@
         inherit (project.pkgs) cardanoLib;
       };
 
-      mkFlakeAttrs = pkgs: rec {
-        inherit (pkgs) system;
-        inherit (pkgs.haskell-nix) haskellLib;
-        inherit (haskellLib) collectChecks' collectComponents';
-        inherit (pkgs.commonLib) eachEnv environments mkSupervisordCluster;
-        inherit (pkgs.stdenv) hostPlatform;
-        project = pkgs.cardanoNodeProject;
+      mkExes = pkgs:
+        let
+          project = pkgs.cardanoNodeProject;
+        in
+          (collectExes project) // {
+            inherit (pkgs) cabalProjectRegenerate checkCabalProject;
+          } // flattenTree (pkgs.scripts // {
+            # `tests` are the test suites which have been built.
+            inherit (project) tests;
+            # `benchmarks` (only built, not run).
+            inherit (project) benchmarks;
+          });
 
-        # This is used by `nix develop .` to open a devShell
-        devShells =
+      mkDevShells = pkgs:
         let
           shell = import ./shell.nix { inherit pkgs customConfig cardano-mainnet-mirror; };
+          project = pkgs.cardanoNodeProject;
         in {
           inherit (shell) devops workbench-shell;
           default = shell.dev;
@@ -157,68 +162,40 @@
           profiled = project.profiled.shell;
         };
 
-        # NixOS tests run a node and submit-api and validate it listens
-        nixosTests = import ./nix/nixos/tests {
-          inherit pkgs;
-        };
-
-        checks = flattenTree project.checks //
-          # Linux only checks:
-          (optionalAttrs hostPlatform.isLinux (
-            prefixNamesWith "nixosTests/" (mapAttrs (_: v: v.${system} or v) nixosTests)
-          ))
-          # checks run on default system only;
-          // (optionalAttrs (system == defaultSystem) {
-          hlint = pkgs.callPackage pkgs.hlintCheck {
-            inherit (project.args) src;
-          };
-        });
-
-        exes = (collectExes project) // {
-          inherit (pkgs) cabalProjectRegenerate checkCabalProject;
-        } // flattenTree (pkgs.scripts // {
-          # `tests` are the test suites which have been built.
-          inherit (project) tests;
-          # `benchmarks` (only built, not run).
-          inherit (project) benchmarks;
-        });
-
-        # The parametrisable workbench.
-        inherit (pkgs) workbench;
-
-        packages =
-          exes
+      mkPackages = pkgs:
+        let
+          inherit (pkgs) system;
+          checks = mkChecks pkgs;
+        in
+          mkExes pkgs
           # Linux only packages:
           // optionalAttrs (system == "x86_64-linux")
-          (let workbenchTest =
-                { profileName, workbenchStartArgs ? [] }:
-                (pkgs.workbench-runner
-                  {
-                    inherit profileName workbenchStartArgs;
-                    backendName = "supervisor";
-                    useCabalRun = false;
-                    cardano-node-rev = pkgs.gitrev;
-                  }).workbench-profile-run;
-          in
-          {
-            "dockerImage/node" = pkgs.dockerImage;
-            "dockerImage/submit-api" = pkgs.submitApiDockerImage;
+            (let
+              workbenchTest = { profileName, workbenchStartArgs ? [] }:
+                (pkgs.workbench-runner {
+                  inherit profileName workbenchStartArgs;
+                  backendName = "supervisor";
+                  useCabalRun = false;
+                  cardano-node-rev = pkgs.gitrev;
+                }).workbench-profile-run;
+            in {
+              "dockerImage/node" = pkgs.dockerImage;
+              "dockerImage/submit-api" = pkgs.submitApiDockerImage;
 
-            ## This is a very light profile, no caching&pinning needed.
-            workbench-ci-test =
-              workbenchTest { profileName        = "ci-test-bage";
-                            };
-            workbench-ci-test-trace =
-              workbenchTest { profileName        = "ci-test-bage";
-                              workbenchStartArgs = [ "--trace" ];
-                            };
+              ## This is a very light profile, no caching&pinning needed.
+              workbench-ci-test =
+                workbenchTest { profileName = "ci-test-bage"; };
+              workbench-ci-test-trace = workbenchTest {
+                profileName = "ci-test-bage";
+                workbenchStartArgs = [ "--trace" ];
+              };
 
-            inherit (pkgs) all-profiles-json;
+              inherit (pkgs) all-profiles-json;
 
-            system-tests = pkgs.writeShellApplication {
-              name = "system-tests";
-              runtimeInputs = with pkgs; [ git gnused ];
-              text = ''
+              system-tests = pkgs.writeShellApplication {
+                name = "system-tests";
+                runtimeInputs = with pkgs; [ git gnused ];
+                text = ''
                   NODE_REV="${self.rev or ""}"
                   if [[ -z $NODE_REV ]]; then
                     echo "Sorry, need clean/pushed git revision to run system tests"
@@ -233,41 +210,73 @@
                   export NODE_REV
                   export MAKE_TARGET
                   nix develop --accept-flake-config .#base -c ./.github/regression.sh 2>&1
-              '';
-            };
-          })
+                '';
+              };
+            })
           # Add checks to be able to build them individually
           // (prefixNamesWith "checks/" checks);
 
-        apps = lib.mapAttrs (n: p: { type = "app"; program = p.exePath or (if (p.executable or false) then "${p}" else "${p}/bin/${p.name or n}"); }) exes;
 
-        ciJobs =
-          let
-            ciJobsVariants = mapAttrs (_: p:
-              (mkFlakeAttrs (pkgs.extend (prev: final: { cardanoNodeProject = p; }))).ciJobs
-            ) project.projectVariants;
-            ciJobs = {
-              cardano-deployment = pkgs.cardanoLib.mkConfigHtml { inherit (pkgs.cardanoLib.environments) mainnet preview preprod; };
-            } // optionalAttrs (system == "x86_64-linux") {
-              native = packages // {
-                shells = devShells;
-                internal = {
-                  roots.project = project.roots;
-                  plan-nix.project = project.plan-nix;
-                };
-                profiled = lib.genAttrs [ "cardano-node" "tx-generator" "locli" ] (n:
-                  packages.${n}.passthru.profiled
-                );
-                asserted = lib.genAttrs [ "cardano-node" ] (n:
-                  packages.${n}.passthru.asserted
-                );
-                variants = mapAttrs (_: v: removeAttrs v.native ["variants"]) ciJobsVariants;
+      mkChecks = pkgs:
+        let
+          inherit (pkgs) system;
+          inherit (pkgs.stdenv) hostPlatform;
+          project = pkgs.cardanoNodeProject;
+          nixosTests = mkNixosTests pkgs;
+        in
+          flattenTree project.checks //
+          # Linux only checks:
+          (optionalAttrs hostPlatform.isLinux (
+            prefixNamesWith "nixosTests/" (mapAttrs (_: v: v.${system} or v) nixosTests)
+          )) //
+          # checks run on default system only;
+          (optionalAttrs (system == defaultSystem) {
+            hlint = pkgs.callPackage pkgs.hlintCheck {
+              inherit (project.args) src;
+            };
+          });
+
+      mkNixosTests = pkgs:
+        import ./nix/nixos/tests {
+          inherit pkgs;
+        };
+
+      mkCiJobs = pkgs:
+        let
+          inherit (pkgs) system;
+          project = pkgs.cardanoNodeProject;
+          packages = mkPackages pkgs;
+          devShells = mkDevShells pkgs;
+
+          ciJobsVariants = mapAttrs (_: p:
+            (mkCiJobs (pkgs.extend (prev: final: { cardanoNodeProject = p; })))
+          ) project.projectVariants;
+
+          ciJobs = {
+            cardano-deployment = pkgs.cardanoLib.mkConfigHtml {
+              inherit (pkgs.cardanoLib.environments) mainnet preview preprod; };
+          } // optionalAttrs (system == "x86_64-linux") {
+            native = packages // {
+              shells = devShells;
+              internal = {
+                roots.project = project.roots;
+                plan-nix.project = project.plan-nix;
               };
-              musl =
-                let
-                  muslProject = project.projectCross.musl64;
-                  projectExes = collectExes muslProject;
-                in
+              profiled = lib.genAttrs [ "cardano-node" "tx-generator" "locli" ] (n:
+                packages.${n}.passthru.profiled
+              );
+              asserted = lib.genAttrs [ "cardano-node" ] (n:
+                packages.${n}.passthru.asserted
+              );
+              variants = mapAttrs (_: v: removeAttrs v.native ["variants"]) ciJobsVariants;
+            };
+
+            musl =
+              let
+                muslProject = project.projectCross.musl64;
+                projectExes = collectExes muslProject;
+                exes = mkExes pkgs;
+              in
                 projectExes // {
                   cardano-node-linux = import ./nix/binary-release.nix {
                     inherit pkgs;
@@ -285,13 +294,15 @@
                   internal.roots.project = muslProject.roots;
                   variants = mapAttrs (_: v: removeAttrs v.musl ["variants"]) ciJobsVariants;
                 };
-              windows =
-                let
-                  windowsProject = project.projectCross.mingwW64;
-                  projectExes = collectExes windowsProject;
-                in
+
+            windows =
+              let
+                windowsProject = project.projectCross.mingwW64;
+                projectExes = collectExes windowsProject;
+                exes = mkExes pkgs;
+              in
                 projectExes
-                  // (removeRecurse {
+                // (removeRecurse {
                   inherit (windowsProject) checks tests benchmarks;
                   cardano-node-win64 = import ./nix/binary-release.nix {
                     inherit pkgs;
@@ -305,116 +316,155 @@
                   internal.roots.project = windowsProject.roots;
                   variants = mapAttrs (_: v: removeAttrs v.windows ["variants"]) ciJobsVariants;
                 });
-            } // optionalAttrs (system == "x86_64-darwin") {
-              native = lib.filterAttrs
-                (n: _:
-                  # only build docker images once on linux:
-                  !(lib.hasPrefix "dockerImage" n))
-                packages // {
-                cardano-node-macos = import ./nix/binary-release.nix {
-                  inherit pkgs;
-                  inherit (exes.cardano-node.identifier) version;
-                  platform = "macos";
-                  exes = lib.collect lib.isDerivation (collectExes project);
-                };
-                shells = removeAttrs devShells [ "profiled" ];
-                internal = {
-                  roots.project = project.roots;
-                  plan-nix.project = project.plan-nix;
-                };
-                variants = mapAttrs (_: v: removeAttrs v.native ["variants"]) ciJobsVariants;
-              };
-            };
-            nonRequiredPaths = [
-              #FIXME: cardano-tracer-test for windows should probably be disabled in haskell.nix config:
-              "windows\\.(.*\\.)?checks\\.cardano-tracer\\.cardano-tracer-test"
-              #FIXME: plutus-scripts-bench (dep of tx-generator) does not compile for windows:
-              "windows\\.(.*\\.)?tx-generator.*"
-              #FIXME: plutus-scripts-bench's gen-plutus does not compile for musl
-              "musl\\.(.*\\.)?tx-generator.*"
-              "musl\\.(.*\\.)?gen-plutus.*"
-              # hlint required status is controled via the github action:
-              "native\\.(.*\\.)?checks/hlint"
-              #system-tests are build and run separately:
-              "native\\.(.*\\.)?system-tests"
-            ] ++
-            lib.optionals (system == "x86_64-darwin") [
-              #FIXME: make variants nonrequired for macos until CI has more capacity for macos builds
-              "native\\.variants\\..*"
-            ];
-          in
+          } // optionalAttrs (system == "x86_64-darwin") {
+            native =
+              let
+                exes = mkExes pkgs;
+              in
+                lib.filterAttrs
+                  (n: _:
+                    # only build docker images once on linux:
+                    !(lib.hasPrefix "dockerImage" n))
+                  packages // {
+                    cardano-node-macos = import ./nix/binary-release.nix {
+                      inherit pkgs;
+                      inherit (exes.cardano-node.identifier) version;
+                      platform = "macos";
+                      exes = lib.collect lib.isDerivation (collectExes project);
+                    };
+                    shells = removeAttrs devShells [ "profiled" ];
+                    internal = {
+                      roots.project = project.roots;
+                      plan-nix.project = project.plan-nix;
+                    };
+                    variants = mapAttrs (_: v: removeAttrs v.native ["variants"]) ciJobsVariants;
+                  };
+          };
+          nonRequiredPaths = [
+            #FIXME: cardano-tracer-test for windows should probably be disabled in haskell.nix config:
+            "windows\\.(.*\\.)?checks\\.cardano-tracer\\.cardano-tracer-test"
+            #FIXME: plutus-scripts-bench (dep of tx-generator) does not compile for windows:
+            "windows\\.(.*\\.)?tx-generator.*"
+            #FIXME: plutus-scripts-bench's gen-plutus does not compile for musl
+            "musl\\.(.*\\.)?tx-generator.*"
+            "musl\\.(.*\\.)?gen-plutus.*"
+            # hlint required status is controled via the github action:
+            "native\\.(.*\\.)?checks/hlint"
+            #system-tests are build and run separately:
+            "native\\.(.*\\.)?system-tests"
+          ] ++
+          lib.optionals (system == "x86_64-darwin") [
+            #FIXME: make variants nonrequired for macos until CI has more capacity for macos builds
+            "native\\.variants\\..*"
+          ];
+        in
           pkgs.callPackages iohkNix.utils.ciJobsAggregates
             {
               inherit ciJobs;
               nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
             } // ciJobs;
-      };
-
-      flake = eachSystem supportedSystems (system:
-        let
-          inherit (haskellNix) config;
-          pkgs = import nixpkgs {
-            inherit config system overlays;
-          };
-          inherit (mkFlakeAttrs pkgs) environments packages checks apps project ciJobs devShells workbench;
-        in
-        {
-
-          inherit environments checks project ciJobs devShells workbench;
-
-          legacyPackages = pkgs // {
-            # allows access to hydraJobs without specifying <arch>:
-            hydraJobs = ciJobs;
-          };
-
-          packages = packages // {
-            # Built by `nix build .`
-            default = packages.cardano-node;
-          };
-
-          # Run by `nix run .`
-          apps = apps // {
-            default = apps.cardano-node;
-          };
-
-        }
-      );
 
     in
-    removeAttrs flake [ "ciJobs" ] // {
+      lib.recursiveUpdate
+        (eachSystem supportedSystems (system:
+          let
+            inherit (haskellNix) config;
+            inherit (pkgs.commonLib) environments;
 
-      hydraJobs = flake.ciJobs // (let pkgs = self.legacyPackages.${defaultSystem}; in {
-        inherit (pkgs.callPackages iohkNix.utils.ciJobsAggregates {
-          ciJobs = lib.mapAttrs (_: lib.getAttr "required") flake.ciJobs // {
-            # ensure hydra notify:
-            gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
+            pkgs = import nixpkgs {
+              inherit config system overlays;
+            };
+            inherit (pkgs) hostPlatform;
+            # The parametrisable workbench.
+            inherit (pkgs) workbench;
+
+            project = pkgs.cardanoNodeProject;
+
+            # NixOS tests run a node and submit-api and validate it listens
+            nixosTests = mkNixosTests pkgs;
+
+            apps =
+              lib.mapAttrs
+                (n: p: {
+                  type = "app";
+                  program =
+                    p.exePath or
+                      (if (p.executable or false) then
+                        "${p}"
+                       else "${p}/bin/${p.name or n}"
+                      );
+                })
+                (mkExes pkgs);
+
+            packages = mkPackages pkgs;
+            checks = mkChecks pkgs;
+            devShells = mkDevShells pkgs;
+            ciJobs = mkCiJobs pkgs;
+
+          in {
+            inherit checks devShells environments project workbench;
+
+            legacyPackages = pkgs // {
+              # allows access to hydraJobs without specifying <arch>:
+              hydraJobs = ciJobs;
+            };
+
+            hydraJobs = ciJobs;
+
+            packages = packages // {
+              # Built by `nix build .`
+              default = packages.cardano-node;
+            };
+
+            # Run by `nix run .`
+            apps = apps // {
+              default = apps.cardano-node;
+            };
+          })) {
+            # allows precise paths (avoid fallbacks) with nix build/eval:
+            outputs = self;
+
+            hydraJobs.required =
+              let
+                pkgs = self.legacyPackages.${defaultSystem};
+                ciJobs = self.hydraJobs;
+                getAttrs = k: attrs:
+                  lib.mapAttrs
+                    (_: lib.getAttr k)
+                    (lib.filterAttrs (_: lib.hasAttr k) attrs);
+                aggregates = pkgs.callPackages iohkNix.utils.ciJobsAggregates {
+                  ciJobs = getAttrs "required" ciJobs // {
+                    # ensure hydra notify:
+                    gitrev = pkgs.writeText "gitrev" pkgs.gitrev;
+                  };
+                };
+              in
+                aggregates.required;
+
+            overlay = final: prev: {
+              cardanoNodeProject = (import ./nix/haskell.nix {
+                inherit (final) haskell-nix;
+                inherit (std) incl;
+                inherit CHaP;
+              }).appendModule [
+                customConfig.haskellNix
+              ];
+              cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
+              inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli db-analyser;
+            };
+
+            nixosModules = {
+              cardano-node = { pkgs, lib, ... }: {
+                imports = [ ./nix/nixos/cardano-node-service.nix ];
+                services.cardano-node.cardanoNodePackages =
+                  lib.mkDefault self.project.${pkgs.system};
+              };
+
+              cardano-submit-api = { pkgs, lib, ... }: {
+                imports = [ ./nix/nixos/cardano-submit-api-service.nix ];
+                services.cardano-submit-api.cardanoNodePackages =
+                  lib.mkDefault self.project.${pkgs.system};
+              };
+            };
           };
-        }) required;
-      });
-
-      # allows precise paths (avoid fallbacks) with nix build/eval:
-      outputs = self;
-
-      overlay = final: prev: {
-        cardanoNodeProject = (import ./nix/haskell.nix {
-          inherit (final) haskell-nix;
-          inherit (std) incl;
-          inherit CHaP;
-        }).appendModule [
-          customConfig.haskellNix
-        ];
-        cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
-        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api cardano-tracer bech32 locli db-analyser;
-      };
-      nixosModules = {
-        cardano-node = { pkgs, lib, ... }: {
-          imports = [ ./nix/nixos/cardano-node-service.nix ];
-          services.cardano-node.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
-        };
-        cardano-submit-api = { pkgs, lib, ... }: {
-          imports = [ ./nix/nixos/cardano-submit-api-service.nix ];
-          services.cardano-submit-api.cardanoNodePackages = lib.mkDefault (mkCardanoNodePackages flake.project.${pkgs.system});
-        };
-      };
-    };
 }
