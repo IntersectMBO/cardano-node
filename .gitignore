@@ -7,8 +7,7 @@
 /cabal.project.old
 configuration/defaults/simpleview/genesis/
 configuration/defaults/liveview/genesis/
-dist-newstyle/
-dist-profiled/
+dist-*
 dist/
 *~
 \#*
@@ -24,7 +23,7 @@ stack.yaml.lock
 /db
 /db-[0-9]
 /logs
-/mainnet
+/mainnet*
 /profile
 /launch_*
 /state-*

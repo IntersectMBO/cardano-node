@@ -32,6 +32,15 @@ packages:
   trace-resources
   trace-forward
 
+  ../ouroboros-consensus/ouroboros-consensus
+  ../ouroboros-consensus/ouroboros-consensus-cardano
+  ../ouroboros-consensus/ouroboros-consensus-diffusion
+  ../ouroboros-consensus/ouroboros-consensus-protocol
+  ../ouroboros-consensus/sop-extras
+  ../ouroboros-consensus/strict-sop-core
+
+  ../cardano-api/cardano-api
+
 program-options
   ghc-options: -Werror
 
@@ -60,3 +69,11 @@ package plutus-scripts-bench
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
+
+source-repository-package
+  type: git
+  location: https://github.com/jasagredo/latex-svg
+  tag: 05dc866baadcdd04a23ed1a488440372f97afb70
+  --sha256: 1amaipl1f516m4yh9x02cqsbv50riszmbdjdmvfpw19vspv1szsx
+  subdir:
+    latex-svg-image

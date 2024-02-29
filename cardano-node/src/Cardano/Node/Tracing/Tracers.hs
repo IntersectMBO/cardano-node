@@ -127,8 +127,9 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
     configureTracers configReflection trConfig [chainDBTr]
     -- Filter out replayed blocks for this tracer
     let chainDBTr' = filterTrace
-                      (\case (_, ChainDB.TraceLedgerReplayEvent
-                                            LedgerDB.ReplayedBlock {}) -> False
+                      (\case (_, ChainDB.TraceLedgerDBEvent
+                                            (LedgerDB.LedgerReplayEvent (LedgerDB.TraceReplayProgressEvent
+                                                                        (LedgerDB.ReplayedBlock {})))) -> False
                              (_, _) -> True)
                       chainDBTr
 

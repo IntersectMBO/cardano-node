@@ -24,6 +24,7 @@ where
 
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
+import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.NodeAddress (SocketPath)
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
@@ -34,8 +35,9 @@ import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
-                   SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.V1.Args (FlushFrequency (..),
+                   QueryBatchSize (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Impl.Snapshots (SnapshotInterval (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
@@ -102,9 +104,7 @@ data NodeConfiguration
        , ncProtocolConfig :: !NodeProtocolConfiguration
 
          -- Node parameters, not protocol-specific:
-       , ncDiffusionMode      :: !DiffusionMode
-       , ncNumOfDiskSnapshots :: !NumOfDiskSnapshots
-       , ncSnapshotInterval   :: !SnapshotInterval
+       , ncDiffusionMode  :: !DiffusionMode
 
          -- | During the development and integration of new network protocols
          -- (node-to-node and node-to-client) we wish to be able to test them
@@ -131,6 +131,12 @@ data NodeConfiguration
        , ncTraceForwardSocket :: !(Maybe (SocketPath, ForwarderMode))
 
        , ncMaybeMempoolCapacityOverride :: !(Maybe MempoolCapacityBytesOverride)
+
+         -- LedgerDB configuration
+       , ncSnapshotInterval   :: !SnapshotInterval
+       , ncLedgerDBBackend    :: !BackingStoreSelectorFlag
+       , ncFlushFrequency     :: !FlushFrequency
+       , ncQueryBatchSize     :: !QueryBatchSize
 
          -- | Protocol idleness timeout, see
          -- 'Ouroboros.Network.Diffusion.daProtocolIdleTimeout'.
@@ -185,8 +191,6 @@ data PartialNodeConfiguration
 
          -- Node parameters, not protocol-specific:
        , pncDiffusionMode      :: !(Last DiffusionMode  )
-       , pncNumOfDiskSnapshots :: !(Last NumOfDiskSnapshots)
-       , pncSnapshotInterval   :: !(Last SnapshotInterval)
        , pncExperimentalProtocolsEnabled :: !(Last Bool)
 
          -- BlockFetch configuration
@@ -201,6 +205,12 @@ data PartialNodeConfiguration
 
          -- Configuration for testing purposes
        , pncMaybeMempoolCapacityOverride :: !(Last MempoolCapacityBytesOverride)
+
+         -- LedgerDB configuration
+       , pncSnapshotInterval :: !(Last SnapshotInterval)
+       , pncLedgerDBBackend  :: !(Last BackingStoreSelectorFlag)
+       , pncFlushFrequency   :: !(Last FlushFrequency)
+       , pncQueryBatchSize   :: !(Last QueryBatchSize)
 
          -- Network timeouts
        , pncProtocolIdleTimeout   :: !(Last DiffTime)
@@ -244,10 +254,6 @@ instance FromJSON PartialNodeConfiguration where
       pncSocketPath <- Last <$> v .:? "SocketPath"
       pncDiffusionMode
         <- Last . fmap getDiffusionMode <$> v .:? "DiffusionMode"
-      pncNumOfDiskSnapshots
-        <- Last . fmap RequestedNumOfDiskSnapshots <$> v .:? "NumOfDiskSnapshots"
-      pncSnapshotInterval
-        <- Last . fmap RequestedSnapshotInterval <$> v .:? "SnapshotInterval"
       pncExperimentalProtocolsEnabled <- fmap Last $ do
         mValue <- v .:? "ExperimentalProtocolsEnabled"
 
@@ -289,6 +295,12 @@ instance FromJSON PartialNodeConfiguration where
                 <*> parseHardForkProtocol v
       pncMaybeMempoolCapacityOverride <- Last <$> parseMempoolCapacityBytesOverride v
 
+      -- LedgerDB configuration
+      pncSnapshotInterval <- Last . fmap RequestedSnapshotInterval <$> v .:? "SnapshotInterval"
+      pncLedgerDBBackend  <- Last <$> parseLedgerDBBackend v
+      pncFlushFrequency   <- Last . fmap RequestedFlushFrequency <$> v .:? "FlushFrequency"
+      pncQueryBatchSize   <- Last . fmap RequestedQueryBatchSize <$> v .:? "QueryBatchSize"
+
       -- Network timeouts
       pncProtocolIdleTimeout   <- Last <$> v .:? "ProtocolIdleTimeout"
       pncTimeWaitTimeout       <- Last <$> v .:? "TimeWaitTimeout"
@@ -325,8 +337,6 @@ instance FromJSON PartialNodeConfiguration where
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
            , pncDiffusionMode
-           , pncNumOfDiskSnapshots
-           , pncSnapshotInterval
            , pncExperimentalProtocolsEnabled
            , pncMaxConcurrencyBulkSync
            , pncMaxConcurrencyDeadline
@@ -342,6 +352,10 @@ instance FromJSON PartialNodeConfiguration where
            , pncShutdownConfig = mempty
            , pncStartAsNonProducingNode = Last $ Just False
            , pncMaybeMempoolCapacityOverride
+           , pncSnapshotInterval
+           , pncLedgerDBBackend
+           , pncFlushFrequency
+           , pncQueryBatchSize
            , pncProtocolIdleTimeout
            , pncTimeWaitTimeout
            , pncChainSyncIdleTimeout
@@ -370,6 +384,17 @@ instance FromJSON PartialNodeConfiguration where
                 , show invalid
                 ]
               Nothing -> return Nothing
+
+      parseLedgerDBBackend v = do
+        maybeString :: Maybe String <- v .:? "LedgerDBBackend"
+        case maybeString of
+           Just "InMemory" -> return $ Just InMemory
+           Just "LMDB"     -> do
+             mapSize :: Maybe Gigabytes <- v .:? "LMDBMapSize"
+             return . Just . LMDB $ mapSize
+           Nothing         -> return Nothing
+           Just whatever   -> fail $ "Malformed LedgerDBBackend" <> whatever
+
       parseByronProtocol v = do
         primary   <- v .:? "ByronGenesisFile"
         secondary <- v .:? "GenesisFile"
@@ -496,8 +521,6 @@ defaultPartialNodeConfiguration =
     , pncLoggingSwitch = Last $ Just True
     , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
-    , pncNumOfDiskSnapshots = Last $ Just DefaultNumOfDiskSnapshots
-    , pncSnapshotInterval = Last $ Just DefaultSnapshotInterval
     , pncExperimentalProtocolsEnabled = Last $ Just False
     , pncTopologyFile = Last . Just $ TopologyFile "configuration/cardano/mainnet-topology.json"
     , pncProtocolFiles = mempty
@@ -511,6 +534,10 @@ defaultPartialNodeConfiguration =
     , pncTraceConfig = mempty
     , pncTraceForwardSocket = mempty
     , pncMaybeMempoolCapacityOverride = mempty
+    , pncSnapshotInterval = Last $ Just DefaultSnapshotInterval
+    , pncLedgerDBBackend  = Last $ Just InMemory
+    , pncFlushFrequency   = Last $ Just DefaultFlushFrequency
+    , pncQueryBatchSize   = Last $ Just DefaultQueryBatchSize
     , pncProtocolIdleTimeout   = Last (Just 5)
     , pncTimeWaitTimeout       = Last (Just 60)
     , pncAcceptedConnectionsLimit =
@@ -548,7 +575,6 @@ makeNodeConfiguration pnc = do
   logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
   traceConfig <- first Text.unpack $ partialTraceSelectionToEither $ pncTraceConfig pnc
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
-  numOfDiskSnapshots <- lastToEither "Missing NumOfDiskSnapshots" $ pncNumOfDiskSnapshots pnc
   snapshotInterval <- lastToEither "Missing SnapshotInterval" $ pncSnapshotInterval pnc
   shutdownConfig <- lastToEither "Missing ShutdownConfig" $ pncShutdownConfig pnc
   socketConfig <- lastToEither "Missing SocketConfig" $ pncSocketConfig pnc
@@ -574,6 +600,15 @@ makeNodeConfiguration pnc = do
   ncTargetNumberOfActiveBigLedgerPeers <-
     lastToEither "Missing TargetNumberOfActiveBigLedgerPeers"
     $ pncTargetNumberOfActiveBigLedgerPeers pnc
+  ncLedgerDBBackend <-
+    lastToEither "Missing LedgerDBBackend"
+    $ pncLedgerDBBackend pnc
+  ncFlushFrequency <-
+    lastToEither "Missing FlushFrequency"
+    $ pncFlushFrequency pnc
+  ncQueryBatchSize <-
+    lastToEither "Missing QueryBatchSize"
+    $ pncQueryBatchSize pnc
   ncProtocolIdleTimeout <-
     lastToEither "Missing ProtocolIdleTimeout"
     $ pncProtocolIdleTimeout pnc
@@ -617,8 +652,6 @@ makeNodeConfiguration pnc = do
              , ncProtocolConfig = protocolConfig
              , ncSocketConfig = socketConfig
              , ncDiffusionMode = diffusionMode
-             , ncNumOfDiskSnapshots = numOfDiskSnapshots
-             , ncSnapshotInterval = snapshotInterval
              , ncExperimentalProtocolsEnabled = experimentalProtocols
              , ncMaxConcurrencyBulkSync = getLast $ pncMaxConcurrencyBulkSync pnc
              , ncMaxConcurrencyDeadline = getLast $ pncMaxConcurrencyDeadline pnc
@@ -628,6 +661,10 @@ makeNodeConfiguration pnc = do
                                                 else TracingOff
              , ncTraceForwardSocket = getLast $ pncTraceForwardSocket pnc
              , ncMaybeMempoolCapacityOverride = getLast $ pncMaybeMempoolCapacityOverride pnc
+             , ncSnapshotInterval = snapshotInterval
+             , ncLedgerDBBackend
+             , ncFlushFrequency
+             , ncQueryBatchSize
              , ncProtocolIdleTimeout
              , ncTimeWaitTimeout
              , ncChainSyncIdleTimeout

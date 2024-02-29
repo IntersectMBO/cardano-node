@@ -186,16 +186,8 @@ indexGCType :: ChainDB.TraceGCEvent a -> Int
 indexGCType ChainDB.ScheduledGC{} = 1
 indexGCType ChainDB.PerformedGC{} = 2
 
-indexReplType :: ChainDB.TraceReplayEvent a -> Int
-indexReplType LedgerDB.ReplayFromGenesis{} = 1
-indexReplType LedgerDB.ReplayFromSnapshot{} = 2
-indexReplType LedgerDB.ReplayedBlock{} = 3
-
 instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   -- equivalent by type and severity
-  isEquivalent (WithSeverity s1 (ChainDB.TraceLedgerReplayEvent ev1))
-               (WithSeverity s2 (ChainDB.TraceLedgerReplayEvent ev2)) =
-                  s1 == s2 && indexReplType ev1 == indexReplType ev2
   isEquivalent (WithSeverity s1 (ChainDB.TraceGCEvent ev1))
                (WithSeverity s2 (ChainDB.TraceGCEvent ev2)) =
                   s1 == s2 && indexGCType ev1 == indexGCType ev2
@@ -215,6 +207,12 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
                (WithSeverity _s2 (ChainDB.TraceCopyToImmutableDBEvent _)) = True
   isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmutableDBEvent _))
                (WithSeverity _s2 (ChainDB.TraceCopyToImmutableDBEvent _)) = True
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceLedgerDBEvent
+                                  (LedgerDB.LedgerReplayEvent
+                                   (LedgerDB.TraceReplayProgressEvent _))))
+               (WithSeverity _s2 (ChainDB.TraceLedgerDBEvent
+                                  (LedgerDB.LedgerReplayEvent
+                                   (LedgerDB.TraceReplayProgressEvent _)))) = True
   isEquivalent (WithSeverity _s1 (ChainDB.TraceInitChainSelEvent ev1))
                (WithSeverity _s2 (ChainDB.TraceInitChainSelEvent ev2)) =
     case (ev1, ev2) of
@@ -227,11 +225,12 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
       _ -> False
   isEquivalent _ _ = False
   -- the types to be elided
-  doelide (WithSeverity _ (ChainDB.TraceLedgerReplayEvent _)) = True
+  doelide (WithSeverity _ (ChainDB.TraceLedgerDBEvent
+                                  (LedgerDB.LedgerReplayEvent
+                                   (LedgerDB.TraceReplayProgressEvent _)))) = True
   doelide (WithSeverity _ (ChainDB.TraceGCEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.IgnoreBlockOlderThanK _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.IgnoreInvalidBlock _ _))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.BlockInTheFuture _ _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.StoreButDontChange _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.TrySwitchToAFork _ _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.SwitchedToAFork{}))) = False
@@ -261,7 +260,9 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
       return (Just ev, count)
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceGCEvent _)) (_old, count) =
       return (Just ev, count)
-  conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock {}))) (_old, count) = do
+  conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceLedgerDBEvent
+                                  (LedgerDB.LedgerReplayEvent
+                                   (LedgerDB.TraceReplayProgressEvent _)))) (_old, count) = do
       return (Just ev, count)
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceInitChainSelEvent
                                              (ChainDB.InitChainSelValidation
@@ -276,7 +277,9 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
            else (Just ev, count)
   conteliding _ _ _ _ = return (Nothing, 0)
 
-  reportelided _tverb _tr (WithSeverity _ (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock{}))) _count = pure ()
+  reportelided _tverb _tr (WithSeverity _ (ChainDB.TraceLedgerDBEvent
+                                  (LedgerDB.LedgerReplayEvent
+                                   (LedgerDB.TraceReplayProgressEvent _)))) _count = pure ()
   reportelided t tr ev count = defaultelidedreporting  t tr ev count
 
 instance (StandardHash header, Eq peer) => ElidingTracer
@@ -780,11 +783,11 @@ traceBlockFetchServerMetrics
   -> STM.TVar SlotNo
   -> Tracer IO (TraceLabelPeer peer (TraceBlockFetchServerEvent blk))
   -> Tracer IO (TraceLabelPeer peer (TraceBlockFetchServerEvent blk))
-traceBlockFetchServerMetrics trMeta meta tBlocksServed tLocalUp tMaxSlotNo tracer = Tracer bsTracer
+traceBlockFetchServerMetrics trMeta meta tBlocksServed tLocalUp tMaxSlotNo tracer = Tracer bfsTracer
 
   where
-    bsTracer :: TraceLabelPeer peer (TraceBlockFetchServerEvent blk) -> IO ()
-    bsTracer e@(TraceLabelPeer _p (TraceBlockFetchServerSendBlock p)) = do
+    bfsTracer :: TraceLabelPeer peer (TraceBlockFetchServerEvent blk) -> IO ()
+    bfsTracer e@(TraceLabelPeer _p (TraceBlockFetchServerSendBlock p)) = do
       traceWith tracer e
 
       (served, mbLocalUpstreamyness) <- atomically $ do
@@ -1186,24 +1189,31 @@ notifyTxsProcessed fStats tr = Tracer $ \case
 mempoolMetricsTraceTransformer :: Trace IO a -> Tracer IO (TraceEventMempool blk)
 mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
   let tr' = appendName "metrics" tr
-      (_n, tot) = case mempoolEvent of
-                    TraceMempoolAddedTx     _tx0 _ tot0 -> (1, tot0)
-                    TraceMempoolRejectedTx  _tx0 _ tot0 -> (1, tot0)
-                    TraceMempoolRemoveTxs   txs0   tot0 -> (length txs0, tot0)
-                    TraceMempoolManuallyRemovedTxs txs0 txs1 tot0 -> ( length txs0 + length txs1, tot0)
-      logValue1 :: LOContent a
-      logValue1 = LogValue "txsInMempool" $ PureI $ fromIntegral (msNumTxs tot)
-      logValue2 :: LOContent a
-      logValue2 = LogValue "mempoolBytes" $ PureI $ fromIntegral (msNumBytes tot)
-  meta <- mkLOMeta Critical Confidential
-  traceNamedObject tr' (meta, logValue1)
-  traceNamedObject tr' (meta, logValue2)
+      mNTot = case mempoolEvent of
+                    TraceMempoolAddedTx     _tx0 _ tot0 -> Just (1, tot0)
+                    TraceMempoolRejectedTx  _tx0 _ tot0 -> Just (1, tot0)
+                    TraceMempoolRemoveTxs   txs0   tot0 -> Just (length txs0, tot0)
+                    TraceMempoolManuallyRemovedTxs txs0 txs1 tot0 -> Just ( length txs0 + length txs1, tot0)
+                    _ -> Nothing
+  maybe
+    (pure ())
+    (\(_n, tot) -> do
+      let logValue1 :: LOContent a
+          logValue1 = LogValue "txsInMempool" $ PureI $ fromIntegral (msNumTxs tot)
+          logValue2 :: LOContent a
+          logValue2 = LogValue "mempoolBytes" $ PureI $ fromIntegral (msNumBytes tot)
+      meta <- mkLOMeta Critical Confidential
+      traceNamedObject tr' (meta, logValue1)
+      traceNamedObject tr' (meta, logValue2)
+    )
+    mNTot
 
 mempoolTracer
   :: ( ToJSON (GenTxId blk)
      , ToObject (ApplyTxErr blk)
      , ToObject (GenTx blk)
      , LedgerSupportsMempool blk
+     , ConvertRawHash blk
      )
   => TraceSelection
   -> Trace IO Text
@@ -1218,6 +1228,7 @@ mempoolTracer tc tracer fStats = Tracer $ \ev -> do
 mpTracer :: ( ToJSON (GenTxId blk)
             , ToObject (ApplyTxErr blk)
             , ToObject (GenTx blk)
+            , ConvertRawHash blk
             , LedgerSupportsMempool blk
             )
          => TraceSelection -> Trace IO Text -> Tracer IO (TraceEventMempool blk)
@@ -1311,7 +1322,7 @@ forgeStateInfoTracer p _ts tracer = Tracer $ \ev -> do
 
 nodeToClientTracers'
   :: ( ToObject localPeer
-     , ShowQuery (BlockQuery blk)
+     , forall fp. ShowQuery (BlockQuery blk fp)
      )
   => TraceSelection
   -> TracingVerbosity
