@@ -170,7 +170,7 @@ test-suite test-locli
   hs-source-dirs:       test
   main-is:              test-locli.hs
   type:                 exitcode-stdio-1.0
-  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
 
   build-depends:        cardano-prelude
                       , containers
