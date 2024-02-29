@@ -6,6 +6,7 @@ module Test.Cardano.Node.POM
   ) where
 
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
+import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
@@ -14,6 +15,8 @@ import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartia
                    partialTraceSelectionToEither)
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
+import           Ouroboros.Consensus.Storage.LedgerDB
+                   (FlushFrequency (DefaultFlushFrequency), QueryBatchSize (DefaultQueryBatchSize),
                    SnapshotInterval (..))
 import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
@@ -144,6 +147,9 @@ testPartialYamlConfig =
     , pncTargetNumberOfActiveBigLedgerPeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
+    , pncLedgerDBBackend = Last (Just InMemory)
+    , pncFlushFrequency = Last (Just DefaultFlushFrequency)
+    , pncQueryBatchSize = Last (Just DefaultQueryBatchSize)
     }
 
 -- | Example partial configuration theoretically created
@@ -184,6 +190,9 @@ testPartialCliConfig =
     , pncTargetNumberOfActiveBigLedgerPeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
+    , pncLedgerDBBackend = Last (Just InMemory)
+    , pncFlushFrequency = Last (Just DefaultFlushFrequency)
+    , pncQueryBatchSize = Last (Just DefaultQueryBatchSize)
     }
 
 -- | Expected final NodeConfiguration
@@ -230,6 +239,9 @@ eExpectedConfig = do
     , ncTargetNumberOfActiveBigLedgerPeers = 5
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = PeerSharingDisabled
+    , ncLedgerDBBackend = InMemory
+    , ncFlushFrequency = DefaultFlushFrequency
+    , ncQueryBatchSize = DefaultQueryBatchSize
     }
 
 -- -----------------------------------------------------------------------------
