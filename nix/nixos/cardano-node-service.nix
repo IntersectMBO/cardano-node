@@ -17,11 +17,13 @@ let
       accessPoints = map (e: builtins.removeAttrs e ["valency"]) g.accessPoints;
       advertise = g.advertise or false;
       valency = g.valency or (length g.accessPoints);
+      trustable = g.trustable or false;
     }) (cfg.producers ++ (cfg.instanceProducers i));
     publicRoots = map (g: {
       accessPoints = map (e: builtins.removeAttrs e ["valency"]) g.accessPoints;
       advertise = g.advertise or false;
     }) (cfg.publicProducers ++ (cfg.instancePublicProducers i));
+    bootstrapPeers = cfg.bootstrapPeers;
   } // optionalAttrs (cfg.usePeersFromLedgerAfterSlot != null) {
     useLedgerAfterSlot = cfg.usePeersFromLedgerAfterSlot;
   };
@@ -36,10 +38,23 @@ let
     );
   };
 
+  assertNewTopology = i:
+    let
+      checkEval = tryEval (
+        assert
+          if cfg.bootstrapPeers == [] && all (e: e.trustable != true) ((newTopology i).localRoots)
+          then false
+          else true;
+      newTopology i);
+    in
+      if checkEval.success
+      then checkEval.value
+      else abort "When bootstrapPeers is an empty list, at least one localRoot must be trustable, otherwise cardano node will fail to start.";
+
   selectTopology = i:
     if cfg.topology != null
     then cfg.topology
-    else toFile "topology.yaml" (toJSON (if (cfg.useNewTopology) then newTopology i else oldTopology i));
+    else toFile "topology.yaml" (toJSON (if (cfg.useNewTopology) then assertNewTopology i else oldTopology i));
 
   topology = i:
     if cfg.useSystemdReload
@@ -448,7 +463,8 @@ in {
 
       publicProducers = mkOption {
         type = types.listOf types.attrs;
-        default = [{
+        default = [];
+        example = [{
           accessPoints = [{
             address = envConfig.relaysNew;
             port = envConfig.edgePort;
@@ -510,6 +526,26 @@ in {
           If set, bootstraps from public roots until it reaches given slot,
           then it switches to using the ledger as a source of peers. It maintains a connection to its local roots.
           Default to null for block producers.
+        '';
+      };
+
+      bootstrapPeers = mkOption {
+        type = types.nullOr (types.listOf types.attrs);
+        default =
+          # Until legacy mainnet relays are deprecated and replaced by IOG bootstrap peers for relaysNew,
+          # filter the legacy relaysNew definition from the mainnet bootstrapPeers list.
+          #
+          # All other envs can use the edgeNodes list as bootstrapPeers.
+          if envConfig.name == "mainnet"
+          then
+            map (e: {address = e.addr; inherit (e) port;})
+              (builtins.filter (e: e.addr != envConfig.relaysNew) envConfig.edgeNodes)
+          else
+            map (e: {address = e.addr; inherit (e) port;}) envConfig.edgeNodes;
+        description = ''
+          If set, it will enable bootstrap peers.
+          To disable, set this to null.
+          To enable, set this to a list of attributes of address and port, example: [{ address = "addr"; port = 3001; }]
         '';
       };
 

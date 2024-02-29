@@ -14,6 +14,7 @@ import           Test.Cardano.Node.Gen
 import           Hedgehog (Property, discover)
 import qualified Hedgehog
 
+
 prop_roundtrip_NodeIPv4Address_JSON :: Property
 prop_roundtrip_NodeIPv4Address_JSON =
   Hedgehog.property $ do
