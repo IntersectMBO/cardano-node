@@ -209,6 +209,7 @@ test-suite cardano-testnet-test
                       , http-conduit
                       , lens-aeson
                       , microlens
+                      , mtl
                       , process
                       , regex-compat
                       , tasty
