@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -118,7 +119,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
     H.noteM_ $ H.execCli' execConfig
        [ "conway", "governance", "drep", "registration-certificate"
        , "--drep-verification-key-file", drepVkeyFp n
-       , "--key-reg-deposit-amt", show @Int 0
+       , "--key-reg-deposit-amt", show @Int 1_000_000
        , "--out-file", drepCertFile n
        ]
 
@@ -166,7 +167,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
   H.noteM_ $ H.execCli' execConfig
      [ "conway", "governance", "drep", "retirement-certificate"
      , "--drep-verification-key-file", drepVkeyFp 1
-     , "--deposit-amt", show @Int 0
+     , "--deposit-amt", show @Int 1_000_000
      , "--out-file", dreprRetirementCertFile
      ]
 
