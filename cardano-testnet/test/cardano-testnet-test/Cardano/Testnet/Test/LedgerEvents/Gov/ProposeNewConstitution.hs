@@ -20,12 +20,10 @@ module Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
 
 import           Cardano.Api as Api
 import           Cardano.Api.Error (displayError)
-import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley
 
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.Governance as Ledger
-import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet
 
 import           Prelude
