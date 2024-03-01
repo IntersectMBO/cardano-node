@@ -127,7 +127,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
     H.execCli' execConfig
        [ "conway", "governance", "drep", "registration-certificate"
        , "--drep-verification-key-file", drepVkeyFp n
-       , "--key-reg-deposit-amt", show @Int 0
+       , "--key-reg-deposit-amt", show @Int 1_000_000
        , "--out-file", drepCertFile n
        ]
 
@@ -169,7 +169,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
   void $ H.execCli' execConfig
     [ "conway", "governance", "action", "create-info"
     , "--testnet"
-    , "--governance-action-deposit", show @Int 0 -- TODO: Get this from the node
+    , "--governance-action-deposit", show @Int 1_000_000 -- TODO: Get this from the node
     , "--deposit-return-stake-verification-key-file", stakeVkeyFp
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
