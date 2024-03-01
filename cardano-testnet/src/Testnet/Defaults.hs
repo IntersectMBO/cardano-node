@@ -1,9 +1,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+
 
 -- | All Byron and Shelley Genesis related functionality
 module Testnet.Defaults
@@ -30,6 +32,7 @@ import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Binary.Version ()
 import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Conway.Genesis
+import           Cardano.Ledger.Conway.PParams
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley as Ledger
@@ -58,8 +61,8 @@ import           Data.Word
 import           Lens.Micro
 import           Numeric.Natural
 
+import           Test.Cardano.Ledger.Core.Rational
 import           Testnet.Start.Types
-
 
 instance Api.Error AlonzoGenesisError where
   prettyError (AlonzoGenErrCostModels e) =
@@ -160,7 +163,44 @@ defaultAlonzoGenesis = do
                            ]
 
 defaultConwayGenesis :: ConwayGenesis StandardCrypto
-defaultConwayGenesis = DefaultClass.def
+defaultConwayGenesis =
+  let upPParams :: UpgradeConwayPParams Identity
+      upPParams = UpgradeConwayPParams
+                    { ucppPoolVotingThresholds = poolVotingThresholds
+                    , ucppDRepVotingThresholds = drepVotingThresholds
+                    , ucppCommitteeMinSize = 0
+                    , ucppCommitteeMaxTermLength = EpochInterval 200
+                    , ucppGovActionLifetime = EpochInterval 1 -- One Epoch
+                    , ucppGovActionDeposit = Coin 1_000_000
+                    , ucppDRepDeposit = Coin 1_000_000
+                    , ucppDRepActivity = EpochInterval 100
+                    }
+      drepVotingThresholds = DRepVotingThresholds
+        { dvtMotionNoConfidence = 0 %! 1
+        , dvtCommitteeNormal = 1 %! 2
+        , dvtCommitteeNoConfidence = 0 %! 1
+        , dvtUpdateToConstitution = 0 %! 2 -- TODO: Requires a constitutional committee when non-zero
+        , dvtHardForkInitiation = 1 %! 2
+        , dvtPPNetworkGroup = 1 %! 2
+        , dvtPPEconomicGroup = 1 %! 2
+        , dvtPPTechnicalGroup = 1 %! 2
+        , dvtPPGovGroup = 1 %! 2
+        , dvtTreasuryWithdrawal = 1 %! 2
+        }
+      poolVotingThresholds = PoolVotingThresholds
+         { pvtMotionNoConfidence = 1 %! 2
+         , pvtCommitteeNormal = 1 %! 2
+         , pvtCommitteeNoConfidence = 1 %! 2
+         , pvtHardForkInitiation = 1 %! 2
+         , pvtPPSecurityGroup = 1 %! 2
+         }
+  in ConwayGenesis
+      { cgUpgradePParams = upPParams
+      , cgConstitution = DefaultClass.def
+      , cgCommittee = DefaultClass.def
+      , cgDelegs = mempty
+      , cgInitialDReps = mempty
+      }
 
 
 
