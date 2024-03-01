@@ -25,7 +25,6 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (SomeConsensusProtocol (..))
 import           Cardano.Node.Startup
-import           Cardano.Node.Types (UseLedger (..))
 import           Cardano.Slotting.Slot (EpochSize (..))
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Byron.Ledger.Conversions (fromByronEpochSlots,
@@ -41,7 +40,8 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
+                   UseLedgerPeers (..))
 
 import           Prelude
 
@@ -220,11 +220,11 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal (NetworkConfigUpdateError err) =
       mconcat [ "kind" .= String "NetworkConfigUpdateError"
                , "error" .= String err ]
-  forMachine _dtal (NetworkConfig localRoots publicRoots useLedgerAfter) =
+  forMachine _dtal (NetworkConfig localRoots publicRoots useLedgerPeers) =
       mconcat [ "kind" .= String "NetworkConfig"
                , "localRoots" .= toJSON localRoots
                , "publicRoots" .= toJSON publicRoots
-               , "useLedgerAfter" .= UseLedger useLedgerAfter
+               , "useLedgerAfter" .= useLedgerPeers
                ]
   forMachine _dtal NetworkConfigLegacy =
       mconcat [ "kind" .= String "NetworkConfigLegacy"
@@ -233,9 +233,6 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal P2PWarning =
       mconcat [ "kind" .= String "P2PWarning"
                , "message" .= String p2pWarningMessage ]
-  forMachine _dtal PeerSharingWarning =
-      mconcat [ "kind" .= String "PeerSharingWarning"
-               , "message" .= String peerSharingWarningMessage ]
   forMachine _ver (WarningDevelopmentNodeToNodeVersions ntnVersions) =
       mconcat [ "kind" .= String "WarningDevelopmentNodeToNodeVersions"
                , "message" .= String "enabled development network protocols"
@@ -308,8 +305,6 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["NetworkConfigLegacy"]
   namespaceFor P2PWarning {}  =
     Namespace [] ["P2PWarning"]
-  namespaceFor PeerSharingWarning {}  =
-    Namespace [] ["PeerSharingWarning"]
   namespaceFor WarningDevelopmentNodeToNodeVersions {}  =
     Namespace [] ["WarningDevelopmentNodeToNodeVersions"]
   namespaceFor WarningDevelopmentNodeToClientVersions {}  =
@@ -507,7 +502,7 @@ ppStartupInfoTrace NetworkConfigUpdate = "Performing topology configuration upda
 ppStartupInfoTrace NetworkConfigUpdateUnsupported =
   "Network topology reconfiguration is not supported in non-p2p mode"
 ppStartupInfoTrace (NetworkConfigUpdateError err) = err
-ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerAfter) =
+ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers) =
     pack
   $ intercalate "\n"
   [ "\nLocal Root Groups:"
@@ -515,16 +510,18 @@ ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerAfter) =
                                     localRoots)
   , "Public Roots:"
   , "  " ++ intercalate "\n  " (map show $ Map.assocs publicRoots)
-  , case useLedgerAfter of
-      UseLedgerAfter slotNo -> "Get root peers from the ledger after slot "
-                            ++ show (unSlotNo slotNo)
-      DontUseLedger         -> "Don't use ledger to get root peers."
+  , case useLedgerPeers of
+      DontUseLedgerPeers            ->
+        "Don't use ledger to get root peers."
+      UseLedgerPeers (After slotNo) ->
+        "Get root peers from the ledger after slot "
+        ++ show (unSlotNo slotNo)
+      UseLedgerPeers Always         ->
+        "Use ledger peers in any slot."
   ]
 ppStartupInfoTrace NetworkConfigLegacy = p2pNetworkConfigLegacyMessage
 
 ppStartupInfoTrace P2PWarning = p2pWarningMessage
-
-ppStartupInfoTrace PeerSharingWarning = peerSharingWarningMessage
 
 ppStartupInfoTrace (WarningDevelopmentNodeToNodeVersions ntnVersions) =
      "enabled development node-to-node versions: "
@@ -572,16 +569,6 @@ p2pNetworkConfigLegacyMessage =
   , "See https://github.com/intersectmbo/cardano-node/issues/4559"
   , "Note that the legacy p2p format will be removed in `1.37` release."
   ]
-
-peerSharingWarningMessage :: Text
-peerSharingWarningMessage =
-    "Warning: Enabling PeerSharing can expose you to significant risks, including "
-  <> "the possibility of eclipse attacks. By turning on this feature, you may "
-  <> "inadvertently give malicious actors the ability to isolate your device, "
-  <> "manipulate your view of the network, and compromise your data integrity. "
-  <> "It is crucial to carefully consider the potential consequences before "
-  <> "enabling PeerSharing. If you are unsure, it is strongly advised to consult "
-  <> "a security expert for guidance. Proceed with caution."
 
 -- | Pretty print 'SocketOrSocketInfo'.
 --
