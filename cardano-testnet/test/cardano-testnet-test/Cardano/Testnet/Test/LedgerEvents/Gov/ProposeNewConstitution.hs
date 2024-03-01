@@ -134,7 +134,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     H.execCli' execConfig
        [ "conway", "governance", "drep", "registration-certificate"
        , "--drep-verification-key-file", drepVkeyFp n
-       , "--key-reg-deposit-amt", show @Int 0
+       , "--key-reg-deposit-amt", show @Int 1_000_000 -- TODO: retrieve this from conway genesis.
        , "--out-file", drepCertFile n
        ]
 
@@ -176,7 +176,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   void $ H.execCli' execConfig
     [ "conway", "governance", "action", "create-constitution"
     , "--testnet"
-    , "--governance-action-deposit", show @Int 0 -- TODO: Get this from the node
+    , "--governance-action-deposit", show @Int 1_000_000 -- TODO: Get this from the node
     , "--deposit-return-stake-verification-key-file", stakeVkeyFp
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
