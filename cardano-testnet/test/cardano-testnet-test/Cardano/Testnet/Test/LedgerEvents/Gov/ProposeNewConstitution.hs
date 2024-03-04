@@ -22,8 +22,11 @@ import           Cardano.Api as Api
 import           Cardano.Api.Error (displayError)
 import           Cardano.Api.Shelley
 
+import qualified Cardano.Crypto.Hash as L
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.Governance as Ledger
+import qualified Cardano.Ledger.Hashes as L
+import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet
 
 import           Prelude
@@ -31,6 +34,8 @@ import           Prelude
 import           Control.Monad
 import           Control.Monad.State.Strict (StateT)
 import qualified Data.Map.Strict as Map
+import           Data.Maybe
+import           Data.Maybe.Strict
 import           Data.String
 import qualified Data.Text as Text
 import           Data.Word
@@ -302,10 +307,16 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   -- We check that constitution was succcessfully ratified
 
-  !eConstitutionAdopted <- runExceptT
-                             $ foldEpochState (File configurationFile) (File socketPath) QuickValidation (EpochNo 10) ()
-                             $ checkConstitutionWasRatified constitutionHash
-  evalEither $ void eConstitutionAdopted
+  !eConstitutionAdopted
+    <- runExceptT $ foldEpochState
+                      (File configurationFile)
+                      (File socketPath)
+                      FullValidation
+                      (EpochNo 10)
+                      ()
+                      (foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash)
+
+  void $ evalEither eConstitutionAdopted
 
 foldBlocksCheckProposalWasSubmitted
   :: TxId -- TxId of submitted tx
@@ -348,26 +359,34 @@ filterNewGovProposals txid (NewGovernanceProposals eventTxId (AnyProposals props
 filterNewGovProposals _ _ = False
 
 
-checkConstitutionWasRatified
+foldBlocksCheckConstitutionWasRatified
   :: String -- submitted constitution hash
+  -> String -- submitted guard rail script hash
   -> AnyNewEpochState
-  -> StateT () IO LedgerStateCondition -- ^ Accumulator at block i and fold status
-checkConstitutionWasRatified submittedConstitutionHash (AnyNewEpochState sbe newEpochState) = do
-  caseShelleyToBabbageOrConwayEraOnwards
-    (const $ error "checkConstitutionWasRatified: Only Conway era supported")
-    (const $ do
-      let ratifyState = L.extractDRepPulsingState (newEpochState ^. L.newEpochStateDRepPulsingStateL)
-      if filterRatificationState submittedConstitutionHash ratifyState
-      then return ConditionMet
-      else return ConditionNotMet
-    )
-    sbe
+  -> StateT s IO LedgerStateCondition -- ^ Accumulator at block i and fold status
+foldBlocksCheckConstitutionWasRatified submittedConstitutionHash submittedGuardRailScriptHash anyNewEpochState =
+  if filterRatificationState submittedConstitutionHash submittedGuardRailScriptHash anyNewEpochState
+  then return ConditionMet
+  else return ConditionNotMet
 
 -- cgsDRepPulsingStateL . ratifyStateL
 filterRatificationState
   :: String -- ^ Submitted constitution anchor hash
-  -> L.RatifyState (ShelleyLedgerEra era)
+  -> String -- ^ Submitted guard rail script hash
+  -> AnyNewEpochState
   -> Bool
-filterRatificationState c rState =
-  let constitutionAnchorHash = Ledger.anchorDataHash $ Ledger.constitutionAnchor (rState ^. Ledger.rsEnactStateL . Ledger.ensConstitutionL)
-  in Text.pack c == renderSafeHashAsHex constitutionAnchorHash
+filterRatificationState c guardRailScriptHash (AnyNewEpochState sbe newEpochState) =
+  caseShelleyToBabbageOrConwayEraOnwards
+    (const $ error "filterRatificationState: Only conway era supported")
+
+    (const $ do
+      let rState = Ledger.extractDRepPulsingState $ newEpochState ^. L.newEpochStateGovStateL . L.drepPulsingStateGovStateL
+          constitution = rState ^. Ledger.rsEnactStateL . Ledger.ensConstitutionL
+          constitutionAnchorHash = Ledger.anchorDataHash $ Ledger.constitutionAnchor constitution
+          L.ScriptHash constitutionScriptHash = fromMaybe (error "filterRatificationState: consitution does not have a guardrail script")
+                                                $ strictMaybeToMaybe $ constitution ^. Ledger.constitutionScriptL
+      Text.pack c == renderSafeHashAsHex constitutionAnchorHash && L.hashToTextAsHex constitutionScriptHash == Text.pack guardRailScriptHash
+
+    )
+    sbe
+
