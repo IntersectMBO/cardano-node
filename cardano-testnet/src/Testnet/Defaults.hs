@@ -64,6 +64,8 @@ import           Numeric.Natural
 import           Test.Cardano.Ledger.Core.Rational
 import           Testnet.Start.Types
 
+{- HLINT ignore "Use underscore" -}
+
 instance Api.Error AlonzoGenesisError where
   prettyError (AlonzoGenErrCostModels e) =
     "Error in Alonzo genesis cost models: " <> pshow e
