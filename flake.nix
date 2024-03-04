@@ -134,7 +134,7 @@
           cardano-cli = set-git-rev cardano-cli.components.exes.cardano-cli;
         });
 
-      mkCardanoNodePackages = project: (collectExes project) // {
+      mkCardanoNodePackages = project: project.exes // (collectExes project) // {
         inherit (project.pkgs) cardanoLib;
       };
 
@@ -142,6 +142,7 @@
         let
           project = pkgs.cardanoNodeProject;
         in
+          project.exes //
           (collectExes project) // {
             inherit (pkgs) cabalProjectRegenerate checkCabalProject;
           } // flattenTree (pkgs.scripts // {
@@ -167,9 +168,8 @@
           inherit (pkgs) system;
           checks = mkChecks pkgs;
         in
-          mkExes pkgs
           # Linux only packages:
-          // optionalAttrs (system == "x86_64-linux")
+          optionalAttrs (system == "x86_64-linux")
             (let
               workbenchTest = { profileName, workbenchStartArgs ? [] }:
                 (pkgs.workbench-runner {
@@ -245,7 +245,7 @@
         let
           inherit (pkgs) system;
           project = pkgs.cardanoNodeProject;
-          packages = mkPackages pkgs;
+          packages = mkPackages pkgs // mkExes pkgs;
           devShells = mkDevShells pkgs;
 
           ciJobsVariants = mapAttrs (_: p:
@@ -274,7 +274,7 @@
             musl =
               let
                 muslProject = project.projectCross.musl64;
-                projectExes = collectExes muslProject;
+                projectExes = muslProject.exes // collectExes muslProject;
                 exes = mkExes pkgs;
               in
                 projectExes // {
@@ -298,7 +298,7 @@
             windows =
               let
                 windowsProject = project.projectCross.mingwW64;
-                projectExes = collectExes windowsProject;
+                projectExes = windowsProject.exes // collectExes windowsProject;
                 exes = mkExes pkgs;
               in
                 projectExes
@@ -330,7 +330,7 @@
                       inherit pkgs;
                       inherit (exes.cardano-node.identifier) version;
                       platform = "macos";
-                      exes = lib.collect lib.isDerivation (collectExes project);
+                      exes = lib.collect lib.isDerivation (project.exes // collectExes project);
                     };
                     shells = removeAttrs devShells [ "profiled" ];
                     internal = {
@@ -383,6 +383,8 @@
             # NixOS tests run a node and submit-api and validate it listens
             nixosTests = mkNixosTests pkgs;
 
+            flake = project.flake {};
+
             apps =
               lib.mapAttrs
                 (n: p: {
@@ -396,7 +398,7 @@
                 })
                 (mkExes pkgs);
 
-            packages = mkPackages pkgs;
+            packages = flake.packages;
             checks = mkChecks pkgs;
             devShells = mkDevShells pkgs;
             ciJobs = mkCiJobs pkgs;
@@ -411,9 +413,16 @@
 
             hydraJobs = ciJobs;
 
-            packages = packages // {
-              # Built by `nix build .`
-              default = packages.cardano-node;
+            packages =
+              packages
+              // collectExes project
+              // mkPackages pkgs
+              // flattenTree (pkgs.scripts)
+              // {
+                inherit (pkgs) cabalProjectRegenerate checkCabalProject;
+
+                # Built by `nix build .`
+                default = packages."cardano-node:exe:cardano-node";
             };
 
             # Run by `nix run .`
