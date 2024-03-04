@@ -35,9 +35,9 @@ import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Impl.Snapshots (SnapshotInterval (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.V1.Args (FlushFrequency (..),
                    QueryBatchSize (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.Impl.Snapshots (SnapshotInterval (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
@@ -134,7 +134,7 @@ data NodeConfiguration
 
          -- LedgerDB configuration
        , ncSnapshotInterval   :: !SnapshotInterval
-       , ncLedgerDBBackend    :: !BackingStoreSelectorFlag
+       , ncLedgerDBBackend    :: !LedgerDbSelectorFlag
        , ncFlushFrequency     :: !FlushFrequency
        , ncQueryBatchSize     :: !QueryBatchSize
 
@@ -168,6 +168,11 @@ data NodeConfiguration
 
          -- Enable Peer Sharing
        , ncPeerSharing :: PeerSharing
+
+         -- SSD options for LMDB/Snapshot storing
+       , ncSsdDatabaseDir     :: FilePath
+       , ncSsdSnapshotState   :: !Bool
+       , ncSsdSnapshotTables  :: !Bool
        } deriving (Eq, Show)
 
 
@@ -208,7 +213,7 @@ data PartialNodeConfiguration
 
          -- LedgerDB configuration
        , pncSnapshotInterval :: !(Last SnapshotInterval)
-       , pncLedgerDBBackend  :: !(Last BackingStoreSelectorFlag)
+       , pncLedgerDBBackend  :: !(Last LedgerDbSelectorFlag)
        , pncFlushFrequency   :: !(Last FlushFrequency)
        , pncQueryBatchSize   :: !(Last QueryBatchSize)
 
@@ -235,6 +240,11 @@ data PartialNodeConfiguration
 
          -- Peer Sharing
        , pncPeerSharing :: !(Last PeerSharing)
+
+       -- SSD options for LMDB/Snapshot storing
+       , pncSsdDatabaseDir     :: Last FilePath
+       , pncSsdSnapshotState   :: !(Last Bool)
+       , pncSsdSnapshotTables  :: !(Last Bool)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -333,6 +343,11 @@ instance FromJSON PartialNodeConfiguration where
       -- DISABLED BY DEFAULT
       pncPeerSharing <- Last <$> v .:? "PeerSharing" .!= Just PeerSharingDisabled
 
+      -- SSD options for LMDB/Snapshot storing
+      pncSsdDatabaseDir    <- Last <$> v .:? "SsdDatabaseDir"
+      pncSsdSnapshotState  <- Last <$> v .:? "SsdSnapshotState"
+      pncSsdSnapshotTables <- Last <$> v .:? "SsdSnapshotTables"
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty pncSocketPath
@@ -369,6 +384,9 @@ instance FromJSON PartialNodeConfiguration where
            , pncTargetNumberOfActiveBigLedgerPeers
            , pncEnableP2P
            , pncPeerSharing
+           , pncSsdDatabaseDir
+           , pncSsdSnapshotState
+           , pncSsdSnapshotTables
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -388,10 +406,11 @@ instance FromJSON PartialNodeConfiguration where
       parseLedgerDBBackend v = do
         maybeString :: Maybe String <- v .:? "LedgerDBBackend"
         case maybeString of
-           Just "InMemory" -> return $ Just InMemory
-           Just "LMDB"     -> do
+           Just "V1InMemory" -> return $ Just V1InMemory
+           Just "V2InMemory" -> return $ Just V2InMemory
+           Just "V1LMDB"     -> do
              mapSize :: Maybe Gigabytes <- v .:? "LMDBMapSize"
-             return . Just . LMDB $ mapSize
+             return . Just . V1LMDB $ mapSize
            Nothing         -> return Nothing
            Just whatever   -> fail $ "Malformed LedgerDBBackend" <> whatever
 
@@ -535,7 +554,7 @@ defaultPartialNodeConfiguration =
     , pncTraceForwardSocket = mempty
     , pncMaybeMempoolCapacityOverride = mempty
     , pncSnapshotInterval = Last $ Just DefaultSnapshotInterval
-    , pncLedgerDBBackend  = Last $ Just InMemory
+    , pncLedgerDBBackend  = Last $ Just V2InMemory
     , pncFlushFrequency   = Last $ Just DefaultFlushFrequency
     , pncQueryBatchSize   = Last $ Just DefaultQueryBatchSize
     , pncProtocolIdleTimeout   = Last (Just 5)
@@ -558,6 +577,9 @@ defaultPartialNodeConfiguration =
     , pncTargetNumberOfActiveBigLedgerPeers      = Last (Just 5)
     , pncEnableP2P                      = Last (Just DisabledP2PMode)
     , pncPeerSharing                    = Last (Just PeerSharingDisabled)
+    , pncSsdDatabaseDir     = Last (Just "mainnet/ledgerdb/")
+    , pncSsdSnapshotState   = Last (Just False)
+    , pncSsdSnapshotTables  = Last (Just False)
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -631,6 +653,16 @@ makeNodeConfiguration pnc = do
     lastToEither "Missing PeerSharing"
     $ pncPeerSharing pnc
 
+  ssdDatabaseDir <-
+    lastToEither "Missing SsdDatabaseDir" 
+    $ pncSsdDatabaseDir pnc
+  ssdSnapshotState <-
+    lastToEither "Missing SsdSnapshotState" 
+    $ pncSsdSnapshotState pnc
+  ssdSnapshotTables <-
+    lastToEither "Missing SsdSnapshotTables" 
+    $ pncSsdSnapshotTables pnc
+
   -- TODO: This is not mandatory
   experimentalProtocols <-
     lastToEither "Missing ExperimentalProtocolsEnabled" $
@@ -680,6 +712,9 @@ makeNodeConfiguration pnc = do
                  EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
                  DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
              , ncPeerSharing
+             , ncSsdDatabaseDir = ssdDatabaseDir
+             , ncSsdSnapshotState = ssdSnapshotState
+             , ncSsdSnapshotTables = ssdSnapshotTables
              }
 
 ncProtocol :: NodeConfiguration -> Protocol

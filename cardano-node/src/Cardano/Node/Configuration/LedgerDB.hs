@@ -4,16 +4,22 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Configuration.LedgerDB (
-    BackingStoreSelectorFlag(..)
+    LedgerDbSelectorFlag(..)
   , Gigabytes
   , toBytes
   , defaultLMDBLimits
+  , selectorToArgs
   ) where
 
 import           Prelude
 
 import qualified Data.Aeson.Types as Aeson (FromJSON)
 import           Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB (LMDBLimits (..))
+import Ouroboros.Consensus.Storage.LedgerDB.Impl.Args
+import Ouroboros.Consensus.Util.Args
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V1.Args as V1
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.Args as V2
+import Data.SOP.Dict
 
 -- | Choose the LedgerDB Backend
 --
@@ -25,11 +31,12 @@ import           Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB 
 -- - 'LMDB': uses less memory but is somewhat slower.
 --
 -- See 'Ouroboros.Consnesus.Storage.LedgerDB.OnDisk.BackingStoreSelector'.
-data BackingStoreSelectorFlag =
-    LMDB (Maybe Gigabytes) -- ^ A map size can be specified, this is the maximum
+data LedgerDbSelectorFlag =
+    V1LMDB (Maybe Gigabytes) -- ^ A map size can be specified, this is the maximum
                           -- disk space the LMDB database can fill. If not
                           -- provided, the default of 16GB will be used.
-  | InMemory
+  | V1InMemory
+  | V2InMemory
   deriving (Eq, Show)
 
 -- | A number of gigabytes.
@@ -87,3 +94,11 @@ defaultLMDBLimits = LMDBLimits {
   , lmdbMaxDatabases = 10
   , lmdbMaxReaders = 16
   }
+
+selectorToArgs :: LedgerDbSelectorFlag -> V1.FlushFrequency -> V1.QueryBatchSize -> Complete LedgerDbFlavorArgs IO
+selectorToArgs V1InMemory a b = LedgerDbFlavorArgsV1 $ V1.V1Args a b V1.InMemoryBackingStoreArgs
+selectorToArgs V2InMemory _ _ = LedgerDbFlavorArgsV2 $ V2.V2Args V2.InMemoryHandleArgs
+selectorToArgs (V1LMDB l) a b=
+    LedgerDbFlavorArgsV1
+  $ V1.V1Args a b
+  $ V1.LMDBBackingStoreArgs (maybe id (\ll lim -> lim { lmdbMapSize = toBytes ll }) l $ defaultLMDBLimits) Dict
