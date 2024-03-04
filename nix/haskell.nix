@@ -42,9 +42,10 @@ let
 
         # These programs will be available inside the nix-shell.
         nativeBuildInputs = with pkgs.pkgsBuildBuild; [
+          lmdb
           nix-prefetch-git
           pkg-config
-          hlint
+          hlint          
           ghcid
           haskell-language-server
           cabal

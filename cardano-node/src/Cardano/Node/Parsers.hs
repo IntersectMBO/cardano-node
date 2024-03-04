@@ -12,6 +12,7 @@ module Cardano.Node.Parsers
   ) where
 
 import           Cardano.Logging.Types
+import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.NodeAddress (File (..),
                    NodeHostIPv4Address (NodeHostIPv4Address),
                    NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath)
@@ -22,6 +23,9 @@ import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Impl.Snapshots (SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.V1.Args (FlushFrequency (..),
+                   QueryBatchSize (..))
 
 import           Data.Foldable
 import           Data.Maybe (fromMaybe)
@@ -34,12 +38,6 @@ import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
 import           System.Posix.Types (Fd (..))
 import           Text.Read (readMaybe)
-
-import           Ouroboros.Consensus.Storage.LedgerDB.V1.Args (FlushFrequency (..),
-                   QueryBatchSize (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.Impl.Snapshots (SnapshotInterval (..))
-
-import           Cardano.Node.Configuration.LedgerDB
 
 nodeCLIParser  :: Parser PartialNodeConfiguration
 nodeCLIParser = subparser
@@ -86,6 +84,11 @@ nodeRunParser = do
   ledgerDBBackend   <- lastOption parseLedgerDBBackend
   pncFlushFrequency <- lastOption parseFlushFrequency
   pncQueryBatchSize <- lastOption parseQueryBatchSize
+
+  -- Storing to SSD configuration
+  ssdDatabaseDir    <- lastOption parseSsdDatabaseDir
+  ssdSnapshotState  <- lastOption parseSsdSnapshotState
+  ssdSnapshotTables <- lastOption parseSsdSnapshotTables
 
   pure $ PartialNodeConfiguration
            { pncSocketConfig =
@@ -136,6 +139,9 @@ nodeRunParser = do
            , pncTargetNumberOfActiveBigLedgerPeers = mempty
            , pncEnableP2P = mempty
            , pncPeerSharing = mempty
+           , pncSsdDatabaseDir = ssdDatabaseDir
+           , pncSsdSnapshotState = ssdSnapshotState
+           , pncSsdSnapshotTables = ssdSnapshotTables
            }
 
 parseSocketPath :: Text -> Parser SocketPath
@@ -403,6 +409,29 @@ parseSnapshotInterval = fmap (RequestedSnapshotInterval . secondsToDiffTime) par
         <> metavar "SNAPSHOTINTERVAL"
         <> help "Snapshot Interval (in seconds)"
     )
+
+parseSsdDatabaseDir :: Parser FilePath
+parseSsdDatabaseDir =
+  strOption
+    ( long "ssd-database-dir"
+      <> metavar "FILEPATH"
+      <> help "Directory where the LMDB is stored."
+      <> completer (bashCompleter "file")
+    )
+
+parseSsdSnapshotState :: Parser Bool
+parseSsdSnapshotState =
+  switch (
+       long "ssd-snapshot-state"
+    <> help "Store serialization of the ledger state in the SSD dir."
+  )
+
+parseSsdSnapshotTables :: Parser Bool
+parseSsdSnapshotTables =
+  switch (
+       long "ssd-snapshot-tables"
+    <> help "Store the copied LMDB tables in the SSD dir."
+  )
 
 -- | Produce just the brief help header for a given CLI option parser,
 --   without the options.
