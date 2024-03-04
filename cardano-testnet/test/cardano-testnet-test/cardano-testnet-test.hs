@@ -53,8 +53,6 @@ tests = pure $ sequentialTestGroup "test/Spec.hs"
         -- ShutdownOnSlotSynced FAILS Still. The node times out and it seems the "shutdown-on-slot-synced" flag does nothing
         -- , H.ignoreOnWindows "ShutdownOnSlotSynced" Cardano.Testnet.Test.Node.Shutdown.hprop_shutdownOnSlotSynced
         , sequentialTestGroup "Babbage"
-            -- TODO: Babbage --next leadership schedule still fails. Once this fix is propagated to the cli (https://github.com/input-output-hk/cardano-api/pull/274)
-            -- this should remedy. Double check and make sure we have re-enabled it and remove this comment.
             [ H.ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule -- FAILS
             , H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot.hprop_stakeSnapshot
             , H.ignoreOnWindows "transaction" Cardano.Testnet.Test.Cli.Babbage.Transaction.hprop_transaction
@@ -63,7 +61,7 @@ tests = pure $ sequentialTestGroup "test/Spec.hs"
         --, sequentialTestGroup "Conway"
         --  [ H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Conway.StakeSnapshot.hprop_stakeSnapshot
         --  ]
-          -- Ignored on Windows due to <stdout>: cosmmitBuffer: invalid argument (invalid character)
+          -- Ignored on Windows due to <stdout>: commitBuffer: invalid argument (invalid character)
           -- as a result of the kes-period-info output to stdout.
         , H.ignoreOnWindows "kes-period-info" Cardano.Testnet.Test.Cli.KesPeriodInfo.hprop_kes_period_info
         , H.ignoreOnWindows "query-slot-number" Cardano.Testnet.Test.Cli.QuerySlotNumber.hprop_querySlotNumber
@@ -78,7 +76,7 @@ tests = pure $ sequentialTestGroup "test/Spec.hs"
       ]
   ]
 
--- FIXME Right now when running tests concurrently it makes tests flaky and sometimes stuck
+-- FIXME Right now when running tests concurrently it makes them flaky
 sequentialTestGroup :: T.TestName -> [TestTree] -> TestTree
 sequentialTestGroup name = T.sequentialTestGroup name T.AllFinish
 

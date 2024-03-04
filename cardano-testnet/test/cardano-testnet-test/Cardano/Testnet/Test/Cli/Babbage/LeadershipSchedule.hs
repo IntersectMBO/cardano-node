@@ -8,17 +8,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-#if __GLASGOW_HASKELL__ >= 908
-{-# OPTIONS_GHC -Wno-x-partial #-}
-#endif
-
 {- HLINT ignore "Redundant id" -}
-{- HLINT ignore "Redundant return" -}
-{- HLINT ignore "Use head" -}
-{- HLINT ignore "Use let" -}
-{- HLINT ignore "Use underscore" -}
-
 
 module Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
   ( hprop_leadershipSchedule
@@ -27,12 +17,12 @@ module Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
 import           Cardano.Api
 
 import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (..))
+import           Cardano.Node.Configuration.Topology
 import           Cardano.Testnet
 
 import           Prelude
 
 import           Control.Monad (void)
-import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Types as J
@@ -73,15 +63,15 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   let era = BabbageEra
       cTestnetOptions = cardanoDefaultTestnetOptions
                           { cardanoNodes = cardanoDefaultTestnetNodeOptions
-                          , cardanoSlotLength = 0.1
-                          , cardanoActiveSlotsCoeff = 0.1
                           , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+                          , cardanoActiveSlotsCoeff = 0.1
                           }
 
   tr@TestnetRuntime
     { testnetMagic
-    , wallets
+    , wallets=wallet0:_
     , configurationFile
+    , poolNodes
     } <- cardanoTestnetDefault cTestnetOptions conf
 
   node1sprocket <- H.headM $ poolSprockets tr
@@ -90,8 +80,8 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   let sbe = shelleyBasedEra @BabbageEra
 
   ----------------Need to register an SPO------------------
-  let utxoAddr = Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
-      utxoSKeyFile = paymentSKey . paymentKeyInfoPair $ wallets !! 0
+  let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
+      utxoSKeyFile = paymentSKey $ paymentKeyInfoPair wallet0
   void $ H.execCli' execConfig
     [ "conway", "query", "utxo"
     , "--address", utxoAddr
@@ -219,31 +209,13 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   let testSpoDir = work </> "test-spo"
       topologyFile = testSpoDir </> "topology.json"
   H.createDirectoryIfMissing_ testSpoDir
-  -- TODO: We need a way to automatically create this based on
-  -- the existing testnet
-  H.lbsWriteFile topologyFile $ Aeson.encode $
-    object
-    [ "Producers" .= toJSON
-      [ object
-        [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3002
-        , "valency" .= toJSON @Int 1
-        ]
-      , object
-        [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3001
-        , "valency" .= toJSON @Int 1
-        ]
-      , object
-        [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3003
-        , "valency" .= toJSON @Int 1
-        ]
-      ]
-    ]
+  let valency = 1
+      topology = RealNodeTopology $
+        flip map poolNodes $ \PoolNode{poolRuntime=NodeRuntime{nodeIpv4,nodePort}} ->
+          RemoteAddress nodeIpv4 nodePort valency
+  H.lbsWriteFile topologyFile $ Aeson.encode topology
   let testSpoKesVKey = work </> "kes.vkey"
       testSpoKesSKey = work </> "kes.skey"
-
 
   _ <- cliNodeKeyGenKes work
          $ KeyNames testSpoKesVKey testSpoKesSKey
@@ -268,7 +240,8 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
 
   yamlBs <- createConfigYaml tempAbsPath (cardanoNodeEra cTestnetOptions)
   H.lbsWriteFile configurationFile yamlBs
-  eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath work) "test-spo" 3005 testnetMagic
+  [newNodePort] <- requestAvailablePortNumbers 1
+  eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath work) "test-spo" "127.0.0.1" newNodePort testnetMagic
         [ "run"
         , "--config", configurationFile
         , "--topology", topologyFile

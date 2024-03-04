@@ -220,8 +220,7 @@ hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-syn
     (Right s):_ -> return s
 
   let epsilon = 50
-
-  H.assert (maxSlot <= slotTip && slotTip <= maxSlot + epsilon)
+  H.assertWithinTolerance slotTip maxSlot epsilon
 
 hprop_shutdownOnSigint :: Property
 hprop_shutdownOnSigint = H.integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tempAbsBasePath' -> do
@@ -231,7 +230,6 @@ hprop_shutdownOnSigint = H.integrationRetryWorkspace 2 "shutdown-on-sigint" $ \t
 
   let fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 300
-        , cardanoSlotLength = 0.01
         }
   testnetRuntime
     <- cardanoTestnetDefault fastTestnetOptions conf

@@ -42,7 +42,6 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "conway-stake-snapshot" $ \t
     era = BabbageEra
     options = cardanoDefaultTestnetOptions
                         { cardanoNodes = cardanoDefaultTestnetNodeOptions
-                        , cardanoSlotLength = 0.1
                         , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                         }
 

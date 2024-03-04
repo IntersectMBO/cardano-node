@@ -8,12 +8,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-#if __GLASGOW_HASKELL__ >= 908
-{-# OPTIONS_GHC -Wno-x-partial #-}
-#endif
-
-{- HLINT ignore "Use head" -}
-
 module Cardano.Testnet.Test.Cli.KesPeriodInfo
   ( hprop_kes_period_info
   ) where
@@ -21,13 +15,13 @@ module Cardano.Testnet.Test.Cli.KesPeriodInfo
 import           Cardano.Api as Api
 
 import           Cardano.CLI.Types.Output
+import           Cardano.Node.Configuration.Topology
 import           Cardano.Testnet
 import           Cardano.Testnet.Test.Misc
 
 import           Prelude
 
 import           Control.Monad
-import           Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
 import qualified Data.Map.Strict as Map
@@ -51,8 +45,6 @@ import           Hedgehog.Extras.Stock (sprocketSystemName)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
-{- HLINT ignore "Use underscore" -}
-
 hprop_kes_period_info :: Property
 hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
@@ -66,18 +58,22 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
       anyEra = AnyCardanoEra era
       cTestnetOptions = cardanoDefaultTestnetOptions
                           { cardanoNodes = cardanoDefaultTestnetNodeOptions
-                          , cardanoSlotLength = 0.1
-                          , cardanoActiveSlotsCoeff = 0.1
                           , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+                          , cardanoActiveSlotsCoeff = 0.1
                           }
 
-  runTime@TestnetRuntime { configurationFile, testnetMagic, wallets } <- cardanoTestnetDefault cTestnetOptions conf
+  runTime@TestnetRuntime
+    { configurationFile
+    , testnetMagic
+    , wallets=wallet0:_
+    , poolNodes
+    } <- cardanoTestnetDefault cTestnetOptions conf
   node1sprocket <- H.headM $ poolSprockets runTime
   execConfig <- H.mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
   -- We get our UTxOs from here
-  let utxoAddr = Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
-      utxoSKeyFile = paymentSKey . paymentKeyInfoPair $ wallets !! 0
+  let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
+      utxoSKeyFile = paymentSKey $ paymentKeyInfoPair wallet0
   void $ H.execCli' execConfig
     [ convertToEraString anyEra, "query", "utxo"
     , "--address", utxoAddr
@@ -203,28 +199,12 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   let testSpoDir = work </> "test-spo"
       topologyFile = testSpoDir </> "topology.json"
   H.createDirectoryIfMissing_ testSpoDir
-  -- TODO: We need a way to automatically create this based on
-  -- the existing testnet
-  H.lbsWriteFile topologyFile $ Aeson.encode $
-    object
-    [ "Producers" .= toJSON
-      [ object
-        [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3002
-        , "valency" .= toJSON @Int 1
-        ]
-      , object
-        [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3001
-        , "valency" .= toJSON @Int 1
-        ]
-      , object
-        [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3003
-        , "valency" .= toJSON @Int 1
-        ]
-      ]
-    ]
+  let valency = 1
+      topology = RealNodeTopology $
+        flip map poolNodes $ \PoolNode{poolRuntime=NodeRuntime{nodeIpv4,nodePort}} ->
+            RemoteAddress nodeIpv4 nodePort valency
+  H.lbsWriteFile topologyFile $ Aeson.encode topology
+
   let testSpoVrfVKey = work </> "vrf.vkey"
       testSpoVrfSKey = work </> "vrf.skey"
       testSpoKesVKey = work </> "kes.vkey"
@@ -255,7 +235,8 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
 
   yamlBs <- createConfigYaml tempAbsPath (cardanoNodeEra cTestnetOptions)
   H.lbsWriteFile configurationFile yamlBs
-  eRuntime <- lift . lift . runExceptT $ startNode tempAbsPath "test-spo" 3005 testnetMagic
+  [newNodePortNumber] <- requestAvailablePortNumbers 1
+  eRuntime <- lift . lift . runExceptT $ startNode tempAbsPath "test-spo" "127.0.0.1" newNodePortNumber testnetMagic
         [ "run"
         , "--config", configurationFile
         , "--topology", topologyFile
@@ -266,7 +247,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
         ]
   NodeRuntime{ nodeStdout } <- H.evalEither eRuntime
 
-  threadDelay 5_000000
+  threadDelay 5_000_000
 
   stakeSnapshot1 <- execCli' execConfig
      [ "query", "stake-snapshot"

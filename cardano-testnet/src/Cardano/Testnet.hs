@@ -6,6 +6,7 @@ module Cardano.Testnet (
   -- ** Start a testnet
   cardanoTestnet,
   cardanoTestnetDefault,
+  requestAvailablePortNumbers,
 
   -- ** Testnet options
   CardanoTestnetOptions(..),

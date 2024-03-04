@@ -7,17 +7,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-#if __GLASGOW_HASKELL__ >= 908
-{-# OPTIONS_GHC -Wno-x-partial #-}
-#endif
-
-{- HLINT ignore "Redundant id" -}
-{- HLINT ignore "Redundant return" -}
-{- HLINT ignore "Use head" -}
-{- HLINT ignore "Use let" -}
-
 module Cardano.Testnet.Test.Cli.Babbage.Transaction
   ( hprop_transaction
   ) where
@@ -61,15 +50,13 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
     era = toCardanoEra sbe
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
     options = cardanoDefaultTestnetOptions
-      { cardanoNodes = cardanoDefaultTestnetNodeOptions
-      , cardanoSlotLength = 0.1
-      , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+      { cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
       }
 
   TestnetRuntime
     { testnetMagic
     , poolNodes
-    , wallets
+    , wallets=wallet0:_
     } <- cardanoTestnetDefault options conf
 
   poolNode1 <- H.headM poolNodes
@@ -82,7 +69,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
 
   void $ execCli' execConfig
     [ "babbage", "query", "utxo"
-    , "--address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
+    , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--cardano-mode"
     , "--out-file", work </> "utxo-1.json"
     ]
@@ -93,16 +80,16 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
 
   void $ execCli' execConfig
     [ "babbage", "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin1
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr (wallets !! 0)) <> "+" <> show @Int 5_000_001
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_001
     , "--out-file", txbodyFp
     ]
 
   void $ execCli' execConfig
     [ "babbage", "transaction", "sign"
     , "--tx-body-file", txbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 0
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
     , "--out-file", txbodySignedFp
     ]
 
@@ -114,7 +101,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
   H.byDurationM 1 15 "Expected UTxO found" $ do
     void $ execCli' execConfig
       [ "babbage", "query", "utxo"
-      , "--address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
+      , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
       , "--cardano-mode"
       , "--out-file", work </> "utxo-2.json"
       ]
