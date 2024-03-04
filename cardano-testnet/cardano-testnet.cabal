@@ -41,6 +41,7 @@ library
                       , cardano-ledger-alonzo
                       , cardano-ledger-conway
                       , cardano-ledger-core
+                      , cardano-ledger-core:testlib
                       , cardano-git-rev
                       , cardano-ledger-core
                       , cardano-ledger-binary
@@ -208,6 +209,7 @@ test-suite cardano-testnet-test
                       , http-conduit
                       , lens-aeson
                       , microlens
+                      , mtl
                       , process
                       , regex-compat
                       , tasty
