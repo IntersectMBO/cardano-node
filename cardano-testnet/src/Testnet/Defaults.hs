@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -47,14 +48,17 @@ import qualified Data.Aeson.KeyMap as KeyMapAeson
 import           Data.Bifunctor
 import qualified Data.Default.Class as DefaultClass
 import qualified Data.Map.Strict as Map
+import           Data.Maybe
 import           Data.Proxy
 import           Data.Ratio
 import           Data.Scientific
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
+import           Data.Typeable
 import qualified Data.Vector as Vector
 import           Data.Word
+import           GHC.Stack
 import           Lens.Micro
 import           Numeric.Natural
 
@@ -440,21 +444,31 @@ defaultShelleyGenesis
   :: UTCTime
   -> CardanoTestnetOptions
   -> Api.ShelleyGenesis StandardCrypto
-defaultShelleyGenesis startTime testnetOptions =
-  let testnetMagic = cardanoTestnetMagic testnetOptions
-      slotLength = cardanoSlotLength testnetOptions
-      epochLength = cardanoEpochLength testnetOptions
-      maxLovelaceLovelaceSupply = cardanoMaxSupply testnetOptions
-      pVer = eraToProtocolVersion $ cardanoNodeEra testnetOptions
+defaultShelleyGenesis startTime testnetOptions = do
+  let CardanoTestnetOptions
+        { cardanoTestnetMagic = testnetMagic
+        , cardanoSlotLength = slotLength
+        , cardanoEpochLength = epochLength
+        , cardanoMaxSupply = maxLovelaceLovelaceSupply
+        , cardanoActiveSlotsCoeff
+        , cardanoNodeEra
+        } = testnetOptions
+      -- f
+      activeSlotsCoeff = round (cardanoActiveSlotsCoeff * 100) % 100
+      -- make security param k satisfy: epochLength = 10 * k / f
+      securityParam = fromIntegral epochLength * cardanoActiveSlotsCoeff / 10
+      pVer = eraToProtocolVersion cardanoNodeEra
       protocolParams = Api.sgProtocolParams Api.shelleyGenesisDefaults
       protocolParamsWithPVer = protocolParams & ppProtocolVersionL' .~ pVer
-  in Api.shelleyGenesisDefaults
-        { Api.sgNetworkMagic = fromIntegral testnetMagic
-        , Api.sgSlotLength = secondsToNominalDiffTimeMicro $ realToFrac slotLength
+  Api.shelleyGenesisDefaults
+        { Api.sgActiveSlotsCoeff = unsafeBoundedRational activeSlotsCoeff
         , Api.sgEpochLength = EpochSize $ fromIntegral epochLength
         , Api.sgMaxLovelaceSupply = maxLovelaceLovelaceSupply
-        , Api.sgSystemStart = startTime
+        , Api.sgNetworkMagic = fromIntegral testnetMagic
         , Api.sgProtocolParams = protocolParamsWithPVer
+        , Api.sgSecurityParam = round securityParam
+        , Api.sgSlotLength = secondsToNominalDiffTimeMicro $ realToFrac slotLength
+        , Api.sgSystemStart = startTime
         }
 
 
@@ -522,3 +536,11 @@ plutusV3SpendingScript =
                , ",\"cborHex\": \"484701010022280001\""
                , "}"
                ]
+
+-- FIXME: move to cardano-api
+unsafeBoundedRational :: forall r. (HasCallStack, Typeable r, BoundedRational r)
+                      => Rational
+                      -> r
+unsafeBoundedRational x = fromMaybe (error errMessage) $ boundRational x
+  where
+    errMessage = show (typeRep (Proxy @r)) <> " is out of bounds: " <> show x
