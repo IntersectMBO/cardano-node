@@ -136,12 +136,7 @@ let
           ;
           nodeSpecsJson = mkNodeSpecsJson
             { inherit profileName profileJson;};
-          nodeSpecs =
-            let nodeSpecsValue = __fromJSON (__readFile nodeSpecsJson);
-            in if backend.validateNodeSpecs { inherit nodeSpecsValue; }
-              then nodeSpecsValue
-              else builtins.throw "Incompatible backend for the current profile"
-          ;
+          nodeSpecs = __fromJSON (__readFile nodeSpecsJson);
           genesisFiles =
             mkGenesisFiles
               { inherit profileName profileJson nodeSpecsJson; }
