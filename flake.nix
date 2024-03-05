@@ -166,7 +166,6 @@
       mkPackages = pkgs:
         let
           inherit (pkgs) system;
-          checks = mkChecks pkgs;
         in
           # Linux only packages:
           optionalAttrs (system == "x86_64-linux")
@@ -212,29 +211,7 @@
                   nix develop --accept-flake-config .#base -c ./.github/regression.sh 2>&1
                 '';
               };
-            })
-          # Add checks to be able to build them individually
-          // (prefixNamesWith "checks/" checks);
-
-
-      mkChecks = pkgs:
-        let
-          inherit (pkgs) system;
-          inherit (pkgs.stdenv) hostPlatform;
-          project = pkgs.cardanoNodeProject;
-          nixosTests = mkNixosTests pkgs;
-        in
-          flattenTree project.checks //
-          # Linux only checks:
-          (optionalAttrs hostPlatform.isLinux (
-            prefixNamesWith "nixosTests/" (mapAttrs (_: v: v.${system} or v) nixosTests)
-          )) //
-          # checks run on default system only;
-          (optionalAttrs (system == defaultSystem) {
-            hlint = pkgs.callPackage pkgs.hlintCheck {
-              inherit (project.args) src;
-            };
-          });
+            });
 
       mkNixosTests = pkgs:
         import ./nix/nixos/tests {
@@ -393,8 +370,6 @@
                 inherit (pkgs) cabalProjectRegenerate checkCabalProject;
               } // flattenTree (pkgs.scripts);
 
-            extraPackages = extraExes // mkPackages pkgs;
-
             extraApps =
               lib.mapAttrs
                 (_: exe: {
@@ -403,30 +378,48 @@
                 })
                 extraExes;
 
-            packages = flake.packages;
-            checks = mkChecks pkgs;
+            extraChecks =
+              let
+                nixTests = mkNixosTests pkgs;
+              in
+                (optionalAttrs hostPlatform.isLinux (
+                  prefixNamesWith "nixosTests/" (mapAttrs (_: v: v.${system} or v) nixosTests)
+                )) //
+                # checks run on default system only;
+                (optionalAttrs (system == defaultSystem) {
+                  hlint = pkgs.callPackage pkgs.hlintCheck {
+                    inherit (project.args) src;
+                  };
+                });
+
+            extraPackages =
+              extraExes // mkPackages pkgs // prefixNamesWith "checks/" checks;
+
+            checks = flake.checks // extraChecks;
             devShells = mkDevShells pkgs;
             ciJobs = mkCiJobs pkgs;
 
           in {
             inherit checks devShells environments project workbench;
 
+            apps = flake.apps // extraApps // {
+              # Run by `nix run .`
+              default = flake.apps."cardano-node:exe:cardano-node";
+            };
+
+            hydraJobs = ciJobs;
+
             legacyPackages = pkgs // {
               # allows access to hydraJobs without specifying <arch>:
               hydraJobs = ciJobs;
             };
 
-            hydraJobs = ciJobs;
-
             packages = flake.packages // extraPackages // {
               # Built by `nix build .`
-              default = packages."cardano-node:exe:cardano-node";
+              default = flake.packages."cardano-node:exe:cardano-node";
             };
 
-            apps = flake.apps // extraApps // {
-              # Run by `nix run .`
-              default = flake.apps."cardano-node:exe:cardano-node";
-            };
+
           })) {
             # allows precise paths (avoid fallbacks) with nix build/eval:
             outputs = self;
