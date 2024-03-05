@@ -21,10 +21,22 @@ usage_nomad() {
                      Gets Cardano World's AWS S3 crdentials from Vault in JSON
                      (WARNING: shows secrets!!!).
 
-    $(helpcmd nodes)
-                     Creates a JSON array with all the SRE's perf nodes in a
-                     format that can be used to ensure cloud runs are
-                     reproducible.
+    $(helpcmd perf-clients ready)
+                     Creates a JSON array with "id", "name", "datacenter" and
+                     "ip" of all SRE's perf Nomad client nodes available
+                     (status=ready).
+                     Needed envars (NOMAD_TOKEN, NOMAD_ADDR or NOMAD_NAMESPACE)
+                     must be provided by the user.
+
+    $(helpcmd perf-clients machines)
+                     Creates a JSON array with all SRE's perf Nomad client nodes
+                     but adds machine info for fingerprinting, to be used to
+                     ensure cloud runs are reproducible.
+                     Needed envars (NOMAD_TOKEN, NOMAD_ADDR or NOMAD_NAMESPACE)
+                     must be provided by the user.
+
+    $(helpcmd perf-clients ssh \(all\|producers\|NAME))
+                     SSH SRE's perf Nomad client nodes.
                      Needed envars (NOMAD_TOKEN, NOMAD_ADDR or NOMAD_NAMESPACE)
                      must be provided by the user.
 
@@ -403,110 +415,198 @@ EOL
       esac
     ;;
 ################################################################################
-### nodes ) ####################################################################
+### perf-clients ) #############################################################
 ################################################################################
-    nodes )
-      local usage="USAGE: wb nomad ${op}"
-      # Fetch the status of all nodes that are in the "ready" state.
-      # If a node is removed status is "down" and will still show its details.
-      # Not using cardano specific filters anymore (-filter 'NodeClass=="perf"').
-      local perf_nodes
-      perf_nodes="$(nomad node status -filter 'Status=="ready"' -json)"
-      # Create the base JSON string but without the "attributes" because those
-      # are only available when fetching the status of individual nodes.
-      local nodes_json
-      nodes_json="$( \
-          echo "${perf_nodes}" \
-        | \
-          jq \
-            "map( {                                   \
-                \"id\":         .ID                   \
-              , \"name\":       .Name                 \
-              , \"datacenter\": .Datacenter           \
-              , \"ip\":         .Address              \
-              , \"attributes\":  null                 \
-            } )"                                      \
-      )"
-      # For each node
-      local nodes_ids
-      nodes_ids="$( \
-          echo "${nodes_json}" \
-        | \
-          jq -S -r "map(.id) | sort | join (\" \")" \
-      )"
-      for node_id in ${nodes_ids[*]}
-      do
-        # Fetch the attributes
-        local node_attributes
-        node_attributes="$(nomad node status -json "${node_id}" | jq .Attributes)"
-        # Add the attributes of this node to the JSON string
+    perf-clients )
+      local usage="USAGE: wb nomad ${op} ready|machines|ssh"
+      local subop=${1:?$usage}; shift
+      case "${subop}" in
+####### perf-clients -> ready )#################################################
+      ready )
+        local usage="USAGE: wb nomad perf-clients ${subop}"
+        # Fetch the status of "perf" nodes that are "ready".
+        # If a node is removed status is "down" and will still show its details.
+        # Not using cardano specific filters anymore (-filter 'NodeClass=="perf"').
+        local perf_nodes
+        perf_nodes="$(nomad node status -filter 'Status=="ready"' -json)"
+        # Create the base JSON string but without the "attributes" because those
+        # are only available when fetching the status of individual nodes.
+        local nodes_json
         nodes_json="$( \
+            echo "${perf_nodes}" \
+          | \
+            jq \
+              "map( {                                   \
+                  \"id\":         .ID                   \
+                , \"name\":       .Name                 \
+                , \"datacenter\": .Datacenter           \
+                , \"ip\":         .Address              \
+              } )"                                      \
+        )"
+        # Output the JSON string ordered by Nomad Client "id"
+        echo "${nodes_json}" | jq '. | sort_by(.id)'
+      ;;
+####### perf-clients -> machines )##############################################
+      machines )
+        local usage="USAGE: wb nomad perf-clients ${subop}"
+        # Fetch the status of "perf" nodes that are "ready".
+        local nodes_json
+        nodes_json="$(wb nomad perf-clients ready)"
+        # For each node
+        local nodes_ids
+        nodes_ids="$( \
             echo "${nodes_json}" \
           | \
-            jq --argjson attrs "${node_attributes}" "                          \
-                .[]                                                            \
-              |= (                                                             \
-                if ( .id == \"${node_id}\" )                                   \
-                then (                                                         \
-                    .attributes                                                \
-                  |=                                                           \
-                    {                                                          \
-                      \"cpu\": {                                               \
-                         \"arch\": \$attrs[\"cpu.arch\"]                       \
-                       , \"frequency\": \$attrs[\"cpu.frequency\"]             \
-                       , \"modelname\": \$attrs[\"cpu.modelname\"]             \
-                       , \"numcores\": \$attrs[\"cpu.numcores\"]               \
-                       , \"reservablecores\": \$attrs[\"cpu.reservablecores\"] \
-                       , \"totalcompute\": \$attrs[\"cpu.totalcompute\"]       \
-                      }                                                        \
-                    , \"kernel\": {                                            \
-                         \"arch\": \$attrs[\"kernel.arch\"]                    \
-                       , \"name\": \$attrs[\"kernel.name\"]                    \
-                       , \"version\": \$attrs[\"kernel.version\"]              \
-                      }                                                        \
-                    , \"memory\": {                                            \
-                         \"totalbytes\": \$attrs[\"memory.totalbytes\"]        \
-                      }                                                        \
-                    , \"os\": {                                                \
-                         \"name\": \$attrs[\"os.name\"]                        \
-                       , \"version\": \$attrs[\"os.version\"]                  \
-                      }                                                        \
-                    , \"platform\": {                                          \
-                        \"aws\": {                                             \
-                            \"ami-id\": \$attrs[\"platform.aws.ami-id\"]       \
-                          , \"instance-type\": \$attrs[\"platform.aws.instance-type\"] \
-                          , \"placement\": {                                   \
-                              \"availability-zone\": \$attrs[\"platform.aws.placement.availability-zone\"] \
+            jq -S -r "map(.id) | sort | join (\" \")" \
+        )"
+        for node_id in ${nodes_ids[*]}
+        do
+          # Fetch the attributes
+          local node_attributes
+          node_attributes="$(nomad node status -json "${node_id}" | jq .Attributes)"
+          # Add the attributes of this node to the JSON string
+          nodes_json="$( \
+              echo "${nodes_json}" \
+            | \
+              jq --argjson attrs "${node_attributes}" "                        \
+                  .[]                                                          \
+                |= (                                                           \
+                  if ( .id == \"${node_id}\" )                                 \
+                  then (                                                       \
+                      .attributes                                              \
+                    |=                                                         \
+                      {                                                        \
+                        \"cpu\": {                                             \
+                           \"arch\": \$attrs[\"cpu.arch\"]                     \
+                         , \"frequency\": \$attrs[\"cpu.frequency\"]           \
+                         , \"modelname\": \$attrs[\"cpu.modelname\"]           \
+                         , \"numcores\": \$attrs[\"cpu.numcores\"]             \
+                         , \"reservablecores\": \$attrs[\"cpu.reservablecores\"] \
+                         , \"totalcompute\": \$attrs[\"cpu.totalcompute\"]     \
+                        }                                                      \
+                      , \"kernel\": {                                          \
+                           \"arch\": \$attrs[\"kernel.arch\"]                  \
+                         , \"name\": \$attrs[\"kernel.name\"]                  \
+                         , \"version\": \$attrs[\"kernel.version\"]            \
+                        }                                                      \
+                      , \"memory\": {                                          \
+                           \"totalbytes\": \$attrs[\"memory.totalbytes\"]      \
+                        }                                                      \
+                      , \"os\": {                                              \
+                           \"name\": \$attrs[\"os.name\"]                      \
+                         , \"version\": \$attrs[\"os.version\"]                \
+                        }                                                      \
+                      , \"platform\": {                                        \
+                          \"aws\": {                                           \
+                              \"ami-id\": \$attrs[\"platform.aws.ami-id\"]     \
+                            , \"instance-type\": \$attrs[\"platform.aws.instance-type\"] \
+                            , \"placement\": {                                 \
+                                \"availability-zone\": \$attrs[\"platform.aws.placement.availability-zone\"] \
+                            }                                                  \
+                          }                                                    \
+                        }                                                      \
+                      , \"unique\": {                                          \
+                          \"hostname\": \$attrs[\"unique.hostname\"]           \
+                        , \"network\": {                                       \
+                              \"ip-address\": \$attrs[\"unique.network.ip-address\"] \
+                          }                                                    \
+                        , \"platform\": {                                      \
+                              \"aws\": {                                       \
+                                  \"hostname\":        \$attrs[\"unique.platform.aws.hostname\"       ] \
+                                , \"instance-id\":     \$attrs[\"unique.platform.aws.instance-id\"    ] \
+                                , \"local-hostname\":  \$attrs[\"unique.platform.aws.local-hostname\" ] \
+                                , \"local-ipv4\":      \$attrs[\"unique.platform.aws.local-ipv4\"     ] \
+                                , \"mac\":             \$attrs[\"unique.platform.aws.mac\"            ] \
+                                , \"public-hostname\": \$attrs[\"unique.platform.aws.public-hostname\"] \
+                                , \"public-ipv4\":     \$attrs[\"unique.platform.aws.public-ipv4\"    ] \
+                              }                                                \
                           }                                                    \
                         }                                                      \
                       }                                                        \
-                    , \"unique\": {                                            \
-                        \"hostname\": \$attrs[\"unique.hostname\"]             \
-                      , \"network\": {                                         \
-                            \"ip-address\": \$attrs[\"unique.network.ip-address\"] \
-                        }                                                      \
-                      , \"platform\": {                                        \
-                            \"aws\": {                                         \
-                                \"hostname\":        \$attrs[\"unique.platform.aws.hostname\"       ] \
-                              , \"instance-id\":     \$attrs[\"unique.platform.aws.instance-id\"    ] \
-                              , \"local-hostname\":  \$attrs[\"unique.platform.aws.local-hostname\" ] \
-                              , \"local-ipv4\":      \$attrs[\"unique.platform.aws.local-ipv4\"     ] \
-                              , \"mac\":             \$attrs[\"unique.platform.aws.mac\"            ] \
-                              , \"public-hostname\": \$attrs[\"unique.platform.aws.public-hostname\"] \
-                              , \"public-ipv4\":     \$attrs[\"unique.platform.aws.public-ipv4\"    ] \
-                            }                                                  \
-                        }                                                      \
-                      }                                                        \
-                    }                                                          \
-                ) else (                                                       \
-                  .                                                            \
-                ) end                                                          \
-              )                                                                \
-            " \
-        )"
-      done
-      # Output the JSON string ordered by Nomad Client "id"
-      echo "${nodes_json}" | jq '. | sort_by(.id)'
+                  ) else (                                                     \
+                    .                                                          \
+                  ) end                                                        \
+                )                                                              \
+              " \
+          )"
+        done
+        # Output the JSON string ordered by Nomad Client "id"
+        echo "${nodes_json}" | jq '. | sort_by(.id)'
+      ;;
+####### perf-clients -> ssh )###################################################
+      ssh )
+        local usage="USAGE: wb nomad nodes ${subop} all|producers|explorer"
+        local key=${1:?$usage}; shift
+        case "${key}" in
+####### perf-clients -> ssh -> all )############################################
+          all )
+            # Fetch the status of "perf" nodes that are "ready".
+            local nodes_json
+            nodes_json="$(wb nomad perf-clients ready)"
+            # For each node
+            local nodes_names
+            nodes_names="$( \
+                echo "${nodes_json}" \
+              | \
+                jq -S -r "map(.name) | sort | join (\" \")" \
+            )"
+            local jobs_array=()
+            for node_name in ${nodes_names[*]}
+            do
+              wb nomad perf-clients ssh "${node_name}" "$@" &
+              jobs_array+=("$!")
+            done
+            if test -n "${jobs_array:-}" # If = () "unbound variable" error
+            then
+              if ! wait_all "${jobs_array[@]}"
+              then
+                echo "ERROR"
+              fi
+            fi
+          ;;
+####### perf-clients -> ssh -> producers )######################################
+          producers )
+            # Fetch the status of "perf" nodes that are "ready".
+            local nodes_json
+            nodes_json="$(wb nomad perf-clients ready)"
+            # For each node
+            local nodes_names
+            nodes_names="$( \
+                echo "${nodes_json}" \
+              | \
+                jq -S -r "map(select(.name != \"explorer\")) | map(.name) | sort | join (\" \")" \
+            )"
+            local jobs_array=()
+            for node_name in ${nodes_names[*]}
+            do
+              wb nomad perf-clients ssh "${node_name}" "$@" &
+              jobs_array+=("$!")
+            done
+            if test -n "${jobs_array:-}" # If = () "unbound variable" error
+            then
+              if ! wait_all "${jobs_array[@]}"
+              then
+                echo "ERROR"
+              fi
+            fi
+          ;;
+####### perf-clients -> ssh -> * )##############################################
+          * )
+            ssh                                       \
+              -n -t -t                                \
+              -i ~/.ssh/perf_cluster.key              \
+              -o StrictHostKeyChecking=no             \
+              -o VisualHostKey=no                     \
+              root@"${key}".perf.aws.iohkdev.io "$@"
+          ;;
+####### perf-clients -> ssh )###################################################
+        esac
+      ;;
+####### perf-clients -> * )#####################################################
+        * )
+          usage_nomad
+        ;;
+      esac # perf-clients
     ;;
 ################################################################################
 ### agents ) ###################################################################
