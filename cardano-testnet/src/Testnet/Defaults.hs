@@ -1,9 +1,12 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+
 
 -- | All Byron and Shelley Genesis related functionality
 module Testnet.Defaults
@@ -30,6 +33,7 @@ import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Binary.Version ()
 import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Conway.Genesis
+import           Cardano.Ledger.Conway.PParams
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley as Ledger
@@ -47,19 +51,24 @@ import qualified Data.Aeson.KeyMap as KeyMapAeson
 import           Data.Bifunctor
 import qualified Data.Default.Class as DefaultClass
 import qualified Data.Map.Strict as Map
+import           Data.Maybe
 import           Data.Proxy
 import           Data.Ratio
 import           Data.Scientific
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
+import           Data.Typeable
 import qualified Data.Vector as Vector
 import           Data.Word
+import           GHC.Stack
 import           Lens.Micro
 import           Numeric.Natural
 
+import           Test.Cardano.Ledger.Core.Rational
 import           Testnet.Start.Types
 
+{- HLINT ignore "Use underscore" -}
 
 instance Api.Error AlonzoGenesisError where
   prettyError (AlonzoGenErrCostModels e) =
@@ -160,7 +169,44 @@ defaultAlonzoGenesis = do
                            ]
 
 defaultConwayGenesis :: ConwayGenesis StandardCrypto
-defaultConwayGenesis = DefaultClass.def
+defaultConwayGenesis =
+  let upPParams :: UpgradeConwayPParams Identity
+      upPParams = UpgradeConwayPParams
+                    { ucppPoolVotingThresholds = poolVotingThresholds
+                    , ucppDRepVotingThresholds = drepVotingThresholds
+                    , ucppCommitteeMinSize = 0
+                    , ucppCommitteeMaxTermLength = EpochInterval 200
+                    , ucppGovActionLifetime = EpochInterval 1 -- One Epoch
+                    , ucppGovActionDeposit = Coin 1_000_000
+                    , ucppDRepDeposit = Coin 1_000_000
+                    , ucppDRepActivity = EpochInterval 100
+                    }
+      drepVotingThresholds = DRepVotingThresholds
+        { dvtMotionNoConfidence = 0 %! 1
+        , dvtCommitteeNormal = 1 %! 2
+        , dvtCommitteeNoConfidence = 0 %! 1
+        , dvtUpdateToConstitution = 0 %! 2 -- TODO: Requires a constitutional committee when non-zero
+        , dvtHardForkInitiation = 1 %! 2
+        , dvtPPNetworkGroup = 1 %! 2
+        , dvtPPEconomicGroup = 1 %! 2
+        , dvtPPTechnicalGroup = 1 %! 2
+        , dvtPPGovGroup = 1 %! 2
+        , dvtTreasuryWithdrawal = 1 %! 2
+        }
+      poolVotingThresholds = PoolVotingThresholds
+         { pvtMotionNoConfidence = 1 %! 2
+         , pvtCommitteeNormal = 1 %! 2
+         , pvtCommitteeNoConfidence = 1 %! 2
+         , pvtHardForkInitiation = 1 %! 2
+         , pvtPPSecurityGroup = 1 %! 2
+         }
+  in ConwayGenesis
+      { cgUpgradePParams = upPParams
+      , cgConstitution = DefaultClass.def
+      , cgCommittee = DefaultClass.def
+      , cgDelegs = mempty
+      , cgInitialDReps = mempty
+      }
 
 
 
@@ -440,21 +486,33 @@ defaultShelleyGenesis
   :: UTCTime
   -> CardanoTestnetOptions
   -> Api.ShelleyGenesis StandardCrypto
-defaultShelleyGenesis startTime testnetOptions =
-  let testnetMagic = cardanoTestnetMagic testnetOptions
-      slotLength = cardanoSlotLength testnetOptions
-      epochLength = cardanoEpochLength testnetOptions
-      maxLovelaceLovelaceSupply = cardanoMaxSupply testnetOptions
-      pVer = eraToProtocolVersion $ cardanoNodeEra testnetOptions
+defaultShelleyGenesis startTime testnetOptions = do
+  let CardanoTestnetOptions
+        { cardanoTestnetMagic = testnetMagic
+        , cardanoSlotLength = slotLength
+        , cardanoEpochLength = epochLength
+        , cardanoMaxSupply = maxLovelaceLovelaceSupply
+        , cardanoActiveSlotsCoeff
+        , cardanoNodeEra
+        } = testnetOptions
+      -- f
+      activeSlotsCoeff = round (cardanoActiveSlotsCoeff * 100) % 100
+      -- make security param k satisfy: epochLength = 10 * k / f
+      -- TODO: find out why this actually degrates network stability - turned off for now
+      -- securityParam = ceiling $ fromIntegral epochLength * cardanoActiveSlotsCoeff / 10
+      pVer = eraToProtocolVersion cardanoNodeEra
       protocolParams = Api.sgProtocolParams Api.shelleyGenesisDefaults
       protocolParamsWithPVer = protocolParams & ppProtocolVersionL' .~ pVer
-  in Api.shelleyGenesisDefaults
-        { Api.sgNetworkMagic = fromIntegral testnetMagic
-        , Api.sgSlotLength = secondsToNominalDiffTimeMicro $ realToFrac slotLength
+  Api.shelleyGenesisDefaults
+        { Api.sgActiveSlotsCoeff = unsafeBoundedRational activeSlotsCoeff
         , Api.sgEpochLength = EpochSize $ fromIntegral epochLength
         , Api.sgMaxLovelaceSupply = maxLovelaceLovelaceSupply
-        , Api.sgSystemStart = startTime
+        , Api.sgNetworkMagic = fromIntegral testnetMagic
         , Api.sgProtocolParams = protocolParamsWithPVer
+        -- using default from shelley genesis k = 2160
+        -- , Api.sgSecurityParam = securityParam
+        , Api.sgSlotLength = secondsToNominalDiffTimeMicro $ realToFrac slotLength
+        , Api.sgSystemStart = startTime
         }
 
 
@@ -522,3 +580,11 @@ plutusV3SpendingScript =
                , ",\"cborHex\": \"484701010022280001\""
                , "}"
                ]
+
+-- TODO: move to cardano-api
+unsafeBoundedRational :: forall r. (HasCallStack, Typeable r, BoundedRational r)
+                      => Rational
+                      -> r
+unsafeBoundedRational x = fromMaybe (error errMessage) $ boundRational x
+  where
+    errMessage = show (typeRep (Proxy @r)) <> " is out of bounds: " <> show x

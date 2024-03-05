@@ -67,7 +67,7 @@ fileJsonGrep fp f = do
 assertByDeadlineIOCustom
   :: (MonadTest m, MonadIO m, HasCallStack)
   => String -> DTC.UTCTime -> IO Bool -> m ()
-assertByDeadlineIOCustom str deadline f = GHC.withFrozenCallStack $ do
+assertByDeadlineIOCustom str deadline f = withFrozenCallStack $ do
   success <- H.evalIO f
   unless success $ do
     currentTime <- H.evalIO DTC.getCurrentTime
@@ -86,33 +86,35 @@ assertExpectedSposInLedgerState
   -> CardanoTestnetOptions
   -> ExecConfig
   -> m ()
-assertExpectedSposInLedgerState output tNetOptions execConfig =
-  GHC.withFrozenCallStack $ do
-    let numExpectedPools = length $ cardanoNodes tNetOptions
+assertExpectedSposInLedgerState output tNetOptions execConfig = withFrozenCallStack $ do
+  let numExpectedPools = length $ cardanoNodes tNetOptions
 
-    void $ execCli' execConfig
-        [ "query", "stake-pools"
-        , "--out-file", output
-        ]
+  void $ execCli' execConfig
+      [ "query", "stake-pools"
+      , "--out-file", output
+      ]
 
-    poolSet <- H.evalEither =<< H.evalIO (Aeson.eitherDecodeFileStrict' @(Set PoolId) output)
+  poolSet <- H.evalEither =<< H.evalIO (Aeson.eitherDecodeFileStrict' @(Set PoolId) output)
 
-    H.cat output
+  H.cat output
 
-    let numPoolsInLedgerState = Set.size poolSet
-    unless (numPoolsInLedgerState == numExpectedPools) $
-      failMessage GHC.callStack
-        $ unlines [ "Expected number of stake pools not found in ledger state"
-                  , "Expected: ", show numExpectedPools
-                  , "Actual: ", show numPoolsInLedgerState
-                  ]
+  let numPoolsInLedgerState = Set.size poolSet
+  unless (numPoolsInLedgerState == numExpectedPools) $
+    failMessage GHC.callStack
+      $ unlines [ "Expected number of stake pools not found in ledger state"
+                , "Expected: ", show numExpectedPools
+                , "Actual: ", show numPoolsInLedgerState
+                ]
 
-assertChainExtended :: (HasCallStack, H.MonadTest m, MonadIO m)
+assertChainExtended
+  :: HasCallStack
+  => H.MonadTest m
+  => MonadIO m
   => DTC.UTCTime
   -> NodeLoggingFormat
   -> FilePath
   -> m ()
-assertChainExtended deadline nodeLoggingFormat nodeStdoutFile =
+assertChainExtended deadline nodeLoggingFormat nodeStdoutFile = withFrozenCallStack $
   assertByDeadlineIOCustom "Chain not extended" deadline $ do
     case nodeLoggingFormat of
       NodeLoggingFormatAsText -> IO.fileContains "Chain extended, new tip" nodeStdoutFile

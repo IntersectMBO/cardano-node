@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Start.Types
@@ -29,10 +30,6 @@ import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras as H
 
 
-{- HLINT ignore "Redundant flip" -}
-{- HLINT ignore "Redundant id" -}
-{- HLINT ignore "Use let" -}
-
 data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | List of node options. Each option will result in a single node being
     -- created.
@@ -54,8 +51,8 @@ cardanoDefaultTestnetOptions = CardanoTestnetOptions
   , cardanoEpochLength = 500
   , cardanoSlotLength = 0.1
   , cardanoTestnetMagic = 42
-  , cardanoActiveSlotsCoeff = 0.1
-  , cardanoMaxSupply = 10020000000
+  , cardanoActiveSlotsCoeff = 0.05
+  , cardanoMaxSupply = 10_020_000_000
   , cardanoEnableP2P = False
   , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
   }

@@ -30,7 +30,7 @@ Available options:
   --slot-length SECONDS    Slot length (default: 0.1)
   --testnet-magic INT      Specify a testnet magic id.
   --active-slots-coeff DOUBLE
-                           Active slots co-efficient (default: 0.1)
+                           Active slots co-efficient (default: 5.0e-2)
   --max-lovelace-supply WORD64
                            Max lovelace supply that your testnet starts with.
                            (default: 10020000000)

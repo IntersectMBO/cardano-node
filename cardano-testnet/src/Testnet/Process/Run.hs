@@ -47,7 +47,6 @@ import           Hedgehog (MonadTest)
 import           Hedgehog.Extras.Internal.Plan (Component (..), Plan (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.OS as OS
-import           Hedgehog.Extras.Test.Base
 import           Hedgehog.Extras.Test.Process (ExecConfig)
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified Hedgehog.Internal.Property as H
@@ -163,7 +162,7 @@ mkExecConfig :: ()
 mkExecConfig tempBaseAbsPath sprocket networkId = do
   env' <- H.evalIO IO.getEnvironment
 
-  noteShow H.ExecConfig
+  return H.ExecConfig
     { H.execConfigEnv = Last $ Just $
       [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName sprocket)
       , ("CARDANO_NODE_NETWORK_ID", show networkId)
