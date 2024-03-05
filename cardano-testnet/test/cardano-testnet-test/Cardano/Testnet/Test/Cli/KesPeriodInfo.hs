@@ -43,6 +43,7 @@ import           Hedgehog (Property)
 import qualified Hedgehog as H
 import           Hedgehog.Extras (threadDelay)
 import           Hedgehog.Extras.Stock (sprocketSystemName)
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
@@ -86,8 +87,17 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
 
+  let node1SocketPath = Api.File $ IO.sprocketSystemName node1sprocket
+      nodeConfigFile = Api.File configurationFile
+      termEpoch = 3
   (stakePoolId, stakePoolColdSigningKey, stakePoolColdVKey, _, _)
-    <- registerSingleSpo 1 tempAbsPath cTestnetOptions execConfig (txin1, utxoSKeyFile, utxoAddr)
+    <- registerSingleSpo 1 tempAbsPath
+         nodeConfigFile
+         node1SocketPath
+         termEpoch
+         cTestnetOptions
+         execConfig
+         (txin1, utxoSKeyFile, utxoAddr)
 
   -- Create test stake address to delegate to the new stake pool
   -- NB: We need to fund the payment credential of the overall address
@@ -187,11 +197,12 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
            , "--tx-file", delegRegTestDelegatorTxFp
            ]
 
-  threadDelay 20_000_000
-
   let testDelegatorStakeAddressInfoOutFp = work </> "test-delegator-stake-address-info.json"
   void $ checkStakeKeyRegistered
            tempAbsPath
+           nodeConfigFile
+           node1SocketPath
+           termEpoch
            execConfig
            testDelegatorStakeAddress
            testDelegatorStakeAddressInfoOutFp

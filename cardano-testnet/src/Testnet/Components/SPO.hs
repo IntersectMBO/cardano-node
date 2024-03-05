@@ -1,8 +1,9 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 
 module Testnet.Components.SPO
@@ -15,17 +16,25 @@ module Testnet.Components.SPO
   , registerSingleSpo
   ) where
 
+import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley hiding (cardanoEra)
+
+import qualified Cardano.Ledger.Api.State.Query as L
+import qualified Cardano.Ledger.Shelley.LedgerState as L
+import qualified Cardano.Ledger.UMap as L
 
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
+import           Control.Monad.State.Strict as StateT
 import qualified Data.Aeson as Aeson
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
+import           Lens.Micro
 import           System.FilePath.Posix ((</>))
 
 import           Testnet.Filepath
@@ -35,7 +44,7 @@ import           Testnet.Property.Utils
 import           Testnet.Start.Types
 
 import           Hedgehog
-import           Hedgehog.Extras (ExecConfig, threadDelay)
+import           Hedgehog.Extras (ExecConfig)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
@@ -77,11 +86,14 @@ checkStakePoolRegistered tempAbsP execConfig poolColdVkeyFp outputFp =
 checkStakeKeyRegistered
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
+  -> NodeConfigFile 'In
+  -> SocketPath
+  -> EpochNo -- ^ Termination epoch
   -> ExecConfig
   -> String -- ^ Stake address
   -> FilePath -- ^ Output file path of stake address info
   -> m DelegationsAndRewards
-checkStakeKeyRegistered tempAbsP execConfig stakeAddr outputFp  =
+checkStakeKeyRegistered tempAbsP nodeConfigFile sPath terminationEpoch execConfig stakeAddr outputFp  =
   GHC.withFrozenCallStack $ do
     let tempAbsPath' = unTmpAbsPath tempAbsP
         oFpAbs = tempAbsPath' </> outputFp
@@ -89,25 +101,60 @@ checkStakeKeyRegistered tempAbsP execConfig stakeAddr outputFp  =
     sAddr <- case deserialiseAddress AsStakeAddress $ Text.pack stakeAddr of
                Just sAddr -> return sAddr
                Nothing -> H.failWithCustom GHC.callStack Nothing $ "Invalid stake address: " <> stakeAddr
+    result <- runExceptT $ foldEpochState
+                            nodeConfigFile
+                            sPath
+                            QuickValidation
+                            terminationEpoch
+                            (DelegationsAndRewards (mempty, mempty))
+                            (handler sAddr)
+    case result of
+      Right (_, dag) -> return dag
+      Left e -> do
+        void $ execCli' execConfig
+          [ "query", "stake-address-info"
+          , "--address", stakeAddr
+          , "--out-file", oFpAbs
+          ]
 
-    void $ execCli' execConfig
-      [ "query", "stake-address-info"
-      , "--address", stakeAddr
-      , "--out-file", oFpAbs
-      ]
+        pledgerStakeInfo <- H.leftFailM $ H.readJsonFile oFpAbs
+        (DelegationsAndRewards (rewardsMap, _delegMap))
+          <- H.noteShowM $ H.jsonErrorFail $ Aeson.fromJSON @DelegationsAndRewards pledgerStakeInfo
+        H.failWithCustom GHC.callStack Nothing
+                       $ unlines [ "Stake address in question: "
+                                 , Text.unpack (serialiseToBech32 sAddr)
+                                 , "was not registered"
+                                 , "Current stake info for address in question: "
+                                 , show $ map serialiseToBech32 $ Map.keys rewardsMap
+                                 , "foldEpochStateError: " <> show e
+                                 ]
+ where
+  handler :: StakeAddress -> AnyNewEpochState -> SlotNo -> BlockNo -> StateT DelegationsAndRewards IO LedgerStateCondition
+  handler (StakeAddress network sCred) (AnyNewEpochState sbe newEpochState) _ _ =
+    let umap = shelleyBasedEraConstraints sbe $ newEpochState ^. L.nesEsL . L.epochStateUMapL
+        dag = L.filterStakePoolDelegsAndRewards umap $ Set.singleton sCred
+        allStakeCredentials = umap ^. L.umElemsL -- This does not include pointer addresses
+        delegsAndRewards = shelleyBasedEraConstraints sbe $ toDelegationsAndRewards network sbe dag
+    in case Map.lookup sCred allStakeCredentials of
+         Nothing -> return ConditionNotMet
+         Just _ -> StateT.put delegsAndRewards >> return ConditionMet
 
-    pledgerStakeInfo <- H.leftFailM $ H.readJsonFile oFpAbs
-    dag@(DelegationsAndRewards (rewardsMap, _delegMap)) <- H.noteShowM $ H.jsonErrorFail $ Aeson.fromJSON @DelegationsAndRewards pledgerStakeInfo
-    case Map.lookup sAddr rewardsMap of
-      Nothing -> H.failWithCustom GHC.callStack Nothing
-                   $ unlines [ "Stake address: "
-                             , Text.unpack (serialiseToBech32 sAddr)
-                             , "was not registered"
-                             , "Current registered stake keys: "
-                             , show $ map serialiseToBech32 $ Map.keys rewardsMap
-                             ]
-      Just _ -> return dag
+  toDelegationsAndRewards
+    :: L.EraCrypto (ShelleyLedgerEra era) ~ L.StandardCrypto
+    => L.Network
+    -> ShelleyBasedEra era
+    -> (Map (L.Credential L.Staking (L.EraCrypto (ShelleyLedgerEra era))) (L.KeyHash L.StakePool (L.EraCrypto (ShelleyLedgerEra era))), Map (L.Credential 'L.Staking (L.EraCrypto (ShelleyLedgerEra era))) L.Coin)
+    -> DelegationsAndRewards
+  toDelegationsAndRewards n _ (delegationMap, rewardsMap) =
+    let apiDelegationMap = Map.map toApiPoolId $ Map.mapKeys (toApiStakeAddress n) delegationMap
+        apiRewardsMap = Map.mapKeys (toApiStakeAddress n) rewardsMap
+    in DelegationsAndRewards (apiRewardsMap, apiDelegationMap)
 
+toApiStakeAddress :: L.Network -> L.Credential 'L.Staking L.StandardCrypto -> StakeAddress
+toApiStakeAddress = StakeAddress
+
+toApiPoolId ::  L.KeyHash L.StakePool L.StandardCrypto -> PoolId
+toApiPoolId = StakePoolKeyHash
 
 createStakeDelegationCertificate
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
@@ -195,6 +242,9 @@ registerSingleSpo
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => Int -- ^ Identifier for stake pool
   -> TmpAbsolutePath
+  -> NodeConfigFile 'In
+  -> SocketPath
+  -> EpochNo -- ^ Termination epoch
   -> CardanoTestnetOptions
   -> ExecConfig
   -> (TxIn, FilePath, String)
@@ -209,7 +259,7 @@ registerSingleSpo
          --   3. FilePath: Stake pool cold verification key
          --   4. FilePath: Stake pool VRF signing key
          --   5. FilePath: Stake pool VRF verification key
-registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') cTestnetOptions execConfig
+registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile socketPath termEpoch cTestnetOptions execConfig
                   (fundingInput, fundingSigninKey, changeAddr) = GHC.withFrozenCallStack $ do
   let testnetMag = cardanoTestnetMagic cTestnetOptions
 
@@ -329,14 +379,16 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') cTestnetOptions 
            ]
   -- TODO: Currently we can't propagate the error message thrown by checkStakeKeyRegistered when using byDurationM
   -- Instead we wait 15 seconds
-  threadDelay 15_000_000
   -- Check the pledger/owner stake key was registered
   delegsAndRewards <-
-    checkStakeKeyRegistered
-      tap
-      execConfig
-      poolownerstakeaddr
-      ("spo-"<> show identifier <> "-requirements" </> "pledger.stake.info")
+      checkStakeKeyRegistered
+        tap
+        nodeConfigFile
+        socketPath
+        termEpoch
+        execConfig
+        poolownerstakeaddr
+        ("spo-"<> show identifier <> "-requirements" </> "pledger.stake.info")
 
   (pledgerSAddr, _rewards, _poolId) <- H.headM $ mergeDelegsAndRewards delegsAndRewards
 
