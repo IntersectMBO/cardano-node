@@ -383,20 +383,25 @@
             # NixOS tests run a node and submit-api and validate it listens
             nixosTests = mkNixosTests pkgs;
 
-            flake = project.flake {};
+            flake = project.flake (
+              nixpkgs.lib.optionalAttrs (system == "x86_64-linux") {
+                crossPlatforms = p: [p.mingwW64 p.musl64];
+              });
 
-            apps =
+            extraExes =
+              (collectExes project) // {
+                inherit (pkgs) cabalProjectRegenerate checkCabalProject;
+              } // flattenTree (pkgs.scripts);
+
+            extraPackages = extraExes // mkPackages pkgs;
+
+            extraApps =
               lib.mapAttrs
-                (n: p: {
+                (_: exe: {
                   type = "app";
-                  program =
-                    p.exePath or
-                      (if (p.executable or false) then
-                        "${p}"
-                       else "${p}/bin/${p.name or n}"
-                      );
+                  program = "${exe}/bin/${exe.exeName or exe.name}";
                 })
-                (mkExes pkgs);
+                extraExes;
 
             packages = flake.packages;
             checks = mkChecks pkgs;
@@ -413,33 +418,15 @@
 
             hydraJobs = ciJobs;
 
-            packages =
-              packages
-              // collectExes project
-              // mkPackages pkgs
-              // flattenTree (pkgs.scripts)
-              // {
-                inherit (pkgs) cabalProjectRegenerate checkCabalProject;
-
-                # Built by `nix build .`
-                default = packages."cardano-node:exe:cardano-node";
+            packages = flake.packages // extraPackages // {
+              # Built by `nix build .`
+              default = packages."cardano-node:exe:cardano-node";
             };
 
-            # Run by `nix run .`
-            apps =
-              flake.apps
-              // lib.mapAttrs
-                (n: p: { type = "app"; program = "${p}/bin/${p.exeName or p.name}"; })
-                ({ inherit (pkgs) cabalProjectRegenerate checkCabalProject; } //
-                 flattenTree pkgs.scripts //
-                 (with project.hsPkgs; {
-                   inherit (bech32.components.exes) bech32;
-                   inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer db-truncater;
-                   inherit (cardano-cli.components.exes) cardano-cli;
-                 }))
-              // {
-                default = flake.apps."cardano-node:exe:cardano-node";
-              };
+            apps = flake.apps // extraApps // {
+              # Run by `nix run .`
+              default = flake.apps."cardano-node:exe:cardano-node";
+            };
           })) {
             # allows precise paths (avoid fallbacks) with nix build/eval:
             outputs = self;
