@@ -426,9 +426,20 @@
             };
 
             # Run by `nix run .`
-            apps = apps // {
-              default = apps.cardano-node;
-            };
+            apps =
+              flake.apps
+              // lib.mapAttrs
+                (n: p: { type = "app"; program = "${p}/bin/${p.exeName or p.name}"; })
+                ({ inherit (pkgs) cabalProjectRegenerate checkCabalProject; } //
+                 flattenTree pkgs.scripts //
+                 (with project.hsPkgs; {
+                   inherit (bech32.components.exes) bech32;
+                   inherit (ouroboros-consensus-cardano.components.exes) db-analyser db-synthesizer db-truncater;
+                   inherit (cardano-cli.components.exes) cardano-cli;
+                 }))
+              // {
+                default = flake.apps."cardano-node:exe:cardano-node";
+              };
           })) {
             # allows precise paths (avoid fallbacks) with nix build/eval:
             outputs = self;
