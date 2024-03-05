@@ -541,7 +541,7 @@ allocate-run-nomadcloud() {
       # ".attributes.kernel.version".
       if test -z "${NOMAD_CLIENTS_FILE:-}" || ! test -f "${NOMAD_CLIENTS_FILE}"
       then
-        fatal "No \"\$NOMAD_CLIENTS_FILE\". For reproducible builds provide this file that ensures cluster nodes are always placed on the same machines, or create a new one with 'wb nomad nodes' if Nomad Clients have suffered changes and runs fail with \"placement errors\""
+        fatal "No \"\$NOMAD_CLIENTS_FILE\". For reproducible builds provide this file that ensures cluster nodes are always placed on the same machines, or create a new one with 'wb nomad perf-clients machines' if Nomad Client Nodes have suffered changes and runs fail with \"placement errors\""
       fi
       # Keep a copy of this run's file (Existance checked in `setenv-defaults`)!
       cp "${NOMAD_CLIENTS_FILE}" "${dir}"/nomad/clients.json
