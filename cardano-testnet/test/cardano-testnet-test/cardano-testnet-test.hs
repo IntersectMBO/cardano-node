@@ -14,6 +14,7 @@ import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldBlocks
 import qualified Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO as LedgerEvents
+import qualified Cardano.Testnet.Test.LedgerEvents.Gov.TreasuryWithdrawal as LedgerEvents
 import qualified Cardano.Testnet.Test.LedgerEvents.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.LedgerEvents.TreasuryGrowth as LedgerEvents
 import qualified Cardano.Testnet.Test.Node.Shutdown
@@ -44,6 +45,7 @@ tests = do
                 [ -- H.ignoreOnMacAndWindows "ProposeAndRatifyNewConstitution" LedgerEvents.hprop_ledger_events_propose_new_constitution
                   -- , H.ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
                   H.ignoreOnWindows "ProposeNewConstitutionSPO" LedgerEvents.hprop_ledger_events_propose_new_constitution_spo
+                , H.ignoreOnWindows "TreasuryWithdrawal" LedgerEvents.hprop_ledger_events_treasury_withdrawal
                 , H.ignoreOnWindows "DRepRetirement" DRepRetirement.hprop_drep_retirement
                 ]
             , testGroup "Plutus"
