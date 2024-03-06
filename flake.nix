@@ -392,20 +392,32 @@
                   };
                 });
 
-            extraPackages =
-              extraExes // mkPackages pkgs // prefixNamesWith "checks/" checks;
+            extraDevShells =
+              let
+                shell = import ./shell.nix { inherit pkgs customConfig cardano-mainnet-mirror; };
+              in {
+                inherit (shell) devops workbench-shell;
 
-            checks = flake.checks // extraChecks;
-            devShells = mkDevShells pkgs;
+                cluster = flake.devShells.default;
+                profiled = project.profiled.shell;
+              };
+
+            extraPackages =
+              extraExes // mkPackages pkgs // prefixNamesWith "checks/" (self.checks.${system});
+
             ciJobs = mkCiJobs pkgs;
 
           in {
-            inherit checks devShells environments project workbench;
+            inherit environments project workbench;
 
             apps = flake.apps // extraApps // {
               # Run by `nix run .`
               default = flake.apps."cardano-node:exe:cardano-node";
             };
+
+            checks = flake.checks // extraChecks;
+
+            devShells = flake.devShells // extraDevShells;
 
             hydraJobs = ciJobs;
 
