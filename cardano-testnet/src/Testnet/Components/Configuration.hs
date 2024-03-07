@@ -34,7 +34,6 @@ import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
 import           Data.String
-import           Data.Word (Word32)
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import           Lens.Micro
@@ -98,7 +97,7 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
       genesisShelleyDirAbs = takeDirectory genesisShelleyFpAbs
   genesisShelleyDir <- H.createDirectoryIfMissing genesisShelleyDirAbs
   let testnetMagic = sgNetworkMagic shelleyGenesis
-      numStakeDelegators = 3
+      numStakeDelegators = 3 :: Int
       startTime = sgSystemStart shelleyGenesis
 
   -- TODO: We need to read the genesis files into Haskell and modify them
@@ -115,6 +114,8 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
  -- 50 second epochs
  -- Epoch length should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"
   H.rewriteJsonFile @Value genesisShelleyFpAbs $ \o -> o
+    -- TODO: remove rho and tau adjustment after https://github.com/IntersectMBO/cardano-api/pull/425 gets
+    -- integrated with newer cardano-api into node
     & L.key "protocolParams" .  L.key "rho" . L._Number  .~ 0.1
     & L.key "protocolParams" .  L.key "tau" . L._Number  .~ 0.1
     & L.key "securityParam" . L._Integer .~ 5
@@ -130,11 +131,11 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
   execCli_
     [ convertToEraString era, "genesis", "create-testnet-data"
     , "--spec-shelley", genesisShelleyFpAbs
-    , "--testnet-magic", show @Word32 testnetMagic
-    , "--pools", show @Int numPoolNodes
+    , "--testnet-magic", show testnetMagic
+    , "--pools", show numPoolNodes
     , "--total-supply",     show @Int 2_000_000_000_000
     , "--delegated-supply", show @Int 1_000_000_000_000
-    , "--stake-delegators", show @Int numStakeDelegators
+    , "--stake-delegators", show numStakeDelegators
     , "--utxo-keys", show numSeededUTxOKeys
     , "--drep-keys", "3"
     , "--start-time", DTC.formatIso8601 startTime
@@ -152,7 +153,6 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
   forM_ files $ \file -> do
     H.note file
 
-
   -- TODO: This conway and alonzo genesis creation should be ultimately moved to create-testnet-data
   alonzoConwayTestGenesisJsonTargetFile <- H.noteShow (genesisShelleyDir </> "genesis.alonzo.json")
   gen <- H.evalEither $ first prettyError defaultAlonzoGenesis
@@ -161,9 +161,15 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
   conwayConwayTestGenesisJsonTargetFile <- H.noteShow (genesisShelleyDir </> "genesis.conway.json")
   H.evalIO $ LBS.writeFile conwayConwayTestGenesisJsonTargetFile $ Aeson.encode defaultConwayGenesis
 
-  H.renameFile (tempAbsPath' </> "byron-gen-command/genesis.json") (genesisByronDir </> "genesis.json")
-  -- TODO: create-testnet-data outputs the new shelley genesis do genesis.json
+  H.renameFile (tempAbsPath' </> "byron-gen-command" </> "genesis.json") (genesisByronDir </> "genesis.json")
+  -- TODO: create-testnet-data outputs the new shelley genesis to genesis.json
   H.renameFile (tempAbsPath' </> "genesis.json") (genesisShelleyDir </> "genesis.shelley.json")
+
+  -- TODO: move this to create-testnet-data
+  -- For some reason when setting "--total-supply 10E16" in create-testnet-data, we're getting negative
+  -- treasury
+  H.rewriteJsonFile @Value (genesisShelleyDir </> "genesis.shelley.json") $ \o -> o
+    & L.key "maxLovelaceSupply" . L._Integer .~ 10_000_000_000_000_000
 
   return genesisShelleyDir
 
