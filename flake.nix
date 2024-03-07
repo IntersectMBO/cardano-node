@@ -213,6 +213,25 @@
               };
             });
 
+      mkChecks = pkgs:
+        let
+          inherit (pkgs) system;
+          inherit (pkgs.stdenv) hostPlatform;
+          project = pkgs.cardanoNodeProject;
+          nixosTests = mkNixosTests pkgs;
+        in
+          flattenTree project.checks //
+          # Linux only checks:
+          (optionalAttrs hostPlatform.isLinux (
+            prefixNamesWith "nixosTests/" (mapAttrs (_: v: v.${system} or v) nixosTests)
+          )) //
+          # checks run on default system only;
+          (optionalAttrs (system == defaultSystem) {
+            hlint = pkgs.callPackage pkgs.hlintCheck {
+              inherit (project.args) src;
+            };
+          });
+
       mkNixosTests = pkgs:
         import ./nix/nixos/tests {
           inherit pkgs;
@@ -224,6 +243,7 @@
           project = pkgs.cardanoNodeProject;
           packages = mkPackages pkgs // mkExes pkgs;
           devShells = mkDevShells pkgs;
+          checks = prefixNamesWith "checks/" (mkChecks pkgs);
 
           ciJobsVariants = mapAttrs (_: p:
             (mkCiJobs (pkgs.extend (prev: final: { cardanoNodeProject = p; })))
@@ -233,7 +253,7 @@
             cardano-deployment = pkgs.cardanoLib.mkConfigHtml {
               inherit (pkgs.cardanoLib.environments) mainnet preview preprod; };
           } // optionalAttrs (system == "x86_64-linux") {
-            native = packages // {
+            native = packages // checks // {
               shells = devShells;
               internal = {
                 roots.project = project.roots;
@@ -302,7 +322,7 @@
                   (n: _:
                     # only build docker images once on linux:
                     !(lib.hasPrefix "dockerImage" n))
-                  packages // {
+                  packages // checks // {
                     cardano-node-macos = import ./nix/binary-release.nix {
                       inherit pkgs;
                       inherit (exes.cardano-node.identifier) version;
