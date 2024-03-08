@@ -86,6 +86,7 @@ jobs:
         cp .github/workflows/cabal.project.local.ci cabal.project.local
         echo "# cabal.project.local"
         cat cabal.project.local
+        ls -lR .git/
 
     - name: Build dry run
       run: |
