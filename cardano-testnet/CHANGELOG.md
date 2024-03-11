@@ -1,5 +1,9 @@
 # Changelog for cardano-testnet
 
+## Next version
+
+* Update `cardano-ping` dependency
+
 ## 8.7.0
 
 * Using `cardano-node-8.7.0`, `cardano-api-8.33` and `cardano-cli-8.15`
