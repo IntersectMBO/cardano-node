@@ -19,24 +19,12 @@ module Cardano.Testnet.Test.Cli.Conway.DRepRetirement
 
 import           Cardano.Api
 import qualified Cardano.Api as Api
-import           Cardano.Api.Ledger
-import qualified Cardano.Api.Ledger as L
 
-import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (..))
-import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet
 
 import           Prelude
 
-import           Control.Monad (void)
-import           Control.Monad.Catch (MonadCatch)
-import           Control.Monad.Trans.State.Strict (put)
-import           Data.Data
-import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import           Data.Type.Equality (testEquality)
-import           GHC.Stack
-import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
@@ -159,7 +147,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
       configFile' = Api.File configurationFile
       socketPath' = Api.File socketPath
 
-  waitDRepsNumber configFile' socketPath' execConfig sizeBefore
+  checkDRepsNumber sbe configFile' socketPath' execConfig sizeBefore
 
   -- Deregister first DRep
   let dreprRetirementCertFile = gov </> "drep-keys" <> "drep1.retirementcert"
@@ -207,65 +195,5 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
 
   -- The important bit is that we pass (sizeBefore - 1) as the last argument,
   -- to witness that the number of dreps indeed decreased.
-  waitDRepsNumber configFile' socketPath' execConfig (sizeBefore - 1)
+  checkDRepsNumber sbe configFile' socketPath' execConfig (sizeBefore - 1)
   H.success
-
--- | @waitDRepsNumber config socket execConfig n@
--- wait for the number of DReps being @n@ for two epochs. If
--- this number is not attained before two epochs, the test is failed.
-waitDRepsNumber ::
-  (HasCallStack, MonadIO m, MonadCatch m, MonadTest m)
-  => NodeConfigFile 'In
-  -> SocketPath
-  -> H.ExecConfig
-  -> Int
-  -> m ()
-waitDRepsNumber configurationFile socketPath execConfig expectedDRepsNb = do
-  QueryTipLocalStateOutput{mEpoch} <- P.execCliStdoutToJson execConfig [ "query", "tip" ]
-  currentEpoch <- H.evalMaybe mEpoch
-  let terminationEpoch = succ . succ $ currentEpoch
-  void $ H.evalMaybeM $ waitDRepsNumber' configurationFile socketPath terminationEpoch expectedDRepsNb
-
--- | @waitDRepsNumber' config socket terminationEpoch n@
--- wait until @terminationEpoch@ for the number of DReps being @n@. If
--- this number is not attained before @terminationEpoch@, the test is failed.
--- So if you call this function, you are expecting the number of DReps to already
--- be @n@, or to be @n@ before @terminationEpoch@
-waitDRepsNumber' ::
-  (HasCallStack, MonadIO m, MonadTest m)
-  => NodeConfigFile In
-  -> SocketPath
-  -> EpochNo -- ^ The termination epoch: the constitution proposal must be found *before* this epoch
-  -> Int -- ^ The expected numbers of DReps. If this number is not reached until the termination epoch, this function fails the test.
-  -> m (Maybe [L.DRepState StandardCrypto]) -- ^ The DReps when the expected number of DReps was attained.
-waitDRepsNumber' nodeConfigFile socketPath maxEpoch expectedDRepsNb = do
-  result <- runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
-      $ \(AnyNewEpochState actualEra newEpochState) -> do
-        case testEquality sbe actualEra of
-          Just Refl -> do
-            let dreps = Map.elems $ shelleyBasedEraConstraints sbe newEpochState
-                      ^. L.nesEsL
-                      . L.esLStateL
-                      . L.lsCertStateL
-                      . L.certVStateL
-                      . L.vsDRepsL
-            if length dreps == expectedDRepsNb then do
-                put $ Just dreps
-                pure ConditionMet
-            else
-                pure ConditionNotMet
-          Nothing -> do
-            error $ "Eras mismatch! expected: " <> show sbe <> ", actual: " <> show actualEra
-  case result of
-    Left (FoldBlocksApplyBlockError (TerminationEpochReached epochNo)) -> do
-      H.note_ $ unlines
-                  [ "waitDRepsNumber: drep number did not become " <> show expectedDRepsNb <> " before termination epoch: " <> show epochNo
-                  , "This is likely an error of this test." ]
-      H.failure
-    Left err -> do
-      H.note_ $ unlines
-                  [ "waitDRepsNumber: could not reach termination epoch: " <> docToString (prettyError err)
-                  , "This is probably an error unrelated to this test." ]
-      H.failure
-    Right (_, val) ->
-      return val

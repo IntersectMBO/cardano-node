@@ -175,6 +175,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.Conway.Plutus
                         Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
                         Cardano.Testnet.Test.Cli.KesPeriodInfo
+                        Cardano.Testnet.Test.Cli.Queries
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
                         Cardano.Testnet.Test.FoldBlocks
                         Cardano.Testnet.Test.Misc
@@ -206,7 +207,6 @@ test-suite cardano-testnet-test
                       , cardano-testnet
                       , containers
                       , directory
-                      , exceptions
                       , filepath
                       , hedgehog
                       , hedgehog-extras
@@ -220,6 +220,7 @@ test-suite cardano-testnet-test
                       , text
                       , time
                       , transformers
+                      , vector
 
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
 
