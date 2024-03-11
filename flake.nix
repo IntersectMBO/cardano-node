@@ -361,6 +361,14 @@
               nonRequiredPaths = map (r: p: builtins.match r p != null) nonRequiredPaths;
             } // ciJobs;
 
+      mkExtraExes = pkgs:
+        let
+          project = pkgs.cardanoNodeProject;
+        in
+          (collectExes project) // {
+            inherit (pkgs) cabalProjectRegenerate checkCabalProject;
+          } // flattenTree (pkgs.scripts);
+
     in
       lib.recursiveUpdate
         (eachSystem supportedSystems (system:
@@ -385,10 +393,7 @@
                 crossPlatforms = p: [p.mingwW64 p.musl64];
               });
 
-            extraExes =
-              (collectExes project) // {
-                inherit (pkgs) cabalProjectRegenerate checkCabalProject;
-              } // flattenTree (pkgs.scripts);
+            extraExes = mkExtraExes pkgs;
 
             extraApps =
               lib.mapAttrs
@@ -423,12 +428,14 @@
               };
 
             extraPackages =
-              extraExes // mkPackages pkgs // prefixNamesWith "checks/" (self.checks.${system});
+              extraExes //
+              mkPackages pkgs //
+              prefixNamesWith "checks/" (self.checks.${system});
 
             ciJobs = mkCiJobs pkgs;
 
           in {
-            inherit environments project workbench;
+            inherit ciJobs environments project workbench;
 
             apps = flake.apps // extraApps // {
               # Run by `nix run .`
@@ -439,7 +446,24 @@
 
             devShells = flake.devShells // extraDevShells;
 
-            hydraJobs = ciJobs;
+            hydraJobs =
+              let
+                mkVariantJobs = variant: project:
+                  let
+                    pkgs' = pkgs.extend (prev: final: {
+                      cardanoNodeProject = project;
+                    });
+                  in
+                    mkPackages pkgs' // mkExtraExes pkgs' // collectExes project;
+              in
+                flake.hydraJobs //
+                extraExes //
+                mkPackages pkgs //
+                lib.mapAttrs mkVariantJobs project.projectVariants // {
+                  cardano-deployment = pkgs.cardanoLib.mkConfigHtml {
+                    inherit (pkgs.cardanoLib.environments) mainnet preview preprod;
+                  };
+                };
 
             legacyPackages = pkgs // {
               # allows access to hydraJobs without specifying <arch>:
