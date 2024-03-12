@@ -21,21 +21,21 @@ usage_nomad() {
                      Gets Cardano World's AWS S3 crdentials from Vault in JSON
                      (WARNING: shows secrets!!!).
 
-    $(helpcmd perf-clients ready)
+    $(helpcmd clients ready)
                      Creates a JSON array with "id", "name", "datacenter" and
-                     "ip" of all SRE's perf Nomad client nodes available
-                     (status=ready).
+                     "ip" of all SRE's Nomad client nodes available
+                     (status=ready) for the "class" of the current profile.
                      Needed envars (NOMAD_TOKEN, NOMAD_ADDR or NOMAD_NAMESPACE)
                      must be provided by the user.
 
-    $(helpcmd perf-clients machines)
+    $(helpcmd clients machines)
                      Creates a JSON array with all SRE's perf Nomad client nodes
                      but adds machine info for fingerprinting, to be used to
                      ensure cloud runs are reproducible.
                      Needed envars (NOMAD_TOKEN, NOMAD_ADDR or NOMAD_NAMESPACE)
                      must be provided by the user.
 
-    $(helpcmd perf-clients ssh \(all\|producers\|NAME))
+    $(helpcmd clients ssh \(all\|producers\|NAME))
                      SSH SRE's perf Nomad client nodes.
                      Needed envars (NOMAD_TOKEN, NOMAD_ADDR or NOMAD_NAMESPACE)
                      must be provided by the user.
@@ -415,20 +415,21 @@ EOL
       esac
     ;;
 ################################################################################
-### perf-clients ) #############################################################
+### clients ) ##################################################################
 ################################################################################
-    perf-clients )
+    clients )
       local usage="USAGE: wb nomad ${op} ready|machines|ssh"
       local subop=${1:?$usage}; shift
       case "${subop}" in
-####### perf-clients -> ready )#################################################
+###### clients -> ready )#######################################################
       ready )
-        local usage="USAGE: wb nomad perf-clients ${subop}"
+        local usage="USAGE: wb nomad clients ${subop}"
         # Fetch the status of "perf" nodes that are "ready".
         # If a node is removed status is "down" and will still show its details.
-        # Not using cardano specific filters anymore (-filter 'NodeClass=="perf"').
+        local nomad_class
+        nomad_class="$(jq -r .cluster.nomad.class "${WB_SHELL_PROFILE_DATA}"/profile.json)"
         local perf_nodes
-        perf_nodes="$(nomad node status -filter 'Status=="ready"' -json)"
+        perf_nodes="$(nomad node status -filter 'Status=="ready"' -filter "NodeClass==\"${nomad_class}\"" -json)"
         # Create the base JSON string but without the "attributes" because those
         # are only available when fetching the status of individual nodes.
         local nodes_json
@@ -439,6 +440,7 @@ EOL
               "map( {                                   \
                   \"id\":         .ID                   \
                 , \"name\":       .Name                 \
+                , \"class\":      .NodeClass            \
                 , \"datacenter\": .Datacenter           \
                 , \"ip\":         .Address              \
               } )"                                      \
@@ -446,12 +448,12 @@ EOL
         # Output the JSON string ordered by Nomad Client "id"
         echo "${nodes_json}" | jq '. | sort_by(.id)'
       ;;
-####### perf-clients -> machines )##############################################
+##### clients -> machines )#####################################################
       machines )
-        local usage="USAGE: wb nomad perf-clients ${subop}"
+        local usage="USAGE: wb nomad clients ${subop}"
         # Fetch the status of "perf" nodes that are "ready".
         local nodes_json
-        nodes_json="$(wb nomad perf-clients ready)"
+        nodes_json="$(wb nomad clients ready)"
         # For each node
         local nodes_ids
         nodes_ids="$( \
@@ -533,16 +535,16 @@ EOL
         # Output the JSON string ordered by Nomad Client "id"
         echo "${nodes_json}" | jq '. | sort_by(.id)'
       ;;
-####### perf-clients -> ssh )###################################################
+##### clients -> ssh )##########################################################
       ssh )
         local usage="USAGE: wb nomad nodes ${subop} all|producers|explorer"
         local key=${1:?$usage}; shift
         case "${key}" in
-####### perf-clients -> ssh -> all )############################################
+######### clients -> ssh -> all )###############################################
           all )
             # Fetch the status of "perf" nodes that are "ready".
             local nodes_json
-            nodes_json="$(wb nomad perf-clients ready)"
+            nodes_json="$(wb nomad clients ready)"
             # For each node
             local nodes_names
             nodes_names="$( \
@@ -553,7 +555,7 @@ EOL
             local jobs_array=()
             for node_name in ${nodes_names[*]}
             do
-              wb nomad perf-clients ssh "${node_name}" "$@" &
+              wb nomad clients ssh "${node_name}" "$@" &
               jobs_array+=("$!")
             done
             if test -n "${jobs_array:-}" # If = () "unbound variable" error
@@ -564,11 +566,11 @@ EOL
               fi
             fi
           ;;
-####### perf-clients -> ssh -> producers )######################################
+######### clients -> ssh -> producers )#########################################
           producers )
             # Fetch the status of "perf" nodes that are "ready".
             local nodes_json
-            nodes_json="$(wb nomad perf-clients ready)"
+            nodes_json="$(wb nomad clients ready)"
             # For each node
             local nodes_names
             nodes_names="$( \
@@ -579,7 +581,7 @@ EOL
             local jobs_array=()
             for node_name in ${nodes_names[*]}
             do
-              wb nomad perf-clients ssh "${node_name}" "$@" &
+              wb nomad clients ssh "${node_name}" "$@" &
               jobs_array+=("$!")
             done
             if test -n "${jobs_array:-}" # If = () "unbound variable" error
@@ -590,7 +592,7 @@ EOL
               fi
             fi
           ;;
-####### perf-clients -> ssh -> * )##############################################
+######### clients -> ssh -> * )#################################################
           * )
             ssh                                       \
               -n -t -t                                \
@@ -599,21 +601,21 @@ EOL
               -o VisualHostKey=no                     \
               root@"${key}".perf.aws.iohkdev.io "$@"
           ;;
-####### perf-clients -> ssh )###################################################
+####### clients -> ssh )########################################################
         esac
       ;;
-####### perf-clients -> storage-kb-available )##################################
+##### clients -> storage-kb-available )#########################################
       storage-kb-available )
-        local usage="USAGE: wb nomad perf-clients ${subop} NAME"
+        local usage="USAGE: wb nomad clients ${subop} NAME"
         local node_name=${1:?$usage}; shift
-          wb nomad perf-clients ssh "${node_name}" df \
+          wb nomad clients ssh "${node_name}" df \
         | grep /dev/disk/by-label/nixos | tr -s " " | cut -d" " -f4
       ;;
-####### perf-clients -> * )#####################################################
+####### clients -> * )##########################################################
         * )
           usage_nomad
         ;;
-      esac # perf-clients
+      esac # clients
     ;;
 ################################################################################
 ### agents ) ###################################################################
