@@ -169,22 +169,93 @@ def all_profile_variants:
       }
     } as $chainsync_cluster
   |
-    # P&T exclusive Nomad cluster Nodes
-    { composition:
-      { locations:                      ["eu-central-1", "us-east-1", "ap-southeast-2"]
-      , topology:                       "torus"
-      , with_explorer:                  true
+  ##
+  ### Definition vocabulary:  cluster
+  ##
+    # P&T exclusive Nomad cluster Nodes: Compute intensive (16 GB, no-SSD)
+    { cluster:
+      { nomad:
+        { namespace: "perf"
+        , class: "perf"
+        , resources:
+          {
+            # Producer nodes use this specs, make sure they are available!
+            # WARNING: Don't use more than roughly 15400, for example 15432,
+            # because some clients show a couple bytes less available.
+            producer: {cores:  8, memory: 15400, memory_max:  16000}
+            # The explorer node uses this specs, make sure they are available!
+          , explorer: {cores: 16, memory: 32000, memory_max:  64000}
+          }
+        , fetch_logs_ssh: true
+        }
+      , aws:
+        { instance_type:
+          { producer: "c5.2xlarge"
+          , explorer: "m5.4xlarge"
+          }
+        }
+      # We are requiring 10.5GB on the explorer node and 9GB on the others.
+      , minimun_storage:
+        { 
+          # 9 GB for the explorer node, that includes the tx-generator.
+          # Plus giving 3 GB for the Nix Store and 1.5GB of margin.
+          producer: 12582912 # 12×1024×1024
+          # 7.5 GB for the nodes without the tx-generator.
+          # Plus giving 3 GB for the Nix Store and 1.5GB of margin.
+        , explorer: 14155776 # 13.5×1024×1024
+        }
+      , keep_running: true
       }
-    } as $nomad_perf_torus
+    } as $nomad_perf
   |
-    # nomad_perf using cardano-ops "dense" topology
-    # Can only be used with the 52 + explorer value profile!
-    { composition:
-      { locations:                      ["eu-central-1", "us-east-1", "ap-southeast-2"]
-      , topology:                       "torus-dense"
-      , with_explorer:                  true
+    # P&T exclusive Nomad cluster Nodes: Disk intensive (fast SSDs)
+    { cluster:
+      { nomad:
+        { namespace: "perf-ssd"
+        , class: "perf-ssd"
+        , resources:
+          { producer: {cores: 32, memory: 64000, memory_max: 64000}
+          , explorer: {cores: 32, memory: 64000, memory_max: 64000}
+          }
+        , fetch_logs_ssh: true
+        }
+      , aws:
+        { instance_type:
+          { producer: "c5.9xlarge"
+          , explorer: null
+          }
+        }
+      , minimun_storage: null
+      , keep_running: true
       }
-    } as $nomad_perf_dense
+    } as $nomad_perfssd
+  |
+    ($nomad_perf *
+      { composition:
+        { locations:                      ["eu-central-1", "us-east-1", "ap-southeast-2"]
+        , topology:                       "torus"
+        , with_explorer:                  true
+        }
+      }
+    ) as $nomad_perf_torus
+  |
+    ($nomad_perf *
+      { composition:
+        { locations:                      ["eu-central-1", "us-east-1", "ap-southeast-2"]
+        , topology:                       "torus-dense"
+        , with_explorer:                  true
+        }
+      }
+    ) as $nomad_perf_dense
+  |
+    ($nomad_perfssd *
+      { composition:
+        { locations:                      ["eu-central-1"]
+        , topology:                       "uni-circle"
+        , with_explorer:                  false
+        }
+      }
+    ) as $nomad_perfssd_unicircle
   |
   ##
   ### Definition vocabulary:  filtering
@@ -556,10 +627,6 @@ def all_profile_variants:
       , desc: "AWS c5-2xlarge cluster dataset, 9 epochs"
     }) as $nomad_perf_plutus_base
   |
-   ($scenario_fixed_loaded * $compose_fiftytwo * $dataset_empty * $for_1blk * $no_filtering *
-    { desc: "AWS c5-2xlarge cluster, stop as soon as we've seen a single block"
-    }) as $nomad_perf_fast_base
-  |
    ($scenario_latency * $compose_fiftytwo * $dataset_empty * $no_filtering *
     { desc: "AWS c5-2xlarge cluster, stop when all latency services stop"
     }) as $nomad_perf_latency_base
@@ -866,9 +933,6 @@ def all_profile_variants:
   , $nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "plutus-nomadperf"
     }
-  , $nomad_perf_fast_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
-    { name: "fast-nomadperf"
-    }
   , $nomad_perf_latency_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "latency-nomadperf"
     }
@@ -883,8 +947,16 @@ def all_profile_variants:
   , $nomad_perf_plutus_base * $nomad_perf_dense * $costmodel_v8_preview *
     { name: "plutus-nomadperf-nop2p"
     }
-  , $nomad_perf_fast_base * $nomad_perf_dense * $costmodel_v8_preview *
+
+## P&T Nomad cluster: 52 nodes, 3 regions, fast, P2P flavour
+  , $fast_base * $compose_fiftytwo * $nomad_perf_dense * $costmodel_v8_preview * $p2p *
+    { name: "fast-nomadperf"
+    }
+  , $fast_base * $compose_fiftytwo * $nomad_perf_dense * $costmodel_v8_preview *
     { name: "fast-nomadperf-nop2p"
+    }
+  , $fast_base * $solo * $nomad_perfssd_unicircle * $costmodel_v8_preview * $p2p *
+    { name: "fast-nomadperfssd"
     }
 
 ## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)
