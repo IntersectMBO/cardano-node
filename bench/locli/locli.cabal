@@ -101,7 +101,7 @@ library
                       , attoparsec
                       , attoparsec-iso8601
                       , bytestring
-                      , cardano-git-rev
+                      , cardano-git-rev >= 0.2
                       , cardano-ledger-core
                       , cardano-prelude
                       , cardano-slotting

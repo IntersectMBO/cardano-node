@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Cardano.Benchmarking.Version
 where
 
@@ -26,7 +28,7 @@ txGeneratorVersion = Version
   , _arch    = Text.pack arch
   , _compilerName    = Text.pack compilerName
   , _compilerVersion = renderVersion compilerVersion
-  , _gitRev = gitRev
+  , _gitRev = $(gitRev)
   }
   where
     renderVersion = Text.pack . showVersion
