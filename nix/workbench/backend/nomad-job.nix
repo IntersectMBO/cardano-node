@@ -190,7 +190,7 @@ let
     # namespace can be specified either with the flag -namespace or read from
     # the NOMAD_NAMESPACE environment variable."
     # https://developer.hashicorp.com/nomad/tutorials/manage-clusters/namespaces
-    namespace = null;
+    namespace = "default";
 
     # The region in which to execute the job.
     region = "global"; # SRE: They are actually using global.
