@@ -54,6 +54,12 @@ def all_profile_variants:
     } as $dataset_small
   |
     { genesis:
+      { utxo:                               (24 * $M)
+      , delegators:                         (1.2 * $M)
+      }
+    } as $dataset_24m
+  |
+    { genesis:
       { utxo:                               (30 * $M)
       , delegators:                         0
       , shelley:
@@ -796,6 +802,11 @@ def all_profile_variants:
     }
   , $fast_base * $old_tracing *
     { name: "fast-oldtracing"
+    }
+
+  ## Fast variants: single node with large, varying dataset sizes
+  , $fast_base * $solo * $dataset_24m *
+    { name: "faststartup-24M"
     }
 
   ## CI variants: test duration, 3 blocks
