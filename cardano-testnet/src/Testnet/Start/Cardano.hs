@@ -262,13 +262,12 @@ cardanoTestnet
       (tmpAbsPath </> "byron.genesis.spec.json")
       (tmpAbsPath </> "byron-gen-command")
 
-    -- Write Alonzo genesis file
-    alonzoGenesisJsonFile <- H.noteShow $ tmpAbsPath </> "genesis.alonzo.spec.json"
-    H.evalIO $ LBS.writeFile alonzoGenesisJsonFile $ Aeson.encode alonzoGenesis
-
-    -- Write Conway genesis file
-    conwayGenesisJsonFile <- H.noteShow $ tmpAbsPath </> "genesis.conway.spec.json"
-    H.evalIO $ LBS.writeFile conwayGenesisJsonFile $ Aeson.encode conwayGenesis
+    -- Write specification files. Those are the same as the genesis files
+    -- used for launching the nodes, but omitting the content regarding stake, utxos, etc.
+    -- They are used by benchmarking: as templates to CLI commands,
+    -- as evidence of what was run, and as cache keys.
+    writeGenesisSpecFile "alonzo" alonzoGenesis
+    writeGenesisSpecFile "conway" conwayGenesis
 
     configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
 
@@ -423,5 +422,10 @@ cardanoTestnet
       H.assertExpectedSposInLedgerState stakePoolsFp testnetOptions execConfig
 
       pure runtime
+  where
+    writeGenesisSpecFile :: (MonadTest m, MonadIO m, HasCallStack) => ToJSON a => FilePath -> a -> m ()
+    writeGenesisSpecFile eraName toWrite = GHC.withFrozenCallStack $ do
+      genesisJsonFile <- H.noteShow $ tmpAbsPath </> "genesis." <> eraName <> ".spec.json"
+      H.evalIO $ LBS.writeFile genesisJsonFile $ Aeson.encode toWrite
 
 
