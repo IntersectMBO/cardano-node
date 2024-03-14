@@ -324,8 +324,9 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
       (handler logFile)
   H.note_ $ "Started logging epoch states to to: " <> logFile
   where
-    handler :: FilePath -> AnyNewEpochState -> StateT () IO LedgerStateCondition
-    handler outputFp anyNewEpochState = handleException . liftIO $ do
+    handler :: FilePath -> AnyNewEpochState ->
+         SlotNo -> BlockNo -> StateT () IO LedgerStateCondition
+    handler outputFp anyNewEpochState _ _ = handleException . liftIO $ do
       appendFile outputFp $ "#### BLOCK ####" <> "\n"
       appendFile outputFp $ show anyNewEpochState <> "\n"
       pure ConditionNotMet

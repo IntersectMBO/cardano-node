@@ -118,4 +118,4 @@ txOutValue (TxOut _ v _ _) = v
 txOutValueLovelace ::TxOutValue era -> L.Coin
 txOutValueLovelace = \case
   TxOutValueShelleyBased sbe v -> v ^. A.adaAssetL sbe
-  TxOutValueByron (Lovelace v) -> L.Coin v
+  TxOutValueByron (L.Coin v) -> L.Coin v

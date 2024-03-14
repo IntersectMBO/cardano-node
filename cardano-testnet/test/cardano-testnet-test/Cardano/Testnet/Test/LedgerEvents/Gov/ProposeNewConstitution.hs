@@ -319,6 +319,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   void $ evalEither eConstitutionAdopted
 
+
 foldBlocksCheckProposalWasSubmitted
   :: TxId -- TxId of submitted tx
   -> Env
@@ -364,8 +365,9 @@ foldBlocksCheckConstitutionWasRatified
   :: String -- submitted constitution hash
   -> String -- submitted guard rail script hash
   -> AnyNewEpochState
+  -> SlotNo -> BlockNo
   -> StateT s IO LedgerStateCondition -- ^ Accumulator at block i and fold status
-foldBlocksCheckConstitutionWasRatified submittedConstitutionHash submittedGuardRailScriptHash anyNewEpochState =
+foldBlocksCheckConstitutionWasRatified submittedConstitutionHash submittedGuardRailScriptHash anyNewEpochState _ _ =
   if filterRatificationState submittedConstitutionHash submittedGuardRailScriptHash anyNewEpochState
   then return ConditionMet
   else return ConditionNotMet

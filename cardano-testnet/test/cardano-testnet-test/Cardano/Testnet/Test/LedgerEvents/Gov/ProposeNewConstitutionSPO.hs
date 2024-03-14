@@ -240,7 +240,7 @@ getConstitutionProposal
   -> m (Maybe (L.GovActionId StandardCrypto))
 getConstitutionProposal nodeConfigFile socketPath maxEpoch = do
   result <- runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
-      $ \(AnyNewEpochState actualEra newEpochState) ->
+      $ \(AnyNewEpochState actualEra newEpochState) _ _ ->
         caseShelleyToBabbageOrConwayEraOnwards
           (error $ "Expected Conway era onwards, got state in " <> docToString (pretty actualEra))
           (\cEra -> conwayEraOnwardsConstraints cEra $ do

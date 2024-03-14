@@ -71,7 +71,7 @@ waitUntilEpoch
 waitUntilEpoch nodeConfigFile socketPath desiredEpoch = withFrozenCallStack $ do
   result <- runExceptT $
     foldEpochState
-      nodeConfigFile socketPath QuickValidation desiredEpoch () (const $ pure ConditionNotMet)
+      nodeConfigFile socketPath QuickValidation desiredEpoch () (\_ _ _ -> pure ConditionNotMet)
   case result of
     Left (FoldBlocksApplyBlockError (TerminationEpochReached epochNo)) ->
       pure epochNo
@@ -133,7 +133,7 @@ getEpochStateView
 getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
   epochStateView <- liftIO $ newIORef Nothing
   runInBackground . runExceptT . foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) Nothing
-    $ \epochState -> do
+    $ \epochState _ _ -> do
         liftIO $ writeIORef epochStateView (Just epochState)
         pure ConditionNotMet
   pure . EpochStateView $ epochStateView
@@ -257,7 +257,7 @@ checkDRepsNumber' ::
   -> m (Maybe [L.DRepState StandardCrypto]) -- ^ The DReps when the expected number of DReps was attained.
 checkDRepsNumber' sbe nodeConfigFile socketPath maxEpoch expectedDRepsNb = do
   result <- runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
-      $ \(AnyNewEpochState actualEra newEpochState) -> do
+      $ \(AnyNewEpochState actualEra newEpochState) _ _ -> do
         case testEquality sbe actualEra of
           Just Refl -> do
             let dreps = Map.elems $ shelleyBasedEraConstraints sbe newEpochState
