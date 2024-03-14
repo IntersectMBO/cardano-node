@@ -17,6 +17,8 @@ module Testnet.Start.Cardano
 
   , cardanoTestnet
   , cardanoTestnetDefault
+  , getDefaultAlonzoGenesis
+  , getDefaultShelleyGenesis
   , requestAvailablePortNumbers
   ) where
 
@@ -99,11 +101,27 @@ cardanoTestnetDefault :: ()
   -> H.Integration TestnetRuntime
 cardanoTestnetDefault opts conf = do
   alonzoGenesis <- H.evalEither $ first prettyError Defaults.defaultAlonzoGenesis
+  (startTime, shelleyGenesis) <- getDefaultShelleyGenesis opts
+  cardanoTestnet opts conf startTime shelleyGenesis alonzoGenesis Defaults.defaultConwayGenesis
+
+-- | An 'AlonzoGenesis' value that is fit to pass to 'cardanoTestnet'
+getDefaultAlonzoGenesis :: ()
+  => HasCallStack
+  => MonadTest m
+  => m AlonzoGenesis
+getDefaultAlonzoGenesis = H.evalEither $ first prettyError Defaults.defaultAlonzoGenesis
+
+-- | A start time and 'ShelleyGenesis' value that are fit to pass to 'cardanoTestnet'
+getDefaultShelleyGenesis :: ()
+  => HasCallStack
+  => MonadIO m
+  => MonadTest m
+  => CardanoTestnetOptions
+  -> m (UTCTime, ShelleyGenesis StandardCrypto)
+getDefaultShelleyGenesis opts = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
-  cardanoTestnet
-    opts conf startTime
-    (Defaults.defaultShelleyGenesis startTime opts) alonzoGenesis Defaults.defaultConwayGenesis
+  return (startTime, Defaults.defaultShelleyGenesis startTime opts)
 
 -- | Hardcoded testnet IP address
 testnetIpv4Address :: Text
@@ -193,9 +211,9 @@ cardanoTestnet :: ()
   => CardanoTestnetOptions -- ^ The options to use. Must be consistent with the genesis files.
   -> Conf
   -> UTCTime -- ^ The starting time. Must be the same as the one in the shelley genesis.
-  -> ShelleyGenesis StandardCrypto -- ^ The shelley genesis to use, for example 'Defaults.defaultShelleyGenesis'.
+  -> ShelleyGenesis StandardCrypto -- ^ The shelley genesis to use, for example 'getDefaultShelleyGenesis' from this module.
                                    --   Some fields are overridden by the accompanying 'CardanoTestnetOptions'.
-  -> AlonzoGenesis -- ^ The alonzo genesis to use, for example 'Defaults.defaultAlonzoGenesis'.
+  -> AlonzoGenesis -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
   -> ConwayGenesis StandardCrypto -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
   -> H.Integration TestnetRuntime
 cardanoTestnet
