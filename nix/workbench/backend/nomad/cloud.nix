@@ -23,27 +23,6 @@ let
     ]
   ;
 
-  validateNodeSpecs = { nodeSpecsValue }:
-    let
-      # There's a region mismatch between the workbench (specifically Haskell
-      # code in cardano-topology) and Cardano World's Nomad cluster that both
-      # use "us-east-2" while our dedicated Nomad cluster is using "us-east-1",
-      # what SRE deployed.
-      # - Cardano World cluster: "eu-central-1", "us-east-2"
-      # - Workbench (Nix level): "eu-central-1", "us-east-2", and "ap-southeast-2"
-      # - Dedicated P&T cluster: "eu-central-1", "us-east-1", and "ap-southeast-2"
-      datacenters = [ "eu-central-1" "us-east-1" "us-east-2" "ap-southeast-2" ];
-      regions = lib.attrsets.mapAttrsToList
-        (name: value: value.region)
-        nodeSpecsValue
-      ;
-    in if builtins.all (r: builtins.elem r datacenters) regions
-       then true
-       else builtins.throw (
-         "The only compatible regions for Nomad cloud are \"${toString datacenters}\" but found \"${toString regions}\""
-       )
-  ;
-
   # Nomad-generic "container-specs.json"
   # Build a Nomad Job specification for this Nomad "sub-backend".
   materialise-profile =
@@ -75,7 +54,7 @@ in
   inherit name;
 
   inherit extraShellPkgs;
-  inherit validateNodeSpecs materialise-profile;
+  inherit materialise-profile;
   inherit overlay service-modules;
   inherit stateDir basePort;
 
