@@ -30,7 +30,6 @@ import           Control.Monad.Catch (MonadCatch)
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as L
-import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
 import           Data.String
@@ -153,17 +152,13 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
   forM_ files $ \file -> do
     H.note file
 
-  -- TODO: This conway and alonzo genesis creation should be ultimately moved to create-testnet-data
-  alonzoConwayTestGenesisJsonTargetFile <- H.noteShow (genesisShelleyDir </> "genesis.alonzo.json")
-  gen <- H.evalEither $ first prettyError defaultAlonzoGenesis
-  H.evalIO $ LBS.writeFile alonzoConwayTestGenesisJsonTargetFile $ Aeson.encode gen
-
-  conwayConwayTestGenesisJsonTargetFile <- H.noteShow (genesisShelleyDir </> "genesis.conway.json")
-  H.evalIO $ LBS.writeFile conwayConwayTestGenesisJsonTargetFile $ Aeson.encode defaultConwayGenesis
+  H.renameFile (tempAbsPath' </> "alonzo-genesis.json") (genesisShelleyDir </> "genesis.alonzo.json")
+  
+  H.renameFile (tempAbsPath' </> "conway-genesis.json") (genesisShelleyDir </> "genesis.conway.json")
 
   H.renameFile (tempAbsPath' </> "byron-gen-command" </> "genesis.json") (genesisByronDir </> "genesis.json")
-  -- TODO: create-testnet-data outputs the new shelley genesis to genesis.json
-  H.renameFile (tempAbsPath' </> "genesis.json") (genesisShelleyDir </> "genesis.shelley.json")
+  
+  H.renameFile (tempAbsPath' </> "shelley-genesis.json") (genesisShelleyDir </> "genesis.shelley.json")
 
   -- TODO: move this to create-testnet-data
   -- For some reason when setting "--total-supply 10E16" in create-testnet-data, we're getting negative
