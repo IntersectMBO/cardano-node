@@ -13,7 +13,6 @@ license:                Apache-2.0
 license-files:          LICENSE
                         NOTICE
 build-type:             Simple
-extra-source-files:     README.md
 data-files:             data/bench-torus-52.json
                         data/bench-torus-dense-52.json
                         data/ci-test-nomadcwqa.json

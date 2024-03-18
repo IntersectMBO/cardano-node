@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
@@ -6,15 +7,17 @@ module Cardano.Testnet.Test.FoldBlocks where
 
 import           Cardano.Api hiding (cardanoEra)
 import qualified Cardano.Api as Api
-import           Cardano.Api.Error (displayError)
+import           Cardano.Api.Error
 import qualified Cardano.Api.Shelley as Api
 
 import           Cardano.Testnet as TN
 
+import           Prelude
+
 import qualified Control.Concurrent as IO
 import           Control.Concurrent.Async (async, link)
 import           Control.Exception (Exception, throw)
-import           Control.Monad (forever)
+import           Control.Monad
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
@@ -22,9 +25,9 @@ import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
 
 import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as HE
-import qualified Hedgehog.Extras.Test as HE
-import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
+import qualified Hedgehog.Extras.Test as H
+
 
 newtype FoldBlocksException = FoldBlocksException Api.FoldBlocksError
 instance Exception FoldBlocksException
@@ -50,7 +53,7 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
 
   -- Get socketPath
   socketPathAbs <- do
-    socketPath' <- HE.sprocketArgumentName <$> HE.headM (nodeSprocket . poolRuntime <$>  poolNodes runtime)
+    socketPath' <- H.sprocketArgumentName <$> H.headM (poolSprockets runtime)
     H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
 
   -- Start foldBlocks in a separate thread
@@ -72,5 +75,6 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
   -- tests that `foldBlocks` receives ledger state; once that happens,
   -- handler is called, which then writes to the `lock` and allows the
   -- test to finish.
-  _ <- H.evalIO $ IO.readMVar lock
+  _ <- H.evalIO $ H.timeout 30_000_000 $ IO.readMVar lock
   H.assert True
+

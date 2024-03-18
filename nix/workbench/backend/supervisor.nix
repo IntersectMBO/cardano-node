@@ -26,20 +26,13 @@ let
       tx-generator
     ]);
 
-  validateNodeSpecs = { nodeSpecsValue }:
-    builtins.all (r: r == "loopback")
-      (lib.attrsets.mapAttrsToList
-        (name: value: value.region)
-        nodeSpecsValue
-      )
-  ;
-
   # Backend-specific Nix bits:
   materialise-profile =
     { profileData }:
       let supervisorConf = import ./supervisor-conf.nix
         { inherit pkgs lib stateDir;
           # Create a `supervisord.conf`
+          inherit profileData;
           nodeSpecs = profileData.node-specs.value;
           withGenerator = true;
           withTracer = profileData.value.node.tracer;
@@ -74,7 +67,7 @@ in
   name = "supervisor";
 
   inherit extraShellPkgs;
-  inherit validateNodeSpecs materialise-profile;
+  inherit materialise-profile;
   inherit overlay service-modules;
   inherit stateDir basePort;
 

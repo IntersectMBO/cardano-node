@@ -19,6 +19,7 @@ backend_nomadcloud() {
 
     # Overrided backend "methods"
 
+    # All sub-backends set these same jq envars.
     setenv-defaults )
       local usage="USAGE: wb backend $op BACKEND-DIR"
       local backend_dir=${1:?$usage}; shift
@@ -42,19 +43,27 @@ backend_nomadcloud() {
     ;;
 
     allocate-run )
-      allocate-run-nomadcloud               "$@"
-      # Does a pre allocation before calling the default/common allocation.
+      # Default allocation before calling the backend specific allocation.
       backend_nomad allocate-run            "$@"
+      allocate-run-nomadcloud               "$@"
     ;;
 
     # Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
     start-cluster )
+      local dir=${1:?$usage};
       backend_nomad start-cluster           "$@"
-      # If value/plutus profile on the dedicated P&T Nomad cluster on AWS extra
-      # checks to make sure the topology that was deployed is the correct one.
-      if jqtest '.composition.topology == "torus-dense"' "${dir}"/profile.json
+      # If value/plutus profile topology on the dedicated P&T Nomad cluster on
+      # AWS extra checks are run to make sure the topology that was deployed is
+      # the correct one.
+      # (For this the clients.json / NOMAD_CLIENTS_FILE file is needed)
+      if \
+            echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"               \
+         &&                                                                       \
+            jqtest '.composition.topology == "torus-dense"' "${dir}"/profile.json \
+         &&                                                                       \
+            jqtest '.composition.n_hosts  == 52'            "${dir}"/profile.json
       then
-        # Show a big warning but let the run continue!
+        # Shows a big warning but lets the run continue on mismatch!!!
         check-deployment "${dir}"
       fi
     ;;
@@ -71,16 +80,25 @@ backend_nomadcloud() {
       # unnecesary Nomad specific traffic (~99% happens waiting for node-0, the
       # first one it waits to stop inside a loop) and at the same time be less
       # sensitive to network failures.
-      backend_nomad wait-pools-stopped   60 "$@"
+      backend_nomad wait-pools-stopped     60 "$@"
+    ;;
+
+    wait-latencies-stopped )
+      # It passes the sleep time (in seconds) required argument.
+      # This time is different between local and cloud backends to avoid
+      # unnecesary Nomad specific traffic (~99% happens waiting for node-0, the
+      # first one it waits to stop inside a loop) and at the same time be less
+      # sensitive to network failures.
+      backend_nomad wait-latencies-stopped 60 "$@"
     ;;
 
     fetch-logs )
-      # Only if running on the dedicated P&T Nomad cluster on AWS we use SSH, if
-      # not `nomad exec`, because we need to have a dedicated port open for us.
-      if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
+      local dir=${1:?$usage};
+      # If not `nomad exec`, because we need to have a dedicated port open.
+      if jqtest '.cluster.nomad.fetch_logs_ssh' "${dir}"/profile.json
       then
         # It "overrides" completely `backend_nomad`'s `fetch-logs`.
-        fetch-logs-nomadcloud               "$@"
+        fetch-logs-ssh                      "$@"
       else
         # Generic backend sub-commands, shared code between Nomad sub-backends.
         backend_nomad fetch-logs            "$@"
@@ -90,14 +108,14 @@ backend_nomadcloud() {
     # All or clean up everything!
     # Called after `scenario.sh` without an exit trap!
     stop-cluster )
-      # Only when running on dedicated P&T Nomad cluster job is kept running!
-      if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
+      local dir=${1:?$usage};
+      if jqtest '.cluster.keep_running' "${dir}"/profile.json
       then
         # It "overrides" completely `backend_nomad`'s `stop-cluster`.
         local usage="USAGE: wb backend $op RUN-DIR"
         local dir=${1:?$usage}; shift
         local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-        msg "$(yellow "Cloud runs DO NOT automatically stop and purge Nomad jobs")"
+        msg "$(yellow "This profile DOES NOT automatically stops and purges Nomad jobs")"
         msg "$(yellow "To stop the Nomad job use:")"
         msg "$(yellow "wb nomad job stop ${dir}/nomad/nomad-job.json ${nomad_job_name}")"
         msg "$(yellow "(With the same NOMAD_ADDR, NOMAD_NAMESPACE and NOMAD_TOKEN used for start-cluster)")"
@@ -132,6 +150,10 @@ backend_nomadcloud() {
 
     start-healthchecks )
       backend_nomad start-healthchecks      "$@"
+    ;;
+
+    start-latencies )
+      backend_nomad start-latencies         "$@"
     ;;
 
     start-node )
@@ -170,92 +192,46 @@ backend_nomadcloud() {
 
 }
 
-# Sets jq envars ("profile_container_specs_file" ,"nomad_environment",
-# "nomad_task_driver" and "one_tracer_per_node") and checks Nomad envars
-# (NOMAD_ADDR, NOMAD_NAMESPACE, NOMAD_TOKEN).
+# Sets the envars not shared by all the other sub-backends.
 setenv-defaults-nomadcloud() {
   local backend_dir="${1}"
 
   local profile_container_specs_file
   profile_container_specs_file="${backend_dir}"/container-specs.json
 
-  # Nomad cloud profiles only available for Cardano World "qa" nodes
-  # ("-nomadcwqa") or the P&T dedicated Nomad cluster ("-nomadperf")
-  if                                                              \
-        ! echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadcwqa" \
-     &&                                                           \
-        ! echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
-  then
-    fatal "Unknown profile for Nomad Cloud: \"${WB_SHELL_PROFILE}\""
-  fi
-
   ##############
   # NOMAD_ADDR #
   ##############
+  local nomad_addr
   if test -z "${NOMAD_ADDR+set}"
   then
     # The variable is not set, it's not set to an empty value, just not set!
     ########################################################################
     msg $(blue "INFO: Nomad address \"NOMAD_ADDR\" envar is not set")
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadcwqa"
-    then
-      export NOMAD_ADDR="https://nomad.world.dev.cardano.org"
-    fi
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
-    then
-      export NOMAD_ADDR="http://10.200.0.1:4646"
-    fi
-    msg $(yellow "WARNING: Setting \"NOMAD_ADDR\" to the SRE provided address for \"Performance and Tracing\" (\"${NOMAD_ADDR}\")")
   else
     # The variable is set and maybe empty!
     ######################################
     msg $(blue "INFO: Nomad address \"NOMAD_ADDR\" envar is \"${NOMAD_ADDR}\"")
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadcwqa"
-    then
-      if test "${NOMAD_ADDR}" != "https://nomad.world.dev.cardano.org"
-      then
-        fatal "Nomad address \"NOMAD_ADDR\" envar is not \"https://nomad.world.dev.cardano.org\""
-      fi
-    fi
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
-    then
-      if test "${NOMAD_ADDR}" != "http://10.200.0.1:4646"
-      then
-        fatal "Nomad address \"NOMAD_ADDR\" envar is not \"http://10.200.0.1:4646\""
-      fi
-    fi
   fi
   ###################
   # NOMAD_NAMESPACE #
   ###################
+  local nomad_namespace
+  nomad_namespace="$(jq -r .cluster.nomad.namespace "${WB_SHELL_PROFILE_DATA}"/profile.json)"
   if test -z ${NOMAD_NAMESPACE+set}
   then
-    msg $(blue "INFO: Nomad namespace \"NOMAD_NAMESPACE\" envar is not set")
     # The variable is not set, it's not set to an empty value, just not set!
     ########################################################################
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadcwqa"
-    then
-      export NOMAD_NAMESPACE="perf"
-      msg $(yellow "WARNING: Setting \"NOMAD_NAMESPACE\" to the SRE provided namespace for \"Performance and Tracing\" (\"${NOMAD_NAMESPACE}\")")
-    fi
-    # We don't use namespaces for the P&T cluster. Nothing else to do!
+    msg $(blue "INFO: Nomad namespace \"NOMAD_NAMESPACE\" envar is not set")
+    export NOMAD_NAMESPACE="${nomad_namespace}"
+    msg $(yellow "WARNING: Setting \"NOMAD_NAMESPACE\" to the namespace provided in the profile (\"${NOMAD_NAMESPACE}\")")
   else
     # The variable is set and maybe empty!
     ######################################
     msg $(blue "INFO: Nomad namespace \"NOMAD_NAMESPACE\" envar is \"${NOMAD_NAMESPACE}\"")
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadcwqa"
+    if test "${NOMAD_NAMESPACE}" != "${nomad_namespace}"
     then
-      if test "${NOMAD_NAMESPACE}" != "perf"
-      then
-        fatal "Nomad namespace \"NOMAD_NAMESPACE\" envar is not \"perf\""
-      fi
-    fi
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
-    then
-      if test "${NOMAD_NAMESPACE}" != ""
-      then
-        fatal "Nomad namespace \"NOMAD_NAMESPACE\" envar is not empty"
-      fi
+      fatal "Nomad namespace \"NOMAD_NAMESPACE\" envar is not \"${nomad_namespace}\""
     fi
   fi
   ###############
@@ -263,37 +239,21 @@ setenv-defaults-nomadcloud() {
   ###############
   if test -z "${NOMAD_TOKEN+set}"
   then
-    msg $(blue "INFO: Nomad token \"NOMAD_TOKEN\" envar is not set")
     # The variable is not set, it's not set to an empty value, just not set!
     ########################################################################
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadcwqa"
-    then
-      export NOMAD_TOKEN="$(wb_nomad vault world nomad-token)"
-      msg $(yellow "WARNING: Fetching a \"NOMAD_TOKEN\" from SRE provided Vault for \"Performance and Tracing\"")
-    fi
+    msg $(blue "INFO: Nomad token \"NOMAD_TOKEN\" envar is not set")
     # We don't use tokens for the P&T cluster. Nothing else to do!
   else
     # The variable is set and maybe empty!
     ######################################
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadcwqa"
+    if test -n "${NOMAD_TOKEN}"
     then
-      if test -z "${NOMAD_TOKEN}"
-      then
-        msg $(red "FATAL: Nomad token \"NOMAD_TOKEN\" envar is empty")
-        fatal "If you need to fetch a NOMAD_TOKEN for world.dev.cardano.org don't set the envar"
-      else
-        msg $(blue "INFO: Using provided Nomad token \"NOMAD_TOKEN\" envar")
-      fi
-    fi
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
-    then
-      if test -n "${NOMAD_TOKEN}"
-      then
-        fatal "A non-empty Nomad token \"NOMAD_TOKEN\" envar was provided but none is needed"
-      fi
+      fatal "A non-empty Nomad token \"NOMAD_TOKEN\" envar was provided but none is needed"
     fi
   fi
-
+  #########
+  # AWS_* #
+  #########
   # Check all the AWS S3 envars needed for the HTTP PUT request
   # Using same names as the AWS CLI
   # https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html
@@ -319,13 +279,10 @@ allocate-run-nomadcloud() {
   # Create a nicely sorted and indented copy
   jq . "${profile_container_specs_file}" > "${dir}"/container-specs.json
 
-  # Create nomad folder and copy the Nomad job spec file to run.
-  mkdir -p "${dir}"/nomad
   # Select which version of the Nomad job spec file we are running and
   # create a nicely sorted and indented copy in "nomad/nomad-job.json".
-  # Only if running on the dedicated P&T Nomad Cluster we use SSH, if not
-  # `nomad exec`, because we need to have an exclusive port open for us
-  if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
+  # If not `nomad exec`, because we need to have a dedicated port open.
+  if jqtest '.cluster.nomad.fetch_logs_ssh' "${dir}"/profile.json
   then
     jq -r ".nomadJob.cloud.ssh"                  \
       "${dir}"/container-specs.json              \
@@ -336,16 +293,56 @@ allocate-run-nomadcloud() {
       "${dir}"/container-specs.json              \
     > "${dir}"/nomad/nomad-job.json
   fi
+
+  local nomad_job_name=$(basename "${dir}") # `^[a-zA-Z0-9-]{1,128}$)`.
+  local nomad_namespace
+  nomad_namespace="$(jq -r .cluster.nomad.namespace "${dir}"/profile.json)"
+  local nomad_class
+  nomad_class="$(jq -r .cluster.nomad.class "${dir}"/profile.json)"
+
   # The job file is "slightly" modified (jq) to suit the running environment.
-  if test -n "${NOMAD_NAMESPACE:-}"
+  ## Job Name
+  ###########
+  backend_nomad allocate-run-nomad-job-patch-name "${dir}" "${nomad_job_name}"
+  ## - Namespace
+  ##############
+  if test -n "${nomad_namespace}" || ! test "${nomad_namespace}" = "null"
   then
     # This sets only the global namespace, the job level namespace. Not groups!
-    backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" "${NOMAD_NAMESPACE}"
+    backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" "${nomad_namespace}"
   else
     # Empty the global namespace
     backend_nomad allocate-run-nomad-job-patch-namespace "${dir}"
   fi
-  # Will set the flake URIs from ".installable" in container-specs.json
+  ## - Class
+  ##########
+  if test -n "${nomad_class}" || ! test "${nomad_class}" = "null"
+  then
+    ### Adds it as a group level contraint to all groups.
+    local group_constraints_array
+    group_constraints_array="                   \
+      [                                         \
+        {                                       \
+          \"operator\":  \"=\"                  \
+        , \"attribute\": \"\${node.class}\"     \
+        , \"value\":     \"${nomad_class}\"     \
+        }                                       \
+      ]                                         \
+    "
+      jq \
+        --argjson group_constraints_array "${group_constraints_array}"         \
+        "                                                                      \
+            .[\"job\"][\"${nomad_job_name}\"][\"group\"]                       \
+          |=                                                                   \
+            with_entries(.value.constraint |= (. + \$group_constraints_array)) \
+        " \
+        "${dir}"/nomad/nomad-job.json \
+    | \
+      sponge "${dir}"/nomad/nomad-job.json
+  fi
+  ## "nix_installables"
+  #####################
+  ### Will set the flake URIs from ".installable" in container-specs.json
   backend_nomad allocate-run-nomad-job-patch-nix "${dir}"
 
   # The Nomad job spec will contain links ("nix_installables" stanza) to
@@ -391,480 +388,351 @@ allocate-run-nomadcloud() {
     fi
   fi
 
-  # Set the placement info and resources accordingly
-  local nomad_job_name
-  nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-  ##############################################################################
-  # Profile name dependent changes #############################################
-  ##############################################################################
-  # "*-nomadperf" profiles only run on the dedicated P&T Nomad Cluster on AWS.
-  # "*-nomadcwqa" (for example "ci-test-nomadcwqa" or "default-nomadcwqa") means
-  # that they run on Cardano World Nomad cluster's nodes that belong to the "qa"
-  # class, runs on these should be limited to short tests and must never use the
-  # "infra" class where HA jobs runs.
-  if test -z "${WB_SHELL_PROFILE:-}"
+  ############################################################################
+  # Memory/resources: ########################################################
+  ############################################################################
+  local producer_resources
+  producer_resources="$(jq -r .cluster.nomad.resources.producer "${dir}"/profile.json)"
+  # Set this for every non-explorer node
+    jq \
+      --argjson producer_resources "${producer_resources}" \
+      "                                                                        \
+          .[\"job\"][\"${nomad_job_name}\"][\"group\"]                         \
+        |=                                                                     \
+          with_entries(                                                        \
+            if ( .key != \"explorer\" )                                        \
+            then (                                                             \
+                .value.task                                                    \
+              |=                                                               \
+                with_entries( .value.resources = \$producer_resources )        \
+            ) else (                                                           \
+              .                                                                \
+            ) end                                                              \
+          )                                                                    \
+      " \
+      "${dir}"/nomad/nomad-job.json \
+  | \
+    sponge "${dir}"/nomad/nomad-job.json
+  if jqtest '.composition.with_explorer' "${dir}"/profile.json
   then
-    fatal "Envar \"WB_SHELL_PROFILE\" is empty!"
-  else
-    ############################################################################
-    # Unique placement: ########################################################
-    ############################################################################
-    ## "distinct_hosts": Instructs the scheduler to not co-locate any groups
-    ## on the same machine. When specified as a job constraint, it applies
-    ## to all groups in the job. When specified as a group constraint, the
-    ## effect is constrained to that group. This constraint can not be
-    ## specified at the task level. Note that the attribute parameter should
-    ## be omitted when using this constraint.
-    ## https://developer.hashicorp.com/nomad/docs/job-specification/constraint#distinct_hosts
-    local job_constraints_array
-    job_constraints_array='
-      [
-        {
-          "operator":  "distinct_hosts"
-        , "value":     "true"
-        }
-      ]
-    '
-    # Adds it as an extra job level contraint.
+    local explorer_resources
+    explorer_resources="$(jq -r .cluster.nomad.resources.explorer "${dir}"/profile.json)"
+    # TODO/MAYBE: When not "value" profile, let the explorer run in any node?
+    # resource wise. So more than one "ci-test", "ci-bench", "default" profile
+    # can be run at the same time. This will need some changes to Nomad
+    # services names (currently all "perf-node-#" and maybe "perf-tracer").
+    # WARNING: By always using/placing the explorer node in the only machine
+    # with more memory, we are sure runs do not overlap and no ports, etc are
+    # clashing and interfering with benchmarks results!
       jq \
-        --argjson job_constraints_array "${job_constraints_array}" \
-        "                                                \
-            .[\"job\"][\"${nomad_job_name}\"].constraint \
-          |=                                             \
-            (. + \$job_constraints_array)                \
+        --argjson resources "${explorer_resources}" \
+        "                                                                        \
+            .[\"job\"][\"${nomad_job_name}\"][\"group\"][\"explorer\"][\"task\"] \
+          |=                                                                     \
+            with_entries( .value.resources = \$resources )                       \
         " \
         "${dir}"/nomad/nomad-job.json \
     | \
       sponge "${dir}"/nomad/nomad-job.json
-    ############################################################################
-    # Node class: ##############################################################
-    ############################################################################
-    local group_constraints_array
-    # Nomad nodes that belong to the "perf" class are the default in the Job
-    # definition and it stays like that unless the profile name contains
-    # "-nomadcwqa", in this case we limit the usage of to "qa" class nodes (CI
-    # dedicated) that are available for short runs.
-    # We have also have to be careful that runs do not overlap. This is
-    # automatically enforced because service names and resources definitions
-    # currently won't allow that to happen.
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadcwqa"
-    then
-      # Using "qa" class distinct nodes. Only "short" test allowed here.
-      group_constraints_array='
-        [
-          {
-            "operator":  "="
-          , "attribute": "${node.class}"
-          , "value":     "qa"
-          }
-        ]
-      '
-    elif test -n "${NOMAD_NAMESPACE:-}"
-    then
-      # Use what was provided.
-      # If no namespace all group level constraints will be emptied!
-      group_constraints_array="                   \
-        [                                         \
-          {                                       \
-            \"operator\":  \"=\"                  \
-          , \"attribute\": \"\${node.class}\"     \
-          , \"value\":     \"${NOMAD_NAMESPACE}\" \
-          }                                       \
-        ]                                         \
-      "
-    fi
-    # Is there something to change related to group constraints ?
-    # Sets or deletes all groups level constraints.
-    if test -n "${group_constraints_array:-}"
-    then
-      # Adds it as a group level contraint to all groups replacing default ones.
-        jq \
-          --argjson group_constraints_array "${group_constraints_array}" \
-          "                                                               \
-              .[\"job\"][\"${nomad_job_name}\"][\"group\"]                \
-            |=                                                            \
-              with_entries(.value.constraint = \$group_constraints_array) \
-          " \
-          "${dir}"/nomad/nomad-job.json \
-      | \
-        sponge "${dir}"/nomad/nomad-job.json
-    else
-      # Else, empties all group level constraints, like previous namespaces.
-        jq \
-          "                                                \
-              .[\"job\"][\"${nomad_job_name}\"][\"group\"] \
-            |=                                             \
-              with_entries(.value.constraint = null)       \
-          " \
-          "${dir}"/nomad/nomad-job.json \
-      | \
-        sponge "${dir}"/nomad/nomad-job.json
-    fi
-    ############################################################################
-    # Memory/resources: ########################################################
-    ############################################################################
-    # Set the resources, only for perf exlusive cloud runs!
-    # When not "-nomadperf", when "-nomadcwqa", only "short" tests are allowed
-    # on whatever resources we are given.
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
-    then
-      # Producer nodes use this specs, make sure they are available!
-      # AWS:
-      ## c5.2xlarge: 8 vCPU and 16 Memory (GiB)
-      ## https://aws.amazon.com/ec2/instance-types/c5/
-      # Nomad:
-      ## - cpu.arch:            = amd64
-      ## - cpu.frequency:       = 3400
-      ## - cpu.modelname:       = Intel(R) Xeon(R) Platinum 8275CL CPU @ 3.00GHz
-      ## - cpu.numcores:        = 8
-      ## - cpu.reservablecores: = 8
-      ## - cpu.totalcompute:    = 27200
-      ## - memory.totalbytes    = 16300142592
-      ## Pesimistic: 1,798 MiB / 15,545 MiB Total
-      ## Optimistic: 1,396 MiB / 15,545 MiB Total
-      #
-      # WARNING: Don't use more than roughly 15400, for example 15432, because
-      # some clients show a couple bytes less available.
-      local producer_resources='{
-          "cores":      8
-        , "memory":     15400
-        , "memory_max": 32000
-      }'
-      # Set this for every non-explorer node
-        jq \
-          --argjson producer_resources "${producer_resources}" \
-          "                                                                 \
-              .[\"job\"][\"${nomad_job_name}\"][\"group\"]                  \
-            |=                                                              \
-              with_entries(                                                 \
-                if ( .key != \"explorer\" )                                 \
-                then (                                                      \
-                    .value.task                                             \
-                  |=                                                        \
-                    with_entries( .value.resources = \$producer_resources ) \
-                ) else (                                                    \
-                  .                                                         \
-                ) end                                                       \
-              )                                                             \
-          " \
-          "${dir}"/nomad/nomad-job.json \
-      | \
-        sponge "${dir}"/nomad/nomad-job.json
-      # The explorer node uses this specs, make sure they are available!
-      # AWS
-      ## m5.4xlarge: 8 vCPU and 16 Memory (GiB)
-      ## https://aws.amazon.com/ec2/instance-types/m5/
-      # Nomad:
-      ## - cpu.arch             = amd64
-      ## - cpu.frequency        = 3100
-      ## - cpu.modelname        = Intel(R) Xeon(R) Platinum 8175M CPU @ 2.50GHz
-      ## - cpu.numcores         = 16
-      ## - cpu.reservablecores  = 16
-      ## - cpu.totalcompute     = 54400
-      ## - memory.totalbytes    = 65900154880
-      # Node ID: 00db7a3a-a05b-7ae0-2b2a-b50b9db139a4
-      # client named "ip-10-24-30-90.eu-central-1.compute.internal"
-      local explorer_resources='{
-          "cores":      16
-        , "memory":     32000
-        , "memory_max": 64000
-      }'
-      # TODO/MAYBE: When not "value" profile, let the explorer run in any node?
-      # resource wise. So more than one "ci-test", "ci-bench", "default" profile
-      # can be run at the same time. This will need some changes to Nomad
-      # services names (currently all "perf-node-#" and maybe "perf-tracer").
-      # WARNING: By always using/placing the explorer node in the only machine
-      # with more memory, we are sure runs do not overlap and no ports, etc are
-      # clashing and interfering with benchmarks results!
-        jq \
-          --argjson resources "${explorer_resources}" \
-          "                                                                        \
-              .[\"job\"][\"${nomad_job_name}\"][\"group\"][\"explorer\"][\"task\"] \
-            |=                                                                     \
-              with_entries( .value.resources = \$resources )                       \
-          " \
-          "${dir}"/nomad/nomad-job.json \
-      | \
-        sponge "${dir}"/nomad/nomad-job.json
-    fi
-    ############################################################################
-    # SSH Server: ##############################################################
-    ############################################################################
-    if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
-    then
-      # Get or create the keys for the SSH servers and add them as templates.
-      local template_json_srv template_json_usr
-      template_json_srv="$( \
-        ssh-key-template \
-          "\"sshd.id_ed25519\""                                           \
-          "\"$(cat "$(wb nomad ssh key server)" | sed -z 's/\n/\\n/g')\"" \
-          "\"600\""                                                       \
-      )"
-      template_json_usr="$( \
-        ssh-key-template \
-          "\"nobody.id_ed25519.pub\""                 \
-          "\"$(cat "$(wb nomad ssh key user)".pub)\"" \
-          "\"644\""                                   \
-      )"
-      # For each Nomad Job Group
-      local groups_array
-      groups_array=$(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"] | keys | join (\" \")" "${dir}"/nomad/nomad-job.json)
-      for group_name in ${groups_array[*]}
+  fi
+
+  ############################################################################
+  # SSH Server: ##############################################################
+  ############################################################################
+  if jqtest '.cluster.nomad.fetch_logs_ssh' "${dir}"/profile.json
+  then
+    # Get or create the keys for the SSH servers and add them as templates.
+    local template_json_srv template_json_usr
+    template_json_srv="$( \
+      ssh-key-template \
+        "\"sshd.id_ed25519\""                                           \
+        "\"$(cat "$(wb nomad ssh key server)" | sed -z 's/\n/\\n/g')\"" \
+        "\"600\""                                                       \
+    )"
+    template_json_usr="$( \
+      ssh-key-template \
+        "\"nobody.id_ed25519.pub\""                 \
+        "\"$(cat "$(wb nomad ssh key user)".pub)\"" \
+        "\"644\""                                   \
+    )"
+    # For each Nomad Job Group
+    local groups_array
+    groups_array=$(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"] | keys | join (\" \")" "${dir}"/nomad/nomad-job.json)
+    for group_name in ${groups_array[*]}
+    do
+      # For each Nomad Job Group Task
+      local tasks_array
+      tasks_array=$(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"task\"] | keys | join (\" \")" "${dir}"/nomad/nomad-job.json)
+      for task_name in ${tasks_array[*]}
       do
-        # For each Nomad Job Group Task
-        local tasks_array
-        tasks_array=$(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"task\"] | keys | join (\" \")" "${dir}"/nomad/nomad-job.json)
-        for task_name in ${tasks_array[*]}
-        do
-          # Append the new templates.
-            jq \
-              --argjson template_json_srv "${template_json_srv}" \
-              --argjson template_json_usr "${template_json_usr}" \
-              " \
-                  .[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"task\"][\"${task_name}\"][\"template\"] \
-                |= \
-                  ( . + [\$template_json_srv, \$template_json_usr]) \
-              " \
-              "${dir}"/nomad/nomad-job.json \
-          | \
-            sponge "${dir}"/nomad/nomad-job.json
-        done
-      done
-    fi
-    ########################################################################
-    # Reproducibility: #####################################################
-    ########################################################################
-    # If value/plutus profile on "-nomadperf", using always the same placement!
-    # This means node-N always runs on the same Nomad Client/AWS EC2 machine
-    if jqtest '.composition.topology == "torus-dense"' "${dir}"/profile.json
-    then
-      # A file with all the available Nomad Clients is needed!
-      # This files is a list of Nomad Clients with a minimun of ".id",
-      # ".datacenter", ".attributes.platform.aws["instance-type"]",
-      # ".attributes.platform.aws.placement["availability-zone"]",
-      # ".attributes.unique.platform.aws["instance-id"]",
-      # ".attributes.unique.platform.aws.["public-ipv4"]"
-      # ".attributes.unique.platform.aws.mac", ".attributes.cpu.modelname" and
-      # ".attributes.kernel.version".
-      if test -z "${NOMAD_CLIENTS_FILE:-}" || ! test -f "${NOMAD_CLIENTS_FILE}"
-      then
-        fatal "No \"\$NOMAD_CLIENTS_FILE\". For reproducible builds provide this file that ensures cluster nodes are always placed on the same machines, or create a new one with 'wb nomad nodes' if Nomad Clients have suffered changes and runs fail with \"placement errors\""
-      fi
-      # Keep a copy of the file used for this run!
-      cp "${NOMAD_CLIENTS_FILE}" "${dir}"/nomad/clients.json
-      # For each (instance-type, datacener/region) we look incrementally for
-      # the unique AWS EC2 "instance-id" only after ordering the Nomad
-      # Clients by its unique Nomad provided "id".
-      local count_ap=0 count_eu=0 count_us=0
-      # For each Nomad Job Group
-      local groups_array
-      # Keys MUST be sorted to always get the same order for the same profile!
-      # Bash's `sort --version-sort` to correctly sort "node-20" and "node-9".
-      readarray -t groups_array < <(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"] | keys | .[]" "${dir}"/nomad/nomad-job.json | sort --version-sort)
-      for group_name in ${groups_array[*]}
-      do
-        # Obtain the datacenter as Nomad sees it, not as an AWS attribute.
-        # For example "eu-central-1" instead of "eu-central-1a".
-        # These values were corrected above.
-        local datacenter
-        datacenter=$(jq \
-          -r \
-          ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"].affinity.value" \
-          "${dir}"/nomad/nomad-job.json \
-        )
-        # For each Nomad Job Group Task
-        local tasks_array
-        # Keys MUST be sorted to always get the same order for the same profile!
-        # Bash's `sort --version-sort` to correctly sort "node-20" and "node-9".
-        readarray -t tasks_array < <(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"task\"] | keys | .[]" "${dir}"/nomad/nomad-job.json | sort --version-sort)
-        for task_name in ${tasks_array[*]}
-        do
-          local count instance_type
-          if test "${task_name}" = "explorer"
-          then
-            # There is only one of this instance!
-            instance_type="m5.4xlarge"
-            count=0
-          else
-            # There are many of these instances and we need to always fetch
-            # them in the same order for reproducibility.
-            instance_type="c5.2xlarge"
-            if test "${datacenter}" = "ap-southeast-2"
-            then
-              count="${count_ap}"
-              count_ap=$(( count_ap + 1 ))
-            elif test "${datacenter}" = "eu-central-1"
-            then
-              count="${count_eu}"
-              count_eu=$(( count_eu + 1 ))
-            elif test "${datacenter}" = "us-east-1"
-            then
-              count="${count_us}"
-              count_us=$(( count_us + 1 ))
-            fi
-          fi
-          # Get the actual client for this datacenter and instance type.
-          local actual_client
-          # Sort first by name so if a Nomad client gets redeployed, replaced
-          # by a new one with the same name, only that Task is placed in a
-          # different EC2 machine instead of having random changes depending on
-          # where the new UUID lands on the clients NOMAD_CLIENTS_FILE file.
-          actual_client=$(jq \
-            "   . \
-              | \
-                sort_by(.name, .id) \
-              | \
-                map(select(.datacenter == \"${datacenter}\")) \
-              | \
-                map(select(.attributes.platform.aws[\"instance-type\"] == \"${instance_type}\")) \
-              | \
-                .[${count}] \
-            " \
-            "${NOMAD_CLIENTS_FILE}" \
-          )
-          local instance_id availability_zone public_ipv4 mac_address cpu_model kernel_version
-          instance_id="$( \
-             echo "${actual_client}" \
-            | \
-              jq -r \
-                '.attributes.unique.platform.aws["instance-id"]' \
-          )"
-          availability_zone="$( \
-             echo "${actual_client}" \
-            | \
-              jq -r \
-                '.attributes.platform.aws.placement["availability-zone"]' \
-          )"
-          public_ipv4="$( \
-             echo "${actual_client}" \
-            | \
-              jq -r \
-                '.attributes.unique.platform.aws["public-ipv4"]' \
-          )"
-          mac_address="$( \
-             echo "${actual_client}" \
-            | \
-              jq -r \
-                '.attributes.unique.platform.aws.mac' \
-          )"
-          cpu_model="$( \
-             echo "${actual_client}" \
-            | \
-              jq -r \
-                '.attributes.cpu.modelname' \
-          )"
-          kernel_version="$( \
-             echo "${actual_client}" \
-            | \
-              jq -r \
-                '.attributes.kernel.version' \
-          )"
-          # Pin the actual node to an specific Nomad Client / AWS instance
-          # by appending below constraints to the already there group
-          # constraints.
-          # We pin it to a couple of AWS specifics attributes so if SRE
-          # changes something related to Nomad Clients or AWS instances we
-          # may hopefully notice it when the job fails to start (placement
-          # errors).
-          local group_constraints_array_plus="
-            [ \
-                { \
-                  \"attribute\": \"\${attr.platform.aws.instance-type}\" \
-                , \"value\":     \"${instance_type}\" \
-                } \
-              ,
-                { \
-                  \"attribute\": \"\${attr.platform.aws.placement.availability-zone}\" \
-                , \"value\":     \"${availability_zone}\" \
-                } \
-              ,
-                { \
-                  \"attribute\": \"\${attr.unique.platform.aws.instance-id}\" \
-                , \"value\":     \"${instance_id}\" \
-                } \
-              ,
-                { \
-                  \"attribute\": \"\${attr.unique.platform.aws.public-ipv4}\" \
-                , \"value\":     \"${public_ipv4}\" \
-                } \
-              ,
-                { \
-                  \"attribute\": \"\${attr.unique.platform.aws.mac}\" \
-                , \"value\":     \"${mac_address}\" \
-                } \
-              ,
-                { \
-                  \"attribute\": \"\${attr.cpu.modelname}\" \
-                , \"value\":     \"${cpu_model}\" \
-                } \
-              ,
-                { \
-                  \"attribute\": \"\${attr.kernel.version}\" \
-                , \"value\":     \"${kernel_version}\" \
-                } \
-            ] \
-          "
-            jq \
-              --argjson group_constraints_array_plus "${group_constraints_array_plus}" \
-              " \
-                  .[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"constraint\"] \
-                |= \
-                  ( . + \$group_constraints_array_plus) \
-              " \
-              "${dir}"/nomad/nomad-job.json \
-          | \
-            sponge "${dir}"/nomad/nomad-job.json
-        done
-      done
-    # Else, if not value profile but still the P&T exclusive cluster, it's not
-    # always the same exact placement, we just make sure regions are OK
-    # When not "-nomadperf", when "-nomadcwqa", only "short" tests are allowed
-    # on whatever resources we are given, regions are only an affinity.
-    elif echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
-    then
-      local groups_array
-      groups_array=$(jq -S -r ".[\"job\"][\"${nomad_job_name}\"][\"group\"] | keys | sort | join (\" \")" "${dir}"/nomad/nomad-job.json)
-      for group_name in ${groups_array[*]}
-      do
-        # Obtain the datacenter as Nomad sees it, not as an AWS attribute.
-        # For example "eu-central-1" instead of "eu-central-1a".
-        # These values were corrected above.
-        local datacenter
-        datacenter=$(jq \
-          -r \
-          ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"].affinity.value" \
-          "${dir}"/nomad/nomad-job.json \
-        )
-        local group_constraints_array_plus="
-          [                                            \
-            {   \"attribute\": \"\${node.datacenter}\" \
-              , \"value\":     \"${datacenter}\"       \
-            }                                          \
-          ]                                            \
-        "
+        # Append the new templates.
           jq \
-            --argjson group_constraints_array_plus "${group_constraints_array_plus}" \
-            "                                                                                   \
-                .[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"constraint\"] \
-              |=                                                                                \
-                ( . + \$group_constraints_array_plus)                                           \
+            --argjson template_json_srv "${template_json_srv}" \
+            --argjson template_json_usr "${template_json_usr}" \
+            " \
+                .[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"task\"][\"${task_name}\"][\"template\"] \
+              |= \
+                ( . + [\$template_json_srv, \$template_json_usr]) \
             " \
             "${dir}"/nomad/nomad-job.json \
         | \
           sponge "${dir}"/nomad/nomad-job.json
       done
-    fi
-    ############################################################################
+    done
   fi
+
+  ##############################################################################
+  # Reproducibility: ###########################################################
+  ##############################################################################
+  # We are using always the same placement!
+  # This means node-N always runs on the same Nomad Client/AWS EC2 machine
+  # For this a file with all the available Nomad Clients is needed!
+  # This files is a list of Nomad Clients with a minimun of ".id", ".name"
+  # ".class", ".datacenter", ".attributes.platform.aws["instance-type"]",
+  # ".attributes.platform.aws.placement["availability-zone"]",
+  # ".attributes.unique.platform.aws["instance-id"]",
+  # ".attributes.unique.platform.aws.["public-ipv4"]"
+  # ".attributes.unique.platform.aws.mac", ".attributes.cpu.modelname" and
+  # ".attributes.kernel.version".
+  # File is created with `wb nomad clients machines` and returns the machines
+  # for the Nomad class of the actual profile (cluster.nomad.class).
+  if test -z "${NOMAD_CLIENTS_FILE:-}" || ! test -f "${NOMAD_CLIENTS_FILE}"
+  then
+    fatal "No \"\$NOMAD_CLIENTS_FILE\". For reproducible runs provide this file that ensures cluster nodes are always placed on the same machines, or create a new one with 'wb nomad clients machines' if Nomad Client Nodes have suffered changes and runs fail with \"placement errors\""
+  fi
+  # Keep a copy of this run's file (Existance checked in `setenv-defaults`)!
+  cp "${NOMAD_CLIENTS_FILE}" "${dir}"/nomad/clients.json
+  # Get the AWS instance types from the profile.
+  local instance_type_explorer instance_type_producer
+  instance_type_explorer="$(jq -r .cluster.aws.instance_type.explorer "${dir}"/profile.json)"
+  instance_type_producer="$(jq -r .cluster.aws.instance_type.producer "${dir}"/profile.json)"
+  # Iterate thorugh all the unique regions available in the node-specs.json
+  # file, this are all the regions the actual profile defines.
+  local regions_array
+  regions_array=$(jq \
+    -r \
+    'map(.region) | sort | unique | join (" ")' \
+    "${dir}"/node-specs.json \
+  )
+  for region in ${regions_array[*]}
+  do
+    local count=0
+    # For each regions, get all the node names that are available.
+    local nodes_names_array
+    # MUST be sorted to always get the same order for the same profile!
+    # The only realiable way to sort, used along the workbench, is the ".i".
+    nodes_names_array=$(jq \
+      -r \
+      "map(select(.region == \"${region}\")) | sort_by(.i) | map(.name) | join (\" \")" \
+      "${dir}"/node-specs.json \
+    )
+    for node_name in ${nodes_names_array[*]}
+    do
+      # Get the actual client for this datacenter/region and instance type.
+      local actual_client
+      # There may be only one "explorer" instance type!
+      if \
+            ! test "${node_name}" = "explorer" \
+         || \
+            test "${instance_type_explorer}" = "${instance_type_producer}"
+      then
+        # Sort first by name so if a Nomad client gets redeployed, replaced
+        # by a new one with the same name, only that Task is placed in a
+        # different EC2 machine instead of having random changes depending on
+        # where the new UUID lands on the clients NOMAD_CLIENTS_FILE file.
+        actual_client=$(jq \
+          "   . \
+            | \
+              sort_by(.name, .id) \
+            | \
+              map(select(.class == \"${nomad_class}\")) \
+            | \
+              map(select(.datacenter == \"${region}\")) \
+            | \
+              map(select(.attributes.platform.aws[\"instance-type\"] == \"${instance_type_producer}\")) \
+            | \
+              .[${count}] \
+          " \
+          "${NOMAD_CLIENTS_FILE}" \
+        )
+        count=$(( count + 1 ))
+      else
+        actual_client=$(jq \
+          "   . \
+            | \
+              sort_by(.name, .id) \
+            | \
+              map(select(.class == \"${nomad_class}\")) \
+            | \
+              map(select(.datacenter == \"${region}\")) \
+            | \
+              map(select(.attributes.platform.aws[\"instance-type\"] == \"${instance_type_explorer}\")) \
+            | \
+              .[0] \
+          " \
+          "${NOMAD_CLIENTS_FILE}" \
+        )
+      fi
+      # Get all the properties we are properties we use to contraint the Tasks.
+      local client_id client_name instance_id instance_type availability_zone public_ipv4 mac_address cpu_model kernel_version
+      client_id="$( \
+         echo "${actual_client}" \
+        | \
+          jq -r \
+            '.id' \
+      )"
+      client_name="$( \
+         echo "${actual_client}" \
+        | \
+          jq -r \
+            '.name' \
+      )"
+      instance_type="$( \
+         echo "${actual_client}" \
+        | \
+          jq -r \
+            '.attributes.platform.aws["instance-type"]' \
+      )"
+      availability_zone="$( \
+         echo "${actual_client}" \
+        | \
+          jq -r \
+            '.attributes.platform.aws.placement["availability-zone"]' \
+      )"
+      instance_id="$( \
+         echo "${actual_client}" \
+        | \
+          jq -r \
+            '.attributes.unique.platform.aws["instance-id"]' \
+      )"
+      public_ipv4="$( \
+         echo "${actual_client}" \
+        | \
+          jq -r \
+            '.attributes.unique.platform.aws["public-ipv4"]' \
+      )"
+      mac_address="$( \
+         echo "${actual_client}" \
+        | \
+          jq -r \
+            '.attributes.unique.platform.aws.mac' \
+      )"
+      cpu_model="$( \
+         echo "${actual_client}" \
+        | \
+          jq -r \
+            '.attributes.cpu.modelname' \
+      )"
+      kernel_version="$( \
+         echo "${actual_client}" \
+        | \
+          jq -r \
+            '.attributes.kernel.version' \
+      )"
+      # Pin the actual node to an specific Nomad Client / AWS instance by
+      # appending below constraints to the already there group constraints.
+      # We pin it to a couple of AWS specifics attributes so if SRE changes
+      # something related to Nomad Clients or AWS instances fail we may
+      # hopefully notice it when the job fails to start (placement errors).
+      msg "$(blue "INFO:") Nomad Task $(yellow "\"${node_name}\"") will be constrainted to $(yellow "AWS Instance ID \"${instance_id}\" with AZ \"${availability_zone}\"") running $(yellow "Nomad client node \"${client_name}\" (${client_id})")"
+      local group_constraints_array_plus="
+        [ \
+            { \
+              \"attribute\": \"\${node.unique.id}\" \
+            , \"value\":     \"${client_id}\" \
+            } \
+          ,
+            { \
+              \"attribute\": \"\${node.unique.name}\" \
+            , \"value\":     \"${client_name}\" \
+            } \
+          ,
+            { \
+              \"attribute\": \"\${attr.platform.aws.instance-type}\" \
+            , \"value\":     \"${instance_type}\" \
+            } \
+          ,
+            { \
+              \"attribute\": \"\${attr.platform.aws.placement.availability-zone}\" \
+            , \"value\":     \"${availability_zone}\" \
+            } \
+          ,
+            { \
+              \"attribute\": \"\${attr.unique.platform.aws.instance-id}\" \
+            , \"value\":     \"${instance_id}\" \
+            } \
+          ,
+            { \
+              \"attribute\": \"\${attr.unique.platform.aws.public-ipv4}\" \
+            , \"value\":     \"${public_ipv4}\" \
+            } \
+          ,
+            { \
+              \"attribute\": \"\${attr.unique.platform.aws.mac}\" \
+            , \"value\":     \"${mac_address}\" \
+            } \
+          ,
+            { \
+              \"attribute\": \"\${attr.cpu.modelname}\" \
+            , \"value\":     \"${cpu_model}\" \
+            } \
+          ,
+            { \
+              \"attribute\": \"\${attr.kernel.version}\" \
+            , \"value\":     \"${kernel_version}\" \
+            } \
+        ] \
+      "
+        jq \
+          --argjson group_constraints_array_plus "${group_constraints_array_plus}" \
+          " \
+              .[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${node_name}\"][\"constraint\"] \
+            |= \
+              ( . + \$group_constraints_array_plus) \
+          " \
+          "${dir}"/nomad/nomad-job.json \
+      | \
+        sponge "${dir}"/nomad/nomad-job.json
+      # Check if there is enough free storage space available!
+      if jqtest '.cluster.minimun_storage != null' "${dir}"/profile.json
+      then
+        local kb_free kb_needed
+        kb_free="$(wb nomad clients storage-kb-available "${client_name}")"
+        if test "${node_name}" = "explorer"
+        then
+          kb_needed="$(jq -r .cluster.minimun_storage.explorer "${dir}"/profile.json)"
+        else
+          kb_needed="$(jq -r .cluster.minimun_storage.producer "${dir}"/profile.json)"
+        fi
+        # This is just a warning message!
+        if test "${kb_free}" -lt "${kb_needed}"
+        then
+          msg "$(yellow "WARNING: Nomad client \"${client_name}\" (${client_id}) has less than ${kb_needed} bytes of storage available")"
+          read -p "Hit enter to continue ..."
+        fi
+      fi
+      # Store this group's reproducibility constraints for debugging purposes.
+        jq \
+          ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${node_name}\"][\"constraint\"]" \
+          "${dir}"/nomad/nomad-job.json \
+      > "${dir}"/nomad/"${node_name}"/constraints.json
+    done
+  done
+  # Store the job's reproducibility constraints for debugging purposes.
+    jq \
+      ".[\"job\"][\"${nomad_job_name}\"][\"constraint\"]" \
+      "${dir}"/nomad/nomad-job.json \
+  > "${dir}"/nomad/constraints.json
 
   # Store a summary of the job.
   jq \
+    --argjson nomad_job_name "\"${nomad_job_name}\"" \
     '{
-        "namespace":   ( .job["workbench-cluster-job"].namespace   )
-      , "datacenters": ( .job["workbench-cluster-job"].datacenters )
-      , "constraint":  ( .job["workbench-cluster-job"].constraint  )
+        "namespace":   ( .job[ $nomad_job_name ].namespace   )
+      , "datacenters": ( .job[ $nomad_job_name ].datacenters )
+      , "constraint":  ( .job[ $nomad_job_name ].constraint  )
       , "groups":      (
-            .job["workbench-cluster-job"].group
+            .job[ $nomad_job_name ].group
           | with_entries(
               .value |= {
                   "constraint": .constraint
@@ -944,7 +812,7 @@ check-deployment() {
   then
     echo "${node_specs_ante}" > "${dir}"/node-specs.ante.json
     echo "${node_specs_post}" > "${dir}"/node-specs.post.json
-    diff --side-by-side "${dir}"/node-specs.ante.json "${dir}"/node-specs.post.json
+    dyff between "${dir}"/node-specs.ante.json "${dir}"/node-specs.post.json
     msg "$(red "----------")"
     msg "$(red "REQUESTED AND DEPLOYED node-specs.json DO NOT MATCH")"
     msg "$(red "----------")"
@@ -965,7 +833,7 @@ check-deployment() {
   then
     echo "${topology_ante}" > "${dir}"/topology.ante.json
     echo "${topology_post}" > "${dir}"/topology.post.json
-    diff --side-by-side "${dir}"/topology.ante.json "${dir}"/topology.post.json
+    dyff between "${dir}"/topology.ante.json "${dir}"/topology.post.json
     msg "$(red "----------")"
     msg "$(red "REQUESTED AND DEPLOYED topology.json DO NOT MATCH")"
     msg "$(red "----------")"
@@ -1046,50 +914,44 @@ deploy-genesis-nomadcloud() {
   fi
 }
 
-fetch-logs-nomadcloud() {
+# Only if running on dedicated P&T Nomad cluster on AWS we use SSH, if not
+# `nomad exec`, because we need to have an exclusive port open for us.
+fetch-logs-ssh() {
   local usage="USAGE: wb backend $op RUN-DIR"
   local dir=${1:?$usage}; shift
 
   msg "Fetch logs ..."
-
   msg "First start the sandboxed SSH servers ..."
-  # Only if running on dedicated P&T Nomad cluster on AWS we use SSH, if not
-  # `nomad exec`, because we need to have an exclusive port open for us.
-  if echo "${WB_SHELL_PROFILE}" | grep --quiet "\-nomadperf"
+  local jobs_array=()
+  local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
+  for node in ${nodes[*]}
+  do
+    # TODO: Do it in parallel ?
+    backend_nomad task-program-start "${dir}" "${node}" ssh &
+    jobs_array+=("$!")
+  done
+  # Wait and check!
+  if test -n "${jobs_array}"
   then
-    local jobs_array=()
-    local nodes=($(jq_tolist keys "${dir}"/node-specs.json))
-    for node in ${nodes[*]}
-    do
-      # TODO: Do it in parallel ?
-      backend_nomad task-program-start "${dir}" "${node}" ssh &
-      jobs_array+=("$!")
-    done
-    # Wait and check!
-    if test -n "${jobs_array}"
+    if ! wait_kill_em_all "${jobs_array[@]}"
     then
-      if ! wait_kill_em_all "${jobs_array[@]}"
-      then
-        fatal "Failed to start ssh server(s)"
-      else
-        msg "Sandboxed ssh server(s) should be now ready"
-        # Make sure the SSH config file used to connect is already created.
-        # Ugly but if `ssh` is called inmediately after `wb nomad ssh config`
-        # race conditions can happen because the file contents are still in the
-        # cache.
-        local ssh_config_path
-        ssh_config_path="$(wb nomad ssh config)"
-        msg "Used ssh config file: $(realpath ${ssh_config_path})"
-      fi
+      fatal "Failed to start ssh server(s)"
+    else
+      msg "Sandboxed ssh server(s) should be now ready"
+      # Make sure the SSH config file used to connect is already created.
+      # Ugly but if `ssh` is called inmediately after `wb nomad ssh config`
+      # race conditions can happen because the file contents are still in the
+      # cache.
+      local ssh_config_path
+      ssh_config_path="$(wb nomad ssh config)"
+      msg "Used ssh config file: $(realpath ${ssh_config_path})"
     fi
   fi
-
-  fetch-logs-nomadcloud-retry "${dir}"
-
+  fetch-logs-ssh-retry "${dir}"
   msg "Sandboxed SSH servers will be kept running for debugging purposes"
 }
 
-fetch-logs-nomadcloud-retry() {
+fetch-logs-ssh-retry() {
   local usage="USAGE: wb backend $op RUN-DIR"
   local dir=${1:?$usage}; shift
 
@@ -1098,7 +960,7 @@ fetch-logs-nomadcloud-retry() {
   do
     if ! test -f "${dir}"/nomad/"${node}"/download_ok
     then
-      fetch-logs-nomadcloud-node "${dir}" "${node}" &
+      fetch-logs-ssh-node "${dir}" "${node}" &
       jobs_array+=("$!")
     else
       msg "Skipping \"${node}\": check file \"${dir}/nomad/${node}/download_ok\""
@@ -1113,7 +975,7 @@ fetch-logs-nomadcloud-retry() {
       msg "$(red "Failed to fetch some logs")"
       msg "Check files \"${dir}/nomad/NODE/download_ok\" and \"${dir}/nomad/NODE/download_failed\""
       read -p "Hit enter to retry ..."
-      fetch-logs-nomadcloud-retry "${dir}"
+      fetch-logs-ssh-retry "${dir}"
     else
       msg "$(green "Finished fetching logs")"
     fi
@@ -1122,10 +984,23 @@ fetch-logs-nomadcloud-retry() {
   fi
 }
 
-fetch-logs-nomadcloud-node() {
+fetch-logs-ssh-node() {
   local dir=${1}
   local node=${2}
 
+  local node_ok="true"
+  # Non SSH logs
+  ##############
+  # These files are not downloaded using SSH.
+  # Job's entrypoints logs (supervisord stdout and stderr) as Nomad sees them.
+  if ! backend_nomad download-logs-entrypoint "${dir}" "${node}"
+  then
+    # Generic `download-logs-entrypoint` already provides error messages.
+    node_ok="false"
+    touch "${dir}"/nomad/"${node}"/download_failed
+  fi
+  # SSH logs ###
+  ##############
   local node_id public_ipv4
   node_id="$( \
     jq -r .NodeID "${dir}"/nomad/nomad-job.json.run/task."${node}".final.json \
@@ -1138,7 +1013,18 @@ fetch-logs-nomadcloud-node() {
   local ssh_config_path ssh_command
   ssh_config_path="$(wb nomad ssh config)"
   ssh_command="ssh -F ${ssh_config_path} -p 32000 -l nobody"
-  local node_ok="true"
+  # Download latency(ies) logs. ################################################
+  ##############################################################################
+  msg "$(blue "Fetching") $(yellow "program \"latency\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+  if ! rsync -e "${ssh_command}" -au                      \
+         -f'- start.sh'                                   \
+         "${public_ipv4}":/local/run/current/latency/     \
+         "${dir}"/latency/"${node}"/
+  then
+    node_ok="false"
+    touch "${dir}"/nomad/"${node}"/download_failed
+    msg "$(red Error fetching) $(yellow "program \"latency\"") $(red "run files from") $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."
+  fi
   # Download healthcheck(s) logs. ##############################################
   ##############################################################################
   msg "$(blue "Fetching") $(yellow "program \"healthcheck\"") run files from $(yellow "\"${node}\" (\"${public_ipv4}\")") ..."

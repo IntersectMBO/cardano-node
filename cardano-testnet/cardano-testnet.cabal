@@ -38,17 +38,17 @@ library
                       , cardano-cli ^>= 8.20.3.0
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
+                      , cardano-git-rev
                       , cardano-ledger-alonzo
+                      , cardano-ledger-binary
+                      , cardano-ledger-byron
+                      , cardano-ledger-conway
                       , cardano-ledger-conway
                       , cardano-ledger-core
                       , cardano-ledger-core:testlib
-                      , cardano-git-rev
-                      , cardano-ledger-core
-                      , cardano-ledger-binary
-                      , cardano-ledger-byron
                       , cardano-ledger-shelley
                       , cardano-node
-                      , cardano-ping ^>= 0.2.0.10
+                      , cardano-ping ^>= 0.2.0.13
                       , contra-tracer
                       , containers
                       , data-default-class
@@ -175,6 +175,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.Conway.Plutus
                         Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
                         Cardano.Testnet.Test.Cli.KesPeriodInfo
+                        Cardano.Testnet.Test.Cli.Queries
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
                         Cardano.Testnet.Test.FoldBlocks
                         Cardano.Testnet.Test.Misc
@@ -183,6 +184,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.LedgerEvents.Gov.InfoAction
                         Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO
                         Cardano.Testnet.Test.LedgerEvents.SanityCheck
+                        Cardano.Testnet.Test.LedgerEvents.TreasuryGrowth
 
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
@@ -198,12 +200,13 @@ test-suite cardano-testnet-test
                       , cardano-cli
                       , cardano-crypto-class
                       , cardano-ledger-conway
+                      , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-node
+                      , cardano-strict-containers ^>= 0.1
                       , cardano-testnet
                       , containers
                       , directory
-                      , exceptions
                       , filepath
                       , hedgehog
                       , hedgehog-extras
@@ -217,6 +220,7 @@ test-suite cardano-testnet-test
                       , text
                       , time
                       , transformers
+                      , vector
 
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
 

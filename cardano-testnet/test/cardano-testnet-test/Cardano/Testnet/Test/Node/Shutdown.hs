@@ -13,13 +13,13 @@ module Cardano.Testnet.Test.Node.Shutdown
 import           Cardano.Api
 
 import           Cardano.Testnet
+import qualified Cardano.Testnet as Testnet
 
 import           Prelude
 
 import           Control.Monad
 import           Data.Aeson
 import           Data.Aeson.Types
-import           Data.Bifunctor
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Either (isRight)
 import qualified Data.List as L
@@ -96,7 +96,7 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
 
   -- 2. Create Alonzo genesis
   alonzoBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> shelleyDir </> "genesis.alonzo.spec.json"
-  gen <- H.evalEither $ first (docToString . prettyError) defaultAlonzoGenesis
+  gen <- Testnet.getDefaultAlonzoGenesis
   H.evalIO $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
 
   -- 2. Create Conway genesis
