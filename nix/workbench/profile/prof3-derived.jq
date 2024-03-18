@@ -85,6 +85,16 @@ def add_derived_params:
 | .era                                       as $era
 | .node                                      as $node
 | .genesis.shelley.protocolParams            as $pparams
+| .cluster.nomad                             as $nomad
+
+## The perf-ssd machines have abundant physical RAM, and Nomad uses cgroups to constrain resources.
+## To also influence RTS / GC behaviour, -M needs to be used, as the RTS infers a heap limit from
+## the system's ulimit, not the cgroup limit.
+| $node.rts_flags_override                   as $rtsflags
+| (if $nomad.class == "perf-ssd"
+   then $rtsflags + [("-M" + ($nomad.resources.producer.memory_max | tostring) + "M")]
+   else $rtsflags
+   end)                                      as $rtsflags_derived
 
 ## Absolute durations:
 | ($gsis.epoch_length * $gsis.slot_duration)       as $epoch_duration
@@ -191,7 +201,7 @@ def add_derived_params:
          { tx_count:              $generator_tx_count
          }
      , node:
-         {
+         { rts_flags_override:    $rtsflags_derived
          }
      , analysis:
          { minimum_chain_density:      ($gsis.active_slots_coeff * 0.5)
