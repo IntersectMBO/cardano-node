@@ -1,5 +1,18 @@
 import "epoch-timeline" as timeline;
 
+## For the Nomad perf-ssd cluster, we might want to artificially
+## cap the large RAM resources the instances provide.
+def nomad_memory_limit($limit):
+  { nomad:
+    { resources:
+      { producer:
+        { memory:       $limit
+        , memory_max:   $limit
+        }
+      }
+    }
+  };
+
 def all_profile_variants:
                                          1024    as $Ki
   |                                      1000000 as $M
@@ -210,8 +223,8 @@ def all_profile_variants:
     } as $compressed_timescale
   |
     { genesis:
-      { epoch_length:                   1800
-      , parameter_k:                    9
+      { epoch_length:                   1200
+      , parameter_k:                    6
       }
     } as $small_timescale
   |
@@ -477,6 +490,10 @@ def all_profile_variants:
     { scenario:                        "fixed-loaded"
     }) as $scenario_nomad_perf
   |
+   ($small_timescale * $nomad_perf_tps_saturation_value *
+    { scenario:                        "fixed-loaded"
+    }) as $scenario_nomad_perfssd_solo
+  |
    ($model_timescale * $model_tps_saturation_value *
     { scenario:                        "fixed-loaded"
     }) as $scenario_model
@@ -563,6 +580,23 @@ def all_profile_variants:
     { desc: "AWS c5-2xlarge cluster, deploy and start run only"
     }) as $nomad_perf_idle_base
   |
+   ($scenario_nomad_perfssd_solo * $solo * $dataset_24m *
+    { node:
+        { shutdown_on_slot_synced:        7200
+        }
+      , analysis:
+        { filters:                        ["epoch3+", "size-full"]
+        }
+      , generator:
+        { epochs:                         6
+        }
+      , genesis:
+        { funds_balance:                  20000000000000
+        , max_block_size:                 88000
+        }
+      , desc: "AWS c5[d]-9xlarge utxoscale dataset, 6 epochs"
+    }) as $nomad_perfssd_solo_base
+  |
    ($scenario_model * $quadruplet * $dataset_current * $for_7ep *
     { node:
         { shutdown_on_slot_synced:        56000
@@ -640,6 +674,13 @@ def all_profile_variants:
   ##
   ### Actual profiles
   ##
+
+  ### Profile templates
+  ###
+  # UTxO scaling on a single node, mainnet blocksize, ~2h runtime (6 epochs) - default: 24mio UTxO, 64GB RAM cap
+    ($nomad_perfssd_solo_base * $nomad_perfssd_unicircle * $costmodel_v8_preview * $p2p
+    ) as $utxoscale_solo_template
+  |
 
   ### First, auto-named profiles:
   ###
@@ -883,6 +924,35 @@ def all_profile_variants:
     }
   , $nomad_perf_plutus_base * $nomad_perf_dense * $costmodel_v8_preview *
     { name: "plutus-nomadperf-nop2p"
+    }
+
+## P&T Nomad cluster: 52 nodes, 3 regions, fast, P2P flavour
+  , $fast_base * $compose_fiftytwo * $nomad_perf_dense * $costmodel_v8_preview * $p2p *
+    { name: "fast-nomadperf"
+    }
+  , $fast_base * $compose_fiftytwo * $nomad_perf_dense * $costmodel_v8_preview *
+    { name: "fast-nomadperf-nop2p"
+    }
+  , $fast_base * $solo * $nomad_perfssd_unicircle * $costmodel_v8_preview * $p2p *
+    { name: "fast-nomadperfssd"
+    }
+
+## P&T NomadSSD cluster: UTxO scale benchmarks on a single node
+  , $utxoscale_solo_template *
+    { name: "utxoscale-solo-24M64G-nomadperfssd"
+    }
+  , $utxoscale_solo_template *
+    { name: "utxoscale-solo-12M64G-nomadperfssd"
+    , genesis:
+      { utxo:                               (12 * $M)
+      }
+    }
+  , $utxoscale_solo_template *
+    { name: "utxoscale-solo-12M16G-nomadperfssd"
+    , genesis:
+      { utxo:                               (12 * $M)
+      }
+    , cluster:                              nomad_memory_limit(16384)
     }
 
 ## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)
