@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2024-03-06T13:35:48Z
-  , cardano-haskell-packages 2024-03-06T12:32:14Z
+  , hackage.haskell.org 2024-03-18T08:58:07Z
+  , cardano-haskell-packages 2024-03-15T18:07:40Z
 
 packages:
   cardano-git-rev
@@ -60,3 +60,24 @@ package plutus-scripts-bench
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
+
+source-repository-package
+    type: git
+    location: https://github.com/input-output-hk/cardano-api/
+    tag: 75b2c372a02ca91477f74348d3cc0064677dab4d
+    subdir: cardano-api
+            cardano-api-gen
+    --sha256: sha256-9A5DekbpJT2/53DG5eY6ZN8I1BoTM7OnqkgB7kagPVs=
+
+source-repository-package
+    type: git
+    location: https://github.com/input-output-hk/cardano-cli/
+    tag: f5fd9725d0b6911a928e0403a16543a96c1d7ab2
+    subdir: cardano-cli
+    --sha256: sha256-cg7E+DuOx8q7LjhMa0z2rTgbBsCG2+vgvPfi1rp9Yfs=
+
+source-repository-package
+    type: git
+    location: https://github.com/input-output-hk/ekg-forward/
+    tag: 6cb6eaca02a640393c88cc38d13b0d78533d9952
+    --sha256: sha256-ORN46i8Z3/f1ZrEHHTFN2zlLCoJKoGjLRQ12uLfhYNs=
