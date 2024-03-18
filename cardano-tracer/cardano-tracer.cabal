@@ -147,12 +147,12 @@ library
                       , directory
                       , ekg
                       , ekg-core
-                      , ekg-forward ^>= 0.4
+                      , ekg-forward ^>= 0.5
                       , extra
                       , filepath
                       , mime-mail
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.12
+                      , ouroboros-network ^>= 0.13
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal
