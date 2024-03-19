@@ -1026,7 +1026,9 @@ def all_profile_variants:
     , genesis:
       { utxo:                               (12 * $M)
       }
-    , cluster:                              nomad_memory_limit(16384)
+    , node:
+      { heap_limit:                         16384
+      }
     }
 
 ## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)

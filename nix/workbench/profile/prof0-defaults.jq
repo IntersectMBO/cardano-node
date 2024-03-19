@@ -61,6 +61,7 @@ def era_defaults($era):
 
   , node:
     { rts_flags_override:             []
+    , heap_limit:                     null                ## optional: heap limit in MB (translates to RTS flag -M)
     , shutdown_on_slot_synced:        null
     , shutdown_on_block_synced:       null
     , tracing_backend:                "trace-dispatcher"  ## or "iohk-monitoring"
