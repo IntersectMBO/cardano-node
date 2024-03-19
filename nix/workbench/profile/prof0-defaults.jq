@@ -86,5 +86,30 @@ def era_defaults($era):
     , ekg:                            false
     , withresources:                  false   # enable resource tracing for cardano-tracer
     }
+
+  , cluster:
+    { nomad:
+      { namespace: "default"
+      , class: ""
+        # As they will be used in the "group.*.resources" of the Nomad Job JSON.
+      , resources:
+        { producer: {cores: 2, memory: 15000, memory_max: 16000}
+        , explorer: {cores: 2, memory: 15000, memory_max: 16000}
+        }
+      , fetch_logs_ssh: false
+      }
+    , aws:
+      { instance_type:
+        { producer: "c5.2xlarge"
+        , explorer: "m5.4xlarge"
+        }
+      }
+    , minimun_storage:
+      { producer: 12582912 # 12×1024×1024
+      , explorer: 14155776 # 13.5×1024×1024
+      }
+    , keep_running: false
+    }
+
   }
 } | (.common * (.[$era] // {}));

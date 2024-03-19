@@ -5,7 +5,7 @@ def fmt_decimal_10_5($x):
 
 def profile_cli_args($p):
 { common:
-  { createStackedArgs:
+  { createStakedArgs:
     ([ "--supply",                 fmt_decimal_10_5($p.genesis.funds_balance)
      , "--gen-utxo-keys",          1
      , "--gen-genesis-keys",       $p.composition.n_bft_hosts

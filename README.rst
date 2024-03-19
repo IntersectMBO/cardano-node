@@ -16,9 +16,9 @@
 
 .. contents:: Contents
 
-*************************
+*******************************************
 Overview of the ``cardano-node`` repository
-*************************
+*******************************************
 
 Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger-specs>`_, `consensus <https://github.com/input-output-hk/ouroboros-consensus>`_,
 `networking <https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-network>`_ and
