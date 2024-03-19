@@ -179,12 +179,21 @@ red() {
     eval $restore_trace
 }
 
+info() {
+    eval $muffle_trace_set_exit
+
+    local subsys=$1; shift
+    msg "$(with_color cyan "$subsys"):  $*"
+
+    eval $restore_trace
+}
+
 verbose() {
     eval $muffle_trace_set_exit
 
     if test -n "${verbose:-}"
     then local subsys=$1; shift
-         msg "$(with_color blue $subsys):  $*"
+         msg "$(with_color blue "$subsys"):  $*"
     fi
 
     eval $restore_trace
@@ -194,7 +203,7 @@ progress() {
     eval $muffle_trace_set_exit
 
     local subsys=$1; shift
-    msg "$(with_color green $subsys):  $(with_color blue "$@")"
+    msg "$(with_color green "$subsys"):  $(with_color blue "$@")"
 
     eval $restore_trace
 }

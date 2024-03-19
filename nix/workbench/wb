@@ -7,6 +7,9 @@ export LANG=C.UTF-8
 
 global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 
+# By default the new genesis creation is disabled
+: "${WB_MODULAR_GENESIS:=0}"
+
 . "$global_basedir"/lib.sh
 . "$global_basedir"/env.sh
 . "$global_basedir"/chaindb.sh
@@ -21,6 +24,8 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 . "$global_basedir"/genesis/genesis.sh
 . "$global_basedir"/topology/topology.sh
 
+. "$global_basedir"/evaluate/evaluate.sh
+
 . "$global_basedir"/backend/backend.sh
 . "$global_basedir"/backend/nomad.sh
 . "$global_basedir"/backend/nomad/cloud.sh
@@ -30,34 +35,35 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 
 usage_main() {
     set +x
-    test $# -lt 1 ||
-        msg "Unknown op: $1"
+    test $# -lt 1 || msg "Unknown op: $1"
      __usage "OP" "Top-level OPs" <<EOF
     $(red profile)      ($(red p))      Cluster profile ops.  Default subop is $(yellow $profile_default_op)
     $(red run)          ($(red r))      Managing cluster runs.  Default subop is $(yellow $run_default_op)
     $(red analyse)      ($(red a))      Analyse cluster runs.  Default subop is $(yellow $analyse_default_op)
     $(red publish)      ($(red u))      Bench data publish.  Default subop is $(yellow $publish_default_op)
 
-  $(blue Secondary top-level OPs):
+    $(blue Secondary top-level OPs):
 
     $(red chaindb)      ($(red c))      ChainDB
     $(red genesis)      ($(red g))      Genesis
     $(red nomad)        ($(red n))      Nomad and Vault
     $(red topology)     ($(red t))      Topology generation
+    $(red evaluate)     ($(red e))      Evaluate workbench module-based configuration
 
-  $(white wb) $(blue options):
+    $(white wb) $(blue options):
 
     $(helpopt --trace / --debug)        Enable workbench tracing (for error reports) ('set -x')
+    $(helpopt --enable-modular-genesis) Enable NixOS modules based genesis configuration
     $(helpopt --help)                   This short help
     $(helpopt --help-full / --aliases)  Extended help (extra ops & subop aliases)
 EOF
 }
 
 usage_extra() {
-    cat >&2 <<EOF
+	cat >&2 <<EOF
   $(blue Extra top-level OPs):
 
-    $(red start $(green [FLAGS..]))       Start a run of profile chosen at 'nix-shell' entry
+    $(red start $(green \[FLAGS..]))       Start a run of profile chosen at 'nix-shell' entry
     $(red finish)                Finish an active cluster run
     $(red scenario)     ($(red s))      Run scenario control
     $(red backend)      ($(red b))      Backend calls
@@ -104,11 +110,11 @@ usage_start()
 {
     cat <<EOF
 $(red USAGE:)
-   $(helpcmd start [FLAGS..])
+   $(helpcmd start \[FLAGS..])
 
    $(blue Flags):
 
-      $(helpopt --batch-name NAME)               Override the batch name (default: $(green ${batchName:-default}))
+      $(helpopt --batch-name NAME)               Override the batch name (default: $(green "${batchName:-default}"))
 
       $(helpopt --iterations \| --times \| --iter \| -n ITERATIONS)
                                       Run this many iterations of the profile.
@@ -135,8 +141,7 @@ $(red USAGE:)
 EOF
 }
 
-start()
-{
+start() {
     local batch_name=
     local profile_data=
     local backend_data=
@@ -144,9 +149,7 @@ start()
     local node_rev=
     local ident=${ID:-}
     local cabal_mode=
-    local skip_prebuild=
     local prebuild_done=
-    local genesis_cache_entry_dir=
     local manifest="{}"
     local iterations=1
     local no_retry_failed_runs=t
@@ -162,8 +165,8 @@ start()
         --batch-name )                   batch_name=$2;   shift;;
         --ident )                        ident=$2; shift;;
         --iterations | --times | --iter | -n ) iterations=$2; no_retry_failed_runs=; shift;;
-        --cache-dir )                    setenvjqstr 'cacheDir' $2; shift;;
-        --base-port )                    setenvjq    'basePort' $2; shift;;
+        --cache-dir )                    setenvjqstr 'cacheDir' "$2"; shift;;
+        --base-port )                    setenvjq    'basePort' "$2"; shift;;
 
         --backend-data )                 backend_data=$2; shift;;
 
@@ -192,7 +195,6 @@ start()
         --verbose | -v )                 export verbose=t;;
         --trace | --debug )              set -x;;
         --trace-wb | --trace-workbench ) export WB_EXTRA_FLAGS=--trace;;
-        --skip-prebuild | -sp )          skip_prebuild=t;;
 
         --help )                         usage_start
                                          exit 1;;
@@ -243,24 +245,25 @@ start()
        current_run_path=$(run current-path)
        mkdir -p "$current_run_path"
 
-       run ${run_args[@]} 'start'    ${run_start_args[@]} $run
+       run "${run_args[@]}" start "${run_start_args[@]}" "$run"
 
-       if test -n "$no_analysis" -o $analysis_type = null; then continue; fi
+       if test -n "$no_analysis" -o "$analysis_type" = null; then continue; fi
 
-       progress "top-level | analysis" "analysis type $(with_color yellow $analysis_type) on $(with_color white $run)"
+       progress "top-level | analysis" "analysis type $(with_color yellow "$analysis_type") on $(with_color white "$run")"
 
-       local runspec=$(test -n "$ident" && echo $ident:)$run
-       analyse ${analyse_args[@]} $analysis_type $runspec &&
-           progress "run | analysis" "done for $(white $runspec)" ||
+       local runspec=$(test -n "$ident" && echo "$ident":)$run
+
+       analyse "${analyse_args[@]}" "$analysis_type" "$runspec" &&
+           progress "run | analysis" "done for $(white "$runspec")" ||
            if test -n "$analysis_can_fail" -a -z "$no_retry_failed_runs"
-           then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red $runspec)"
+           then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red "$runspec")"
                 iterations=$((iterations + 1))
            else fail "analysis failed:  $run"
                 false; fi
     done
 
-    if test -z "$no_analysis" -a $analysis_type != null -a $iterations -gt 1
-    then analyse variance ${runs[*]}
+    if test -z "$no_analysis" -a "$analysis_type" != null -a "$iterations" -gt 1
+    then analyse variance "${runs[@]}"
     fi
 }
 
@@ -277,8 +280,9 @@ finish()
 
 while test $# -gt 0
 do case "$1" in
-       --nomad      | --backend-nomad )      export WB_BACKEND=nomad;;
-       --supervisor | --backend-supervisor ) export WB_BACKEND=supervisor;;
+       --nomad      | --backend-nomad )      export WB_BACKEND=nomad      ;;
+       --supervisor | --backend-supervisor ) export WB_BACKEND=supervisor ;;
+       --enable-modular-genesis )            export WB_MODULAR_GENESIS=1  ;;
 
        --cls )                          echo -en "\ec">&2;;
        --verbose | -v )                 export verbose=t;;
@@ -302,9 +306,10 @@ main() {
         ## Public, secondary:
         profile      | profiles | prof | ps | p )
                                   profile             "$@";;
-        run          | runs | r ) run                 "$@";;
+        run          | r )        run                 "$@";;
         analyse      | a )        analyse             "$@";;
         publish      | u )        publish             "$@";;
+        evaluate     | e )        evaluate            "$@";;
 
         ## Public, internals-y:
         chaindb      | c )        chaindb             "$@";;
@@ -318,7 +323,7 @@ main() {
         | profile-json                          | pj            \
         | profile-describe         | pdesc      | pd            \
         | profile-node-specs       | node-specs | specs         \
-          )                       profile $op         "$@";;
+          )                       profile "$op"        "$@";;
 
         ## 'run' aliases:
           list-runs                | runs       | lsr           \
@@ -348,17 +353,21 @@ main() {
         | trace-frequencies        | trace-freq | freq | tf     \
         | chain-rejecta-reasons    | chain-rejecta | rejecta    \
         | render-comparison-pdf    | render-pdf | pdf           \
-          )                       analyse $op         "$@";;
+          )                       analyse "$op"        "$@";;
 
         ## Internals:
         #
         scenario     | s )        scenario            "$@";;
         backend      | b )        backend             "$@";;
         call )                                        "$@";;
-        path )                    echo     $global_basedir;;
+        path )                    echo "$global_basedir"  ;;
 
         ## Bail for help:
-        * ) usage_main "$op"; exit 1;; esac
+        * )
+          usage_main "$op"
+          exit 1
+          ;;
+    esac
 }
 
 main "$@"
