@@ -111,10 +111,9 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
     , "--start-time", formatIso8601 startTime
     ]
 
-
   byronGenesisHash <- getByronGenesisHash $ tempAbsPath' </> "byron/genesis.json"
-  H.renameFile (tempAbsPath' </> "shelley/genesis.json") (tempAbsPath' </> defaultShelleyGenesisFp)
-  shelleyGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> defaultShelleyGenesisFp) "ShelleyGenesisHash"
+  H.renameFile (tempAbsPath' </> "shelley/genesis.json") (tempAbsPath' </> defaultGenesisFilepath ShelleyEra)
+  shelleyGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath ShelleyEra) "ShelleyGenesisHash"
   alonzoGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> "shelley/genesis.alonzo.json") "AlonzoGenesisHash"
 
   let finalYamlConfig :: LBS.ByteString

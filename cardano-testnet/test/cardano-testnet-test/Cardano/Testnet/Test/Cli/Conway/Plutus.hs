@@ -80,7 +80,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
       utxoSKeyFile2 = paymentSKey . paymentKeyInfoPair $ wallets !! 1
 
   void $ H.execCli' execConfig
-    [ convertToEraString anyEra, "query", "utxo"
+    [ anyEraToString anyEra, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
     , "--out-file", work </> "utxo-1.json"
@@ -108,7 +108,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
 
   mintingPolicyId <- filter (/= '\n') <$>
     H.execCli' execConfig
-      [ convertToEraString anyEra, "transaction"
+      [ anyEraToString anyEra, "transaction"
       , "policyid"
       , "--script-file", plutusMintingScript
       ]
@@ -135,7 +135,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
   -- 1. Put UTxO and datum at Plutus spending script address
   --    Register script stake address
   void $ execCli' execConfig
-    [ convertToEraString anyEra, "transaction", "build"
+    [ anyEraToString anyEra, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
     , "--tx-in", Text.unpack $ renderTxIn txin1
     , "--tx-out", plutusSpendingScriptAddr <> "+" <> show @Int 5_000_000
@@ -159,7 +159,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
   H.threadDelay 10_000_000
   -- 2. Successfully spend conway spending script
   void $ H.execCli' execConfig
-    [ convertToEraString anyEra, "query", "utxo"
+    [ anyEraToString anyEra, "query", "utxo"
     , "--address", utxoAddr2
     , "--cardano-mode"
     , "--out-file", work </> "utxo-2.json"
@@ -172,7 +172,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
   txinCollateral <- H.noteShow $ keys2 !! 0
 
   void $ H.execCli' execConfig
-    [ convertToEraString anyEra, "query", "utxo"
+    [ anyEraToString anyEra, "query", "utxo"
     , "--address", plutusSpendingScriptAddr
     , "--cardano-mode"
     , "--out-file", work </> "plutus-script-utxo.json"
@@ -192,7 +192,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
                       ]
 
   void $ execCli' execConfig
-    [ convertToEraString anyEra, "transaction", "build"
+    [ anyEraToString anyEra, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 1
     , "--tx-in-collateral", Text.unpack $ renderTxIn txinCollateral
     , "--tx-in", Text.unpack $ renderTxIn plutusScriptTxIn

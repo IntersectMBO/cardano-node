@@ -189,7 +189,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   -- only useful for minting scripts
   constitutionScriptHash <- filter (/= '\n') <$>
     H.execCli' execConfig
-      [ convertToEraString cEra, "transaction"
+      [ anyEraToString cEra, "transaction"
       , "policyid"
       , "--script-file", guardRailScriptFp
       ]

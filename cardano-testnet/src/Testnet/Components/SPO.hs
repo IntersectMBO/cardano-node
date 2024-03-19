@@ -157,7 +157,7 @@ createScriptStakeRegistrationCertificate tempAbsP anyCEra scriptFile deposit out
     let tempAbsPath' = unTmpAbsPath tempAbsP
 
     void $ execCli
-      [ convertToEraString anyCEra
+      [ anyEraToString anyCEra
       , "stake-address", "registration-certificate"
       , "--stake-script-file", scriptFile
       , "--key-reg-deposit-amt", show deposit

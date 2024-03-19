@@ -389,7 +389,7 @@ cardanoTestnet
 
       let runtime = TestnetRuntime
             { configurationFile
-            , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultShelleyGenesisFp
+            , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultGenesisFilepath ShelleyEra
             , testnetMagic
             , poolNodes
             , wallets = wallets
