@@ -17,6 +17,8 @@ module Testnet.Components.Configuration
 
 import           Cardano.Api.Ledger (StandardCrypto)
 import           Cardano.Api.Shelley hiding (Value, cardanoEra)
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
@@ -30,7 +32,6 @@ import           Control.Monad.Catch (MonadCatch)
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as L
-import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
 import           Data.String
@@ -90,18 +91,17 @@ createSPOGenesisAndFiles
   => NumPools -- ^ The number of pools to make
   -> AnyCardanoEra -- ^ The era to use
   -> ShelleyGenesis StandardCrypto -- ^ The shelley genesis to use.
+  -> AlonzoGenesis -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
+  -> ConwayGenesis StandardCrypto -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
   -> TmpAbsolutePath
   -> m FilePath -- ^ Shelley genesis directory
-createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolutePath tempAbsPath') = do
+createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tempAbsPath') = do
   let genesisShelleyFpAbs = tempAbsPath' </> defaultShelleyGenesisFp
       genesisShelleyDirAbs = takeDirectory genesisShelleyFpAbs
   genesisShelleyDir <- H.createDirectoryIfMissing genesisShelleyDirAbs
   let testnetMagic = sgNetworkMagic shelleyGenesis
       numStakeDelegators = 3 :: Int
       startTime = sgSystemStart shelleyGenesis
-
-  -- TODO: We need to read the genesis files into Haskell and modify them
-  -- based on cardano-testnet's cli parameters
 
   -- We create the initial genesis file to avoid having to re-write the genesis file later
   -- with the parameters we want. The user must provide genesis files or we will use a default.
@@ -153,26 +153,27 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
   forM_ files $ \file -> do
     H.note file
 
-  -- TODO: This conway and alonzo genesis creation should be ultimately moved to create-testnet-data
-  alonzoConwayTestGenesisJsonTargetFile <- H.noteShow (genesisShelleyDir </> "genesis.alonzo.json")
-  gen <- H.evalEither $ first prettyError defaultAlonzoGenesis
-  H.evalIO $ LBS.writeFile alonzoConwayTestGenesisJsonTargetFile $ Aeson.encode gen
-
-  conwayConwayTestGenesisJsonTargetFile <- H.noteShow (genesisShelleyDir </> "genesis.conway.json")
-  H.evalIO $ LBS.writeFile conwayConwayTestGenesisJsonTargetFile $ Aeson.encode defaultConwayGenesis
+  -- TODO: This conway and alonzo genesis creation can be removed,
+  -- as this will be done by create-testenet-data when cardano-cli is upgraded above 8.20.3.0.
+  writeGenesisFile genesisShelleyDir "alonzo" alonzoGenesis
+  writeGenesisFile genesisShelleyDir "conway" conwayGenesis
 
   H.renameFile (tempAbsPath' </> "byron-gen-command" </> "genesis.json") (genesisByronDir </> "genesis.json")
   -- TODO: create-testnet-data outputs the new shelley genesis to genesis.json
   H.renameFile (tempAbsPath' </> "genesis.json") (genesisShelleyDir </> "genesis.shelley.json")
 
-  -- TODO: move this to create-testnet-data
   -- For some reason when setting "--total-supply 10E16" in create-testnet-data, we're getting negative
-  -- treasury. This should be fixed by https://github.com/IntersectMBO/cardano-cli/pull/644
+  -- treasury. TODO: This should be fixed by https://github.com/IntersectMBO/cardano-cli/pull/644
   -- So this can be removed when cardano-cli is upgraded above 8.20.3.0.
   H.rewriteJsonFile @Value (genesisShelleyDir </> "genesis.shelley.json") $ \o -> o
     & L.key "maxLovelaceSupply" . L._Integer .~ 10_000_000_000_000_000
 
   return genesisShelleyDir
+  where
+    writeGenesisFile :: (MonadTest m, MonadIO m, HasCallStack) => ToJSON a => FilePath -> String -> a -> m ()
+    writeGenesisFile dir eraName toWrite = GHC.withFrozenCallStack $ do
+      targetJsonFile <- H.noteShow (dir </> "genesis." <> eraName <> ".json")
+      H.evalIO $ LBS.writeFile targetJsonFile $ Aeson.encode toWrite
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
