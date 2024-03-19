@@ -167,7 +167,8 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
 
   -- TODO: move this to create-testnet-data
   -- For some reason when setting "--total-supply 10E16" in create-testnet-data, we're getting negative
-  -- treasury
+  -- treasury. This should be fixed by https://github.com/IntersectMBO/cardano-cli/pull/644
+  -- So this can be removed when cardano-cli is upgraded above 8.20.3.0.
   H.rewriteJsonFile @Value (genesisShelleyDir </> "genesis.shelley.json") $ \o -> o
     & L.key "maxLovelaceSupply" . L._Integer .~ 10_000_000_000_000_000
 

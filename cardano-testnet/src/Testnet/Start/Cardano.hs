@@ -178,10 +178,6 @@ requestAvailablePortNumbers numberOfPorts
 -- > │   ├── genesis{1,2,3}
 -- > │   │   └── key.{skey,vkey}
 -- > │   └── README.md
--- > ├── logs
--- > │   └── pool3
--- > │       └── {stderr,stdout}.log
--- > ├── module
 -- > ├── pools-keys
 -- > │   ├── pool{1,2,3}
 -- > │   │   ├── byron-delegate.key
@@ -423,7 +419,7 @@ cardanoTestnet
 
       pure runtime
   where
-    writeGenesisSpecFile :: (MonadTest m, MonadIO m, HasCallStack) => ToJSON a => FilePath -> a -> m ()
+    writeGenesisSpecFile :: (MonadTest m, MonadIO m, HasCallStack) => ToJSON a => String -> a -> m ()
     writeGenesisSpecFile eraName toWrite = GHC.withFrozenCallStack $ do
       genesisJsonFile <- H.noteShow $ tmpAbsPath </> "genesis." <> eraName <> ".spec.json"
       H.evalIO $ LBS.writeFile genesisJsonFile $ Aeson.encode toWrite
