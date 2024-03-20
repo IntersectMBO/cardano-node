@@ -233,14 +233,14 @@ def all_profile_variants:
         { namespace: "perf-ssd"
         , class: "perf-ssd"
         , resources:
-          { producer: {cores: 32, memory: 64000, memory_max: 64000}
-          , explorer: {cores: 32, memory: 64000, memory_max: 64000}
+          { producer: {cores: 16, memory: 128000, memory_max: 128000}
+          , explorer: {cores: 16, memory: 128000, memory_max: 128000}
           }
         , fetch_logs_ssh: true
         }
       , aws:
         { instance_type:
-          { producer: "c5.9xlarge"
+          { producer: "r5.4xlarge"
           , explorer: null
           }
         }
