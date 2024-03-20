@@ -17,6 +17,7 @@ extra-doc-files:        CHANGELOG.md
 
 common project-config
   default-language:     Haskell2010
+  default-extensions:   ImportQualifiedPost                      
   build-depends:        base >= 4.14 && < 5
 
   ghc-options:          -Wall
@@ -109,7 +110,36 @@ library
 
   autogen-modules:      Paths_cardano_testnet
 
+library plutus-example
+  import:               project-config
 
+  hs-source-dirs:       plutus-example
+
+  ghc-options:          -Wunused-packages
+
+  default-extensions:   ViewPatterns
+
+  build-depends:        bytestring
+                      , cardano-api
+                      , plutus-ledger-api           >= 1.21
+                      , plutus-script-utils         >= 1.3
+                      , plutus-tx                   >= 1.21
+                      , serialise
+
+  exposed-modules:      Cardano.Testnet.PlutusExample.AlwaysFails
+                        Cardano.Testnet.PlutusExample.AlwaysSucceeds
+                        Cardano.Testnet.PlutusExample.PlutusVersion1.CustomDatumRedeemerGuess
+                        Cardano.Testnet.PlutusExample.PlutusVersion1.DatumRedeemerGuess
+                        Cardano.Testnet.PlutusExample.PlutusVersion1.Loop
+                        Cardano.Testnet.PlutusExample.PlutusVersion1.MintingScript
+                        Cardano.Testnet.PlutusExample.PlutusVersion1.RedeemerContextScripts
+                        Cardano.Testnet.PlutusExample.PlutusVersion1.Sum
+                        Cardano.Testnet.PlutusExample.PlutusVersion2.EcdsaSecp256k1Loop
+                        Cardano.Testnet.PlutusExample.PlutusVersion2.MintingScript
+                        Cardano.Testnet.PlutusExample.PlutusVersion2.RedeemerContextEquivalence
+                        Cardano.Testnet.PlutusExample.PlutusVersion2.RequireRedeemer
+                        Cardano.Testnet.PlutusExample.PlutusVersion2.SchnorrSecp256k1Loop
+                        Cardano.Testnet.PlutusExample.PlutusVersion2.StakeScript
 
 executable cardano-testnet
   import:               project-config
