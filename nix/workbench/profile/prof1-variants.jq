@@ -196,12 +196,25 @@ def all_profile_variants:
       }
     } as $nomad_perf_torus
   |
-    # nomad_perf using cardano-ops "dense" topology
-    # Can only be used with the 52 + explorer value profile!
-    { composition:
-      { locations:                      ["eu-central-1", "us-east-1", "ap-southeast-2"]
-      , topology:                       "torus-dense"
-      , with_explorer:                  true
+    # P&T exclusive Nomad cluster Nodes: Disk intensive (fast SSDs)
+    { cluster:
+      { nomad:
+        { namespace: "perf-ssd"
+        , class: "perf-ssd"
+        , resources:
+          { producer: {cores: 16, memory: 128000, memory_max: 128000}
+          , explorer: {cores: 16, memory: 128000, memory_max: 128000}
+          }
+        , fetch_logs_ssh: true
+        }
+      , aws:
+        { instance_type:
+          { producer: "r5.4xlarge"
+          , explorer: null
+          }
+        }
+      , minimun_storage: null
+      , keep_running: true
       }
     } as $nomad_perf_dense
   |
