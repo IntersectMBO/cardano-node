@@ -6,6 +6,9 @@ module Testnet.Start.Types
   ( CardanoTestnetOptions(..)
   , cardanoDefaultTestnetOptions
 
+  , anyEraToString
+  , eraToString
+
   , TestnetNodeOptions(..)
   , extraSpoNodeCliArgs
   , cardanoDefaultTestnetNodeOptions
@@ -20,6 +23,7 @@ import           Cardano.Api hiding (cardanoEra)
 
 import           Prelude
 
+import           Data.Char (toLower)
 import           Data.Word
 import           GHC.Stack
 import           System.FilePath (addTrailingPathSeparator)
@@ -94,4 +98,10 @@ mkConf tempAbsPath' = withFrozenCallStack $ do
     { tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
     }
 
+-- | @anyEraToString (AnyCardanoEra ByronEra)@ returns @"byron"@
+anyEraToString :: AnyCardanoEra -> String
+anyEraToString (AnyCardanoEra e) = eraToString e
 
+-- | @eraToString ByronEra@ returns @"byron"@
+eraToString :: CardanoEra a -> String
+eraToString = map toLower . docToString . pretty

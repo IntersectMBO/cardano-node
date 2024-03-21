@@ -75,7 +75,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
       utxoSKeyFile = paymentSKey $ paymentKeyInfoPair wallet0
   void $ H.execCli' execConfig
-    [ convertToEraString anyEra, "query", "utxo"
+    [ anyEraToString anyEra, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
     , "--out-file", work </> "utxo-1.json"
@@ -141,7 +141,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   H.note_  "Get updated UTxO"
 
   void $ H.execCli' execConfig
-    [ convertToEraString anyEra, "query", "utxo"
+    [ anyEraToString anyEra, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
     , "--out-file", work </> "utxo-2.json"

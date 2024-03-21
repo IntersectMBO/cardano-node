@@ -6,9 +6,10 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Testnet.Components.Configuration
-  ( convertToEraString
+  ( anyEraToString
   , createConfigYaml
   , createSPOGenesisAndFiles
+  , eraToString
   , mkTopologyConfig
   , numSeededUTxOKeys
   , NumPools
@@ -18,6 +19,8 @@ module Testnet.Components.Configuration
 import           Cardano.Api.Ledger (StandardCrypto)
 import           Cardano.Api.Shelley hiding (Value, cardanoEra)
 
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import           Ouroboros.Network.PeerSelection.Bootstrap
@@ -29,21 +32,22 @@ import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.Aeson.Lens as L
-import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
 import           Data.String
+import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import           Lens.Micro
-import           System.FilePath.Posix (takeDirectory, (</>))
+import           System.FilePath.Posix (takeDirectory, takeFileName, (</>))
 
 import           Testnet.Defaults
 import           Testnet.Filepath
 import           Testnet.Process.Run (execCli_)
 import           Testnet.Property.Utils
-import           Testnet.Start.Types (CardanoTestnetOptions (..))
+import           Testnet.Start.Types (CardanoTestnetOptions (..), anyEraToString, eraToString)
 
 import           Hedgehog
 import qualified Hedgehog as H
@@ -51,31 +55,28 @@ import qualified Hedgehog.Extras.Stock.Time as DTC
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
-createConfigYaml
-  :: (MonadTest m, MonadIO m, HasCallStack)
+-- | Returns JSON encoded hashes of the era, as well as the hard fork configuration toggle.
+createConfigYaml :: ()
+  => (MonadTest m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
-  -> AnyCardanoEra
+  -> AnyCardanoEra -- ^ The era used for generating the hard fork configuration toggle
   -> m LBS.ByteString
-createConfigYaml (TmpAbsolutePath tempAbsPath') anyCardanoEra' = GHC.withFrozenCallStack $ do
-  -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-  -- TODO: These genesis filepaths should not be hardcoded. Using the cli as a library
-  -- rather as an executable will allow us to get the genesis files paths in a more
-  -- direct fashion.
-
-  byronGenesisHash <- getByronGenesisHash $ tempAbsPath' </> "byron/genesis.json"
-  shelleyGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> defaultShelleyGenesisFp) "ShelleyGenesisHash"
-  alonzoGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> "shelley/genesis.alonzo.json") "AlonzoGenesisHash"
-  conwayGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> "shelley/genesis.conway.json") "ConwayGenesisHash"
-
+createConfigYaml (TmpAbsolutePath tempAbsPath) era = GHC.withFrozenCallStack $ do
+  byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron/genesis.json"
+  shelleyGenesisHash <- getHash ShelleyEra "ShelleyGenesisHash"
+  alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
+  conwayGenesisHash  <- getHash ConwayEra  "ConwayGenesisHash"
 
   return . Aeson.encode . Aeson.Object
     $ mconcat [ byronGenesisHash
               , shelleyGenesisHash
               , alonzoGenesisHash
               , conwayGenesisHash
-              , defaultYamlHardforkViaConfig anyCardanoEra'
+              , defaultYamlHardforkViaConfig era
               ]
-
+   where
+    getHash :: (MonadTest m, MonadIO m) => CardanoEra a -> Text.Text -> m (Aeson.KeyMap Aeson.Value)
+    getHash e = getShelleyGenesisHash (tempAbsPath </> defaultGenesisFilepath e)
 
 numSeededUTxOKeys :: Int
 numSeededUTxOKeys = 3
@@ -90,18 +91,17 @@ createSPOGenesisAndFiles
   => NumPools -- ^ The number of pools to make
   -> AnyCardanoEra -- ^ The era to use
   -> ShelleyGenesis StandardCrypto -- ^ The shelley genesis to use.
+  -> AlonzoGenesis -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
+  -> ConwayGenesis StandardCrypto -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
   -> TmpAbsolutePath
   -> m FilePath -- ^ Shelley genesis directory
-createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolutePath tempAbsPath') = do
-  let genesisShelleyFpAbs = tempAbsPath' </> defaultShelleyGenesisFp
+createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tempAbsPath) = do
+  let genesisShelleyFpAbs = tempAbsPath </> defaultGenesisFilepath ShelleyEra
       genesisShelleyDirAbs = takeDirectory genesisShelleyFpAbs
   genesisShelleyDir <- H.createDirectoryIfMissing genesisShelleyDirAbs
   let testnetMagic = sgNetworkMagic shelleyGenesis
       numStakeDelegators = 3 :: Int
       startTime = sgSystemStart shelleyGenesis
-
-  -- TODO: We need to read the genesis files into Haskell and modify them
-  -- based on cardano-testnet's cli parameters
 
   -- We create the initial genesis file to avoid having to re-write the genesis file later
   -- with the parameters we want. The user must provide genesis files or we will use a default.
@@ -129,7 +129,7 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
   H.note_ $ "Number of seeded UTxO keys: " <> show numSeededUTxOKeys
 
   execCli_
-    [ convertToEraString era, "genesis", "create-testnet-data"
+    [ anyEraToString era, "genesis", "create-testnet-data"
     , "--spec-shelley", genesisShelleyFpAbs
     , "--testnet-magic", show testnetMagic
     , "--pools", show numPoolNodes
@@ -139,7 +139,7 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
     , "--utxo-keys", show numSeededUTxOKeys
     , "--drep-keys", "3"
     , "--start-time", DTC.formatIso8601 startTime
-    , "--out-dir", tempAbsPath'
+    , "--out-dir", tempAbsPath
     ]
 
   -- Here we move all of the keys etc generated by create-testnet-data
@@ -147,31 +147,34 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
 
   -- Move all genesis related files
 
-  genesisByronDir <- H.createDirectoryIfMissing $ tempAbsPath' </> "byron"
+  genesisByronDir <- H.createDirectoryIfMissing $ tempAbsPath </> "byron"
 
-  files <- H.listDirectory tempAbsPath'
+  files <- H.listDirectory tempAbsPath
   forM_ files $ \file -> do
     H.note file
 
-  -- TODO: This conway and alonzo genesis creation should be ultimately moved to create-testnet-data
-  alonzoConwayTestGenesisJsonTargetFile <- H.noteShow (genesisShelleyDir </> "genesis.alonzo.json")
-  gen <- H.evalEither $ first prettyError defaultAlonzoGenesis
-  H.evalIO $ LBS.writeFile alonzoConwayTestGenesisJsonTargetFile $ Aeson.encode gen
+  -- TODO: This conway and alonzo genesis creation can be removed,
+  -- as this will be done by create-testenet-data when cardano-cli is upgraded above 8.20.3.0.
+  writeGenesisFile genesisShelleyDir AlonzoEra alonzoGenesis
+  writeGenesisFile genesisShelleyDir ConwayEra conwayGenesis
 
-  conwayConwayTestGenesisJsonTargetFile <- H.noteShow (genesisShelleyDir </> "genesis.conway.json")
-  H.evalIO $ LBS.writeFile conwayConwayTestGenesisJsonTargetFile $ Aeson.encode defaultConwayGenesis
-
-  H.renameFile (tempAbsPath' </> "byron-gen-command" </> "genesis.json") (genesisByronDir </> "genesis.json")
+  H.renameFile (tempAbsPath </> "byron-gen-command" </> "genesis.json") (genesisByronDir </> "genesis.json")
   -- TODO: create-testnet-data outputs the new shelley genesis to genesis.json
-  H.renameFile (tempAbsPath' </> "genesis.json") (genesisShelleyDir </> "genesis.shelley.json")
+  H.renameFile (tempAbsPath </> "genesis.json") (genesisShelleyDir </> "genesis.shelley.json")
 
-  -- TODO: move this to create-testnet-data
   -- For some reason when setting "--total-supply 10E16" in create-testnet-data, we're getting negative
-  -- treasury
+  -- treasury. TODO: This should be fixed by https://github.com/IntersectMBO/cardano-cli/pull/644
+  -- So this can be removed when cardano-cli is upgraded above 8.20.3.0.
   H.rewriteJsonFile @Value (genesisShelleyDir </> "genesis.shelley.json") $ \o -> o
     & L.key "maxLovelaceSupply" . L._Integer .~ 10_000_000_000_000_000
 
   return genesisShelleyDir
+  where
+    writeGenesisFile :: (MonadTest m, MonadIO m, HasCallStack) => ToJSON b => FilePath -> CardanoEra a -> b -> m ()
+    writeGenesisFile dir era' toWrite = GHC.withFrozenCallStack $ do
+      let filename = takeFileName $ defaultGenesisFilepath era'
+      targetJsonFile <- H.noteShow (dir </> filename)
+      H.evalIO $ LBS.writeFile targetJsonFile $ Aeson.encode toWrite
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"

@@ -157,7 +157,7 @@ createScriptStakeRegistrationCertificate tempAbsP anyCEra scriptFile deposit out
     let tempAbsPath' = unTmpAbsPath tempAbsP
 
     void $ execCli
-      [ convertToEraString anyCEra
+      [ anyEraToString anyCEra
       , "stake-address", "registration-certificate"
       , "--stake-script-file", scriptFile
       , "--key-reg-deposit-amt", show deposit
@@ -168,15 +168,7 @@ createScriptStakeRegistrationCertificate tempAbsP anyCEra scriptFile deposit out
 -- TODO: Remove me and replace with new era based commands
 -- i.e "conway", "babbage" etc
 convertToEraFlag :: AnyCardanoEra -> String
-convertToEraFlag (AnyCardanoEra e) =
-  case e of
-    ConwayEra -> "--conway-era"
-    BabbageEra -> "--babbage-era"
-    AlonzoEra -> "--alonzo-era"
-    MaryEra -> "--mary-era"
-    AllegraEra -> "--allegra-era"
-    ShelleyEra -> "--shelley-era"
-    ByronEra -> "--byron-era"
+convertToEraFlag era = "--" <> anyEraToString era  <> "-era"
 
 -- | Related documentation: https://github.com/input-output-hk/cardano-node-wiki/blob/main/docs/stake-pool-operations/8_register_stakepool.md
 registerSingleSpo

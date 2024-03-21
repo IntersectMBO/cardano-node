@@ -15,7 +15,7 @@ module Testnet.Defaults
   , defaultYamlConfig
   , defaultConwayGenesis
   , defaultShelleyGenesis
-  , defaultShelleyGenesisFp
+  , defaultGenesisFilepath
   , defaultYamlHardforkViaConfig
   , defaultMainnetTopology
   , plutusV3NonSpendingScript
@@ -64,6 +64,7 @@ import           Data.Word
 import           GHC.Stack
 import           Lens.Micro
 import           Numeric.Natural
+import           System.FilePath.Posix ((</>))
 
 import           Test.Cardano.Ledger.Core.Rational
 import           Testnet.Start.Types
@@ -434,9 +435,9 @@ defaultYamlConfig =
 
     -- Genesis filepaths
     , ("ByronGenesisFile", "byron/genesis.json")
-    , ("ShelleyGenesisFile", Aeson.String $ Text.pack defaultShelleyGenesisFp)
-    , ("AlonzoGenesisFile", "shelley/genesis.alonzo.json")
-    , ("ConwayGenesisFile", "shelley/genesis.conway.json")
+    , ("ShelleyGenesisFile", genesisPath ShelleyEra)
+    , ("AlonzoGenesisFile",  genesisPath AlonzoEra)
+    , ("ConwayGenesisFile",  genesisPath ConwayEra)
 
     -- See: https://github.com/input-output-hk/cardano-ledger/blob/master/eras/byron/ledger/impl/doc/network-magic.md
     , ("RequiresNetworkMagic", "RequiresMagic")
@@ -452,6 +453,8 @@ defaultYamlConfig =
     , ("defaultBackends", Aeson.Array $ Vector.fromList ["KatipBK"])
     , ("options", Aeson.object mempty)
     ]
+  where
+    genesisPath era = Aeson.String $ Text.pack $ defaultGenesisFilepath era
 
 -- | We need a Byron genesis in order to be able to hardfork to the later Shelley based eras.
 -- The values here don't matter as the testnet conditions are ultimately determined
@@ -548,13 +551,8 @@ defaultMainnetTopology =
          }
   in RealNodeTopology [single]
 
--- TODO: These filepaths should really be decoded from the output of
--- create-testnet-data. We are still deciding the best way to pass this information
--- to cardano-testnet.
-
-defaultShelleyGenesisFp :: FilePath
-defaultShelleyGenesisFp = "shelley/genesis.shelley.json"
-
+defaultGenesisFilepath :: CardanoEra a -> FilePath
+defaultGenesisFilepath era = "shelley" </> ("genesis." <> eraToString era <> ".json")
 
 -- TODO: We should not hardcode a script like this. We need to move
 -- plutus-example from plutus apps to cardano-node-testnet. This will
