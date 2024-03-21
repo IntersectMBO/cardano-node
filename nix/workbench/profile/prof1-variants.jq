@@ -901,6 +901,11 @@ def all_profile_variants:
   , $cibench_base * $with_rtview *
     { name: "ci-bench-rtview"
     }
+  , $cibench_base * $p2p *
+    { name: "ci-bench-lmdb"
+    , node:    { utxo_lmdb: true }
+    , cluster: { ssd_directory: "/tmp" }
+    }
   , $cibench_base * $nomad_perf_torus * $p2p *
     { name: "ci-bench-nomadperf"
     , desc: "ci-bench on P&T exclusive cluster"
