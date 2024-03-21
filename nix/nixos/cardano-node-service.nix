@@ -128,6 +128,11 @@ let
       ];
     };
     instanceDbPath = cfg.databasePath i;
+    utxoLmdbParams = ["--v1-lmdb-ledger-db-backend"]
+      ++ lib.optionals (cfg.lmdbDatabasePath i != null)
+        [ "--ssd-database-dir ${cfg.lmdbDatabasePath i}"
+          "--ssd-snapshot-tables"
+        ];
     cmd = builtins.filter (x: x != "") [
       "${cfg.executable} run"
       "--config ${nodeConfigFile}"
@@ -143,7 +148,8 @@ let
       "--tracer-socket-path-accept ${cfg.tracerSocketPathAccept i}"
     ] ++ lib.optionals (cfg.tracerSocketPathConnect i != null) [
       "--tracer-socket-path-connect ${cfg.tracerSocketPathConnect i}"
-    ] ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
+    ] ++ lib.optionals (cfg.withUtxoHdLmdb i) utxoLmdbParams
+      ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
       echo "Starting: ${concatStringsSep "\"\n   echo \"" cmd}"
       echo "..or, once again, in a single line:"
@@ -343,11 +349,28 @@ in {
         '';
       };
 
+      ssdDatabaseDir = mkOption {
+        type = nullOrStr;
+        default = null;
+        description = ''
+          Optional mount point of a device with high performance disk I/O.
+          This could be a direct-access SSD, with a specifically created journal-less file system and optimized mount options.
+          It'll be used as storage for UTxO-HD's LMDB backend only.
+        '';
+      };
+
       databasePath = mkOption {
         type = funcToOr types.str;
         default = i : "${cfg.stateDir i}/${cfg.dbPrefix i}";
         apply = x : if builtins.isFunction x then x else _ : x;
         description = ''Node database path, for each instance.'';
+      };
+
+      lmdbDatabasePath = mkOption {
+        type = funcToOr nullOrStr;
+        default = i : if cfg.ssdDatabaseDir == null then null else "${cfg.ssdDatabaseDir}/lmdb-${cfg.dbPrefix i}";
+        apply = x : if builtins.isFunction x then x else if x == null then _: null else i: x;
+        description = ''Node UTxO-HD LMDB path for performant disk I/O, for each instance.'';
       };
 
       socketPath = mkOption {
@@ -646,6 +669,13 @@ in {
       withCardanoTracer = mkOption {
         type = types.bool;
         default = false;
+      };
+
+      withUtxoHdLmdb = mkOption {
+        type = funcToOr types.bool;
+        default = false;
+        apply = x: if builtins.isFunction x then x else _: x;
+        description = ''On an UTxO-HD enabled node, the in-memory backend is the default. This activates the on-disk backend (LMDB) instead.'';
       };
 
       extraArgs = mkOption {
