@@ -66,6 +66,7 @@ def era_defaults($era):
     , shutdown_on_block_synced:       null
     , tracing_backend:                "trace-dispatcher"  ## or "iohk-monitoring"
     , tracer:                         true
+    , utxo_lmdb:                      false               ## use LMDB backend (instead of default in-mem) on a UTxO-HD node; will be ignored by non-UTxO-HD nodes
     , verbatim:
       {
       }
@@ -110,7 +111,8 @@ def era_defaults($era):
       , explorer: 14155776 # 13.5×1024×1024
       }
     , keep_running: false
+    , ssd_directory: null
     }
-
   }
+
 } | (.common * (.[$era] // {}));
