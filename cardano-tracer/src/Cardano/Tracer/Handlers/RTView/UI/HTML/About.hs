@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Cardano.Tracer.Handlers.RTView.UI.HTML.About
   ( mkAboutInfo
@@ -106,7 +107,7 @@ mkAboutInfo = do
   on UI.click closeIt . const $ element info #. "modal"
   return info
  where
-  commit = T.unpack . T.take 7 $ gitRev
+  commit = T.unpack . T.take 7 $ $(gitRev)
 
 currentOS :: String
 currentOS =

@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Parsers.Version
   ( VersionOptions(..)
   , cmdVersion
@@ -30,7 +31,7 @@ runVersionOptions VersionOptions = do
     [ "cardano-node ", showVersion version
     , " - ", os, "-", arch
     , " - ", compilerName, "-", showVersion compilerVersion
-    , "\ngit rev ", T.unpack gitRev
+    , "\ngit rev ", T.unpack $(gitRev)
     ]
 
 cmdVersion :: Mod CommandFields VersionOptions
