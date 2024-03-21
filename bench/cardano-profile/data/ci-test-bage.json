@@ -1,0 +1,122 @@
+{
+  "era": "babbage",
+  "scenario": "fixed-loaded",
+  "composition": {
+    "locations": [
+      "loopback"
+    ],
+    "n_bft_hosts": 0,
+    "n_singular_hosts": 2,
+    "n_dense_hosts": 0,
+    "dense_pool_density": 1,
+    "with_proxy": false,
+    "with_explorer": false,
+    "topology": "uni-circle",
+    "n_hosts": 2,
+    "n_pools": 2,
+    "n_singular_pools": 2,
+    "n_dense_pools": 0,
+    "n_pool_hosts": 2
+  },
+  "generator": {
+    "add_tx_size": 100,
+    "init_cooldown": 5,
+    "inputs_per_tx": 2,
+    "outputs_per_tx": 2,
+    "tx_fee": 1000000,
+    "epochs": 3,
+    "tps": 15,
+    "plutus": {
+      "type": null,
+      "script": null
+    },
+    "tx_count": 9000
+  },
+  "node": {
+    "rts_flags_override": [],
+    "shutdown_on_slot_synced": null,
+    "shutdown_on_block_synced": 3,
+    "tracing_backend": "trace-dispatcher",
+    "tracer": true,
+    "verbatim": {}
+  },
+  "analysis": {
+    "type": "standard",
+    "cluster_base_startup_overhead_s": 40,
+    "start_log_spread_s": 120,
+    "last_log_spread_s": 120,
+    "silence_since_last_block_s": 120,
+    "tx_loss_ratio": 0.02,
+    "finish_patience": 21,
+    "filters": [],
+    "filter_exprs": [
+      {
+        "tag": "CBlock",
+        "contents": {
+          "tag": "BMinimumAdoptions",
+          "contents": 1
+        }
+      }
+    ],
+    "minimum_chain_density": 0.025,
+    "cluster_startup_overhead_s": 40
+  },
+  "tracer": {
+    "rtview": false,
+    "ekg": false,
+    "withresources": false
+  },
+  "cluster": {
+    "nomad": {
+      "namespace": "default",
+      "class": "",
+      "resources": {
+        "producer": {
+          "cores": 2,
+          "memory": 15000,
+          "memory_max": 16000
+        },
+        "explorer": {
+          "cores": 2,
+          "memory": 15000,
+          "memory_max": 16000
+        }
+      },
+      "fetch_logs_ssh": false
+    },
+    "aws": {
+      "instance_type": {
+        "producer": "c5.2xlarge",
+        "explorer": "m5.4xlarge"
+      }
+    },
+    "minimun_storage": {
+      "producer": 12582912,
+      "explorer": 14155776
+    },
+    "keep_running": false
+  },
+  "desc": "Miniature dataset, CI-friendly duration, test scale",
+  "name": "ci-test-bage"
+
+
+
+, "genesis": {
+      "network_magic" : 0
+    , "single_shot" : false
+    , "per_pool_balance" : 0
+    , "funds_balance" : 0
+    , "utxo" : 0
+    , "active_slots_coeff" : 0
+    , "epoch_length" : 0
+    , "parameter_k" : 0
+    , "slot_duration" : 0
+    , "extra_future_offset" : 0
+    , "pparamsEpoch" : 0
+    , "delegators" : 0
+    , "shelley" : {}
+    , "alonzo" : {}
+    , "pool_coin" : 0
+    , "delegator_coin" : 0
+  }
+}
