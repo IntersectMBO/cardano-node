@@ -68,6 +68,12 @@ let
       topology       = "topology.json";
       nodeConfigFile = "config.json";
 
+      # Allow for local clusters to have multiple LMDB directories in the same physical ssd_directory
+      withUtxoHdLmdb   = profile.node.utxo_lmdb;
+      lmdbDatabasePath =
+          if (profile.cluster ? "ssd_directory" && profile.cluster.ssd_directory != null)
+          then "${profile.cluster.ssd_directory}/lmdb-node-${toString i}"
+          else null;
 
       ## Combine:
       ##   0. baseNodeConfig (coming cardanoLib's testnet environ)
