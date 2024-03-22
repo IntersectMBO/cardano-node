@@ -3855,7 +3855,7 @@ client {
 
   # Specifies an arbitrary string used to logically group client nodes by
   # user-defined class. This can be used during job placement as a filter.
-  node_class = "perf" # Using the "world.dev.cardano.org" testing class for "perf".
+  node_class = "" # Make sure we are not using namespaces locally.
 
   # "artifact" parameters (fail fast!!!)
   ######################################
