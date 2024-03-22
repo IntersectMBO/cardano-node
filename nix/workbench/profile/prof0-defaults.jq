@@ -98,6 +98,8 @@ def era_defaults($era):
         { producer: {cores: 2, memory: 15000, memory_max: 16000}
         , explorer: {cores: 2, memory: 15000, memory_max: 16000}
         }
+      # Volumes like {source: "ssd1", destination: "/ssd1", read_only: false}
+      , host_volumes: null
       , fetch_logs_ssh: false
       }
     , aws:
