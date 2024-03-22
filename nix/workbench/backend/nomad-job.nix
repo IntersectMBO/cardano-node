@@ -476,13 +476,6 @@ let
             }
           ];
         };
-
-        # The Consul namespace in which group and task-level services within the
-        # group will be registered. Use of template to access Consul KV will read
-        # from the specified Consul namespace. Specifying namespace takes
-        # precedence over the -consul-namespace command line argument in job run.
-        # namespace = "";
-        # Not available as the documentations says: Extraneous JSON object property; No argument or block type is named "namespace".
       }
       //
       # If it needs host volumes add the constraints (can't be "null" or "[]".)
