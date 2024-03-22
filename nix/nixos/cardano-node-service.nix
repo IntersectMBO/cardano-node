@@ -349,16 +349,6 @@ in {
         '';
       };
 
-      ssdDatabaseDir = mkOption {
-        type = nullOrStr;
-        default = null;
-        description = ''
-          Optional mount point of a device with high performance disk I/O.
-          This could be a direct-access SSD, with a specifically created journal-less file system and optimized mount options.
-          It'll be used as storage for UTxO-HD's LMDB backend only.
-        '';
-      };
-
       databasePath = mkOption {
         type = funcToOr types.str;
         default = i : "${cfg.stateDir i}/${cfg.dbPrefix i}";
@@ -368,9 +358,12 @@ in {
 
       lmdbDatabasePath = mkOption {
         type = funcToOr nullOrStr;
-        default = i : if cfg.ssdDatabaseDir == null then null else "${cfg.ssdDatabaseDir}/lmdb-${cfg.dbPrefix i}";
-        apply = x : if builtins.isFunction x then x else if x == null then _: null else i: x;
-        description = ''Node UTxO-HD LMDB path for performant disk I/O, for each instance.'';
+        default = null;
+        apply = x : if builtins.isFunction x then x else if x == null then _: null else _: x;
+        description = ''
+          Node UTxO-HD LMDB path for performant disk I/O, for each instance.
+          This could point to a direct-access SSD, with a specifically created journal-less file system and optimized mount options.
+        '';
       };
 
       socketPath = mkOption {
@@ -722,6 +715,7 @@ in {
   config = mkIf cfg.enable ( let
     stateDirBase = "/var/lib/";
     runDirBase = "/run/";
+    lmdbPaths = filter (x: x != null) (map (e: lmdbDatabasePath e) cfg.instances);
     genInstanceConf = f: listToAttrs (if cfg.instances > 1
       then genList (i: let n = "cardano-node-${toString i}"; in nameValuePair n (f n i)) cfg.instances
       else [ (nameValuePair "cardano-node" (f "cardano-node" 0)) ]); in lib.mkMerge [
@@ -822,6 +816,10 @@ in {
         {
           assertion = !(cfg.systemdSocketActivation && cfg.useNewTopology);
           message = "Systemd socket activation cannot be used with p2p topology due to a systemd socket re-use issue.";
+        }
+        {
+          assertion = (length lmdPaths) == (length (lib.lists.unique lmdbPaths));
+          message   = "When configuring multiple LMDB enabled nodes on one instance, lmdbDatabasePath must be unique.";
         }
       ];
     }
