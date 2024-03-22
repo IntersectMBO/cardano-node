@@ -483,7 +483,28 @@ let
         # precedence over the -consul-namespace command line argument in job run.
         # namespace = "";
         # Not available as the documentations says: Extraneous JSON object property; No argument or block type is named "namespace".
-
+      }
+      //
+      # If it needs host volumes add the constraints (can't be "null" or "[]".)
+      ### - https://developer.hashicorp.com/nomad/tutorials/stateful-workloads/stateful-workloads-host-volumes
+      (lib.optionalAttrs (profileData.value.cluster.nomad.host_volumes != null) {
+        volume = lib.listToAttrs (lib.lists.imap0
+          (i: v: {
+            # Internal name, reference to mount in this group's tasks below.
+            name = "volume-${taskName}-${toString i}";
+            value = {
+              type = "host"; # We only support type "host".
+              read_only = v.read_only;
+              # How it is named in the Nomad Client's config.
+              # https://developer.hashicorp.com/nomad/docs/configuration/client#host_volume-block
+              source = v.source;
+            };
+          })
+          profileData.value.cluster.nomad.host_volumes
+        );
+      })
+      //
+      {
         # The task stanza creates an individual unit of work, such as a Docker
         # container, web application, or batch processing.
         # https://developer.hashicorp.com/nomad/docs/job-specification/task
@@ -590,6 +611,20 @@ let
             # https://developer.hashicorp.com/nomad/docs/job-specification/check
             check = null;
           };
+
+          # If it needs host volumes mount them (defined above if any).
+          volume_mount = if profileData.value.cluster.nomad.host_volumes != null
+            then lib.lists.imap0
+              (i: v: {
+                # Internal name, defined above in the group's specification.
+                volume = "volume-${taskName}-${toString i}";
+                # Where it is going to be mounted inside the Task.
+                destination = v.destination;
+                read_only = v.read_only;
+              })
+              profileData.value.cluster.nomad.host_volumes
+            else null
+          ;
 
           # Specifies the set of templates to render for the task. Templates can
           # be used to inject both static and dynamic configuration with data
