@@ -578,12 +578,12 @@ let
             # address of an AWS EC2 instance set this to
             # ${attr.unique.platform.aws.public-ipv4}.
             address =
-              # When using the dedicated P&T Nomad cluster on AWS we use public
-              # IPs/routing, all the other cloud runs are behind a VPC/firewall.
-              # Local runs just use 12.0.0.1.
-              if lib.strings.hasInfix "-nomadperf" profileData.profileName
+              # When using dedicated Nomad clusters on AWS we want to use public
+              # IPs/routing, all the other cloud runs will run behind a
+              # VPC/firewall.
+              if profileData.value.cluster.aws.use_public_routing
               then "\${attr.unique.platform.aws.public-ipv4}"
-              else ""
+              else "" # Local runs just use 127.0.0.1.
             ;
             # Specifies the port to advertise for this service. The value of
             # port depends on which address_mode is being used:
@@ -1398,7 +1398,7 @@ let
       [
         # Address string to
         (
-          if lib.strings.hasInfix "-nomadperf" profileData.profileName
+          if profileData.value.cluster.aws.use_public_routing
           then ''--host-addr {{ env "attr.unique.platform.aws.local-ipv4" }}''
           else ''--host-addr 0.0.0.0''
         )

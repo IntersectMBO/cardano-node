@@ -107,6 +107,8 @@ def era_defaults($era):
         { producer: "c5.2xlarge"
         , explorer: "m5.4xlarge"
         }
+      # "attr.unique.platform.aws.public-ipv4" to bind and service definition.
+      , use_public_routing: false
       }
     , minimun_storage:
       { producer: 12582912 # 12×1024×1024
