@@ -14,10 +14,10 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
                    partialTraceSelectionToEither)
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
-import           Ouroboros.Consensus.Storage.LedgerDB
-                   (FlushFrequency (DefaultFlushFrequency), QueryBatchSize (DefaultQueryBatchSize),
-                   SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Impl.Snapshots
+                   (SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.V1.Args
+
 import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
@@ -119,7 +119,6 @@ testPartialYamlConfig =
     , pncShutdownConfig = Last Nothing
     , pncStartAsNonProducingNode = Last $ Just False
     , pncDiffusionMode = Last Nothing
-    , pncNumOfDiskSnapshots = Last Nothing
     , pncSnapshotInterval = mempty
     , pncExperimentalProtocolsEnabled = Last Nothing
     , pncMaxConcurrencyBulkSync = Last Nothing
@@ -147,9 +146,12 @@ testPartialYamlConfig =
     , pncTargetNumberOfActiveBigLedgerPeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
-    , pncLedgerDBBackend = Last (Just InMemory)
+    , pncLedgerDBBackend = Last (Just V2InMemory)
     , pncFlushFrequency = Last (Just DefaultFlushFrequency)
     , pncQueryBatchSize = Last (Just DefaultQueryBatchSize)
+    , pncSsdSnapshotState = Last (Just False)
+    , pncSsdDatabaseDir = Last Nothing
+    , pncSsdSnapshotTables = Last (Just False)
     }
 
 -- | Example partial configuration theoretically created
@@ -164,7 +166,6 @@ testPartialCliConfig =
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
     , pncDiffusionMode = mempty
-    , pncNumOfDiskSnapshots = Last Nothing
     , pncSnapshotInterval = Last . Just . RequestedSnapshotInterval $ secondsToDiffTime 100
     , pncExperimentalProtocolsEnabled = Last $ Just True
     , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
@@ -190,9 +191,12 @@ testPartialCliConfig =
     , pncTargetNumberOfActiveBigLedgerPeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
-    , pncLedgerDBBackend = Last (Just InMemory)
+    , pncLedgerDBBackend = Last (Just V2InMemory)
     , pncFlushFrequency = Last (Just DefaultFlushFrequency)
     , pncQueryBatchSize = Last (Just DefaultQueryBatchSize)
+    , pncSsdSnapshotState = Last (Just False)
+    , pncSsdDatabaseDir = Last Nothing
+    , pncSsdSnapshotTables = Last (Just False)
     }
 
 -- | Expected final NodeConfiguration
@@ -211,7 +215,6 @@ eExpectedConfig = do
     , ncValidateDB = True
     , ncProtocolConfig = testNodeProtocolConfiguration
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
-    , ncNumOfDiskSnapshots = DefaultNumOfDiskSnapshots
     , ncSnapshotInterval = RequestedSnapshotInterval $ secondsToDiffTime 100
     , ncExperimentalProtocolsEnabled = True
     , ncMaxConcurrencyBulkSync = Nothing
@@ -239,9 +242,12 @@ eExpectedConfig = do
     , ncTargetNumberOfActiveBigLedgerPeers = 5
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = PeerSharingDisabled
-    , ncLedgerDBBackend = InMemory
+    , ncLedgerDBBackend = V2InMemory
     , ncFlushFrequency = DefaultFlushFrequency
     , ncQueryBatchSize = DefaultQueryBatchSize
+    , ncSsdDatabaseDir = "mainnet/ledgerdb/"
+    , ncSsdSnapshotState = False
+    , ncSsdSnapshotTables = False
     }
 
 -- -----------------------------------------------------------------------------

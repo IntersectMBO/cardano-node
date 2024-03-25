@@ -216,15 +216,15 @@ documentTracer tracer = do
     propertiesBuilder LogDoc {..} =
         case ldSeverityCoded of
           Just s  -> fromText "Severity:  " <> asCode (fromString (show s)) <> "\n"
-          Nothing -> fromText "Severity missing" <> "\n"
+          Nothing -> fromText "Severity missing: " <> "\n"
       <>
         case ldPrivacyCoded of
           Just p  -> fromText "Privacy:   " <> asCode (fromString (show p)) <> "\n"
-          Nothing -> fromText "Privacy missing" <> "\n"
+          Nothing -> fromText "Privacy missing: " <> "\n"
       <>
         case ldDetailsCoded of
           Just d  -> fromText "Details:   " <> asCode (fromString (show d)) <> "\n"
-          Nothing -> fromText "Details missing" <> "\n"
+          Nothing -> fromText "Details missing: " <> "\n"
 
     propertiesWarning :: LogDoc ->[InconsistencyWarning]
     propertiesWarning LogDoc {..} =

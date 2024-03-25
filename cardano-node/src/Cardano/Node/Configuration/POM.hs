@@ -170,7 +170,7 @@ data NodeConfiguration
        , ncPeerSharing :: PeerSharing
 
          -- SSD options for LMDB/Snapshot storing
-       , ncSsdDatabaseDir     :: FilePath
+       , ncSsdDatabaseDir     :: !FilePath
        , ncSsdSnapshotState   :: !Bool
        , ncSsdSnapshotTables  :: !Bool
        } deriving (Eq, Show)
@@ -242,7 +242,7 @@ data PartialNodeConfiguration
        , pncPeerSharing :: !(Last PeerSharing)
 
        -- SSD options for LMDB/Snapshot storing
-       , pncSsdDatabaseDir     :: Last FilePath
+       , pncSsdDatabaseDir     :: !(Last FilePath)
        , pncSsdSnapshotState   :: !(Last Bool)
        , pncSsdSnapshotTables  :: !(Last Bool)
        } deriving (Eq, Generic, Show)
