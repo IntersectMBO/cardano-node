@@ -43,7 +43,7 @@ executable cardano-node-chairman
                         "-with-rtsopts=-T"
   build-depends:        cardano-api
                       , cardano-crypto-class
-                      , cardano-git-rev
+                      , cardano-git-rev ^>=0.2.2
                       , cardano-node ^>= 8.9
                       , cardano-prelude
                       , containers

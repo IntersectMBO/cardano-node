@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Cardano.Chairman.Commands.Version
   ( VersionOptions(..)
   , cmdVersion
@@ -25,7 +26,7 @@ runVersionOptions VersionOptions = do
     [ "cardano-node ", showVersion version
     , " - ", os, "-", arch
     , " - ", compilerName, "-", showVersion compilerVersion
-    , "\ngit rev ", T.unpack gitRev
+    , "\ngit rev ", T.unpack $(gitRev)
     ]
 
 cmdVersion :: Mod CommandFields (IO ())

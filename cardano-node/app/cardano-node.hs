@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 import qualified Cardano.Crypto.Init as Crypto
 import           Cardano.Git.Rev (gitRev)
@@ -89,7 +90,7 @@ runVersionCommand =
       [ "cardano-node ", renderVersion version
       , " - ", Text.pack os, "-", Text.pack arch
       , " - ", Text.pack compilerName, "-", renderVersion compilerVersion
-      , "\ngit rev ", gitRev
+      , "\ngit rev ", $(gitRev)
       ]
   where
     renderVersion = Text.pack . showVersion
