@@ -17,7 +17,6 @@ index-state:
   , cardano-haskell-packages 2024-03-18T16:52:28Z
 
 packages:
-  cardano-git-rev
   cardano-node
   cardano-node-capi
   cardano-node-chairman
