@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
@@ -69,7 +70,7 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
       basicInfoCommon = BICommon $ BasicInfoCommon {
                 biProtocol = pack . show $ ncProtocol nc
               , biVersion  = pack . showVersion $ version
-              , biCommit   = gitRev
+              , biCommit   = $(gitRev)
               , biNodeStartTime = nodeStartTime
               , biConfigPath = fp
               , biNetworkMagic = getNetworkMagic $ Consensus.configBlock cfg

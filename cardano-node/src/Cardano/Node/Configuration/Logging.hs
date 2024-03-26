@@ -5,6 +5,7 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Node.Configuration.Logging
@@ -173,7 +174,7 @@ createLoggingLayer ver nodeConfig' p = do
   -- These have to be set before the switchboard is set up.
   liftIO $ do
     Config.setTextOption logConfig "appversion" ver
-    Config.setTextOption logConfig "appcommit" gitRev
+    Config.setTextOption logConfig "appcommit" $(gitRev)
 
   (baseTrace', switchBoard) <- liftIO $ setupTrace_ logConfig "cardano"
 
@@ -352,7 +353,7 @@ nodeBasicInfo nc (SomeConsensusProtocol whichP pForInfo) nodeStartTime' = do
       items = nub $
         [ ("protocol",      pack . show $ ncProtocol nc)
         , ("version",       pack . showVersion $ version)
-        , ("commit",        gitRev)
+        , ("commit",        $(gitRev))
         , ("nodeStartTime", textShow nodeStartTime')
         ] ++ protocolDependentItems
       logObjects =

@@ -38,7 +38,7 @@ library
                       , cardano-cli ^>= 8.20.3.0
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
-                      , cardano-git-rev
+                      , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-alonzo
                       , cardano-ledger-binary
                       , cardano-ledger-byron
