@@ -234,15 +234,15 @@ def all_profile_variants:
         { namespace: "perf-ssd"
         , class: "perf-ssd"
         , resources:
-          { producer: {cores: 16, memory: 128000, memory_max: 128000}
-          , explorer: {cores: 16, memory: 128000, memory_max: 128000}
+          { producer: {cores: 16, memory: 120000, memory_max: 124000}
+          , explorer: {cores: 16, memory: 120000, memory_max: 124000}
           }
         , fetch_logs_ssh: true
         }
       , aws:
         { instance_type:
           { producer: "r5.4xlarge"
-          , explorer: null
+          , explorer: "r5.4xlarge"
           }
         , use_public_routing: true
         }
@@ -277,6 +277,15 @@ def all_profile_variants:
         }
       }
     ) as $nomad_perfssd_unicircle
+  |
+    ($nomad_perfssd *
+      { composition:
+        { locations:                      ["eu-central-1", "us-east-1", "ap-southeast-2"]
+        , topology:                       "torus-dense"
+        , with_explorer:                  true
+        }
+      }
+    ) as $nomad_perfssd_dense
   |
   ##
   ### Definition vocabulary:  filtering
@@ -563,6 +572,10 @@ def all_profile_variants:
     { scenario:                        "fixed-loaded"
     }) as $scenario_nomad_perf
   |
+   ($model_timescale * $nomad_perf_tps_saturation_value *
+    { scenario:                        "fixed-loaded"
+    }) as $scenario_nomad_perfssd
+  |
    ($small_timescale * $nomad_perf_tps_saturation_value *
     { scenario:                        "fixed-loaded"
     }) as $scenario_nomad_perfssd_solo
@@ -634,6 +647,23 @@ def all_profile_variants:
       , desc: "AWS c5-2xlarge cluster dataset, 7 epochs"
     }) as $nomad_perf_base
   |
+   ($scenario_nomad_perfssd * $compose_fiftytwo * $dataset_oct2021 * $for_8ep *
+    { node:
+        { shutdown_on_slot_synced:        64000
+        }
+      , analysis:
+        { filters:                        ["epoch3+", "size-full"]
+        }
+      , generator:
+        { init_cooldown:                  45
+        }
+      , genesis:
+        { funds_balance:                  20000000000000
+        , max_block_size:                 88000
+        }
+      , desc: "AWS c5-2xlarge cluster dataset, 7 epochs"
+    }) as $nomad_perfssd_base
+  |
    ($scenario_nomad_perf * $compose_fiftytwo * $dataset_oct2021 * $for_9ep * $plutus_base * $plutus_loop_counter *
     { node:
         { shutdown_on_slot_synced:        72000
@@ -653,8 +683,12 @@ def all_profile_variants:
     }) as $nomad_perf_plutus_base
   |
    ($scenario_latency * $compose_fiftytwo * $dataset_empty * $no_filtering *
-    { desc: "AWS c5-2xlarge cluster, stop when all latency services stop"
+    { desc: "AWS perf class cluster, stop when all latency services stop"
     }) as $nomad_perf_latency_base
+  |
+   ($scenario_latency * $compose_fiftytwo * $dataset_empty * $no_filtering *
+    { desc: "AWS perf-ssd class cluster, stop when all latency services stop"
+    }) as $nomad_perfssd_latency_base
   |
    ($scenario_nomad_perfssd_solo * $solo * $dataset_24m *
     { node:
@@ -986,6 +1020,9 @@ def all_profile_variants:
   , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "value-nomadperf"
     }
+  , $nomad_perfssd_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
+    { name: "value-nomadperfssd"
+    }
   , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview * $old_tracing *
     { name: "value-oldtracing-nomadperf"
     }
@@ -994,6 +1031,9 @@ def all_profile_variants:
     }
   , $nomad_perf_latency_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "latency-nomadperf"
+    }
+  , $nomad_perfssd_latency_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
+    { name: "latency-nomadperfssd"
     }
 
 ## P&T Nomad cluster: 52 nodes, 3 regions, value-only (with old tracing variant) and Plutus, no P2P flavour
@@ -1014,7 +1054,7 @@ def all_profile_variants:
   , $fast_base * $compose_fiftytwo * $nomad_perf_dense * $costmodel_v8_preview *
     { name: "fast-nomadperf-nop2p"
     }
-  , $fast_base * $solo * $nomad_perfssd_unicircle * $costmodel_v8_preview * $p2p *
+  , $fast_base * $compose_fiftytwo * $nomad_perfssd_dense * $costmodel_v8_preview * $p2p *
     { name: "fast-nomadperfssd"
     }
 
