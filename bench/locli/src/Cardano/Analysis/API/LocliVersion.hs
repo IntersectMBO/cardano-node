@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Cardano.Analysis.API.LocliVersion (module Cardano.Analysis.API.LocliVersion) where
 
 import Cardano.Prelude (NFData, mconcat)
@@ -22,7 +23,7 @@ data LocliVersion =
 getLocliVersion :: LocliVersion
 getLocliVersion =
   LocliVersion
-    Cardano.Git.Rev.gitRev
+    $(Cardano.Git.Rev.gitRev)
     (pack (showVersion Paths_locli.version))
 
 renderProgramAndVersion :: LocliVersion -> Text

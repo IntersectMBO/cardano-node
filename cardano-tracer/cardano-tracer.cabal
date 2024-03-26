@@ -137,7 +137,7 @@ library
                       , bimap >= 0.4.0
                       , blaze-html
                       , bytestring
-                      , cardano-git-rev
+                      , cardano-git-rev ^>=0.2.2
                       , cardano-node
                       , cassava
                       , cborg
