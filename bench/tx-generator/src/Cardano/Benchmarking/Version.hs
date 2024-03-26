@@ -1,13 +1,16 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Cardano.Benchmarking.Version
 where
+
+import           Cardano.Git.Rev (gitRev)
 
 import           Data.Aeson as A
 import           Data.Text as Text
 import           Data.Version (showVersion)
-import           Paths_tx_generator (version)
 import           System.Info (arch, compilerName, compilerVersion, os)
 
-import           Cardano.Git.Rev (gitRev)
+import           Paths_tx_generator (version)
 
 data Version = Version
   { _package :: !Text
@@ -26,7 +29,7 @@ txGeneratorVersion = Version
   , _arch    = Text.pack arch
   , _compilerName    = Text.pack compilerName
   , _compilerVersion = renderVersion compilerVersion
-  , _gitRev = gitRev
+  , _gitRev = $(gitRev)
   }
   where
     renderVersion = Text.pack . showVersion
