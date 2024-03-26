@@ -25,11 +25,13 @@ import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import           Ouroboros.Consensus.Block (SlotNo (..))
 import           Ouroboros.Consensus.HardFork.Combinator
-import           Ouroboros.Consensus.Ledger.Abstract (IsLedger)
+import           Ouroboros.Consensus.Ledger.Abstract (EmptyMK)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState, ledgerState)
+import           Ouroboros.Consensus.Ledger.SupportsProtocol
 import           Ouroboros.Consensus.Node (NodeKernel (..))
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.API as LedgerDB
 
 import           Cardano.Node.Queries (LedgerQueries (..), NodeKernelData (..))
 import           Cardano.Slotting.Slot (fromWithOrigin)
@@ -49,12 +51,9 @@ data TraceStartLeadershipCheckPlus =
     }
 
 forgeTracerTransform ::
-  (  IsLedger (LedgerState blk)
+  (  LedgerSupportsProtocol blk
   ,  LedgerQueries blk
-#if __GLASGOW_HASKELL__ >= 906
-  , AF.HasHeader blk
-#endif
-  ,  AF.HasHeader (Header blk))
+  )
   => NodeKernelData blk
   -> Trace IO (ForgeTracerType blk)
   -> IO (Trace IO (ForgeTracerType blk))
@@ -65,7 +64,7 @@ forgeTracerTransform nodeKern (Trace tr) =
             query <- mapNodeKernelDataIO
                         (\nk ->
                           (,,)
-                            <$> nkQueryLedger (ledgerUtxoSize . ledgerState) nk
+                            <$> fmap (maybe 0 LedgerDB.ledgerTableSize) (ChainDB.getStatistics (getChainDB nk))
                             <*> nkQueryLedger (ledgerDelegMapSize . ledgerState) nk
                             <*> nkQueryChain fragmentChainDensity nk)
                         nodeKern
@@ -84,8 +83,7 @@ forgeTracerTransform nodeKern (Trace tr) =
               pure (lc, Left control))
 
 nkQueryLedger ::
-     IsLedger (LedgerState blk)
-  => (ExtLedgerState blk -> a)
+     (ExtLedgerState blk EmptyMK -> a)
   -> NodeKernel IO RemoteAddress LocalConnectionId blk
   -> IO a
 nkQueryLedger f NodeKernel{getChainDB} =
