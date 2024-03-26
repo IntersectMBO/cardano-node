@@ -47,12 +47,6 @@ deriving instance ToJSON ChunkNo
 
 deriving instance NFData ChunkNo
 
-deriving instance Generic NPV.NodeToNodeVersion
-deriving instance NFData NPV.NodeToNodeVersion
-
-deriving instance Generic NPV.NodeToClientVersion
-deriving instance NFData NPV.NodeToClientVersion
-
 data OpeningDbs
   = StartedOpeningImmutableDB
   | OpenedImmutableDB (WithOrigin SlotNo) ChunkNo
