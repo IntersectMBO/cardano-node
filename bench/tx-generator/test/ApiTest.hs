@@ -30,6 +30,7 @@ import           System.Exit (die, exitSuccess)
 import           System.FilePath
 
 import           Cardano.Api
+import qualified Cardano.Api.Ledger as Api
 import           Cardano.Api.Shelley (ProtocolParameters (..), fromPlutusData)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types (AdjustFilePaths (..), GenesisFile (..))
@@ -125,13 +126,13 @@ main
 -- the alternatives would make lines exceed 80 columns, so these
 -- helper functions move them out-of-line, with an extra helper to
 -- avoid repeating the failure message.
-showFundCore :: IsShelleyBasedEra era => Maybe (AddressInEra era, Lovelace) -> String
+showFundCore :: IsShelleyBasedEra era => Maybe (AddressInEra era, Api.Coin) -> String
 showFundCore = maybe "fund check failed" show
 
-showBabbage :: Maybe (AddressInEra BabbageEra, Lovelace) -> String
+showBabbage :: Maybe (AddressInEra BabbageEra, Api.Coin) -> String
 showBabbage = ("Babbage: " ++) . showFundCore
 
-showConway :: Maybe (AddressInEra ConwayEra, Lovelace) -> String
+showConway :: Maybe (AddressInEra ConwayEra, Api.Coin) -> String
 showConway = ("Conway: " ++) . showFundCore
 
 checkFund ::
@@ -151,7 +152,7 @@ checkFundCore ::
   IsShelleyBasedEra era
   => ShelleyGenesis
   -> SigningKey PaymentKey
-  -> Maybe (AddressInEra era, Lovelace)
+  -> Maybe (AddressInEra era, Api.Coin)
 checkFundCore = genesisInitialFundForKey Mainnet
 
 checkPlutusBuiltin :: FilePath -> IO ()

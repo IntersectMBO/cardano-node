@@ -10,6 +10,7 @@ where
 import           Cardano.Api
 
 import           Cardano.Benchmarking.Script.Types
+import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
@@ -159,7 +160,7 @@ splittingPhase srcWallet = do
 -- testCompiler (error "opts") $ splitSequenceWalletNames (WalletName "w1") (WalletName "w2") (unfoldSplitSequence 1 1000 10000)
 
 data Split
-  = SplitWithChange Lovelace Int
+  = SplitWithChange L.Coin Int
   | FullSplits Int
   deriving Show
 
@@ -171,7 +172,7 @@ splitSequenceWalletNames src dst (split: rest) = do
   l <- splitSequenceWalletNames tempWallet dst rest
   return $ ( src, tempWallet, split) : l
 
-unfoldSplitSequence :: Lovelace -> Lovelace -> Int -> [ Split ]
+unfoldSplitSequence :: L.Coin -> L.Coin -> Int -> [ Split ]
 unfoldSplitSequence fee value outputs
   = if outputs < maxOutputsPerTx
       then [ SplitWithChange value outputs ]
@@ -208,8 +209,8 @@ benchmarkingPhase wallet collateralWallet = do
   return doneWallet
 
 data Fees = Fees {
-    _safeCollateral :: Lovelace
-  , _minValuePerInput :: Lovelace
+    _safeCollateral :: L.Coin
+  , _minValuePerInput :: L.Coin
   }
 
 evilFeeMagic :: Compiler Fees

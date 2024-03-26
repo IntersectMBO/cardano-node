@@ -11,11 +11,12 @@ module  Cardano.TxGenerator.Utils
         (module Cardano.TxGenerator.Utils)
         where
 
-import           Data.Maybe (fromJust)
-
 import           Cardano.Api as Api
 
+import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.Types
+
+import           Data.Maybe (fromJust)
 
 
 -- | `liftAnyEra` applies a function to the value in `InAnyCardanoEra`
@@ -40,7 +41,7 @@ keyAddress networkId k
       NoStakeAddress
 
 -- TODO: check sufficient funds and minimumValuePerUtxo
-inputsToOutputsWithFee :: Lovelace -> Int -> [Lovelace] -> [Lovelace]
+inputsToOutputsWithFee :: L.Coin -> Int -> [L.Coin] -> [L.Coin]
 inputsToOutputsWithFee fee count inputs = map (quantityToLovelace . Quantity) outputs
   where
     (Quantity totalAvailable) = lovelaceToQuantity $ sum inputs - fee
@@ -50,7 +51,7 @@ inputsToOutputsWithFee fee count inputs = map (quantityToLovelace . Quantity) ou
 -- | 'includeChange' gets use made of it as a value splitter in
 -- 'Cardano.TxGenerator.Tx.sourceToStoreTransactionNew' by
 -- 'Cardano.Benchmarking.Script.Core.evalGenerator'.
-includeChange :: Lovelace -> [Lovelace] -> [Lovelace] -> PayWithChange
+includeChange :: L.Coin -> [L.Coin] -> [L.Coin] -> PayWithChange
 includeChange fee spend have = case compare changeValue 0 of
   GT -> PayWithChange changeValue spend
   EQ -> PayExact spend
@@ -65,7 +66,7 @@ includeChange fee spend have = case compare changeValue 0 of
 
 -- | `mkTxFee` reinterprets the `Either` returned by
 -- `txFeesExplicitInEra` with `TxFee` constructors.
-mkTxFee :: IsShelleyBasedEra era => Lovelace -> TxFee era
+mkTxFee :: IsShelleyBasedEra era => L.Coin -> TxFee era
 mkTxFee = TxFeeExplicit shelleyBasedEra
 
 -- | `mkTxValidityUpperBound` rules out needing the
