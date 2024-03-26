@@ -63,7 +63,7 @@ import           Hedgehog.Internal.Property (MonadTest)
 
 -- | Block and wait for the desired epoch.
 waitUntilEpoch
-  :: (MonadIO m, MonadTest m, HasCallStack)
+  :: (MonadCatch m, MonadIO m, MonadTest m, HasCallStack)
   => NodeConfigFile In
   -> SocketPath
   -> EpochNo -- ^ Desired epoch
@@ -71,7 +71,7 @@ waitUntilEpoch
 waitUntilEpoch nodeConfigFile socketPath desiredEpoch = withFrozenCallStack $ do
   result <- runExceptT $
     foldEpochState
-      nodeConfigFile socketPath QuickValidation desiredEpoch () (const $ pure ConditionNotMet)
+      nodeConfigFile socketPath QuickValidation desiredEpoch () (\_ _ _ -> pure ConditionNotMet)
   case result of
     Left (FoldBlocksApplyBlockError (TerminationEpochReached epochNo)) ->
       pure epochNo
@@ -133,7 +133,7 @@ getEpochStateView
 getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
   epochStateView <- liftIO $ newIORef Nothing
   runInBackground . runExceptT . foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) Nothing
-    $ \epochState -> do
+    $ \epochState _slotNb _blockNb -> do
         liftIO $ writeIORef epochStateView (Just epochState)
         pure ConditionNotMet
   pure . EpochStateView $ epochStateView
@@ -229,7 +229,7 @@ findLargestUtxoForPaymentKey epochStateView sbe address =
 -- wait for the number of DReps being @n@ for two epochs. If
 -- this number is not attained before two epochs, the test is failed.
 checkDRepsNumber ::
-  (HasCallStack, MonadIO m, MonadCatch m, MonadTest m)
+  (HasCallStack, MonadCatch m, MonadIO m, MonadTest m)
   => ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
   -> NodeConfigFile 'In
   -> SocketPath
@@ -248,7 +248,7 @@ checkDRepsNumber sbe configurationFile socketPath execConfig expectedDRepsNb = d
 -- So if you call this function, you are expecting the number of DReps to already
 -- be @n@, or to be @n@ before @terminationEpoch@
 checkDRepsNumber' ::
-  (HasCallStack, MonadIO m, MonadTest m)
+  (HasCallStack, MonadCatch m, MonadIO m, MonadTest m)
   => ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
   -> NodeConfigFile In
   -> SocketPath
@@ -257,7 +257,7 @@ checkDRepsNumber' ::
   -> m (Maybe [L.DRepState StandardCrypto]) -- ^ The DReps when the expected number of DReps was attained.
 checkDRepsNumber' sbe nodeConfigFile socketPath maxEpoch expectedDRepsNb = do
   result <- runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
-      $ \(AnyNewEpochState actualEra newEpochState) -> do
+      $ \(AnyNewEpochState actualEra newEpochState) _slotNb _blockNb -> do
         case testEquality sbe actualEra of
           Just Refl -> do
             let dreps = Map.elems $ shelleyBasedEraConstraints sbe newEpochState

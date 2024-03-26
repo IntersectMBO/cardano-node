@@ -67,15 +67,15 @@ prop_check_if_treasury_is_growing = H.integrationRetryWorkspace 0 "growing-treas
        H.note_ "treasury is not growing"
        H.failure
   where
-    handler :: AnyNewEpochState -> StateT (Map EpochNo Integer) IO LedgerStateCondition
-    handler (AnyNewEpochState _ newEpochState) = do
+    handler :: AnyNewEpochState -> SlotNo -> BlockNo -> StateT (Map EpochNo Integer) IO LedgerStateCondition
+    handler (AnyNewEpochState _ newEpochState) _slotNo _blockNo = do
       let (Coin coin) = newEpochState ^. L.nesEsL . L.esAccountStateL . L.asTreasuryL
           epochNo = newEpochState ^. L.nesELL
       -- handler is executed multiple times per epoch, so we keep only the latest treasury value
       modify $ M.insert epochNo coin
-      if epochNo >= EpochNo 5
-         then pure ConditionMet
-         else pure ConditionNotMet
+      pure $ if epochNo >= EpochNo 5
+         then ConditionMet
+         else ConditionNotMet
 
     -- | Check if the last element > first element
     checkHasIncreased :: (Ord a) => [a] -> Bool

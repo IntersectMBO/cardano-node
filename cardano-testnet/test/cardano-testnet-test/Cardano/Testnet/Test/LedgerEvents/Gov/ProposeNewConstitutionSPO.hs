@@ -29,6 +29,7 @@ import           Cardano.Testnet
 
 import           Prelude
 
+import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.Trans.State.Strict (put)
 import           Data.Bifunctor (Bifunctor (..))
 import           Data.List (isInfixOf)
@@ -231,16 +232,14 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   H.assert $ "DisallowedVoters" `isInfixOf` stderr -- Did it fail for the expected reason?
 
 getConstitutionProposal
-  :: HasCallStack
-  => MonadIO m
-  => MonadTest m
+  :: (HasCallStack, MonadCatch m, MonadIO m, MonadTest m)
   => NodeConfigFile In
   -> SocketPath
   -> EpochNo -- ^ The termination epoch: the constitution proposal must be found *before* this epoch
   -> m (Maybe (L.GovActionId StandardCrypto))
 getConstitutionProposal nodeConfigFile socketPath maxEpoch = do
   result <- runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
-      $ \(AnyNewEpochState actualEra newEpochState) ->
+      $ \(AnyNewEpochState actualEra newEpochState) _slotNb _blockNb ->
         caseShelleyToBabbageOrConwayEraOnwards
           (error $ "Expected Conway era onwards, got state in " <> docToString (pretty actualEra))
           (\cEra -> conwayEraOnwardsConstraints cEra $ do
