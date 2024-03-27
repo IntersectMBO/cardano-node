@@ -18,6 +18,7 @@ import           Cardano.Api.Shelley
 import           Cardano.Ledger.Conway.Governance (RatifyState (..))
 import qualified Cardano.Ledger.Conway.Governance as L
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (filterNewGovProposals, foldBlocksFindLedgerEvent)
 
 import           Prelude
 
@@ -31,16 +32,16 @@ import           Data.Word
 import           GHC.Stack
 import           System.FilePath ((</>))
 
+import           Hedgehog
+import qualified Hedgehog.Extras as H
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
+
 import           Testnet.Components.Query
 import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
-
-import           Hedgehog
-import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/InfoAction/'@
@@ -193,13 +194,9 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
     , "--tx-file", txbodySignedFp
     ]
 
-  !propSubmittedResult
-    <- runExceptT $ foldBlocks
-                      (File configurationFile)
-                      (File socketPath)
-                      FullValidation
-                      Nothing -- Initial accumulator state
-                      (foldBlocksCheckProposalWasSubmitted (fromString txidString))
+  !propSubmittedResult <- foldBlocksFindLedgerEvent (filterNewGovProposals (fromString txidString))
+                                                    configurationFile
+                                                    socketPath
 
   newProposalEvents <- case propSubmittedResult of
                         Left e ->
@@ -273,21 +270,6 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
         $ "foldBlocksCheckInfoAction failed with: " <> displayError e
     Right _events -> success
 
-foldBlocksCheckProposalWasSubmitted
-  :: TxId -- TxId of submitted tx
-  -> Env
-  -> LedgerState
-  -> [LedgerEvent]
-  -> BlockInMode -- Block i
-  -> Maybe LedgerEvent -- ^ Accumulator at block i - 1
-  -> IO (Maybe LedgerEvent, FoldStatus) -- ^ Accumulator at block i and fold status
-foldBlocksCheckProposalWasSubmitted txid _ _ allEvents _ _ = do
-  let newGovProposal = filter (filterNewGovProposals txid) allEvents
-  pure $ case newGovProposal of
-    [] -> (Nothing, ContinueFold)
-    proposal:_ -> (Just proposal, StopFold)
-
-
 retrieveGovernanceActionIndex
   :: (HasCallStack, MonadTest m)
   => Maybe LedgerEvent
@@ -306,11 +288,6 @@ retrieveGovernanceActionIndex mEvent = do
         $ mconcat ["retrieveGovernanceActionIndex: Expected NewGovernanceProposals, got: "
                   , show unexpectedEvent
                   ]
-
-
-filterNewGovProposals :: TxId -> LedgerEvent -> Bool
-filterNewGovProposals txid (NewGovernanceProposals eventTxId _) = fromShelleyTxId eventTxId == txid
-filterNewGovProposals _ _ = False
 
 -- | Fold accumulator for checking action state
 data InfoActionState = InfoActionState
