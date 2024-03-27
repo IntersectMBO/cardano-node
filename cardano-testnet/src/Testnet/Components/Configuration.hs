@@ -14,6 +14,8 @@ module Testnet.Components.Configuration
   , numSeededUTxOKeys
   , NumPools
   , numPools
+  , NumDReps
+  , numDReps
   ) where
 
 import           Cardano.Api.Ledger (StandardCrypto)
@@ -88,16 +90,23 @@ newtype NumPools = NumPools Int
 numPools :: CardanoTestnetOptions -> NumPools
 numPools CardanoTestnetOptions { cardanoNodes } = NumPools $ length cardanoNodes
 
+newtype NumDReps = NumDReps Int
+
+numDReps :: CardanoTestnetOptions -> NumDReps
+numDReps CardanoTestnetOptions { cardanoNumDReps } = NumDReps cardanoNumDReps
+
 createSPOGenesisAndFiles
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => NumPools -- ^ The number of pools to make
+  -> NumDReps -- ^ The number of pools to make
   -> AnyCardanoEra -- ^ The era to use
   -> ShelleyGenesis StandardCrypto -- ^ The shelley genesis to use.
   -> AlonzoGenesis -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
   -> ConwayGenesis StandardCrypto -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
   -> TmpAbsolutePath
   -> m FilePath -- ^ Shelley genesis directory
-createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tempAbsPath) = GHC.withFrozenCallStack $ do
+createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) era shelleyGenesis
+                         alonzoGenesis conwayGenesis (TmpAbsolutePath tempAbsPath) = GHC.withFrozenCallStack $ do
   let inputGenesisShelleyFp = tempAbsPath </> genesisInputFilepath ShelleyEra
       inputGenesisAlonzoFp  = tempAbsPath </> genesisInputFilepath AlonzoEra
       inputGenesisConwayFp  = tempAbsPath </> genesisInputFilepath ConwayEra
@@ -141,7 +150,7 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis alonzoGenesi
     , "--delegated-supply", show @Int 1_000_000_000_000
     , "--stake-delegators", show numStakeDelegators
     , "--utxo-keys", show numSeededUTxOKeys
-    , "--drep-keys", "3"
+    , "--drep-keys", show numDelReps
     , "--start-time", DTC.formatIso8601 startTime
     , "--out-dir", tempAbsPath
     ]
