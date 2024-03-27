@@ -23,7 +23,8 @@ import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.Impl.Snapshots (SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Impl.Snapshots (NumOfDiskSnapshots (..),
+                   SnapshotInterval (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.V1.Args (FlushFrequency (..),
                    QueryBatchSize (..))
 
@@ -80,10 +81,11 @@ nodeRunParser = do
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
 
   -- LedgerDB configuration
-  snapshotInterval  <- lastOption parseSnapshotInterval
-  ledgerDBBackend   <- lastOption parseLedgerDBBackend
-  pncFlushFrequency <- lastOption parseFlushFrequency
-  pncQueryBatchSize <- lastOption parseQueryBatchSize
+  numOfDiskSnapshots <- lastOption parseNumOfDiskSnapshots
+  snapshotInterval   <- lastOption parseSnapshotInterval
+  ledgerDBBackend    <- lastOption parseLedgerDBBackend
+  pncFlushFrequency  <- lastOption parseFlushFrequency
+  pncQueryBatchSize  <- lastOption parseQueryBatchSize
 
   -- Storing to SSD configuration
   ssdDatabaseDir    <- lastOption parseSsdDatabaseDir
@@ -122,6 +124,7 @@ nodeRunParser = do
            , pncTraceConfig = mempty
            , pncTraceForwardSocket = traceForwardSocket
            , pncMaybeMempoolCapacityOverride = maybeMempoolCapacityOverride
+           , pncNumOfDiskSnapshots = numOfDiskSnapshots
            , pncSnapshotInterval = snapshotInterval
            , pncLedgerDBBackend = ledgerDBBackend
            , pncFlushFrequency
@@ -408,6 +411,15 @@ parseStartAsNonProducingNode =
         , "credentials are specified."
         ]
     ]
+
+parseNumOfDiskSnapshots :: Parser NumOfDiskSnapshots
+parseNumOfDiskSnapshots = fmap RequestedNumOfDiskSnapshots parseNum
+  where
+  parseNum = Opt.option auto
+    ( long "num-of-disk-snapshots"
+        <> metavar "NUMOFDISKSNAPSHOTS"
+        <> help "Number of ledger snapshots stored on disk."
+    )
 
 -- TODO revisit because it sucks
 parseSnapshotInterval :: Parser SnapshotInterval
