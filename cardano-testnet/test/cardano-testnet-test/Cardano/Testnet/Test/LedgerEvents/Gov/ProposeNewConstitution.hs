@@ -65,6 +65,15 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
+  -- Generate model for votes
+  let allVotes :: [(String, Int)]
+      allVotes = voteList [("yes", 4), ("no", 3), ("abstain", 2)]
+  annotateShow allVotes
+
+  let numVotes :: Int
+      numVotes = length allVotes
+  annotateShow numVotes
+
   let sbe = ShelleyBasedEraConway
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
@@ -72,6 +81,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
         { cardanoEpochLength = 100
         , cardanoSlotLength = 0.1
         , cardanoNodeEra = cEra
+        , cardanoNumDReps = numVotes
         }
 
   TestnetRuntime
@@ -193,10 +203,10 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
       voteFp n = work </> gov </> "vote-" <> show n
 
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
-  forM_ [1..3] $ \n -> do
+  forM_ allVotes $ \(vote, n) -> do
     H.execCli' execConfig
       [ "conway", "governance", "vote", "create"
-      , "--yes"
+      , "--" ++ vote
       , "--governance-action-tx-id", txidString
       , "--governance-action-index", show @Word32 governanceActionIndex
       , "--drep-verification-key-file", defaultDRepVkeyFp n
@@ -211,26 +221,22 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   voteTxBodyFp <- H.note $ work </> gov </> "vote.txbody"
 
   -- Submit votes
-  void $ H.execCli' execConfig
+  void $ H.execCli' execConfig $
     [ "conway", "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin3
     , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show @Int 3_000_000
-    , "--vote-file", voteFp 1
-    , "--vote-file", voteFp 2
-    , "--vote-file", voteFp 3
-    , "--witness-override", show @Int 4
+    ] ++ (concat [["--vote-file", voteFp n] | (_, n) <- allVotes]) ++
+    [ "--witness-override", show @Int (numVotes + 1)
     , "--out-file", voteTxBodyFp
     ]
 
-  void $ H.execCli' execConfig
+  void $ H.execCli' execConfig $
     [ "conway", "transaction", "sign"
     , "--tx-body-file", voteTxBodyFp
     , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
-    , "--signing-key-file", defaultDRepSkeyFp 1
-    , "--signing-key-file", defaultDRepSkeyFp 2
-    , "--signing-key-file", defaultDRepSkeyFp 3
-    , "--out-file", voteTxFp
+    ] ++ (concat [["--signing-key-file", defaultDRepSkeyFp n] | (_, n) <- allVotes]) ++
+    [ "--out-file", voteTxFp
     ]
 
   void $ H.execCli' execConfig
@@ -259,6 +265,8 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     , "--out-file", finalGovState
     ]
 
+  -- Tally registered votes
+
   finalGovFileBS <- liftIO $ LBS.readFile finalGovState
 
   votes <- H.nothingFail $ do (Aeson.Object jsonValue) <- Aeson.decode finalGovFileBS
@@ -267,12 +275,23 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
                               (Aeson.Object votes) <- proposal KeyMap.!? "dRepVotes"
                               KeyMap.foldl' extractVote (Just []) votes
 
-  length (filter (== "VoteYes") votes) === 3
+  length (filter (== "VoteYes") votes) === 4
+  length (filter (== "VoteNo") votes) === 3
+  length (filter (== "Abstain") votes) === 2
+  length votes === numVotes
 
   where
     extractVote :: Maybe [String] -> Aeson.Value -> Maybe [String]
     extractVote (Just acc) (Aeson.String x) = Just $ unpack x:acc
     extractVote _ _ = Nothing
+
+    voteList :: [(a, Int)] -> [(a, Int)]
+    voteList l = go 1 l
+      where
+        go :: Int -> [(a, Int)] -> [(a, Int)]
+        go _ [] = []
+        go n ((s, m):r) | m > 0 = (s, n):go (n + 1) ((s, m - 1):r)
+                        | otherwise = go n r
 
 
 retrieveGovernanceActionIndex
