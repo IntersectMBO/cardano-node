@@ -62,7 +62,7 @@ import           Cardano.Tracing.Tracers
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNodeArgs (..),
-                   StdRunNodeArgs (..), stdChainSyncTimeout)
+                   SnapshotPolicyArgs (..), StdRunNodeArgs (..), stdChainSyncTimeout)
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
@@ -495,7 +495,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnTraceChainDB                 = chainDBTracer tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               , srnChainSyncTimeout             = customizeChainSyncTimeout
-              , srnSnapshotInterval             = ncSnapshotInterval nc
+              , srnSnapshotPolicyArgs           = snapshotPolicyArgs
               , srnLdbFlavorArgs                = selectorToArgs (ncLedgerDBBackend nc) (ncFlushFrequency nc) (ncQueryBatchSize nc)
               , srnPutInSSD                     = (ncSsdSnapshotTables nc, ncSsdSnapshotState nc)
               , srnSSDPath                      = ssdPath
@@ -571,7 +571,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnTraceChainDB                = chainDBTracer tracers
               , srnChainSyncTimeout            = customizeChainSyncTimeout
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
-              , srnSnapshotInterval            = ncSnapshotInterval nc
+              , srnSnapshotPolicyArgs          = snapshotPolicyArgs
               , srnLdbFlavorArgs               = selectorToArgs (ncLedgerDBBackend nc) (ncFlushFrequency nc) (ncQueryBatchSize nc)
               , srnPutInSSD                    = (ncSsdSnapshotTables nc, ncSsdSnapshotState nc)
               , srnSSDPath                     = ssdPath
@@ -634,6 +634,11 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
         Nothing       -> id
         Just version_ -> Map.takeWhileAntitone (<= version_)
 
+  snapshotPolicyArgs :: SnapshotPolicyArgs
+  snapshotPolicyArgs =
+    SnapshotPolicyArgs
+      (ncSnapshotInterval nc)
+      (ncNumOfDiskSnapshots nc)
 --------------------------------------------------------------------------------
 -- SIGHUP Handlers
 --------------------------------------------------------------------------------
