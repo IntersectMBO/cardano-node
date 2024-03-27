@@ -13,6 +13,7 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--max-lovelace-supply WORD64]
   [--enable-p2p BOOL]
   [--nodeLoggingFormat LOGGING_FORMAT]
+  [--num-dreps NUMBER]
 
   Start a testnet in any era
 
@@ -38,4 +39,6 @@ Available options:
   --nodeLoggingFormat LOGGING_FORMAT
                            Node logging format (json|text)
                            (default: NodeLoggingFormatAsJson)
+  --num-dreps NUMBER       Number of delegate representatives (DReps) to
+                           generate (default: 3)
   -h,--help                Show this help text

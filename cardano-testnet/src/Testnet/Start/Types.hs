@@ -46,6 +46,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoMaxSupply :: Word64 -- ^ The amount of ADA you are starting your testnet with
   , cardanoEnableP2P :: Bool
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
+  , cardanoNumDReps :: Int -- ^ The number of DReps to generate at creation
   } deriving (Eq, Show)
 
 cardanoDefaultTestnetOptions :: CardanoTestnetOptions
@@ -59,6 +60,7 @@ cardanoDefaultTestnetOptions = CardanoTestnetOptions
   , cardanoMaxSupply = 10_020_000_000
   , cardanoEnableP2P = False
   , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
+  , cardanoNumDReps = 3
   }
 
 -- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)
