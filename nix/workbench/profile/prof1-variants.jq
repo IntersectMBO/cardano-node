@@ -234,8 +234,8 @@ def all_profile_variants:
         { namespace: "perf-ssd"
         , class: "perf-ssd"
         , resources:
-          { producer: {cores: 16, memory: 120000, memory_max: 124000}
-          , explorer: {cores: 16, memory: 120000, memory_max: 124000}
+          { producer: {cores: 16, memory: 120000, memory_max: 127358}
+          , explorer: {cores: 16, memory: 120000, memory_max: 127358}
           }
         , fetch_logs_ssh: true
         }
