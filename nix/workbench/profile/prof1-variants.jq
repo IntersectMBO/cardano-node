@@ -572,7 +572,7 @@ def all_profile_variants:
     { scenario:                        "fixed-loaded"
     }) as $scenario_nomad_perf
   |
-   ($model_timescale * $nomad_perf_tps_saturation_value *
+   ($small_timescale * $nomad_perf_tps_saturation_value *
     { scenario:                        "fixed-loaded"
     }) as $scenario_nomad_perfssd
   |
@@ -647,21 +647,23 @@ def all_profile_variants:
       , desc: "AWS c5-2xlarge cluster dataset, 7 epochs"
     }) as $nomad_perf_base
   |
-   ($scenario_nomad_perfssd * $compose_fiftytwo * $dataset_oct2021 * $for_8ep *
+   ($scenario_nomad_perfssd * $compose_fiftytwo * $dataset_24m *
     { node:
-        { shutdown_on_slot_synced:        64000
+        { shutdown_on_slot_synced:        7200
         }
       , analysis:
         { filters:                        ["epoch3+", "size-full"]
         }
       , generator:
         { init_cooldown:                  45
+        , epochs:                         6
         }
       , genesis:
         { funds_balance:                  20000000000000
         , max_block_size:                 88000
+        , extra_future_offset:            400
         }
-      , desc: "AWS c5-2xlarge cluster dataset, 7 epochs"
+      , desc: "AWS r5.4xlarge cluster dataset, 6 epochs"
     }) as $nomad_perfssd_base
   |
    ($scenario_nomad_perf * $compose_fiftytwo * $dataset_oct2021 * $for_9ep * $plutus_base * $plutus_loop_counter *
