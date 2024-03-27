@@ -14,7 +14,6 @@
 
 module Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
   ( hprop_ledger_events_propose_new_constitution
-  , foldBlocksCheckProposalWasSubmitted
   , retrieveGovernanceActionIndex
   ) where
 
@@ -28,6 +27,7 @@ import qualified Cardano.Ledger.Conway.Governance as Ledger
 import qualified Cardano.Ledger.Hashes as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet
+import           Cardano.Testnet.Test.Utils (filterNewGovProposals, foldBlocksFindLedgerEvent)
 
 import           Prelude
 
@@ -39,10 +39,13 @@ import           Data.Maybe.Strict
 import           Data.String
 import qualified Data.Text as Text
 import           Data.Word
-import           GHC.IO.Exception (IOException)
 import           GHC.Stack (HasCallStack, callStack)
 import           Lens.Micro
 import           System.FilePath ((</>))
+
+import           Hedgehog
+import qualified Hedgehog.Extras as H
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
@@ -52,14 +55,7 @@ import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
 
-import           Hedgehog
-import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
-
-newtype AdditionalCatcher
-  = IOE IOException
-  deriving Show
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/ProposeAndRatifyNewConstitution/"'@
@@ -236,23 +232,15 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     [ "transaction", "txid"
     , "--tx-file", txbodySignedFp
     ]
-  !propSubmittedResult
-    <- runExceptT $ handleIOExceptT IOE
-                  $ runExceptT $ foldBlocks
-                      (File configurationFile)
-                      (File socketPath)
-                      FullValidation
-                      Nothing -- Initial accumulator state
-                      (foldBlocksCheckProposalWasSubmitted (fromString txidString))
+  !propSubmittedResult <- foldBlocksFindLedgerEvent (filterNewGovProposals (fromString txidString))
+                                                    configurationFile
+                                                    socketPath
 
   newProposalEvents <- case propSubmittedResult of
-                        Left (IOE e) ->
+                        Left e ->
                           H.failMessage callStack
-                            $ "foldBlocksCheckProposalWasSubmitted failed with: " <> show e
-                        Right (Left e) ->
-                          H.failMessage callStack
-                            $ "foldBlocksCheckProposalWasSubmitted failed with: " <> displayError e
-                        Right (Right events) -> return events
+                            $ "foldBlocksFindLedgerEvent failed with: " <> displayError e
+                        Right events -> return events
 
   governanceActionIndex <- retrieveGovernanceActionIndex newProposalEvents
 
@@ -290,7 +278,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     , "--out-file", voteTxBodyFp
     ]
 
-
   void $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", voteTxBodyFp
@@ -319,19 +306,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   void $ evalEither eConstitutionAdopted
 
-foldBlocksCheckProposalWasSubmitted
-  :: TxId -- TxId of submitted tx
-  -> Env
-  -> LedgerState
-  -> [LedgerEvent]
-  -> BlockInMode -- Block i
-  -> Maybe LedgerEvent -- ^ Accumulator at block i - 1
-  -> IO (Maybe LedgerEvent, FoldStatus) -- ^ Accumulator at block i and fold status
-foldBlocksCheckProposalWasSubmitted txid _ _ allEvents _ _ = do
-  let newGovProposal = filter (filterNewGovProposals txid) allEvents
-  if null newGovProposal
-  then return (Nothing, ContinueFold)
-  else return (Just $ newGovProposal !! 0, StopFold)
 
 
 retrieveGovernanceActionIndex
@@ -351,14 +325,6 @@ retrieveGovernanceActionIndex mEvent = do
         $ mconcat ["retrieveGovernanceActionIndex: Expected NewGovernanceProposals, got: "
                   , show unexpectedEvent
                   ]
-
-
-filterNewGovProposals :: TxId -> LedgerEvent -> Bool
-filterNewGovProposals txid (NewGovernanceProposals eventTxId (AnyProposals props)) =
-  let _govActionStates = Ledger.proposalsActionsMap props
-  in fromShelleyTxId eventTxId == txid
-filterNewGovProposals _ _ = False
-
 
 foldBlocksCheckConstitutionWasRatified
   :: String -- submitted constitution hash
