@@ -789,9 +789,9 @@ def all_profile_variants:
 
   ### Profile templates
   ###
-  # UTxO scaling on a single node, mainnet blocksize, ~2h runtime (6 epochs) - default: 24mio UTxO, 64GB RAM cap
-    ($nomad_perfssd_solo_base * $nomad_perfssd_unicircle * $costmodel_v8_preview * $p2p
-    ) as $utxoscale_solo_template
+  # UTxO scaling, mainnet blocksize, ~2h runtime (6 epochs) - default: 24mio UTxO, 128GB RAM cap
+    ($nomad_perfssd_base * $nomad_perfssd_dense * $costmodel_v8_preview * $p2p
+    ) as $utxoscale_template
   |
 
   ### First, auto-named profiles:
@@ -1022,9 +1022,6 @@ def all_profile_variants:
   , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "value-nomadperf"
     }
-  , $nomad_perfssd_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
-    { name: "value-nomadperfssd"
-    }
   , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview * $old_tracing *
     { name: "value-oldtracing-nomadperf"
     }
@@ -1060,23 +1057,23 @@ def all_profile_variants:
     { name: "fast-nomadperfssd"
     }
 
-## P&T NomadSSD cluster: UTxO scale benchmarks on a single node
-  , $utxoscale_solo_template *
-    { name: "utxoscale-solo-24M64G-nomadperfssd"
-    }
-  , $utxoscale_solo_template *
-    { name: "utxoscale-solo-12M64G-nomadperfssd"
+## P&T NomadSSD cluster: UTxO scale benchmarks
+  , $utxoscale_template *
+    { name: "utxoscale-32M32G-nomadperfssd"
     , genesis:
-      { utxo:                               (12 * $M)
-      }
-    }
-  , $utxoscale_solo_template *
-    { name: "utxoscale-solo-12M16G-nomadperfssd"
-    , genesis:
-      { utxo:                               (12 * $M)
+      { utxo:                               (32 * $M)
       }
     , node:
-      { heap_limit:                         16384
+      { heap_limit:                         32768
+      }
+    }
+  , $utxoscale_template *
+    { name: "utxoscale-42M32G-nomadperfssd"
+    , genesis:
+      { utxo:                               (42 * $M)
+      }
+    , node:
+      { heap_limit:                         32768
       }
     }
 
