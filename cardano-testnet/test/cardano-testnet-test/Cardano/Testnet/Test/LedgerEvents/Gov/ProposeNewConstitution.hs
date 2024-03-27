@@ -26,11 +26,16 @@ import           Prelude
 
 import           Control.Monad
 import           Control.Monad.State.Strict (StateT)
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.KeyMap as KeyMap
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Maybe.Strict
 import           Data.String
+import           Data.Text (unpack)
 import qualified Data.Text as Text
+import qualified Data.Vector as Vector
 import           Data.Word
 import           GHC.Stack (HasCallStack, callStack)
 import           Lens.Micro
@@ -246,6 +251,28 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   void $ evalEither eConstitutionAdopted
 
+  finalGovState <- H.note $ work </> gov </> "final_gov_state.json"
+
+  void $ H.execCli' execConfig
+    [ "conway", "query", "gov-state"
+    , "--volatile-tip"
+    , "--out-file", finalGovState
+    ]
+
+  finalGovFileBS <- liftIO $ LBS.readFile finalGovState
+
+  votes <- H.nothingFail $ do (Aeson.Object jsonValue) <- Aeson.decode finalGovFileBS
+                              (Aeson.Array proposals) <- jsonValue KeyMap.!? "proposals"
+                              (Aeson.Object proposal) <- Vector.headM proposals
+                              (Aeson.Object votes) <- proposal KeyMap.!? "dRepVotes"
+                              KeyMap.foldl' extractVote (Just []) votes
+
+  length (filter (== "VoteYes") votes) === 3
+
+  where
+    extractVote :: Maybe [String] -> Aeson.Value -> Maybe [String]
+    extractVote (Just acc) (Aeson.String x) = Just $ unpack x:acc
+    extractVote _ _ = Nothing
 
 
 retrieveGovernanceActionIndex
