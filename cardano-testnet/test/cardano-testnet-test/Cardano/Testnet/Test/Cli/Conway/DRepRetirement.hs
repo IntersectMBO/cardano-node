@@ -21,6 +21,7 @@ import qualified Data.Text as Text
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
+import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
@@ -86,13 +87,6 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
          $ P.KeyNames { P.verificationKeyFile = stakeVkeyFp
                       , P.signingKeyFile = stakeSKeyFp
                       }
-
-  let drepVkeyFp :: Int -> FilePath
-      drepVkeyFp n = tempAbsPath' </> "drep-keys" </> ("drep" <> show n) </> "drep.vkey"
-
-      drepSKeyFp :: Int -> FilePath
-      drepSKeyFp n = tempAbsPath' </> "drep-keys" </> ("drep" <> show n) </> "drep.skey"
-
   let sizeBefore = 3
       configFile' = Api.File configurationFile
       socketPath' = Api.File socketPath
@@ -104,7 +98,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
 
   H.noteM_ $ H.execCli' execConfig
      [ "conway", "governance", "drep", "retirement-certificate"
-     , "--drep-verification-key-file", drepVkeyFp 1
+     , "--drep-verification-key-file", defaultDRepVkeyFp 1
      , "--deposit-amt", show @Int 1_000_000
      , "--out-file", dreprRetirementCertFile
      ]
@@ -134,7 +128,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
     [ "conway", "transaction", "sign"
     , "--tx-body-file", drepRetirementRegTxbodyFp
     , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
-    , "--signing-key-file", drepSKeyFp 1
+    , "--signing-key-file", defaultDRepSkeyFp 1
     , "--out-file", drepRetirementRegTxSignedFp
     ]
 

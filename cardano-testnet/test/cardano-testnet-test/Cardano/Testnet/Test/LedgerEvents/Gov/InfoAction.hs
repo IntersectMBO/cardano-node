@@ -32,6 +32,7 @@ import           GHC.Stack
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
+import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
@@ -105,20 +106,13 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
                       , P.signingKeyFile = stakeSKeyFp
                       }
 
-  let drepVkeyFp :: Int -> FilePath
-      drepVkeyFp n = tempAbsPath' </> "drep-keys" </> ("drep" <> show n) </> "drep.vkey"
-
-      drepSKeyFp :: Int -> FilePath
-      drepSKeyFp n = tempAbsPath' </> "drep-keys" </> ("drep" <> show n) </> "drep.skey"
-
-
   -- Create Drep registration certificates
   let drepCertFile :: Int -> FilePath
       drepCertFile n = gov </> "drep-keys" <>"drep" <> show n <> ".regcert"
   H.forConcurrently_ [1..3] $ \n -> do
     H.execCli' execConfig
        [ "conway", "governance", "drep", "registration-certificate"
-       , "--drep-verification-key-file", drepVkeyFp n
+       , "--drep-verification-key-file", defaultDRepVkeyFp n
        , "--key-reg-deposit-amt", show @Int 1_000_000
        , "--out-file", drepCertFile n
        ]
@@ -145,9 +139,9 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
     [ "conway", "transaction", "sign"
     , "--tx-body-file", drepRegTxbodyFp
     , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
-    , "--signing-key-file", drepSKeyFp 1
-    , "--signing-key-file", drepSKeyFp 2
-    , "--signing-key-file", drepSKeyFp 3
+    , "--signing-key-file", defaultDRepSkeyFp 1
+    , "--signing-key-file", defaultDRepSkeyFp 2
+    , "--signing-key-file", defaultDRepSkeyFp 3
     , "--out-file", drepRegTxSignedFp
     ]
 
@@ -225,7 +219,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
       , "--yes"
       , "--governance-action-tx-id", txidString
       , "--governance-action-index", show @Word32 governanceActionIndex
-      , "--drep-verification-key-file", drepVkeyFp n
+      , "--drep-verification-key-file", defaultDRepVkeyFp n
       , "--out-file", voteFp n
       ]
 
@@ -253,9 +247,9 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
     [ "conway", "transaction", "sign"
     , "--tx-body-file", voteTxBodyFp
     , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
-    , "--signing-key-file", drepSKeyFp 1
-    , "--signing-key-file", drepSKeyFp 2
-    , "--signing-key-file", drepSKeyFp 3
+    , "--signing-key-file", defaultDRepSkeyFp 1
+    , "--signing-key-file", defaultDRepSkeyFp 2
+    , "--signing-key-file", defaultDRepSkeyFp 3
     , "--out-file", voteTxFp
     ]
 
