@@ -10,7 +10,6 @@
 {- HLINT ignore "Redundant id" -}
 {- HLINT ignore "Redundant return" -}
 {- HLINT ignore "Use head" -}
-{- HLINT ignore "Use let" -}
 
 module Cardano.Testnet.Test.Cli.Conway.Plutus
   ( hprop_plutus_v3
