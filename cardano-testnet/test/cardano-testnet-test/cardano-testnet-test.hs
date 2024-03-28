@@ -10,6 +10,7 @@ import qualified Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
 import qualified Cardano.Testnet.Test.Cli.Babbage.Transaction
 import qualified Cardano.Testnet.Test.Cli.Conway.DRepRetirement as DRepRetirement
 import qualified Cardano.Testnet.Test.Cli.Conway.Plutus
+import qualified Cardano.Testnet.Test.Cli.Conway.RepeatedCertificatesInTransaction
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.Queries
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
@@ -62,11 +63,11 @@ tests = do
               [ H.ignoreOnMacAndWindows "leadership-schedule" Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule -- FAILS
               , H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot.hprop_stakeSnapshot
               , H.ignoreOnWindows "transaction" Cardano.Testnet.Test.Cli.Babbage.Transaction.hprop_transaction
+              , H.ignoreOnWindows "repeated-certificates-in-tx" Cardano.Testnet.Test.Cli.Conway.RepeatedCertificatesInTransaction.hprop_repeated_certificates_in_transaction
               ]
           -- TODO: Conway -  Re-enable when create-staked is working in conway again
-          --, testGroup "Conway"
+          -- , testGroup "Conway"
           --  [ H.ignoreOnWindows "stake-snapshot" Cardano.Testnet.Test.Cli.Conway.StakeSnapshot.hprop_stakeSnapshot
-          --  ]
             -- Ignored on Windows due to <stdout>: commitBuffer: invalid argument (invalid character)
             -- as a result of the kes-period-info output to stdout.
           , H.ignoreOnWindows "kes-period-info" Cardano.Testnet.Test.Cli.KesPeriodInfo.hprop_kes_period_info
