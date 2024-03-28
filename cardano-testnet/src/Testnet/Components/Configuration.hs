@@ -41,7 +41,7 @@ import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import           Lens.Micro
-import           System.FilePath.Posix (takeDirectory, takeFileName, (</>))
+import           System.FilePath.Posix (takeDirectory, (</>))
 
 import           Testnet.Defaults
 import           Testnet.Filepath
@@ -97,6 +97,8 @@ createSPOGenesisAndFiles
   -> m FilePath -- ^ Shelley genesis directory
 createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tempAbsPath) = do
   let genesisShelleyFpAbs = tempAbsPath </> defaultGenesisFilepath ShelleyEra
+      genesisAlonzoFpAbs = tempAbsPath </> defaultGenesisFilepath AlonzoEra
+      genesisConwayFpAbs = tempAbsPath </> defaultGenesisFilepath ConwayEra
       genesisShelleyDirAbs = takeDirectory genesisShelleyFpAbs
   genesisShelleyDir <- H.createDirectoryIfMissing genesisShelleyDirAbs
   let testnetMagic = sgNetworkMagic shelleyGenesis
@@ -108,7 +110,10 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis alonzoGenesi
   -- We should *never* be modifying the genesis file after @cardanoTestnet@ is run because this
   -- is sure to be a source of confusion if users provide genesis files and we are mutating them
   -- without their knowledge.
-  H.evalIO $ LBS.writeFile genesisShelleyFpAbs $ encode shelleyGenesis
+  H.evalIO $ do
+    LBS.writeFile genesisShelleyFpAbs $ encode shelleyGenesis
+    LBS.writeFile genesisAlonzoFpAbs  $ encode alonzoGenesis
+    LBS.writeFile genesisConwayFpAbs  $ encode conwayGenesis
 
   -- TODO: Remove this rewrite.
  -- 50 second epochs
@@ -131,6 +136,8 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis alonzoGenesi
   execCli_
     [ anyEraToString era, "genesis", "create-testnet-data"
     , "--spec-shelley", genesisShelleyFpAbs
+    , "--spec-alonzo",  genesisAlonzoFpAbs
+    , "--spec-conway",  genesisConwayFpAbs
     , "--testnet-magic", show testnetMagic
     , "--pools", show numPoolNodes
     , "--total-supply",     show @Int 2_000_000_000_000
@@ -153,14 +160,8 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis alonzoGenesi
   forM_ files $ \file -> do
     H.note file
 
-  -- TODO: This conway and alonzo genesis creation can be removed,
-  -- as this will be done by create-testenet-data when cardano-cli is upgraded above 8.20.3.0.
-  writeGenesisFile genesisShelleyDir AlonzoEra alonzoGenesis
-  writeGenesisFile genesisShelleyDir ConwayEra conwayGenesis
-
   H.renameFile (tempAbsPath </> "byron-gen-command" </> "genesis.json") (genesisByronDir </> "genesis.json")
-  -- TODO: create-testnet-data outputs the new shelley genesis to genesis.json
-  H.renameFile (tempAbsPath </> "genesis.json") (genesisShelleyDir </> "genesis.shelley.json")
+  H.renameFile (tempAbsPath </> "shelley-genesis.json") (genesisShelleyDir </> "genesis.shelley.json")
 
   -- For some reason when setting "--total-supply 10E16" in create-testnet-data, we're getting negative
   -- treasury. TODO: This should be fixed by https://github.com/IntersectMBO/cardano-cli/pull/644
@@ -169,12 +170,6 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis alonzoGenesi
     & L.key "maxLovelaceSupply" . L._Integer .~ 10_000_000_000_000_000
 
   return genesisShelleyDir
-  where
-    writeGenesisFile :: (MonadTest m, MonadIO m, HasCallStack) => ToJSON b => FilePath -> CardanoEra a -> b -> m ()
-    writeGenesisFile dir era' toWrite = GHC.withFrozenCallStack $ do
-      let filename = takeFileName $ defaultGenesisFilepath era'
-      targetJsonFile <- H.noteShow (dir </> filename)
-      H.evalIO $ LBS.writeFile targetJsonFile $ Aeson.encode toWrite
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"

@@ -9,25 +9,24 @@ It actually does use a protocol file taken in from IO.
 module Cardano.Benchmarking.Script.Selftest
 where
 
-import           Prelude
-
-import           Control.Monad
-import qualified Data.ByteString.Lazy.Char8 as BSL
-
-import           Data.Either (fromRight)
-import           Data.String
-
 import           Cardano.Api
-import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (prettyPrint)
 import           Cardano.Benchmarking.Script.Env as Script
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer (initNullTracers)
-
+import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
+import           Ouroboros.Network.NodeToClient (IOManager)
+
+import           Prelude
+
+import           Control.Monad
+import qualified Data.ByteString.Lazy.Char8 as BSL
+import           Data.Either (fromRight)
+import           Data.String
 
 import           Paths_tx_generator
 
@@ -70,7 +69,7 @@ testScript protocolFile submitMode =
   , DefineSigningKey key skey
   , AddFund era genesisWallet
     (TxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162" (TxIx 0))
-    (Lovelace 90000000000000) key
+    (L.Coin 90000000000000) key
   , createChange genesisWallet splitWallet1 1 10
   , createChange splitWallet1 splitWallet2 10 30 -- 10 TXs with 30 outputs -> in total 300 outputs
   , createChange splitWallet2 splitWallet3 300 30

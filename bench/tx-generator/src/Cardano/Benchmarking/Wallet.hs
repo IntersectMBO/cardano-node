@@ -11,17 +11,19 @@ effect, like 'createAndStore' and 'mangle'.
 -}
 module Cardano.Benchmarking.Wallet
 where
-import           Prelude
-
-import           Control.Concurrent.MVar
-import           Streaming
-
 import           Cardano.Api
 
+import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.FundQueue as FundQueue
 import           Cardano.TxGenerator.Tx
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.UTxO
+
+import           Prelude
+
+import           Control.Concurrent.MVar
+
+import           Streaming
 
 -- | All the actual functionality of Wallet / WalletRef has been removed
 -- and WalletRef has been stripped down to MVar FundQueue.
@@ -121,7 +123,7 @@ mangleWithChange mkChange mkPayment outs = case outs of
 -- The only caller not passing a constant list built with 'repeat'
 -- as the first @fkts@ argument is 'mangleWithChange' above. This
 -- is likely worth refactoring for the sake of maintainability.
-mangle :: Monad m => [ CreateAndStore m era ] -> CreateAndStoreList m era [ Lovelace ]
+mangle :: Monad m => [ CreateAndStore m era ] -> CreateAndStoreList m era [ L.Coin ]
 mangle fkts values
   = (outs, \txId -> mapM_ (\f -> f txId) fs)
   where

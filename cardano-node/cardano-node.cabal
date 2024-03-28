@@ -144,10 +144,10 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.39.3.0
+                      , cardano-api ^>= 8.42.0.0
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
-                      , cardano-git-rev
+                      , cardano-git-rev ^>=0.2.2
                       , cardano-ledger-alonzo
                       , cardano-ledger-allegra
                       , cardano-ledger-api

@@ -100,13 +100,13 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.39.3.0
+                      , cardano-api ^>= 8.42.0.0
                       , cardano-binary
-                      , cardano-cli ^>= 8.20.3.0
+                      , cardano-cli ^>= 8.21.0.0
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data
-                      , cardano-git-rev
+                      , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-alonzo
                       , cardano-ledger-api
                       , cardano-ledger-byron

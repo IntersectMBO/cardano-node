@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -213,7 +214,7 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
     { niName            = nodeName
     , niProtocol        = pack . show . ncProtocol $ nc
     , niVersion         = pack . showVersion $ version
-    , niCommit          = gitRev
+    , niCommit          = $(gitRev)
     , niStartTime       = nodeStartTime
     , niSystemStartTime = systemStartTime
     }

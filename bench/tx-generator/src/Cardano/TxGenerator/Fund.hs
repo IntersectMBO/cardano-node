@@ -20,9 +20,11 @@ module Cardano.TxGenerator.Fund
     )
     where
 
-import           Data.Function (on)
-
 import           Cardano.Api as Api
+
+import qualified Cardano.Ledger.Coin as L
+
+import           Data.Function (on)
 
 
 -- $Types
@@ -67,7 +69,7 @@ getFundKey :: Fund -> Maybe (SigningKey PaymentKey)
 getFundKey (Fund (InAnyCardanoEra _ a)) = _fundSigningKey a
 
 -- | Converting a `TxOutValue` to `Lovelace` requires case analysis.
-getFundLovelace :: Fund -> Lovelace
+getFundLovelace :: Fund -> L.Coin
 getFundLovelace (Fund (InAnyCardanoEra _ a)) = case _fundVal a of
   TxOutValueByron l -> l
   TxOutValueShelleyBased era v -> selectLovelace $ Api.fromLedgerValue era v
