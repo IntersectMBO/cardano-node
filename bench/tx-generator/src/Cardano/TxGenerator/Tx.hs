@@ -66,10 +66,10 @@ sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore =
  where
   go inputFunds = do
     let
-      -- 'getFundLovelace' unwraps the 'TxOutValue' in a fund field
+      -- 'getFundCoin' unwraps the 'TxOutValue' in a fund field
       -- so it's all just 'Lovelace' instead of a coproduct
       -- maintaining distinctions.
-      outValues = inToOut $ map getFundLovelace inputFunds
+      outValues = inToOut $ map getFundCoin inputFunds
       (outputs, toFunds) = mkTxOut outValues
     case txGenerator inputFunds outputs of
         Left err -> return $ Left err
@@ -102,7 +102,7 @@ sourceToStoreTransactionNew txGenerator fundSource valueSplitter toStore =
  where
   go inputFunds = do
     let
-      split = valueSplitter $ map getFundLovelace inputFunds
+      split = valueSplitter $ map getFundCoin inputFunds
       (outputs, storeAction) = toStore split
     case txGenerator inputFunds outputs of
         Left err -> return $ Left err
@@ -144,7 +144,7 @@ sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
   second fst $
     txGenerator inputFunds outputs
  where
-  split         = valueSplitter $ map getFundLovelace inputFunds
+  split         = valueSplitter $ map getFundCoin inputFunds
   (outputs, _)  = toStore split
 
 -- | 'genTx' seems to mostly be a wrapper for

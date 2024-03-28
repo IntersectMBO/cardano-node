@@ -15,7 +15,7 @@ module Cardano.TxGenerator.Fund
     -- $Accessors
     , getFundTxIn
     , getFundKey
-    , getFundLovelace
+    , getFundCoin
     , getFundWitness
     )
     where
@@ -68,9 +68,8 @@ getFundTxIn (Fund (InAnyCardanoEra _ a)) = _fundTxIn a
 getFundKey :: Fund -> Maybe (SigningKey PaymentKey)
 getFundKey (Fund (InAnyCardanoEra _ a)) = _fundSigningKey a
 
--- | Converting a `TxOutValue` to `Lovelace` requires case analysis.
-getFundLovelace :: Fund -> L.Coin
-getFundLovelace (Fund (InAnyCardanoEra _ a)) = case _fundVal a of
+getFundCoin :: Fund -> L.Coin
+getFundCoin (Fund (InAnyCardanoEra _ a)) = case _fundVal a of
   TxOutValueByron l -> l
   TxOutValueShelleyBased era v -> selectLovelace $ Api.fromLedgerValue era v
 

@@ -76,7 +76,7 @@ library
     , cardano-api             ^>= 8.42.0.0
     , plutus-ledger-api       >=1.0.0
     , plutus-tx               >=1.0.0
-    , plutus-tx-plugin        ^>=1.21
+    , plutus-tx-plugin        ^>=1.23
 
   ------------------------
   -- Non-IOG dependencies
