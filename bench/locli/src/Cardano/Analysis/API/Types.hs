@@ -443,8 +443,8 @@ testSlotStats :: Genesis -> SlotStats a -> SlotCond -> Bool
 testSlotStats g SlotStats{..} = \case
   SlotGEq  s -> slSlot >= s
   SlotLEq  s -> slSlot <= s
-  EpochGEq s -> fromIntegral (unEpochNo slEpoch) >= s
-  EpochLEq s -> fromIntegral (unEpochNo slEpoch) <= s
+  EpochGEq s -> slEpoch >= s
+  EpochLEq s -> slEpoch <= s
   SlotHasLeaders -> slCountLeads > 0
   EpochSafeIntGEq i -> slEpochSafeInt >= i
   EpochSafeIntLEq i -> slEpochSafeInt <= i

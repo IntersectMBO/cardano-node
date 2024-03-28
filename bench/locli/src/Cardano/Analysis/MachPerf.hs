@@ -74,7 +74,7 @@ timelineFromLogObjects run@Run{genesis} (f, xs') =
    zeroSlotStats =
      SlotStats
      { slSlot = impliedSlot genesis firstRelevantLogObjectTime
-     , slEpoch = 0
+     , slEpoch = EpochNo 0
      , slEpochSlot = 0
      , slEpochSafeInt = 0
      , slStart = SlotStart firstRelevantLogObjectTime

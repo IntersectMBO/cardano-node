@@ -2107,6 +2107,15 @@ instance ( StandardHash blk
       , "expected" .= String (Text.pack $ show expect)
       , "actual" .= String (Text.pack $ show act)
       ]
+
+  forMachine _dtal (CheckpointMismatch blockNumber hdrHashExpected hdrHashActual) =
+    mconcat
+      [ "kind" .= String "CheckpointMismatch"
+      , "blockNo" .= String (Text.pack $ show blockNumber)
+      , "expected" .= String (Text.pack $ show hdrHashExpected)
+      , "actual" .= String (Text.pack $ show hdrHashActual)
+      ]
+
   forMachine dtal (OtherHeaderEnvelopeError err) =
     forMachine dtal err
 
