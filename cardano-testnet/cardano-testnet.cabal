@@ -199,6 +199,7 @@ test-suite cardano-testnet-test
                       , cardano-api:{cardano-api, internal}
                       , cardano-cli
                       , cardano-crypto-class
+                      , cardano-ledger-core
                       , cardano-ledger-conway
                       , cardano-ledger-core
                       , cardano-ledger-shelley
