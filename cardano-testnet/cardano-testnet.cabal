@@ -173,6 +173,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.Babbage.Transaction
                         Cardano.Testnet.Test.Cli.Conway.DRepRetirement
                         Cardano.Testnet.Test.Cli.Conway.Plutus
+                        Cardano.Testnet.Test.Cli.Conway.RepeatedCertificatesInTransaction
                         Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
                         Cardano.Testnet.Test.Cli.KesPeriodInfo
                         Cardano.Testnet.Test.Cli.Queries
