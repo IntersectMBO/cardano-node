@@ -476,14 +476,28 @@ let
             }
           ];
         };
-
-        # The Consul namespace in which group and task-level services within the
-        # group will be registered. Use of template to access Consul KV will read
-        # from the specified Consul namespace. Specifying namespace takes
-        # precedence over the -consul-namespace command line argument in job run.
-        # namespace = "";
-        # Not available as the documentations says: Extraneous JSON object property; No argument or block type is named "namespace".
-
+      }
+      //
+      # If it needs host volumes add the constraints (can't be "null" or "[]".)
+      ### - https://developer.hashicorp.com/nomad/tutorials/stateful-workloads/stateful-workloads-host-volumes
+      (lib.optionalAttrs (profileData.value.cluster.nomad.host_volumes != null) {
+        volume = lib.listToAttrs (lib.lists.imap0
+          (i: v: {
+            # Internal name, reference to mount in this group's tasks below.
+            name = "volume-${taskName}-${toString i}";
+            value = {
+              type = "host"; # We only support type "host".
+              read_only = v.read_only;
+              # How it is named in the Nomad Client's config.
+              # https://developer.hashicorp.com/nomad/docs/configuration/client#host_volume-block
+              source = v.source;
+            };
+          })
+          profileData.value.cluster.nomad.host_volumes
+        );
+      })
+      //
+      {
         # The task stanza creates an individual unit of work, such as a Docker
         # container, web application, or batch processing.
         # https://developer.hashicorp.com/nomad/docs/job-specification/task
@@ -557,12 +571,12 @@ let
             # address of an AWS EC2 instance set this to
             # ${attr.unique.platform.aws.public-ipv4}.
             address =
-              # When using the dedicated P&T Nomad cluster on AWS we use public
-              # IPs/routing, all the other cloud runs are behind a VPC/firewall.
-              # Local runs just use 12.0.0.1.
-              if lib.strings.hasInfix "-nomadperf" profileData.profileName
+              # When using dedicated Nomad clusters on AWS we want to use public
+              # IPs/routing, all the other cloud runs will run behind a
+              # VPC/firewall.
+              if profileData.value.cluster.aws.use_public_routing
               then "\${attr.unique.platform.aws.public-ipv4}"
-              else ""
+              else "" # Local runs just use 127.0.0.1.
             ;
             # Specifies the port to advertise for this service. The value of
             # port depends on which address_mode is being used:
@@ -590,6 +604,20 @@ let
             # https://developer.hashicorp.com/nomad/docs/job-specification/check
             check = null;
           };
+
+          # If it needs host volumes mount them (defined above if any).
+          volume_mount = if profileData.value.cluster.nomad.host_volumes != null
+            then lib.lists.imap0
+              (i: v: {
+                # Internal name, defined above in the group's specification.
+                volume = "volume-${taskName}-${toString i}";
+                # Where it is going to be mounted inside the Task.
+                destination = v.destination;
+                read_only = v.read_only;
+              })
+              profileData.value.cluster.nomad.host_volumes
+            else null
+          ;
 
           # Specifies the set of templates to render for the task. Templates can
           # be used to inject both static and dynamic configuration with data
@@ -1363,7 +1391,7 @@ let
       [
         # Address string to
         (
-          if lib.strings.hasInfix "-nomadperf" profileData.profileName
+          if profileData.value.cluster.aws.use_public_routing
           then ''--host-addr {{ env "attr.unique.platform.aws.local-ipv4" }}''
           else ''--host-addr 0.0.0.0''
         )

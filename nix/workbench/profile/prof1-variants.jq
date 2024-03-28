@@ -193,6 +193,7 @@ def all_profile_variants:
           { producer: "c5.2xlarge"
           , explorer: "m5.4xlarge"
           }
+        , use_public_routing: true
         }
       # We are requiring 10.5GB on the explorer node and 9GB on the others.
       , minimun_storage:
@@ -224,6 +225,7 @@ def all_profile_variants:
           { producer: "c5.9xlarge"
           , explorer: null
           }
+        , use_public_routing: true
         }
       , minimun_storage: null
       , keep_running: true
