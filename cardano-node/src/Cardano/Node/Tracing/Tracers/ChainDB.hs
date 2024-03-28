@@ -39,7 +39,7 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 
-import           Data.Aeson (Value (String), toJSON, (.=))
+import           Data.Aeson (Value (String), object, toJSON, (.=))
 import           Data.Int (Int64)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -418,6 +418,12 @@ instance ( LogFormatting (Header blk)
   forHuman (ChainDB.ChainSelectionForFutureBlock pt) =
       "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.PipeliningEvent ev') = forHumanOrMachine ev'
+  forHuman ChainDB.AddedReprocessLoEBlocksToQueue =
+      "Added request to queue to reprocess blocks postponed by LoE."
+  forHuman ChainDB.PoppedReprocessLoEBlocksFromQueue =
+      "Poppped request from queue to reprocess blocks postponed by LoE."
+  forHuman (ChainDB.ChainSelectionLoEDebug {}) =
+      "ChainDB LoE debug event"
   forMachine dtal (ChainDB.IgnoreBlockOlderThanK pt) =
       mconcat [ "kind" .= String "IgnoreBlockOlderThanK"
                , "block" .= forMachine dtal pt ]
@@ -493,6 +499,21 @@ instance ( LogFormatting (Header blk)
                , "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.PipeliningEvent ev') =
     forMachine dtal ev'
+  forMachine _dtal ChainDB.AddedReprocessLoEBlocksToQueue =
+      mconcat [ "kind" .= String "AddedReprocessLoEBlocksToQueue" ]
+  forMachine _dtal ChainDB.PoppedReprocessLoEBlocksFromQueue =
+      mconcat [ "kind" .= String "PoppedReprocessLoEBlocksFromQueue" ]
+  forMachine dtal (ChainDB.ChainSelectionLoEDebug curChain loeFrag) =
+      mconcat [ "kind" .= String "ChainSelectionLoEDebug"
+              , "curChain" .= headAndAnchor curChain
+              , "loeFrag" .= headAndAnchor loeFrag
+              ]
+    where
+      headAndAnchor frag = object
+        [ "anchor" .= forMachine dtal (AF.anchorPoint frag)
+        , "head" .= forMachine dtal (AF.headPoint frag)
+        ]
+
 
   asMetrics (ChainDB.SwitchedToAFork _warnings selChangedInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
@@ -548,6 +569,12 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     Namespace [] ["ChainSelectionForFutureBlock"]
   namespaceFor (ChainDB.PipeliningEvent ev') =
     nsPrependInner "PipeliningEvent" (namespaceFor ev')
+  namespaceFor ChainDB.AddedReprocessLoEBlocksToQueue =
+    Namespace [] ["AddedReprocessLoEBlocksToQueue"]
+  namespaceFor ChainDB.PoppedReprocessLoEBlocksFromQueue =
+    Namespace [] ["PoppedReprocessLoEBlocksFromQueue"]
+  namespaceFor ChainDB.ChainSelectionLoEDebug {} =
+    Namespace [] ["ChainSelectionLoEDebug"]
 
   severityFor (Namespace _ ["IgnoreBlockOlderThanK"]) _ = Just Info
   severityFor (Namespace _ ["IgnoreBlockAlreadyInVolatileDB"]) _ = Just Info
@@ -578,6 +605,9 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("PipeliningEvent" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (ChainDB.TracePipeliningEvent blk)) Nothing
+  severityFor (Namespace _ ["AddedReprocessLoEBlocksToQueue"]) _ = Just Debug
+  severityFor (Namespace _ ["PoppedReprocessLoEBlocksFromQueue"]) _ = Just Debug
+  severityFor (Namespace _ ["ChainSelectionLoEDebug"]) _ = Just Debug
   severityFor _ _ = Nothing
 
   privacyFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.AddBlockValidation ev')) =
@@ -721,6 +751,9 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     , Namespace [] ["AddedToCurrentChain"]
     , Namespace [] ["SwitchedToAFork"]
     , Namespace [] ["ChainSelectionForFutureBlock"]
+    , Namespace [] ["AddedReprocessLoEBlocksToQueue"]
+    , Namespace [] ["PoppedReprocessLoEBlocksFromQueue"]
+    , Namespace [] ["ChainSelectionLoEDebug"]
     ]
     ++ map (nsPrependInner "PipeliningEvent")
           (allNamespaces :: [Namespace (ChainDB.TracePipeliningEvent blk)])
@@ -950,30 +983,30 @@ instance MetaTrace (ChainDB.TraceGCEvent blk) where
 instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
   => LogFormatting (ChainDB.TraceInitChainSelEvent blk) where
     forHuman (ChainDB.InitChainSelValidation v) = forHumanOrMachine v
-    forHuman ChainDB.InitalChainSelected{} =
+    forHuman ChainDB.InitialChainSelected{} =
         "Initial chain selected"
     forHuman ChainDB.StartedInitChainSelection {} =
         "Started initial chain selection"
 
     forMachine dtal (ChainDB.InitChainSelValidation v) = forMachine dtal v
-    forMachine _dtal ChainDB.InitalChainSelected =
-      mconcat ["kind" .= String "Follower.InitalChainSelected"]
+    forMachine _dtal ChainDB.InitialChainSelected =
+      mconcat ["kind" .= String "Follower.InitialChainSelected"]
     forMachine _dtal ChainDB.StartedInitChainSelection =
       mconcat ["kind" .= String "Follower.StartedInitChainSelection"]
 
     asMetrics (ChainDB.InitChainSelValidation v) = asMetrics v
-    asMetrics ChainDB.InitalChainSelected        = []
+    asMetrics ChainDB.InitialChainSelected        = []
     asMetrics ChainDB.StartedInitChainSelection  = []
 
 instance MetaTrace (ChainDB.TraceInitChainSelEvent blk) where
-  namespaceFor ChainDB.InitalChainSelected {} =
-    Namespace [] ["InitalChainSelected"]
+  namespaceFor ChainDB.InitialChainSelected {} =
+    Namespace [] ["InitialChainSelected"]
   namespaceFor ChainDB.StartedInitChainSelection {} =
     Namespace [] ["StartedInitChainSelection"]
   namespaceFor (ChainDB.InitChainSelValidation ev') =
     nsPrependInner "Validation" (namespaceFor ev')
 
-  severityFor (Namespace _ ["InitalChainSelected"]) _ = Just Info
+  severityFor (Namespace _ ["InitialChainSelected"]) _ = Just Info
   severityFor (Namespace _ ["StartedInitChainSelection"]) _ = Just Info
   severityFor (Namespace out ("Validation" : tl))
                             (Just (ChainDB.InitChainSelValidation ev')) =
@@ -1003,7 +1036,7 @@ instance MetaTrace (ChainDB.TraceInitChainSelEvent blk) where
     metricsDocFor (Namespace out tl :: Namespace (ChainDB.TraceValidationEvent blk))
   metricsDocFor _ = []
 
-  documentFor (Namespace _ ["InitalChainSelected"]) = Just
+  documentFor (Namespace _ ["InitialChainSelected"]) = Just
     "A garbage collection for the given 'SlotNo' was performed."
   documentFor (Namespace _ ["StartedInitChainSelection"]) = Just $ mconcat
     [ "A garbage collection for the given 'SlotNo' was scheduled to happen"
@@ -1014,7 +1047,7 @@ instance MetaTrace (ChainDB.TraceInitChainSelEvent blk) where
   documentFor _ = Nothing
 
   allNamespaces =
-    [ Namespace [] ["InitalChainSelected"]
+    [ Namespace [] ["InitialChainSelected"]
     , Namespace [] ["StartedInitChainSelection"]
     ]
     ++ map (nsPrependInner "Validation")
@@ -2107,6 +2140,15 @@ instance ( StandardHash blk
       , "expected" .= String (Text.pack $ show expect)
       , "actual" .= String (Text.pack $ show act)
       ]
+
+  forMachine _dtal (CheckpointMismatch blockNumber hdrHashExpected hdrHashActual) =
+    mconcat
+      [ "kind" .= String "CheckpointMismatch"
+      , "blockNo" .= String (Text.pack $ show blockNumber)
+      , "expected" .= String (Text.pack $ show hdrHashExpected)
+      , "actual" .= String (Text.pack $ show hdrHashActual)
+      ]
+
   forMachine dtal (OtherHeaderEnvelopeError err) =
     forMachine dtal err
 

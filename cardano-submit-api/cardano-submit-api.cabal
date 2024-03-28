@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-submit-api
-version:                3.2.2
+version:                8.10.0
 synopsis:               A web server that allows transactions to be POSTed to the cardano chain
 description:            A web server that allows transactions to be POSTed to the cardano chain.
 homepage:               https://github.com/intersectmbo/cardano-node
@@ -39,9 +39,9 @@ library
                       , aeson
                       , async
                       , bytestring
-                      , cardano-api ^>= 8.42.0.0
+                      , cardano-api ^>= 8.44
                       , cardano-binary
-                      , cardano-cli ^>= 8.21.0.0
+                      , cardano-cli ^>= 8.22
                       , cardano-crypto-class ^>= 2.1.2
                       , http-media
                       , iohk-monitoring

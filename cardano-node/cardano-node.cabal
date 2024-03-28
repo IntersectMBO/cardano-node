@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                8.9.0
+version:                8.10.0
 synopsis:               The cardano full node
 description:            The cardano full node.
 category:               Cardano,
@@ -144,7 +144,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.42.0.0
+                      , cardano-api ^>= 8.44
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
@@ -158,7 +158,7 @@ library
                       , cardano-ledger-shelley
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.0.2
-                      , cardano-slotting >= 0.1.1
+                      , cardano-slotting >= 0.2
                       , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer
@@ -183,9 +183,9 @@ library
                       , network-mux >= 0.4
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-consensus ^>= 0.16
-                      , ouroboros-consensus-cardano ^>= 0.14
-                      , ouroboros-consensus-diffusion ^>= 0.12
+                      , ouroboros-consensus ^>= 0.17
+                      , ouroboros-consensus-cardano ^>= 0.15
+                      , ouroboros-consensus-diffusion ^>= 0.13
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api ^>= 0.7.1
                       , ouroboros-network ^>= 0.13

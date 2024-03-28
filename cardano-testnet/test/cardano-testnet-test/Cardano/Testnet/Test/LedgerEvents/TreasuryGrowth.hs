@@ -53,7 +53,7 @@ prop_check_if_treasury_is_growing = H.integrationRetryWorkspace 0 "growing-treas
     H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
 
   (_condition, treasuryValues) <- H.leftFailM . runExceptT $
-    Api.foldEpochState (File configurationFile) (Api.File socketPathAbs) Api.QuickValidation 10 M.empty handler
+    Api.foldEpochState (File configurationFile) (Api.File socketPathAbs) Api.QuickValidation (EpochNo 10) M.empty handler
   H.note_ $ "treasury for last 5 epochs: " <> show treasuryValues
 
   let treasuriesSortedByEpoch =

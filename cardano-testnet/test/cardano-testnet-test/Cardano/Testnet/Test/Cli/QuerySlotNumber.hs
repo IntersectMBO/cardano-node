@@ -14,6 +14,7 @@ module Cardano.Testnet.Test.Cli.QuerySlotNumber
 
 import           Cardano.Api
 
+import           Cardano.Slotting.Slot
 import           Cardano.Testnet
 
 import           Prelude
@@ -58,7 +59,7 @@ hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tem
       -- how many slots can the checked value differ from
       -- we have 1s precision for UTC timestamp CLI argument, so this value tells how many slots in 1s can be
       slotPrecision = round $ 1 / slotLength
-      epochSize = fromIntegral sgEpochLength :: Int
+      epochSize = fromIntegral (unEpochSize sgEpochLength) :: Int
 
   poolNode1 <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1

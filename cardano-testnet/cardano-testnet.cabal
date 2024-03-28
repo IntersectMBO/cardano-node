@@ -35,8 +35,8 @@ library
                       , aeson-pretty
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 8.42.0.0
-                      , cardano-cli ^>= 8.21.0.0
+                      , cardano-api ^>= 8.44
+                      , cardano-cli ^>= 8.22
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2
@@ -204,6 +204,7 @@ test-suite cardano-testnet-test
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-node
+                      , cardano-slotting
                       , cardano-strict-containers ^>= 0.1
                       , cardano-testnet
                       , containers

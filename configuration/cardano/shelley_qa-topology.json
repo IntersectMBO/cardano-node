@@ -1,9 +1,23 @@
 {
-  "Producers": [
+  "bootstrapPeers": [
     {
-      "addr": "relays-new.shelley-qa.dev.cardano.org",
-      "port": 3001,
-      "valency": 2
+      "address": "shelley-qa-node.play.dev.cardano.org",
+      "port": 3001
     }
-  ]
+  ],
+  "localRoots": [
+    {
+      "accessPoints": [],
+      "advertise": false,
+      "trustable": false,
+      "valency": 1
+    }
+  ],
+  "publicRoots": [
+    {
+      "accessPoints": [],
+      "advertise": false
+    }
+  ],
+  "useLedgerAfterSlot": 19252750
 }

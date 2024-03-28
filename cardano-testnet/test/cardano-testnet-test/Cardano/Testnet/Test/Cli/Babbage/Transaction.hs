@@ -93,7 +93,8 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
   -- This is the current calculated fee.
   -- It's a sanity check to see if anything has
   -- changed regarding fee calculation.
-  228 H.=== txFee
+  -- 8.10 changed fee from 228 -> 330
+  330 H.=== txFee
 
   void $ execCli' execConfig
     [ "babbage", "transaction", "sign"
