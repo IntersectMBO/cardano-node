@@ -7,7 +7,7 @@
 
 module Testnet.Components.Configuration
   ( anyEraToString
-  , createConfigYaml
+  , createConfigJSON
   , createSPOGenesisAndFiles
   , eraToString
   , mkTopologyConfig
@@ -56,14 +56,13 @@ import qualified Hedgehog.Extras.Stock.Time as DTC
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
--- TODO rename me, it generates JSON
 -- | Returns JSON encoded hashes of the era, as well as the hard fork configuration toggle.
-createConfigYaml :: ()
+createConfigJSON :: ()
   => (MonadTest m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
   -> AnyCardanoEra -- ^ The era used for generating the hard fork configuration toggle
   -> m LBS.ByteString
-createConfigYaml (TmpAbsolutePath tempAbsPath) era = GHC.withFrozenCallStack $ do
+createConfigJSON (TmpAbsolutePath tempAbsPath) era = GHC.withFrozenCallStack $ do
   byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron/genesis.json"
   shelleyGenesisHash <- getHash ShelleyEra "ShelleyGenesisHash"
   alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
