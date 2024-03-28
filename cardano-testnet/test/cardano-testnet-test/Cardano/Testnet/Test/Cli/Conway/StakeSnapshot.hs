@@ -3,8 +3,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
 module Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
   ( hprop_stakeSnapshot
   ) where

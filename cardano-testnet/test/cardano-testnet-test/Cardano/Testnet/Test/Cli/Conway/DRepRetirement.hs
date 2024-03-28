@@ -7,12 +7,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-#if __GLASGOW_HASKELL__ >= 908
-{-# OPTIONS_GHC -Wno-x-partial #-}
-#endif
-
-{- HLINT ignore "Use head" -}
-
 module Cardano.Testnet.Test.Cli.Conway.DRepRetirement
   ( hprop_drep_retirement
   ) where
@@ -64,7 +58,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
   TestnetRuntime
     { testnetMagic
     , poolNodes
-    , wallets
+    , wallets=wallet0:_
     , configurationFile
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
@@ -111,7 +105,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
        , "--out-file", drepCertFile n
        ]
 
-  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe $ wallets !! 0
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   -- Submit registration certificates
   drepRegTxbodyFp <- H.note $ work </> "drep.registration.txbody"
@@ -120,7 +114,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "transaction", "build"
     , "--tx-in", Text.unpack $ renderTxIn txin1
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--certificate-file", drepCertFile 1
     , "--certificate-file", drepCertFile 2
     , "--certificate-file", drepCertFile 3
@@ -131,7 +125,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", drepRegTxbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 0
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
     , "--signing-key-file", drepSKeyFp 1
     , "--signing-key-file", drepSKeyFp 2
     , "--signing-key-file", drepSKeyFp 3
@@ -161,12 +155,12 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
 
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "query", "utxo"
-    , "--address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
+    , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--cardano-mode"
     , "--out-file", work </> "utxo-11.json"
     ]
 
-  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe $ wallets !! 0
+  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   drepRetirementRegTxbodyFp <- H.note $ work </> "drep.retirement.txbody"
   drepRetirementRegTxSignedFp <- H.note $ work </> "drep.retirement.tx"
@@ -174,7 +168,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "transaction", "build"
     , "--tx-in", Text.unpack $ renderTxIn txin2
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--certificate-file", dreprRetirementCertFile
     , "--witness-override", "2"
     , "--out-file", drepRetirementRegTxbodyFp
@@ -183,7 +177,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", drepRetirementRegTxbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 0
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
     , "--signing-key-file", drepSKeyFp 1
     , "--out-file", drepRetirementRegTxSignedFp
     ]

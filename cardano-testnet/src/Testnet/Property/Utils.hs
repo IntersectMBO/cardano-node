@@ -3,6 +3,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Testnet.Property.Utils
   ( integration
@@ -19,6 +20,7 @@ module Testnet.Property.Utils
   , getShelleyGenesisHash
 
   , decodeEraUTxO
+  , requireEon
   ) where
 
 import           Cardano.Api
@@ -36,6 +38,7 @@ import           Data.Aeson.Key
 import           Data.Aeson.KeyMap hiding (map)
 import qualified Data.ByteString as BS
 import           Data.Text (Text)
+import           Data.Typeable
 import           Data.Word
 import           GHC.Stack
 import qualified GHC.Stack as GHC
@@ -43,6 +46,8 @@ import           Options.Applicative
 import qualified System.Environment as IO
 import           System.Info (os)
 import qualified System.IO.Unsafe as IO
+
+import           Testnet.Start.Types
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
@@ -122,3 +127,18 @@ runInBackground act = void . H.evalM $ allocate (H.async act) cleanUp
 
 decodeEraUTxO :: (IsShelleyBasedEra era, MonadTest m) => ShelleyBasedEra era -> Aeson.Value -> m (UTxO era)
 decodeEraUTxO _ = H.jsonErrorFail . Aeson.fromJSON
+
+
+requireEon :: forall eon era m. Eon eon
+           => HasCallStack
+           => Typeable (eon era)
+           => MonadTest m
+           => CardanoEra era -- ^ node era
+           -> m (eon era)
+requireEon era = withFrozenCallStack $
+  maybe
+    (H.note_ errorMessage >> H.failure)
+    pure
+    (forEraMaybeEon era)
+  where
+    errorMessage = "Cannot witness '" <> show (typeRep (Proxy @(eon era)))  <> "' in " <> eraToString era <> " era."

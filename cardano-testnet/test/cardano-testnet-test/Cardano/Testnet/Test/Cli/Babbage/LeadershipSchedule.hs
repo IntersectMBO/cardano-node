@@ -1,5 +1,4 @@
 {-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -135,6 +134,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
     tempAbsPath
     (cardanoNodeEra cTestnetOptions)
     testDelegatorVkeyFp
+    2_000_000
     testDelegatorRegCertFp
 
   -- Test stake address deleg  cert
@@ -161,12 +161,12 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
   txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 
-  let eraFlag = convertToEraFlag $ cardanoNodeEra cTestnetOptions
+  let eraString = anyEraToString $ cardanoNodeEra cTestnetOptions
       delegRegTestDelegatorTxBodyFp = work </> "deleg-register-test-delegator.txbody"
 
   void $ execCli' execConfig
-    [ "transaction", "build"
-    , eraFlag
+    [ eraString
+    , "transaction", "build"
     , "--change-address", testDelegatorPaymentAddr -- NB: A large balance ends up at our test delegator's address
     , "--tx-in", Text.unpack $ renderTxIn txin2
     , "--tx-out", utxoAddr <> "+" <> show @Int 5_000_000
