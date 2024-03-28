@@ -56,7 +56,6 @@ import           Hedgehog
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
-
 newtype AdditionalCatcher
   = IOE IOException
   deriving Show
@@ -129,14 +128,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
          $ P.KeyNames { P.verificationKeyFile = stakeVkeyFp
                       , P.signingKeyFile = stakeSKeyFp
                       }
-
-  -- TODO share this piece of code that is duplicated in multiple tests
-  let drepVkeyFp :: Int -> FilePath
-      drepVkeyFp n = tempAbsPath' </> "drep-keys" </> ("drep" <> show n) </> "drep.vkey"
-
-      drepSKeyFp :: Int -> FilePath
-      drepSKeyFp n = tempAbsPath' </> "drep-keys" </> ("drep" <> show n) </> "drep.skey"
-
   -- Create constitution proposal
 
   guardRailScriptFp <- H.note $ work </> "guard-rail-script.plutusV3"
@@ -222,7 +213,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
       , "--yes"
       , "--governance-action-tx-id", txidString
       , "--governance-action-index", show @Word32 governanceActionIndex
-      , "--drep-verification-key-file", drepVkeyFp n
+      , "--drep-verification-key-file", defaultDRepVkeyFp n
       , "--out-file", voteFp n
       ]
 
@@ -251,9 +242,9 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     [ "conway", "transaction", "sign"
     , "--tx-body-file", voteTxBodyFp
     , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 0
-    , "--signing-key-file", drepSKeyFp 1
-    , "--signing-key-file", drepSKeyFp 2
-    , "--signing-key-file", drepSKeyFp 3
+    , "--signing-key-file", defaultDRepSkeyFp 1
+    , "--signing-key-file", defaultDRepSkeyFp 2
+    , "--signing-key-file", defaultDRepSkeyFp 3
     , "--out-file", voteTxFp
     ]
 
