@@ -1077,6 +1077,15 @@ def all_profile_variants:
       }
     }
   , $utxoscale_template *
+    { name: "utxoscale-45M32G-nomadperfssd"
+    , genesis:
+      { utxo:                               (45 * $M)
+      }
+    , node:
+      { heap_limit:                         32768
+      }
+    }
+  , $utxoscale_template *
     { name: "utxoscale-48M32G-nomadperfssd"
     , genesis:
       { utxo:                               (48 * $M)

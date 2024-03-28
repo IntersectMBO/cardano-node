@@ -102,7 +102,7 @@ PROFILES_NOMAD_PERF_NOP2P := default-nomadperf-nop2p oldtracing-nomadperf-nop2p 
 PROFILES_NOMAD_PERF_NOP2P += value-nomadperf-nop2p value-oldtracing-nomadperf-nop2p plutus-nomadperf-nop2p fast-nomadperf-nop2p
 PROFILES_NOMAD_PERFSSD    := fast-nomadperfssd latency-nomadperfssd
 # UTxO scale-testing profiles on the NomadSSD cluster on AWS
-PROFILES_UTXOSCALE        := utxoscale-32M32G-nomadperfssd utxoscale-42M32G-nomadperfssd utxoscale-48M32G-nomadperfssd
+PROFILES_UTXOSCALE        := utxoscale-32M32G-nomadperfssd utxoscale-42M32G-nomadperfssd utxoscale-48M32G-nomadperfssd utxoscale-45M32G-nomadperfssd
 
 LOCAL_PROFILES += $(PROFILES_BASE)
 LOCAL_PROFILES += $(PROFILES_FAST)
