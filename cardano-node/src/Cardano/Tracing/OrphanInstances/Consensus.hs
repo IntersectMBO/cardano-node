@@ -764,6 +764,13 @@ instance ( StandardHash blk
       , "expected" .= String (pack $ show expect)
       , "actual" .= String (pack $ show act)
       ]
+  toObject _verb (CheckpointMismatch blockNumber hdrHashExpected hdrHashActual) =
+    mconcat
+      [ "kind" .= String "CheckpointMismatch"
+      , "blockNo" .= String (pack $ show blockNumber)
+      , "expected" .= String (pack $ show hdrHashExpected)
+      , "actual" .= String (pack $ show hdrHashActual)
+      ]
   toObject verb (OtherHeaderEnvelopeError err) =
     toObject verb err
 

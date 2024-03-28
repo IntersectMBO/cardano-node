@@ -158,7 +158,7 @@ library
                       , cardano-ledger-shelley
                       , cardano-prelude
                       , cardano-protocol-tpraos >= 1.0.2
-                      , cardano-slotting >= 0.1.1
+                      , cardano-slotting >= 0.2
                       , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer

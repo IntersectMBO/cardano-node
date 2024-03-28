@@ -77,6 +77,7 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
+import           GHC.IsList (toList)
 
 {- HLINT ignore "Use :" -}
 
@@ -136,6 +137,13 @@ instance LogFormatting (Conway.ConwayGovCertPredFailure era) where
       , "credential" .= String (textShow kHash)
       , "error" .= String "Committee has resigned"
       ]
+    Conway.ConwayDRepIncorrectRefund givenRefund expectedRefund  ->
+      [ "kind" .= String "ConwayDRepIncorrectRefund"
+      , "givenRefund" .= givenRefund
+      , "expectedRefund" .= expectedRefund
+      , "error" .= String "Refunds mismatch"
+      ]
+
 
 
 instance LogFormatting (Conway.ConwayDelegPredFailure era) where
@@ -184,7 +192,7 @@ instance
   , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGER" era))
   ) => LogFormatting (ApplyTxError era) where
   forMachine dtal (ApplyTxError predicateFailures) =
-    mconcat $ map (forMachine dtal) predicateFailures
+    mconcat $ toList $ fmap (forMachine dtal) predicateFailures
 
 instance
   ( Ledger.Crypto era
@@ -211,7 +219,7 @@ instance
   ) => LogFormatting (ShelleyLedgerError era) where
   forMachine dtal (BBodyError (BlockTransitionError fs)) =
     mconcat [ "kind" .= String "BBodyError"
-             , "failures" .= map (forMachine dtal) fs
+             , "failures" .= fmap (forMachine dtal) fs
              ]
 
 instance
@@ -254,7 +262,7 @@ instance
   ) => LogFormatting (ChainTransitionError crypto) where
   forMachine dtal (ChainTransitionError fs) =
     mconcat [ "kind" .= String "ChainTransitionError"
-             , "failures" .= map (forMachine dtal) fs
+             , "failures" .= fmap (forMachine dtal) fs
              ]
 
 instance LogFormatting ChainPredicateFailure where
@@ -345,7 +353,7 @@ instance
   , Api.IsShelleyBasedEra era
   , Consensus.ShelleyBasedEra ledgerera
   , Ledger.EraCrypto ledgerera ~ StandardCrypto
-  , LogFormatting (PPUPPredFailure ledgerera)
+  , LogFormatting (Ledger.EraRuleFailure "PPUP" ledgerera)
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" ledgerera))
   ) => LogFormatting (AlonzoUtxowPredFailure ledgerera) where
   forMachine dtal (ShelleyInAlonzoUtxowPredFailure utxoPredFail) =
@@ -441,7 +449,7 @@ instance
 
 instance
   ( Consensus.ShelleyBasedEra era
-  , LogFormatting (PPUPPredFailure era)
+  , LogFormatting (Ledger.EraRuleFailure "PPUP" era)
   ) => LogFormatting (ShelleyUtxoPredFailure era) where
   forMachine _dtal (BadInputsUTxO badInputs) =
     mconcat [ "kind" .= String "BadInputsUTxO"
@@ -500,7 +508,7 @@ instance
 instance
   ( Consensus.ShelleyBasedEra era
   , ToJSON Allegra.ValidityInterval
-  , LogFormatting (PPUPPredFailure era)
+  , LogFormatting (Ledger.EraRuleFailure "PPUP" era)
   ) => LogFormatting (AllegraUtxoPredFailure era) where
   forMachine _dtal (Allegra.BadInputsUTxO badInputs) =
     mconcat [ "kind" .= String "BadInputsUTxO"
@@ -1013,7 +1021,7 @@ instance
 
 instance
   ( ToJSON (Alonzo.CollectError ledgerera)
-  , LogFormatting (PPUPPredFailure ledgerera)
+  , LogFormatting (Ledger.EraRuleFailure "PPUP" ledgerera)
   ) => LogFormatting (AlonzoUtxosPredFailure ledgerera) where
   forMachine _ (Alonzo.ValidationTagMismatch isValidating reason) =
     mconcat [ "kind" .= String "ValidationTagMismatch"
@@ -1060,13 +1068,18 @@ instance
                 , "outputs" .= outputs
                 ]
 
+      Babbage.BabbageNonDisjointRefInputs nonDisjointInputs ->
+        mconcat [ "kind" .= String "BabbageNonDisjointRefInputs"
+                , "outputs" .= nonDisjointInputs
+                ]
+
 instance
   ( Api.ShelleyLedgerEra era ~ ledgerera
   , Api.IsShelleyBasedEra era
   , Ledger.Era ledgerera
   , Ledger.EraCrypto ledgerera ~ StandardCrypto
   , ShelleyBasedEra ledgerera
-  , LogFormatting (PPUPPredFailure ledgerera)
+  , LogFormatting (Ledger.EraRuleFailure "PPUP" ledgerera)
   , LogFormatting (ShelleyUtxowPredFailure ledgerera)
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" ledgerera))
   ) => LogFormatting (BabbageUtxowPredFailure ledgerera) where
@@ -1289,6 +1302,25 @@ instance Ledger.Crypto c => LogFormatting (PraosChainSelectView c) where
               ]
     where
       renderVRF = Text.decodeUtf8 . B16.encode . Crypto.getOutputVRFBytes
+
+instance
+  ( ToJSON (Alonzo.CollectError ledgerera)
+  ) => LogFormatting (Conway.ConwayUtxosPredFailure ledgerera) where
+  forMachine _ (Conway.ValidationTagMismatch isValidating reason) =
+    mconcat [ "kind" .= String "ValidationTagMismatch"
+             , "isvalidating" .= isValidating
+             , "reason" .= reason
+             ]
+  forMachine _ (Conway.CollectErrors errors) =
+    mconcat [ "kind" .= String "CollectErrors"
+             , "errors" .= errors
+             ]
+
+-- We define this bogus instance as it is required by some of the
+-- 'LogFormatting' instances in this module
+instance LogFormatting (Ledger.VoidEraRule rule era) where
+  -- NOTE: There are no values of type 'Ledger.VoidEraRule rule era'
+  forMachine _ = \case
 
 --------------------------------------------------------------------------------
 -- Helper functions
