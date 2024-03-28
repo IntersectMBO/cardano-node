@@ -1,10 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 {- HLINT ignore "Use head" -}
 
@@ -20,15 +18,13 @@ import           Cardano.Testnet
 
 import           Prelude
 
-import           Control.Monad (forM_, void)
+import           Control.Monad (forM_)
 import qualified Data.Aeson as Aeson
-import qualified Data.Text as Text
 import qualified Data.Vector as Vector
 import           GHC.Stack (HasCallStack)
 import           System.FilePath ((</>))
 
-import           Testnet.Components.Query (checkDRepsNumber, findLargestUtxoForPaymentKey,
-                   getEpochStateView)
+import           Testnet.Components.Query (checkDRepsNumber)
 import qualified Testnet.Process.Cli as H
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
@@ -49,8 +45,7 @@ hprop_cli_queries :: Property
 hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> do
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     <- mkConf tempAbsBasePath'
-  let tempAbsPath' = unTmpAbsPath tempAbsPath
-      tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
+  let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   let sbe = ShelleyBasedEraConway
       era = toCardanoEra sbe
@@ -64,7 +59,6 @@ hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> 
   TestnetRuntime
     { testnetMagic
     , poolNodes
-    , wallets
     , configurationFile
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
@@ -77,65 +71,10 @@ hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> 
       socketBase = IO.sprocketBase poolSprocket1 -- /tmp
       socketPath = socketBase </> socketName'
 
-  epochStateView <- getEpochStateView (File configurationFile) (File socketPath)
-
   H.note_ $ "Sprocket: " <> show poolSprocket1
   H.note_ $ "Abs path: " <> tempAbsBasePath'
   H.note_ $ "Socketpath: " <> socketPath
   H.note_ $ "Foldblocks config file: " <> configurationFile
-
-  let drepVkeyFp :: Int -> FilePath
-      drepVkeyFp n = tempAbsPath' </> "drep-keys" </> ("drep" <> show n) </> "drep.vkey"
-
-      drepSKeyFp :: Int -> FilePath
-      drepSKeyFp n = tempAbsPath' </> "drep-keys" </> ("drep" <> show n) </> "drep.skey"
-
-  gov <- H.createDirectoryIfMissing $ tempAbsPath' </> "governance"
-
-  -- Create DRep and register them
-  let drepCertFile :: Int -> FilePath
-      drepCertFile n = gov </> "drep-keys" <> "drep" <> show n <> ".regcert"
-  forM_ [1..3] $ \n -> do
-    H.execCli' execConfig
-       [ "conway", "governance", "drep", "registration-certificate"
-       , "--drep-verification-key-file", drepVkeyFp n
-       , "--key-reg-deposit-amt", show @Int 1_000_000
-       , "--out-file", drepCertFile n
-       ]
-
-  -- Retrieve UTxOs for registration submission
-  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe $ wallets !! 0
-
-  drepRegTxbodyFp <- H.note $ work </> "drep.registration.txbody"
-  drepRegTxSignedFp <- H.note $ work </> "drep.registration.tx"
-
-  void $ H.execCli' execConfig
-    [ "conway", "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
-    , "--tx-in", Text.unpack $ renderTxIn txin1
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr (wallets !! 1)) <> "+" <> show @Int 5_000_000
-    , "--certificate-file", drepCertFile 1
-    , "--certificate-file", drepCertFile 2
-    , "--certificate-file", drepCertFile 3
-    , "--witness-override", show @Int 4
-    , "--out-file", drepRegTxbodyFp
-    ]
-
-  void $ H.execCli' execConfig
-    [ "conway", "transaction", "sign"
-    , "--tx-body-file", drepRegTxbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 0
-    , "--signing-key-file", drepSKeyFp 1
-    , "--signing-key-file", drepSKeyFp 2
-    , "--signing-key-file", drepSKeyFp 3
-    , "--out-file", drepRegTxSignedFp
-    ]
-
-  void $ H.execCli' execConfig
-    [ "conway", "transaction", "submit"
-    , "--tx-file", drepRegTxSignedFp
-    ]
-  -- Finished creating DReps
 
   -- TODO: we could wait less: waiting 1 block should suffice.
   checkDRepsNumber sbe (Api.File configurationFile) (Api.File socketPath) execConfig 3
