@@ -177,7 +177,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.FollowerNewImmIterator {} -> Debug
   getSeverityAnnotation (ChainDB.TraceInitChainSelEvent ev) = case ev of
     ChainDB.StartedInitChainSelection{} -> Info
-    ChainDB.InitalChainSelected{} -> Info
+    ChainDB.InitialChainSelected{} -> Info
     ChainDB.InitChainSelValidation ev' -> case ev' of
       ChainDB.InvalidBlock{} -> Debug
       ChainDB.ValidCandidate {} -> Info
@@ -604,7 +604,7 @@ instance ( ConvertRawHash blk
         ChainDB.FollowerNewImmIterator _ _ ->  "FollowerNewImmIterator"
       ChainDB.TraceInitChainSelEvent ev -> case ev of
         ChainDB.StartedInitChainSelection -> "Started initial chain selection"
-        ChainDB.InitalChainSelected -> "Initial chain selected"
+        ChainDB.InitialChainSelected -> "Initial chain selected"
         ChainDB.InitChainSelValidation e -> case e of
           ChainDB.InvalidBlock _err _pt -> "Invalid block found during Initial chain selection, truncating the candidate and retrying to select a best candidate."
           ChainDB.ValidCandidate af     -> "Valid candidate at tip " <> renderPointAsPhrase (AF.lastPoint af)
@@ -1073,8 +1073,8 @@ instance ( ConvertRawHash blk
     ChainDB.FollowerNewImmIterator _ _ ->
       mconcat [ "kind" .= String "TraceFollowerEvent.FollowerNewImmIterator" ]
   toObject verb (ChainDB.TraceInitChainSelEvent ev) = case ev of
-    ChainDB.InitalChainSelected ->
-      mconcat ["kind" .= String "TraceFollowerEvent.InitalChainSelected"]
+    ChainDB.InitialChainSelected ->
+      mconcat ["kind" .= String "TraceFollowerEvent.InitialChainSelected"]
     ChainDB.StartedInitChainSelection ->
       mconcat ["kind" .= String "TraceFollowerEvent.StartedInitChainSelection"]
     ChainDB.InitChainSelValidation ev' -> case ev' of
