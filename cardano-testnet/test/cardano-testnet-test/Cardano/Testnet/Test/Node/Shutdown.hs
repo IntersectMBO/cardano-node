@@ -52,6 +52,10 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 
 {- HLINT ignore "Redundant <&>" -}
+
+-- Execute this test with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Shutdown/"'@
+--
 -- TODO: Use cardanoTestnet in hprop_shutdown
 hprop_shutdown :: Property
 hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> do
@@ -112,9 +116,13 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
     ]
 
   byronGenesisHash <- getByronGenesisHash $ tempAbsPath' </> "byron/genesis.json"
-  H.renameFile (tempAbsPath' </> "shelley/genesis.json") (tempAbsPath' </> defaultGenesisFilepath ShelleyEra)
+  -- Move the files to the paths expected by 'defaultYamlHardforkViaConfig' below
+  H.renameFile (tempAbsPath' </> "shelley/genesis.json")        (tempAbsPath' </> defaultGenesisFilepath ShelleyEra)
+  H.renameFile (tempAbsPath' </> "shelley/genesis.alonzo.json") (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)
+  H.renameFile (tempAbsPath' </> "shelley/genesis.conway.json") (tempAbsPath' </> defaultGenesisFilepath ConwayEra)
+
   shelleyGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath ShelleyEra) "ShelleyGenesisHash"
-  alonzoGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> "shelley/genesis.alonzo.json") "AlonzoGenesisHash"
+  alonzoGenesisHash  <- getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)  "AlonzoGenesisHash"
 
   let finalYamlConfig :: LBS.ByteString
       finalYamlConfig = encode . Object
@@ -221,6 +229,8 @@ hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-syn
   let epsilon = 50
   H.assertWithinTolerance slotTip maxSlot epsilon
 
+-- Execute this test with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/ShutdownOnSigint/"'@
 hprop_shutdownOnSigint :: Property
 hprop_shutdownOnSigint = H.integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tempAbsBasePath' -> do
   -- Start a local test net
