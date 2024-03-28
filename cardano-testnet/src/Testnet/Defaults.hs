@@ -181,6 +181,7 @@ defaultConwayGenesis =
                     , ucppGovActionDeposit = Coin 1_000_000
                     , ucppDRepDeposit = Coin 1_000_000
                     , ucppDRepActivity = EpochInterval 100
+                    , ucppMinFeeRefScriptCostPerByte = undefined
                     }
       drepVotingThresholds = DRepVotingThresholds
         { dvtMotionNoConfidence = 0 %! 1
