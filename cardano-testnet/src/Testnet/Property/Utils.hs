@@ -122,3 +122,4 @@ runInBackground act = void . H.evalM $ allocate (H.async act) cleanUp
 
 decodeEraUTxO :: (IsShelleyBasedEra era, MonadTest m) => ShelleyBasedEra era -> Aeson.Value -> m (UTxO era)
 decodeEraUTxO _ = H.jsonErrorFail . Aeson.fromJSON
+
