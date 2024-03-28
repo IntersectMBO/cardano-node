@@ -418,6 +418,9 @@ instance ( LogFormatting (Header blk)
   forHuman (ChainDB.ChainSelectionForFutureBlock pt) =
       "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.PipeliningEvent ev') = forHumanOrMachine ev'
+  forHuman (ChainDB.AddedReprocessLoEBlocksToQueue) = "FIXME"
+  forHuman (ChainDB.PoppedReprocessLoEBlocksFromQueue) = "FIXME"
+  forHuman (ChainDB.ChainSelectionLoEDebug _ _) = "FIXME"
   forMachine dtal (ChainDB.IgnoreBlockOlderThanK pt) =
       mconcat [ "kind" .= String "IgnoreBlockOlderThanK"
                , "block" .= forMachine dtal pt ]
@@ -493,6 +496,9 @@ instance ( LogFormatting (Header blk)
                , "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.PipeliningEvent ev') =
     forMachine dtal ev'
+  forMachine _dtal (ChainDB.AddedReprocessLoEBlocksToQueue) = mconcat [ "kind" .= String "FIXME" ]
+  forMachine _dtal (ChainDB.PoppedReprocessLoEBlocksFromQueue) = mconcat [ "kind" .= String "FIXME" ]
+  forMachine _dtal (ChainDB.ChainSelectionLoEDebug _ _) = mconcat [ "kind" .= String "FIXME" ]
 
   asMetrics (ChainDB.SwitchedToAFork _warnings selChangedInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
@@ -548,6 +554,12 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     Namespace [] ["ChainSelectionForFutureBlock"]
   namespaceFor (ChainDB.PipeliningEvent ev') =
     nsPrependInner "PipeliningEvent" (namespaceFor ev')
+  namespaceFor (ChainDB.AddedReprocessLoEBlocksToQueue) =
+    Namespace [] ["AddedReprocessLoEBlocksToQueue"]
+  namespaceFor (ChainDB.PoppedReprocessLoEBlocksFromQueue) =
+    Namespace [] ["PoppedReprocessLoEBlocksFromQueue"]
+  namespaceFor (ChainDB.ChainSelectionLoEDebug _ _) =
+    Namespace [] ["FIXME: ChainSelectionLoEDebug ?? ??"]
 
   severityFor (Namespace _ ["IgnoreBlockOlderThanK"]) _ = Just Info
   severityFor (Namespace _ ["IgnoreBlockAlreadyInVolatileDB"]) _ = Just Info
