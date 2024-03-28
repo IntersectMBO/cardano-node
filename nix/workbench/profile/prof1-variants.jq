@@ -1076,6 +1076,15 @@ def all_profile_variants:
       { heap_limit:                         32768
       }
     }
+  , $utxoscale_template *
+    { name: "utxoscale-48M32G-nomadperfssd"
+    , genesis:
+      { utxo:                               (48 * $M)
+      }
+    , node:
+      { heap_limit:                         32768
+      }
+    }
 
 ## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)
   , $model_base * $costmodel_v8_preview *
