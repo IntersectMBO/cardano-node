@@ -32,4 +32,6 @@ data TracerEnv = TracerEnv
   , teRTViewStateDir        :: !(Maybe FilePath)
   , teTracer                :: !(Trace IO TracerTrace)
   , teReforwardTraceObjects :: !([TraceObject] -> IO ())
+  , teRegistry              :: !HandleRegistry
   }
+

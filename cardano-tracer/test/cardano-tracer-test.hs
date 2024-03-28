@@ -32,7 +32,7 @@ main = do
 
     -- 1. Prepare directory hierarchy
     tracerRoot <- Sys.canonicalizePath $ unI (tsWorkDir ts')
-    putStrLn . mconcat $ [ "tsWorkDir ts: ", tracerRoot ]
+    -- putStrLn . mconcat $ [ "tsWorkDir ts: ", tracerRoot ]
     -- Weird:  using path canonicalisation leads to process shutdown failures
     whenM (fileExist                         tracerRoot) $
       Sys.removeDirectoryRecursive           tracerRoot

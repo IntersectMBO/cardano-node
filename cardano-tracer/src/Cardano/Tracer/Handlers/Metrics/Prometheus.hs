@@ -159,4 +159,3 @@ getMetricsFromNode tracerEnv nodeId acceptedMetrics =
                                                 Just rep -> p' : (rep,mv) : accu)
                             []
                             metricsList
-

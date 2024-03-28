@@ -2,6 +2,7 @@
 
 module Cardano.Tracer.Handlers.Logs.TraceObjects
   ( traceObjectsHandler
+  , deregisterNodeId
   ) where
 
 import           Cardano.Logging (TraceObject)
@@ -14,8 +15,10 @@ import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
 import           Control.Concurrent.Async (forConcurrently_)
+import           Control.Concurrent.MVar (modifyMVar_)
 import           Control.Monad.Extra (whenJust)
-import qualified Data.List.NonEmpty as NE
+import qualified Data.Map as Map
+import           System.IO (Handle, hClose)
 
 -- | This handler is called periodically by 'TraceObjectForward' protocol
 --   from 'trace-forward' library.
@@ -27,20 +30,46 @@ traceObjectsHandler
 traceObjectsHandler _ _ [] = return ()
 traceObjectsHandler tracerEnv nodeId traceObjects = do
   nodeName <- askNodeName tracerEnv nodeId
-  forConcurrently_ (NE.nub logging) \LoggingParams{logMode, logRoot, logFormat} ->
-    showProblemIfAny verbosity
+
+  forConcurrently_ logging \loggingParams@LoggingParams{logMode} -> do
+    showProblemIfAny verbosity do
       case logMode of
-        FileMode    -> writeTraceObjectsToFile nodeName teCurrentLogLock logRoot logFormat traceObjects
-        JournalMode -> writeTraceObjectsToJournal nodeName traceObjects
+        FileMode ->
+          writeTraceObjectsToFile teRegistry
+             loggingParams nodeName teCurrentLogLock traceObjects
+        JournalMode ->
+          writeTraceObjectsToJournal nodeName traceObjects
   whenJust hasRTView \_ ->
     saveTraceObjects teSavedTO nodeId traceObjects
   teReforwardTraceObjects traceObjects
 
- where
-  TracerEnv
-    { teConfig = TracerConfig{logging, verbosity, hasRTView}
-    , teCurrentLogLock
-    , teSavedTO
-    , teReforwardTraceObjects
-    }
-    = tracerEnv
+  where
+    TracerEnv
+      { teConfig = TracerConfig{logging, verbosity, hasRTView}
+      , teCurrentLogLock
+      , teSavedTO
+      , teReforwardTraceObjects
+      , teRegistry
+      } = tracerEnv
+
+deregisterNodeId :: TracerEnv -> NodeId -> IO ()
+deregisterNodeId tracerEnv@TracerEnv{ teConfig = TracerConfig { logging }, teRegistry = Registry registry } nodeId = do
+  nodeName <- askNodeName tracerEnv nodeId
+
+  forConcurrently_ logging \loggingParams@LoggingParams{logMode} -> do
+
+    case logMode of
+      FileMode -> do
+        modifyMVar_ registry \reg -> do
+          case Map.updateLookupWithKey alwaysDelete (nodeName, loggingParams) reg of
+            (Nothing, _newReg) -> pure reg
+            (Just (handle, _filePath), newReg) -> do
+              hClose handle
+              pure newReg
+      JournalMode ->
+        pure ()
+
+  where
+
+  alwaysDelete :: (NodeName, LoggingParams) -> (Handle, FilePath) -> Maybe (Handle, FilePath)
+  alwaysDelete _key _value = Nothing

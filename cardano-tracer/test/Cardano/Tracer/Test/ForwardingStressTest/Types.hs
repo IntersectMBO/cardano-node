@@ -1,3 +1,5 @@
+{-# LANGUAGE ViewPatterns #-}
+
 module Cardano.Tracer.Test.ForwardingStressTest.Types (
     MessageID
   , Message (..)
@@ -5,13 +7,18 @@ module Cardano.Tracer.Test.ForwardingStressTest.Types (
   , Script (..)
   , ScriptRes (..)
   , scriptLength
+  , scriptMessages
   , emptyScriptRes
   ) where
 
 import           Cardano.Logging
+import qualified Cardano.Tracer.Test.Utils as Utils
 
-import           Data.Aeson (Value (..), (.=))
-import           Data.Text hiding (length)
+import           Data.Aeson (FromJSON (..), Value (..), withObject, (.:), (.=))
+import           Data.Text hiding (length, reverse)
+import           Data.Vector (Vector)
+import qualified Data.Vector as Vector
+import           Text.Read (readMaybe)
 
 import           Test.QuickCheck
 
@@ -22,6 +29,24 @@ data Message =
   | Message2 MessageID Text
   | Message3 MessageID Double
   deriving (Eq, Ord, Show)
+
+instance FromJSON Message where
+  parseJSON = withObject "Message" \obj -> do
+    kind     <- obj .: "kind"
+    mid      <- obj .: "mid"
+    workload <- obj .: "workload"
+    pure case (kind, stripBrackets mid, workload) of
+      (String "Message1", Just (readMaybe @Int -> Just mid'), String (readMaybe @Int . unpack -> Just workload')) -> Message1 mid' workload'
+      (String "Message2", Just (readMaybe @Int -> Just mid'), String workload') -> Message2 mid' workload'
+      (String "Message3", Just (readMaybe @Int -> Just mid'), String (readMaybe @Double . unpack -> Just workload')) -> Message3 mid' workload'
+      _ -> error ".."
+
+stripBrackets :: String -> Maybe String
+stripBrackets ('<':str) =
+  case reverse str of
+    '>':str' -> Just (reverse str')
+    _ -> Nothing
+stripBrackets _ = Nothing
 
 instance LogFormatting Message where
   forMachine _dtal (Message1 mid i) =
@@ -64,7 +89,6 @@ instance Arbitrary Message where
       Message3 0 <$> arbitrary
     ]
 
-
 -- | Adds a time between 0 and 1.
 --   0 is the time of the test start, and 1 the test end
 data ScriptedMessage = ScriptedMessage Double Message
@@ -77,15 +101,19 @@ instance Ord ScriptedMessage where
 instance Arbitrary ScriptedMessage where
   arbitrary = ScriptedMessage <$> choose (0.0, 1.0) <*> arbitrary
 
-newtype Script = Script [ScriptedMessage]
+newtype Script = Script (Vector ScriptedMessage)
   deriving (Eq, Show)
 
 scriptLength :: Script -> Int
-scriptLength (Script m) = length m
+scriptLength (Script m) = Vector.length m
+
+scriptMessages :: Script -> Vector Message
+scriptMessages (Script messages) = fmap (\(ScriptedMessage _ message) -> message) messages
 
 instance Arbitrary Script where
-  arbitrary = Script <$> listOf arbitrary
+  arbitrary = Script <$> Utils.vectorOf arbitrary
 
+-- TODO: Where is this used?
 data ScriptRes = ScriptRes {
     srScript     :: Script
   , srStdoutRes  :: [FormattedMessage]
@@ -95,7 +123,7 @@ data ScriptRes = ScriptRes {
 
 emptyScriptRes :: ScriptRes
 emptyScriptRes =  ScriptRes {
-    srScript = Script []
+    srScript = Script Vector.empty
   , srStdoutRes = []
   , srForwardRes = []
   , srEkgRes = []
