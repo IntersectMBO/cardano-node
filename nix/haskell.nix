@@ -332,7 +332,7 @@ let
                 lib.mkIf (pkgs.stdenv.hostPlatform.isMusl && config.package.isLocal)
                 {
                   # Module options which adds GHC flags and libraries for a fully static build
-                  enableShared = true; # Template haskell code used in `cardano-node` breaks if this is is false.
+                  enableShared = true; # TH code breaks if this is false.
                   enableStatic = true;
                 }
               ));
