@@ -950,30 +950,30 @@ instance MetaTrace (ChainDB.TraceGCEvent blk) where
 instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
   => LogFormatting (ChainDB.TraceInitChainSelEvent blk) where
     forHuman (ChainDB.InitChainSelValidation v) = forHumanOrMachine v
-    forHuman ChainDB.InitalChainSelected{} =
+    forHuman ChainDB.InitialChainSelected{} =
         "Initial chain selected"
     forHuman ChainDB.StartedInitChainSelection {} =
         "Started initial chain selection"
 
     forMachine dtal (ChainDB.InitChainSelValidation v) = forMachine dtal v
-    forMachine _dtal ChainDB.InitalChainSelected =
-      mconcat ["kind" .= String "Follower.InitalChainSelected"]
+    forMachine _dtal ChainDB.InitialChainSelected =
+      mconcat ["kind" .= String "Follower.InitialChainSelected"]
     forMachine _dtal ChainDB.StartedInitChainSelection =
       mconcat ["kind" .= String "Follower.StartedInitChainSelection"]
 
     asMetrics (ChainDB.InitChainSelValidation v) = asMetrics v
-    asMetrics ChainDB.InitalChainSelected        = []
+    asMetrics ChainDB.InitialChainSelected        = []
     asMetrics ChainDB.StartedInitChainSelection  = []
 
 instance MetaTrace (ChainDB.TraceInitChainSelEvent blk) where
-  namespaceFor ChainDB.InitalChainSelected {} =
-    Namespace [] ["InitalChainSelected"]
+  namespaceFor ChainDB.InitialChainSelected {} =
+    Namespace [] ["InitialChainSelected"]
   namespaceFor ChainDB.StartedInitChainSelection {} =
     Namespace [] ["StartedInitChainSelection"]
   namespaceFor (ChainDB.InitChainSelValidation ev') =
     nsPrependInner "Validation" (namespaceFor ev')
 
-  severityFor (Namespace _ ["InitalChainSelected"]) _ = Just Info
+  severityFor (Namespace _ ["InitialChainSelected"]) _ = Just Info
   severityFor (Namespace _ ["StartedInitChainSelection"]) _ = Just Info
   severityFor (Namespace out ("Validation" : tl))
                             (Just (ChainDB.InitChainSelValidation ev')) =
@@ -1003,7 +1003,7 @@ instance MetaTrace (ChainDB.TraceInitChainSelEvent blk) where
     metricsDocFor (Namespace out tl :: Namespace (ChainDB.TraceValidationEvent blk))
   metricsDocFor _ = []
 
-  documentFor (Namespace _ ["InitalChainSelected"]) = Just
+  documentFor (Namespace _ ["InitialChainSelected"]) = Just
     "A garbage collection for the given 'SlotNo' was performed."
   documentFor (Namespace _ ["StartedInitChainSelection"]) = Just $ mconcat
     [ "A garbage collection for the given 'SlotNo' was scheduled to happen"
@@ -1014,7 +1014,7 @@ instance MetaTrace (ChainDB.TraceInitChainSelEvent blk) where
   documentFor _ = Nothing
 
   allNamespaces =
-    [ Namespace [] ["InitalChainSelected"]
+    [ Namespace [] ["InitialChainSelected"]
     , Namespace [] ["StartedInitChainSelection"]
     ]
     ++ map (nsPrependInner "Validation")
