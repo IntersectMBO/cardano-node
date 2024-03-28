@@ -59,3 +59,41 @@ package plutus-scripts-bench
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
+
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/cardano-ledger
+  tag: 40afb3aae0f478a80bae7a7226c0949a40ab7768
+  --sha256: sha256-+WWJqeBtxLEshrTYAP8ozrmXlHdRHA7muYohYg3eHmI=
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/babbage/impl
+    eras/byron/ledger/impl
+    eras/byron/chain/executable-spec
+    eras/byron/ledger/executable-spec
+    eras/conway/impl
+    eras/mary/impl
+    eras/shelley/impl
+    libs/cardano-data
+    libs/cardano-ledger-api
+    libs/cardano-ledger-binary
+    libs/cardano-ledger-core
+    libs/cardano-protocol-tpraos
+    libs/small-steps
+
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/cardano-api
+  tag: 6bab313cfd075bb18fc721cfc0d35f9b93ecb144
+  --sha256: sha256-NPC/H/2Vu2OPqggtT8pk9a+H6x6b0DOzs/cYTUHgJb8=
+  subdir:
+    cardano-api
+
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/cardano-cli
+  tag: 623e172a53676f91173bd4a1cf7fb9885c4e507d
+  --sha256: sha256-awqfOZwfloqIjQJFU2uN+om63IT1E3tYS+ShOum+pic=
+  subdir:
+    cardano-cli
