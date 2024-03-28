@@ -661,7 +661,7 @@ def all_profile_variants:
       , genesis:
         { funds_balance:                  20000000000000
         , max_block_size:                 88000
-        , extra_future_offset:            400
+        , extra_future_offset:            900
         }
       , desc: "AWS r5.4xlarge cluster dataset, 6 epochs"
     }) as $nomad_perfssd_base
