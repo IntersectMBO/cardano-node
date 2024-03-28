@@ -3,6 +3,7 @@
 ## Next version
 
 * Update `cardano-ping` dependency
+* Add `--num-dreps` parameter
 
 ## 8.7.0
 
