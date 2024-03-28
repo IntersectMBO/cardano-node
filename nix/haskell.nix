@@ -342,10 +342,6 @@ let
               {
                 # Haddock not working and not needed for cross builds
                 doHaddock = false;
-                packages.cardano-cli.enableShared = false;
-                packages.cardano-cli.enableStatic = true;
-                # Needed for TH code in cardano-cli
-                packages.cardano-git-rev.enableShared = lib.mkForce true;
               };
           })
           ({ lib, pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {
