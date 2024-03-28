@@ -239,8 +239,8 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
       , "--out-file", testSpoOperationalCertFp
       ]
 
-  yamlBs <- createConfigYaml tempAbsPath (cardanoNodeEra cTestnetOptions)
-  H.lbsWriteFile configurationFile yamlBs
+  jsonBS <- createConfigJson tempAbsPath (cardanoNodeEra cTestnetOptions)
+  H.lbsWriteFile configurationFile jsonBS
   [newNodePort] <- requestAvailablePortNumbers 1
   eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath work) "test-spo" "127.0.0.1" newNodePort testnetMagic
         [ "run"

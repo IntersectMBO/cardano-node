@@ -7,7 +7,7 @@
 
 module Testnet.Components.Configuration
   ( anyEraToString
-  , createConfigYaml
+  , createConfigJson
   , createSPOGenesisAndFiles
   , eraToString
   , mkTopologyConfig
@@ -32,6 +32,7 @@ import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Encode.Pretty as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.Aeson.Lens as L
 import qualified Data.ByteString.Lazy as LBS
@@ -56,20 +57,19 @@ import qualified Hedgehog.Extras.Stock.Time as DTC
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
--- TODO rename me, it generates JSON
 -- | Returns JSON encoded hashes of the era, as well as the hard fork configuration toggle.
-createConfigYaml :: ()
+createConfigJson :: ()
   => (MonadTest m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
   -> AnyCardanoEra -- ^ The era used for generating the hard fork configuration toggle
   -> m LBS.ByteString
-createConfigYaml (TmpAbsolutePath tempAbsPath) era = GHC.withFrozenCallStack $ do
+createConfigJson (TmpAbsolutePath tempAbsPath) era = GHC.withFrozenCallStack $ do
   byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron/genesis.json"
   shelleyGenesisHash <- getHash ShelleyEra "ShelleyGenesisHash"
   alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
   conwayGenesisHash  <- getHash ConwayEra  "ConwayGenesisHash"
 
-  return . Aeson.encode . Aeson.Object
+  return . Aeson.encodePretty . Aeson.Object
     $ mconcat [ byronGenesisHash
               , shelleyGenesisHash
               , alonzoGenesisHash

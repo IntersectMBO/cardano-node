@@ -324,9 +324,9 @@ cardanoTestnet
         mkNodeName i = "pool" <> show i
 
     -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-    finalYamlConfig <- createConfigYaml (TmpAbsolutePath tmpAbsPath) era
+    config <- createConfigJson (TmpAbsolutePath tmpAbsPath) era
 
-    H.evalIO $ LBS.writeFile configurationFile finalYamlConfig
+    H.evalIO $ LBS.writeFile configurationFile config
 
     -- Byron related
     forM_ (zip [1..] portNumbers) $ \(i, portNumber) -> do
