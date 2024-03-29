@@ -175,8 +175,8 @@ def all_profile_variants:
     # P&T exclusive Nomad cluster Nodes: Compute intensive (16 GB, no-SSD)
     { cluster:
       { nomad:
-        { namespace: "perf"
-        , class: "perf"
+        { namespace: "perf-ssd"
+        , class: "perf-ssd"
         , resources:
           {
             # Producer nodes use this specs, make sure they are available!
@@ -190,8 +190,8 @@ def all_profile_variants:
         }
       , aws:
         { instance_type:
-          { producer: "c5.2xlarge"
-          , explorer: "m5.4xlarge"
+          { producer: "r5.4xlarge"
+          , explorer: "r5.4xlarge"
           }
         }
       # We are requiring 10.5GB on the explorer node and 9GB on the others.
