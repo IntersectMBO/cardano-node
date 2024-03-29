@@ -116,14 +116,10 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis alonzoGenesi
       numStakeDelegators = 3 :: Int
       startTime = sgSystemStart shelleyGenesis
 
-  -- TODO: Remove this rewrite.
+ -- TODO: Remove this rewrite.
  -- 50 second epochs
  -- Epoch length should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"
   H.rewriteJsonFile @Value inputGenesisShelleyFp $ \o -> o
-    -- TODO: remove rho and tau adjustment after https://github.com/IntersectMBO/cardano-api/pull/425 gets
-    -- integrated with newer cardano-api into node
-    & L.key "protocolParams" .  L.key "rho" . L._Number  .~ 0.1
-    & L.key "protocolParams" .  L.key "tau" . L._Number  .~ 0.1
     & L.key "securityParam" . L._Integer .~ 5
     & L.key "updateQuorum" . L._Integer .~ 2
 
