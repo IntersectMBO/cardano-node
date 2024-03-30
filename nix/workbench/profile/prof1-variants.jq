@@ -609,6 +609,46 @@ def all_profile_variants:
       , desc: "AWS c5-2xlarge cluster dataset, 7 epochs"
     }) as $nomad_perf_base
   |
+   ($scenario_nomad_perf * $compose_fiftytwo * $for_8ep *
+    { node:
+        { shutdown_on_slot_synced:        64000
+        }
+      , analysis:
+        { filters:                        ["epoch3+", "size-full"]
+        }
+      , generator:
+        { init_cooldown:                  45
+        }
+      , genesis:
+        { funds_balance:                  20000000000000
+        , max_block_size:                 88000
+        , utxo:                           (20 * $M)
+        , delegators:                     (1 * $M)
+        , extra_future_offset:            450
+        }
+    , cluster:
+      { nomad:
+        { resources:
+          { producer: {cores:  8, memory:  32000, memory_max:  32000}
+          , explorer: {cores: 16, memory: 120000, memory_max: 120000}
+          }
+        }
+      # We are requiring 10.5GB on the explorer node and 9GB on the others.
+      , minimun_storage:
+        { 
+          # 9 GB for the explorer node, that includes the tx-generator.
+          # Plus giving 3 GB for the Nix Store and 1.5GB of margin.
+          # Plus 6 for the bigger UTXO set size
+          producer: 18874368 # (12+6)×1024×1024
+          # 7.5 GB for the nodes without the tx-generator.
+          # Plus giving 3 GB for the Nix Store and 1.5GB of margin.
+          # Plus 6 for the bigger UTXO set size
+        , explorer: 20447232 # (13.5+6)×1024×1024
+        }
+      }
+    , desc: "value with 5x utxos and double memory"
+    }) as $nomad_perf_base_20M32G
+  |
    ($scenario_nomad_perf * $compose_fiftytwo * $dataset_oct2021 * $for_9ep * $plutus_base * $plutus_loop_counter *
     { node:
         { shutdown_on_slot_synced:        72000
@@ -926,6 +966,9 @@ def all_profile_variants:
 ## P&T Nomad cluster: 52 nodes, 3 regions, value-only (incl. old tracing variant) and Plutus, P2P enabled by default
   , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "value-nomadperf"
+    }
+  ,  $nomad_perf_dense * $nomad_perf_base_20M32G * $p2p * $costmodel_v8_preview *
+    { name: "value-20M32G-nomadperf"
     }
   , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview * $old_tracing *
     { name: "value-oldtracing-nomadperf"
