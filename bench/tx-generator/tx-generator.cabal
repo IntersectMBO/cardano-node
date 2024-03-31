@@ -100,9 +100,9 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.43
+                      , cardano-api ^>= 8.44
                       , cardano-binary
-                      , cardano-cli ^>= 8.21
+                      , cardano-cli ^>= 8.22
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data

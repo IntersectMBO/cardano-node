@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2024-03-26T06:28:59Z
-  , cardano-haskell-packages 2024-03-25T11:11:00Z
+  , cardano-haskell-packages 2024-03-31T05:00:00Z
 
 packages:
   cardano-node
@@ -62,38 +62,35 @@ package plutus-scripts-bench
 
 source-repository-package
   type: git
-  location: https://github.com/intersectmbo/cardano-ledger
-  tag: 40afb3aae0f478a80bae7a7226c0949a40ab7768
-  --sha256: sha256-+WWJqeBtxLEshrTYAP8ozrmXlHdRHA7muYohYg3eHmI=
+  location: https://github.com/intersectmbo/ouroboros-network
+  tag: 318aee8ca3049e762c1a3990fb4e24db96d3393b
+  --sha256: sha256-jKtGreAivI2UPKYjuXIRVTQt1ovKMSdvdjT0ywwTf/A=
   subdir:
-    eras/allegra/impl
-    eras/alonzo/impl
-    eras/babbage/impl
-    eras/byron/ledger/impl
-    eras/byron/chain/executable-spec
-    eras/byron/ledger/executable-spec
-    eras/conway/impl
-    eras/mary/impl
-    eras/shelley/impl
-    libs/cardano-data
-    libs/cardano-ledger-api
-    libs/cardano-ledger-binary
-    libs/cardano-ledger-core
-    libs/cardano-protocol-tpraos
-    libs/small-steps
+    ouroboros-network-protocols
+
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/ouroboros-consensus
+  tag: 0a1925206d4532cc7b189bc7ca6719571982b6cc
+  --sha256: sha256-3SG/O2F69Hg30W0Oc6KerVEKmUgDkH582PlAnCBd1Pg=
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-diffusion
+    ouroboros-consensus-protocol
 
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/cardano-api
-  tag: 6bab313cfd075bb18fc721cfc0d35f9b93ecb144
-  --sha256: sha256-NPC/H/2Vu2OPqggtT8pk9a+H6x6b0DOzs/cYTUHgJb8=
+  tag: 6a59f3b09990a7674a919ba8a05317396a65b550
+  --sha256: sha256-g8zcktWdi0PKe3wz6wk/cSN5m/QVlvZDUdh/ejxgHJk=
   subdir:
     cardano-api
 
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/cardano-cli
-  tag: 623e172a53676f91173bd4a1cf7fb9885c4e507d
-  --sha256: sha256-awqfOZwfloqIjQJFU2uN+om63IT1E3tYS+ShOum+pic=
+  tag: 8f8778782157349977491a515020703c2aeb5b06
+  --sha256: sha256-9n4iz7IByvZoNohI6Z5FbSYVgx1i7l0KGB6ertNDA7k=
   subdir:
     cardano-cli
