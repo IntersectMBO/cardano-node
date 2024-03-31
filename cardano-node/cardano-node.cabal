@@ -144,7 +144,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.43
+                      , cardano-api ^>= 8.44
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
@@ -183,10 +183,10 @@ library
                       , network-mux >= 0.4
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-consensus ^>= 0.16
-                      , ouroboros-consensus-cardano ^>= 0.14
+                      , ouroboros-consensus ^>= 0.17
+                      , ouroboros-consensus-cardano ^>= 0.15
                       -- FIXME: bump ouroboros-consensus-diffusion
-                      , ouroboros-consensus-diffusion ^>= 0.11
+                      , ouroboros-consensus-diffusion ^>= 0.13
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api ^>= 0.7.1
                       , ouroboros-network ^>= 0.13
