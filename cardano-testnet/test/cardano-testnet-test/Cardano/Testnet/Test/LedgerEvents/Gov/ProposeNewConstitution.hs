@@ -26,15 +26,14 @@ import           Prelude
 import           Control.Monad
 import           Control.Monad.State.Strict (StateT)
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.KeyMap as KeyMap
+import qualified Data.Aeson.Lens as AL
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Maybe.Strict
 import           Data.String
-import           Data.Text (unpack)
+import           Data.Text (Text)
 import qualified Data.Text as Text
-import qualified Data.Vector as Vector
 import           Data.Word
 import           GHC.Stack (HasCallStack, callStack)
 import           Lens.Micro
@@ -268,11 +267,13 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   finalGovFileBS <- liftIO $ LBS.readFile finalGovState
 
-  votes <- H.nothingFail $ do (Aeson.Object jsonValue) <- Aeson.decode finalGovFileBS
-                              (Aeson.Array proposals) <- jsonValue KeyMap.!? "proposals"
-                              (Aeson.Object proposal) <- Vector.headM proposals
-                              (Aeson.Object votes) <- proposal KeyMap.!? "dRepVotes"
-                              KeyMap.foldl' extractVote (Just []) votes
+  decodedFinalGovFile <- H.nothingFail (Aeson.decode finalGovFileBS :: Maybe Aeson.Value)
+  let votes :: [Text]
+      votes = decodedFinalGovFile ^.. AL.key "proposals"
+                                    . AL.nth 0
+                                    . AL.key "dRepVotes"
+                                    . AL.members
+                                    . AL._String
 
   length (filter (== "VoteYes") votes) === 4
   length (filter (== "VoteNo") votes) === 3
@@ -280,10 +281,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   length votes === numVotes
 
   where
-    extractVote :: Maybe [String] -> Aeson.Value -> Maybe [String]
-    extractVote (Just acc) (Aeson.String x) = Just $ unpack x:acc
-    extractVote _ _ = Nothing
-
     voteList :: [(a, Int)] -> [(a, Int)]
     voteList l = go 1 l
       where
