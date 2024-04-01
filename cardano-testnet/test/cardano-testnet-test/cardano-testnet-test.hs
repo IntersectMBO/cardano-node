@@ -5,6 +5,7 @@ module Main
   ) where
 
 import qualified Cardano.Crypto.Init as Crypto
+import qualified Cardano.Testnet.Test.LedgerEvents.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
 
 import           Prelude
@@ -41,9 +42,9 @@ tests :: IO TestTree
 tests = do
   section <- shouldRunConcurrently >>= mkSection
   pure $ T.testGroup "test/Spec.hs"
-    [ -- T.testGroup "Spec"
-      -- [ T.testGroup "Ledger Events"
-      --   [ section $ H.ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
+    [ T.testGroup "Spec"
+      [ T.testGroup "Ledger Events"
+        [ section $ H.ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
       --   , section $ H.ignoreOnWindows "Treasury Growth" LedgerEvents.prop_check_if_treasury_is_growing
       --   -- TODO: Replace foldBlocks with checkLedgerStateCondition
       --   , T.testGroup "Governance"
@@ -79,10 +80,9 @@ tests = do
       --   , section $ H.ignoreOnWindows "query-slot-number" Cardano.Testnet.Test.Cli.QuerySlotNumber.hprop_querySlotNumber
       --   , section $ H.ignoreOnWindows "foldBlocks receives ledger state" Cardano.Testnet.Test.FoldBlocks.prop_foldBlocks
       --   , section $ H.ignoreOnWindows "CliQueries" Cardano.Testnet.Test.Cli.Queries.hprop_cli_queries
-      --   ]
-      -- ]
-    -- ,
-      T.testGroup "SubmitApi"
+        ]
+      ]
+    , T.testGroup "SubmitApi"
       [ T.testGroup "Babbage"
         [ section $ H.ignoreOnWindows "transaction" Cardano.Testnet.Test.SubmitApi.Babbage.Transaction.hprop_transaction
         ]
