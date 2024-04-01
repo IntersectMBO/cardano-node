@@ -87,7 +87,6 @@ import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           GHC.IsList (toList)
 
 {- HLINT ignore "Use :" -}
 
@@ -117,7 +116,7 @@ instance
   ( ToObject (PredicateFailure (Core.EraRule "LEDGER" ledgerera))
   ) => ToObject (ApplyTxError ledgerera) where
   toObject verb (ApplyTxError predicateFailures) =
-    mconcat $ toList $ fmap (toObject verb) predicateFailures
+    mconcat $ NonEmpty.toList $ fmap (toObject verb) predicateFailures
 
 instance Core.Crypto crypto => ToObject (TPraosCannotForge crypto) where
   toObject _verb (TPraosCannotForgeKeyNotUsableYet wallClockPeriod keyStartPeriod) =
