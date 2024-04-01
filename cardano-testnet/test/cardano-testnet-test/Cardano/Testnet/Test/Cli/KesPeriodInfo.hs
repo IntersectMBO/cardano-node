@@ -23,6 +23,7 @@ import           Prelude
 import           Control.Monad
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
+import           Data.Function
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           GHC.Stack (callStack)
@@ -291,7 +292,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
         H.failMessage callStack "cardano-cli query tip returned Nothing for EpochNo"
       Just currEpoch -> return currEpoch
 
-  let nodeHasMintedEpoch = currEpoch + 3
+  let nodeHasMintedEpoch = currEpoch & succ & succ & succ
   currentEpoch <- waitUntilEpoch
                    (Api.File configurationFile)
                    (Api.File $ sprocketSystemName node1sprocket)
