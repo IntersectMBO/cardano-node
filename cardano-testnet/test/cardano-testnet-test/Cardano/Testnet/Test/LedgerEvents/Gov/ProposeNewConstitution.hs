@@ -65,7 +65,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   -- Generate model for votes
   let allVotes :: [(String, Int)]
-      allVotes = voteList [("yes", 4), ("no", 3), ("abstain", 2)]
+      allVotes = zip (concatMap (uncurry replicate) [(4, "yes"), (3, "no"), (2, "abstain")]) [1..]
   annotateShow allVotes
 
   let numVotes :: Int
@@ -279,15 +279,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   length (filter (== "VoteNo") votes) === 3
   length (filter (== "Abstain") votes) === 2
   length votes === numVotes
-
-  where
-    voteList :: [(a, Int)] -> [(a, Int)]
-    voteList l = go 1 l
-      where
-        go :: Int -> [(a, Int)] -> [(a, Int)]
-        go _ [] = []
-        go n ((s, m):r) | m > 0 = (s, n):go (n + 1) ((s, m - 1):r)
-                        | otherwise = go n r
 
 
 retrieveGovernanceActionIndex
