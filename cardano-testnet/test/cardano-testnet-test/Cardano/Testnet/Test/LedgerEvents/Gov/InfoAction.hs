@@ -18,7 +18,6 @@ import           Cardano.Api.Shelley
 import           Cardano.Ledger.Conway.Governance (RatifyState (..))
 import qualified Cardano.Ledger.Conway.Governance as L
 import           Cardano.Testnet
-import           Cardano.Testnet.Test.Utils (filterNewGovProposals, foldBlocksFindLedgerEvent)
 
 import           Prelude
 
@@ -32,16 +31,16 @@ import           Data.Word
 import           GHC.Stack
 import           System.FilePath ((</>))
 
-import           Hedgehog
-import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-
 import           Testnet.Components.Query
 import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
+
+import           Hedgehog
+import qualified Hedgehog.Extras as H
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/InfoAction/'@

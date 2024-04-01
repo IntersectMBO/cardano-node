@@ -1,18 +1,20 @@
-module Cardano.Testnet.Test.Utils
+module Testnet.LedgerEventProcessing
   ( filterNewGovProposals
   , foldBlocksFindLedgerEvent
   ) where
 
 
 import           Cardano.Api as Api
-import           Cardano.Api.Shelley
+import           Cardano.Api.Shelley (AnyProposals (AnyProposals),
+                   LedgerEvent (NewGovernanceProposals), fromShelleyTxId)
 
 import qualified Cardano.Ledger.Conway.Governance as Ledger
 
 import           Prelude
 
+import           Control.Monad.Catch (MonadCatch)
 
-foldBlocksFindLedgerEvent :: MonadIO m
+foldBlocksFindLedgerEvent :: (MonadIO m, MonadCatch m)
   => (LedgerEvent -> Bool)
   -> FilePath
   -> FilePath

@@ -93,6 +93,7 @@ library
                         Testnet.Components.Query
                         Testnet.Defaults
                         Testnet.Filepath
+                        Testnet.LedgerEventProcessing
                         Testnet.Property.Assert
                         Testnet.Property.Run
                         Testnet.Property.Utils
@@ -189,8 +190,6 @@ test-suite cardano-testnet-test
 
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
-
-                        Cardano.Testnet.Test.Utils
 
   type:                 exitcode-stdio-1.0
 
