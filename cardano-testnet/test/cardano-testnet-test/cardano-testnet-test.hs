@@ -6,6 +6,7 @@ module Main
 
 import qualified Cardano.Crypto.Init as Crypto
 import qualified Cardano.Testnet.Test.LedgerEvents.SanityCheck as LedgerEvents
+import qualified Cardano.Testnet.Test.LedgerEvents.TreasuryGrowth as LedgerEvents
 import qualified Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
 
 import           Prelude
@@ -45,7 +46,7 @@ tests = do
     [ T.testGroup "Spec"
       [ T.testGroup "Ledger Events"
         [ section $ H.ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
-      --   , section $ H.ignoreOnWindows "Treasury Growth" LedgerEvents.prop_check_if_treasury_is_growing
+        , section $ H.ignoreOnWindows "Treasury Growth" LedgerEvents.prop_check_if_treasury_is_growing
       --   -- TODO: Replace foldBlocks with checkLedgerStateCondition
       --   , T.testGroup "Governance"
       --       [ section $ H.ignoreOnMacAndWindows "ProposeAndRatifyNewConstitution" Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution.hprop_ledger_events_propose_new_constitution
