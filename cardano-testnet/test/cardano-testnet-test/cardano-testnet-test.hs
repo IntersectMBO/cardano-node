@@ -5,6 +5,7 @@ module Main
   ) where
 
 import qualified Cardano.Crypto.Init as Crypto
+import qualified Cardano.Testnet.Test.Cli.Queries
 import qualified Cardano.Testnet.Test.LedgerEvents.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.LedgerEvents.TreasuryGrowth as LedgerEvents
 import qualified Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
@@ -80,7 +81,7 @@ tests = do
       --   , section $ H.ignoreOnWindows "kes-period-info" Cardano.Testnet.Test.Cli.KesPeriodInfo.hprop_kes_period_info
       --   , section $ H.ignoreOnWindows "query-slot-number" Cardano.Testnet.Test.Cli.QuerySlotNumber.hprop_querySlotNumber
       --   , section $ H.ignoreOnWindows "foldBlocks receives ledger state" Cardano.Testnet.Test.FoldBlocks.prop_foldBlocks
-      --   , section $ H.ignoreOnWindows "CliQueries" Cardano.Testnet.Test.Cli.Queries.hprop_cli_queries
+        , section $ H.ignoreOnWindows "CliQueries" Cardano.Testnet.Test.Cli.Queries.hprop_cli_queries
         ]
       ]
     , T.testGroup "SubmitApi"
