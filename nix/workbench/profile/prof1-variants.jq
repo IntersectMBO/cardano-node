@@ -234,19 +234,28 @@ def all_profile_variants:
         { namespace: "perf-ssd"
         , class: "perf-ssd"
         , resources:
-          { producer: {cores: 16, memory: 128000, memory_max: 128000}
-          , explorer: {cores: 16, memory: 128000, memory_max: 128000}
+          { producer: {cores: 16, memory: 122000, memory_max: 128000}
+          , explorer: {cores: 16, memory: 122000, memory_max: 128000}
           }
         , fetch_logs_ssh: true
         }
       , aws:
         { instance_type:
           { producer: "r5.4xlarge"
-          , explorer: null
+          , explorer: "r5.4xlarge"
           }
         , use_public_routing: true
         }
-      , minimun_storage: null
+      # We are requiring 10.5GB on the explorer node and 9GB on the others.
+      , minimun_storage:
+        { 
+          # 9 GB for the explorer node, that includes the tx-generator.
+          # Plus giving 3 GB for the Nix Store and 1.5GB of margin.
+          producer: 12582912 # 12×1024×1024
+          # 7.5 GB for the nodes without the tx-generator.
+          # Plus giving 3 GB for the Nix Store and 1.5GB of margin.
+        , explorer: 14155776 # 13.5×1024×1024
+        }
       , keep_running: true
       }
     } as $nomad_perfssd
@@ -277,6 +286,15 @@ def all_profile_variants:
         }
       }
     ) as $nomad_perfssd_unicircle
+  |
+    ($nomad_perfssd *
+      { composition:
+        { locations:                      ["eu-central-1", "us-east-1", "ap-southeast-2"]
+        , topology:                       "torus-dense"
+        , with_explorer:                  true
+        }
+      }
+    ) as $nomad_perfssd_dense
   |
   ##
   ### Definition vocabulary:  filtering
@@ -990,6 +1008,9 @@ def all_profile_variants:
   , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "value-nomadperf"
     }
+  , $nomad_perf_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
+    { name: "value-nomadperfssd"
+    }
   , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview * $old_tracing *
     { name: "value-oldtracing-nomadperf"
     }
@@ -998,6 +1019,9 @@ def all_profile_variants:
     }
   , $nomad_perf_latency_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "latency-nomadperf"
+    }
+  , $nomad_perf_latency_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
+    { name: "latency-nomadperfssd"
     }
 
 ## P&T Nomad cluster: 52 nodes, 3 regions, value-only (with old tracing variant) and Plutus, no P2P flavour
@@ -1018,7 +1042,7 @@ def all_profile_variants:
   , $fast_base * $compose_fiftytwo * $nomad_perf_dense * $costmodel_v8_preview *
     { name: "fast-nomadperf-nop2p"
     }
-  , $fast_base * $solo * $nomad_perfssd_unicircle * $costmodel_v8_preview * $p2p *
+  , $fast_base * $compose_fiftytwo * $nomad_perfssd_dense * $costmodel_v8_preview * $p2p *
     { name: "fast-nomadperfssd"
     }
 
