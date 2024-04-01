@@ -1375,12 +1375,19 @@ let
   # Replaces the addresses and ports occurrences with Nomad templates variables.
   startScriptToGoTemplate = nodeSpec: servicePortName: startScript:
     builtins.replaceStrings
+      (
       [
         # Address string from
         ''--host-addr 127.0.0.1''
         # Port string from
         ''--port ${toString nodeSpec.port}''
       ]
+      ++
+      (if nodeSpec.name == "explorer"
+      then ["-M16384m"]
+      else []
+      )
+      )
       # On cloud deployments to SRE-managed / dedicated P&T Nomad cluster, that
       # uses AWS, the hosts at Linux level may not be aware of the EIP public
       # address they have so we can't bind to the public IP (that we can resolve
@@ -1388,6 +1395,7 @@ let
       # "all-weather" 0.0.0.0 or use the private IP provided by AWS. We use the
       # latter in case the Nomad Client was not started with the correct
       # `-network-interface XX` parameter.
+      (
       [
         # Address string to
         (
@@ -1407,6 +1415,12 @@ let
         #''--port {{ env "NOMAD_HOST_PORT_${servicePortName}" }}''
         #''--port {{ env "NOMAD_ALLOC_PORT_${name}" }}''
       ]
+      ++
+      (if nodeSpec.name == "explorer"
+      then [" "]
+      else []
+      )
+      )
       startScript
   ;
 

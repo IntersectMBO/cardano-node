@@ -561,6 +561,12 @@ def all_profile_variants:
      .node.rts_flags_override         = ["-xn"]
     ) as $rts_xn
   |
+    ({ extra_desc:                     "RTSflags -M16384m"
+     , suffix:                         "rtsM16384m"
+     }|
+     .node.rts_flags_override         = ["-M16384m"]
+    ) as $rts_M16G
+  |
   ##
   ### Definition vocabulary:  scenario
   ##
@@ -1010,6 +1016,9 @@ def all_profile_variants:
     }
   , $nomad_perf_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
     { name: "value-nomadperfssd"
+    }
+  , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview * $rts_M16G *
+    { name: "value-M16G-nomadperf"
     }
   , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview * $old_tracing *
     { name: "value-oldtracing-nomadperf"
