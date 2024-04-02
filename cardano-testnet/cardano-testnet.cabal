@@ -185,6 +185,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
                         Cardano.Testnet.Test.LedgerEvents.Gov.InfoAction
                         Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO
+                        Cardano.Testnet.Test.LedgerEvents.Gov.DRepDeposits
                         Cardano.Testnet.Test.LedgerEvents.SanityCheck
                         Cardano.Testnet.Test.LedgerEvents.TreasuryGrowth
 
