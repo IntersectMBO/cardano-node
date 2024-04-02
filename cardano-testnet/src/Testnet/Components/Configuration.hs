@@ -106,9 +106,9 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis alonzoGenesi
   -- Then, create-testnet-data will output (possibly augmented/modified) versions
   -- and we remove those input files (see below), to avoid confusion.
   H.evalIO $ do
-    LBS.writeFile inputGenesisShelleyFp $ encode shelleyGenesis
-    LBS.writeFile inputGenesisAlonzoFp  $ encode alonzoGenesis
-    LBS.writeFile inputGenesisConwayFp  $ encode conwayGenesis
+    LBS.writeFile inputGenesisShelleyFp $ Aeson.encodePretty shelleyGenesis
+    LBS.writeFile inputGenesisAlonzoFp  $ Aeson.encodePretty alonzoGenesis
+    LBS.writeFile inputGenesisConwayFp  $ Aeson.encodePretty conwayGenesis
 
   let genesisShelleyDirAbs = takeDirectory inputGenesisShelleyFp
   genesisShelleyDir <- H.createDirectoryIfMissing genesisShelleyDirAbs
@@ -173,7 +173,7 @@ ifaceAddress = "127.0.0.1"
 -- TODO: Reconcile all other mkTopologyConfig functions. NB: We only intend
 -- to support current era on mainnet and the upcoming era.
 mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> LBS.ByteString
-mkTopologyConfig numNodes allPorts port False = Aeson.encode topologyNonP2P
+mkTopologyConfig numNodes allPorts port False = Aeson.encodePretty topologyNonP2P
   where
     topologyNonP2P :: NonP2P.NetworkTopology
     topologyNonP2P =
@@ -183,7 +183,7 @@ mkTopologyConfig numNodes allPorts port False = Aeson.encode topologyNonP2P
                                (numNodes - 1)
         | peerPort <- allPorts List.\\ [port]
         ]
-mkTopologyConfig numNodes allPorts port True = Aeson.encode topologyP2P
+mkTopologyConfig numNodes allPorts port True = Aeson.encodePretty topologyP2P
   where
     rootConfig :: P2P.RootConfig
     rootConfig =
