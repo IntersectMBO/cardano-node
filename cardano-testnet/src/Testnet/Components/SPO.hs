@@ -108,6 +108,7 @@ checkStakeKeyRegistered tempAbsP nodeConfigFile sPath terminationEpoch execConfi
                             terminationEpoch
                             (DelegationsAndRewards (mempty, mempty))
                             (handler sAddr)
+
     case result of
       Right (_, dag) -> return dag
       Left e -> do
@@ -117,17 +118,16 @@ checkStakeKeyRegistered tempAbsP nodeConfigFile sPath terminationEpoch execConfi
           , "--out-file", oFpAbs
           ]
 
-        pledgerStakeInfo <- H.leftFailM $ H.readJsonFile oFpAbs
-        (DelegationsAndRewards (rewardsMap, _delegMap))
-          <- H.noteShowM $ H.jsonErrorFail $ Aeson.fromJSON @DelegationsAndRewards pledgerStakeInfo
+        DelegationsAndRewards (rewardsMap, _delegMap) <- H.noteShowM $ H.readJsonFileOk oFpAbs
+
         H.failWithCustom GHC.callStack Nothing
-                       $ unlines [ "Stake address in question: "
-                                 , Text.unpack (serialiseToBech32 sAddr)
-                                 , "was not registered"
-                                 , "Current stake info for address in question: "
-                                 , show $ map serialiseToBech32 $ Map.keys rewardsMap
-                                 , "foldEpochStateError: " <> show e
-                                 ]
+          $ unlines [ "Stake address in question: "
+                    , Text.unpack (serialiseToBech32 sAddr)
+                    , "was not registered"
+                    , "Current stake info for address in question: "
+                    , show $ map serialiseToBech32 $ Map.keys rewardsMap
+                    , "foldEpochStateError: " <> show e
+                    ]
  where
   handler :: StakeAddress -> AnyNewEpochState -> SlotNo -> BlockNo -> StateT DelegationsAndRewards IO LedgerStateCondition
   handler (StakeAddress network sCred) (AnyNewEpochState sbe newEpochState) _ _ =
@@ -377,8 +377,7 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile s
            [ "transaction", "submit"
            , "--tx-file", pledgeAndPoolRegistrationTx
            ]
-  -- TODO: Currently we can't propagate the error message thrown by checkStakeKeyRegistered when using byDurationM
-  -- Instead we wait 15 seconds
+
   -- Check the pledger/owner stake key was registered
   delegsAndRewards <-
       checkStakeKeyRegistered

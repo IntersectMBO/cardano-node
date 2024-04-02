@@ -93,12 +93,12 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
   let node1SocketPath = Api.File $ IO.sprocketSystemName node1sprocket
       nodeConfigFile = Api.File configurationFile
-      termEpoch = 15
+      termEpoch = EpochNo 15
   (stakePoolIdNewSpo, stakePoolColdSigningKey, stakePoolColdVKey, vrfSkey, _)
     <- registerSingleSpo 1 tempAbsPath
          (Api.File configurationFile)
          node1SocketPath
-         10
+         (EpochNo 10)
          cTestnetOptions
          execConfig
          (txin1, utxoSKeyFile, utxoAddr)

@@ -89,7 +89,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
 
   let node1SocketPath = Api.File $ IO.sprocketSystemName node1sprocket
       nodeConfigFile = Api.File configurationFile
-      termEpoch = 3
+      termEpoch = EpochNo 3
   (stakePoolId, stakePoolColdSigningKey, stakePoolColdVKey, _, _)
     <- registerSingleSpo 1 tempAbsPath
          nodeConfigFile
