@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE GADTs #-}
@@ -127,6 +126,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
     tempAbsPath
     (cardanoNodeEra cTestnetOptions)
     testDelegatorVkeyFp
+    2_000_000
     testDelegatorRegCertFp
 
   -- Test stake address deleg  cert
@@ -153,12 +153,12 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
   txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 
-  let eraFlag = convertToEraFlag $ cardanoNodeEra cTestnetOptions
+  let eraString = anyEraToString $ cardanoNodeEra cTestnetOptions
       delegRegTestDelegatorTxBodyFp = work </> "deleg-register-test-delegator.txbody"
 
   void $ execCli' execConfig
-    [ "transaction", "build"
-    , eraFlag
+    [ eraString
+    , "transaction", "build"
     , "--change-address", testDelegatorPaymentAddr -- NB: A large balance ends up at our test delegator's address
     , "--tx-in", Text.unpack $ renderTxIn txin2
     , "--tx-out", utxoAddr <> "+" <> show @Int 5_000_000

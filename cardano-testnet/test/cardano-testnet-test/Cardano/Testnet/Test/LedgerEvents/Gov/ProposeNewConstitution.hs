@@ -1,16 +1,9 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-
-#if __GLASGOW_HASKELL__ >= 908
-{-# OPTIONS_GHC -Wno-x-partial #-}
-#endif
-
-{- HLINT ignore "Use head" -}
 
 module Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
   ( hprop_ledger_events_propose_new_constitution
@@ -84,7 +77,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   TestnetRuntime
     { testnetMagic
     , poolNodes
-    , wallets
+    , wallets=wallet0:wallet1:_
     , configurationFile
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
@@ -149,16 +142,16 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
        ]
 
   -- Retrieve UTxOs for registration submission
-  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe $ wallets !! 0
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   drepRegTxbodyFp <- H.note $ work </> "drep.registration.txbody"
   drepRegTxSignedFp <- H.note $ work </> "drep.registration.tx"
 
   void $ H.execCli' execConfig
     [ "conway", "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin1
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr (wallets !! 1)) <> "+" <> show @Int 5_000_000
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show @Int 5_000_000
     , "--certificate-file", drepCertFile 1
     , "--certificate-file", drepCertFile 2
     , "--certificate-file", drepCertFile 3
@@ -169,7 +162,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   void $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", drepRegTxbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 0
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
     , "--signing-key-file", drepSKeyFp 1
     , "--signing-key-file", drepSKeyFp 2
     , "--signing-key-file", drepSKeyFp 3
@@ -209,13 +202,13 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   txbodyFp <- H.note $ work </> "tx.body"
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
-  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe $ wallets !! 1
+  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
 
   void $ H.execCli' execConfig
     [ "conway", "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 1
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
     , "--tx-in", Text.unpack $ renderTxIn txin2
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr (wallets !! 0)) <> "+" <> show @Int 5_000_000
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_000
     , "--proposal-file", constitutionActionFp
     , "--out-file", txbodyFp
     ]
@@ -223,7 +216,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   void $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", txbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 1
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet1
     , "--out-file", txbodySignedFp
     ]
 
@@ -272,7 +265,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   -- We need more UTxOs
 
-  txin3 <- findLargestUtxoForPaymentKey epochStateView sbe $ wallets !! 0
+  txin3 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   voteTxFp <- H.note $ work </> gov </> "vote.tx"
   voteTxBodyFp <- H.note $ work </> gov </> "vote.txbody"
@@ -280,9 +273,9 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   -- Submit votes
   void $ H.execCli' execConfig
     [ "conway", "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin3
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr (wallets !! 1)) <> "+" <> show @Int 3_000_000
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show @Int 3_000_000
     , "--vote-file", voteFp 1
     , "--vote-file", voteFp 2
     , "--vote-file", voteFp 3
@@ -294,7 +287,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   void $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", voteTxBodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 0
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
     , "--signing-key-file", drepSKeyFp 1
     , "--signing-key-file", drepSKeyFp 2
     , "--signing-key-file", drepSKeyFp 3
@@ -328,10 +321,10 @@ foldBlocksCheckProposalWasSubmitted
   -> Maybe LedgerEvent -- ^ Accumulator at block i - 1
   -> IO (Maybe LedgerEvent, FoldStatus) -- ^ Accumulator at block i and fold status
 foldBlocksCheckProposalWasSubmitted txid _ _ allEvents _ _ = do
-  let newGovProposal = filter (filterNewGovProposals txid) allEvents
-  if null newGovProposal
-  then return (Nothing, ContinueFold)
-  else return (Just $ newGovProposal !! 0, StopFold)
+  let newGovProposals = filter (filterNewGovProposals txid) allEvents
+  pure $ case newGovProposals of
+    [] ->  (Nothing, ContinueFold)
+    newGovProposal:_ -> (Just newGovProposal, StopFold)
 
 
 retrieveGovernanceActionIndex
@@ -342,10 +335,8 @@ retrieveGovernanceActionIndex mEvent = do
     Nothing -> H.failMessage callStack "retrieveGovernanceActionIndex: No new governance proposals found"
     Just (NewGovernanceProposals _ (AnyProposals props)) ->
     -- In this test there will only be one
-        let govActionStates = [i
-                              | Ledger.GovActionIx i <- map Ledger.gaidGovActionIx . Map.keys $ Ledger.proposalsActionsMap props
-                              ]
-        in return $ govActionStates !! 0
+        H.headM [i | Ledger.GovActionIx i
+                    <- map Ledger.gaidGovActionIx . Map.keys $ Ledger.proposalsActionsMap props ]
     Just unexpectedEvent ->
       H.failMessage callStack
         $ mconcat ["retrieveGovernanceActionIndex: Expected NewGovernanceProposals, got: "
