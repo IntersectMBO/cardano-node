@@ -169,6 +169,7 @@ defaultAlonzoGenesis = do
                            , 1, 1, 69522, 11687, 0, 1, 60091, 32, 196500, 453240, 220, 0, 1, 1, 196500, 453240, 220, 0, 1, 1, 1159724, 392670, 0, 2, 806990
                            , 30482, 4, 1927926, 82523, 4, 265318, 0, 4, 0, 85931, 32, 205665, 812, 1, 1, 41182
                            , 32, 212342, 32, 31220, 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32, 35190005, 10, 57996947, 18975, 10, 39121781, 32260, 10
+                           , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 -- FIXME GARBAGE VALUE
                            ]
 
 defaultConwayGenesis :: ConwayGenesis StandardCrypto
@@ -183,7 +184,7 @@ defaultConwayGenesis =
                     , ucppGovActionDeposit = Coin 1_000_000
                     , ucppDRepDeposit = Coin 1_000_000
                     , ucppDRepActivity = EpochInterval 100
-                    , ucppMinFeeRefScriptCostPerByte = undefined
+                    , ucppMinFeeRefScriptCostPerByte = 0 %! 1 -- FIXME GARBAGE VALUE
                     }
       drepVotingThresholds = DRepVotingThresholds
         { dvtMotionNoConfidence = 0 %! 1

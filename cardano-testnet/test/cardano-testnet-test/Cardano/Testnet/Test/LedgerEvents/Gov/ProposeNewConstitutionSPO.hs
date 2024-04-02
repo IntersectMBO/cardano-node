@@ -242,7 +242,7 @@ getConstitutionProposal nodeConfigFile socketPath maxEpoch = do
                       . L.esLStateL
                       . L.lsUTxOStateL
                       . L.utxosGovStateL
-                      . L.cgProposalsL
+                      . L.cgsProposalsL
                 govActions = Map.toList $ L.proposalsActionsMap proposals
             case map (second L.gasAction) govActions of
               (govActionId, L.NewConstitution _ _) : _ -> do
