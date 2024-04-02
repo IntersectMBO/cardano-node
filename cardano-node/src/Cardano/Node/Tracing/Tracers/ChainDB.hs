@@ -39,7 +39,7 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 
-import           Data.Aeson (Value (String), toJSON, (.=))
+import           Data.Aeson (Value (String), object, toJSON, (.=))
 import           Data.Int (Int64)
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -418,9 +418,12 @@ instance ( LogFormatting (Header blk)
   forHuman (ChainDB.ChainSelectionForFutureBlock pt) =
       "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.PipeliningEvent ev') = forHumanOrMachine ev'
-  forHuman (ChainDB.AddedReprocessLoEBlocksToQueue) = "FIXME"
-  forHuman (ChainDB.PoppedReprocessLoEBlocksFromQueue) = "FIXME"
-  forHuman (ChainDB.ChainSelectionLoEDebug _ _) = "FIXME"
+  forHuman (ChainDB.AddedReprocessLoEBlocksToQueue) =
+      "Added request to queue to reprocess blocks postponed by LoE."
+  forHuman (ChainDB.PoppedReprocessLoEBlocksFromQueue) =
+      "Poppped request from queue to reprocess blocks postponed by LoE."
+  forHuman (ChainDB.ChainSelectionLoEDebug {}) =
+      "ChainDB LoE debug event"
   forMachine dtal (ChainDB.IgnoreBlockOlderThanK pt) =
       mconcat [ "kind" .= String "IgnoreBlockOlderThanK"
                , "block" .= forMachine dtal pt ]
@@ -496,9 +499,21 @@ instance ( LogFormatting (Header blk)
                , "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.PipeliningEvent ev') =
     forMachine dtal ev'
-  forMachine _dtal (ChainDB.AddedReprocessLoEBlocksToQueue) = mconcat [ "kind" .= String "FIXME" ]
-  forMachine _dtal (ChainDB.PoppedReprocessLoEBlocksFromQueue) = mconcat [ "kind" .= String "FIXME" ]
-  forMachine _dtal (ChainDB.ChainSelectionLoEDebug _ _) = mconcat [ "kind" .= String "FIXME" ]
+  forMachine _dtal (ChainDB.AddedReprocessLoEBlocksToQueue) =
+      mconcat [ "kind" .= String "AddedReprocessLoEBlocksToQueue" ]
+  forMachine _dtal (ChainDB.PoppedReprocessLoEBlocksFromQueue) =
+      mconcat [ "kind" .= String "PoppedReprocessLoEBlocksFromQueue" ]
+  forMachine dtal (ChainDB.ChainSelectionLoEDebug curChain loeFrag) =
+      mconcat [ "kind" .= String "ChainSelectionLoEDebug"
+              , "curChain" .= headAndAnchor curChain
+              , "loeFrag" .= headAndAnchor loeFrag
+              ]
+    where
+      headAndAnchor frag = object
+        [ "anchor" .= forMachine dtal (AF.anchorPoint frag)
+        , "head" .= forMachine dtal (AF.headPoint frag)
+        ]
+
 
   asMetrics (ChainDB.SwitchedToAFork _warnings selChangedInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
@@ -554,12 +569,12 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     Namespace [] ["ChainSelectionForFutureBlock"]
   namespaceFor (ChainDB.PipeliningEvent ev') =
     nsPrependInner "PipeliningEvent" (namespaceFor ev')
-  namespaceFor (ChainDB.AddedReprocessLoEBlocksToQueue) =
+  namespaceFor ChainDB.AddedReprocessLoEBlocksToQueue =
     Namespace [] ["AddedReprocessLoEBlocksToQueue"]
-  namespaceFor (ChainDB.PoppedReprocessLoEBlocksFromQueue) =
+  namespaceFor ChainDB.PoppedReprocessLoEBlocksFromQueue =
     Namespace [] ["PoppedReprocessLoEBlocksFromQueue"]
-  namespaceFor (ChainDB.ChainSelectionLoEDebug _ _) =
-    Namespace [] ["FIXME: ChainSelectionLoEDebug ?? ??"]
+  namespaceFor ChainDB.ChainSelectionLoEDebug {} =
+    Namespace [] ["ChainSelectionLoEDebug"]
 
   severityFor (Namespace _ ["IgnoreBlockOlderThanK"]) _ = Just Info
   severityFor (Namespace _ ["IgnoreBlockAlreadyInVolatileDB"]) _ = Just Info
@@ -590,6 +605,9 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     severityFor (Namespace out tl) (Just ev')
   severityFor (Namespace out ("PipeliningEvent" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (ChainDB.TracePipeliningEvent blk)) Nothing
+  severityFor (Namespace _ ["AddedReprocessLoEBlocksToQueue"]) _ = Just Debug
+  severityFor (Namespace _ ["PoppedReprocessLoEBlocksFromQueue"]) _ = Just Debug
+  severityFor (Namespace _ ["ChainSelectionLoEDebug"]) _ = Just Debug
   severityFor _ _ = Nothing
 
   privacyFor (Namespace out ("AddBlockEvent" : tl)) (Just (ChainDB.AddBlockValidation ev')) =
@@ -733,6 +751,9 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
     , Namespace [] ["AddedToCurrentChain"]
     , Namespace [] ["SwitchedToAFork"]
     , Namespace [] ["ChainSelectionForFutureBlock"]
+    , Namespace [] ["AddedReprocessLoEBlocksToQueue"]
+    , Namespace [] ["PoppedReprocessLoEBlocksFromQueue"]
+    , Namespace [] ["ChainSelectionLoEDebug"]
     ]
     ++ map (nsPrependInner "PipeliningEvent")
           (allNamespaces :: [Namespace (ChainDB.TracePipeliningEvent blk)])

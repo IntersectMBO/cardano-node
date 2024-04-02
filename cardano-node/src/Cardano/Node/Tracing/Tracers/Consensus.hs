@@ -286,13 +286,13 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
       Namespace _ ["Termination"] ->
         Just Notice
       Namespace _ ["ValidatedHeader"] ->
-        Just Notice
+        Just Debug
       Namespace _ ["WaitingBeyondForecastHorizon"] ->
-        Just Notice
+        Just Debug
       Namespace _ ["AccessingForecastHorizon"] ->
-        Just Notice
+        Just Debug
       Namespace _ ["GaveLoPToken"] ->
-        Just Notice
+        Just Debug
       _ ->
         Nothing
 

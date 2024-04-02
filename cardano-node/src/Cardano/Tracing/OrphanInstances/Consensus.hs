@@ -140,8 +140,8 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
       ChainDB.UpdateLedgerDbTraceEvent {} -> Debug
     ChainDB.ChainSelectionForFutureBlock{} -> Debug
     ChainDB.PipeliningEvent {} -> Debug
-    ChainDB.AddedReprocessLoEBlocksToQueue -> Info
-    ChainDB.PoppedReprocessLoEBlocksFromQueue -> Info
+    ChainDB.AddedReprocessLoEBlocksToQueue -> Debug
+    ChainDB.PoppedReprocessLoEBlocksFromQueue -> Debug
     ChainDB.ChainSelectionLoEDebug _ _ -> Debug
 
 
@@ -240,10 +240,10 @@ instance HasSeverityAnnotation (TraceChainSyncClientEvent blk) where
   getSeverityAnnotation (TraceRolledBack _) = Notice
   getSeverityAnnotation (TraceException _) = Warning
   getSeverityAnnotation (TraceTermination _) = Notice
-  getSeverityAnnotation (TraceValidatedHeader _) = Info
-  getSeverityAnnotation (TraceWaitingBeyondForecastHorizon _) = Info
-  getSeverityAnnotation (TraceAccessingForecastHorizon _) = Info
-  getSeverityAnnotation (TraceGaveLoPToken _ _ _) = Info
+  getSeverityAnnotation (TraceValidatedHeader _) = Debug
+  getSeverityAnnotation (TraceWaitingBeyondForecastHorizon _) = Debug
+  getSeverityAnnotation (TraceAccessingForecastHorizon _) = Debug
+  getSeverityAnnotation (TraceGaveLoPToken _ _ _) = Debug
 
 
 instance HasPrivacyAnnotation (TraceChainSyncServerEvent blk)
@@ -496,10 +496,11 @@ instance ( ConvertRawHash blk
             FallingEdgeWith sz ->
               "Block added to queue: " <> renderRealPointAsPhrase pt <> " queue size " <> condenseT sz
         ChainDB.AddedReprocessLoEBlocksToQueue ->
-          "Added LoE blocks to queue."
+          "Added request to queue to reprocess blocks postponed by LoE."
         ChainDB.PoppedReprocessLoEBlocksFromQueue ->
-          "Added LoE blocks to queue."
-        ChainDB.ChainSelectionLoEDebug _anchFrag0 _anchFrag1 -> "FIXME"
+          "Poppped request from queue to reprocess blocks postponed by LoE."
+        ChainDB.ChainSelectionLoEDebug {} ->
+          "ChainDB LoE debug event"
 
         ChainDB.PoppedBlockFromQueue edgePt ->
           case edgePt of
@@ -998,10 +999,16 @@ instance ( ConvertRawHash blk
        mconcat [ "kind" .= String "AddedReprocessLoEBlocksToQueue" ]
     ChainDB.PoppedReprocessLoEBlocksFromQueue ->
        mconcat [ "kind" .= String "PoppedReprocessLoEBlocksFromQueue" ]
-    ChainDB.ChainSelectionLoEDebug _frag0 _frag1 ->
+    ChainDB.ChainSelectionLoEDebug curChain loeFrag ->
         mconcat [ "kind" .= String "ChainSelectionLoEDebug"
-                --, "???" .= undefined
+                , "curChain" .= headAndAnchor curChain
+                , "loeFrag" .= headAndAnchor loeFrag
                 ]
+      where
+        headAndAnchor frag = Aeson.object
+          [ "anchor" .= renderPointForVerbosity verb (AF.anchorPoint frag)
+          , "head" .= renderPointForVerbosity verb (AF.headPoint frag)
+          ]
 
    where
      addedHdrsNewChain
@@ -1330,13 +1337,13 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
               , tipToObject (tipFromHeader h) ]
     TraceWaitingBeyondForecastHorizon slotNo ->
       mconcat [ "kind" .= String "ChainSyncClientEvent.TraceWaitingBeyondForecastHorizon"
-               , "slotNo" .= condense slotNo  ]
+               , "slot" .= condense slotNo  ]
     TraceAccessingForecastHorizon slotNo ->
       mconcat [ "kind" .= String "ChainSyncClientEvent.TraceAccessingForecastHorizon"
-               , "slotNo" .= condense slotNo  ]
+               , "slot" .= condense slotNo  ]
     TraceGaveLoPToken tokenGiven h bestBlockNumberPriorToH ->
       mconcat [ "kind" .= String "ChainSyncClientEvent.TraceGaveLoPToken"
-               , "given" .= String (pack $ show tokenGiven)
+               , "given" .= tokenGiven
                , tipToObject (tipFromHeader h)
                , "blockNo" .=  bestBlockNumberPriorToH ]
 
@@ -1573,11 +1580,11 @@ instance ToObject selection => ToObject (TraceGsmEvent selection) where
       , "currentSelection" .= toObject verb s
       , "age" .= toJSON (show a)
       ]
-  toObject _verb (GsmEventPreSyncingToSyncing) =
+  toObject _verb GsmEventPreSyncingToSyncing =
     mconcat
-      [ "kind" .= String ""
+      [ "kind" .= String "GsmEventPreSyncingToSyncing"
       ]
-  toObject _verb (GsmEventSyncingToPreSyncing) =
+  toObject _verb GsmEventSyncingToPreSyncing =
     mconcat
       [ "kind" .= String "GsmEventSyncingToPreSyncing"
       ]
