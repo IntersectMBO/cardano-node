@@ -36,8 +36,8 @@ foldBlocksFindLedgerEvent ledgerEventFilter configurationFile socketPath =
     go txFilter _ _ allEvents _ _ = do
       let foundTransactions = filter txFilter allEvents
       return $ case foundTransactions of
-                  (foundTransaction:_) -> (Just foundTransaction, StopFold)
-                  _ -> (Nothing, ContinueFold)
+                  [] -> (Nothing, ContinueFold)
+                  foundTransaction:_ -> (Just foundTransaction, StopFold)
 
 filterNewGovProposals :: TxId -> LedgerEvent -> Bool
 filterNewGovProposals txid (NewGovernanceProposals eventTxId (AnyProposals props)) =
