@@ -77,7 +77,6 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
-import           GHC.IsList (toList)
 
 {- HLINT ignore "Use :" -}
 
@@ -192,7 +191,7 @@ instance
   , LogFormatting (PredicateFailure (Ledger.EraRule "LEDGER" era))
   ) => LogFormatting (ApplyTxError era) where
   forMachine dtal (ApplyTxError predicateFailures) =
-    mconcat $ toList $ fmap (forMachine dtal) predicateFailures
+    mconcat $ NonEmpty.toList $ fmap (forMachine dtal) predicateFailures
 
 instance
   ( Ledger.Crypto era
