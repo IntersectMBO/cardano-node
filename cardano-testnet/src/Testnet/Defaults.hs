@@ -27,9 +27,8 @@ module Testnet.Defaults
 import           Cardano.Api (AnyCardanoEra (..), CardanoEra (..), pshow)
 import qualified Cardano.Api.Shelley as Api
 
-import           Cardano.Ledger.Alonzo.Core (CoinPerWord (..), PParams (..))
+import           Cardano.Ledger.Alonzo.Core (PParams (..))
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import           Cardano.Ledger.Alonzo.Scripts
 import           Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Binary.Version ()
@@ -38,6 +37,7 @@ import           Cardano.Ledger.Conway.Genesis
 import           Cardano.Ledger.Conway.PParams
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Plutus as Ledger
 import qualified Cardano.Ledger.Shelley as Ledger
 import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Node.Configuration.Topology
@@ -45,13 +45,14 @@ import           Cardano.Tracing.Config
 
 import           Prelude
 
+import           Control.Monad
 import           Control.Monad.Identity (Identity)
 import           Data.Aeson (ToJSON (..), Value, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KeyMapAeson
-import           Data.Bifunctor
 import qualified Data.Default.Class as DefaultClass
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Proxy
@@ -62,7 +63,6 @@ import qualified Data.Text as Text
 import           Data.Time (UTCTime)
 import           Data.Typeable
 import qualified Data.Vector as Vector
-import           Data.Word
 import           GHC.Stack
 import           Lens.Micro
 import           Numeric.Natural
@@ -81,96 +81,29 @@ instance Api.Error AlonzoGenesisError where
 
 data AlonzoGenesisError
   = AlonzoGenErrTooMuchPrecision Rational
-  | AlonzoGenErrCostModels Api.ProtocolParametersConversionError
+  | AlonzoGenErrCostModels (Map Ledger.Language Ledger.CostModelError)
   deriving Show
 
 defaultAlonzoGenesis :: Either AlonzoGenesisError AlonzoGenesis
 defaultAlonzoGenesis = do
-  es <- checkBoundedRational priceExecStepsRat
-  ms <- checkBoundedRational priceMemStepsRat
-  let execPrices = Prices ms es
-  costModels <- first AlonzoGenErrCostModels
-                  $ Api.toAlonzoCostModels apiCostModels
-  return $ AlonzoGenesis
-    { agCoinsPerUTxOWord = CoinPerWord $ Coin 34482
-    , agCostModels = costModels
-    , agPrices = execPrices
-    , agMaxTxExUnits = maxTxExUnits
-    , agMaxBlockExUnits = maxBlockExUnits
-    , agMaxValSize = 5000
-    , agCollateralPercentage = 150
-    , agMaxCollateralInputs = 3
-    }
+  let genesis@AlonzoGenesis{agCostModels, agPrices} = Api.alonzoGenesisDefaults
+
+  -- fail on cost models errors
+  unless (Map.null $ Ledger.costModelsErrors agCostModels)
+    . Left . AlonzoGenErrCostModels $ Ledger.costModelsErrors agCostModels
+
+  -- double check that prices have correct values - they're set using unsafeBoundedRational in cardano-api
+  _priceExecSteps <- checkBoundedRational $ Ledger.prSteps agPrices
+  _priceMemSteps <- checkBoundedRational $ Ledger.prMem agPrices
+
+  pure genesis
   where
-
-    priceExecStepsRat = promoteRatio $ 721 % (10000000 :: Word64)
-    priceMemStepsRat = promoteRatio $ 577 % (10000 :: Word64)
-
-    checkBoundedRational r =
+    checkBoundedRational :: BoundedRational a => a -> Either AlonzoGenesisError a
+    checkBoundedRational v = do
+      let r = unboundRational v
       case boundRational r of
         Nothing -> Left $ AlonzoGenErrTooMuchPrecision r
         Just s -> return s
-
-    maxTxExUnits = Api.toAlonzoExUnits
-                     $ Api.ExecutionUnits
-                         { Api.executionSteps = 10000000000
-                         , Api.executionMemory = 140000000
-                         }
-    maxBlockExUnits = Api.toAlonzoExUnits
-                        $ Api.ExecutionUnits
-                            { Api.executionSteps = 20000000000
-                            , Api.executionMemory = 62000000
-                            }
-    apiCostModels =
-      let pv1 = Api.AnyPlutusScriptVersion Api.PlutusScriptV1
-          pv2 = Api.AnyPlutusScriptVersion Api.PlutusScriptV2
-          pv3 = Api.AnyPlutusScriptVersion Api.PlutusScriptV3
-      in mconcat [ Map.singleton pv1 defaultV1CostModel
-                 , Map.singleton pv2 defaultV2CostModel
-                 , Map.singleton pv3 defaultV3CostModel
-                 ]
-    defaultV1CostModel = Api.CostModel
-                           [ 205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475, 4
-                           , 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 100, 100
-                           , 23000, 100, 19537, 32, 175354, 32, 46417, 4, 221973, 511, 0, 1, 89141, 32, 497525
-                           , 14068, 4, 2, 196500, 453240, 220, 0, 1, 1, 1000, 28662, 4, 2, 245000, 216773, 62
-                           , 1, 1060367, 12586, 1, 208512, 421, 1, 187000, 1000, 52998, 1, 80436, 32, 43249, 32
-                           , 1000, 32, 80556, 1, 57667, 4, 1000, 10, 197145, 156, 1, 197145, 156, 1, 204924, 473
-                           , 1, 208896, 511, 1, 52467, 32, 64832, 32, 65493, 32, 22558, 32, 16563, 32, 76511, 32
-                           , 196500, 453240, 220, 0, 1, 1, 69522, 11687, 0, 1, 60091, 32, 196500, 453240, 220, 0
-                           , 1, 1, 196500, 453240, 220, 0, 1, 1, 806990, 30482, 4, 1927926, 82523, 4, 265318, 0
-                           , 4, 0, 85931, 32, 205665, 812, 1, 1, 41182, 32, 212342, 32, 31220, 32, 32696, 32, 43357
-                           , 32, 32247, 32, 38314, 32, 57996947, 18975, 10
-                           ]
-    defaultV2CostModel = Api.CostModel
-                           [ 205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475, 4
-                           , 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 100, 100
-                           , 23000, 100, 19537, 32, 175354, 32, 46417, 4, 221973, 511, 0, 1, 89141, 32, 497525
-                           , 14068, 4, 2, 196500, 453240, 220, 0, 1, 1, 1000, 28662, 4, 2, 245000, 216773, 62
-                           , 1, 1060367, 12586, 1, 208512, 421, 1, 187000, 1000, 52998, 1, 80436, 32, 43249, 32
-                           , 1000, 32, 80556, 1, 57667, 4, 1000, 10, 197145, 156, 1, 197145, 156, 1, 204924, 473
-                           , 1, 208896, 511, 1, 52467, 32, 64832, 32, 65493, 32, 22558, 32, 16563, 32, 76511, 32
-                           , 196500, 453240, 220, 0, 1, 1, 69522, 11687, 0, 1, 60091, 32, 196500, 453240, 220, 0
-                           , 1, 1, 196500, 453240, 220, 0, 1, 1, 1159724, 392670, 0, 2, 806990, 30482, 4, 1927926
-                           , 82523, 4, 265318, 0, 4, 0, 85931, 32, 205665, 812, 1, 1, 41182, 32, 212342, 32, 31220
-                           , 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32, 35892428, 10, 9462713, 1021, 10, 38887044
-                           , 32947, 10
-                           ]
-    defaultV3CostModel = Api.CostModel
-                           [ 205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475, 4, 117366, 10475, 4, 832808, 18
-                           , 3209094, 6, 331451, 1, 65990684, 23097, 18, 114242, 18, 94393407
-                           , 87060, 18, 16420089, 18, 2145798, 36, 3795345, 12, 889023, 1, 204237282, 23271, 36, 129165, 36, 189977790
-                           , 85902, 36, 33012864, 36, 388443360, 1, 401885761, 72, 2331379, 72, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000
-                           , 100, 23000, 100, 23000, 100, 23000, 100, 100, 100, 23000, 100
-                           , 19537, 32, 175354, 32, 46417, 4, 221973, 511, 0, 1, 89141, 32, 497525, 14068, 4, 2, 196500, 453240, 220, 0, 1, 1, 1000, 28662
-                           , 4, 2, 245000, 216773, 62, 1, 1060367, 12586, 1, 208512, 421, 1, 187000, 1000, 52998, 1, 80436, 32
-                           , 43249, 1000, 32, 32, 80556, 1, 57667, 4, 1927926, 82523, 4, 1000, 10, 197145, 156, 1, 197145, 156, 1, 204924, 473, 1, 208896
-                           , 511, 1, 52467, 32, 64832, 32, 65493, 32, 22558, 32, 16563, 32, 76511, 32, 196500, 453240, 220, 0
-                           , 1, 1, 69522, 11687, 0, 1, 60091, 32, 196500, 453240, 220, 0, 1, 1, 196500, 453240, 220, 0, 1, 1, 1159724, 392670, 0, 2, 806990
-                           , 30482, 4, 1927926, 82523, 4, 265318, 0, 4, 0, 85931, 32, 205665, 812, 1, 1, 41182
-                           , 32, 212342, 32, 31220, 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32, 35190005, 10, 57996947, 18975, 10, 39121781, 32260, 10
-                           , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 -- FIXME GARBAGE VALUE
-                           ]
 
 defaultConwayGenesis :: ConwayGenesis StandardCrypto
 defaultConwayGenesis =
