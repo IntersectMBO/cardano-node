@@ -166,12 +166,6 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) era shell
 
   H.renameFile (tempAbsPath </> "byron-gen-command" </> "genesis.json") (genesisByronDir </> "genesis.json")
 
-  -- For some reason when setting "--total-supply 10E16" in create-testnet-data, we're getting negative
-  -- treasury. TODO: This was supposed to be fixed by https://github.com/IntersectMBO/cardano-cli/pull/644,
-  -- but no, it's still there.
-  H.rewriteJsonFile @Value (tempAbsPath </> defaultGenesisFilepath ShelleyEra) $ \o -> o
-    & L.key "maxLovelaceSupply" . L._Integer .~ 10_000_000_000_000_000
-
   return genesisShelleyDir
   where
     genesisInputFilepath e = "genesis-input." <> anyEraToString (AnyCardanoEra e) <> ".json"
