@@ -28,7 +28,8 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 import qualified Hedgehog.Extras.Test as H
 
-
+-- | Execute me with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Treasury Growth/"'@
 prop_check_if_treasury_is_growing :: H.Property
 prop_check_if_treasury_is_growing = H.integrationRetryWorkspace 0 "growing-treasury" $ \tempAbsBasePath' -> do
   -- Start testnet

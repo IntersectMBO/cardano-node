@@ -233,8 +233,8 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
       , "--out-file", testSpoOperationalCertFp
       ]
 
-  yamlBs <- createConfigYaml tempAbsPath (cardanoNodeEra cTestnetOptions)
-  H.lbsWriteFile configurationFile yamlBs
+  jsonBS <- createConfigJson tempAbsPath (cardanoNodeEra cTestnetOptions)
+  H.lbsWriteFile configurationFile jsonBS
   [newNodePortNumber] <- requestAvailablePortNumbers 1
   eRuntime <- lift . lift . runExceptT $ startNode tempAbsPath "test-spo" "127.0.0.1" newNodePortNumber testnetMagic
         [ "run"

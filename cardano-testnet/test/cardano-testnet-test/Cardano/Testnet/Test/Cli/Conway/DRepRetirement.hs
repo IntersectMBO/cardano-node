@@ -21,6 +21,7 @@ import qualified Data.Text as Text
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
+import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
@@ -86,56 +87,6 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
          $ P.KeyNames { P.verificationKeyFile = stakeVkeyFp
                       , P.signingKeyFile = stakeSKeyFp
                       }
-
-  let drepVkeyFp :: Int -> FilePath
-      drepVkeyFp n = tempAbsPath' </> "drep-keys" </> ("drep" <> show n) </> "drep.vkey"
-
-      drepSKeyFp :: Int -> FilePath
-      drepSKeyFp n = tempAbsPath' </> "drep-keys" </> ("drep" <> show n) </> "drep.skey"
-
-  -- Create Drep registration certificates
-  let drepCertFile :: Int -> FilePath
-      drepCertFile n = gov </> "drep-keys" <>"drep" <> show n <> ".regcert"
-  H.forConcurrently_ [1..3] $ \n -> do
-    H.noteM_ $ H.execCli' execConfig
-       [ "conway", "governance", "drep", "registration-certificate"
-       , "--drep-verification-key-file", drepVkeyFp n
-       , "--key-reg-deposit-amt", show @Int 1_000_000
-       , "--out-file", drepCertFile n
-       ]
-
-  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
-
-  -- Submit registration certificates
-  drepRegTxbodyFp <- H.note $ work </> "drep.registration.txbody"
-  drepRegTxSignedFp <- H.note $ work </> "drep.registration.tx"
-
-  H.noteM_ $ H.execCli' execConfig
-    [ "conway", "transaction", "build"
-    , "--tx-in", Text.unpack $ renderTxIn txin1
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
-    , "--certificate-file", drepCertFile 1
-    , "--certificate-file", drepCertFile 2
-    , "--certificate-file", drepCertFile 3
-    , "--witness-override", show @Int 4
-    , "--out-file", drepRegTxbodyFp
-    ]
-
-  H.noteM_ $ H.execCli' execConfig
-    [ "conway", "transaction", "sign"
-    , "--tx-body-file", drepRegTxbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
-    , "--signing-key-file", drepSKeyFp 1
-    , "--signing-key-file", drepSKeyFp 2
-    , "--signing-key-file", drepSKeyFp 3
-    , "--out-file", drepRegTxSignedFp
-    ]
-
-  H.noteM_ $ H.execCli' execConfig
-    [ "conway", "transaction", "submit"
-    , "--tx-file", drepRegTxSignedFp
-    ]
-
   let sizeBefore = 3
       configFile' = Api.File configurationFile
       socketPath' = Api.File socketPath
@@ -147,7 +98,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
 
   H.noteM_ $ H.execCli' execConfig
      [ "conway", "governance", "drep", "retirement-certificate"
-     , "--drep-verification-key-file", drepVkeyFp 1
+     , "--drep-verification-key-file", defaultDRepVkeyFp 1
      , "--deposit-amt", show @Int 1_000_000
      , "--out-file", dreprRetirementCertFile
      ]
@@ -177,7 +128,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
     [ "conway", "transaction", "sign"
     , "--tx-body-file", drepRetirementRegTxbodyFp
     , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
-    , "--signing-key-file", drepSKeyFp 1
+    , "--signing-key-file", defaultDRepSkeyFp 1
     , "--out-file", drepRetirementRegTxSignedFp
     ]
 

@@ -1,7 +1,7 @@
 {
-    "AlonzoGenesisFile": "shelley/genesis.alonzo.json",
+    "AlonzoGenesisFile": "alonzo-genesis.json",
     "ByronGenesisFile": "byron/genesis.json",
-    "ConwayGenesisFile": "shelley/genesis.conway.json",
+    "ConwayGenesisFile": "conway-genesis.json",
     "EnableLogMetrics": false,
     "EnableLogging": true,
     "EnableP2P": false,
@@ -15,7 +15,7 @@
     "PBftSignatureThreshold": 0.6,
     "Protocol": "Cardano",
     "RequiresNetworkMagic": "RequiresMagic",
-    "ShelleyGenesisFile": "shelley/genesis.shelley.json",
+    "ShelleyGenesisFile": "shelley-genesis.json",
     "SocketPath": "db/node.socket",
     "TestAllegraHardForkAtEpoch": 0,
     "TestMaryHardForkAtEpoch": 0,
