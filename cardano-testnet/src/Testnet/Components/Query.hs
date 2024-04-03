@@ -9,6 +9,7 @@ module Testnet.Components.Query
   ( QueryTip
   , EpochStateView
   , checkDRepsNumber
+  , getDRepInfo
   , getEpochState
   , getMinDRepDeposit
   , queryTip
@@ -242,14 +243,14 @@ checkDRepsNumber sbe configurationFile socketPath execConfig expectedDRepsNb = d
   QueryTipLocalStateOutput{mEpoch} <- P.execCliStdoutToJson execConfig [ "query", "tip" ]
   currentEpoch <- H.evalMaybe mEpoch
   let terminationEpoch = succ . succ $ currentEpoch
-  void $ H.evalMaybeM $ checkDRepsNumber' sbe configurationFile socketPath terminationEpoch expectedDRepsNb
+  void $ H.evalMaybeM $ getDRepInfo sbe configurationFile socketPath terminationEpoch expectedDRepsNb
 
--- | @checkDRepsNumber' config socket terminationEpoch n@
+-- | @getDRepInfo config socket terminationEpoch n@
 -- wait until @terminationEpoch@ for the number of DReps being @n@. If
 -- this number is not attained before @terminationEpoch@, the test is failed.
 -- So if you call this function, you are expecting the number of DReps to already
 -- be @n@, or to be @n@ before @terminationEpoch@
-checkDRepsNumber' ::
+getDRepInfo ::
   (HasCallStack, MonadCatch m, MonadIO m, MonadTest m)
   => ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
   -> NodeConfigFile In
@@ -257,7 +258,7 @@ checkDRepsNumber' ::
   -> EpochNo -- ^ The termination epoch: the constitution proposal must be found *before* this epoch
   -> Int -- ^ The expected numbers of DReps. If this number is not reached until the termination epoch, this function fails the test.
   -> m (Maybe [L.DRepState StandardCrypto]) -- ^ The DReps when the expected number of DReps was attained.
-checkDRepsNumber' sbe nodeConfigFile socketPath maxEpoch expectedDRepsNb = do
+getDRepInfo sbe nodeConfigFile socketPath maxEpoch expectedDRepsNb = do
   result <- runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState) _slotNb _blockNb -> do
         case testEquality sbe actualEra of

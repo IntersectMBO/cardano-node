@@ -1,17 +1,24 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Testnet.Test.LedgerEvents.Gov.DRepDeposits
   ( hprop_ledger_events_drep_deposits
   ) where
 
-import           Cardano.Api (AnyCardanoEra (..), File (..), ShelleyBasedEra (..),
-                   ToCardanoEra (..), renderTxIn)
+import           Cardano.Api (AnyCardanoEra (..), ConwayEra, EpochNo, File (..), FileDirection (In),
+                   NodeConfigFile, ShelleyBasedEra (..), SocketPath, ToCardanoEra (..), renderTxIn)
+import           Cardano.Api.Ledger (Coin (..), DRepState (..))
 
 import           Cardano.Testnet
+                   (CardanoTestnetOptions (cardanoEpochLength, cardanoNodeEra, cardanoNumDReps, cardanoSlotLength),
+                   Conf (Conf, tempAbsPath), NodeRuntime (nodeSprocket),
+                   TmpAbsolutePath (unTmpAbsPath), cardanoDefaultTestnetOptions,
+                   cardanoTestnetDefault, makeTmpBaseAbsPath, mkConf)
 
 import           Prelude
 
@@ -25,7 +32,7 @@ import qualified GHC.Stack as GHC
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query (EpochStateView, findLargestUtxoForPaymentKey,
-                   getEpochStateView)
+                   getDRepInfo, getEpochStateView)
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime (PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair),
@@ -33,6 +40,7 @@ import           Testnet.Runtime (PaymentKeyInfo (paymentKeyInfoAddr, paymentKey
                    TestnetRuntime (TestnetRuntime, configurationFile, poolNodes, testnetMagic, wallets))
 
 import           Hedgehog (MonadTest, Property)
+import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
@@ -84,35 +92,37 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
-  -- DRep 1 (enough deposit)
+  -- DRep 1 (not enough deposit)
 
   drepDir1 <- H.createDirectoryIfMissing $ gov </> "drep1"
 
   drepKeyPair1 <- generateDRepKeyPair execConfig drepDir1 "keys"
   drepRegCert1 <- generateRegistrationCertificate execConfig drepDir1 "reg-cert"
-                                                  drepKeyPair1 1_000_000
+                                                  drepKeyPair1 999_999
   drepRegTxBody1 <- createDRepRegistrationTxBody execConfig epochStateView sbe drepDir1 "reg-cert-txbody"
                                                  drepRegCert1 wallet0
   drepSignedRegTx1 <- signTx execConfig drepDir1 "signed-reg-tx"
                              drepRegTxBody1 [drepKeyPair1, paymentKeyInfoPair wallet0]
 
-  submitTx execConfig drepSignedRegTx1
+  failToSubmitTx execConfig drepSignedRegTx1
 
-  -- DRep 2 (not enough deposit)
+  -- DRep 2 (enough deposit)
 
   drepDir2 <- H.createDirectoryIfMissing $ gov </> "drep2"
 
   drepKeyPair2 <- generateDRepKeyPair execConfig drepDir2 "keys"
   drepRegCert2 <- generateRegistrationCertificate execConfig drepDir2 "reg-cert"
-                                                  drepKeyPair2 999_999
+                                                  drepKeyPair2 1_000_000
   drepRegTxBody2 <- createDRepRegistrationTxBody execConfig epochStateView sbe drepDir2 "reg-cert-txbody"
                                                  drepRegCert2 wallet1
   drepSignedRegTx2 <- signTx execConfig drepDir2 "signed-reg-tx"
                              drepRegTxBody2 [drepKeyPair2, paymentKeyInfoPair wallet1]
 
-  failToSubmitTx execConfig drepSignedRegTx2
+  submitTx execConfig drepSignedRegTx2
 
+  deposits <- H.evalMaybeM $ getDRepDeposits sbe (File configurationFile) (File socketPath) 10 1
 
+  deposits H.=== [1_000_000]
 
 -- DRep key pair generation
 
@@ -210,7 +220,8 @@ submitTx execConfig signedTx =
     , "--tx-file", signedTxFile signedTx
     ]
 
--- Fail to submit transaction
+-- Attempt to submit transaction that must fail
+
 failToSubmitTx
   :: (MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig
@@ -224,3 +235,17 @@ failToSubmitTx execConfig signedTx = GHC.withFrozenCallStack $ do
   case exitCode of
     ExitSuccess -> H.failMessage GHC.callStack "Transaction submission was expected to fail but it succeeded"
     _ -> return ()
+
+-- Obtains the amounts of the DRep deposits given some assumptions
+
+getDRepDeposits ::
+  (HasCallStack, MonadCatch m, MonadIO m, MonadTest m)
+  => ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
+  -> NodeConfigFile In
+  -> SocketPath
+  -> EpochNo -- ^ The termination epoch: the constitution proposal must be found *before* this epoch
+  -> Int -- ^ The expected numbers of DReps. If this number is not reached until the termination epoch, this function fails the test.
+  -> m (Maybe [Integer]) -- ^ The DReps when the expected number of DReps was attained.
+getDRepDeposits sbe nodeConfigFile socketPath maxEpoch expectedDRepsNb = do
+  mDRepInfo <- getDRepInfo sbe nodeConfigFile socketPath maxEpoch expectedDRepsNb
+  return $ map (unCoin . drepDeposit) <$> mDRepInfo
