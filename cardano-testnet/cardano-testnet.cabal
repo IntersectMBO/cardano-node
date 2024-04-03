@@ -59,8 +59,9 @@ library
                       , filepath
                       , hedgehog
                       , hedgehog-extras < 0.6.2
-                      , microlens
                       , lens-aeson
+                      , lifted-base
+                      , microlens
                       , mtl
                       , network
                       , network-mux

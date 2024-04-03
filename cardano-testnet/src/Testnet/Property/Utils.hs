@@ -27,6 +27,8 @@ import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesis
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
 
+import qualified Control.Concurrent.QSem as IO
+import qualified Control.Exception.Lifted as CE
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
 import           Control.Monad.Trans.Resource
@@ -48,16 +50,20 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 import           Hedgehog.Internal.Property (MonadTest)
 
-
 disableRetries :: Bool
 disableRetries = IO.unsafePerformIO $ do
   mValue <- IO.lookupEnv "DISABLE_RETRIES"
   return $ mValue == Just "1"
 {-# NOINLINE disableRetries #-}
 
+sem :: IO.QSem
+sem = IO.unsafePerformIO $ IO.newQSem 1
+{-# NOINLINE sem #-}
+
 -- TODO: Document what an Integration is
 integration :: HasCallStack => H.Integration () -> H.Property
-integration f = GHC.withFrozenCallStack $ H.withTests 1 $ H.propertyOnce f
+integration f = GHC.withFrozenCallStack $ H.withTests 1 $ H.propertyOnce $
+  CE.bracket_ (liftIO $ IO.waitQSem sem) (liftIO $ IO.signalQSem sem) f
 
 -- | The 'FilePath' in '(FilePath -> H.Integration ())' is the work space directory.
 -- This is created (and returned) via 'H.workspace'.
