@@ -333,7 +333,7 @@ cardanoTestnet
     forM_ (zip [1..] portNumbers) $ \(i, portNumber) -> do
       let iStr = printf "%03d" (i - 1)
       H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegate-keys." <> iStr <> ".key") (tmpAbsPath </> poolKeyDir i </> "byron-delegate.key")
-      H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegation-cert." <> iStr <> ".json") (tmpAbsPath </> poolKeyDir i </>"byron-delegation.cert")
+      H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegation-cert." <> iStr <> ".json") (tmpAbsPath </> poolKeyDir i </> "byron-delegation.cert")
       H.writeFile (tmpAbsPath </> poolKeyDir i </> "port") (show portNumber)
 
     -- Make topology files

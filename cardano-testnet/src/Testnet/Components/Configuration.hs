@@ -146,8 +146,8 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) era shell
     , "--spec-conway",  inputGenesisConwayFp
     , "--testnet-magic", show testnetMagic
     , "--pools", show numPoolNodes
-    , "--total-supply",     show @Int 2_000_000_000_000
-    , "--delegated-supply", show @Int 1_000_000_000_000
+    , "--total-supply",     show @Int 2_000_000_000_000 -- 2 trillions
+    , "--delegated-supply", show @Int 1_000_000_000_000 -- 1 trillion
     , "--stake-delegators", show numStakeDelegators
     , "--utxo-keys", show numSeededUTxOKeys
     , "--drep-keys", show numDelReps
