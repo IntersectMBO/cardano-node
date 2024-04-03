@@ -586,8 +586,8 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
   logStartupWarnings :: IO ()
   logStartupWarnings = do
     (case p2pMode of
-      DisabledP2PMode -> return ()
-      EnabledP2PMode  -> traceWith (startupTracer tracers) P2PWarning
+      EnabledP2PMode  -> return ()
+      DisabledP2PMode -> traceWith (startupTracer tracers) NonP2PWarning
       ) :: IO () -- annoying, but unavoidable for GADT type inference
 
     let developmentNtnVersions =
