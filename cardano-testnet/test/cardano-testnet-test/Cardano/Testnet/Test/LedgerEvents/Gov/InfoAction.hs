@@ -193,17 +193,18 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
     , "--tx-file", txbodySignedFp
     ]
 
-  !propSubmittedResult <- foldBlocksFindLedgerEvent (filterNewGovProposals (fromString txidString))
-                                                    configurationFile
-                                                    socketPath
+  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex sbe (fromString txidString))
+                                        configurationFile
+                                        socketPath
+                                        10
 
-  newProposalEvents <- case propSubmittedResult of
-                        Left e ->
-                          H.failMessage callStack
-                            $ "foldBlocksCheckProposalWasSubmitted failed with: " <> displayError e
-                        Right events -> return events
-
-  governanceActionIndex <- retrieveGovernanceActionIndex newProposalEvents
+  governanceActionIndex <- case propSubmittedResult of
+                             Left e ->
+                               H.failMessage callStack
+                                 $ "findCondition failed with: " <> displayError e
+                             Right Nothing ->
+                               H.failMessage callStack "Couldn't find proposal."
+                             Right (Just a) -> return a
 
   let voteFp :: Int -> FilePath
       voteFp n = work </> gov </> "vote-" <> show n
@@ -268,25 +269,6 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
       H.failMessage callStack
         $ "foldBlocksCheckInfoAction failed with: " <> displayError e
     Right _events -> success
-
-retrieveGovernanceActionIndex
-  :: (HasCallStack, MonadTest m)
-  => Maybe LedgerEvent
-  -> m Word32
-retrieveGovernanceActionIndex mEvent = do
-  case mEvent of
-    Nothing -> H.failMessage callStack "retrieveGovernanceActionIndex: No new governance proposals found"
-    Just (NewGovernanceProposals _ (AnyProposals props)) -> do
-        -- In this test there will only be one
-        let govActionStates = [i
-                              | L.GovActionIx i <- map L.gaidGovActionIx . Map.keys $ L.proposalsActionsMap props
-                              ]
-        H.headM govActionStates
-    Just unexpectedEvent ->
-      H.failMessage callStack
-        $ mconcat ["retrieveGovernanceActionIndex: Expected NewGovernanceProposals, got: "
-                  , show unexpectedEvent
-                  ]
 
 -- | Fold accumulator for checking action state
 data InfoActionState = InfoActionState

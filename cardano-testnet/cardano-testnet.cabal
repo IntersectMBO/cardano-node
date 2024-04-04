@@ -93,7 +93,7 @@ library
                         Testnet.Components.Query
                         Testnet.Defaults
                         Testnet.Filepath
-                        Testnet.LedgerEventProcessing
+                        Testnet.EpochStateProcessing
                         Testnet.Property.Assert
                         Testnet.Property.Run
                         Testnet.Property.Utils

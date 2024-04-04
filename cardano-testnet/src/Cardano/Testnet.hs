@@ -25,9 +25,9 @@ module Cardano.Testnet (
   makeSocketDir,
   makeTmpBaseAbsPath,
 
-  -- * LedgerEvent processsing helper functions
-  filterNewGovProposals,
-  foldBlocksFindLedgerEvent,
+  -- * EpochState processsing helper functions
+  maybeExtractGovernanceActionIndex,
+  findCondition,
 
   -- * Processes
   procChairman,
@@ -43,8 +43,8 @@ module Cardano.Testnet (
   ) where
 
 import           Testnet.Components.Query
+import           Testnet.EpochStateProcessing
 import           Testnet.Filepath
-import           Testnet.LedgerEventProcessing
 import           Testnet.Process.Run (procChairman)
 import           Testnet.Property.Utils
 import           Testnet.Runtime

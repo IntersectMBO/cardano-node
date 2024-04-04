@@ -7,12 +7,10 @@
 
 module Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
   ( hprop_ledger_events_propose_new_constitution
-  , retrieveGovernanceActionIndex
   ) where
 
 import           Cardano.Api as Api
 import           Cardano.Api.Error (displayError)
-import           Cardano.Api.Shelley
 
 import qualified Cardano.Crypto.Hash as L
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -28,14 +26,13 @@ import           Control.Monad.State.Strict (StateT)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as AL
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Maybe.Strict
 import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word
-import           GHC.Stack (HasCallStack, callStack)
+import           GHC.Stack (callStack)
 import           Lens.Micro
 import           System.FilePath ((</>))
 
@@ -185,17 +182,19 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     [ "transaction", "txid"
     , "--tx-file", txbodySignedFp
     ]
-  !propSubmittedResult <- foldBlocksFindLedgerEvent (filterNewGovProposals (fromString txidString))
-                                                    configurationFile
-                                                    socketPath
 
-  newProposalEvents <- case propSubmittedResult of
-                        Left e ->
-                          H.failMessage callStack
-                            $ "foldBlocksFindLedgerEvent failed with: " <> displayError e
-                        Right events -> return events
+  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex sbe (fromString txidString))
+                                        configurationFile
+                                        socketPath
+                                        10
 
-  governanceActionIndex <- retrieveGovernanceActionIndex newProposalEvents
+  governanceActionIndex <- case propSubmittedResult of
+                             Left e ->
+                               H.failMessage callStack
+                                 $ "findCondition failed with: " <> displayError e
+                             Right Nothing ->
+                               H.failMessage callStack "Couldn't find proposal."
+                             Right (Just a) -> return a
 
   let voteFp :: Int -> FilePath
       voteFp n = work </> gov </> "vote-" <> show n
@@ -279,23 +278,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   length (filter (== "VoteNo") votes) === 3
   length (filter (== "Abstain") votes) === 2
   length votes === numVotes
-
-
-retrieveGovernanceActionIndex
-  :: (HasCallStack, MonadTest m)
-  => Maybe LedgerEvent -> m Word32
-retrieveGovernanceActionIndex mEvent = do
-  case mEvent of
-    Nothing -> H.failMessage callStack "retrieveGovernanceActionIndex: No new governance proposals found"
-    Just (NewGovernanceProposals _ (AnyProposals props)) ->
-    -- In this test there will only be one
-        H.headM [i | Ledger.GovActionIx i
-                    <- map Ledger.gaidGovActionIx . Map.keys $ Ledger.proposalsActionsMap props ]
-    Just unexpectedEvent ->
-      H.failMessage callStack
-        $ mconcat ["retrieveGovernanceActionIndex: Expected NewGovernanceProposals, got: "
-                  , show unexpectedEvent
-                  ]
 
 foldBlocksCheckConstitutionWasRatified
   :: String -- submitted constitution hash
