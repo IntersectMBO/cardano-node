@@ -76,8 +76,8 @@ if impl(ghc >= 9.6)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: a31e7705fc42a39389d90299c77498dac77e546e
-  --sha256: 0f6vz6rh3zzqz52hzzydqvgw5hj6ii0fhvhs901sylzhl4d21jw1
+  tag: 02d6f44179cbffd573a15c0bd8a7e8d5de43690e
+  --sha256: 1h67ln5r5xzs2yiwld0pplym6iga458wh653z4z2s4k7g7a2i3rq
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -89,7 +89,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: 0fb8ae595e7b0ae644c4724aa4b63594d1e53877
-  --sha256: 01yy747i9bwf6jhfmww8bgf2jz86plw9j42hmfz2zbq3cl72qfsj
+  tag: ffadb947c711b9fc89123ba653b5b567006f1138
+  --sha256: 12bd8qrhyqs0l7hyilwcqg5m18119lwgqxazbs8hxc20alg9gs5f
   subdir:
     cardano-api
