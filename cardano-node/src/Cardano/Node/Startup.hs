@@ -114,8 +114,8 @@ data StartupTrace blk =
                   (Map RelayAccessPoint PeerAdvertise)
                   UseLedgerPeers
 
-  -- | Warn when 'EnableP2P' is set.
-  | P2PWarning
+  -- | Warn when 'DisabledP2P' is set.
+  | NonP2PWarning
 
   -- | Warn when 'ExperimentalProtocolsEnabled' is set and affects
   -- node-to-node protocol.
