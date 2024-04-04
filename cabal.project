@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2024-03-26T06:28:59Z
-  , cardano-haskell-packages 2024-04-02T19:00:00Z
+  , cardano-haskell-packages 2024-04-04T03:00:00Z
 
 packages:
   cardano-node
@@ -62,9 +62,17 @@ package plutus-scripts-bench
 
 source-repository-package
   type: git
+  location: https://github.com/intersectmbo/cardano-ledger
+  tag: 2b816e58cb714061176d888e6d4c8e57bcc848b2
+  --sha256: sha256-lXjU26w0sue0opGeyNAV07id3leT04lCxx47Qr7ZIhQ=
+  subdir:
+    eras/conway/impl
+
+source-repository-package
+  type: git
   location: https://github.com/intersectmbo/ouroboros-consensus
-  tag: 0a1925206d4532cc7b189bc7ca6719571982b6cc
-  --sha256: sha256-3SG/O2F69Hg30W0Oc6KerVEKmUgDkH582PlAnCBd1Pg=
+  tag: 2a4f737782a432c997d46d8e84d66ad8da20324a
+  --sha256: sha256-Xn6zD8Utt0Wn8cJ0EUSHeIA3EtPZJvjzpKYUZfMcWxU=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -74,15 +82,15 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/cardano-api
-  tag: 85894367ea531f36e15dd44b967aaa1f280a9029
-  --sha256: sha256-g8zcktWdi0PKe3wz6wk/cSN5m/QVlvZDUdh/ejxgHJk=
+  tag: f41c70adc8966b39118296755e219629b3ebb6a5
+  --sha256: sha256-PkxBJn49JmA07FJRPnDlKuRI0QW4OdieXctHJseCll8=
   subdir:
     cardano-api
 
 source-repository-package
   type: git
   location: https://github.com/intersectmbo/cardano-cli
-  tag: 8f8778782157349977491a515020703c2aeb5b06
-  --sha256: sha256-9n4iz7IByvZoNohI6Z5FbSYVgx1i7l0KGB6ertNDA7k=
+  tag: c0a01e8c8c990376098559cd86e30f4eb3386e09
+  --sha256: sha256-YqgPh8FKfw9/peKOZFrllL1HtaoD1VJ94Jine/8Xwus=
   subdir:
     cardano-cli
