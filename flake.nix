@@ -15,7 +15,7 @@
       flake = false;
     };
     haskellNix = {
-      url = "github:input-output-hk/haskell.nix/static-nix-tools";
+      url = "github:input-output-hk/haskell.nix";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.hackage.follows = "hackageNix";
     };
