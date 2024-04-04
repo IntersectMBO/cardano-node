@@ -35,7 +35,8 @@ import           Cardano.Tracing.OrphanInstances.Network ()
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.Impl.Snapshots (SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Impl.Snapshots (NumOfDiskSnapshots (..),
+                   SnapshotInterval (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.V1.Args (FlushFrequency (..),
                    QueryBatchSize (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
@@ -133,6 +134,7 @@ data NodeConfiguration
        , ncMaybeMempoolCapacityOverride :: !(Maybe MempoolCapacityBytesOverride)
 
          -- LedgerDB configuration
+       , ncNumOfDiskSnapshots :: !NumOfDiskSnapshots
        , ncSnapshotInterval   :: !SnapshotInterval
        , ncLedgerDBBackend    :: !LedgerDbSelectorFlag
        , ncFlushFrequency     :: !FlushFrequency
@@ -212,6 +214,7 @@ data PartialNodeConfiguration
        , pncMaybeMempoolCapacityOverride :: !(Last MempoolCapacityBytesOverride)
 
          -- LedgerDB configuration
+       , pncNumOfDiskSnapshots :: !(Last NumOfDiskSnapshots)
        , pncSnapshotInterval :: !(Last SnapshotInterval)
        , pncLedgerDBBackend  :: !(Last LedgerDbSelectorFlag)
        , pncFlushFrequency   :: !(Last FlushFrequency)
@@ -306,6 +309,7 @@ instance FromJSON PartialNodeConfiguration where
       pncMaybeMempoolCapacityOverride <- Last <$> parseMempoolCapacityBytesOverride v
 
       -- LedgerDB configuration
+      pncNumOfDiskSnapshots <- Last . fmap RequestedNumOfDiskSnapshots <$> v .:? "NumOfDiskSnapshots"
       pncSnapshotInterval <- Last . fmap RequestedSnapshotInterval <$> v .:? "SnapshotInterval"
       pncLedgerDBBackend  <- Last <$> parseLedgerDBBackend v
       pncFlushFrequency   <- Last . fmap RequestedFlushFrequency <$> v .:? "FlushFrequency"
@@ -367,6 +371,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncShutdownConfig = mempty
            , pncStartAsNonProducingNode = Last $ Just False
            , pncMaybeMempoolCapacityOverride
+           , pncNumOfDiskSnapshots
            , pncSnapshotInterval
            , pncLedgerDBBackend
            , pncFlushFrequency
@@ -553,6 +558,7 @@ defaultPartialNodeConfiguration =
     , pncTraceConfig = mempty
     , pncTraceForwardSocket = mempty
     , pncMaybeMempoolCapacityOverride = mempty
+    , pncNumOfDiskSnapshots = Last $ Just DefaultNumOfDiskSnapshots
     , pncSnapshotInterval = Last $ Just DefaultSnapshotInterval
     , pncLedgerDBBackend  = Last $ Just V2InMemory
     , pncFlushFrequency   = Last $ Just DefaultFlushFrequency
@@ -597,6 +603,7 @@ makeNodeConfiguration pnc = do
   logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
   traceConfig <- first Text.unpack $ partialTraceSelectionToEither $ pncTraceConfig pnc
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
+  numOfDiskSnapshots <- lastToEither "Missing NumOfDiskSnapshots" $ pncNumOfDiskSnapshots pnc
   snapshotInterval <- lastToEither "Missing SnapshotInterval" $ pncSnapshotInterval pnc
   shutdownConfig <- lastToEither "Missing ShutdownConfig" $ pncShutdownConfig pnc
   socketConfig <- lastToEither "Missing SocketConfig" $ pncSocketConfig pnc
@@ -654,13 +661,13 @@ makeNodeConfiguration pnc = do
     $ pncPeerSharing pnc
 
   ssdDatabaseDir <-
-    lastToEither "Missing SsdDatabaseDir" 
+    lastToEither "Missing SsdDatabaseDir"
     $ pncSsdDatabaseDir pnc
   ssdSnapshotState <-
-    lastToEither "Missing SsdSnapshotState" 
+    lastToEither "Missing SsdSnapshotState"
     $ pncSsdSnapshotState pnc
   ssdSnapshotTables <-
-    lastToEither "Missing SsdSnapshotTables" 
+    lastToEither "Missing SsdSnapshotTables"
     $ pncSsdSnapshotTables pnc
 
   -- TODO: This is not mandatory
@@ -693,6 +700,7 @@ makeNodeConfiguration pnc = do
                                                 else TracingOff
              , ncTraceForwardSocket = getLast $ pncTraceForwardSocket pnc
              , ncMaybeMempoolCapacityOverride = getLast $ pncMaybeMempoolCapacityOverride pnc
+             , ncNumOfDiskSnapshots = numOfDiskSnapshots
              , ncSnapshotInterval = snapshotInterval
              , ncLedgerDBBackend
              , ncFlushFrequency
