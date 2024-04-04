@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2024-03-26T06:28:59Z
-  , cardano-haskell-packages 2024-04-04T10:00:00Z
+  , cardano-haskell-packages 2024-04-04T15:00:00Z
 
 packages:
   cardano-node
@@ -62,16 +62,8 @@ package plutus-scripts-bench
 
 source-repository-package
   type: git
-  location: https://github.com/intersectmbo/cardano-api
-  tag: da669760811da7cbe5d01da32116e02272f06cc1
-  --sha256: sha256-6Tp2WiM8++JuWiSZs2v/ldHQUT11OAspQfWIrReiLZo=
-  subdir:
-    cardano-api
-
-source-repository-package
-  type: git
   location: https://github.com/intersectmbo/cardano-cli
-  tag: 10381147c66539cc300a664954b2e49d79f225e4
-  --sha256: sha256-NikVnpbszBJg+LYVZjH/un2570jgJwQuZXn78HRHw3I=
+  tag: b469aebdd07fdb1951a95f4fa387a3551efee488
+  --sha256: sha256-w8JOfjeGIatrMM49jogAfcqNddAYRJVW0Ca45EsDJjs=
   subdir:
     cardano-cli
