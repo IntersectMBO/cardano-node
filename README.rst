@@ -40,12 +40,12 @@ Network Configuration, Genesis and Topology Files
 
 The latest supported networks can be found at `<https://book.world.dev.cardano.org/environments.html>`_
 
-****
+**************************
 Obtaining ``cardano-node``
-****
+**************************
 
 Building from source
-====
+====================
 
 Documentation for building the node can be found `here <https://docs.cardano.org/getting-started/installing-the-cardano-node>`_.
 
@@ -56,7 +56,7 @@ You can download the hydra binaries of ``cardano-node`` and ``cardano-cli`` from
 
 
 Running the node on Windows
-----
+---------------------------
 
 The download includes cardano-node.exe and a .dll. To run the node with cardano-node run you need to reference a few files and directories as arguments. These can be copied from the cardano-node repo into the executables directory. The command to run the node on mainnet looks like this:
 
@@ -73,12 +73,13 @@ You can pull the docker image with the latest version of cardano-node from `here
 
     docker pull inputoutput/cardano-node
 
-****
+**********************
 Using ``cardano-node``
-****
+**********************
 
 Command line summary: ``cardano-node``
-====
+======================================
+
 This refers to the client that is used for running a node.
 
 The general synopsis is as follows:
@@ -132,7 +133,7 @@ The general synopsis is as follows:
 * ``--validate-db`` - Flag to revalidate all on-disk database files
 
 Configuration
-====
+=============
 
 The ``--config`` flag points to a ``.yaml`` (or a structurally equivalent ``.json``) file that is responsible to configuring the logging & other important settings for the node. E.g. see the Byron mainnet configuration in this
 `configuration.yaml <https://github.com/intersectmbo/cardano-node/blob/master/configuration/defaults/byron-mainnet/configuration.yaml>`_.
@@ -148,9 +149,9 @@ Scripts
 
 Please see ``scripts/README.md`` for information on the various scripts.
 
-****
+*********************
 Using ``cardano-cli``
-****
+*********************
 
 A CLI utility to support a variety of key material operations (genesis, migration, pretty-printing..) for different system generations.
 Usage documentation can be found at ``https://github.com/input-output-hk/cardano-cli/tree/master/cardano-cli/README.md``.
@@ -165,7 +166,7 @@ The general synopsis is as follows:
 before ``cardano-cli``.  We henceforth assume that the necessary environment-specific adjustment has been made, so we only mention ``cardano-cli``.
 
 Command line options: ``cardano-cli``
-====
+=====================================
 
 The subcommands are subdivided in groups, and their full list can be seen in the output of ``cardano-cli --help``.
 
@@ -190,7 +191,7 @@ All subcommands have help available.  For example:
 
 
 Genesis generation
-====
+==================
 
 The Byron genesis generation operations will create a directory that contains:
 
@@ -421,9 +422,9 @@ Note: When developing locally, for any package you are working on, in **cabal.pr
 
 Otherwise GHC might complain about unused packages.
 
-****
+*************
 Native Tokens
-****
+*************
 
 Native tokens is a new feature that enables the transacting of multi-assets on Cardano. Native tokens are now supported on mainnet and users can transact with ada, and an unlimited number of user-defined (custom) tokens natively. Note that users who do not need to create new assets (“token holders”) will be able to send and receive existing multi-asset tokens using a wallet such as Daedalus or Yoroi, and with no requirement to use any CLI commands.
 
@@ -439,9 +440,9 @@ To help you get started, see:
 
 To start, please ensure that you are familiar with setting up and operating the `Cardano node <https://github.com/intersectmbo/cardano-node>`_. Alternatively, see instructions on how to `start your node <https://github.com/input-output-hk/cardano-node-wiki/wiki/2_start_your_nodes>`_ to submit the commands. You will not need to set up and start a full block producing node ('stake pool'), just a much simpler relay node. This node will need to connect to a Cardano network that is capable of processing native tokens (e.g., the native token pre-production environment (PPE), or the Cardano mainnet).
 
-****
+*****************
 API Documentation
-****
+*****************
 
 The API documentation is published `here <https://cardano-node.cardano.intersectmbo.org/>`_.
 
@@ -449,23 +450,23 @@ The documentation is built with each push, but is only published from ``master``
 test if the documentation is working, build the documentation locally with ``cabal haddock-project --local --output=./haddocks`` and
 open ``haddocks/index.html`` in the browser.
 
-****
+*******************************************
 Using the ``cardano-node`` Haskell packages
-****
+*******************************************
 
 If you want to use the ``cardano-node`` Haskell packages from another project, you should use `CHaP <https://github.com/input-output-hk/cardano-haskell-packages>`_ to get the packages defined in this repository.
 Please note that you may need to use any ``source-repository-package`` stanzas defined in ``cabal.project``, although we will endeavour to keep these to an absolute minimum.
 
-****
+***********
 Style guide
-****
+***********
 
 The `style guide <https://github.com/input-output-hk/cardano-node-wiki/wiki/Style-guide>`_ for can be found
 on the `cardano-node repository's wiki <https://github.com/input-output-hk/cardano-node-wiki/wiki>`_.
 
-****
+***************************************
 Troubleshooting ``cardano-node`` issues
-****
+***************************************
 
 For some troubleshooting help with building or running ``cardano-node``, the wiki has a
 `troubleshooting page <https://github.com/input-output-hk/cardano-node-wiki/wiki/Troubleshooting>`_
