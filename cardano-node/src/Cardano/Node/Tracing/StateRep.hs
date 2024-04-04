@@ -227,7 +227,7 @@ traceNodeStateChainDB _scp tr ev =
       case ev' of
         ChainDB.StartedInitChainSelection ->
           traceWith tr $ NodeInitChainSelection InitChainStartedSelection
-        ChainDB.InitalChainSelected ->
+        ChainDB.InitialChainSelected ->
           traceWith tr $ NodeInitChainSelection InitChainSelected
         _ -> return ()
     ChainDB.TraceAddBlockEvent ev' ->

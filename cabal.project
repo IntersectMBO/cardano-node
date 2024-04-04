@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2024-03-26T06:28:59Z
-  , cardano-haskell-packages 2024-03-25T11:11:00Z
+  , cardano-haskell-packages 2024-04-04T15:00:00Z
 
 packages:
   cardano-node
@@ -59,3 +59,11 @@ package plutus-scripts-bench
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
+
+source-repository-package
+  type: git
+  location: https://github.com/intersectmbo/cardano-cli
+  tag: b469aebdd07fdb1951a95f4fa387a3551efee488
+  --sha256: sha256-w8JOfjeGIatrMM49jogAfcqNddAYRJVW0Ca45EsDJjs=
+  subdir:
+    cardano-cli

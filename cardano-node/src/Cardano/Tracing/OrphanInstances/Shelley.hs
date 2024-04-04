@@ -40,7 +40,7 @@ import qualified Cardano.Ledger.Babbage.Rules as Babbage
 import           Cardano.Ledger.BaseTypes (activeSlotLog, strictMaybeToMaybe)
 import           Cardano.Ledger.Chain
 import           Cardano.Ledger.Conway.Governance (govActionIdToText)
-import           Cardano.Ledger.Conway.Rules ()
+import           Cardano.Ledger.Conway.Rules (ConwayUtxosPredFailure)
 import qualified Cardano.Ledger.Conway.Rules as Conway
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
@@ -116,7 +116,7 @@ instance
   ( ToObject (PredicateFailure (Core.EraRule "LEDGER" ledgerera))
   ) => ToObject (ApplyTxError ledgerera) where
   toObject verb (ApplyTxError predicateFailures) =
-    mconcat $ map (toObject verb) predicateFailures
+    mconcat $ NonEmpty.toList $ fmap (toObject verb) predicateFailures
 
 instance Core.Crypto crypto => ToObject (TPraosCannotForge crypto) where
   toObject _verb (TPraosCannotForgeKeyNotUsableYet wallClockPeriod keyStartPeriod) =
@@ -137,7 +137,7 @@ instance
   ) => ToObject (ShelleyLedgerError ledgerera) where
   toObject verb (BBodyError (BlockTransitionError fs)) =
     mconcat [ "kind" .= String "BBodyError"
-            , "failures" .= map (toObject verb) fs
+            , "failures" .= fmap (toObject verb) fs
             ]
 
 instance
@@ -184,6 +184,13 @@ instance ToObject (Conway.ConwayGovCertPredFailure era) where
       , "credential" .= String (textShow kHash)
       , "error" .= String "Committee has resigned"
       ]
+    Conway.ConwayDRepIncorrectRefund givenRefund expectedRefund ->
+      [ "kind" .= String "ConwayDRepIncorrectRefund"
+      , "givenRefund" .= String (textShow givenRefund)
+      , "expectedRefund" .= String (textShow expectedRefund)
+      , "error" .= String "Refund given does not match the expected one"
+      ]
+
 
 instance ToObject (Conway.ConwayDelegPredFailure era) where
   toObject _verb = mconcat . \case
@@ -245,7 +252,7 @@ instance Core.Crypto crypto => ToObject (UpdateState crypto) where
 instance Core.Crypto crypto => ToObject (ChainTransitionError crypto) where
   toObject verb (ChainTransitionError fs) =
     mconcat [ "kind" .= String "ChainTransitionError"
-             , "failures" .= map (toObject verb) fs
+             , "failures" .= fmap (toObject verb) fs
              ]
 
 instance ToObject ChainPredicateFailure where
@@ -307,17 +314,13 @@ instance
 
 
 instance
-  ( ToObject (PredicateFailure (ShelleyUTXO ledgerera))
-  , ToObject (PredicateFailure (ShelleyUTXOW ledgerera))
-  , ToObject (PredicateFailure (Core.EraRule "LEDGER" ledgerera))
+  ( ToObject (PredicateFailure (Core.EraRule "LEDGER" ledgerera))
   ) => ToObject (ShelleyLedgersPredFailure ledgerera) where
   toObject verb (LedgerFailure f) = toObject verb f
 
 
 instance
-  ( ToObject (PredicateFailure (ShelleyUTXO ledgerera))
-  , ToObject (PredicateFailure (ShelleyUTXOW ledgerera))
-  , ToObject (PredicateFailure (Core.EraRule "DELEGS" ledgerera))
+  ( ToObject (PredicateFailure (Core.EraRule "DELEGS" ledgerera))
   , ToObject (PredicateFailure (Core.EraRule "UTXOW" ledgerera))
   ) => ToObject (ShelleyLedgerPredFailure ledgerera) where
   toObject verb (UtxowFailure f) = toObject verb f
@@ -411,7 +414,7 @@ instance
 instance
   ( Api.ShelleyLedgerEra era ~ ledgerera
   , Api.IsShelleyBasedEra era
-  , ToObject (PPUPPredFailure ledgerera)
+  , ToObject (Ledger.EraRuleFailure "PPUP" ledgerera)
   , ToObject (PredicateFailure (Ledger.EraRule "UTXO" ledgerera))
   , Ledger.EraCrypto ledgerera ~ StandardCrypto
   , Show (Ledger.Value ledgerera)
@@ -461,8 +464,7 @@ instance
       (Api.shelleyBasedEra :: Api.ShelleyBasedEra era)
 
 instance
-  ( ToObject (PredicateFailure (ShelleyUTXO ledgerera))
-  , ToObject (PredicateFailure (Core.EraRule "UTXO" ledgerera))
+  ( ToObject (PredicateFailure (Core.EraRule "UTXO" ledgerera))
   , Ledger.EraCrypto ledgerera ~ StandardCrypto
   , Core.Crypto (Ledger.EraCrypto ledgerera)
   ) => ToObject (ShelleyUtxowPredFailure ledgerera) where
@@ -509,7 +511,7 @@ instance
              ]
 
 instance
-  ( ToObject (PPUPPredFailure ledgerera)
+  ( ToObject (Ledger.EraRuleFailure "PPUP" ledgerera)
   , Show (Ledger.Value ledgerera)
   , ToJSON (Ledger.Value ledgerera)
   , ToJSON (Ledger.TxOut ledgerera)
@@ -580,7 +582,7 @@ instance ToJSON Allegra.ValidityInterval where
       mbfield (SJust x) = [x]
 
 instance
-  ( ToObject (PPUPPredFailure ledgerera)
+  ( ToObject (Ledger.EraRuleFailure "PPUP" ledgerera)
   , ToJSON (Ledger.TxOut ledgerera)
   , Show (Ledger.Value ledgerera)
   , ToJSON (Ledger.Value ledgerera)
@@ -1030,7 +1032,7 @@ instance ToObject (ShelleyUpecPredFailure era) where
 instance
   ( Ledger.Era ledgerera
   , ToObject (PredicateFailure (Ledger.EraRule "UTXOS" ledgerera))
-  , ToObject (PPUPPredFailure ledgerera)
+  , ToObject (Ledger.EraRuleFailure "PPUP" ledgerera)
   , ToJSON (Ledger.TxOut ledgerera)
   , Show (Ledger.Value ledgerera)
   , ToJSON (Ledger.Value ledgerera)
@@ -1134,7 +1136,7 @@ instance
 
 instance
   ( ToJSON (Alonzo.CollectError ledgerera)
-  , ToObject (PPUPPredFailure ledgerera)
+  , ToObject (Ledger.EraRuleFailure "PPUP" ledgerera)
   ) => ToObject (AlonzoUtxosPredFailure ledgerera) where
   toObject _ (Alonzo.ValidationTagMismatch isValidating reason) =
     mconcat [ "kind" .= String "ValidationTagMismatch"
@@ -1190,7 +1192,7 @@ instance
   ( Ledger.Era ledgerera
   , ToObject (ShelleyUtxowPredFailure ledgerera)
   , ToObject (PredicateFailure (Ledger.EraRule "UTXOS" ledgerera))
-  , ToObject (PPUPPredFailure ledgerera)
+  , ToObject (Ledger.EraRuleFailure "PPUP" ledgerera)
   , ToJSON (Ledger.TxOut ledgerera)
   , Show (Ledger.Value ledgerera)
   , ToJSON (Ledger.Value ledgerera)
@@ -1210,13 +1212,18 @@ instance
                 , "outputs" .= outputs
                 ]
 
+      Babbage.BabbageNonDisjointRefInputs nonDisjointInputs ->
+        mconcat [ "kind" .= String "BabbageNonDisjointRefInputs"
+                , "outputs" .= nonDisjointInputs
+                ]
+
 instance
   ( Api.ShelleyLedgerEra era ~ ledgerera
   , Api.IsShelleyBasedEra era
   , Ledger.Era ledgerera
   , Ledger.EraCrypto ledgerera ~ StandardCrypto
   , Show (Ledger.Value ledgerera)
-  , ToObject (PPUPPredFailure ledgerera)
+  , ToObject (Ledger.EraRuleFailure "PPUP" ledgerera)
   , ToObject (PredicateFailure (Ledger.EraRule "UTXO" ledgerera))
   , ToJSON (Ledger.Value ledgerera)
   , ToJSON (Ledger.TxOut ledgerera)
@@ -1357,6 +1364,29 @@ instance Ledger.Crypto c => ToObject (PraosChainSelectView c) where
               ]
     where
       renderVRF = Text.decodeUtf8 . B16.encode . Crypto.getOutputVRFBytes
+
+--------------------------------------------------------------------------------
+-- Conway related
+--------------------------------------------------------------------------------
+
+instance
+  ( ToJSON (Alonzo.CollectError ledgerera)
+  ) => ToObject (ConwayUtxosPredFailure ledgerera) where
+  toObject _ (Conway.ValidationTagMismatch isValidating reason) =
+    mconcat [ "kind" .= String "ValidationTagMismatch"
+             , "isvalidating" .= isValidating
+             , "reason" .= reason
+             ]
+  toObject _ (Conway.CollectErrors errors) =
+    mconcat [ "kind" .= String "CollectErrors"
+             , "errors" .= errors
+             ]
+
+-- We define this bogus instance as it is required by some of the
+-- 'ToObject' instances in this module
+instance ToObject (Ledger.VoidEraRule rule era) where
+  -- NOTE: There are no values of type 'Ledger.VoidEraRule rule era'
+  toObject _ = \case
 
 --------------------------------------------------------------------------------
 -- Helper functions
