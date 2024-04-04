@@ -374,8 +374,9 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
 
   dbPath <- canonDbPath nc
 
-  let diffusionArguments :: Diffusion.Arguments Socket      RemoteAddress
-                                                LocalSocket LocalAddress
+  publicPeerSelectionVar <- Diffusion.makePublicPeerSelectionStateVar
+  let diffusionArguments :: Diffusion.Arguments IO Socket      RemoteAddress
+                                                   LocalSocket LocalAddress
       diffusionArguments =
         Diffusion.Arguments {
             Diffusion.daIPv4Address  =
@@ -395,6 +396,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 Nothing                         -> Nothing
           , Diffusion.daAcceptedConnectionsLimit = ncAcceptedConnectionsLimit nc
           , Diffusion.daMode = ncDiffusionMode nc
+          , Diffusion.daPublicPeerSelectionVar = publicPeerSelectionVar
           }
 
   ipv4 <- traverse getSocketOrSocketInfoAddr publicIPv4SocketOrAddr

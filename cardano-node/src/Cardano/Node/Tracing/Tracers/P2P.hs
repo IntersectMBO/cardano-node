@@ -40,6 +40,7 @@ import qualified Ouroboros.Network.PeerSelection.State.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    WarmValency (..))
 import           Ouroboros.Network.PeerSelection.Types ()
+import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingAmount (..))
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 (ServerTrace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
@@ -272,10 +273,11 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              , "actualKnown" .= actualKnown
              , "selectedPeers" .= toJSONList (toList sp)
              ]
-  forMachine _dtal (TracePeerShareRequests targetKnown actualKnown aps sps) =
+  forMachine _dtal (TracePeerShareRequests targetKnown actualKnown (PeerSharingAmount numRequested) aps sps) =
     mconcat [ "kind" .= String "PeerShareRequests"
              , "targetKnown" .= targetKnown
              , "actualKnown" .= actualKnown
+             , "numRequested" .= numRequested
              , "availablePeers" .= toJSONList (toList aps)
              , "selectedPeers" .= toJSONList (toList sps)
              ]
