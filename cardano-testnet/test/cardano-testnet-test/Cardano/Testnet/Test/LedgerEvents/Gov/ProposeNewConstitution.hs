@@ -102,6 +102,8 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   H.note_ $ "Socketpath: " <> socketPath
   H.note_ $ "Foldblocks config file: " <> configurationFile
 
+  minDRepDeposit <- getMinDRepDeposit execConfig
+
   -- Create Conway constitution
   gov <- H.createDirectoryIfMissing $ work </> "governance"
   proposalAnchorFile <- H.note $ work </> gov </> "sample-proposFal-anchor"
@@ -142,7 +144,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   void $ H.execCli' execConfig
     [ "conway", "governance", "action", "create-constitution"
     , "--testnet"
-    , "--governance-action-deposit", show @Int 1_000_000 -- TODO: Get this from the node
+    , "--governance-action-deposit", show @Integer minDRepDeposit
     , "--deposit-return-stake-verification-key-file", stakeVkeyFp
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
