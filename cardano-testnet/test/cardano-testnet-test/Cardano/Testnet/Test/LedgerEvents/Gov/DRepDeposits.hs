@@ -32,7 +32,7 @@ import qualified GHC.Stack as GHC
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query (EpochStateView, findLargestUtxoForPaymentKey,
-                   getDRepInfo, getEpochStateView)
+                   getDRepInfo, getEpochStateView, getMinDRepDeposit)
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime (PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair),
@@ -92,13 +92,15 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
+  minDRepDeposit <- getMinDRepDeposit execConfig
+
   -- DRep 1 (not enough deposit)
 
   drepDir1 <- H.createDirectoryIfMissing $ gov </> "drep1"
 
   drepKeyPair1 <- generateDRepKeyPair execConfig drepDir1 "keys"
   drepRegCert1 <- generateRegistrationCertificate execConfig drepDir1 "reg-cert"
-                                                  drepKeyPair1 999_999
+                                                  drepKeyPair1 (minDRepDeposit - 1)
   drepRegTxBody1 <- createDRepRegistrationTxBody execConfig epochStateView sbe drepDir1 "reg-cert-txbody"
                                                  drepRegCert1 wallet0
   drepSignedRegTx1 <- signTx execConfig drepDir1 "signed-reg-tx"
@@ -112,7 +114,7 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
 
   drepKeyPair2 <- generateDRepKeyPair execConfig drepDir2 "keys"
   drepRegCert2 <- generateRegistrationCertificate execConfig drepDir2 "reg-cert"
-                                                  drepKeyPair2 1_000_000
+                                                  drepKeyPair2 minDRepDeposit
   drepRegTxBody2 <- createDRepRegistrationTxBody execConfig epochStateView sbe drepDir2 "reg-cert-txbody"
                                                  drepRegCert2 wallet1
   drepSignedRegTx2 <- signTx execConfig drepDir2 "signed-reg-tx"
@@ -122,7 +124,8 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
 
   deposits <- H.evalMaybeM $ getDRepDeposits sbe (File configurationFile) (File socketPath) 10 1
 
-  deposits H.=== [1_000_000]
+  deposits H.=== [minDRepDeposit]
+
 
 -- DRep key pair generation
 
@@ -148,13 +151,13 @@ generateRegistrationCertificate
   -> FilePath
   -> String
   -> PaymentKeyPair
-  -> Int
+  -> Integer
   -> m DRepRegistrationCertificate
 generateRegistrationCertificate execConfig work prefix drepKeyPair depositAmount = do
   let dRepRegistrationCertificate = DRepRegistrationCertificate (work </> prefix <> ".regcert")
   void $ H.execCli' execConfig [ "conway", "governance", "drep", "registration-certificate"
                                , "--drep-verification-key-file", paymentVKey drepKeyPair
-                               , "--key-reg-deposit-amt", show @Int depositAmount
+                               , "--key-reg-deposit-amt", show @Integer depositAmount
                                , "--out-file", registrationCertificateFile dRepRegistrationCertificate
                                ]
   return dRepRegistrationCertificate
