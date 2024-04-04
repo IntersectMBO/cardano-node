@@ -87,67 +87,51 @@ jobs:
         echo "# cabal.project.local"
         cat cabal.project.local
 
+    # A dry run `build all` operation does *NOT* downlaod anything, it just looks at the package
+    # indices to generate an install plan.
     - name: Build dry run
-      run: |
-        cabal build all --dry-run --minimize-conflict-set
+      run: cabal build all --enable-tests --dry-run --minimize-conflict-set
 
-    # For users who fork cardano-node and want to define a writable cache, then can set up their own
-    # S3 bucket then define in their forked repository settings the following secrets:
-    #
-    #   AWS_ACCESS_KEY_ID
-    #   AWS_SECRET_ACCESS_KEY
-    #   BINARY_CACHE_URI
-    #   BINARY_CACHE_REGION
-    - name: Cabal cache over S3
-      uses: action-works/cabal-cache-s3@v1
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    # From the install plan we generate a dependency list.
+    - name: Record dependencies
+      id: record-deps
+      run: |
+        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
+        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
+        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
+        cat dist-newstyle/cache/plan.json | jq -r '."install-plan" | select(.style != "local") | .id' | sort | uniq > dependencies.txt
+
+    # From the dependency list we restore the cached dependencies.
+    # We use the hash of `dependencies.txt` as part of the cache key because that will be stable
+    # until the `index-state` values in the `cabal.project` file changes.
+    - name: Restore cached dependencies
+      uses: actions/cache/restore@v4
+      id: cache
       with:
-        region: ${{ vars.BINARY_CACHE_REGION }}
-        dist-dir: dist-newstyle
-        store-path: ${{ steps.setup-haskell.outputs.cabal-store }}
-        threads: ${{ vars.BINARY_CACHE_THREADS }}
-        archive-uri: ${{ vars.BINARY_CACHE_URI }}/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}/${{ matrix.cabal }}/${{ matrix.ghc }}
-        skip: "${{ vars.BINARY_CACHE_URI == '' }}"
+        path: |
+          ${{ steps.setup-haskell.outputs.cabal-store }}
+          dist-newstyle
+        key: cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
 
-    # It's important to ensure that people who fork this repository can not only successfully build in
-    # CI by default, but also have meaning cabal store caching.
-    #
-    # Because syncing with S3 requires credentials, we cannot rely on S3 for this. For this reason a
-    # https fallback is used. The https server mirrors the content of the S3 bucket. The https cabal
-    # store archive is read-only for security reasons.
-    #
-    # Users who fork this repository who want to have a writable cabal store archive are encouraged
-    # to set up their own S3 bucket.
-    - name: Cabal cache over HTTPS
-      uses: action-works/cabal-cache-s3@v1
+    # Now we install the dependencies. If the cache was found and restored in the previous step,
+    # this should be a no-op, but if the cache key was not found we need to build stuff so we can
+    # cache it for the next step.
+    - name: Install dependencies
+      run: cabal build all --enable-tests --only-dependencies -j --ghc-option=-j4
+
+    # Always store the cabal cache.
+    # This can fail (benign failure) if there is already a hash at that key.
+    - name: Cache Cabal store
+      uses: actions/cache/save@v4
       with:
-        dist-dir: dist-newstyle
-        store-path: ${{ steps.setup-haskell.outputs.cabal-store }}
-        threads: ${{ vars.BINARY_CACHE_THREADS }}
-        archive-uri: https://iohk.cache.haskellworks.io/${{ env.CABAL_CACHE_VERSION }}/${{ runner.os }}/${{ matrix.cabal }}/${{ matrix.ghc }}
-        skip: "${{ vars.BINARY_CACHE_URI != '' }}"
-        enable-save: false
+        path: |
+          ${{ steps.setup-haskell.outputs.cabal-store }}
+          dist-newstyle
+        key: cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
 
-    # The following seems like a duplicate but it is due to a bug in cabal which can sometimes
-    # cause build intermittent build failures on Windows, so we run the build twice.
-    #
-    # https://github.com/haskell/cabal/issues/9587
-    #
-    # TODO Remove the workaround when the cabal bug is fixed.
-    - name: Build core components
-      continue-on-error: true
-      run: |
-        cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api -j1
-
-    - name: Build core components
-      run: |
-        cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api -j1
-
-    - name: Build remaining components
-      run: |
-        cabal build all
+    # Now we build.
+    - name: Build all
+      run: cabal build all --enable-tests
 
     - name: Run tests
       env:
@@ -168,7 +152,7 @@ jobs:
 
     - name: Upload workspaces on tests failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: failed-test-workspaces-${{ matrix.os }}-ghc${{ matrix.ghc }}-cabal${{ matrix.cabal }}.tgz
         path: ${{ runner.temp }}/workspaces.tgz
@@ -198,7 +182,8 @@ jobs:
           find "${{ runner.temp }}/chairman" -type s -exec rm -f {} \;
         fi
 
-    - uses: actions/upload-artifact@v2
+    - name: Save Artifact
+      uses: actions/upload-artifact@v4
       if: ${{ always() }}
       continue-on-error: true
       with:
@@ -217,9 +202,9 @@ jobs:
     # and will silently fail if msys2 is not in path. See the "Run tests" step.
     #
     # - name: Setup tmate session
-    #   if: ${{ failure() }}
-    #   uses: mxschmitt/action-tmate@v3
-    #   with:
+    #  if: ${{ failure() }}
+    #  uses: mxschmitt/action-tmate@v3
+    #  with:
     #     limit-access-to-actor: true
 
   build-complete:
