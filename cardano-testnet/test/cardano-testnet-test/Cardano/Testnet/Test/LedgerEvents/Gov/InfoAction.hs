@@ -106,50 +106,6 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
                       , P.signingKeyFile = stakeSKeyFp
                       }
 
-  -- Create Drep registration certificates
-  let drepCertFile :: Int -> FilePath
-      drepCertFile n = gov </> "drep-keys" <>"drep" <> show n <> ".regcert"
-  H.forConcurrently_ [1..3] $ \n -> do
-    H.execCli' execConfig
-       [ "conway", "governance", "drep", "registration-certificate"
-       , "--drep-verification-key-file", defaultDRepVkeyFp n
-       , "--key-reg-deposit-amt", show @Int 1_000_000
-       , "--out-file", drepCertFile n
-       ]
-
-  -- Retrieve UTxOs for registration submission
-  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
-
-  drepRegTxbodyFp <- H.note $ work </> "drep.registration.txbody"
-  drepRegTxSignedFp <- H.note $ work </> "drep.registration.tx"
-
-  void $ H.execCli' execConfig
-    [ "conway", "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
-    , "--tx-in", Text.unpack $ renderTxIn txin1
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show @Int 5_000_000
-    , "--certificate-file", drepCertFile 1
-    , "--certificate-file", drepCertFile 2
-    , "--certificate-file", drepCertFile 3
-    , "--witness-override", show @Int 4
-    , "--out-file", drepRegTxbodyFp
-    ]
-
-  void $ H.execCli' execConfig
-    [ "conway", "transaction", "sign"
-    , "--tx-body-file", drepRegTxbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
-    , "--signing-key-file", defaultDRepSkeyFp 1
-    , "--signing-key-file", defaultDRepSkeyFp 2
-    , "--signing-key-file", defaultDRepSkeyFp 3
-    , "--out-file", drepRegTxSignedFp
-    ]
-
-  void $ H.execCli' execConfig
-    [ "conway", "transaction", "submit"
-    , "--tx-file", drepRegTxSignedFp
-    ]
-
   -- Create info action proposal
 
   void $ H.execCli' execConfig
