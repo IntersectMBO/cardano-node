@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2024-03-25T10:39:21Z
-  , cardano-haskell-packages 2024-03-22T16:27:41Z
+  , cardano-haskell-packages 2024-04-04T11:57:10Z
 
 packages:
   cardano-git-rev
@@ -76,8 +76,8 @@ if impl(ghc >= 9.6)
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: ef26a50893c65f346ea0a3b865632b014692db3f
-  --sha256: 0c3pd7zdriid7n6a5n86f2c009lygls10qjawmdiih8rvpvr51d3
+  tag: a31e7705fc42a39389d90299c77498dac77e546e
+  --sha256: 0f6vz6rh3zzqz52hzzydqvgw5hj6ii0fhvhs901sylzhl4d21jw1
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -89,7 +89,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: cf6e015c1829dc5e54b8baec4f16f6f0b3d25f53
-  --sha256: 1cqsim1ka2949p64096mz7j44sx23rfnq88bns2k39fyf2h19r1h
+  tag: 0fb8ae595e7b0ae644c4724aa4b63594d1e53877
+  --sha256: 01yy747i9bwf6jhfmww8bgf2jz86plw9j42hmfz2zbq3cl72qfsj
   subdir:
     cardano-api
