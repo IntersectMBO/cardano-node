@@ -3,6 +3,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 {- HLINT ignore "Use head" -}
 
@@ -35,6 +37,9 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Golden as H
+import qualified Data.Aeson.KeyMap as KeyMap
+import qualified Data.Text as T
+import System.Directory (doesFileExist)
 
 -- | Test CLI queries
 -- Execute me with:
@@ -116,15 +121,95 @@ hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> 
   -- query drep-state to stdout
   -- TODO: deserialize to a Haskell value when
   -- https://github.com/IntersectMBO/cardano-cli/issues/606 is tackled
-  dreps :: Aeson.Value <- H.noteShowM $ H.execCliStdoutToJson execConfig [ "conway", "query", "drep-state", "--all-dreps"]
-  assertArrayOfSize dreps 3
+  -- H.noteShowM_ $ H.execCli' execConfig [ "conway", "query", "drep-state", "--all-dreps" ]
   -- query drep-state to a file
-  let drepStateOutFile = work </> "drep-state-out.json"
+  drepStateOutFile <- liftIO $ getTmpFile "all-dreps" ".json"
+  
   H.noteM_ $ H.execCli' execConfig [ "conway", "query", "drep-state", "--all-dreps"
                                    , "--out-file", drepStateOutFile]
   _ :: Aeson.Value <- H.leftFailM . H.readJsonFile $ drepStateOutFile
 
-  H.success
+
+
+  -- H.noteShowM_ $ H.execCli' execConfig [ "conway", "query", "drep-state", "--all-dreps", "--include-stake" ]
+  -- query drep-state to a file
+  drepStateIncludeStakeOutFile <- liftIO $ getTmpFile "all-dreps-include-stake" ".json"
+  H.noteM_ $ H.execCli' execConfig [ "conway", "query", "drep-state", "--all-dreps", "--include-stake"
+                                   , "--out-file", drepStateIncludeStakeOutFile]
+  v :: Aeson.Value <- H.leftFailM . H.readJsonFile $ drepStateIncludeStakeOutFile
+
+  firstDRep <- T.unpack <$> getFirstDRepHash v
+  H.note_ firstDRep
+
+  -- _ :: Aeson.Value <- H.noteShowM $ H.execCliStdoutToJson execConfig [ "conway", "query", "drep-state", "--drep-key-hash", firstDRep ]
+  -- query drep-state to a file
+  drepAloneOutFile <- liftIO $ getTmpFile "one-drep" ".json"
+  H.noteM_ $ H.execCli' execConfig [ "conway", "query", "drep-state", "--drep-key-hash", firstDRep
+                                   , "--out-file", drepAloneOutFile]
+  _ :: Aeson.Value <- H.leftFailM . H.readJsonFile $ drepAloneOutFile
+
+  -- _ :: Aeson.Value <- H.noteShowM $ H.execCliStdoutToJson execConfig [ "conway", "query", "drep-state", "--drep-key-hash", firstDRep, "--include-stake" ]
+  -- query drep-state to a file
+  drepAloneIncludeStakeOutFile <- liftIO $ getTmpFile "one-drep-include-stake" ".json"
+  H.noteM_ $ H.execCli' execConfig [ "conway", "query", "drep-state", "--drep-key-hash", firstDRep, "--include-stake" 
+                                   , "--out-file", drepAloneIncludeStakeOutFile]
+  _ :: Aeson.Value <- H.leftFailM . H.readJsonFile $ drepAloneIncludeStakeOutFile
+
+  liftIO $ writeScript drepStateOutFile drepStateIncludeStakeOutFile drepAloneOutFile drepAloneIncludeStakeOutFile
+
+  H.assert False
+  -- H.success
+
+writeScript :: String -> String -> String -> String -> IO ()
+writeScript allDreps allRepsWithStake oneDrep oneDrepWithStake =
+  writeFile "/home/churlin/dev/cardano-node-2/cat-outputs.sh" $ unlines [
+      "#!/usr/bin/env bash"
+      , ""
+      , "echo all-dreps.json"
+      , "cat " <> allDreps
+      , "echo ''"
+      , "echo all-dreps-with-stake.json"
+      , "cat " <> allRepsWithStake
+      , "echo ''"
+      , "echo one-drep.json"
+      , "cat " <> oneDrep
+      , "echo ''"
+      , "echo one-drep-with-stake.json"
+      , "cat " <> oneDrepWithStake
+    ]
+
+getTmpFile :: FilePath -> FilePath -> IO FilePath
+getTmpFile basename suffix =
+  go 0
+  where 
+    go :: Int -> IO FilePath
+    go (i :: Int) = do
+      let target = "/tmp/" <> basename <> "-" <> show i <> suffix -- "foo-0.json"
+      fileExists <- doesFileExist target
+      if fileExists
+      then go (i + 1)
+      else return target
+
+
+getFirstDRepHash :: MonadTest m => Aeson.Value -> m T.Text
+getFirstDRepHash v =
+  case v of
+    Aeson.Array a -> do
+      case a Vector.! 0 of
+        Aeson.Array b -> do
+          case b Vector.! 0 of
+            Aeson.Object o ->
+              case KeyMap.lookup "keyHash" o of
+                Just (Aeson.String t) -> return t
+                _ -> failWrongType "?4"
+            _ -> failWrongType "?3"
+        _ -> failWrongType "?2"
+    _ -> failWrongType "?1"
+   where
+     failWrongType got = do
+       H.note_ $ "Expected a JSON object, but received: " <> got
+       H.failure
+
 
 -- | @assertArrayOfSize v n@ checks that the value is a JSON array of size @n@,
 -- otherwise it fails the test.
