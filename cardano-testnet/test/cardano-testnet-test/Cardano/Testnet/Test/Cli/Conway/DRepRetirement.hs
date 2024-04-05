@@ -239,7 +239,7 @@ waitDRepsNumber' ::
   -> m (Maybe [L.DRepState StandardCrypto]) -- ^ The DReps when the expected number of DReps was attained.
 waitDRepsNumber' nodeConfigFile socketPath maxEpoch expectedDRepsNb = do
   result <- runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
-      $ \(AnyNewEpochState actualEra newEpochState) -> do
+      $ \(AnyNewEpochState actualEra newEpochState _) -> do
         case testEquality sbe actualEra of
           Just Refl -> do
             let dreps = Map.elems $ shelleyBasedEraConstraints sbe newEpochState
