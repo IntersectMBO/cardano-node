@@ -218,12 +218,16 @@ def all_profile_variants:
           { producer: {cores: 16, memory: 122000, memory_max: 128000}
           , explorer: {cores: 16, memory: 122000, memory_max: 128000}
           }
+        , host_volumes: [
+            {source: "ssd1", destination: "/ssd1", read_only: false}
+          , {source: "ssd2", destination: "/ssd2", read_only: false}
+          ]
         , fetch_logs_ssh: true
         }
       , aws:
         { instance_type:
-          { producer: "r5.4xlarge"
-          , explorer: "r5.4xlarge"
+          { producer: "r5d.4xlarge"
+          , explorer: "r5d.4xlarge"
           }
         , use_public_routing: true
         }
@@ -1024,6 +1028,23 @@ def all_profile_variants:
         { resources:
           # Minus 600 MB for the OS, same as with the 16 GB nomad-perf cluster.
           { producer: {cores: 8, memory: 31400, memory_max: 31400} }
+        }
+      }
+    }
+  , $nomad_perf_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
+    { name: "value-40M64G-nomadperfssd"
+    , genesis:
+      { utxo: (40 * $M)
+        # This is to account for cloud genesis deployment (upload and download).
+        # Test run with 42M "utxo" and 900s "offset": nodes had from 3 to 244
+        # unneeded seconds as shown in 'ns:"BlockchainTime.StartTimeInTheFuture"'.
+      , extra_future_offset: 700
+      }
+    , cluster:
+      { nomad:
+        { resources:
+          # Minus 600 MB for the OS, same as with the 16 GB nomad-perf cluster.
+          { producer: {cores: 8, memory: 63400, memory_max: 63400} }
         }
       }
     }
