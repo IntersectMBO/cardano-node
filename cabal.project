@@ -64,8 +64,8 @@ package plutus-scripts-bench
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 9e7d827b1e06de326e6e303c91b7d3d9d5402552
-  --sha256: 1928whrs6fv7lvzqhhjxid38hxpq6gp62ghd9cqw38v2v765dpfx
+  tag: 6b52504b882e1767f53bb37df4365c58014bea09
+  --sha256: 1jc2n0h7a9569617r2ds4a8bi4j20xlgsnmgqn10cdjfbq3j74fk
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -77,7 +77,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: 5e6b14102d628892bd90e5bb59d45830c3cba613
-  --sha256: 1myh0kpm2w8s7c4mqxlch920ab7d1rr003a7rh4wr0zq2x8n7lai
+  tag: c98b480098094e86aab43d5478b264032fd02da7
+  --sha256: 07x7k7pk16ihidp44n2khsv8cs8zxid27xlnjdxy6sy9l08hi4qk
   subdir:
     cardano-api
