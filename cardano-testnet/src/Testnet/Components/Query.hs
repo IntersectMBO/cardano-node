@@ -19,29 +19,23 @@ module Testnet.Components.Query
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Shelley (ShelleyLedgerEra, fromShelleyTxIn, fromShelleyTxOut)
 
 import           Cardano.CLI.Types.Output
-import qualified Cardano.Ledger.Shelley.LedgerState as L
-import qualified Cardano.Ledger.UTxO as L
 
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
 import           Control.Monad.Trans.Resource
 import           Data.Aeson
-import           Data.Bifunctor (bimap)
 import           Data.IORef
 import           Data.List (sortOn)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import qualified Data.Map.Strict as Map
 import           Data.Maybe (listToMaybe)
 import           Data.Ord (Down (..))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Type.Equality
 import           GHC.Stack
-import           Lens.Micro ((^.))
 import           System.Directory (doesFileExist, removeFile)
 
 import qualified Testnet.Process.Run as H
@@ -142,20 +136,9 @@ findAllUtxos
   -> ShelleyBasedEra era
   -> m (Map TxIn (TxOut CtxUTxO era))
 findAllUtxos epochStateView sbe = withFrozenCallStack $ do
-  AnyNewEpochState sbe' newEpochState <- getEpochState epochStateView
+  AnyNewEpochState sbe' _ tbs <- getEpochState epochStateView
   Refl <- H.leftFail $ assertErasEqual sbe sbe'
-  pure $ fromLedgerUTxO $ newEpochState ^. L.nesEsL . L.esLStateL . L.lsUTxOStateL . L.utxosUtxoL
-  where
-    fromLedgerUTxO
-      :: ()
-      => L.UTxO (ShelleyLedgerEra era)
-      -> Map TxIn (TxOut CtxUTxO era)
-    fromLedgerUTxO (L.UTxO utxo) =
-      shelleyBasedEraConstraints sbe
-        $ Map.fromList
-        . map (bimap fromShelleyTxIn (fromShelleyTxOut sbe))
-        . Map.toList
-        $ utxo
+  pure $ getUTxOValues sbe' tbs
 
 -- | Retrieve utxos from the epoch state view for an address.
 findUtxosWithAddress
