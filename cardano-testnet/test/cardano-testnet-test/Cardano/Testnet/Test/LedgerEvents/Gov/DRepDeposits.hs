@@ -127,8 +127,16 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
   deposits H.=== [minDRepDeposit]
 
 
--- DRep key pair generation
-
+-- | Generates a key pair for a decentralized representative (DRep) using @cardano-cli@.
+--
+-- The function takes three parameters:
+--
+-- * 'execConfig': Specifies the CLI execution configuration.
+-- * 'work': Base directory path where keys will be stored.
+-- * 'prefix': Name for the subfolder that will be created under 'work' folder to store the output keys.
+--
+-- Returns the generated 'PaymentKeyPair' containing paths to the verification and
+-- signing key files.
 generateDRepKeyPair :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack) => H.ExecConfig -> FilePath -> String -> m PaymentKeyPair
 generateDRepKeyPair execConfig work prefix = do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
@@ -145,6 +153,21 @@ generateDRepKeyPair execConfig work prefix = do
 
 newtype DRepRegistrationCertificate = DRepRegistrationCertificate { registrationCertificateFile :: FilePath }
 
+-- | Generates a registration certificate for a decentralized representative (DRep)
+-- using @cardano-cli@.
+--
+-- The function takes five parameters:
+--
+-- * 'execConfig': Specifies the CLI execution configuration.
+-- * 'work': Base directory path where the certificate file will be stored.
+-- * 'prefix': Prefix for the output certificate file name. The extension will be @.regcert@.
+-- * 'drepKeyPair': Payment key pair associated with the DRep. Can be generated using
+--                  'generateDRepKeyPair'.
+-- * 'depositAmount': Deposit amount required for DRep registration. The right amount
+--                    can be obtained using 'getMinDRepDeposit'.
+--
+-- Returns the generated 'DRepRegistrationCertificate' containing the file path to
+-- the registration certificate.
 generateRegistrationCertificate
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => H.ExecConfig
@@ -166,6 +189,23 @@ generateRegistrationCertificate execConfig work prefix drepKeyPair depositAmount
 
 newtype TxBody = TxBody { txBodyFile :: FilePath }
 
+-- | Composes a decentralized representative (DRep) registration transaction body
+--   (without signing) using @cardano-cli@.
+--
+-- This function takes seven parameters:
+--
+-- * 'execConfig': Specifies the CLI execution configuration.
+-- * 'epochStateView': Current epoch state view for transaction building. It can be obtained
+--                     using the 'getEpochStateView' function.
+-- * 'sbe': The Shelley-based era (e.g., 'ShelleyEra') in which the transaction will be constructed.
+-- * 'work': Base directory path where the transaction body file will be stored.
+-- * 'prefix': Prefix for the output transaction body file name. The extension will be @.txbody@.
+-- * 'drepRegCert': The registration certificate for the DRep, obtained using
+--                  'generateRegistrationCertificate'.
+-- * 'wallet': Payment key information associated with the transaction,
+--             as returned by 'cardanoTestnetDefault'.
+--
+-- Returns the generated 'TxBody' containing the file path to the transaction body.
 createDRepRegistrationTxBody
   :: (H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig
@@ -193,6 +233,17 @@ createDRepRegistrationTxBody execConfig epochStateView sbe work prefix drepRegCe
 
 newtype SignedTx = SignedTx { signedTxFile :: FilePath }
 
+-- | Calls @cardano-cli@ to signs a transaction body using the specified key pairs.
+--
+-- This function takes five parameters:
+--
+-- * 'execConfig': Specifies the CLI execution configuration.
+-- * 'work': Base directory path where the signed transaction file will be stored.
+-- * 'prefix': Prefix for the output signed transaction file name. The extension will be @.tx@.
+-- * 'txBody': Transaction body to be signed, obtained using 'createDRepRegistrationTxBody' or similar.
+-- * 'signatoryKeyPairs': List of payment key pairs used for signing the transaction.
+--
+-- Returns the generated 'SignedTx' containing the file path to the signed transaction file.
 signTx :: (MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig
   -> FilePath
@@ -210,8 +261,12 @@ signTx execConfig work prefix txBody signatoryKeyPairs = do
     ]
   return signedTx
 
--- Transaction submission
-
+-- | Submits a signed transaction using @cardano-cli@.
+--
+-- This function takes two parameters:
+--
+-- * 'execConfig': Specifies the CLI execution configuration.
+-- * 'signedTx': Signed transaction to be submitted, obtained using 'signTx'.
 submitTx
   :: (MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig
@@ -223,8 +278,16 @@ submitTx execConfig signedTx =
     , "--tx-file", signedTxFile signedTx
     ]
 
--- Attempt to submit transaction that must fail
-
+-- | Attempts to submit a transaction that is expected to fail using @cardano-cli@.
+--
+-- This function takes two parameters:
+--
+-- * 'execConfig': Specifies the CLI execution configuration.
+-- * 'signedTx': Signed transaction to be submitted, obtained using 'signTx'.
+--
+-- If the submission fails (the expected behavior), the function succeeds.
+-- If the submission succeeds unexpectedly, it raises a failure message that is
+-- meant to be caught by @Hedgehog@.
 failToSubmitTx
   :: (MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig
@@ -239,16 +302,27 @@ failToSubmitTx execConfig signedTx = GHC.withFrozenCallStack $ do
     ExitSuccess -> H.failMessage GHC.callStack "Transaction submission was expected to fail but it succeeded"
     _ -> return ()
 
--- Obtains the amounts of the DRep deposits given some assumptions
-
+-- | Obtains a list of deposits made by decentralized representatives (DReps) under specified conditions.
+--
+-- This function takes five parameters:
+--
+-- * 'sbe': A 'ShelleyBasedEra' witness that this is the 'ConwayEra'.
+-- * 'nodeConfigFile': The FoldBlocks configuration file as returned by 'cardanoTestnetDefault'.
+-- * 'socketPath': Path to the socket file for communicating with the node.
+-- * 'maxEpoch': The timeout epoch by which the exact required number of DReps must be reached.
+-- * 'expectedDRepsNb': Expected number of DReps. If not reached by 'maxEpoch', the test fails.
+--
+-- If the expected number of DReps is attained by 'maxEpoch', the function returns
+-- the list of the amounts deposited by each DReps when the expected number of registered DReps
+-- was attained. Otherwise, the test fails.
 getDRepDeposits ::
   (HasCallStack, MonadCatch m, MonadIO m, MonadTest m)
-  => ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
+  => ShelleyBasedEra ConwayEra
   -> NodeConfigFile In
   -> SocketPath
-  -> EpochNo -- ^ The termination epoch: the constitution proposal must be found *before* this epoch
-  -> Int -- ^ The expected numbers of DReps. If this number is not reached until the termination epoch, this function fails the test.
-  -> m (Maybe [Integer]) -- ^ The DReps when the expected number of DReps was attained.
+  -> EpochNo
+  -> Int
+  -> m (Maybe [Integer])
 getDRepDeposits sbe nodeConfigFile socketPath maxEpoch expectedDRepsNb = do
   mDRepInfo <- getDRepInfo sbe nodeConfigFile socketPath maxEpoch expectedDRepsNb
   return $ map (unCoin . drepDeposit) <$> mDRepInfo
