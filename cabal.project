@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2024-03-25T10:39:21Z
-  , cardano-haskell-packages 2024-04-05T11:01:53Z
+  , cardano-haskell-packages 2024-04-05T13:36:27Z
 
 packages:
   cardano-git-rev
@@ -63,21 +63,9 @@ package plutus-scripts-bench
 
 source-repository-package
   type: git
-  location: https://github.com/jasagredo/latex-svg
-  tag: c52c9905cb043ddb430c93b41ce431a7506a300d
-  --sha256: 0h9yrlvmyi32zlr0cj2nx8ik0y2cg5ckcxq4lgq5vvjyl6lhzrbk
-  subdir:
-    latex-svg-image
-
-if impl(ghc >= 9.6)
-  allow-newer:
-    cardano-lmdb-simple:bytestring
-
-source-repository-package
-  type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 33881548e70d619e652cb5334e31ee59ceefcc55
-  --sha256: 1a64976szdvp0vmpjm974l955i18cjzqgcbyfgwjma8zh07r4347
+  tag: 9e7d827b1e06de326e6e303c91b7d3d9d5402552
+  --sha256: 1928whrs6fv7lvzqhhjxid38hxpq6gp62ghd9cqw38v2v765dpfx
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -89,7 +77,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: dd72904df7127cc74f0c9ae2af5b486aa0449409
-  --sha256: 1r4lqggs7h6f6whpsz3ms83y4lcgar8qmvm2pnp1cydf2n86i020
+  tag: 5e6b14102d628892bd90e5bb59d45830c3cba613
+  --sha256: 1myh0kpm2w8s7c4mqxlch920ab7d1rr003a7rh4wr0zq2x8n7lai
   subdir:
     cardano-api
