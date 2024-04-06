@@ -196,7 +196,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
   !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex sbe (fromString txidString))
                                         configurationFile
                                         socketPath
-                                        10
+                                        (EpochNo 10)
 
   governanceActionIndex <- case propSubmittedResult of
                              Left e ->
