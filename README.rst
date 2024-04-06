@@ -47,7 +47,7 @@ Obtaining ``cardano-node``
 Building from source
 ====================
 
-Documentation for building the node can be found `here <https://docs.cardano.org/getting-started/installing-the-cardano-node>`_.
+Documentation for building the node can be found `here <https://docs.cardano.org/development-guidelines/installing-the-cardano-node>`_.
 
 Executables
 ===========
