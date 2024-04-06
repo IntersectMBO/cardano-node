@@ -9,8 +9,9 @@ module Cardano.Testnet.Test.LedgerEvents.Gov.DRepDeposits
   ( hprop_ledger_events_drep_deposits
   ) where
 
-import           Cardano.Api (AnyCardanoEra (..), ConwayEra, EpochNo, File (..), FileDirection (In),
-                   NodeConfigFile, ShelleyBasedEra (..), SocketPath, ToCardanoEra (..), renderTxIn)
+import           Cardano.Api (AnyCardanoEra (..), ConwayEra, EpochNo (EpochNo), File (..),
+                   FileDirection (In), NodeConfigFile, ShelleyBasedEra (..), SocketPath,
+                   ToCardanoEra (..), renderTxIn)
 import           Cardano.Api.Ledger (Coin (..), DRepState (..))
 
 import           Cardano.Testnet
@@ -121,7 +122,7 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
 
   submitTx execConfig drepSignedRegTx2
 
-  deposits <- H.evalMaybeM $ getDRepDeposits sbe (File configurationFile) (File socketPath) 10 1
+  deposits <- H.evalMaybeM $ getDRepDeposits sbe (File configurationFile) (File socketPath) (EpochNo 10) 1
 
   deposits H.=== [minDRepDeposit]
 
