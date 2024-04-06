@@ -858,7 +858,6 @@ deploy-genesis-nomadcloud() {
       --file="${dir}"/"${genesis_file_name}"      \
       --owner=65534 --group=65534 --mode="u=rwx"  \
       --directory="${dir}"/genesis --files-from=-
-
   # Upload genesis tar file
   local s3_region="eu-central-1"
   local s3_host="s3.${s3_region}.amazonaws.com";
