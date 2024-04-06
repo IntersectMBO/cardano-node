@@ -33,6 +33,7 @@ import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
 import           Ouroboros.Consensus.Cardano.Condense ()
+import           Ouroboros.Consensus.Config (emptyCheckpointsMap)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import qualified Ouroboros.Consensus.Shelley.Node.Praos as Praos
@@ -305,6 +306,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              (maybe 9 fromIntegral npcTestConwayHardForkAtVersion)
                 Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
         }
+       -- TODO: once https://github.com/IntersectMBO/cardano-node/issues/5730 is implemented 'emptyCheckpointsMap' needs to be replaced with the checkpoints map read from a configuration file.
+      , checkpoints = emptyCheckpointsMap
       }
 
         ----------------------------------------------------------------------

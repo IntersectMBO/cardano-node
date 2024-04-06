@@ -164,7 +164,7 @@ generateTxPure TxEnvironment{..} inQueue
         collateralFunds :: (TxInsCollateral BabbageEra, [Fund])
         collateralFunds = (TxInsCollateralNone, [])
 
-    outValues = computeOutputValues $ map getFundLovelace inputs
+    outValues = computeOutputValues $ map getFundCoin inputs
     (outputs, toFunds) = makeToUTxOList (repeat computeUTxO) outValues
 
     computeOutputValues :: [L.Coin] -> [L.Coin]
