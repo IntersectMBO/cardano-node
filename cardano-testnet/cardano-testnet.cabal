@@ -74,7 +74,7 @@ library
                       , scientific
                       , si-timers
                       , stm
-                      , tasty
+                      , tasty ^>= 1.5
                       , tasty-expected-failure
                       , tasty-hedgehog
                       , text
@@ -152,7 +152,7 @@ test-suite cardano-testnet-golden
                       , hedgehog-extras
                       , process
                       , regex-compat
-                      , tasty
+                      , tasty ^>= 1.5
                       , tasty-hedgehog
                       , text
 
@@ -220,7 +220,7 @@ test-suite cardano-testnet-test
                       , mtl
                       , process
                       , regex-compat
-                      , tasty
+                      , tasty ^>= 1.5
                       , text
                       , time
                       , transformers
