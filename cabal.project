@@ -59,3 +59,11 @@ package plutus-scripts-bench
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/tasty
+  tag: bf11a333ea78b9cb2b0fe7cbecc9a03e194bc5f9
+  --sha256: 0vl8cra8d5qnhb47lh5rjvxc43rk57p5wjs5iv37ga5kb94bz8c1
+  subdir: core
+
