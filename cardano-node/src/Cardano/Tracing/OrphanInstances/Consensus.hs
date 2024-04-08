@@ -44,6 +44,8 @@ import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempoo
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent (..))
+import qualified Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as ChainSync.Client
+import qualified Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State as ChainSync.Client
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (BlockingType (..),
                    TraceChainSyncServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
@@ -245,7 +247,11 @@ instance HasSeverityAnnotation (TraceChainSyncClientEvent blk) where
   getSeverityAnnotation (TraceWaitingBeyondForecastHorizon _) = Debug
   getSeverityAnnotation (TraceAccessingForecastHorizon _) = Debug
   getSeverityAnnotation (TraceGaveLoPToken _ _ _) = Debug
-
+  -- TODO new
+  getSeverityAnnotation (TraceOfferJump _) = Info
+  getSeverityAnnotation (TraceJumpResult _) = Info
+  getSeverityAnnotation TraceJumpingWaitingForNextInstruction = Info
+  getSeverityAnnotation (TraceJumpingInstructionIs _) = Info
 
 instance HasPrivacyAnnotation (TraceChainSyncServerEvent blk)
 instance HasSeverityAnnotation (TraceChainSyncServerEvent blk) where
@@ -1358,6 +1364,45 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
                , "given" .= tokenGiven
                , tipToObject (tipFromHeader h)
                , "blockNo" .=  bestBlockNumberPriorToH ]
+    TraceOfferJump jumpTo ->
+      mconcat [ "kind" .= String "ChainSyncClientEvent.TraceOfferJump"
+               , "jumpTo" .= toObject verb jumpTo
+               ]
+    TraceJumpResult res ->
+      mconcat [ "kind" .= String "ChainSyncClientEvent.TraceJumpResult"
+               , "res" .= case res of
+                   ChainSync.Client.AcceptedJump info -> Aeson.object
+                     [ "kind" .= String "AcceptedJump"
+                      -- , "tip" .= toObject verb (AF.headPoint frag)
+                      ]
+                     where
+                       -- frag = ChainSync.Client.jTheirFragment info
+                   ChainSync.Client.RejectedJump info -> Aeson.object
+                     [ "kind" .= String "RejectedJump"
+                      -- , "tip" .= toObject verb (AF.headPoint frag)
+                      ]
+                     where
+                       -- frag = ChainSync.Client.jTheirFragment info
+               ]
+    TraceJumpingWaitingForNextInstruction ->
+      mconcat [ "kind" .= String "ChainSyncClientEvent.TraceJumpingWaitingForNextInstruction"
+               ]
+    TraceJumpingInstructionIs instr ->
+      mconcat [ "kind" .= String "ChainSyncClientEvent.TraceJumpingInstructionIs"
+               , "instr" .= case instr of
+                   ChainSync.Client.RunNormally -> Aeson.object
+                     [ "kind" .= String "RunNormally"
+                      ]
+                   ChainSync.Client.Restart -> Aeson.object
+                     [ "kind" .= String "Restart"
+                      ]
+                   ChainSync.Client.JumpInstruction info -> Aeson.object
+                     [ "kind" .= String "JumpInstruction"
+                      -- , "tip" .= toObject verb (AF.headPoint frag)
+                      ]
+                     where
+                       -- frag = ChainSync.Client.jTheirFragment info
+               ]
 
 instance ConvertRawHash blk
       => ToObject (TraceChainSyncServerEvent blk) where
