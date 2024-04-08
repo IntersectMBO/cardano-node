@@ -506,7 +506,9 @@ instance ( LogFormatting (Header blk)
   forMachine dtal (ChainDB.ChainSelectionLoEDebug curChain loeFrag) =
       mconcat [ "kind" .= String "ChainSelectionLoEDebug"
               , "curChain" .= headAndAnchor curChain
-              , "loeFrag" .= headAndAnchor loeFrag
+              , "loeFrag" .= case loeFrag of
+                  ChainDB.LoEDisabled     -> String "disabled"
+                  ChainDB.LoEEnabled frag -> headAndAnchor frag
               ]
     where
       headAndAnchor frag = object
@@ -1179,7 +1181,7 @@ instance ConvertRawHash blk
   forHuman (ChainDB.OpenedImmutableDB immTip chunk) =
           "Opened imm db with immutable tip at " <> renderPointAsPhrase immTip <>
           " and chunk " <> showT chunk
-  forHuman ChainDB.OpenedVolatileDB = "Opened vol db"
+  forHuman ChainDB.OpenedVolatileDB {} = "Opened vol db"
   forHuman ChainDB.OpenedLgrDB = "Opened lgr db"
   forHuman ChainDB.StartedOpeningDB = "Started opening Chain DB"
   forHuman ChainDB.StartedOpeningImmutableDB = "Started opening Immutable DB"
@@ -1198,7 +1200,7 @@ instance ConvertRawHash blk
     mconcat [ "kind" .= String "OpenedImmutableDB"
              , "immtip" .= forMachine dtal immTip
              , "epoch" .= String ((Text.pack . show) epoch) ]
-  forMachine _dtal ChainDB.OpenedVolatileDB =
+  forMachine _dtal ChainDB.OpenedVolatileDB {} =
       mconcat [ "kind" .= String "OpenedVolatileDB" ]
   forMachine _dtal ChainDB.OpenedLgrDB =
       mconcat [ "kind" .= String "OpenedLgrDB" ]
