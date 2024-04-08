@@ -19,8 +19,6 @@ import           Cardano.Node.Tracing.Era.Shelley ()
 import           Cardano.Node.Tracing.Formatting ()
 import           Cardano.Node.Tracing.Render
 import           Cardano.Prelude (maximumDef)
-
-import Ouroboros.Network.Block (MaxSlotNo(..))
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.HeaderValidation (HeaderEnvelopeError (..), HeaderError (..),
                    OtherHeaderEnvelopeError)
@@ -40,6 +38,7 @@ import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
+import           Ouroboros.Network.Block (MaxSlotNo (..))
 
 import           Data.Aeson (Value (String), toJSON, (.=))
 import           Data.Int (Int64)
@@ -1462,8 +1461,8 @@ instance MetaTrace (LedgerDB.TraceLedgerDBEvent blk) where
   severityFor (Namespace out ("Snapshot" : tl)) Nothing =
     severityFor (Namespace out tl :: Namespace (LedgerDB.TraceSnapshotEvent blk)) Nothing
   severityFor (Namespace _out ("Replay" : _tl)) Nothing = Just Info
-  severityFor (Namespace _out (["Forker"])) Nothing = Just Debug
-  severityFor (Namespace _out (["Flavor"])) Nothing = Just Debug
+  severityFor (Namespace _out ["Forker"]) Nothing = Just Debug
+  severityFor (Namespace _out ["Flavor"]) Nothing = Just Debug
   severityFor _ _ = Nothing
 
   documentFor (Namespace o ("Snapshot" : tl)) =

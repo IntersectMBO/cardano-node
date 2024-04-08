@@ -25,14 +25,14 @@ import           Cardano.Logging
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import qualified Cardano.Node.Startup as Startup
-import           Cardano.Slotting.Slot (EpochNo, SlotNo (..), WithOrigin)
+import           Cardano.Slotting.Slot (EpochNo, SlotNo (..), WithOrigin, withOrigin)
 import           Cardano.Tracing.OrphanInstances.Network ()
 import qualified Ouroboros.Consensus.Block.RealPoint as RP
 import qualified Ouroboros.Consensus.Node.NetworkProtocolVersion as NPV
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal
-import qualified Ouroboros.Consensus.Storage.LedgerDB as LgrDb
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB as LgrDb
 import           Ouroboros.Network.Block (pointSlot)
 
 import           Control.DeepSeq (NFData)
@@ -41,8 +41,6 @@ import           Data.Text (Text)
 import           Data.Time.Clock
 import           Data.Time.Clock.POSIX
 import           GHC.Generics (Generic)
-import           Cardano.Slotting.Slot (withOrigin)
-import           Cardano.Tracing.OrphanInstances.Network ()
 
 deriving instance FromJSON ChunkNo
 
@@ -222,7 +220,7 @@ traceNodeStateChainDB _scp tr ev =
       case ev' of
         LedgerDB.TraceReplayStartEvent ev'' -> case ev'' of
           LgrDb.ReplayFromGenesis ->
-            traceWith tr $ NodeReplays $ ReplayFromGenesis
+            traceWith tr $ NodeReplays ReplayFromGenesis
           LgrDb.ReplayFromSnapshot _ (LgrDb.ReplayStart rs) ->
             traceWith tr $ NodeReplays $ ReplayFromSnapshot (withOrigin undefined id $ pointSlot rs)
         LedgerDB.TraceReplayProgressEvent ev'' -> case ev'' of

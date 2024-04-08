@@ -36,14 +36,6 @@ module Cardano.Node.Queries
   , fromSMaybe
   ) where
 
-import           Control.Monad.STM (atomically)
-import           Data.ByteString (ByteString)
-import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
-import qualified Data.Map.Strict as Map
-import           Data.SOP
-import           Data.SOP.Functors
-import           Data.Word (Word64)
-
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash as Crypto
@@ -81,6 +73,14 @@ import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.NodeToClient (LocalConnectionId)
 import           Ouroboros.Network.NodeToNode (RemoteAddress, RemoteConnectionId)
+
+import           Control.Monad.STM (atomically)
+import           Data.ByteString (ByteString)
+import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import qualified Data.Map.Strict as Map
+import           Data.SOP
+import           Data.SOP.Functors
+import           Data.Word (Word64)
 
 --
 -- * TxId -> ByteString projection

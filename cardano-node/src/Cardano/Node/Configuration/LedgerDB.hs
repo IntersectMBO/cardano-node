@@ -11,15 +11,14 @@ module Cardano.Node.Configuration.LedgerDB (
   , selectorToArgs
   ) where
 
-import           Prelude
+import           Ouroboros.Consensus.Storage.LedgerDB.Impl.Args
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V1.Args as V1
+import           Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB (LMDBLimits (..))
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.Args as V2
+import           Ouroboros.Consensus.Util.Args
 
 import qualified Data.Aeson.Types as Aeson (FromJSON)
-import           Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore.Impl.LMDB (LMDBLimits (..))
-import Ouroboros.Consensus.Storage.LedgerDB.Impl.Args
-import Ouroboros.Consensus.Util.Args
-import qualified Ouroboros.Consensus.Storage.LedgerDB.V1.Args as V1
-import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.Args as V2
-import Data.SOP.Dict
+import           Data.SOP.Dict
 
 -- | Choose the LedgerDB Backend
 --
@@ -101,4 +100,4 @@ selectorToArgs V2InMemory _ _ = LedgerDbFlavorArgsV2 $ V2.V2Args V2.InMemoryHand
 selectorToArgs (V1LMDB l) a b=
     LedgerDbFlavorArgsV1
   $ V1.V1Args a b
-  $ V1.LMDBBackingStoreArgs (maybe id (\ll lim -> lim { lmdbMapSize = toBytes ll }) l $ defaultLMDBLimits) Dict
+  $ V1.LMDBBackingStoreArgs (maybe id (\ll lim -> lim { lmdbMapSize = toBytes ll }) l defaultLMDBLimits) Dict
