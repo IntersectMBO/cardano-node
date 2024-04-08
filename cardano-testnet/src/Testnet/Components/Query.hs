@@ -10,6 +10,7 @@ module Testnet.Components.Query
   , EpochStateView
   , checkDRepsNumber
   , getEpochState
+  , getMinDRepDeposit
   , queryTip
   , waitUntilEpoch
   , getEpochStateView
@@ -34,6 +35,7 @@ import           Control.Monad
 import           Control.Monad.Trans.Resource
 import           Control.Monad.Trans.State.Strict (put)
 import           Data.Aeson
+import           Data.Aeson.Lens (_Integral, key)
 import           Data.Bifunctor (bimap)
 import           Data.IORef
 import           Data.List (sortOn)
@@ -46,7 +48,7 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Type.Equality
 import           GHC.Stack
-import           Lens.Micro ((^.))
+import           Lens.Micro ((^.), (^?))
 import           System.Directory (doesFileExist, removeFile)
 
 import qualified Testnet.Process.Cli as P
@@ -286,3 +288,20 @@ checkDRepsNumber' sbe nodeConfigFile socketPath maxEpoch expectedDRepsNb = do
       H.failure
     Right (_, val) ->
       return val
+
+-- | Obtain minimum deposit amount for DRep registration from node
+getMinDRepDeposit ::
+  (MonadCatch m, MonadIO m, MonadTest m)
+  => H.ExecConfig
+  -> m Integer
+getMinDRepDeposit execConfig = do
+  govState :: Data.Aeson.Value <- P.execCliStdoutToJson execConfig [ "conway", "query", "gov-state"
+                                                                   , "--volatile-tip"
+                                                                   ]
+  let mMinDRepDeposit :: Maybe Integer
+      mMinDRepDeposit = govState ^? key "currentPParams"
+                                  . key "dRepDeposit"
+                                  . _Integral
+
+  H.evalMaybe mMinDRepDeposit
+

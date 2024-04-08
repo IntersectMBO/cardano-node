@@ -220,6 +220,7 @@ cardanoTestnet
       testnetMagic = cardanoTestnetMagic testnetOptions
       numPoolNodes = length $ cardanoNodes testnetOptions
       nbPools = numPools testnetOptions
+      nbDReps = numDReps testnetOptions
       era = cardanoNodeEra testnetOptions
 
   portNumbers <- requestAvailablePortNumbers numPoolNodes
@@ -266,7 +267,7 @@ cardanoTestnet
 
     configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
 
-    _ <- createSPOGenesisAndFiles nbPools era shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
+    _ <- createSPOGenesisAndFiles nbPools nbDReps era shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
 
     poolKeys <- H.noteShow $ flip fmap [1..numPoolNodes] $ \n ->
       PoolNodeKeys
