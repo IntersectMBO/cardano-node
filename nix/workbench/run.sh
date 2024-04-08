@@ -570,11 +570,74 @@ EOF
         cp "$dir"/genesis/genesis.alonzo.json  "$dir"/genesis.alonzo.json
         echo >&2
 
-        ## 8. deploy genesis
+        ## 8. optional chaindb build
+        ##    Now only supporting db-synthesizer
+        ##    https://github.com/IntersectMBO/ouroboros-consensus/blob/main/ouroboros-consensus-cardano/app/db-synthesizer.hs
+        if jqtest '.chaindb.db_synthesizer != null' "$dir"/profile.json
+        then
+          progress "run | ChainDB" "db_synthesizer.."
+          # Do not create the "db" folder inside the genesis folder.
+          # Let `db-synthesizer` create it and deploy it if found later.
+          # keys
+          ######
+          local db_synthesizer_args=()
+          if jqtest '.chaindb.db_synthesizer.shelley_operational_certificate != null' "$dir"/profile.json
+          then
+            db_synthesizer_args+=("--shelley-operational-certificate")
+            db_synthesizer_args+=("${dir}/$(jq -r .chaindb.db_synthesizer.shelley_operational_certificate "$dir"/profile.json)")
+          fi
+          if jqtest '.chaindb.db_synthesizer.shelley_vrf_key != null' "$dir"/profile.json
+          then
+            db_synthesizer_args+=("--shelley-vrf-key")
+            db_synthesizer_args+=("${dir}/$(jq -r .chaindb.db_synthesizer.shelley_vrf_key "$dir"/profile.json)")
+          fi
+          if jqtest '.chaindb.db_synthesizer.shelley_kes_key != null' "$dir"/profile.json
+          then
+            db_synthesizer_args+=("--shelley-kes-key")
+            db_synthesizer_args+=("${dir}/$(jq -r .chaindb.db_synthesizer.shelley_kes_key "$dir"/profile.json)")
+          fi
+
+          if jqtest '.chaindb.db_synthesizer.bulk_credentials_file != null' "$dir"/profile.json
+          then
+            db_synthesizer_args+=("--bulk-credentials-file")
+            db_synthesizer_args+=("${dir}/$(jq -r .chaindb.db_synthesizer.bulk_credentials_file "$dir"/profile.json)")
+          fi
+          # slots, blocks and epochs
+          ##########################
+          if jqtest '.chaindb.db_synthesizer.slots != null' "$dir"/profile.json
+          then
+            db_synthesizer_args+=("--slots")
+            db_synthesizer_args+=("$(jq -r .chaindb.db_synthesizer.slots "$dir"/profile.json)")
+          fi
+          if jqtest '.chaindb.db_synthesizer.blocks != null' "$dir"/profile.json
+          then
+            db_synthesizer_args+=("--blocks")
+            db_synthesizer_args+=("$(jq -r .chaindb.db_synthesizer.blocks "$dir"/profile.json)")
+          fi
+          if jqtest '.chaindb.db_synthesizer.epochs != null' "$dir"/profile.json
+          then
+            db_synthesizer_args+=("--epochs")
+            db_synthesizer_args+=("$(jq -r .chaindb.db_synthesizer.epochs "$dir"/profile.json)")
+          fi
+          # Custom param
+          ##############
+          if jqtest '.chaindb.db_synthesizer.genesis_utxo_signing_key_file != null' "$dir"/profile.json
+          then
+            db_synthesizer_args+=("--genesis-utxo-signing-key-file")
+            db_synthesizer_args+=("${dir}/$(jq -r .chaindb.db_synthesizer.genesis_utxo_signing_key_file "$dir"/profile.json)")
+          fi
+          db-synthesizer \
+                --config "$dir"/node-0/config.json \
+                --db "$dir"/genesis/db             \
+                -f                                 \
+                "${db_synthesizer_args[@]}"
+        fi
+
+        ## 9. deploy genesis
         progress "run | genesis" "deploying.."
         backend deploy-genesis "$dir"
 
-        ## 9. everything needed to start-[tracers|nodes|generator] should be
+        ## 10. everything needed to start-[tracers|nodes|generator] should be
         ##    ready
         progress "run" "allocated $(with_color white $run) @ $dir"
         run     describe "$run"

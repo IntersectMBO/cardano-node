@@ -110,6 +110,7 @@ in project.shellFor {
   # These programs will be available inside the nix-shell.
   nativeBuildInputs = with pkgs; with haskellPackages; with cardanoNodePackages; [
     db-analyser
+    db-synthesizer
     pkgs.graphviz
     graphmod
     jq

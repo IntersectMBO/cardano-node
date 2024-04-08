@@ -45,6 +45,29 @@ def era_defaults($era):
     , pparamsOverlays:                []
     }
 
+  , chaindb:
+    { db_synthesizer:
+      ### - `--config ${dir}/node-0/config.json`
+      ### - `--db ${dir}/genesis/db`
+      {
+        # Path to the delegation certificate
+        shelley_operational_certificate: null
+        # Path to the VRF signing key
+      , shelley_vrf_key: null
+        # Path to the KES signing key
+      , shelley_kes_key: null
+        # Path to the bulk credentials file
+      , bulk_credentials_file: null
+      , genesis_utxo_signing_key_file: null # "genesis/utxo-keys/utxo1.skey"
+        # Amount of slots to process
+      , slots: 2
+        # Amount of blocks to forge
+      , blocks: null
+        # Amount of epochs to process
+      , epochs: null
+      }
+    }
+
   , generator:
     { add_tx_size:                    100
     , init_cooldown:                  5

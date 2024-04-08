@@ -569,6 +569,31 @@ backend_nomad() {
               return 1
             fi
           fi
+          # Check patched ChainDB folder.
+          if test -d "${dir}"/genesis/db
+          then
+            local mvs_array=()
+            for node in ${nodes[*]}
+            do
+              # When executing commands the directories used depend on the
+              # filesystem isolation mode (AKA chroot or not).
+              local state_dir
+              state_dir="$(backend_nomad task-workbench-state-dir "${dir}" "${node}")"
+              backend_nomad task-exec "${dir}" "${node}"               \
+                mv "${state_dir}"/genesis/db "${state_dir}"/${node}/db \
+              &
+              mvs_array+=("$!")
+            done
+            # Wait and check!
+            if test -n "${mvs_array}"
+            then
+              if ! wait_kill_em_all "${mvs_array[@]}"
+              then
+                msg "$(red "Failed to unpack patched ChainDB folders")"
+                return 1
+              fi
+            fi
+          fi
         fi
       fi
     ;;
