@@ -32,7 +32,7 @@ import qualified GHC.Stack as GHC
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query (EpochStateView, findLargestUtxoForPaymentKey,
-                   getDRepInfo, getEpochStateView, getMinDRepDeposit)
+                   waitForDRepsAndGetState, getEpochStateView, getMinDRepDeposit)
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime (PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair),
@@ -324,5 +324,5 @@ getDRepDeposits ::
   -> Int
   -> m (Maybe [Integer])
 getDRepDeposits sbe nodeConfigFile socketPath maxEpoch expectedDRepsNb = do
-  mDRepInfo <- getDRepInfo sbe nodeConfigFile socketPath maxEpoch expectedDRepsNb
+  mDRepInfo <- waitForDRepsAndGetState sbe nodeConfigFile socketPath maxEpoch expectedDRepsNb
   return $ map (unCoin . drepDeposit) <$> mDRepInfo
