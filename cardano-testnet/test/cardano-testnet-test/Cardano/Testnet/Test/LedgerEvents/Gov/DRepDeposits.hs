@@ -32,12 +32,13 @@ import qualified GHC.Stack as GHC
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query (EpochStateView, findLargestUtxoForPaymentKey,
-                   waitForDRepsAndGetState, getEpochStateView, getMinDRepDeposit)
+                   getEpochStateView, getMinDRepDeposit, waitForDRepsAndGetState)
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime (PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair),
                    PaymentKeyPair (..), PoolNode (poolRuntime),
                    TestnetRuntime (TestnetRuntime, configurationFile, poolNodes, testnetMagic, wallets))
+import           Testnet.Start.Types (anyEraToString)
 
 import           Hedgehog (MonadTest, Property)
 import qualified Hedgehog as H
@@ -102,10 +103,10 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
                                                   drepKeyPair1 (minDRepDeposit - 1)
   drepRegTxBody1 <- createDRepRegistrationTxBody execConfig epochStateView sbe drepDir1 "reg-cert-txbody"
                                                  drepRegCert1 wallet0
-  drepSignedRegTx1 <- signTx execConfig drepDir1 "signed-reg-tx"
+  drepSignedRegTx1 <- signTx execConfig cEra drepDir1 "signed-reg-tx"
                              drepRegTxBody1 [drepKeyPair1, paymentKeyInfoPair wallet0]
 
-  failToSubmitTx execConfig drepSignedRegTx1
+  failToSubmitTx execConfig cEra drepSignedRegTx1
 
   -- DRep 2 (enough deposit)
 
@@ -116,10 +117,10 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
                                                   drepKeyPair2 minDRepDeposit
   drepRegTxBody2 <- createDRepRegistrationTxBody execConfig epochStateView sbe drepDir2 "reg-cert-txbody"
                                                  drepRegCert2 wallet1
-  drepSignedRegTx2 <- signTx execConfig drepDir2 "signed-reg-tx"
+  drepSignedRegTx2 <- signTx execConfig cEra drepDir2 "signed-reg-tx"
                              drepRegTxBody2 [drepKeyPair2, paymentKeyInfoPair wallet1]
 
-  submitTx execConfig drepSignedRegTx2
+  submitTx execConfig cEra drepSignedRegTx2
 
   deposits <- H.evalMaybeM $ getDRepDeposits sbe (File configurationFile) (File socketPath) (EpochNo 10) 1
 
@@ -237,6 +238,7 @@ newtype SignedTx = SignedTx { signedTxFile :: FilePath }
 -- This function takes five parameters:
 --
 -- * 'execConfig': Specifies the CLI execution configuration.
+-- * 'cEra': Specifies the current Cardano era.
 -- * 'work': Base directory path where the signed transaction file will be stored.
 -- * 'prefix': Prefix for the output signed transaction file name. The extension will be @.tx@.
 -- * 'txBody': Transaction body to be signed, obtained using 'createDRepRegistrationTxBody' or similar.
@@ -245,15 +247,16 @@ newtype SignedTx = SignedTx { signedTxFile :: FilePath }
 -- Returns the generated 'SignedTx' containing the file path to the signed transaction file.
 signTx :: (MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig
+  -> AnyCardanoEra
   -> FilePath
   -> String
   -> TxBody
   -> [PaymentKeyPair]
   -> m SignedTx
-signTx execConfig work prefix txBody signatoryKeyPairs = do
+signTx execConfig cEra work prefix txBody signatoryKeyPairs = do
   let signedTx = SignedTx (work </> prefix <> ".tx")
   void $ H.execCli' execConfig $
-    [ "conway", "transaction", "sign"
+    [ anyEraToString cEra, "transaction", "sign"
     , "--tx-body-file", txBodyFile txBody
     ] ++ (concat [["--signing-key-file", paymentSKey kp] | kp <- signatoryKeyPairs]) ++
     [ "--out-file", signedTxFile signedTx
@@ -265,15 +268,17 @@ signTx execConfig work prefix txBody signatoryKeyPairs = do
 -- This function takes two parameters:
 --
 -- * 'execConfig': Specifies the CLI execution configuration.
+-- * 'cEra': Specifies the current Cardano era.
 -- * 'signedTx': Signed transaction to be submitted, obtained using 'signTx'.
 submitTx
   :: (MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig
+  -> AnyCardanoEra
   -> SignedTx
   -> m ()
-submitTx execConfig signedTx =
+submitTx execConfig cEra signedTx =
   void $ H.execCli' execConfig
-    [ "conway", "transaction", "submit"
+    [ anyEraToString cEra, "transaction", "submit"
     , "--tx-file", signedTxFile signedTx
     ]
 
@@ -282,6 +287,7 @@ submitTx execConfig signedTx =
 -- This function takes two parameters:
 --
 -- * 'execConfig': Specifies the CLI execution configuration.
+-- * 'cEra': Specifies the current Cardano era.
 -- * 'signedTx': Signed transaction to be submitted, obtained using 'signTx'.
 --
 -- If the submission fails (the expected behavior), the function succeeds.
@@ -290,11 +296,12 @@ submitTx execConfig signedTx =
 failToSubmitTx
   :: (MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig
+  -> AnyCardanoEra
   -> SignedTx
   -> m ()
-failToSubmitTx execConfig signedTx = GHC.withFrozenCallStack $ do
+failToSubmitTx execConfig cEra signedTx = GHC.withFrozenCallStack $ do
   (exitCode, _, _) <- H.execFlexAny' execConfig "cardano-cli" "CARDANO_CLI"
-                                     [ "conway", "transaction", "submit"
+                                     [ anyEraToString cEra, "transaction", "submit"
                                      , "--tx-file", signedTxFile signedTx
                                      ]
   case exitCode of
