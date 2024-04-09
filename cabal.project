@@ -31,6 +31,7 @@ packages:
   trace-dispatcher
   trace-resources
   trace-forward
+  ../ouroboros-consensus/ouroboros-consensus
 
 program-options
   ghc-options: -Werror
@@ -67,7 +68,7 @@ source-repository-package
   tag: 144666d22235fc441fda615a7c7990f4e301d176
   --sha256: 07qd9alk2ck1a5piv6ax79pvv10618939npqpvi6qmv59bmpx7a8
   subdir:
-    ouroboros-consensus
+--    ouroboros-consensus
     ouroboros-consensus-cardano
     ouroboros-consensus-diffusion
     ouroboros-consensus-protocol
