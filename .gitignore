@@ -18,6 +18,7 @@ dist/
 result*
 /launch-*
 stack.yaml.lock
+.ghcid
 
 /.cache
 /db

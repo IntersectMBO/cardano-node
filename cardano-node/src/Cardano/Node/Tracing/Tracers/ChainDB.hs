@@ -1698,14 +1698,61 @@ instance LogFormatting LedgerDB.TraceForkerEvent where
   forHuman LedgerDB.ForkerRangeReadTablesStart = "Started to range read tables"
   forHuman LedgerDB.ForkerRangeReadTablesEnd = "Finish range reading tables"
   forHuman LedgerDB.ForkerReadStatistics = "Gathering statistics"
-  forHuman LedgerDB.ForkerPushStart = "Started to pus"
-  forHuman LedgerDB.ForkerPushEnd = mempty
+  forHuman LedgerDB.ForkerPushStart = "Started to push"
+  forHuman LedgerDB.ForkerPushEnd = "Pushed"
 
 instance MetaTrace LedgerDB.TraceForkerEventWithKey where
-  namespaceFor = undefined
-  severityFor = undefined
-  documentFor = undefined
-  allNamespaces = undefined
+  namespaceFor (LedgerDB.TraceForkerEventWithKey _ ev) = 
+    nsCast $ namespaceFor ev
+  severityFor ns (Just (LedgerDB.TraceForkerEventWithKey _ ev)) =
+    severityFor (nsCast ns) (Just ev)
+  severityFor (Namespace out tl) Nothing =
+    severityFor (Namespace out tl :: Namespace LedgerDB.TraceForkerEvent) Nothing
+  documentFor = documentFor @LedgerDB.TraceForkerEvent . nsCast
+  allNamespaces = map nsCast $ allNamespaces @LedgerDB.TraceForkerEvent
+
+instance MetaTrace LedgerDB.TraceForkerEvent where
+  namespaceFor LedgerDB.ForkerOpen = Namespace [] ["Open"]
+  namespaceFor LedgerDB.ForkerCloseUncommitted = Namespace [] ["CloseUncommitted"]
+  namespaceFor LedgerDB.ForkerCloseCommitted = Namespace [] ["CloseCommitted"]
+  namespaceFor LedgerDB.ForkerReadTablesStart = Namespace [] ["StartRead"]
+  namespaceFor LedgerDB.ForkerReadTablesEnd = Namespace [] ["FinishRead"]
+  namespaceFor LedgerDB.ForkerRangeReadTablesStart = Namespace [] ["StartRangeRead"]
+  namespaceFor LedgerDB.ForkerRangeReadTablesEnd = Namespace [] ["FinishRangeRead"]
+  namespaceFor LedgerDB.ForkerReadStatistics = Namespace [] ["Statistics"]
+  namespaceFor LedgerDB.ForkerPushStart = Namespace [] ["StartPush"]
+  namespaceFor LedgerDB.ForkerPushEnd = Namespace [] ["FinishPush"]
+
+  severityFor _ _ = Just Debug
+
+  documentFor (Namespace _ ("Open" : _tl)) = Just 
+   "A forker is being opened"
+  documentFor (Namespace _ ("CloseUncommitted" : _tl)) = Just $
+   mconcat [ "A forker was closed without being committed."
+           , " This is usually the case with forkers that are not opened for chain selection,"
+           , " and for forkers on discarded forks"]
+  documentFor (Namespace _ ("CloseCommitted" : _tl)) = Just "A forker was committed (the LedgerDB was modified accordingly) and closed"
+  documentFor (Namespace _ ("StartRead" : _tl)) = Just "The process for reading ledger tables started"
+  documentFor (Namespace _ ("FinishRead" : _tl)) = Just "Values from the ledger tables were read"
+  documentFor (Namespace _ ("StartRangeRead" : _tl)) = Just "The process for range reading ledger tables started"
+  documentFor (Namespace _ ("FinishRangeRead" : _tl)) = Just "Values from the ledger tables were range-read"
+  documentFor (Namespace _ ("Statistics" : _tl)) = Just "Statistics were gathered from the forker"
+  documentFor (Namespace _ ("StartPush" : _tl)) = Just "A ledger state is going to be pushed to the forker"
+  documentFor (Namespace _ ("FinishPush" : _tl)) = Just "A ledger state was pushed to the forker"
+  documentFor _ = Nothing
+
+  allNamespaces = [
+      Namespace [] ["Open"]
+    , Namespace [] ["CloseUncommitted"]
+    , Namespace [] ["CloseCommitted"]
+    , Namespace [] ["StartRead"]
+    , Namespace [] ["FinishRead"]
+    , Namespace [] ["StartRangeRead"]
+    , Namespace [] ["FinishRangeRead"]
+    , Namespace [] ["Statistics"]
+    , Namespace [] ["StartPush"]
+    , Namespace [] ["FinishPush"]
+    ]
 
 --------------------------------------------------------------------------------
 -- Flavor specific trace
@@ -1887,41 +1934,9 @@ instance MetaTrace V1.FlavorImplSpecificTraceOnDisk where
           (allNamespaces :: [Namespace V1.BackingStoreTrace])
 
 instance MetaTrace V1.BackingStoreTrace where    
-  namespaceFor V1.BSOpened  = undefined --                !(Maybe FS.FsPath)
-  namespaceFor V1.BSInitia{} = undefined --lisingFromCopy   !FS.FsPath
-  namespaceFor V1.BSInitialisedFromCopy {} = undefined --   !FS.FsPath
-  namespaceFor V1.BSInitialisingFromVal{} = undefined --ues !(WithOrigin SlotNo)
-  namespaceFor V1.BSInitialisedFromValues {} = undefined -- !(WithOrigin SlotNo)
-  namespaceFor V1.BSClosing
- =   --   nam{}espundefined --aceFor V1.BSAlready = Closed
-  namespaceFor V1.BSClosed
- = undefined --  --   namespaceFor V1.BSCopyin = g                !FS.FsPath
-  namespaceFor V1.BSCopied  =       undefined --          !FS.FsPath
-  namespaceFor V1.BSCreati = undefined --ngValueHandle
-  namespaceFor V1.BSValueHa{}ndlundefined --eTrace    =     !(Maybe Int) !BackingStoreValueHandleTrace
-  namespaceFor V1.BSCreate{}dVaundefined --lueHand = le
-  namespaceFor V1.BSWriting            =  undefined --    !SlotNo
-  namespaceFor V1.BSWritten =       {}   undefined --       !(WithOrigin SlotNo) !SlotNo
-  namespaceFor V1.ance Meta = Trace V1.Baundefined --ckingStoreValueHandleTrace where
-  un-----------------------{}-----defined ------------------------------------------------------
-  
-
-{}    severityFor _ _ = undefined
-  documentFor _ _ = undefined
-  allNamespaces = undefinedd-------------------------------efined ---------------------------------------------------
-
 instance LogFormatting V2.FlavorImplSpecificTrace where
-  forMachine _dtal V2.FlavorImplSpecificTraceInMemory = 
-    mconcat [ "kind" .= String "FlavorImplSpecificTraceInMemory" ]
-  forMachine _dtal V2.FlavorImplSpecificTraceOnDisk = 
-    mconcat [ "kind" .= String "FlavorImplSpecificTraceOnDisk" ]
-  
-  forHuman V2.FlavorImplSpecificTraceInMemory = undefined
-  forHuman V2.FlavorImplSpecificTraceOnDisk = undefined
   
 instance MetaTrace V2.FlavorImplSpecificTrace where
-  namespaceFor V2.FlavorImplSpecificTraceInMemory = _
-  namespaceFor V2.FlavorImplSpecificTraceOnDisk
 
 --------------------------------------------------------------------------------
 -- ImmDB.TraceEvent
