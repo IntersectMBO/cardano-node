@@ -15,6 +15,8 @@ import           Cardano.Api (AnyCardanoEra (..), ConwayEra, EpochNo, FileDirect
                    NodeConfigFile, ShelleyBasedEra (..), SocketPath, renderTxIn)
 import           Cardano.Api.Ledger (Coin (..), DRepState (..))
 
+import           Cardano.CLI.Types.Common (File (..))
+
 import           Prelude
 
 import           Control.Monad (void)
@@ -35,7 +37,6 @@ import           Testnet.Start.Types (anyEraToString)
 import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras as H
 
-
 -- | Generates a key pair for a decentralized representative (DRep) using @cardano-cli@.
 --
 -- The function takes three parameters:
@@ -46,7 +47,11 @@ import qualified Hedgehog.Extras as H
 --
 -- Returns the generated 'PaymentKeyPair' containing paths to the verification and
 -- signing key files.
-generateDRepKeyPair :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack) => H.ExecConfig -> FilePath -> String -> m PaymentKeyPair
+generateDRepKeyPair :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => H.ExecConfig
+  -> FilePath
+  -> String
+  -> m PaymentKeyPair
 generateDRepKeyPair execConfig work prefix = do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
   let dRepKeyPair = PaymentKeyPair { paymentVKey = baseDir </> "verification.vkey"
@@ -60,7 +65,7 @@ generateDRepKeyPair execConfig work prefix = do
 
 -- DRep registration certificate generation
 
-newtype DRepRegistrationCertificate = DRepRegistrationCertificate { registrationCertificateFile :: FilePath }
+data DRepRegistrationCertificate
 
 -- | Generates a registration certificate for a decentralized representative (DRep)
 -- using @cardano-cli@.
@@ -75,8 +80,8 @@ newtype DRepRegistrationCertificate = DRepRegistrationCertificate { registration
 -- * 'depositAmount': Deposit amount required for DRep registration. The right amount
 --                    can be obtained using 'getMinDRepDeposit'.
 --
--- Returns the generated 'DRepRegistrationCertificate' containing the file path to
--- the registration certificate.
+-- Returns the generated @File DRepRegistrationCertificate In@ file path to the
+-- registration certificate.
 generateRegistrationCertificate
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => H.ExecConfig
@@ -84,19 +89,19 @@ generateRegistrationCertificate
   -> String
   -> PaymentKeyPair
   -> Integer
-  -> m DRepRegistrationCertificate
+  -> m (File DRepRegistrationCertificate In)
 generateRegistrationCertificate execConfig work prefix drepKeyPair depositAmount = do
-  let dRepRegistrationCertificate = DRepRegistrationCertificate (work </> prefix <> ".regcert")
+  let dRepRegistrationCertificate = File (work </> prefix <> ".regcert")
   void $ H.execCli' execConfig [ "conway", "governance", "drep", "registration-certificate"
                                , "--drep-verification-key-file", paymentVKey drepKeyPair
                                , "--key-reg-deposit-amt", show @Integer depositAmount
-                               , "--out-file", registrationCertificateFile dRepRegistrationCertificate
+                               , "--out-file", unFile dRepRegistrationCertificate
                                ]
   return dRepRegistrationCertificate
 
 -- DRep registration transaction composition (without signing)
 
-newtype TxBody = TxBody { txBodyFile :: FilePath }
+data TxBody
 
 -- | Composes a decentralized representative (DRep) registration transaction body
 --   (without signing) using @cardano-cli@.
@@ -109,12 +114,12 @@ newtype TxBody = TxBody { txBodyFile :: FilePath }
 -- * 'sbe': The Shelley-based era (e.g., 'ShelleyEra') in which the transaction will be constructed.
 -- * 'work': Base directory path where the transaction body file will be stored.
 -- * 'prefix': Prefix for the output transaction body file name. The extension will be @.txbody@.
--- * 'drepRegCert': The registration certificate for the DRep, obtained using
+-- * 'drepRegCert': The file name of the registration certificate for the DRep, obtained using
 --                  'generateRegistrationCertificate'.
 -- * 'wallet': Payment key information associated with the transaction,
 --             as returned by 'cardanoTestnetDefault'.
 --
--- Returns the generated 'TxBody' containing the file path to the transaction body.
+-- Returns the generated @File TxBody In@ file path to the transaction body.
 createDRepRegistrationTxBody
   :: (H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig
@@ -122,25 +127,25 @@ createDRepRegistrationTxBody
   -> ShelleyBasedEra era
   -> FilePath
   -> String
-  -> DRepRegistrationCertificate
+  -> File DRepRegistrationCertificate In
   -> PaymentKeyInfo
-  -> m TxBody
+  -> m (File TxBody In)
 createDRepRegistrationTxBody execConfig epochStateView sbe work prefix drepRegCert wallet = do
-  let dRepRegistrationTxBody = TxBody (work </> prefix <> ".txbody")
+  let dRepRegistrationTxBody = File (work </> prefix <> ".txbody")
   walletLargestUTXO <- findLargestUtxoForPaymentKey epochStateView sbe wallet
   void $ H.execCli' execConfig
     [ "conway", "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
     , "--tx-in", Text.unpack $ renderTxIn walletLargestUTXO
-    , "--certificate-file", registrationCertificateFile drepRegCert
+    , "--certificate-file", unFile drepRegCert
     , "--witness-override", show @Int 2
-    , "--out-file", txBodyFile dRepRegistrationTxBody
+    , "--out-file", unFile dRepRegistrationTxBody
     ]
   return dRepRegistrationTxBody
 
 -- Transaction signing
 
-newtype SignedTx = SignedTx { signedTxFile :: FilePath }
+data SignedTx
 
 -- | Calls @cardano-cli@ to signs a transaction body using the specified key pairs.
 --
@@ -153,22 +158,22 @@ newtype SignedTx = SignedTx { signedTxFile :: FilePath }
 -- * 'txBody': Transaction body to be signed, obtained using 'createDRepRegistrationTxBody' or similar.
 -- * 'signatoryKeyPairs': List of payment key pairs used for signing the transaction.
 --
--- Returns the generated 'SignedTx' containing the file path to the signed transaction file.
+-- Returns the generated @File SignedTx In@ file path to the signed transaction file.
 signTx :: (MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig
   -> AnyCardanoEra
   -> FilePath
   -> String
-  -> TxBody
+  -> File TxBody In
   -> [PaymentKeyPair]
-  -> m SignedTx
+  -> m (File SignedTx In)
 signTx execConfig cEra work prefix txBody signatoryKeyPairs = do
-  let signedTx = SignedTx (work </> prefix <> ".tx")
+  let signedTx = File (work </> prefix <> ".tx")
   void $ H.execCli' execConfig $
     [ anyEraToString cEra, "transaction", "sign"
-    , "--tx-body-file", txBodyFile txBody
+    , "--tx-body-file", unFile txBody
     ] ++ (concat [["--signing-key-file", paymentSKey kp] | kp <- signatoryKeyPairs]) ++
-    [ "--out-file", signedTxFile signedTx
+    [ "--out-file", unFile signedTx
     ]
   return signedTx
 
@@ -183,12 +188,12 @@ submitTx
   :: (MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig
   -> AnyCardanoEra
-  -> SignedTx
+  -> File SignedTx In
   -> m ()
 submitTx execConfig cEra signedTx =
   void $ H.execCli' execConfig
     [ anyEraToString cEra, "transaction", "submit"
-    , "--tx-file", signedTxFile signedTx
+    , "--tx-file", unFile signedTx
     ]
 
 -- | Attempts to submit a transaction that is expected to fail using @cardano-cli@.
@@ -206,12 +211,12 @@ failToSubmitTx
   :: (MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig
   -> AnyCardanoEra
-  -> SignedTx
+  -> File SignedTx In
   -> m ()
 failToSubmitTx execConfig cEra signedTx = GHC.withFrozenCallStack $ do
   (exitCode, _, _) <- H.execFlexAny' execConfig "cardano-cli" "CARDANO_CLI"
                                      [ anyEraToString cEra, "transaction", "submit"
-                                     , "--tx-file", signedTxFile signedTx
+                                     , "--tx-file", unFile signedTx
                                      ]
   case exitCode of
     ExitSuccess -> H.failMessage GHC.callStack "Transaction submission was expected to fail but it succeeded"
