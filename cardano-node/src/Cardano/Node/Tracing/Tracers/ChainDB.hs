@@ -34,13 +34,13 @@ import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (chunkN
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.Impl.Snapshots as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore as V1
+import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.Args as V2
 import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Consensus.Util.Enclose
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (MaxSlotNo (..))
-import qualified Ouroboros.Consensus.Storage.LedgerDB.V1.BackingStore as V1
-import qualified Ouroboros.Consensus.Storage.LedgerDB.V2.Args as V2
 
 import           Data.Aeson (Value (String), toJSON, (.=))
 import           Data.Int (Int64)
@@ -1673,11 +1673,11 @@ instance MetaTrace (LedgerDB.TraceReplayProgressEvent blk) where
 --------------------------------------------------------------------------------
 
 instance LogFormatting LedgerDB.TraceForkerEventWithKey where
-  forMachine dtals (LedgerDB.TraceForkerEventWithKey k ev) = 
+  forMachine dtals (LedgerDB.TraceForkerEventWithKey k ev) =
     (\ev' -> mconcat [ "key" .= showT k, "event" .= ev' ]) $ forMachine dtals ev
-  forHuman (LedgerDB.TraceForkerEventWithKey k ev) = 
+  forHuman (LedgerDB.TraceForkerEventWithKey k ev) =
     "Forker " <> showT k <> ": " <> forHuman ev
-  
+
 instance LogFormatting LedgerDB.TraceForkerEvent where
   forMachine _dtals LedgerDB.ForkerOpen = mempty
   forMachine _dtals LedgerDB.ForkerCloseUncommitted = mempty
@@ -1702,7 +1702,7 @@ instance LogFormatting LedgerDB.TraceForkerEvent where
   forHuman LedgerDB.ForkerPushEnd = "Pushed"
 
 instance MetaTrace LedgerDB.TraceForkerEventWithKey where
-  namespaceFor (LedgerDB.TraceForkerEventWithKey _ ev) = 
+  namespaceFor (LedgerDB.TraceForkerEventWithKey _ ev) =
     nsCast $ namespaceFor ev
   severityFor ns (Just (LedgerDB.TraceForkerEventWithKey _ ev)) =
     severityFor (nsCast ns) (Just ev)
@@ -1725,7 +1725,7 @@ instance MetaTrace LedgerDB.TraceForkerEvent where
 
   severityFor _ _ = Just Debug
 
-  documentFor (Namespace _ ("Open" : _tl)) = Just 
+  documentFor (Namespace _ ("Open" : _tl)) = Just
    "A forker is being opened"
   documentFor (Namespace _ ("CloseUncommitted" : _tl)) = Just $
    mconcat [ "A forker was closed without being committed."
@@ -1846,7 +1846,6 @@ instance LogFormatting V1.BackingStoreTrace where
     mconcat [ "old" .= showT s1, "new" .= showT s2 ]
   forMachine _dtals (V1.BSValueHandleTrace i _ev) =
     maybe mempty (\i' -> mconcat ["idx" .= showT i']) i
-
 instance LogFormatting V1.BackingStoreValueHandleTrace where
   forMachine _dtals V1.BSVHClosing = mempty
   forMachine _dtals V1.BSVHAlreadyClosed = mempty
@@ -1910,9 +1909,9 @@ instance MetaTrace V1.FlavorImplSpecificTraceInMemory where
           (allNamespaces :: [Namespace V1.BackingStoreTrace])
 
 instance MetaTrace V1.FlavorImplSpecificTraceOnDisk where
-  namespaceFor V1.OnDiskBackingStoreInitialise{} = 
+  namespaceFor V1.OnDiskBackingStoreInitialise{} =
     Namespace [] ["Initialise"]
-  namespaceFor (V1.OnDiskBackingStoreTrace ev) = 
+  namespaceFor (V1.OnDiskBackingStoreTrace ev) =
     nsPrependInner "BackingStoreEvent" (namespaceFor ev)
 
   severityFor (Namespace _ ("Initialise" : _)) _ = Just Debug
@@ -1933,9 +1932,167 @@ instance MetaTrace V1.FlavorImplSpecificTraceOnDisk where
     : map (nsPrependInner "BackingStoreEvent")
           (allNamespaces :: [Namespace V1.BackingStoreTrace])
 
-instance MetaTrace V1.BackingStoreTrace where    
+instance MetaTrace V1.BackingStoreTrace where
+  namespaceFor V1.BSOpening = Namespace [] ["Opening"]
+  namespaceFor V1.BSOpened{} = Namespace [] ["Opened"]
+  namespaceFor V1.BSInitialisingFromCopy{} =
+    Namespace [] ["InitialisingFromCopy"]
+  namespaceFor V1.BSInitialisedFromCopy{} =
+    Namespace [] ["InitialisedFromCopy"]
+  namespaceFor V1.BSInitialisingFromValues{} =
+    Namespace [] ["InitialisingFromValues"]
+  namespaceFor V1.BSInitialisedFromValues{} =
+    Namespace [] ["InitialisedFromValues"]
+  namespaceFor V1.BSClosing = Namespace [] ["Closing"]
+  namespaceFor V1.BSAlreadyClosed = Namespace [] ["AlreadyClosed"]
+  namespaceFor V1.BSClosed = Namespace [] ["Closed"]
+  namespaceFor V1.BSCopying{} = Namespace [] ["Copying"]
+  namespaceFor V1.BSCopied{} = Namespace [] ["Copied"]
+  namespaceFor V1.BSCreatingValueHandle = Namespace [] ["CreatingValueHandle"]
+  namespaceFor V1.BSCreatedValueHandle = Namespace [] ["CreatedValueHandle"]
+  namespaceFor (V1.BSValueHandleTrace _ bsValueHandleTrace) =
+    nsPrependInner "ValueHandleTrace" (namespaceFor bsValueHandleTrace)
+  namespaceFor V1.BSWriting{} = Namespace [] ["Writing"]
+  namespaceFor V1.BSWritten{} = Namespace [] ["Written"]
+
+  severityFor (Namespace _ ("Opening" : _)) _ = Just Debug
+  severityFor (Namespace _ ("Opened" : _)) _ = Just Debug
+  severityFor (Namespace _ ("InitialisingFromCopy" : _)) _ = Just Debug
+  severityFor (Namespace _ ("InitialisedFromCopy" : _)) _ = Just Debug
+  severityFor (Namespace _ ("InitialisingFromValues" : _)) _ = Just Debug
+  severityFor (Namespace _ ("InitialisedFromValues" : _)) _ = Just Debug
+  severityFor (Namespace _ ("Closing" : _)) _ = Just Debug
+  severityFor (Namespace _ ("AlreadyClosed" : _)) _ = Just Debug
+  severityFor (Namespace _ ("Closed" : _)) _ = Just Debug
+  severityFor (Namespace _ ("Copying" : _)) _ = Just Debug
+  severityFor (Namespace _ ("Copied" : _)) _ = Just Debug
+  severityFor (Namespace _ ("CreatingValueHandle" : _)) _ = Just Debug
+  severityFor (Namespace _ ("CreatedValueHandle" : _)) _ = Just Debug
+  severityFor (Namespace out ("ValueHandleTrace" : t1)) Nothing =
+    severityFor
+      (Namespace out t1 :: Namespace V1.BackingStoreValueHandleTrace)
+      Nothing
+  severityFor
+    (Namespace out ("ValueHandleTrace" : t1))
+    (Just (V1.BSValueHandleTrace _ bsValueHandleTrace)) =
+      severityFor
+        (Namespace out t1 :: Namespace V1.BackingStoreValueHandleTrace)
+        (Just bsValueHandleTrace)
+  severityFor (Namespace _ ("Writing" : _)) _ = Just Debug
+  severityFor (Namespace _ ("Written" : _)) _ = Just Debug
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ("Opening" : _ )) = Just
+    "Opening backing store"
+  documentFor (Namespace _ ("Opened" : _ )) = Just
+    "Backing store opened"
+  documentFor (Namespace _ ("InitialisingFromCopy" : _ )) = Just
+    "Initialising backing store from copy"
+  documentFor (Namespace _ ("InitialisedFromCopy" : _ )) = Just
+    "Backing store initialised from copy"
+  documentFor (Namespace _ ("InitialisingFromValues" : _ )) = Just
+    "Initialising backing store from values"
+  documentFor (Namespace _ ("InitialisedFromValues" : _ )) = Just
+    "Backing store initialised from values"
+  documentFor (Namespace _ ("Closing" : _ )) = Just
+    "Closing backing store"
+  documentFor (Namespace _ ("AlreadyClosed" : _ )) = Just
+    "Backing store is already closed"
+  documentFor (Namespace _ ("Closed" : _ )) = Just
+    "Backing store closed"
+  documentFor (Namespace _ ("Copying" : _ )) = Just
+    "Copying backing store"
+  documentFor (Namespace _ ("Copied" : _ )) = Just
+    "Backing store copied"
+  documentFor (Namespace _ ("CreatingValueHandle" : _ )) = Just
+    "Creating value handle for backing store"
+  documentFor (Namespace _ ("CreatedValueHandle" : _ )) = Just
+    "Value handle for backing store created"
+  documentFor (Namespace out ("ValueHandleTrace" : t1 )) =
+    documentFor (Namespace out t1 :: Namespace V1.BackingStoreValueHandleTrace)
+  documentFor (Namespace _ ("Writing" : _ )) = Just
+    "Writing backing store"
+  documentFor (Namespace _ ("Written" : _ )) = Just
+    "Backing store written"
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["Opening"]
+    , Namespace [] ["Opened"]
+    , Namespace [] ["InitialisingFromCopy"]
+    , Namespace [] ["InitialisedFromCopy"]
+    , Namespace [] ["InitialisingFromValues"]
+    , Namespace [] ["InitialisedFromValues"]
+    , Namespace [] ["Closing"]
+    , Namespace [] ["AlreadyClosed"]
+    , Namespace [] ["Closed"]
+    , Namespace [] ["Copying"]
+    , Namespace [] ["Copied"]
+    , Namespace [] ["CreatingValueHandle"]
+    , Namespace [] ["CreatedValueHandle"]
+    , Namespace [] ["Writing"]
+    , Namespace [] ["Written"]
+    ] ++ map (nsPrependInner "ValueHandleTrace")
+             (allNamespaces :: [Namespace V1.BackingStoreValueHandleTrace])
+
+
+instance MetaTrace V1.BackingStoreValueHandleTrace where
+  namespaceFor V1.BSVHClosing = Namespace [] ["Closing"]
+  namespaceFor V1.BSVHAlreadyClosed = Namespace [] ["AlreadyClosed"]
+  namespaceFor V1.BSVHClosed = Namespace [] ["Closed"]
+  namespaceFor V1.BSVHRangeReading = Namespace [] ["RangeReading"]
+  namespaceFor V1.BSVHRangeRead = Namespace [] ["RangeRead"]
+  namespaceFor V1.BSVHReading = Namespace [] ["Reading"]
+  namespaceFor V1.BSVHRead = Namespace [] ["Read"]
+  namespaceFor V1.BSVHStatting = Namespace [] ["Statting"]
+  namespaceFor V1.BSVHStatted = Namespace [] ["Statted"]
+
+  severityFor (Namespace _ ("Closing" : _ )) _ = Just Debug
+  severityFor (Namespace _ ("AlreadyClosed" : _ )) _ = Just Debug
+  severityFor (Namespace _ ("Closed" : _ )) _ = Just Debug
+  severityFor (Namespace _ ("RangeReading" : _ )) _ = Just Debug
+  severityFor (Namespace _ ("RangeRead" : _ )) _ = Just Debug
+  severityFor (Namespace _ ("Reading" : _ )) _ = Just Debug
+  severityFor (Namespace _ ("Read" : _ )) _ = Just Debug
+  severityFor (Namespace _ ("Statting" : _ )) _ = Just Debug
+  severityFor (Namespace _ ("Statted" : _ )) _ = Just Debug
+  severityFor _ _ = Nothing
+
+  documentFor (Namespace _ ("Closing" : _ )) = Just
+    "Closing backing store value handle"
+  documentFor (Namespace _ ("AlreadyClosed" : _ )) = Just
+    "Backing store value handle already clsoed"
+  documentFor (Namespace _ ("Closed" : _ )) = Just
+    "Backing store value handle closed"
+  documentFor (Namespace _ ("RangeReading" : _ )) = Just
+    "Reading range for backing store value handle"
+  documentFor (Namespace _ ("RangeRead" : _ )) = Just
+    "Range for backing store value handle read"
+  documentFor (Namespace _ ("Reading" : _ )) = Just
+    "Reading backing store value handle"
+  documentFor (Namespace _ ("Read" : _ )) = Just
+    "Backing store value handle read"
+  documentFor (Namespace _ ("Statting" : _ )) = Just
+    "Statting backing store value handle"
+  documentFor (Namespace _ ("Statted" : _ )) = Just
+    "Backing store value handle statted"
+  documentFor _ = Nothing
+
+  allNamespaces =
+    [ Namespace [] ["Closing"]
+    , Namespace [] ["AlreadyClosed"]
+    , Namespace [] ["Closed"]
+    , Namespace [] ["RangeReading"]
+    , Namespace [] ["RangeRead"]
+    , Namespace [] ["Reading"]
+    , Namespace [] ["Read"]
+    , Namespace [] ["Statting"]
+    , Namespace [] ["Statted"]
+    ]
+
+
 instance LogFormatting V2.FlavorImplSpecificTrace where
-  
+
 instance MetaTrace V2.FlavorImplSpecificTrace where
 
 --------------------------------------------------------------------------------
@@ -1944,7 +2101,7 @@ instance MetaTrace V2.FlavorImplSpecificTrace where
 
 instance (ConvertRawHash blk, StandardHash blk)
   => LogFormatting (ImmDB.TraceEvent blk) where
-    forMachine _dtal ImmDB.NoValidLastLocation = 
+    forMachine _dtal ImmDB.NoValidLastLocation =
       mconcat [ "kind" .= String "NoValidLastLocation" ]
     forMachine _dtal (ImmDB.ValidatedLastLocation chunkNo immTip) =
       mconcat [ "kind" .= String "ValidatedLastLocation"
