@@ -248,6 +248,8 @@ test-suite cardano-node-test
                       , cardano-crypto-wrapper
                       , cardano-api:{cardano-api, internal}
                       , cardano-ledger-core
+                      , cardano-ledger-allegra
+                      , cardano-ledger-alonzo
                       , cardano-node
                       , cardano-slotting
                       , directory
@@ -276,5 +278,6 @@ test-suite cardano-node-test
                         Test.Cardano.Node.POM
                         Test.Cardano.Tracing.NewTracing.Consistency
                         Test.Cardano.Tracing.OrphanInstances.HardFork
+                        Test.Cardano.Tracing.OrphanInstances.Shelley
 
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
