@@ -31,7 +31,6 @@ packages:
   trace-dispatcher
   trace-resources
   trace-forward
-  ../ouroboros-consensus/ouroboros-consensus
 
 program-options
   ghc-options: -Werror
@@ -65,10 +64,10 @@ package plutus-scripts-bench
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 144666d22235fc441fda615a7c7990f4e301d176
-  --sha256: 07qd9alk2ck1a5piv6ax79pvv10618939npqpvi6qmv59bmpx7a8
+  tag: 2953920b81ebaf2aa3d5e19c6d66b7b73219f73b
+  --sha256: 0sa0s35xxm6rb823yn09128bgv052qhr6s25gndrywyshj667317
   subdir:
---    ouroboros-consensus
+    ouroboros-consensus
     ouroboros-consensus-cardano
     ouroboros-consensus-diffusion
     ouroboros-consensus-protocol
