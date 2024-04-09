@@ -1,0 +1,101 @@
+cabal-version: 3.0
+
+name:                   stdout-tools
+version:                0.1.0
+synopsis:               See README for more info
+description:            See README for more info.
+category:               Cardano,
+                        Trace,
+copyright:              2022-2024 Input Output Global Inc (IOG).
+author:                 IOHK
+maintainer:             operations@iohk.io
+license:                Apache-2.0
+license-files:          LICENSE
+                        NOTICE
+build-type:             Simple
+extra-doc-files:        README.md
+                        CHANGELOG.md
+
+common project-config
+  default-language:     Haskell2010
+  build-depends:        base >= 4.14 && < 5
+
+  ghc-options:          -Wall
+                        -Wcompat
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wno-unticked-promoted-constructors
+                        -Wno-orphans
+                        -Wpartial-fields
+                        -Wredundant-constraints
+                        -Wunused-packages
+
+library
+  import:               project-config
+  hs-source-dirs:       src
+  exposed-modules:      Data.Log
+                        Cardano.Tracer.Trace
+                        Cardano.Tracer.Filter
+                        Cardano.Tracer.Reducer
+                        Cardano.Tracer.FilterReduce
+  build-depends:        base >=4.12 && <5
+                      , time
+                      , bytestring
+                      , text
+                      , text-iso8601
+                      , containers
+                      , aeson
+
+executable tq
+  import:               project-config
+
+  hs-source-dirs:       app
+
+  main-is:              tq.hs
+
+  build-depends:        time
+                      , async
+                      , optparse-applicative
+                      , stdout-tools
+
+  ghc-options:          -threaded
+                        -rtsopts=all
+
+--  other-modules:        Paths_trace_analyzer
+--  autogen-modules:      Paths_trace_analyzer
+--  other-modules:        Cardano.Tracer.Analyze.Process
+--                      , Cardano.Tracer.Analyze.Types
+
+executable rts-flags
+  main-is:              app/rts-flags.hs
+  default-language:     Haskell2010
+  build-depends:        base >= 4.14 && < 5
+  ghc-options:          -threaded
+                        -rtsopts=all
+
+executable lmdb-test
+  main-is:              app/lmdb-test.hs
+  default-language:     Haskell2010
+  build-depends:        base >= 4.14 && < 5
+                      , cardano-lmdb-simple
+                      , array
+                      , random
+  ghc-options:          -threaded
+                        -rtsopts=all
+
+test-suite stdout-tools-test
+  import:               project-config
+  hs-source-dirs:       test/
+  main-is:              Main.hs
+  type:                 exitcode-stdio-1.0
+  other-modules:        Paths_stdout_tools
+  autogen-modules:      Paths_stdout_tools
+  build-depends:        base
+                      , text-iso8601
+                      , containers
+                      , tasty
+                      , tasty-hunit
+                      , stdout-tools
+  ghc-options:          -threaded
+                        -rtsopts
+                        "-with-rtsopts=-T"
