@@ -28,6 +28,7 @@ packages:
   bench/locli
   bench/plutus-scripts-bench
   bench/tx-generator
+  bench/stdout-tools
   trace-dispatcher
   trace-resources
   trace-forward
