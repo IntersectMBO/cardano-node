@@ -89,6 +89,7 @@ library
                         Testnet.Start.Byron
                         Testnet.Start.Types
                         Testnet.Components.Configuration
+                        Testnet.Components.DReps
                         Testnet.Components.SPO
                         Testnet.Components.Query
                         Testnet.Defaults
