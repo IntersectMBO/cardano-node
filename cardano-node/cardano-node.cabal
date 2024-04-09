@@ -149,8 +149,8 @@ library
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
-                      , cardano-ledger-alonzo
-                      , cardano-ledger-allegra
+                      , cardano-ledger-alonzo >=1.7.1
+                      , cardano-ledger-allegra >=1.4.1
                       , cardano-ledger-api
                       , cardano-ledger-babbage
                       , cardano-ledger-byron
