@@ -15,7 +15,7 @@ import           Cardano.Api (AnyCardanoEra (..), ConwayEra, EpochNo (EpochNo), 
 import           Cardano.Api.Ledger (Coin (..), DRepState (..))
 
 import           Cardano.Testnet
-                   (CardanoTestnetOptions (cardanoEpochLength, cardanoNodeEra, cardanoNumDReps, cardanoSlotLength),
+                   (CardanoTestnetOptions (cardanoEpochLength, cardanoNodeEra, cardanoNumDReps),
                    Conf (Conf, tempAbsPath), NodeRuntime (nodeSprocket),
                    TmpAbsolutePath (unTmpAbsPath), cardanoDefaultTestnetOptions,
                    cardanoTestnetDefault, makeTmpBaseAbsPath, mkConf)
@@ -62,7 +62,6 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
       cEra = AnyCardanoEra era
       fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 100
-        , cardanoSlotLength = 0.1
         , cardanoNodeEra = cEra
         , cardanoNumDReps = 0
         }
