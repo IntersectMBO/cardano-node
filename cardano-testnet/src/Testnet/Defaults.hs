@@ -434,7 +434,7 @@ defaultShelleyGenesis startTime testnetOptions = do
         { cardanoTestnetMagic = testnetMagic
         , cardanoSlotLength = slotLength
         , cardanoEpochLength = epochLength
-        , cardanoMaxSupply = maxLovelaceLovelaceSupply
+        , cardanoMaxSupply = sgMaxLovelaceSupply
         , cardanoActiveSlotsCoeff
         , cardanoNodeEra
         } = testnetOptions
@@ -449,7 +449,7 @@ defaultShelleyGenesis startTime testnetOptions = do
   Api.shelleyGenesisDefaults
         { Api.sgActiveSlotsCoeff = unsafeBoundedRational activeSlotsCoeff
         , Api.sgEpochLength = EpochSize $ fromIntegral epochLength
-        , Api.sgMaxLovelaceSupply = maxLovelaceLovelaceSupply
+        , Api.sgMaxLovelaceSupply
         , Api.sgNetworkMagic = fromIntegral testnetMagic
         , Api.sgProtocolParams = protocolParamsWithPVer
         -- using default from shelley genesis k = 2160
