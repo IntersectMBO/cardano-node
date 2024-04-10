@@ -263,7 +263,7 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
   detailsFor (Namespace out ("LedgerEvent" : tl)) (Just (ChainDB.TraceLedgerDBEvent ev')) =
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("LedgerEvent" : tl)) Nothing =
-    detailsFor (Namespace out tl :: Namespace (LedgerDB.TraceReplayEvent blk)) Nothing
+    detailsFor (Namespace out tl :: Namespace (LedgerDB.TraceLedgerDBEvent blk)) Nothing
   detailsFor (Namespace out ("ImmDbEvent" : tl)) (Just (ChainDB.TraceImmutableDBEvent ev')) =
     detailsFor (Namespace out tl) (Just ev')
   detailsFor (Namespace out ("ImmDbEvent" : tl)) Nothing =
@@ -290,8 +290,6 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     metricsDocFor (Namespace out tl :: Namespace (ChainDB.TraceIteratorEvent blk))
   metricsDocFor (Namespace out ("LedgerEvent" : tl)) =
     metricsDocFor (Namespace out tl :: Namespace (LedgerDB.TraceLedgerDBEvent blk))
-  metricsDocFor (Namespace out ("LedgerReplay" : tl)) =
-    metricsDocFor (Namespace out tl :: Namespace (LedgerDB.TraceReplayEvent blk))
   metricsDocFor (Namespace out ("ImmDbEvent" : tl)) =
     metricsDocFor (Namespace out tl :: Namespace (ImmDB.TraceEvent blk))
   metricsDocFor (Namespace out ("VolatileDbEvent" : tl)) =
@@ -314,8 +312,6 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
     documentFor (Namespace out tl :: Namespace (ChainDB.TraceIteratorEvent blk))
   documentFor (Namespace out ("LedgerEvent" : tl)) =
     documentFor (Namespace out tl :: Namespace (LedgerDB.TraceLedgerDBEvent blk))
-  documentFor (Namespace out ("LedgerReplay" : tl)) =
-    documentFor (Namespace out tl :: Namespace (LedgerDB.TraceReplayEvent blk))
   documentFor (Namespace out ("ImmDbEvent" : tl)) =
     documentFor (Namespace out tl :: Namespace (ImmDB.TraceEvent blk))
   documentFor (Namespace out ("VolatileDbEvent" : tl)) =
@@ -339,8 +335,6 @@ instance MetaTrace  (ChainDB.TraceEvent blk) where
                   (allNamespaces :: [Namespace (ChainDB.TraceIteratorEvent blk)])
           ++ map  (nsPrependInner "LedgerEvent")
                   (allNamespaces :: [Namespace (LedgerDB.TraceLedgerDBEvent blk)])
-          ++ map  (nsPrependInner "LedgerReplay")
-                  (allNamespaces :: [Namespace (LedgerDB.TraceReplayEvent blk)])
           ++ map  (nsPrependInner "ImmDbEvent")
                   (allNamespaces :: [Namespace (ImmDB.TraceEvent blk)])
           ++ map  (nsPrependInner "VolatileDbEvent")
@@ -1517,7 +1511,7 @@ instance MetaTrace (LedgerDB.TraceSnapshotEvent blk) where
   namespaceFor LedgerDB.InvalidSnapshot {} = Namespace [] ["InvalidSnapshot"]
 
   severityFor (Namespace _ ["TookSnapshot"]) _ = Just Info
-  severityFor (Namespace _ ["DeletedSnpshot"]) _ = Just Debug
+  severityFor (Namespace _ ["DeletedSnapshot"]) _ = Just Debug
   severityFor (Namespace _ ["InvalidSnapshot"]) _ = Just Error
   severityFor _ _ = Nothing
 
