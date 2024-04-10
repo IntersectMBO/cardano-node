@@ -14,7 +14,6 @@ import qualified Test.Cardano.Node.FilePermissions
 import qualified Test.Cardano.Node.Json
 import qualified Test.Cardano.Node.POM
 import qualified Test.Cardano.Tracing.OrphanInstances.HardFork
-import qualified Test.Cardano.Tracing.OrphanInstances.Shelley
 import qualified Test.Cardano.Tracing.NewTracing.Consistency
 
 import qualified Cardano.Crypto.Init as Crypto
@@ -36,6 +35,5 @@ main = do
       , Test.Cardano.Node.Json.tests
       , Test.Cardano.Node.POM.tests
       , Test.Cardano.Tracing.OrphanInstances.HardFork.tests
-      , Test.Cardano.Tracing.OrphanInstances.Shelley.tests
       , Test.Cardano.Tracing.NewTracing.Consistency.tests
       ]
