@@ -1113,8 +1113,8 @@ def all_profile_variants:
     { name: "short-value-dbsynth-32G-nomadperfssd"
     , genesis:
       { utxo: 0
-        # Account for slots db-synthesis creates
-      , extra_future_offset: -8000
+        # Account for slots db-synthesis creates, and the delay for it to run
+      , extra_future_offset: -7600
       , funds_balance: 40000000000000
       }
     , node:
