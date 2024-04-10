@@ -74,7 +74,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
       cEra = AnyCardanoEra era
       fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 100
-        , cardanoSlotLength = 0.1
         , cardanoNodeEra = cEra
         , cardanoNumDReps = numVotes
         }
