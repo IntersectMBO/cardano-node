@@ -8,12 +8,10 @@ module Testnet.Components.DReps
   , signTx
   , submitTx
   , failToSubmitTx
-  , getDRepDeposits
   ) where
 
-import           Cardano.Api (AnyCardanoEra (..), ConwayEra, EpochNo, FileDirection (In),
-                   NodeConfigFile, ShelleyBasedEra (..), SocketPath, renderTxIn)
-import           Cardano.Api.Ledger (Coin (..), DRepState (..))
+import           Cardano.Api (AnyCardanoEra (..), FileDirection (In), ShelleyBasedEra (..),
+                   renderTxIn)
 
 import           Cardano.CLI.Types.Common (File (..))
 
@@ -28,8 +26,7 @@ import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import           System.FilePath ((</>))
 
-import           Testnet.Components.Query (EpochStateView, findLargestUtxoForPaymentKey,
-                   waitForDRepsAndGetState)
+import           Testnet.Components.Query (EpochStateView, findLargestUtxoForPaymentKey)
 import qualified Testnet.Process.Run as H
 import           Testnet.Runtime (PaymentKeyInfo (paymentKeyInfoAddr), PaymentKeyPair (..))
 import           Testnet.Start.Types (anyEraToString)
@@ -221,28 +218,3 @@ failToSubmitTx execConfig cEra signedTx = GHC.withFrozenCallStack $ do
   case exitCode of
     ExitSuccess -> H.failMessage GHC.callStack "Transaction submission was expected to fail but it succeeded"
     _ -> return ()
-
--- | Obtains a list of deposits made by decentralized representatives (DReps) under specified conditions.
---
--- This function takes five parameters:
---
--- * 'sbe': A 'ShelleyBasedEra' witness that this is the 'ConwayEra'.
--- * 'nodeConfigFile': The FoldBlocks configuration file as returned by 'cardanoTestnetDefault'.
--- * 'socketPath': Path to the socket file for communicating with the node.
--- * 'maxEpoch': The timeout epoch by which the exact required number of DReps must be reached.
--- * 'expectedDRepsNb': Expected number of DReps. If not reached by 'maxEpoch', the test fails.
---
--- If the expected number of DReps is attained by 'maxEpoch', the function returns
--- the list of the amounts deposited by each DReps when the expected number of registered DReps
--- was attained. Otherwise, the test fails.
-getDRepDeposits ::
-  (HasCallStack, MonadCatch m, MonadIO m, MonadTest m)
-  => ShelleyBasedEra ConwayEra
-  -> NodeConfigFile In
-  -> SocketPath
-  -> EpochNo
-  -> Int
-  -> m (Maybe [Integer])
-getDRepDeposits sbe nodeConfigFile socketPath maxEpoch expectedDRepsNb = do
-  mDRepInfo <- waitForDRepsAndGetState sbe nodeConfigFile socketPath maxEpoch expectedDRepsNb
-  return $ map (unCoin . drepDeposit) <$> mDRepInfo

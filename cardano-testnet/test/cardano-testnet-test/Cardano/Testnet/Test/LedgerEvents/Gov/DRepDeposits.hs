@@ -4,8 +4,9 @@ module Cardano.Testnet.Test.LedgerEvents.Gov.DRepDeposits
   ( hprop_ledger_events_drep_deposits
   ) where
 
-import           Cardano.Api (AnyCardanoEra (..), EpochNo (EpochNo), File (..),
-                   ShelleyBasedEra (..), ToCardanoEra (..))
+import           Cardano.Api (AnyCardanoEra (..), File (..), ShelleyBasedEra (..),
+                   ToCardanoEra (..))
+import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
                    (CardanoTestnetOptions (cardanoEpochLength, cardanoNodeEra, cardanoNumDReps),
@@ -15,19 +16,18 @@ import           Cardano.Testnet
 
 import           Prelude
 
+import qualified Data.Map as Map
 import           System.FilePath ((</>))
 
 import           Testnet.Components.DReps (createDRepRegistrationTxBody, failToSubmitTx,
-                   generateDRepKeyPair, generateRegistrationCertificate, getDRepDeposits, signTx,
-                   submitTx)
-import           Testnet.Components.Query (getEpochStateView, getMinDRepDeposit)
+                   generateDRepKeyPair, generateRegistrationCertificate, signTx, submitTx)
+import           Testnet.Components.Query (checkDRepState, getEpochStateView, getMinDRepDeposit)
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime (PaymentKeyInfo (paymentKeyInfoPair), PoolNode (poolRuntime),
                    TestnetRuntime (TestnetRuntime, configurationFile, poolNodes, testnetMagic, wallets))
 
 import           Hedgehog (Property)
-import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
@@ -108,8 +108,7 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
 
   submitTx execConfig cEra drepSignedRegTx2
 
-  deposits <- H.evalMaybeM $ getDRepDeposits sbe (File configurationFile) (File socketPath) (EpochNo 10) 1
-
-  deposits H.=== [minDRepDeposit]
+  checkDRepState sbe (File configurationFile) (File socketPath) execConfig
+    (\m -> if map L.drepDeposit (Map.elems m) == [L.Coin minDRepDeposit] then Just () else Nothing)
 
 
