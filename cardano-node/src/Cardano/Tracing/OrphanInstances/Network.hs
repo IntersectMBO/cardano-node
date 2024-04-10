@@ -84,7 +84,8 @@ import           Ouroboros.Network.Protocol.LocalTxMonitor.Type (LocalTxMonitor)
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LocalTxMonitor
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
-import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingResult (..))
+import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingAmount (..),
+                   PeerSharingResult (..))
 import           Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission2
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 (ServerTrace (..))
@@ -1643,10 +1644,11 @@ instance ToObject (TracePeerSelection SockAddr) where
              , "actualKnown" .= actualKnown
              , "selectedPeers" .= Aeson.toJSONList (toList sp)
              ]
-  toObject _verb (TracePeerShareRequests targetKnown actualKnown aps sps) =
+  toObject _verb (TracePeerShareRequests targetKnown actualKnown (PeerSharingAmount numRequested) aps sps) =
     mconcat [ "kind" .= String "PeerShareRequests"
              , "targetKnown" .= targetKnown
              , "actualKnown" .= actualKnown
+             , "numRequested" .= numRequested
              , "availablePeers" .= Aeson.toJSONList (toList aps)
              , "selectedPeers" .= Aeson.toJSONList (toList sps)
              ]
