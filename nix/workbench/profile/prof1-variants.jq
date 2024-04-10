@@ -1109,6 +1109,19 @@ def all_profile_variants:
         }
       }
     }
+  , $nomad_perf_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
+    { name: "short-value-dbsynth-32G-nomadperfssd"
+    , genesis:
+      { utxo: 0
+        # Account for slots db-synthesis creates
+      , extra_future_offset: -8000
+      , funds_balance: 40000000000000
+      }
+    , node:
+      { shutdown_on_slot_synced: 8100
+      , heap_limit:              32768
+      }
+    }
   , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview * $old_tracing *
     { name: "value-oldtracing-nomadperf"
     }
