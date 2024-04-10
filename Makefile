@@ -100,7 +100,7 @@ PROFILES_NOMAD_PERF       := default-nomadperf ci-test-nomadperf ci-bench-nomadp
 PROFILES_NOMAD_PERF       += plutus-nomadperf fast-nomadperf latency-nomadperf
 PROFILES_NOMAD_PERF_NOP2P := default-nomadperf-nop2p oldtracing-nomadperf-nop2p ci-test-nomadperf-nop2p ci-bench-nomadperf-nop2p
 PROFILES_NOMAD_PERF_NOP2P += value-nomadperf-nop2p value-oldtracing-nomadperf-nop2p plutus-nomadperf-nop2p fast-nomadperf-nop2p
-PROFILES_NOMAD_PERFSSD    := fast-nomadperfssd value-nomadperfssd value-20M32G-nomadperfssd value-25M32G-nomadperfssd value-30M32G-nomadperfssd value-40M32G-nomadperfssd value-40M64G-nomadperfssd plutus-20M32GB-nomadperfssd latency-nomadperfssd short-value-dbsynth-32G-nomadperfssd
+PROFILES_NOMAD_PERFSSD    := fast-nomadperfssd value-nomadperfssd value-20M32G-nomadperfssd value-25M32G-nomadperfssd value-30M32G-nomadperfssd value-40M32G-nomadperfssd value-40M64G-nomadperfssd plutus-20M32GB-nomadperfssd latency-nomadperfssd value-dbsynth-32G-nomadperfssd
 
 LOCAL_PROFILES += $(PROFILES_BASE)
 LOCAL_PROFILES += $(PROFILES_FAST)
