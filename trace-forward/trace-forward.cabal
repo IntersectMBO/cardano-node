@@ -64,7 +64,7 @@ library
                       , deepseq
                       , extra
                       , io-classes
-                      , ouroboros-network-api ^>= 0.7.1
+                      , ouroboros-network-api ^>= 0.7.2
                       , ouroboros-network-framework
                       , serialise
                       , stm

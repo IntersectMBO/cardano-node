@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
@@ -36,7 +37,9 @@ import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
+import qualified Ouroboros.Network.Diffusion.Configuration as Diffusion
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
+import           Ouroboros.Network.PeerSelection.Governor (PeerSelectionTargets (..))
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
 import           Control.Monad (when)
@@ -516,22 +519,31 @@ defaultPartialNodeConfiguration =
     , pncAcceptedConnectionsLimit =
         Last
       $ Just
-      $ AcceptedConnectionsLimit
-        { acceptedConnectionsHardLimit = 512
-        , acceptedConnectionsSoftLimit = 384
-        , acceptedConnectionsDelay     = 5
-        }
-    , pncTargetNumberOfRootPeers        = Last (Just 85)
-    , pncTargetNumberOfKnownPeers       = Last (Just 85)
-    , pncTargetNumberOfEstablishedPeers = Last (Just 40)
-    , pncTargetNumberOfActivePeers      = Last (Just 15)
+      $ Diffusion.defaultAcceptedConnectionsLimit
+
+      -- peer selection targets
+    , pncTargetNumberOfRootPeers =
+      Last (Just targetNumberOfRootPeers)
+    , pncTargetNumberOfKnownPeers =
+      Last (Just targetNumberOfKnownPeers)
+    , pncTargetNumberOfEstablishedPeers =
+      Last (Just targetNumberOfEstablishedPeers)
+    , pncTargetNumberOfActivePeers =
+      Last (Just targetNumberOfActivePeers)
+    , pncTargetNumberOfKnownBigLedgerPeers =
+      Last (Just targetNumberOfKnownBigLedgerPeers)
+    , pncTargetNumberOfEstablishedBigLedgerPeers =
+      Last (Just targetNumberOfEstablishedBigLedgerPeers)
+    , pncTargetNumberOfActiveBigLedgerPeers =
+      Last (Just targetNumberOfActiveBigLedgerPeers)
+
     , pncChainSyncIdleTimeout           = mempty
-    , pncTargetNumberOfKnownBigLedgerPeers       = Last (Just 15)
-    , pncTargetNumberOfEstablishedBigLedgerPeers = Last (Just 10)
-    , pncTargetNumberOfActiveBigLedgerPeers      = Last (Just 5)
     , pncEnableP2P                      = Last (Just EnabledP2PMode)
-    , pncPeerSharing                    = Last (Just PeerSharingDisabled)
+    , pncPeerSharing                    = Last (Just Diffusion.defaultPeerSharing)
     }
+  where
+    -- unpack all `targetNumberOf...`
+    PeerSelectionTargets {..} = Diffusion.defaultPeerSelectionTargets
 
 lastOption :: Parser a -> Parser (Last a)
 lastOption = fmap Last . optional

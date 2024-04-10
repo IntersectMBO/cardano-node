@@ -26,20 +26,19 @@ import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
-                   DebugPeerSelectionState (..), PeerSelectionCounters (..),
-                   PeerSelectionState (..), PeerSelectionTargets (..), TracePeerSelection (..))
+import           Ouroboros.Network.PeerSelection.Governor (ChurnCounters (..), DebugPeerSelection (..),
+                   DebugPeerSelectionState (..), PeerSelectionCounters , PeerSelectionView (..),
+                   PeerSelectionState (..), PeerSelectionTargets (..),
+                   TracePeerSelection (..), peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
                    (TraceLocalRootPeers (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers
                    (TracePublicRootPeers (..))
-import qualified Ouroboros.Network.PeerSelection.State.EstablishedPeers as EstablishedPeers
 import qualified Ouroboros.Network.PeerSelection.State.KnownPeers as KnownPeers
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
-                   WarmValency (..))
 import           Ouroboros.Network.PeerSelection.Types ()
+import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingAmount (..))
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 (ServerTrace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
@@ -272,10 +271,11 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              , "actualKnown" .= actualKnown
              , "selectedPeers" .= toJSONList (toList sp)
              ]
-  forMachine _dtal (TracePeerShareRequests targetKnown actualKnown aps sps) =
+  forMachine _dtal (TracePeerShareRequests targetKnown actualKnown (PeerSharingAmount numRequested) aps sps) =
     mconcat [ "kind" .= String "PeerShareRequests"
              , "targetKnown" .= targetKnown
              , "actualKnown" .= actualKnown
+             , "numRequested" .= numRequested
              , "availablePeers" .= toJSONList (toList aps)
              , "selectedPeers" .= toJSONList (toList sps)
              ]
@@ -490,10 +490,13 @@ instance LogFormatting (TracePeerSelection SockAddr) where
   forMachine _dtal (TraceChurnMode c) =
     mconcat [ "kind" .= String "ChurnMode"
              , "event" .= show c ]
-  forMachine _dtal (TraceKnownInboundConnection addr sharing) =
-    mconcat [ "kind" .= String "KnownInboundConnection"
-            , "peer" .= toJSON addr
-            , "peerSharing" .= String (pack . show $ sharing) ]
+  forMachine _dtal (TracePickInboundPeers targetNumberOfKnownPeers numberOfKnownPeers selected available) =
+    mconcat [ "kind" .= String "PickInboundPeers"
+            , "targetKnown" .= targetNumberOfKnownPeers
+            , "actualKnown" .= numberOfKnownPeers
+            , "selected" .= selected
+            , "available" .= available
+            ]
   forMachine _dtal (TraceLedgerStateJudgementChanged new) =
     mconcat [ "kind" .= String "LedgerStateJudgementChanged"
             , "new" .= show new ]
@@ -508,6 +511,18 @@ instance LogFormatting (TracePeerSelection SockAddr) where
   forMachine _dtal (TraceOutboundGovernorCriticalFailure err) =
     mconcat [ "kind" .= String "OutboundGovernorCriticalFailure"
             , "reason" .= show err
+            ]
+  forMachine _dtal (TraceChurnAction duration action counter) =
+    mconcat [ "kind" .= String "ChurnAction"
+            , "action" .= show action
+            , "counter" .= counter
+            , "duration" .= duration
+            ]
+  forMachine _dtal (TraceChurnTimeout duration action counter) =
+    mconcat [ "kind" .= String "ChurnTimeout"
+            , "action" .= show action
+            , "counter" .= counter
+            , "duration" .= duration
             ]
   forMachine _dtal (TraceDebugState mtime ds) =
     mconcat [ "kind" .= String "DebugState"
@@ -534,6 +549,12 @@ instance LogFormatting (TracePeerSelection SockAddr) where
             ]
 
   forHuman = pack . show
+
+  asMetrics (TraceChurnAction duration action _) =
+    [ DoubleM ("Net.PeerSelection.Churn." <> pack (show action) <> ".duration")
+              (realToFrac duration)
+    ]
+  asMetrics _ = []
 
 instance MetaTrace (TracePeerSelection SockAddr) where
     namespaceFor TraceLocalRootPeersChanged {} =
@@ -632,8 +653,8 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["ChurnWait"]
     namespaceFor TraceChurnMode {}             =
       Namespace [] ["ChurnMode"]
-    namespaceFor TraceKnownInboundConnection {} =
-      Namespace [] ["KnownInboundConnection"]
+    namespaceFor TracePickInboundPeers {} =
+      Namespace [] ["PickInboundPeers"]
     namespaceFor TraceLedgerStateJudgementChanged {} =
       Namespace [] ["LedgerStateJudgementChanged"]
     namespaceFor TraceOnlyBootstrapPeers {} =
@@ -644,6 +665,10 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["BootstrapPeersFlagChangedWhilstInSensitiveState"]
     namespaceFor TraceOutboundGovernorCriticalFailure {} =
       Namespace [] ["OutboundGovernorCriticalFailure"]
+    namespaceFor TraceChurnAction {} =
+      Namespace [] ["ChurnAction"]
+    namespaceFor TraceChurnTimeout {} =
+      Namespace [] ["ChurnTimeout"]
     namespaceFor TraceDebugState {} =
       Namespace [] ["DebugState"]
 
@@ -676,8 +701,10 @@ instance MetaTrace (TracePeerSelection SockAddr) where
     severityFor (Namespace [] ["GovernorWakeup"]) _ = Just Info
     severityFor (Namespace [] ["ChurnWait"]) _ = Just Info
     severityFor (Namespace [] ["ChurnMode"]) _ = Just Info
-    severityFor (Namespace [] ["KnownInboundConnection"]) _ = Just Info
+    severityFor (Namespace [] ["PickInboundPeers"]) _ = Just Info
     severityFor (Namespace [] ["OutboundGovernorCriticalFailure"]) _ = Just Error
+    severityFor (Namespace [] ["ChurnAction"]) _ = Just Info
+    severityFor (Namespace [] ["ChurnTimeout"]) _ = Just Notice
     severityFor (Namespace [] ["DebugState"]) _ = Just Info
     severityFor _ _ = Nothing
 
@@ -731,7 +758,7 @@ instance MetaTrace (TracePeerSelection SockAddr) where
     documentFor (Namespace [] ["GovernorWakeup"]) = Just  ""
     documentFor (Namespace [] ["ChurnWait"]) = Just  ""
     documentFor (Namespace [] ["ChurnMode"]) = Just  ""
-    documentFor (Namespace [] ["KnownInboundConnection"]) = Just
+    documentFor (Namespace [] ["PickInboundPeers"]) = Just
       "An inbound connection was added to known set of outbound governor"
     documentFor (Namespace [] ["OutboundGovernorCriticalFailure"]) = Just
       "Outbound Governor was killed unexpectedly"
@@ -769,7 +796,7 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       , Namespace [] ["GovernorWakeup"]
       , Namespace [] ["ChurnWait"]
       , Namespace [] ["ChurnMode"]
-      , Namespace [] ["KnownInboundConnection"]
+      , Namespace [] ["PickInboundPeers"]
       , Namespace [] ["OutboundGovernorCriticalFailure"]
       , Namespace [] ["DebugState"]
       ]
@@ -779,17 +806,13 @@ instance MetaTrace (TracePeerSelection SockAddr) where
 --------------------------------------------------------------------------------
 
 instance LogFormatting (DebugPeerSelection SockAddr) where
-  forMachine DNormal (TraceGovernorState blockedAt wakeupAfter
-                   PeerSelectionState { targets, knownPeers, establishedPeers, activePeers }) =
+  forMachine dtal@DNormal (TraceGovernorState blockedAt wakeupAfter
+                   st@PeerSelectionState { targets }) =
     mconcat [ "kind" .= String "DebugPeerSelection"
              , "blockedAt" .= String (pack $ show blockedAt)
              , "wakeupAfter" .= String (pack $ show wakeupAfter)
              , "targets" .= peerSelectionTargetsToObject targets
-             , "numberOfPeers" .=
-                 Object (mconcat [ "known" .= KnownPeers.size knownPeers
-                                  , "established" .= EstablishedPeers.size establishedPeers
-                                  , "active" .= Set.size activePeers
-                                  ])
+             , "counters" .= forMachine dtal (peerSelectionStateToCounters st)
              ]
   forMachine _ (TraceGovernorState blockedAt wakeupAfter ev) =
     mconcat [ "kind" .= String "DebugPeerSelection"
@@ -838,43 +861,123 @@ instance MetaTrace (DebugPeerSelection SockAddr) where
 --------------------------------------------------------------------------------
 
 instance LogFormatting PeerSelectionCounters where
-  forMachine _dtal ev =
+  forMachine _dtal PeerSelectionCounters {..} =
     mconcat [ "kind" .= String "PeerSelectionCounters"
-            , "coldPeers" .= coldPeers ev
-            , "warmPeers" .= warmPeers ev
-            , "hotPeers" .= hotPeers ev
-            , "coldBigLedgerPeers" .= coldBigLedgerPeers ev
-            , "warmBigLedgerPeers" .= warmBigLedgerPeers ev
-            , "hotBigLedgerPeers" .= hotBigLedgerPeers ev
-            , "localRoots" .= toJSON (localRoots ev)
+
+            , "knownPeers" .= numberOfKnownPeers
+            , "rootPeers" .= numberOfRootPeers
+            , "coldPeersPromotions" .= numberOfColdPeersPromotions
+            , "establishedPeers" .= numberOfEstablishedPeers
+            , "warmPeersDemotions" .= numberOfWarmPeersDemotions
+            , "warmPeersPromotions" .= numberOfWarmPeersPromotions
+            , "activePeers" .= numberOfActivePeers
+            , "activePeersDemotions" .= numberOfActivePeersDemotions
+
+            , "knownBigLedgerPeers" .= numberOfKnownBigLedgerPeers
+            , "coldBigLedgerPeersPromotions" .= numberOfColdBigLedgerPeersPromotions
+            , "establishedBigLedgerPeers" .= numberOfEstablishedBigLedgerPeers
+            , "warmBigLedgerPeersDemotions" .= numberOfWarmBigLedgerPeersDemotions
+            , "warmBigLedgerPeersPromotions" .= numberOfWarmBigLedgerPeersPromotions
+            , "activeBigLedgerPeers" .= numberOfActiveBigLedgerPeers
+            , "activeBigLedgerPeersDemotions" .= numberOfActiveBigLedgerPeersDemotions
+
+            , "knownLocalRootPeers" .= numberOfKnownLocalRootPeers
+            , "establishedLocalRootPeers" .= numberOfEstablishedLocalRootPeers
+            , "warmLocalRootPeersPromotions" .= numberOfWarmLocalRootPeersPromotions
+            , "activeLocalRootPeers" .= numberOfActiveLocalRootPeers
+            , "activeLocalRootPeersDemotions" .= numberOfActiveLocalRootPeersDemotions
+
+            , "knownNonRootPeers" .= numberOfKnownNonRootPeers
+            , "coldNonRootPeersPromotions" .= numberOfColdNonRootPeersPromotions
+            , "establishedNonRootPeers" .= numberOfEstablishedNonRootPeers
+            , "warmNonRootPeersDemotions" .= numberOfWarmNonRootPeersDemotions
+            , "warmNonRootPeersPromotions" .= numberOfWarmNonRootPeersPromotions
+            , "activeNonRootPeers" .= numberOfActiveNonRootPeers
+            , "activeNonRootPeersDemotions" .= numberOfActiveNonRootPeersDemotions
+
+            , "knownBootstrapPeers" .= numberOfKnownBootstrapPeers
+            , "coldBootstrapPeersPromotions" .= numberOfColdBootstrapPeersPromotions
+            , "establishedBootstrapPeers" .= numberOfEstablishedBootstrapPeers
+            , "warmBootstrapPeersDemotions" .= numberOfWarmBootstrapPeersDemotions
+            , "warmBootstrapPeersPromotions" .= numberOfWarmBootstrapPeersPromotions
+            , "activeBootstrapPeers" .= numberOfActiveBootstrapPeers
+            , "ActiveBootstrapPeersDemotions" .= numberOfActiveBootstrapPeersDemotions
             ]
   forHuman = pack . show
-  asMetrics PeerSelectionCounters {..} =
-    [ IntM
-        "Net.PeerSelection.Cold"
-        (fromIntegral coldPeers)
-    , IntM
-        "Net.PeerSelection.Warm"
-        (fromIntegral warmPeers)
-    , IntM
-        "Net.PeerSelection.Hot"
-        (fromIntegral hotPeers)
-    , IntM
-        "Net.PeerSelection.ColdBigLedgerPeers"
-        (fromIntegral coldBigLedgerPeers)
-    , IntM
-        "Net.PeerSelection.WarmBigLedgerPeers"
-        (fromIntegral warmBigLedgerPeers)
-    , IntM
-        "Net.PeerSelection.HotBigLedgerPeers"
-        (fromIntegral hotBigLedgerPeers)
-    , IntM
-        "Net.PeerSelection.WarmLocalRoots"
-        (fromIntegral $ getWarmValency $ foldl' (\a (_, b) -> a + b) 0 localRoots)
-    , IntM
-        "Net.PeerSelection.HotLocalRoots"
-        (fromIntegral $ getHotValency $ foldl' (\a (b, _) -> a + b) 0 localRoots)
-    ]
+  asMetrics psc =
+    case psc of
+      PeerSelectionCountersHWC {..} ->
+        -- Deprecated metrics; they will be removed in a future version.
+        [ IntM
+            "Net.PeerSelection.Cold"
+            (fromIntegral numberOfColdPeers)
+        , IntM
+            "Net.PeerSelection.Warm"
+            (fromIntegral numberOfWarmPeers)
+        , IntM
+            "Net.PeerSelection.Hot"
+            (fromIntegral numberOfHotPeers)
+        , IntM
+            "Net.PeerSelection.ColdBigLedgerPeers"
+            (fromIntegral numberOfColdBigLedgerPeers)
+        , IntM
+            "Net.PeerSelection.WarmBigLedgerPeers"
+            (fromIntegral numberOfWarmBigLedgerPeers)
+        , IntM
+            "Net.PeerSelection.HotBigLedgerPeers"
+            (fromIntegral numberOfHotBigLedgerPeers)
+
+        , IntM
+            "Net.PeerSelection.WarmLocalRoots"
+            (fromIntegral $ numberOfActiveLocalRootPeers psc)
+        , IntM
+            "Net.PeerSelection.HotLocalRoots"
+            (fromIntegral $ numberOfEstablishedLocalRootPeers psc
+                          - numberOfActiveLocalRootPeers psc)
+        ]
+    ++
+    case psc of
+      PeerSelectionCounters {..} ->
+        [ IntM "Net.PeerSelection.RootPeers" (fromIntegral numberOfRootPeers)
+
+        , IntM "Net.PeerSelection.KnownPeers" (fromIntegral numberOfKnownPeers)
+        , IntM "Net.PeerSelection.ColdPeersPromotions" (fromIntegral numberOfColdPeersPromotions)
+        , IntM "Net.PeerSelection.EstablishedPeers" (fromIntegral numberOfEstablishedPeers)
+        , IntM "Net.PeerSelection.WarmPeersDemotions" (fromIntegral numberOfWarmPeersDemotions)
+        , IntM "Net.PeerSelection.WarmPeersPromotions" (fromIntegral numberOfWarmPeersPromotions)
+        , IntM "Net.PeerSelection.ActivePeers" (fromIntegral numberOfActivePeers)
+        , IntM "Net.PeerSelection.ActivePeersDemotions" (fromIntegral numberOfActivePeersDemotions)
+
+        , IntM "Net.PeerSelection.KnownBigLedgerPeers" (fromIntegral numberOfKnownBigLedgerPeers)
+        , IntM "Net.PeerSelection.ColdBigLedgerPeersPromotions" (fromIntegral numberOfColdBigLedgerPeersPromotions)
+        , IntM "Net.PeerSelection.EstablishedBigLedgerPeers" (fromIntegral numberOfEstablishedBigLedgerPeers)
+        , IntM "Net.PeerSelection.WarmBigLedgerPeersDemotions" (fromIntegral numberOfWarmBigLedgerPeersDemotions)
+        , IntM "Net.PeerSelection.WarmBigLedgerPeersPromotions" (fromIntegral numberOfWarmBigLedgerPeersPromotions)
+        , IntM "Net.PeerSelection.ActiveBigLedgerPeers" (fromIntegral numberOfActiveBigLedgerPeers)
+        , IntM "Net.PeerSelection.ActiveBigLedgerPeersDemotions" (fromIntegral numberOfActiveBigLedgerPeersDemotions)
+
+        , IntM "Net.PeerSelection.KnownLocalRootPeers" (fromIntegral numberOfKnownLocalRootPeers)
+        , IntM "Net.PeerSelection.EstablishedLocalRootPeers" (fromIntegral numberOfEstablishedLocalRootPeers)
+        , IntM "Net.PeerSelection.WarmLocalRootPeersPromotions" (fromIntegral numberOfWarmLocalRootPeersPromotions)
+        , IntM "Net.PeerSelection.ActiveLocalRootPeers" (fromIntegral numberOfActiveLocalRootPeers)
+        , IntM "Net.PeerSelection.ActiveLocalRootPeersDemotions" (fromIntegral numberOfActiveLocalRootPeersDemotions)
+
+        , IntM "Net.PeerSelection.KnownNonRootPeers" (fromIntegral numberOfKnownNonRootPeers)
+        , IntM "Net.PeerSelection.ColdNonRootPeersPromotions" (fromIntegral numberOfColdNonRootPeersPromotions)
+        , IntM "Net.PeerSelection.EstablishedNonRootPeers" (fromIntegral numberOfEstablishedNonRootPeers)
+        , IntM "Net.PeerSelection.WarmNonRootPeersDemotions" (fromIntegral numberOfWarmNonRootPeersDemotions)
+        , IntM "Net.PeerSelection.WarmNonRootPeersPromotions" (fromIntegral numberOfWarmNonRootPeersPromotions)
+        , IntM "Net.PeerSelection.ActiveNonRootPeers" (fromIntegral numberOfActiveNonRootPeers)
+        , IntM "Net.PeerSelection.ActiveNonRootPeersDemotions" (fromIntegral numberOfActiveNonRootPeersDemotions)
+
+        , IntM "Net.PeerSelection.KnownBootstrapPeers" (fromIntegral numberOfKnownBootstrapPeers)
+        , IntM "Net.PeerSelection.ColdBootstrapPeersPromotions" (fromIntegral numberOfColdBootstrapPeersPromotions)
+        , IntM "Net.PeerSelection.EstablishedBootstrapPeers" (fromIntegral numberOfEstablishedBootstrapPeers)
+        , IntM "Net.PeerSelection.WarmBootstrapPeersDemotions" (fromIntegral numberOfWarmBootstrapPeersDemotions)
+        , IntM "Net.PeerSelection.WarmBootstrapPeersPromotions" (fromIntegral numberOfWarmBootstrapPeersPromotions)
+        , IntM "Net.PeerSelection.ActiveBootstrapPeers" (fromIntegral numberOfActiveBootstrapPeers)
+        , IntM "Net.PeerSelection.ActiveBootstrapPeersDemotions" (fromIntegral numberOfActiveBootstrapPeersDemotions)
+        ]
 
 instance MetaTrace PeerSelectionCounters where
     namespaceFor PeerSelectionCounters {} = Namespace [] ["Counters"]
@@ -883,7 +986,7 @@ instance MetaTrace PeerSelectionCounters where
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["Counters"]) = Just
-      "Counters for cold, warm and hot peers"
+      "Counters of selected peers"
     documentFor _ = Nothing
 
     metricsDocFor (Namespace _ ["Counters"]) =
@@ -899,6 +1002,54 @@ instance MetaTrace PeerSelectionCounters where
 
     allNamespaces =[
       Namespace [] ["Counters"]
+      ]
+
+
+--------------------------------------------------------------------------------
+-- ChurnCounters Tracer
+--------------------------------------------------------------------------------
+
+
+instance LogFormatting ChurnCounters where
+  forMachine _dtal (ChurnCounter action c) =
+    mconcat [ "kind" .= String "ChurnCounter" 
+            , "action" .= String (pack $ show action)
+            , "counter" .= c
+            ]
+  asMetrics (ChurnCounter action c) =
+    [ IntM
+        ("Net.Churn." <> (pack $ show action))
+        (fromIntegral c)
+    ]
+
+instance MetaTrace ChurnCounters where
+    namespaceFor ChurnCounter {} = Namespace [] ["ChurnCounters"]
+
+    severityFor (Namespace _ ["ChurnCounters"]) _ = Just Info
+    severityFor _ _ = Nothing
+
+    documentFor (Namespace _ ["ChurnCounters"]) = Just
+      "churn counters"
+    documentFor _ = Nothing
+
+    metricsDocFor (Namespace _ ["Counters"]) =
+     [ ("Net.Churn.DecreasedActivePeers", "number of decreased active peers")
+     , ("Net.Churn.IncreasedActivePeers", "number of increased active peers")
+     , ("Net.Churn.DecreasedActiveBigLedgerPeers", "number of decreased active big ledger peers")
+     , ("Net.Churn.IncreasedActiveBigLedgerPeers", "number of increased active big ledger peers")
+     , ("Net.Churn.DecreasedEstablishedPeers", "number of decreased established peers")
+     , ("Net.Churn.IncreasedEstablishedPeers", "number of increased established peers")
+     , ("Net.Churn.IncreasedEstablishedBigLedgerPeers", "number of increased established big ledger peers")
+     , ("Net.Churn.DecreasedEstablishedBigLedgerPeers", "number of decreased established big ledger peers")
+     , ("Net.Churn.DecreasedKnownPeers", "number of decreased known peers")
+     , ("Net.Churn.IncreasedKnownPeers", "number of increased known peers")
+     , ("Net.Churn.DecreasedKnownBigLedgerPeers", "number of decreased known big ledger peers")
+     , ("Net.Churn.IncreasedKnownBigLedgerPeers", "number of increased known big ledger peers")
+     ]
+    metricsDocFor _ = []
+
+    allNamespaces =[
+      Namespace [] ["ChurnCounters"]
       ]
 
 
@@ -1478,6 +1629,15 @@ forMachineGov _dtal (InboundGovernor.TrInboundGovernorError err) =
   mconcat [ "kind" .= String "InboundGovernorError"
             , "remoteSt" .= String (pack . show $ err)
             ]
+forMachineGov _dtal (InboundGovernor.TrMaturedConnections matured fresh) =
+  mconcat [ "kind" .= String "MaturedConnections"
+          , "matured" .= toJSON matured
+          , "fresh" .= toJSON fresh
+          ]
+forMachineGov _dtal (InboundGovernor.TrInactive fresh) =
+  mconcat [ "kind" .= String "Inactive"
+          , "fresh" .= toJSON fresh
+          ]
 
 instance MetaTrace (InboundGovernorTrace addr) where
     namespaceFor TrNewConnection {}         = Namespace [] ["NewConnection"]
@@ -1499,6 +1659,10 @@ instance MetaTrace (InboundGovernorTrace addr) where
                                 Namespace [] ["UnexpectedlyFalseAssertion"]
     namespaceFor InboundGovernor.TrInboundGovernorError {} =
                                 Namespace [] ["InboundGovernorError"]
+    namespaceFor InboundGovernor.TrMaturedConnections {} =
+                                Namespace [] ["MaturedConnections"]
+    namespaceFor InboundGovernor.TrInactive {} =
+                                Namespace [] ["Inactive"]
 
     severityFor (Namespace _ ["NewConnection"]) _ = Just Debug
     severityFor (Namespace _ ["ResponderRestarted"]) _ = Just Debug
@@ -1517,6 +1681,8 @@ instance MetaTrace (InboundGovernorTrace addr) where
     severityFor (Namespace _ ["RemoteState"]) _ = Just Debug
     severityFor (Namespace _ ["UnexpectedlyFalseAssertion"]) _ = Just Error
     severityFor (Namespace _ ["InboundGovernorError"]) _ = Just Error
+    severityFor (Namespace _ ["MaturedConnections"]) _ = Just Info
+    severityFor (Namespace _ ["Inactive"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["NewConnection"]) = Just ""
@@ -1542,6 +1708,8 @@ instance MetaTrace (InboundGovernorTrace addr) where
     documentFor (Namespace _ ["RemoteState"]) = Just ""
     documentFor (Namespace _ ["UnexpectedlyFalseAssertion"]) = Just ""
     documentFor (Namespace _ ["InboundGovernorError"]) = Just ""
+    documentFor (Namespace _ ["MaturedConnections"]) = Just ""
+    documentFor (Namespace _ ["Inactive"]) = Just ""
     documentFor _ = Nothing
 
     metricsDocFor (Namespace [] ["InboundGovernorCounters"]) =
@@ -1584,6 +1752,8 @@ instance MetaTrace (InboundGovernorTrace addr) where
       , Namespace [] ["RemoteState"]
       , Namespace [] ["UnexpectedlyFalseAssertion"]
       , Namespace [] ["InboundGovernorError"]
+      , Namespace [] ["MaturedConnections"]
+      , Namespace [] ["Inactive"]
       ]
 
 --------------------------------------------------------------------------------

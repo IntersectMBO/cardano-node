@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -54,8 +55,9 @@ import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNode
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Bootstrap
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
-                   DebugPeerSelectionState (..), PeerSelectionCounters (..),
-                   PeerSelectionState (..), PeerSelectionTargets (..), TracePeerSelection (..))
+                   DebugPeerSelectionState (..), PeerSelectionCounters, PeerSelectionView (..),
+                   PeerSelectionState (..), PeerSelectionTargets (..),
+                   TracePeerSelection (..), peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
@@ -66,7 +68,6 @@ import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
                    (TraceLocalRootPeers (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers
                    (TracePublicRootPeers (..))
-import qualified Ouroboros.Network.PeerSelection.State.EstablishedPeers as EstablishedPeers
 import           Ouroboros.Network.PeerSelection.State.KnownPeers (KnownPeerInfo (..))
 import qualified Ouroboros.Network.PeerSelection.State.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
@@ -84,7 +85,8 @@ import           Ouroboros.Network.Protocol.LocalTxMonitor.Type (LocalTxMonitor)
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LocalTxMonitor
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
-import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingResult (..))
+import           Ouroboros.Network.Protocol.PeerSharing.Type (PeerSharingAmount (..),
+                   PeerSharingResult (..))
 import           Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission2
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 (ServerTrace (..))
@@ -414,6 +416,7 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TracePeerShareRequests     {} -> Info
       TracePeerShareResults      {} -> Info
       TracePeerShareResultsFiltered {} -> Debug
+      TracePickInboundPeers      {} -> Info
       TraceForgetColdPeers       {} -> Info
       TracePromoteColdPeers      {} -> Info
       TracePromoteColdLocalPeers {} -> Info
@@ -436,7 +439,6 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceGovernorWakeup        {} -> Info
       TraceChurnWait             {} -> Info
       TraceChurnMode             {} -> Info
-      TraceKnownInboundConnection {} -> Info
 
       TraceForgetBigLedgerPeers  {} -> Info
 
@@ -470,6 +472,9 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceOnlyBootstrapPeers {}          -> Notice
 
       TraceOutboundGovernorCriticalFailure {} -> Error
+
+      TraceChurnAction {} -> Info
+      TraceChurnTimeout {} -> Notice
 
       TraceDebugState {} -> Info
 
@@ -561,6 +566,8 @@ instance HasSeverityAnnotation (InboundGovernorTrace addr) where
       InboundGovernor.TrUnexpectedlyFalseAssertion {}
                                                    -> Error
       InboundGovernor.TrInboundGovernorError {}    -> Error
+      InboundGovernor.TrMaturedConnections {}      -> Info
+      InboundGovernor.TrInactive {}                -> Debug
 
 instance HasPrivacyAnnotation (Server.RemoteTransitionTrace addr)
 instance HasSeverityAnnotation (Server.RemoteTransitionTrace addr) where
@@ -1643,10 +1650,11 @@ instance ToObject (TracePeerSelection SockAddr) where
              , "actualKnown" .= actualKnown
              , "selectedPeers" .= Aeson.toJSONList (toList sp)
              ]
-  toObject _verb (TracePeerShareRequests targetKnown actualKnown aps sps) =
+  toObject _verb (TracePeerShareRequests targetKnown actualKnown (PeerSharingAmount numRequested) aps sps) =
     mconcat [ "kind" .= String "PeerShareRequests"
              , "targetKnown" .= targetKnown
              , "actualKnown" .= actualKnown
+             , "numRequested" .= numRequested
              , "availablePeers" .= Aeson.toJSONList (toList aps)
              , "selectedPeers" .= Aeson.toJSONList (toList sps)
              ]
@@ -1867,10 +1875,13 @@ instance ToObject (TracePeerSelection SockAddr) where
   toObject _verb (TraceChurnMode c) =
     mconcat [ "kind" .= String "ChurnMode"
              , "event" .= show c ]
-  toObject _verb (TraceKnownInboundConnection addr sharing) =
-    mconcat [ "kind" .= String "KnownInboundConnection"
-             , "peer" .= show addr
-             , "peerSharing" .= show sharing ]
+  toObject _verb (TracePickInboundPeers targetNumberOfKnownPeers numberOfKnownPeers selected available) =
+    mconcat [ "kind" .= String "PickInboundPeers"
+            , "targetKnown" .= targetNumberOfKnownPeers
+            , "actualKnown" .= numberOfKnownPeers
+            , "selected" .= selected
+            , "available" .= available
+            ]
   toObject _verb (TraceLedgerStateJudgementChanged new) =
     mconcat [ "kind" .= String "LedgerStateJudgementChanged"
              , "new" .= show new ]
@@ -1886,6 +1897,18 @@ instance ToObject (TracePeerSelection SockAddr) where
     mconcat [ "kind" .= String "OutboundGovernorCriticalFailure"
              , "reason" .= show err
              ]
+  toObject _verb (TraceChurnAction duration action counter) =
+    mconcat [ "kind" .= String "ChurnAction"
+            , "action" .= show action
+            , "counter" .= counter
+            , "duration" .= duration
+            ]
+  toObject _verb (TraceChurnTimeout duration action counter) =
+    mconcat [ "kind" .= String "ChurnTimeout"
+            , "action" .= show action
+            , "counter" .= counter
+            , "duration" .= duration
+            ]
   toObject _verb (TraceDebugState mtime ds) =
    mconcat [ "kind" .= String "DebugState"
             , "monotonicTime" .= mtime
@@ -1971,26 +1994,15 @@ peerSelectionTargetsToObject
 
 instance ToObject (DebugPeerSelection SockAddr) where
   toObject verb (TraceGovernorState blockedAt wakeupAfter
-                   PeerSelectionState { targets, knownPeers, establishedPeers, activePeers, publicRootPeers })
+                   st@PeerSelectionState { targets })
       | verb <= NormalVerbosity =
     mconcat [ "kind" .= String "DebugPeerSelection"
              , "blockedAt" .= String (pack $ show blockedAt)
              , "wakeupAfter" .= String (pack $ show wakeupAfter)
              , "targets" .= peerSelectionTargetsToObject targets
-             , "numberOfPeers" .=
-                 Object (mconcat [ "known" .= KnownPeers.size knownPeers
-                                  , "established" .= EstablishedPeers.size establishedPeers
-                                  , "active" .= Set.size activePeers
-                                  ])
-             , "numberOfBigLedgerPeers" .=
-                 Object (mconcat [ "known" .= Set.size (KnownPeers.toSet knownPeers `Set.intersection` bigLedgerPeers)
-                                 , "established" .= Set.size (EstablishedPeers.toSet establishedPeers `Set.intersection` bigLedgerPeers)
-                                 , "active" .= Set.size (activePeers `Set.intersection` bigLedgerPeers)
-                                 ])
+             , "counters" .= toObject verb (peerSelectionStateToCounters st)
 
              ]
-    where
-     bigLedgerPeers = PublicRootPeers.getBigLedgerPeers publicRootPeers
   toObject _ (TraceGovernorState blockedAt wakeupAfter ev) =
     mconcat [ "kind" .= String "DebugPeerSelection"
              , "blockedAt" .= String (pack $ show blockedAt)
@@ -2022,15 +2034,48 @@ instance Show lAddr => ToObject (PeerSelectionActionsTrace SockAddr lAddr) where
              ]
 
 instance ToObject PeerSelectionCounters where
-  toObject _verb ev =
+  toObject _verb PeerSelectionCounters {..} =
     mconcat [ "kind" .= String "PeerSelectionCounters"
-             , "coldPeers" .= coldPeers ev
-             , "warmPeers" .= warmPeers ev
-             , "hotPeers" .= hotPeers ev
-             , "coldBigLedgerPeers" .= coldBigLedgerPeers ev
-             , "warmBigLedgerPeers" .= warmBigLedgerPeers ev
-             , "hotBigLedgerPeers" .= hotBigLedgerPeers ev
-             ]
+
+            , "knownPeers" .= numberOfKnownPeers
+            , "rootPeers" .= numberOfRootPeers
+            , "coldPeersPromotions" .= numberOfColdPeersPromotions
+            , "establishedPeers" .= numberOfEstablishedPeers
+            , "warmPeersDemotions" .= numberOfWarmPeersDemotions
+            , "warmPeersPromotions" .= numberOfWarmPeersPromotions
+            , "activePeers" .= numberOfActivePeers
+            , "activePeersDemotions" .= numberOfActivePeersDemotions
+
+            , "knownBigLedgerPeers" .= numberOfKnownBigLedgerPeers
+            , "coldBigLedgerPeersPromotions" .= numberOfColdBigLedgerPeersPromotions
+            , "establishedBigLedgerPeers" .= numberOfEstablishedBigLedgerPeers
+            , "warmBigLedgerPeersDemotions" .= numberOfWarmBigLedgerPeersDemotions
+            , "warmBigLedgerPeersPromotions" .= numberOfWarmBigLedgerPeersPromotions
+            , "activeBigLedgerPeers" .= numberOfActiveBigLedgerPeers
+            , "activeBigLedgerPeersDemotions" .= numberOfActiveBigLedgerPeersDemotions
+
+            , "knownLocalRootPeers" .= numberOfKnownLocalRootPeers
+            , "establishedLocalRootPeers" .= numberOfEstablishedLocalRootPeers
+            , "warmLocalRootPeersPromotions" .= numberOfWarmLocalRootPeersPromotions
+            , "activeLocalRootPeers" .= numberOfActiveLocalRootPeers
+            , "activeLocalRootPeersDemotions" .= numberOfActiveLocalRootPeersDemotions
+
+            , "knownNonRootPeers" .= numberOfKnownNonRootPeers
+            , "coldNonRootPeersPromotions" .= numberOfColdNonRootPeersPromotions
+            , "establishedNonRootPeers" .= numberOfEstablishedNonRootPeers
+            , "warmNonRootPeersDemotions" .= numberOfWarmNonRootPeersDemotions
+            , "warmNonRootPeersPromotions" .= numberOfWarmNonRootPeersPromotions
+            , "activeNonRootPeers" .= numberOfActiveNonRootPeers
+            , "activeNonRootPeersDemotions" .= numberOfActiveNonRootPeersDemotions
+
+            , "knownBootstrapPeers" .= numberOfKnownBootstrapPeers
+            , "coldBootstrapPeersPromotions" .= numberOfColdBootstrapPeersPromotions
+            , "establishedBootstrapPeers" .= numberOfEstablishedBootstrapPeers
+            , "warmBootstrapPeersDemotions" .= numberOfWarmBootstrapPeersDemotions
+            , "warmBootstrapPeersPromotions" .= numberOfWarmBootstrapPeersPromotions
+            , "activeBootstrapPeers" .= numberOfActiveBootstrapPeers
+            , "activeBootstrapPeersDemotions" .= numberOfActiveBootstrapPeersDemotions
+            ]
 
 instance (Show (ClientHasAgency st), Show (ServerHasAgency st))
   => ToJSON (PeerHasAgency pr st) where
@@ -2513,6 +2558,15 @@ instance (ToJSON addr, Show addr)
     mconcat [ "kind" .= String "InboundGovernorError"
              , "remoteSt" .= String (pack . show $ err)
              ]
+  toObject _verb (InboundGovernor.TrMaturedConnections matured fresh) =
+    mconcat [ "kind" .= String "MaturedConnections"
+            , "matured" .= toJSON matured
+            , "fresh" .= toJSON fresh
+            ]
+  toObject _verb (InboundGovernor.TrInactive fresh) =
+    mconcat [ "kind" .= String "Inactive"
+            , "fresh" .= toJSON fresh
+            ]
 
 instance ToJSON addr
       => ToObject (Server.RemoteTransitionTrace addr) where

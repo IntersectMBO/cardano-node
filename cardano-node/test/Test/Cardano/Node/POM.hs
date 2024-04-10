@@ -216,20 +216,16 @@ eExpectedConfig = do
     , ncTimeWaitTimeout = 60
     , ncChainSyncIdleTimeout = NoTimeoutOverride
     , ncAcceptedConnectionsLimit =
-        AcceptedConnectionsLimit
-          { acceptedConnectionsHardLimit = 512
-          , acceptedConnectionsSoftLimit = 384
-          , acceptedConnectionsDelay     = 5
-          }
-    , ncTargetNumberOfRootPeers = 85
-    , ncTargetNumberOfKnownPeers = 85
-    , ncTargetNumberOfEstablishedPeers = 40
-    , ncTargetNumberOfActivePeers = 15
-    , ncTargetNumberOfKnownBigLedgerPeers = 15
-    , ncTargetNumberOfEstablishedBigLedgerPeers = 10
-    , ncTargetNumberOfActiveBigLedgerPeers = 5
-    , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
-    , ncPeerSharing = PeerSharingDisabled
+        Diffusion.defaultAcceptedConnectionsLimit
+    , ncTargetNumberOfRootPeers = targetNumberOfRootPeers Diffusion.defaultPeerSelectionTargets
+    , ncTargetNumberOfKnownPeers = targetNumberOfKnownPeers Diffusion.defaultPeerSelectionTargets
+    , ncTargetNumberOfEstablishedPeers = targetNumberOfEstablishedPeers Diffusion.defaultPeerSelectionTargets
+    , ncTargetNumberOfActivePeers = targetNumberOfActivePeers Diffusion.defaultPeerSelectionTargets
+    , ncTargetNumberOfKnownBigLedgerPeers = targetNumberOfKnownBigLedgerPeers Diffusion.defaultPeerSelectionTargets
+    , ncTargetNumberOfEstablishedBigLedgerPeers = targetNumberOfEstablishedBigLedgerPeers Diffusion.defaultPeerSelectionTargets
+    , ncTargetNumberOfActiveBigLedgerPeers = targetNumberOfActiveBigLedgerPeers Diffusion.defaultPeerSelectionTargets
+    , ncEnableP2P = SomeNetworkP2PMode Consensus.EnableP2PMode
+    , ncPeerSharing = Diffusion.defaultPeerSharing
     }
 
 -- -----------------------------------------------------------------------------
