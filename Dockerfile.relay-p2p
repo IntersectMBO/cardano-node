@@ -34,7 +34,7 @@ RUN useradd -rm -d /home/cardano -s /bin/bash -g 1001 -G sudo -u 1001 cardano
 RUN mkdir -p /home/cardano/data/db
 RUN mkdir /home/cardano/ipc
 RUN cd /home/cardano && git clone https://github.com/input-output-hk/cardano-configurations.git
-RUN cd /home/cardano/cardano-configurations/network/mainnet/cardano-node/ && sed -i -e 's/127.0.0.1/0.0.0.0/g' config.json && sed -i '1 a "EnableP2P": true,' config.json && wget https://book.world.dev.cardano.org/environments/mainnet/topology-p2p.json && mv topology-p2p.json topology.json
+RUN cd /home/cardano/cardano-configurations/network/mainnet/cardano-node/ && sed -i -e 's/127.0.0.1/0.0.0.0/g' config.json
 RUN chown -R 1001:1001 /home/cardano/ipc 
 RUN chown -R 1001:1001 /home/cardano/data
 RUN chown -R 1001:1001 /home/cardano/cardano-configurations
