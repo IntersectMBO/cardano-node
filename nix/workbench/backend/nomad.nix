@@ -131,9 +131,9 @@ let
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
               tx-generator = rec {
-                nix-store-path  = pkgs.cardanoNodePackages.tx-generator;
+                nix-store-path  = pkgs.tx-generator-script;
                 flake-reference = "github:intersectmbo/cardano-node";
-                flake-output = "cardanoNodePackages.tx-generator";
+                flake-output = "cardanoNodePackages.tx-generator-script";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
             }
