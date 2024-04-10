@@ -76,13 +76,9 @@ in pkgs.commonLib.defServiceModule
       svcDesc = "configurable transaction generator";
 
       svcPackageSelector =
-        pkgs: ## Local:
-              pkgs.cardanoNodePackages.tx-generator
-              ## Imported by another repo, that adds an overlay:
-                or pkgs.tx-generator;
-              ## TODO:  that's actually a bit ugly and could be improved.
+        pkgs: pkgs.tx-generator-script;
       ## This exe has to be available in the selected package.
-      exeName = "tx-generator";
+      exeName = "tx-generator-script";
 
       extraOptionDecls = {
         highLevelConfig = opt bool false     "Pass high-level config to the tx-generator";
