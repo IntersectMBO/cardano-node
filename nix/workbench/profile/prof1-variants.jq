@@ -1110,15 +1110,15 @@ def all_profile_variants:
       }
     }
   , $nomad_perf_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
-    { name: "short-value-dbsynth-32G-nomadperfssd"
+    { name: "value-dbsynth-32G-nomadperfssd"
     , genesis:
       { utxo: 0
         # Account for slots db-synthesis creates, and the delay for it to run
-      , extra_future_offset: -7600
+      , extra_future_offset: -779900
       , funds_balance: 40000000000000
       }
     , node:
-      { shutdown_on_slot_synced: 8100
+      { shutdown_on_slot_synced: 864000
       , heap_limit:              32768
       }
     }

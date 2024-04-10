@@ -576,7 +576,7 @@ EOF
             --config "$dir"/node-0/config.json --db "$dir"/genesis/db \
             --bulk-credentials-file "$dir"/genesis/pools/bulk1.creds \
             --genesis-utxo-signing-key-file "$dir"/genesis/utxo-keys/utxo1.skey \
-	    --epochs 1 # TODO change back to the amount needed for full UTxO set
+	    --slots 800000
 
         echo 42 > "$dir"/genesis/db/protocolMagicId
 
