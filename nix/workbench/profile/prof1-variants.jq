@@ -690,10 +690,6 @@ def all_profile_variants:
 
   ### Profile templates
   ###
-  # UTxO scaling on a single node, mainnet blocksize, ~2h runtime (6 epochs) - default: 24mio UTxO, 64GB RAM cap
-    ($nomad_perfssd_solo_base * $nomad_perfssd_unicircle * $costmodel_v8_preview * $p2p
-    ) as $utxoscale_solo_template
-  |
 
   ### First, auto-named profiles:
   ###
@@ -950,29 +946,6 @@ def all_profile_variants:
     }
   , $fast_base * $compose_fiftytwo * $nomad_perf_dense * $costmodel_v8_preview *
     { name: "fast-nomadperf-nop2p"
-    }
-  , $fast_base * $solo * $nomad_perfssd_unicircle * $costmodel_v8_preview * $p2p *
-    { name: "fast-nomadperfssd"
-    }
-
-## P&T NomadSSD cluster: UTxO scale benchmarks on a single node
-  , $utxoscale_solo_template *
-    { name: "utxoscale-solo-24M64G-nomadperfssd"
-    }
-  , $utxoscale_solo_template *
-    { name: "utxoscale-solo-12M64G-nomadperfssd"
-    , genesis:
-      { utxo:                               (12 * $M)
-      }
-    }
-  , $utxoscale_solo_template *
-    { name: "utxoscale-solo-12M16G-nomadperfssd"
-    , genesis:
-      { utxo:                               (12 * $M)
-      }
-    , node:
-      { heap_limit:                         16384
-      }
     }
 
 ## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)
