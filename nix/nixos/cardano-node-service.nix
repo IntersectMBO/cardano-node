@@ -131,7 +131,7 @@ let
     utxoLmdbParams = ["--v1-lmdb-ledger-db-backend"]
       ++ lib.optionals (cfg.lmdbDatabasePath i != null)
         [ "--ssd-database-dir ${cfg.lmdbDatabasePath i}"
-          "--ssd-snapshot-tables"
+          # "--ssd-snapshot-tables"
         ];
     cmd = builtins.filter (x: x != "") [
       "${cfg.executable} run"
