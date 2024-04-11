@@ -230,15 +230,15 @@ documentTracer tracer = do
     propertiesWarning LogDoc {..} =
         case ldSeverityCoded of
           Just _s -> []
-          Nothing -> map (\ns -> pack "Severity missing" <> nsRawToText ns) ldNamespace
+          Nothing -> map (\ns -> pack "Severity missing: " <> nsRawToText ns) ldNamespace
       <>
         case ldPrivacyCoded of
           Just _p -> []
-          Nothing -> map (\ns -> pack "Privacy missing" <> nsRawToText ns) ldNamespace
+          Nothing -> map (\ns -> pack "Privacy missing: " <> nsRawToText ns) ldNamespace
       <>
         case ldDetailsCoded of
           Just _d -> []
-          Nothing -> map (\ns -> pack "Details missing" <> nsRawToText ns) ldNamespace
+          Nothing -> map (\ns -> pack "Details missing: " <> nsRawToText ns) ldNamespace
 
     configBuilder :: LogDoc -> Builder
     configBuilder LogDoc {..} =
@@ -617,5 +617,3 @@ accentuated t = if t == ""
     addAccent t' = if t' == ""
                     then ">"
                     else "> " <> t'
-
-

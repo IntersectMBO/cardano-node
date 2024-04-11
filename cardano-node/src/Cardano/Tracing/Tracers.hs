@@ -213,6 +213,15 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
                (WithSeverity _s2 (ChainDB.TraceLedgerDBEvent
                                   (LedgerDB.LedgerReplayEvent
                                    (LedgerDB.TraceReplayProgressEvent _)))) = True
+  -- HACK: we never want any of the forker or flavor events to break the elision.
+  --
+  -- when a forker event arrives, it will be compared as @(ev `isEquivalent`)@, but once it is
+  -- processed the next time it will be compared as @(`isEquivalent` ev)@, hence the flipped
+  -- versions below this comment
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceLedgerDBEvent LedgerDB.LedgerDBForkerEvent{})) _ = True
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceLedgerDBEvent LedgerDB.LedgerDBFlavorImplEvent{})) _ = True
+  isEquivalent _ (WithSeverity _s1 (ChainDB.TraceLedgerDBEvent LedgerDB.LedgerDBForkerEvent{})) = True
+  isEquivalent _ (WithSeverity _s1 (ChainDB.TraceLedgerDBEvent LedgerDB.LedgerDBFlavorImplEvent{})) = True
   isEquivalent (WithSeverity _s1 (ChainDB.TraceInitChainSelEvent ev1))
                (WithSeverity _s2 (ChainDB.TraceInitChainSelEvent ev2)) =
     case (ev1, ev2) of
@@ -228,6 +237,10 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceLedgerDBEvent
                                   (LedgerDB.LedgerReplayEvent
                                    (LedgerDB.TraceReplayProgressEvent _)))) = True
+  doelide (WithSeverity _ (ChainDB.TraceLedgerDBEvent
+                                  LedgerDB.LedgerDBForkerEvent{})) = True
+  doelide (WithSeverity _ (ChainDB.TraceLedgerDBEvent
+                                  LedgerDB.LedgerDBFlavorImplEvent{})) = True
   doelide (WithSeverity _ (ChainDB.TraceGCEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.IgnoreBlockOlderThanK _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.IgnoreInvalidBlock _ _))) = False
@@ -263,6 +276,10 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceLedgerDBEvent
                                   (LedgerDB.LedgerReplayEvent
                                    (LedgerDB.TraceReplayProgressEvent _)))) (_old, count) = do
+      return (Just ev, count)
+  conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceLedgerDBEvent LedgerDB.LedgerDBForkerEvent{})) (_old, count) = do
+      return (Just ev, count)
+  conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceLedgerDBEvent LedgerDB.LedgerDBFlavorImplEvent{})) (_old, count) = do
       return (Just ev, count)
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceInitChainSelEvent
                                              (ChainDB.InitChainSelValidation
