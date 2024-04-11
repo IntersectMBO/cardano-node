@@ -1,26 +1,16 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-#if __GLASGOW_HASKELL__ >= 908
-{-# OPTIONS_GHC -Wno-x-partial #-}
-#endif
-
-{- HLINT ignore "Use head" -}
-
 module Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
   ( hprop_ledger_events_propose_new_constitution
-  , foldBlocksCheckProposalWasSubmitted
-  , retrieveGovernanceActionIndex
   ) where
 
 import           Cardano.Api as Api
 import           Cardano.Api.Error (displayError)
-import           Cardano.Api.Shelley
 
 import qualified Cardano.Crypto.Hash as L
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -33,14 +23,16 @@ import           Prelude
 
 import           Control.Monad
 import           Control.Monad.State.Strict (StateT)
-import qualified Data.Map.Strict as Map
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Lens as AL
+import qualified Data.ByteString.Lazy as LBS
 import           Data.Maybe
 import           Data.Maybe.Strict
 import           Data.String
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word
-import           GHC.IO.Exception (IOException)
-import           GHC.Stack (HasCallStack, callStack)
+import           GHC.Stack (callStack)
 import           Lens.Micro
 import           System.FilePath ((</>))
 
@@ -57,10 +49,6 @@ import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 
-newtype AdditionalCatcher
-  = IOE IOException
-  deriving Show
-
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/ProposeAndRatifyNewConstitution/"'@
 hprop_ledger_events_propose_new_constitution :: Property
@@ -72,6 +60,15 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
+  -- Generate model for votes
+  let allVotes :: [(String, Int)]
+      allVotes = zip (concatMap (uncurry replicate) [(4, "yes"), (3, "no"), (2, "abstain")]) [1..]
+  annotateShow allVotes
+
+  let numVotes :: Int
+      numVotes = length allVotes
+  annotateShow numVotes
+
   let sbe = ShelleyBasedEraConway
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
@@ -79,12 +76,13 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
         { cardanoEpochLength = 100
         , cardanoSlotLength = 0.1
         , cardanoNodeEra = cEra
+        , cardanoNumDReps = numVotes
         }
 
   TestnetRuntime
     { testnetMagic
     , poolNodes
-    , wallets
+    , wallets=wallet0:wallet1:_
     , configurationFile
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
@@ -103,6 +101,8 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   H.note_ $ "Abs path: " <> tempAbsBasePath'
   H.note_ $ "Socketpath: " <> socketPath
   H.note_ $ "Foldblocks config file: " <> configurationFile
+
+  minDRepDeposit <- getMinDRepDeposit execConfig
 
   -- Create Conway constitution
   gov <- H.createDirectoryIfMissing $ work </> "governance"
@@ -129,58 +129,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
          $ P.KeyNames { P.verificationKeyFile = stakeVkeyFp
                       , P.signingKeyFile = stakeSKeyFp
                       }
-
-  -- TODO share this piece of code that is duplicated in multiple tests
-  let drepVkeyFp :: Int -> FilePath
-      drepVkeyFp n = tempAbsPath' </> "drep-keys" </> ("drep" <> show n) </> "drep.vkey"
-
-      drepSKeyFp :: Int -> FilePath
-      drepSKeyFp n = tempAbsPath' </> "drep-keys" </> ("drep" <> show n) </> "drep.skey"
-
-  -- Create Drep registration certificates
-  let drepCertFile :: Int -> FilePath
-      drepCertFile n = gov </> "drep-keys" <>"drep" <> show n <> ".regcert"
-  forM_ [1..3] $ \n -> do
-    H.execCli' execConfig
-       [ "conway", "governance", "drep", "registration-certificate"
-       , "--drep-verification-key-file", drepVkeyFp n
-       , "--key-reg-deposit-amt", show @Int 1_000_000 -- TODO: retrieve this from conway genesis.
-       , "--out-file", drepCertFile n
-       ]
-
-  -- Retrieve UTxOs for registration submission
-  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe $ wallets !! 0
-
-  drepRegTxbodyFp <- H.note $ work </> "drep.registration.txbody"
-  drepRegTxSignedFp <- H.note $ work </> "drep.registration.tx"
-
-  void $ H.execCli' execConfig
-    [ "conway", "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
-    , "--tx-in", Text.unpack $ renderTxIn txin1
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr (wallets !! 1)) <> "+" <> show @Int 5_000_000
-    , "--certificate-file", drepCertFile 1
-    , "--certificate-file", drepCertFile 2
-    , "--certificate-file", drepCertFile 3
-    , "--witness-override", show @Int 4
-    , "--out-file", drepRegTxbodyFp
-    ]
-
-  void $ H.execCli' execConfig
-    [ "conway", "transaction", "sign"
-    , "--tx-body-file", drepRegTxbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 0
-    , "--signing-key-file", drepSKeyFp 1
-    , "--signing-key-file", drepSKeyFp 2
-    , "--signing-key-file", drepSKeyFp 3
-    , "--out-file", drepRegTxSignedFp
-    ]
-
-  void $ H.execCli' execConfig
-    [ "conway", "transaction", "submit"
-    , "--tx-file", drepRegTxSignedFp
-    ]
-
   -- Create constitution proposal
 
   guardRailScriptFp <- H.note $ work </> "guard-rail-script.plutusV3"
@@ -189,14 +137,14 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   -- only useful for minting scripts
   constitutionScriptHash <- filter (/= '\n') <$>
     H.execCli' execConfig
-      [ convertToEraString cEra, "transaction"
+      [ anyEraToString cEra, "transaction"
       , "policyid"
       , "--script-file", guardRailScriptFp
       ]
   void $ H.execCli' execConfig
     [ "conway", "governance", "action", "create-constitution"
     , "--testnet"
-    , "--governance-action-deposit", show @Int 1_000_000 -- TODO: Get this from the node
+    , "--governance-action-deposit", show @Integer minDRepDeposit
     , "--deposit-return-stake-verification-key-file", stakeVkeyFp
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
@@ -209,13 +157,13 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   txbodyFp <- H.note $ work </> "tx.body"
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
-  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe $ wallets !! 1
+  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
 
   void $ H.execCli' execConfig
     [ "conway", "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 1
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
     , "--tx-in", Text.unpack $ renderTxIn txin2
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr (wallets !! 0)) <> "+" <> show @Int 5_000_000
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_000
     , "--proposal-file", constitutionActionFp
     , "--out-file", txbodyFp
     ]
@@ -223,7 +171,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   void $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", txbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 1
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet1
     , "--out-file", txbodySignedFp
     ]
 
@@ -236,69 +184,58 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     [ "transaction", "txid"
     , "--tx-file", txbodySignedFp
     ]
-  !propSubmittedResult
-    <- runExceptT $ handleIOExceptT IOE
-                  $ runExceptT $ foldBlocks
-                      (File configurationFile)
-                      (File socketPath)
-                      FullValidation
-                      Nothing -- Initial accumulator state
-                      (foldBlocksCheckProposalWasSubmitted (fromString txidString))
 
-  newProposalEvents <- case propSubmittedResult of
-                        Left (IOE e) ->
-                          H.failMessage callStack
-                            $ "foldBlocksCheckProposalWasSubmitted failed with: " <> show e
-                        Right (Left e) ->
-                          H.failMessage callStack
-                            $ "foldBlocksCheckProposalWasSubmitted failed with: " <> displayError e
-                        Right (Right events) -> return events
+  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex sbe (fromString txidString))
+                                        configurationFile
+                                        socketPath
+                                        (EpochNo 10)
 
-  governanceActionIndex <- retrieveGovernanceActionIndex newProposalEvents
+  governanceActionIndex <- case propSubmittedResult of
+                             Left e ->
+                               H.failMessage callStack
+                                 $ "findCondition failed with: " <> displayError e
+                             Right Nothing ->
+                               H.failMessage callStack "Couldn't find proposal."
+                             Right (Just a) -> return a
 
   let voteFp :: Int -> FilePath
       voteFp n = work </> gov </> "vote-" <> show n
 
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
-  forM_ [1..3] $ \n -> do
+  forM_ allVotes $ \(vote, n) -> do
     H.execCli' execConfig
       [ "conway", "governance", "vote", "create"
-      , "--yes"
+      , "--" ++ vote
       , "--governance-action-tx-id", txidString
       , "--governance-action-index", show @Word32 governanceActionIndex
-      , "--drep-verification-key-file", drepVkeyFp n
+      , "--drep-verification-key-file", defaultDRepVkeyFp n
       , "--out-file", voteFp n
       ]
 
   -- We need more UTxOs
 
-  txin3 <- findLargestUtxoForPaymentKey epochStateView sbe $ wallets !! 0
+  txin3 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   voteTxFp <- H.note $ work </> gov </> "vote.tx"
   voteTxBodyFp <- H.note $ work </> gov </> "vote.txbody"
 
   -- Submit votes
-  void $ H.execCli' execConfig
+  void $ H.execCli' execConfig $
     [ "conway", "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ wallets !! 0
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin3
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr (wallets !! 1)) <> "+" <> show @Int 3_000_000
-    , "--vote-file", voteFp 1
-    , "--vote-file", voteFp 2
-    , "--vote-file", voteFp 3
-    , "--witness-override", show @Int 4
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show @Int 3_000_000
+    ] ++ (concat [["--vote-file", voteFp n] | (_, n) <- allVotes]) ++
+    [ "--witness-override", show @Int (numVotes + 1)
     , "--out-file", voteTxBodyFp
     ]
 
-
-  void $ H.execCli' execConfig
+  void $ H.execCli' execConfig $
     [ "conway", "transaction", "sign"
     , "--tx-body-file", voteTxBodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 0
-    , "--signing-key-file", drepSKeyFp 1
-    , "--signing-key-file", drepSKeyFp 2
-    , "--signing-key-file", drepSKeyFp 3
-    , "--out-file", voteTxFp
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
+    ] ++ (concat [["--signing-key-file", defaultDRepSkeyFp n] | (_, n) <- allVotes]) ++
+    [ "--out-file", voteTxFp
     ]
 
   void $ H.execCli' execConfig
@@ -315,50 +252,34 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
                       FullValidation
                       (EpochNo 10)
                       ()
-                      (foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash)
+                      (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
 
   void $ evalEither eConstitutionAdopted
 
-foldBlocksCheckProposalWasSubmitted
-  :: TxId -- TxId of submitted tx
-  -> Env
-  -> LedgerState
-  -> [LedgerEvent]
-  -> BlockInMode -- Block i
-  -> Maybe LedgerEvent -- ^ Accumulator at block i - 1
-  -> IO (Maybe LedgerEvent, FoldStatus) -- ^ Accumulator at block i and fold status
-foldBlocksCheckProposalWasSubmitted txid _ _ allEvents _ _ = do
-  let newGovProposal = filter (filterNewGovProposals txid) allEvents
-  if null newGovProposal
-  then return (Nothing, ContinueFold)
-  else return (Just $ newGovProposal !! 0, StopFold)
+  finalGovState <- H.note $ work </> gov </> "final_gov_state.json"
 
+  void $ H.execCli' execConfig
+    [ "conway", "query", "gov-state"
+    , "--volatile-tip"
+    , "--out-file", finalGovState
+    ]
 
-retrieveGovernanceActionIndex
-  :: (HasCallStack, MonadTest m)
-  => Maybe LedgerEvent -> m Word32
-retrieveGovernanceActionIndex mEvent = do
-  case mEvent of
-    Nothing -> H.failMessage callStack "retrieveGovernanceActionIndex: No new governance proposals found"
-    Just (NewGovernanceProposals _ (AnyProposals props)) ->
-    -- In this test there will only be one
-        let govActionStates = [i
-                              | Ledger.GovActionIx i <- map Ledger.gaidGovActionIx . Map.keys $ Ledger.proposalsActionsMap props
-                              ]
-        in return $ govActionStates !! 0
-    Just unexpectedEvent ->
-      H.failMessage callStack
-        $ mconcat ["retrieveGovernanceActionIndex: Expected NewGovernanceProposals, got: "
-                  , show unexpectedEvent
-                  ]
+  -- Tally registered votes
 
+  finalGovFileBS <- liftIO $ LBS.readFile finalGovState
 
-filterNewGovProposals :: TxId -> LedgerEvent -> Bool
-filterNewGovProposals txid (NewGovernanceProposals eventTxId (AnyProposals props)) =
-  let _govActionStates = Ledger.proposalsActionsMap props
-  in fromShelleyTxId eventTxId == txid
-filterNewGovProposals _ _ = False
+  decodedFinalGovFile <- H.nothingFail (Aeson.decode finalGovFileBS :: Maybe Aeson.Value)
+  let votes :: [Text]
+      votes = decodedFinalGovFile ^.. AL.key "proposals"
+                                    . AL.nth 0
+                                    . AL.key "dRepVotes"
+                                    . AL.members
+                                    . AL._String
 
+  length (filter (== "VoteYes") votes) === 4
+  length (filter (== "VoteNo") votes) === 3
+  length (filter (== "Abstain") votes) === 2
+  length votes === numVotes
 
 foldBlocksCheckConstitutionWasRatified
   :: String -- submitted constitution hash

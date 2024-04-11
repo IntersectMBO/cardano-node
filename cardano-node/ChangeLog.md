@@ -1,5 +1,9 @@
 # Changelog for cardano-node
 
+## Next version
+
+- Use p2p network stack by default, warn when using the legacy network stack.
+
 ## 8.2.1 -- August 2023
 
 - prevent SIGHUP from killing node during ledger replay

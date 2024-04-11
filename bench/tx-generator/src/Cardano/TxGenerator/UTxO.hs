@@ -9,14 +9,15 @@ module  Cardano.TxGenerator.UTxO
 import           Cardano.Api
 import           Cardano.Api.Shelley (ReferenceScript (..))
 
+import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.Fund (Fund (..), FundInEra (..))
 import           Cardano.TxGenerator.Utils (keyAddress)
 
-type ToUTxO era = Lovelace -> (TxOut CtxTx era, TxIx -> TxId -> Fund)
+type ToUTxO era = L.Coin -> (TxOut CtxTx era, TxIx -> TxId -> Fund)
 type ToUTxOList era split = split -> ([TxOut CtxTx era], TxId -> [Fund])
 
 
-makeToUTxOList :: [ ToUTxO era ] -> ToUTxOList era [ Lovelace ]
+makeToUTxOList :: [ ToUTxO era ] -> ToUTxOList era [ L.Coin ]
 makeToUTxOList fkts values
   = (outs, \txId -> map (\f -> f txId) fs)
   where
@@ -36,7 +37,7 @@ mkUTxOVariant networkId key value
  where
   mkTxOut v = TxOut (keyAddress @era networkId key) (lovelaceToTxOutValue (shelleyBasedEra @era) v) TxOutDatumNone ReferenceScriptNone
 
-  mkNewFund :: Lovelace -> TxIx -> TxId -> Fund
+  mkNewFund :: L.Coin -> TxIx -> TxId -> Fund
   mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @era) $ FundInEra {
       _fundTxIn = TxIn txId txIx
     , _fundWitness = KeyWitness KeyWitnessForSpending
@@ -74,7 +75,7 @@ mkUTxOScript networkId (script, txOutDatum) witness value
                   (TxOutDatumHash tag $ hashScriptDataBytes $ unsafeHashableScriptData txOutDatum)
                   ReferenceScriptNone
 
-  mkNewFund :: Lovelace -> TxIx -> TxId -> Fund
+  mkNewFund :: L.Coin -> TxIx -> TxId -> Fund
   mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @era) $ FundInEra {
       _fundTxIn = TxIn txId txIx
     , _fundWitness = witness

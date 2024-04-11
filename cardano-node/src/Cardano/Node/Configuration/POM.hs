@@ -529,7 +529,7 @@ defaultPartialNodeConfiguration =
     , pncTargetNumberOfKnownBigLedgerPeers       = Last (Just 15)
     , pncTargetNumberOfEstablishedBigLedgerPeers = Last (Just 10)
     , pncTargetNumberOfActiveBigLedgerPeers      = Last (Just 5)
-    , pncEnableP2P                      = Last (Just DisabledP2PMode)
+    , pncEnableP2P                      = Last (Just EnabledP2PMode)
     , pncPeerSharing                    = Last (Just PeerSharingDisabled)
     }
 

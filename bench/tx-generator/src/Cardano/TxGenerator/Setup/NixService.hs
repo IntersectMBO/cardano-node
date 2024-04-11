@@ -15,18 +15,19 @@ module Cardano.TxGenerator.Setup.NixService
        )
        where
 
+import           Cardano.Api (AnyCardanoEra, mapFile)
+
+import           Cardano.CLI.Types.Common (FileDirection (..), SigningKeyFile)
+import qualified Cardano.Ledger.Coin as L
+import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
+import           Cardano.Node.Types (AdjustFilePaths (..))
+import           Cardano.TxGenerator.Internal.Orphans ()
+import           Cardano.TxGenerator.Types
+
 import           Data.Aeson
 import           Data.List.NonEmpty (NonEmpty)
 import           Data.Maybe (fromMaybe)
 import           GHC.Generics (Generic)
-
-import           Cardano.CLI.Types.Common (FileDirection (..), SigningKeyFile)
-import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
-import           Cardano.Node.Types (AdjustFilePaths (..))
-
-import           Cardano.Api (AnyCardanoEra, Lovelace, mapFile)
-import           Cardano.TxGenerator.Internal.Orphans ()
-import           Cardano.TxGenerator.Types
 
 
 data NixServiceOptions = NixServiceOptions {
@@ -35,8 +36,8 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_tps              :: TPSRate
   , _nix_inputs_per_tx    :: NumberOfInputsPerTx
   , _nix_outputs_per_tx   :: NumberOfOutputsPerTx
-  , _nix_tx_fee           :: Lovelace
-  , _nix_min_utxo_value   :: Lovelace
+  , _nix_tx_fee           :: L.Coin
+  , _nix_min_utxo_value   :: L.Coin
   , _nix_add_tx_size      :: TxAdditionalSize
   , _nix_init_cooldown    :: Double
   , _nix_era              :: AnyCardanoEra

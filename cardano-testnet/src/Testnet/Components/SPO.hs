@@ -1,14 +1,16 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 
 module Testnet.Components.SPO
   ( checkStakeKeyRegistered
-  , convertToEraFlag
   , createScriptStakeRegistrationCertificate
   , createStakeDelegationCertificate
   , createStakeKeyRegistrationCertificate
+  , createStakeKeyDeregistrationCertificate
   , decodeEraUTxO
   , registerSingleSpo
   ) where
@@ -115,12 +117,12 @@ createStakeDelegationCertificate
   -> String -- ^ Pool id
   -> FilePath
   -> m ()
-createStakeDelegationCertificate tempAbsP anyCera delegatorStakeVerKey poolId outputFp =
+createStakeDelegationCertificate tempAbsP (AnyCardanoEra cEra) delegatorStakeVerKey poolId outputFp =
   GHC.withFrozenCallStack $ do
     let tempAbsPath' = unTmpAbsPath tempAbsP
-    void $ execCli
-      [ "stake-address", "delegation-certificate"
-      , convertToEraFlag anyCera
+    execCli_
+      [ eraToString cEra
+      , "stake-address", "stake-delegation-certificate"
       , "--stake-verification-key-file", delegatorStakeVerKey
       , "--stake-pool-id", poolId
       , "--out-file", tempAbsPath' </> outputFp
@@ -131,52 +133,62 @@ createStakeKeyRegistrationCertificate
   => TmpAbsolutePath
   -> AnyCardanoEra
   -> FilePath -- ^ Stake verification key file
+  -> Int -- ^ deposit amount used only in Conway
   -> FilePath -- ^ Output file path
   -> m ()
-createStakeKeyRegistrationCertificate tempAbsP anyCEra stakeVerKey outputFp =
-  GHC.withFrozenCallStack $ do
-    let tempAbsPath' = unTmpAbsPath tempAbsP
-
-    void $ execCli
-      [ "stake-address", "registration-certificate"
-      , convertToEraFlag anyCEra
-      , "--stake-verification-key-file", stakeVerKey
-      , "--out-file", tempAbsPath' </> outputFp
-      ]
+createStakeKeyRegistrationCertificate tempAbsP (AnyCardanoEra cEra) stakeVerKey deposit outputFp = GHC.withFrozenCallStack $ do
+  let tempAbsPath' = unTmpAbsPath tempAbsP
+      extraArgs = monoidForEraInEon @ConwayEraOnwards cEra $
+        const ["--key-reg-deposit-amt", show deposit]
+  execCli_ $
+    [ eraToString cEra
+    , "stake-address", "registration-certificate"
+    , "--stake-verification-key-file", stakeVerKey
+    , "--out-file", tempAbsPath' </> outputFp
+    ]
+    <> extraArgs
 
 createScriptStakeRegistrationCertificate
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
   -> AnyCardanoEra
   -> FilePath -- ^ Script file
-  -> Int -- ^ Registration deposit amount
+  -> Int -- ^ Registration deposit amount used only in Conway
   -> FilePath -- ^ Output file path
   -> m ()
-createScriptStakeRegistrationCertificate tempAbsP anyCEra scriptFile deposit outputFp =
+createScriptStakeRegistrationCertificate tempAbsP (AnyCardanoEra cEra) scriptFile deposit outputFp =
   GHC.withFrozenCallStack $ do
     let tempAbsPath' = unTmpAbsPath tempAbsP
-
-    void $ execCli
-      [ convertToEraString anyCEra
+        extraArgs = monoidForEraInEon @ConwayEraOnwards cEra $
+          const ["--key-reg-deposit-amt", show deposit]
+    execCli_ $
+      [ eraToString cEra
       , "stake-address", "registration-certificate"
       , "--stake-script-file", scriptFile
-      , "--key-reg-deposit-amt", show deposit
       , "--out-file", tempAbsPath' </> outputFp
       ]
+      <> extraArgs
 
-
--- TODO: Remove me and replace with new era based commands
--- i.e "conway", "babbage" etc
-convertToEraFlag :: AnyCardanoEra -> String
-convertToEraFlag (AnyCardanoEra e) =
-  case e of
-    ConwayEra -> "--conway-era"
-    BabbageEra -> "--babbage-era"
-    AlonzoEra -> "--alonzo-era"
-    MaryEra -> "--mary-era"
-    AllegraEra -> "--allegra-era"
-    ShelleyEra -> "--shelley-era"
-    ByronEra -> "--byron-era"
+createStakeKeyDeregistrationCertificate
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => TmpAbsolutePath
+  -> AnyCardanoEra
+  -> FilePath -- ^ Stake verification key file
+  -> Int -- ^ deposit amount used only in Conway
+  -> FilePath -- ^ Output file path
+  -> m ()
+createStakeKeyDeregistrationCertificate tempAbsP (AnyCardanoEra cEra) stakeVerKey deposit outputFp =
+  GHC.withFrozenCallStack $ do
+    let tempAbsPath' = unTmpAbsPath tempAbsP
+        extraArgs = monoidForEraInEon @ConwayEraOnwards cEra $
+          const ["--key-reg-deposit-amt", show deposit]
+    execCli_ $
+      [ eraToString cEra
+      , "stake-address" , "deregistration-certificate"
+      , "--stake-verification-key-file", stakeVerKey
+      , "--out-file", tempAbsPath' </> outputFp
+      ]
+      <> extraArgs
 
 -- | Related documentation: https://github.com/input-output-hk/cardano-node-wiki/blob/main/docs/stake-pool-operations/8_register_stakepool.md
 registerSingleSpo
@@ -200,7 +212,6 @@ registerSingleSpo
 registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') cTestnetOptions execConfig
                   (fundingInput, fundingSigninKey, changeAddr) = GHC.withFrozenCallStack $ do
   let testnetMag = cardanoTestnetMagic cTestnetOptions
-      eraFlag= convertToEraFlag $ cardanoNodeEra cTestnetOptions
 
   workDir <- H.note tempAbsPath'
 
@@ -259,11 +270,12 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') cTestnetOptions 
 
   -- 5. Create registration certificate
   let poolRegCertFp = spoReqDir </> "registration.cert"
+  let era = cardanoNodeEra cTestnetOptions
 
   -- The pledge, pool cost and pool margin can all be 0
   execCli_
-    [ "stake-pool", "registration-certificate"
-    , "--babbage-era"
+    [ anyEraToString era
+    , "stake-pool", "registration-certificate"
     , "--testnet-magic", show @Int testnetMag
     , "--pool-pledge", "0"
     , "--pool-cost", "0"
@@ -280,15 +292,14 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') cTestnetOptions 
 
   -- Create pledger registration certificate
 
-  createStakeKeyRegistrationCertificate
-    tap
-    (cardanoNodeEra cTestnetOptions)
+  createStakeKeyRegistrationCertificate tap era
     poolOwnerstakeVkeyFp
+    2_000_000
     (workDir </> "pledger.regcert")
 
   void $ execCli' execConfig
-    [ "transaction", "build"
-    , eraFlag
+    [ anyEraToString era
+    , "transaction", "build"
     , "--change-address", changeAddr
     , "--tx-in", Text.unpack $ renderTxIn fundingInput
     , "--tx-out", poolowneraddresswstakecred <> "+" <> show @Int 5_000_000
@@ -318,7 +329,7 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') cTestnetOptions 
            ]
   -- TODO: Currently we can't propagate the error message thrown by checkStakeKeyRegistered when using byDurationM
   -- Instead we wait 15 seconds
-  threadDelay 15_000000
+  threadDelay 15_000_000
   -- Check the pledger/owner stake key was registered
   delegsAndRewards <-
     checkStakeKeyRegistered
@@ -339,4 +350,3 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') cTestnetOptions 
               poolColdVkeyFp
               currentRegistedPoolsJson
   return (poolId, poolColdSkeyFp, poolColdVkeyFp, vrfSkeyFp, vrfVkeyFp)
-

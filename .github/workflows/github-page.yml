@@ -32,17 +32,17 @@ jobs:
 
     - name: Fetch nix cache and update cabal indices
       run: |
-        nix develop .\#project.x86_64-linux.projectVariants.ghc963.shell --command \
+        nix develop .\#project.x86_64-linux.projectVariants.ghc964.shell --command \
           cabal update
 
     - name: Build whole project
       run: |
-        nix develop .\#project.x86_64-linux.projectVariants.ghc963.shell --command \
+        nix develop .\#project.x86_64-linux.projectVariants.ghc964.shell --command \
           cabal build all
 
     - name: Build documentation
       run: |
-        nix develop .\#project.x86_64-linux.projectVariants.ghc963.shell --command \
+        nix develop .\#project.x86_64-linux.projectVariants.ghc964.shell --command \
           cabal haddock-project --local --output=./haddocks --internal --foreign-libraries
 
     - name: Compress haddocks

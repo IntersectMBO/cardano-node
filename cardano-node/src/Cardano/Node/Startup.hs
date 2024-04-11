@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -113,8 +114,8 @@ data StartupTrace blk =
                   (Map RelayAccessPoint PeerAdvertise)
                   UseLedgerPeers
 
-  -- | Warn when 'EnableP2P' is set.
-  | P2PWarning
+  -- | Warn when 'DisabledP2P' is set.
+  | NonP2PWarning
 
   -- | Warn when 'ExperimentalProtocolsEnabled' is set and affects
   -- node-to-node protocol.
@@ -213,7 +214,7 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
     { niName            = nodeName
     , niProtocol        = pack . show . ncProtocol $ nc
     , niVersion         = pack . showVersion $ version
-    , niCommit          = gitRev
+    , niCommit          = $(gitRev)
     , niStartTime       = nodeStartTime
     , niSystemStartTime = systemStartTime
     }

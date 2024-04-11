@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -178,10 +177,6 @@ requestAvailablePortNumbers numberOfPorts
 -- > │   ├── genesis{1,2,3}
 -- > │   │   └── key.{skey,vkey}
 -- > │   └── README.md
--- > ├── logs
--- > │   └── pool3
--- > │       └── {stderr,stdout}.log
--- > ├── module
 -- > ├── pools-keys
 -- > │   ├── pool{1,2,3}
 -- > │   │   ├── byron-delegate.key
@@ -225,6 +220,7 @@ cardanoTestnet
       testnetMagic = cardanoTestnetMagic testnetOptions
       numPoolNodes = length $ cardanoNodes testnetOptions
       nbPools = numPools testnetOptions
+      nbDReps = numDReps testnetOptions
       era = cardanoNodeEra testnetOptions
 
   portNumbers <- requestAvailablePortNumbers numPoolNodes
@@ -271,7 +267,7 @@ cardanoTestnet
 
     configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
 
-    _ <- createSPOGenesisAndFiles nbPools era shelleyGenesis (TmpAbsolutePath tmpAbsPath)
+    _ <- createSPOGenesisAndFiles nbPools nbDReps era shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
 
     poolKeys <- H.noteShow $ flip fmap [1..numPoolNodes] $ \n ->
       PoolNodeKeys
@@ -329,15 +325,15 @@ cardanoTestnet
         mkNodeName i = "pool" <> show i
 
     -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-    finalYamlConfig <- createConfigYaml (TmpAbsolutePath tmpAbsPath) era
+    config <- createConfigJson (TmpAbsolutePath tmpAbsPath) era
 
-    H.evalIO $ LBS.writeFile configurationFile finalYamlConfig
+    H.evalIO $ LBS.writeFile configurationFile config
 
     -- Byron related
     forM_ (zip [1..] portNumbers) $ \(i, portNumber) -> do
       let iStr = printf "%03d" (i - 1)
       H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegate-keys." <> iStr <> ".key") (tmpAbsPath </> poolKeyDir i </> "byron-delegate.key")
-      H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegation-cert." <> iStr <> ".json") (tmpAbsPath </> poolKeyDir i </>"byron-delegation.cert")
+      H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegation-cert." <> iStr <> ".json") (tmpAbsPath </> poolKeyDir i </> "byron-delegation.cert")
       H.writeFile (tmpAbsPath </> poolKeyDir i </> "port") (show portNumber)
 
     -- Make topology files
@@ -393,7 +389,7 @@ cardanoTestnet
 
       let runtime = TestnetRuntime
             { configurationFile
-            , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultShelleyGenesisFp
+            , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultGenesisFilepath ShelleyEra
             , testnetMagic
             , poolNodes
             , wallets = wallets
@@ -423,7 +419,7 @@ cardanoTestnet
 
       pure runtime
   where
-    writeGenesisSpecFile :: (MonadTest m, MonadIO m, HasCallStack) => ToJSON a => FilePath -> a -> m ()
+    writeGenesisSpecFile :: (MonadTest m, MonadIO m, HasCallStack) => ToJSON a => String -> a -> m ()
     writeGenesisSpecFile eraName toWrite = GHC.withFrozenCallStack $ do
       genesisJsonFile <- H.noteShow $ tmpAbsPath </> "genesis." <> eraName <> ".spec.json"
       H.evalIO $ LBS.writeFile genesisJsonFile $ Aeson.encode toWrite

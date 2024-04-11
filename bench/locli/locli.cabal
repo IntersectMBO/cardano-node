@@ -101,7 +101,7 @@ library
                       , attoparsec
                       , attoparsec-iso8601
                       , bytestring
-                      , cardano-git-rev
+                      , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-core
                       , cardano-prelude
                       , cardano-slotting
@@ -121,7 +121,7 @@ library
                       , optparse-generic
                       , ouroboros-consensus
                       -- for Data.SOP.Strict:
-                      , ouroboros-network ^>= 0.12
+                      , ouroboros-network ^>= 0.13
                       , ouroboros-network-api
                       , process
                       , quiet

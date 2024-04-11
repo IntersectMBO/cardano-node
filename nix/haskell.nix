@@ -332,7 +332,7 @@ let
                 lib.mkIf (pkgs.stdenv.hostPlatform.isMusl && config.package.isLocal)
                 {
                   # Module options which adds GHC flags and libraries for a fully static build
-                  enableShared = false;
+                  enableShared = true; # TH code breaks if this is false.
                   enableStatic = true;
                 }
               ));
@@ -342,10 +342,6 @@ let
               {
                 # Haddock not working and not needed for cross builds
                 doHaddock = false;
-                packages.cardano-cli.enableShared = false;
-                packages.cardano-cli.enableStatic = true;
-                # Needed for TH code in cardano-cli
-                packages.cardano-git-rev.enableShared = lib.mkForce true;
               };
           })
           ({ lib, pkgs, ... }: lib.mkIf (pkgs.stdenv.hostPlatform != pkgs.stdenv.buildPlatform) {

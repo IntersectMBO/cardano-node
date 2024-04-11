@@ -32,13 +32,14 @@ library
   import:               project-config
 
   build-depends:        aeson
+                      , aeson-pretty
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 8.39.2.0
-                      , cardano-cli ^>= 8.20.3.0
+                      , cardano-api ^>= 8.44
+                      , cardano-cli ^>= 8.22
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
-                      , cardano-git-rev
+                      , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-alonzo
                       , cardano-ledger-binary
                       , cardano-ledger-byron
@@ -64,7 +65,7 @@ library
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.12
+                      , ouroboros-network ^>= 0.13
                       , ouroboros-network-api
                       , prettyprinter
                       , process
@@ -92,6 +93,7 @@ library
                         Testnet.Components.Query
                         Testnet.Defaults
                         Testnet.Filepath
+                        Testnet.EpochStateProcessing
                         Testnet.Property.Assert
                         Testnet.Property.Run
                         Testnet.Property.Utils
@@ -203,10 +205,12 @@ test-suite cardano-testnet-test
                       , cardano-ledger-core
                       , cardano-ledger-shelley
                       , cardano-node
+                      , cardano-slotting
                       , cardano-strict-containers ^>= 0.1
                       , cardano-testnet
                       , containers
                       , directory
+                      , exceptions
                       , filepath
                       , hedgehog
                       , hedgehog-extras

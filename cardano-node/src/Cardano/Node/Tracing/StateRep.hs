@@ -47,12 +47,6 @@ deriving instance ToJSON ChunkNo
 
 deriving instance NFData ChunkNo
 
-deriving instance Generic NPV.NodeToNodeVersion
-deriving instance NFData NPV.NodeToNodeVersion
-
-deriving instance Generic NPV.NodeToClientVersion
-deriving instance NFData NPV.NodeToClientVersion
-
 data OpeningDbs
   = StartedOpeningImmutableDB
   | OpenedImmutableDB (WithOrigin SlotNo) ChunkNo
@@ -92,7 +86,7 @@ data StartupState
   | StartupDBValidation
   | NetworkConfigUpdate
   | NetworkConfigUpdateError Text
-  | P2PWarning
+  | NonP2PWarning
   | WarningDevelopmentNodeToNodeVersions [NPV.NodeToNodeVersion]
   | WarningDevelopmentNodeToClientVersions [NPV.NodeToClientVersion]
   deriving (Generic, FromJSON, ToJSON)
@@ -233,7 +227,7 @@ traceNodeStateChainDB _scp tr ev =
       case ev' of
         ChainDB.StartedInitChainSelection ->
           traceWith tr $ NodeInitChainSelection InitChainStartedSelection
-        ChainDB.InitalChainSelected ->
+        ChainDB.InitialChainSelected ->
           traceWith tr $ NodeInitChainSelection InitChainSelected
         _ -> return ()
     ChainDB.TraceAddBlockEvent ev' ->
@@ -266,8 +260,8 @@ traceNodeStateStartup tr ev =
       traceWith tr $ NodeStartup NetworkConfigUpdate
     Startup.NetworkConfigUpdateError e ->
       traceWith tr $ NodeStartup $ NetworkConfigUpdateError e
-    Startup.P2PWarning ->
-      traceWith tr $ NodeStartup P2PWarning
+    Startup.NonP2PWarning ->
+      traceWith tr $ NodeStartup NonP2PWarning
     Startup.WarningDevelopmentNodeToNodeVersions ntnVersions ->
       traceWith tr $ NodeStartup (WarningDevelopmentNodeToNodeVersions ntnVersions)
     Startup.WarningDevelopmentNodeToClientVersions ntcVersions ->

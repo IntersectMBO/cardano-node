@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
@@ -69,7 +70,7 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
       basicInfoCommon = BICommon $ BasicInfoCommon {
                 biProtocol = pack . show $ ncProtocol nc
               , biVersion  = pack . showVersion $ version
-              , biCommit   = gitRev
+              , biCommit   = $(gitRev)
               , biNodeStartTime = nodeStartTime
               , biConfigPath = fp
               , biNetworkMagic = getNetworkMagic $ Consensus.configBlock cfg
@@ -230,9 +231,9 @@ instance ( Show (BlockNodeToNodeVersion blk)
       mconcat [ "kind" .= String "NetworkConfigLegacy"
               , "message" .= String p2pNetworkConfigLegacyMessage
               ]
-  forMachine _dtal P2PWarning =
-      mconcat [ "kind" .= String "P2PWarning"
-               , "message" .= String p2pWarningMessage ]
+  forMachine _dtal NonP2PWarning =
+      mconcat [ "kind" .= String "NonP2PWarning"
+               , "message" .= String nonP2PWarningMessage ]
   forMachine _ver (WarningDevelopmentNodeToNodeVersions ntnVersions) =
       mconcat [ "kind" .= String "WarningDevelopmentNodeToNodeVersions"
                , "message" .= String "enabled development network protocols"
@@ -303,8 +304,8 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["NetworkConfig"]
   namespaceFor NetworkConfigLegacy {}  =
     Namespace [] ["NetworkConfigLegacy"]
-  namespaceFor P2PWarning {}  =
-    Namespace [] ["P2PWarning"]
+  namespaceFor NonP2PWarning {}  =
+    Namespace [] ["NonP2PWarning"]
   namespaceFor WarningDevelopmentNodeToNodeVersions {}  =
     Namespace [] ["WarningDevelopmentNodeToNodeVersions"]
   namespaceFor WarningDevelopmentNodeToClientVersions {}  =
@@ -322,7 +323,7 @@ instance MetaTrace  (StartupTrace blk) where
   severityFor (Namespace _ ["NetworkConfigUpdate"]) _ = Just Notice
   severityFor (Namespace _ ["NetworkConfigUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["NetworkConfigUpdateUnsupported"]) _ = Just Warning
-  severityFor (Namespace _ ["P2PWarning"]) _ = Just Warning
+  severityFor (Namespace _ ["NonP2PWarning"]) _ = Just Warning
   severityFor (Namespace _ ["WarningDevelopmentNodeToNodeVersions"]) _ = Just Warning
   severityFor (Namespace _ ["WarningDevelopmentNodeToClientVersions"]) _ = Just Warning
   severityFor (Namespace _ ["BlockForgingUpdateError"]) _ = Just Error
@@ -357,7 +358,7 @@ instance MetaTrace  (StartupTrace blk) where
     ""
   documentFor (Namespace [] ["NetworkConfigLegacy"]) = Just
     ""
-  documentFor (Namespace [] ["P2PWarning"]) = Just
+  documentFor (Namespace [] ["NonP2PWarning"]) = Just
     ""
   documentFor (Namespace [] ["WarningDevelopmentNodeToNodeVersions"]) = Just
     ""
@@ -408,7 +409,7 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["NetworkConfigUpdateError"]
     , Namespace [] ["NetworkConfig"]
     , Namespace [] ["NetworkConfigLegacy"]
-    , Namespace [] ["P2PWarning"]
+    , Namespace [] ["NonP2PWarning"]
     , Namespace [] ["WarningDevelopmentNodeToNodeVersions"]
     , Namespace [] ["WarningDevelopmentNodeToClientVersions"]
     , Namespace [] ["Common"]
@@ -521,7 +522,7 @@ ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers) =
   ]
 ppStartupInfoTrace NetworkConfigLegacy = p2pNetworkConfigLegacyMessage
 
-ppStartupInfoTrace P2PWarning = p2pWarningMessage
+ppStartupInfoTrace NonP2PWarning = nonP2PWarningMessage
 
 ppStartupInfoTrace (WarningDevelopmentNodeToNodeVersions ntnVersions) =
      "enabled development node-to-node versions: "
@@ -556,10 +557,10 @@ ppStartupInfoTrace (BICommon BasicInfoCommon {..}) =
   <> ", Commit " <> showT biCommit
   <> ", Node start time " <> showT biNodeStartTime
 
-p2pWarningMessage :: Text
-p2pWarningMessage =
-      "You are using an early release of peer-to-peer capabilities, "
-   <> "please report any issues."
+nonP2PWarningMessage :: Text
+nonP2PWarningMessage =
+      "You are using legacy networking stack, "
+   <> "consider upgrading to the p2p network stack."
 
 p2pNetworkConfigLegacyMessage :: Text
 p2pNetworkConfigLegacyMessage =

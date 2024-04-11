@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   trace-dispatcher
-version:                2.5.3
+version:                2.5.4
 synopsis:               Tracers for Cardano
 description:            Package for development of simple and efficient tracers
                         based on the arrow based contra-tracer package
@@ -56,11 +56,11 @@ library
                       , deepseq
                       , ekg
                       , ekg-core
-                      , ekg-forward >= 0.4
+                      , ekg-forward >= 0.5
                       , hostname
                       , network
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.12
+                      , ouroboros-network ^>= 0.13
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , serialise

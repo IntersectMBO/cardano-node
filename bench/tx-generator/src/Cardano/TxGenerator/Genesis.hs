@@ -18,20 +18,21 @@ module Cardano.TxGenerator.Genesis
   )
 where
 
+import           Cardano.Api
+import           Cardano.Api.Shelley (ReferenceScript (..), fromShelleyPaymentCredential,
+                   fromShelleyStakeReference)
+
+import qualified Cardano.Ledger.Coin as L
+import           Cardano.Ledger.Shelley.API (Addr (..), sgInitialFunds)
+import           Cardano.TxGenerator.Fund
+import           Cardano.TxGenerator.Types
+import           Cardano.TxGenerator.Utils
+import           Ouroboros.Consensus.Shelley.Node (validateGenesis)
+
 import           Data.Bifunctor (bimap, second)
 import           Data.Function ((&))
 import           Data.List (find)
 import qualified Data.ListMap as ListMap (toList)
-
-import           Cardano.Api
-import           Cardano.Api.Shelley (ReferenceScript (..), fromShelleyLovelace,
-                   fromShelleyPaymentCredential, fromShelleyStakeReference)
-import           Cardano.Ledger.Shelley.API (Addr (..), sgInitialFunds)
-import           Ouroboros.Consensus.Shelley.Node (validateGenesis)
-
-import           Cardano.TxGenerator.Fund
-import           Cardano.TxGenerator.Types
-import           Cardano.TxGenerator.Utils
 
 
 genesisValidate ::  ShelleyGenesis -> Either String ()
@@ -59,11 +60,11 @@ genesisSecureInitialFund networkId genesis srcKey destKey TxGenTxParams{txParamF
 genesisInitialFunds :: forall era. IsShelleyBasedEra era
   => NetworkId
   -> ShelleyGenesis
-  -> [(AddressInEra era, Lovelace)]
+  -> [(AddressInEra era, L.Coin)]
 genesisInitialFunds networkId g
  = [ ( shelleyAddressInEra (shelleyBasedEra @era) $
           makeShelleyAddress networkId (fromShelleyPaymentCredential pcr) (fromShelleyStakeReference stref)
-     , fromShelleyLovelace coin
+     , coin
      )
      | (Addr _ pcr stref, coin) <- ListMap.toList $ sgInitialFunds g
    ]
@@ -72,7 +73,7 @@ genesisInitialFundForKey :: forall era. IsShelleyBasedEra era
   => NetworkId
   -> ShelleyGenesis
   -> SigningKey PaymentKey
-  -> Maybe (AddressInEra era, Lovelace)
+  -> Maybe (AddressInEra era, L.Coin)
 genesisInitialFundForKey networkId genesis key
   = find (isTxOutForKey . fst) (genesisInitialFunds networkId genesis)
  where
@@ -94,7 +95,7 @@ genesisExpenditure ::
   -> SigningKey PaymentKey
   -> AddressInEra era
   -> TxOutValue era
-  -> Lovelace
+  -> L.Coin
   -> SlotNo
   -> SigningKey PaymentKey
   -> Either TxGenError (Tx era, Fund)
@@ -116,7 +117,7 @@ mkGenesisTransaction :: forall era .
      IsShelleyBasedEra era
   => SigningKey GenesisUTxOKey
   -> SlotNo
-  -> Lovelace
+  -> L.Coin
   -> [TxIn]
   -> [TxOut CtxTx era]
   -> Either TxGenError (Tx era)

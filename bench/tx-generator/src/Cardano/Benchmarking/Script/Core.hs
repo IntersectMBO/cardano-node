@@ -19,61 +19,52 @@ module Cardano.Benchmarking.Script.Core
 where
 
 import           "contra-tracer" Control.Tracer (Tracer (..))
-
-import           Control.Concurrent (threadDelay)
-import           Control.Monad
-import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.Except.Extra
-import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
-import           Data.Ratio ((%))
-
-import           Streaming
-import qualified Streaming.Prelude as Streaming
-
-import qualified Data.Text as Text (unpack)
-import           Prelude
-
 import           Cardano.Api
 import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
                    ShelleyLedgerEra, convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
                    protocolParamPrices)
-
-import           Cardano.Logging hiding (LocalSocket)
-
-import qualified Cardano.Ledger.Core as Ledger
-
-import           Cardano.TxGenerator.Fund as Fund
-import qualified Cardano.TxGenerator.FundQueue as FundQueue
-import           Cardano.TxGenerator.Setup.Plutus as Plutus
-import           Cardano.TxGenerator.Tx
-import           Cardano.TxGenerator.Types
-import qualified Cardano.TxGenerator.Utils as Utils
-import           Cardano.TxGenerator.UTxO
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark, walletBenchmark)
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
                    benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
-import qualified Cardano.TxGenerator.Genesis as Genesis
-import           Cardano.TxGenerator.PlutusContext
-import           Cardano.TxGenerator.Setup.SigningKey
-
-import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
-                   makeLocalConnectInfo, protocolToCodecConfig)
-
 import           Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..), btConnect_, btN2N_,
                    btSubmission2_, btTxSubmit_)
-import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
-import           Cardano.Benchmarking.Wallet as Wallet
-
+import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
+                   makeLocalConnectInfo, protocolToCodecConfig)
 import           Cardano.Benchmarking.Script.Aeson (prettyPrintOrdered, readProtocolParametersFile)
 import           Cardano.Benchmarking.Script.Env hiding (Error (TxGenError))
 import qualified Cardano.Benchmarking.Script.Env as Env (Error (TxGenError))
 import           Cardano.Benchmarking.Script.Types
+import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           Cardano.Benchmarking.Version as Version
+import           Cardano.Benchmarking.Wallet as Wallet
+import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Core as Ledger
+import           Cardano.Logging hiding (LocalSocket)
+import           Cardano.TxGenerator.Fund as Fund
+import qualified Cardano.TxGenerator.FundQueue as FundQueue
+import qualified Cardano.TxGenerator.Genesis as Genesis
+import           Cardano.TxGenerator.PlutusContext
+import           Cardano.TxGenerator.Setup.Plutus as Plutus
+import           Cardano.TxGenerator.Setup.SigningKey
+import           Cardano.TxGenerator.Tx
+import           Cardano.TxGenerator.Types
+import qualified Cardano.TxGenerator.Utils as Utils
+import           Cardano.TxGenerator.UTxO
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (Target (..))
+
+import           Prelude
+
+import           Control.Concurrent (threadDelay)
+import           Control.Monad
+import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
+import           Data.Ratio ((%))
+import qualified Data.Text as Text (unpack)
+
+import           Streaming
+import qualified Streaming.Prelude as Streaming
 
 liftCoreWithEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM (Either TxGenError x)
 liftCoreWithEra era coreCall = withEra era ( liftIO . runExceptT . coreCall)
@@ -106,7 +97,7 @@ readSigningKey name filePath =
 defineSigningKey :: String -> SigningKey PaymentKey -> ActionM ()
 defineSigningKey = setEnvKeys
 
-addFund :: AnyCardanoEra -> String -> TxIn -> Lovelace -> String -> ActionM ()
+addFund :: AnyCardanoEra -> String -> TxIn -> L.Coin -> String -> ActionM ()
 addFund era wallet txIn lovelace keyName = do
   fundKey  <- getEnvKeys keyName
   let
@@ -428,7 +419,7 @@ interpretPayMode payMode = do
 
 makePlutusContext :: forall era. IsShelleyBasedEra era
   => ScriptSpec
-  -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, Lovelace)
+  -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, L.Coin)
 makePlutusContext ScriptSpec{..} = do
   protocolParameters <- getProtocolParameters
   script <- liftIOSafe $ Plutus.readPlutusScript scriptSpecFile

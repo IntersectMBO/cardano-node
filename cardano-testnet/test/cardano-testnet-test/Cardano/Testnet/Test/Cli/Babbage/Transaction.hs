@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -14,7 +13,9 @@ module Cardano.Testnet.Test.Cli.Babbage.Transaction
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as A
+import           Cardano.Api.Shelley
 
+import qualified Cardano.Ledger.Core as L
 import           Cardano.Testnet
 
 import           Prelude
@@ -85,6 +86,15 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
     , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_001
     , "--out-file", txbodyFp
     ]
+  cddlUnwitnessedTx <- H.readJsonFileOk txbodyFp
+  apiTx <- H.evalEither $ deserialiseTxLedgerCddl sbe cddlUnwitnessedTx
+  let txFee = L.unCoin $ extractTxFee apiTx
+
+  -- This is the current calculated fee.
+  -- It's a sanity check to see if anything has
+  -- changed regarding fee calculation.
+  -- 8.10 changed fee from 228 -> 330
+  330 H.=== txFee
 
   void $ execCli' execConfig
     [ "babbage", "transaction", "sign"
@@ -98,6 +108,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
     , "--tx-file", txbodySignedFp
     ]
 
+
   H.byDurationM 1 15 "Expected UTxO found" $ do
     void $ execCli' execConfig
       [ "babbage", "query", "utxo"
@@ -109,7 +120,6 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
     utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
     UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
     txouts2 <- H.noteShow $ L.unCoin . txOutValueLovelace . txOutValue . snd <$> Map.toList utxo2
-
     H.assert $ 5_000_001 `List.elem` txouts2
 
 txOutValue :: TxOut ctx era -> TxOutValue era
@@ -118,4 +128,8 @@ txOutValue (TxOut _ v _ _) = v
 txOutValueLovelace ::TxOutValue era -> L.Coin
 txOutValueLovelace = \case
   TxOutValueShelleyBased sbe v -> v ^. A.adaAssetL sbe
-  TxOutValueByron (Lovelace v) -> L.Coin v
+  TxOutValueByron v -> v
+
+extractTxFee :: Tx era -> L.Coin
+extractTxFee (ShelleyTx sbe ledgerTx) =
+  shelleyBasedEraConstraints sbe $ ledgerTx ^. (L.bodyTxL . L.feeTxBodyL)

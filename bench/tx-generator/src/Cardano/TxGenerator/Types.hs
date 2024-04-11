@@ -16,6 +16,7 @@ module  Cardano.TxGenerator.Types
 import           Cardano.Api
 import           Cardano.Api.Shelley (ProtocolParameters)
 
+import qualified Cardano.Ledger.Coin as L
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley.API as Ledger (ShelleyGenesis)
 import           Cardano.TxGenerator.Fund (Fund)
@@ -42,12 +43,12 @@ type FundToStore m      = Fund -> m ()
 type FundToStoreList m  = [Fund] -> m ()
 
 data PayWithChange
-  = PayExact [Lovelace]
-  | PayWithChange Lovelace [Lovelace]
+  = PayExact [L.Coin]
+  | PayWithChange L.Coin [L.Coin]
 
 
 data TxGenTxParams = TxGenTxParams
-  { txParamFee        :: !Lovelace              -- ^ Transaction fee, in Lovelace
+  { txParamFee        :: !L.Coin                -- ^ Transaction fee, in Lovelace
   , txParamAddTxSize  :: !Int                   -- ^ Extra transaction payload, in bytes -- Note [Tx additional size]
   , txParamTTL        :: !SlotNo                -- ^ Time-to-live
   }
@@ -73,7 +74,7 @@ data TxEnvironment era = TxEnvironment
 
 
 data TxGenConfig = TxGenConfig
-  { confMinUtxoValue  :: !Lovelace              -- ^ Minimum value required per UTxO entry
+  { confMinUtxoValue  :: !L.Coin                -- ^ Minimum value required per UTxO entry
   , confTxsPerSecond  :: !Double                -- ^ Strength of generated workload, in transactions per second
   , confInitCooldown  :: !Double                -- ^ Delay between init and main submissions in seconds
   , confTxsInputs     :: !NumberOfInputsPerTx   -- ^ Inputs per transaction
