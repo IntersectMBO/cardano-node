@@ -67,11 +67,11 @@ The download includes cardano-node.exe and a .dll. To run the node with cardano-
 Docker image
 ============
 
-You can pull the docker image with the latest version of cardano-node from `here <https://hub.docker.com/r/inputoutput/cardano-node>`_.
+You can pull the docker image with the latest version of cardano-node from `here <https://github.com/IntersectMBO/cardano-node/pkgs/container/cardano-node>`_.
 
 .. code-block:: console
 
-    docker pull inputoutput/cardano-node
+    docker pull ghcr.io/intersectmbo/cardano-node:8.9.1
 
 **********************
 Using ``cardano-node``
