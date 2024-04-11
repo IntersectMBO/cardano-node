@@ -100,7 +100,6 @@ PROFILES_NOMAD_PERF       := default-nomadperf ci-test-nomadperf ci-bench-nomadp
 PROFILES_NOMAD_PERF       += plutus-nomadperf idle-nomadperf
 PROFILES_NOMAD_PERF_NOP2P := default-nomadperf-nop2p oldtracing-nomadperf-nop2p ci-test-nomadperf-nop2p ci-bench-nomadperf-nop2p
 PROFILES_NOMAD_PERF_NOP2P += value-nomadperf-nop2p value-oldtracing-nomadperf-nop2p plutus-nomadperf-nop2p fast-nomadperf-nop2p
-PROFILES_NOMAD_PERFSSD    := fast-nomadperfssd
 # single node profiles on the NomadSSD cluster on AWS
 PROFILES_UTXOSCALE_SOLO	  := utxoscale-solo-24M64G-nomadperfssd utxoscale-solo-12M64G-nomadperfssd utxoscale-solo-12M16G-nomadperfssd
 
@@ -121,7 +120,6 @@ LOCAL_PROFILES += $(PROFILES_CHAINSYNC)
 LOCAL_PROFILES += $(PROFILES_VENDOR)
 CLOUD_PROFILES += $(PROFILES_NOMAD_PERF)
 CLOUD_PROFILES += $(PROFILES_NOMAD_PERF_NOP2P)
-CLOUD_PROFILES += $(PROFILES_NOMAD_PERFSSD)
 CLOUD_PROFILES += $(PROFILES_UTXOSCALE_SOLO)
 
 
