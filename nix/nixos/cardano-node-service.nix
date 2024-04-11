@@ -131,7 +131,7 @@ let
     utxoLmdbParams = ["--v1-lmdb-ledger-db-backend"]
       ++ lib.optionals (cfg.lmdbDatabasePath i != null)
         [ "--ssd-database-dir ${cfg.lmdbDatabasePath i}"
-          "--ssd-snapshot-tables"
+          # "--ssd-snapshot-tables"
         ];
     cmd = builtins.filter (x: x != "") [
       "${cfg.executable} run"
@@ -715,7 +715,7 @@ in {
   config = mkIf cfg.enable ( let
     stateDirBase = "/var/lib/";
     runDirBase = "/run/";
-    lmdbPaths = filter (x: x != null) (map (e: lmdbDatabasePath e) cfg.instances);
+    lmdbPaths = filter (x: x != null) (map (e: cfg.lmdbDatabasePath e) (builtins.genList lib.trivial.id cfg.instances));
     genInstanceConf = f: listToAttrs (if cfg.instances > 1
       then genList (i: let n = "cardano-node-${toString i}"; in nameValuePair n (f n i)) cfg.instances
       else [ (nameValuePair "cardano-node" (f "cardano-node" 0)) ]); in lib.mkMerge [
@@ -818,7 +818,7 @@ in {
           message = "Systemd socket activation cannot be used with p2p topology due to a systemd socket re-use issue.";
         }
         {
-          assertion = (length lmdPaths) == (length (lib.lists.unique lmdbPaths));
+          assertion = (length lmdbPaths) == (length (lib.lists.unique lmdbPaths));
           message   = "When configuring multiple LMDB enabled nodes on one instance, lmdbDatabasePath must be unique.";
         }
       ];
