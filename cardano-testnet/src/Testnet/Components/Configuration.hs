@@ -121,7 +121,9 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) era shell
   let genesisShelleyDirAbs = takeDirectory inputGenesisShelleyFp
   genesisShelleyDir <- H.createDirectoryIfMissing genesisShelleyDirAbs
   let testnetMagic = sgNetworkMagic shelleyGenesis
-      numStakeDelegators = 3 :: Int
+      -- At least there should be a delegator per DRep
+      -- otherwise some won't be representing anybody
+      numStakeDelegators = max 3 numDelReps :: Int
       startTime = sgSystemStart shelleyGenesis
 
  -- TODO: Remove this rewrite.

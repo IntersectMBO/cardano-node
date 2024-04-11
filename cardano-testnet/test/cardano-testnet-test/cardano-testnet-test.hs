@@ -14,6 +14,7 @@ import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.Queries
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldBlocks
+import qualified Cardano.Testnet.Test.LedgerEvents.Gov.DRepActivity
 import qualified Cardano.Testnet.Test.LedgerEvents.Gov.DRepDeposits
 import qualified Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
 import qualified Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO as LedgerEvents
@@ -48,6 +49,7 @@ tests = do
             -- TODO: Replace foldBlocks with checkLedgerStateCondition
             , T.testGroup "Governance"
                 [ H.ignoreOnMacAndWindows "ProposeAndRatifyNewConstitution" Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution.hprop_ledger_events_propose_new_constitution
+                , H.ignoreOnWindows "DRep Activity" Cardano.Testnet.Test.LedgerEvents.Gov.DRepActivity.hprop_check_drep_activity
                 , H.ignoreOnWindows "DRep Deposits" Cardano.Testnet.Test.LedgerEvents.Gov.DRepDeposits.hprop_ledger_events_drep_deposits
                   -- FIXME Those tests are flaky
                   -- , H.ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action

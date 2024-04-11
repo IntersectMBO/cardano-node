@@ -20,6 +20,7 @@ module Testnet.Components.Query
   , findLargestUtxoWithAddress
   , findLargestUtxoForPaymentKey
   , startLedgerNewEpochStateLogging
+  , getCurrentEpochNo
   ) where
 
 import           Cardano.Api as Api
@@ -336,3 +337,15 @@ getMinDRepDeposit execConfig ceo = withFrozenCallStack $ do
                                   . _Integral
   H.evalMaybe mMinDRepDeposit
 
+-- | Obtain current epoch number using 'getEpochState'
+getCurrentEpochNo :: (MonadTest m, MonadAssertion m, MonadIO m)
+  => EpochStateView
+  -> ShelleyBasedEra ConwayEra
+  -> m EpochNo
+getCurrentEpochNo epochStateView sbe = do
+  AnyNewEpochState actualEra newEpochState <- getEpochState epochStateView
+  case testEquality sbe actualEra of
+    Just Refl -> return $ shelleyBasedEraConstraints sbe newEpochState
+                            ^. L.nesELL
+    Nothing ->
+      error $ "Eras mismatch! expected: " <> show sbe <> ", actual: " <> show actualEra
