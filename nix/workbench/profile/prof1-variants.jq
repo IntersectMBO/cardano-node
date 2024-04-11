@@ -237,12 +237,16 @@ def all_profile_variants:
           { producer: {cores: 16, memory: 120000, memory_max: 124000}
           , explorer: {cores: 16, memory: 120000, memory_max: 124000}
           }
+        , host_volumes: [
+            {source: "ssd1", destination: "/ssd1", read_only: false}
+          , {source: "ssd2", destination: "/ssd2", read_only: false}
+          ]
         , fetch_logs_ssh: true
         }
       , aws:
         { instance_type:
-          { producer: "r5.4xlarge"
-          , explorer: "r5.4xlarge"
+          { producer: "r5d.4xlarge"
+          , explorer: "r5d.4xlarge"
           }
         , use_public_routing: true
         }
