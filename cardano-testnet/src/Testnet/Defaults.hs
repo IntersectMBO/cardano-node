@@ -16,6 +16,7 @@ module Testnet.Defaults
   , defaultConwayGenesis
   , defaultDRepVkeyFp
   , defaultDRepSkeyFp
+  , defaultDRepKeyPair
   , defaultShelleyGenesis
   , defaultGenesisFilepath
   , defaultYamlHardforkViaConfig
@@ -70,6 +71,7 @@ import           Numeric.Natural
 import           System.FilePath ((</>))
 
 import           Test.Cardano.Ledger.Core.Rational
+import           Testnet.Runtime (PaymentKeyPair (PaymentKeyPair))
 import           Testnet.Start.Types
 
 {- HLINT ignore "Use underscore" -}
@@ -507,6 +509,10 @@ defaultDRepSkeyFp
   :: Int -- ^ The DRep's index (starts at 1)
   -> FilePath
 defaultDRepSkeyFp n = "drep-keys" </> ("drep" <> show n) </> "drep.skey"
+
+-- | The relative path to DRep key pairs in directories created by cardano-testnet
+defaultDRepKeyPair :: Int -> PaymentKeyPair
+defaultDRepKeyPair n = PaymentKeyPair (defaultDRepVkeyFp n) (defaultDRepSkeyFp n)
 
 -- TODO: We should not hardcode a script like this. We need to move
 -- plutus-example from plutus apps to cardano-node-testnet. This will

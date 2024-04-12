@@ -29,12 +29,12 @@ import           Data.Maybe.Strict
 import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as Text
-import           Data.Word
 import           GHC.Stack (callStack)
 import           Lens.Micro
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
+import           Testnet.Components.DReps (createVotingTxBody, generateVoteFiles, signTx, submitTx)
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
@@ -104,9 +104,9 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   -- Create Conway constitution
   gov <- H.createDirectoryIfMissing $ work </> "governance"
-  proposalAnchorFile <- H.note $ work </> gov </> "sample-proposal-anchor"
-  consitutionFile <- H.note $ work </> gov </> "sample-constitution"
-  constitutionActionFp <- H.note $ work </> gov </> "constitution.action"
+  proposalAnchorFile <- H.note $ gov </> "sample-proposal-anchor"
+  consitutionFile <- H.note $ gov </> "sample-constitution"
+  constitutionActionFp <- H.note $ gov </> "constitution.action"
 
   H.writeFile proposalAnchorFile "dummy anchor data"
   H.writeFile consitutionFile "dummy constitution data"
@@ -179,12 +179,12 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     , "--tx-file", txbodySignedFp
     ]
 
-  txidString <- mconcat . lines <$> H.execCli' execConfig
+  governanceActionTxId <- mconcat . lines <$> H.execCli' execConfig
     [ "transaction", "txid"
     , "--tx-file", txbodySignedFp
     ]
 
-  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex sbe (fromString txidString))
+  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex sbe (fromString governanceActionTxId))
                                         configurationFile
                                         socketPath
                                         (EpochNo 10)
@@ -197,50 +197,18 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
                                H.failMessage callStack "Couldn't find proposal."
                              Right (Just a) -> return a
 
-  let voteFp :: Int -> FilePath
-      voteFp n = work </> gov </> "vote-" <> show n
-
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
-  forM_ allVotes $ \(vote, n) -> do
-    H.execCli' execConfig
-      [ "conway", "governance", "vote", "create"
-      , "--" ++ vote
-      , "--governance-action-tx-id", txidString
-      , "--governance-action-index", show @Word32 governanceActionIndex
-      , "--drep-verification-key-file", defaultDRepVkeyFp n
-      , "--out-file", voteFp n
-      ]
-
-  -- We need more UTxOs
-
-  txin3 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
-
-  voteTxFp <- H.note $ work </> gov </> "vote.tx"
-  voteTxBodyFp <- H.note $ work </> gov </> "vote.txbody"
+  voteFiles <- generateVoteFiles execConfig work "vote-files"
+                                 governanceActionTxId governanceActionIndex
+                                 [(defaultDRepKeyPair idx, vote) | (vote, idx) <- allVotes]
 
   -- Submit votes
-  void $ H.execCli' execConfig $
-    [ "conway", "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
-    , "--tx-in", Text.unpack $ renderTxIn txin3
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet1) <> "+" <> show @Int 3_000_000
-    ] ++ (concat [["--vote-file", voteFp n] | (_, n) <- allVotes]) ++
-    [ "--witness-override", show @Int (numVotes + 1)
-    , "--out-file", voteTxBodyFp
-    ]
+  voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe work "vote-tx-body"
+                                     voteFiles wallet0
 
-  void $ H.execCli' execConfig $
-    [ "conway", "transaction", "sign"
-    , "--tx-body-file", voteTxBodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
-    ] ++ (concat [["--signing-key-file", defaultDRepSkeyFp n] | (_, n) <- allVotes]) ++
-    [ "--out-file", voteTxFp
-    ]
-
-  void $ H.execCli' execConfig
-    [ "conway", "transaction", "submit"
-    , "--tx-file", voteTxFp
-    ]
+  voteTxFp <- signTx execConfig cEra gov "signed-vote-tx" voteTxBodyFp
+                     (paymentKeyInfoPair wallet0:[defaultDRepKeyPair n | (_, n) <- allVotes])
+  submitTx execConfig cEra voteTxFp
 
   -- We check that constitution was succcessfully ratified
 

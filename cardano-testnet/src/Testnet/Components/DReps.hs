@@ -5,6 +5,8 @@ module Testnet.Components.DReps
   ( generateDRepKeyPair
   , generateRegistrationCertificate
   , createDRepRegistrationTxBody
+  , generateVoteFiles
+  , createVotingTxBody
   , signTx
   , submitTx
   , failToSubmitTx
@@ -17,10 +19,11 @@ import           Cardano.CLI.Types.Common (File (..))
 
 import           Prelude
 
-import           Control.Monad (void)
+import           Control.Monad (forM, void)
 import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.IO.Class (MonadIO)
 import qualified Data.Text as Text
+import           Data.Word (Word32)
 import           GHC.IO.Exception (ExitCode (..))
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
@@ -139,6 +142,89 @@ createDRepRegistrationTxBody execConfig epochStateView sbe work prefix drepRegCe
     , "--out-file", unFile dRepRegistrationTxBody
     ]
   return dRepRegistrationTxBody
+
+-- DRep vote file generation
+data DRepVoteFile
+
+-- | Generates decentralized representative (DRep) voting files (without signing)
+-- using @cardano-cli@.
+--
+-- This function takes the following parameters:
+--
+-- * 'execConfig': Specifies the CLI execution configuration.
+-- * 'work': Base directory path where the voting files and directories will be
+--           stored.
+-- * 'prefix': Name for the subfolder that will be created under 'work' to store
+--             the output voting files.
+-- * 'governanceActionTxId': Transaction ID string of the governance action.
+-- * 'governanceActionIndex': Index of the governance action.
+-- * 'allVotes': List of tuples where each tuple contains a 'PaymentKeyPair'
+--               representing the DRep key pair and a 'String' representing the
+--               vote type (i.e: "yes", "no", or "abstain").
+--
+-- Returns a list of generated @File DRepVoteFile In@ representing the paths to
+-- the generated voting files.
+generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m)
+  => H.ExecConfig
+  -> FilePath
+  -> String
+  -> String
+  -> Word32
+  -> [(PaymentKeyPair, [Char])]
+  -> m [File DRepVoteFile In]
+generateVoteFiles execConfig work prefix governanceActionTxId governanceActionIndex allVotes = do
+  baseDir <- H.createDirectoryIfMissing $ work </> prefix
+  forM (zip [(1 :: Integer)..] allVotes) $ \(idx, (drepKeyPair, vote)) -> do
+    let path = File (baseDir </> "vote-" <> show idx)
+    void $ H.execCli' execConfig
+      [ "conway", "governance", "vote", "create"
+      , "--" ++ vote
+      , "--governance-action-tx-id", governanceActionTxId
+      , "--governance-action-index", show @Word32 governanceActionIndex
+      , "--drep-verification-key-file", paymentVKey drepKeyPair
+      , "--out-file", unFile path
+      ]
+    return path
+
+-- | Composes a decentralized representative (DRep) voting transaction body
+-- (without signing) using @cardano-cli@.
+--
+-- This function takes seven parameters:
+--
+-- * 'execConfig': Specifies the CLI execution configuration.
+-- * 'epochStateView': Current epoch state view for transaction building. It can be obtained
+--                     using the 'getEpochStateView' function.
+-- * 'sbe': The Shelley-based era (e.g., 'ShelleyEra') in which the transaction will be constructed.
+-- * 'work': Base directory path where the transaction body file will be stored.
+-- * 'prefix': Prefix for the output transaction body file name. The extension will be @.txbody@.
+-- * 'votes': List of voting files (@File DRepVoteFile In@) to include in the transaction,
+--            obtained using 'generateVoteFiles'.
+-- * 'wallet': Payment key information associated with the transaction,
+--             as returned by 'cardanoTestnetDefault'.
+--
+-- Returns the generated @File TxBody In@ file path to the transaction body.
+createVotingTxBody
+  :: (H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
+  => H.ExecConfig
+  -> EpochStateView
+  -> ShelleyBasedEra era
+  -> FilePath
+  -> String
+  -> [File DRepVoteFile In]
+  -> PaymentKeyInfo
+  -> m (File TxBody In)
+createVotingTxBody execConfig epochStateView sbe work prefix votes wallet = do
+  let dRepVotingTxBody = File (work </> prefix <> ".txbody")
+  walletLargestUTXO <- findLargestUtxoForPaymentKey epochStateView sbe wallet
+  void $ H.execCli' execConfig $
+    [ "conway", "transaction", "build"
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
+    , "--tx-in", Text.unpack $ renderTxIn walletLargestUTXO
+    ] ++ (concat [["--vote-file", voteFile] | File voteFile <- votes]) ++
+    [ "--witness-override", show @Int (length votes)
+    , "--out-file", unFile dRepVotingTxBody
+    ]
+  return dRepVotingTxBody
 
 -- Transaction signing
 
