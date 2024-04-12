@@ -47,6 +47,7 @@ executable stdout-tools
 
   build-depends:        time
                       , text
+                      , text-iso8601
                       , containers
                       , aeson
                       , async
