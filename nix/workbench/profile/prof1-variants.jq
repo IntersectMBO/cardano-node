@@ -1121,6 +1121,9 @@ def all_profile_variants:
       { shutdown_on_slot_synced: 864000
       , heap_limit:              32768
       }
+    , generator:
+      { tx_count: 768000
+      }
     }
   , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview * $old_tracing *
     { name: "value-oldtracing-nomadperf"
