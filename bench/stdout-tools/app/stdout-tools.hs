@@ -27,12 +27,11 @@ real  1m30.707s
 user  1m28.129s
 sys 0m8.124s
 
-lineFoldl' (\l _ -> l + 1) (0::Int) fp >>= print
 > time cabal run stdout-tools -- --file big-node:bench/stdout-tools/5nodes.stdout --filter count-lines
 25581640
-real  0m15.605s
-user  0m13.545s
-sys 0m2.047s
+real  0m11.630s
+user  0m10.836s
+sys 0m0.826s
 
 Count all the ns="Forge.Loop.StartLeadershipCheckPlus"
 --------------------------------------------------------------------------------
@@ -53,9 +52,21 @@ sys 0m5.901s
 
 $ time cabal run stdout-tools -- --file big-node:bench/stdout-tools/5nodes.stdout --filter count-FLSLCP
 264150
-real  1m2.851s
-user  1m0.511s
-sys 0m2.262s
+real  0m26.420s
+user  0m25.654s
+sys 0m0.837s
+
+Heap changes
+--------------------------------------------------------------------------------
+> grep -E "^{.*" bench/stdout-tools/5stdout | jq 'select(.ns == "Resources") | .data.Heap' | uniq
+real  1m5.810s
+user  1m7.716s
+sys 0m3.674s
+
+> time cabal run stdout-tools -- --file 5stdout:bench/stdout-tools/5stdout --filter heap-changes
+real  0m54.360s
+user  0m53.606s
+sys 0m0.873s
 
 -}
 
@@ -112,6 +123,8 @@ import           Data.Time.Clock
 import qualified Data.Sequence as Seq
 -- package: text.
 import qualified Data.Text as Text
+-- package: text-iso8601-0.1
+import qualified Data.Time.FromText as ParseTime
 -- package: aeson.
 import qualified Data.Aeson as Aeson
 -- package: async.
@@ -201,49 +214,49 @@ instance Reducer HeapChanges where
   type instance Accum HeapChanges = (Maybe Integer, Seq.Seq (UTCTime, Integer))
   initialOf _ = (Nothing, Seq.empty)
   reducerOf _ ans (Cursor _ Nothing) = ans
-  reducerOf _ ans@(maybePrevHeap, sq) (Cursor _ (Just !cursorMsg)) =
-    case Aeson.fromJSON (msgData cursorMsg) of
-      (Aeson.Success !resources) ->
+  reducerOf _ ans@(maybePrevHeap, sq) (Cursor _ (Just !cursorTrace)) =
+    case Aeson.eitherDecodeStrictText (more cursorTrace) of
+      (Right !resourcesMore) ->
         -- TODO: Use `unsnoc` when available
-        let actualHeap = resourcesHeap resources
+        let actualHeap = resourcesHeap $ traceData resourcesMore
         in case maybePrevHeap of
-          Nothing -> (Just actualHeap, Seq.singleton (at cursorMsg, actualHeap))
+          Nothing -> (Just actualHeap, Seq.singleton (at cursorTrace, actualHeap))
           (Just prevHeap) ->
             if actualHeap == prevHeap
             then ans
-            else (Just actualHeap, sq Seq.|> (at cursorMsg, actualHeap))
-      (Aeson.Error _) -> ans
+            else (Just actualHeap, sq Seq.|> (at cursorTrace, actualHeap))
+      (Left _) -> ans
   showAns _ = show
 
 instance Reducer MissedSlots where
   type instance Accum MissedSlots = (Maybe Integer, Seq.Seq Integer)
   initialOf _ = (Nothing, Seq.empty)
   reducerOf _ ans (Cursor _ Nothing) = ans
-  reducerOf _ ans@(maybePrevSlot, !sq) (Cursor _ (Just !(Msg _ "Forge.Loop.StartLeadershipCheckPlus" aeson))) =
-    case Aeson.fromJSON aeson of
-      (Aeson.Success !dataWithSlot) ->
+  reducerOf _ ans@(maybePrevSlot, !sq) (Cursor _ (Just !(Trace _ "Forge.Loop.StartLeadershipCheckPlus" aeson))) =
+    case Aeson.eitherDecodeStrictText aeson of
+      (Right !dataWithSlot) ->
         -- TODO: Use `unsnoc` when available
-        let actualSlot = slot dataWithSlot
+        let actualSlot = slot $ traceData dataWithSlot
         in case maybePrevSlot of
           Nothing -> (Just actualSlot, Seq.empty)
           (Just prevSlot) ->
             if actualSlot == prevSlot + 1
             then (Just actualSlot, sq)
             else (Just actualSlot, sq Seq.>< (Seq.fromList [(prevSlot+1)..(actualSlot-1)]))
-      (Aeson.Error _) -> ans
+      (Left _) -> ans
   reducerOf _ ans (Cursor _ (Just _)) = ans
   showAns _ = show
 
 instance Reducer OneSecondSilences where
-  type instance Accum OneSecondSilences = (Maybe Msg, Seq.Seq (NominalDiffTime, Msg, Msg))
+  type instance Accum OneSecondSilences = (Maybe Trace, Seq.Seq (NominalDiffTime, Trace, Trace))
   initialOf _ = (Nothing, Seq.empty)
   reducerOf _ (Nothing, sq) cursor = (_maybeCursorMsg cursor, sq)
   reducerOf _ (Just _prevMsg, sq) (Cursor _ Nothing) = (Just _prevMsg, sq)
-  reducerOf _ (Just _prevMsg, sq) (Cursor _ (Just cursorMsg)) =
-    let diffTime = diffUTCTime (at cursorMsg) (at _prevMsg)
+  reducerOf _ (Just _prevMsg, sq) (Cursor _ (Just cursorTrace)) =
+    let diffTime = diffUTCTime (at cursorTrace) (at _prevMsg)
     in if diffTime >  fromInteger 2
-    then (Just cursorMsg, sq Seq.|> (diffTime, _prevMsg, cursorMsg))
-    else (Just cursorMsg, sq)
+    then (Just cursorTrace, sq Seq.|> (diffTime, _prevMsg, cursorTrace))
+    else (Just cursorTrace, sq)
   showAns   _ = show
 
 --------------------------------------------------------------------------------
@@ -289,11 +302,11 @@ run cliOpts@(CliOpts _ parallel ((MkReducer r):_)) = do
   print r
   if not parallel
   then do
-    --------------------------------------------------------
-    putStrLn "---------------------------------------------"
-    putStrLn "Do something with all files (NOT in parallel)"
-    putStrLn "---------------------------------------------"
-    --------------------------------------------------------
+    ------------------------------------
+    putStrLn "-------------------------"
+    putStrLn "Apply filter to all files"
+    putStrLn "-------------------------"
+    ------------------------------------
     mapM_
       (\(logName,fp) -> do
         ans <- lineFoldl'
@@ -348,36 +361,71 @@ run cliOpts@(CliOpts _ parallel ((MkReducer r):_)) = do
 -- A log message.
 --------------------------------------------------------------------------------
 
--- Keep it simple!
 -- TODO:
 -- All traces start with, use this assumption to build a "fast" decoder.
 -- {"at":"2024-03-30T00:30:27.015631111Z","ns":"Reflection.TracerInfo"
-data Msg = Msg
+-- Keep it simple!
+data Trace = Trace
   -- Strict of keep thunks of `Data.Time.FromText.parseUTCTime`.
   { at :: UTCTime -- "2024-04-06T11:27:45.37268578Z"
   , ns :: Text.Text
-  -- Only does a final `fromJSON` if needed!
-  , msgData :: Aeson.Value
+  -- Only do `fromJSON` if needed!
+  , more :: Text.Text
+  }
+  deriving (Eq, Show)
+
+-- Fast & Ugly, Ugly & Fast.
+-- Too many assumptions (assumption is the parent of all thing that did not go
+-- quite as expected).
+traceFromJson :: Text.Text -> Either String Trace
+traceFromJson text =
+  -- Assume '{"at":"'' is there
+  case Text.splitAt 7 text of
+    -- Property 'at' assumed as expected.
+    ("{\"at\":\"", text') ->
+           -- Assume a date like '2024-04-11T12:01:33.2135764Z' is there.
+           -- The milliseconds part is variable, can't read a fix amount.
+      let (atText, text'' ) = Text.break (== '"') text'
+          -- Consume all the text until the next '"'.
+          -- First drop the date's last '"' ans assume ',"ns":"' is there.
+          (nsText, text''') = Text.break (== '"') (Text.drop 8 text'')
+      --in Left $ show (atText, text'', nsText, text''')
+      in  case ParseTime.parseUTCTime atText of
+            (Left err) -> Left $ "parseUTCTime: " ++ err
+            (Right utcTime) -> Right $
+              -- Drop closing '",' of 'ns' and leave unconsumed as a new object.
+              Trace utcTime nsText ("{" <> (Text.drop 2 text'''))
+    _ -> Left "No {\"at\":\""
+
+-- Keep it simple!
+data TraceData a = TraceData
+  -- Strict of keep thunks of `Data.Time.FromText.parseUTCTime`.
+  { traceData :: a
+  , sev       :: Text.Text
+  , thread    :: Text.Text
+  , host      :: Text.Text
   }
   deriving (Eq, Show, Generic)
 
-instance Aeson.ToJSON Msg where
+instance Aeson.ToJSON a => Aeson.ToJSON (TraceData a) where
   -- Only using a non-automatic instance because of "data" and "msgData".
-  toJSON p@(Msg _ _ _) =
+  toJSON p@(TraceData _ _ _ _) =
     Aeson.object
-      [ "at"   Aeson..= at p
-      , "ns"   Aeson..= ns p
-      , "data" Aeson..= msgData p
+      [ "data"   Aeson..= traceData p
+      , "sev"    Aeson..= sev       p
+      , "thread" Aeson..= thread    p
+      , "host"   Aeson..= host      p
       ]
 
-instance Aeson.FromJSON Msg where
+instance Aeson.FromJSON a => Aeson.FromJSON (TraceData a) where
   -- Only using a non-automatic instance because of "data" and "msgData".
   parseJSON =
-    Aeson.withObject "Msg" $ \o -> do
-      Msg
-        <$> o Aeson..: "at"
-        <*> o Aeson..: "ns"
-        <*> o Aeson..: "data"
+    Aeson.withObject "TraceData" $ \o -> do
+      TraceData
+        <$> o Aeson..: "data"
+        <*> o Aeson..: "sev"
+        <*> o Aeson..: "thread"
+        <*> o Aeson..: "host"
 
 {--
 class Cursor a where
@@ -393,7 +441,7 @@ instance Cursor BasicCursor where
 data Cursor = Cursor
   { _cursorText :: Text.Text
   -- All lines are read (converted to Text) but `fromJSON` is lazy.
-  , _maybeCursorMsg :: Maybe Msg
+  , _maybeCursorMsg :: Maybe Trace
   }
 
 -- Allow to `fold'` through the log file but in JSON format.
@@ -401,12 +449,12 @@ lineFoldl' :: (a -> Cursor -> a) -> a -> FilePath -> IO a
 lineFoldl' f initialAcc filePath = do
   Log.lineFoldl'
     (\acc textLine ->
-      let maybeMsg = case Aeson.eitherDecodeStrictText textLine of
-                      (Left _) -> Nothing
-                      (Right msg) -> Just msg
+      let maybeTrace = case traceFromJson textLine of
+                      (Left _str) -> Nothing
+                      (Right trace) -> Just trace
           -- CRITICAL: Has to be "STRICT" to keep `Log.lineFoldl'`'s behaviour.
           --           I repeat, the accumulator function has to be strict!
-          !nextAcc = f acc (Cursor textLine maybeMsg)
+          !nextAcc = f acc (Cursor textLine maybeTrace)
       in nextAcc
     )
     initialAcc
