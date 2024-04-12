@@ -75,7 +75,7 @@ jobs:
       with:
         use-sodium-vrf: true # default is true
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Cabal update
       run: cabal update
@@ -228,7 +228,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Create Release Tag
       id: create_release_tag

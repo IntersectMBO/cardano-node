@@ -32,7 +32,6 @@ import           Cardano.Node.Configuration.Topology
 import           Prelude hiding (lines)
 
 import           Control.Monad
-import qualified Control.Monad.Class.MonadTimer.SI as MT
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (first)
@@ -66,10 +65,8 @@ import           Testnet.Start.Types
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
-import           Hedgehog.Extras (failMessage)
+import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.OS as OS
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
 
 -- | There are certain conditions that need to be met in order to run
 -- a valid node cluster.
@@ -349,7 +346,7 @@ cardanoTestnet
         RealNodeTopology producers
 
     let keysWithPorts = L.zip3 [1..] poolKeys portNumbers
-    ePoolNodes <- forM keysWithPorts $ \(i, key, port) -> do
+    ePoolNodes <- H.forConcurrently keysWithPorts $ \(i, key, port) -> do
       let nodeName = mkNodeName i
           keyDir = tmpAbsPath </> poolKeyDir i
       H.note_ $ "Node name: " <> nodeName
@@ -367,61 +364,56 @@ cardanoTestnet
           ]
       pure $ flip PoolNode key <$> eRuntime
 
-    if any isLeft ePoolNodes
-    -- TODO: We can render this in a nicer way
-    then failMessage GHC.callStack . show . map show $ lefts ePoolNodes
-    else do
-      let (_ , poolNodes) = partitionEithers ePoolNodes
+    let (failedNodes, poolNodes) = partitionEithers ePoolNodes
+    unless (null failedNodes) $ do
+      H.noteShow_ . vsep $ prettyError <$> failedNodes
+      H.failure
 
-      -- FIXME: replace with ledger events waiting for chain extensions
-      liftIO $ MT.threadDelay 10
-      now <- H.noteShowIO DTC.getCurrentTime
-      deadline <- H.noteShow $ DTC.addUTCTime 35 now
+    -- FIXME: use foldEpochState waiting for chain extensions
+    now <- H.noteShowIO DTC.getCurrentTime
+    deadline <- H.noteShow $ DTC.addUTCTime 45 now
+    forM_ (map (nodeStdout . poolRuntime) poolNodes) $ \nodeStdoutFile -> do
+      H.assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile
 
-      forM_ (map (nodeStdout . poolRuntime) poolNodes) $ \nodeStdoutFile -> do
-        H.assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile
+    H.noteShowIO_ DTC.getCurrentTime
 
-      H.noteShowIO_ DTC.getCurrentTime
+    forM_ wallets $ \wallet -> do
+      H.cat $ paymentSKey $ paymentKeyInfoPair wallet
+      H.cat $ paymentVKey $ paymentKeyInfoPair wallet
 
-      forM_ wallets $ \wallet -> do
-        H.cat $ paymentSKey $ paymentKeyInfoPair wallet
-        H.cat $ paymentVKey $ paymentKeyInfoPair wallet
+    let runtime = TestnetRuntime
+          { configurationFile
+          , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultGenesisFilepath ShelleyEra
+          , testnetMagic
+          , poolNodes
+          , wallets
+          , delegators = []
+          }
 
-      let runtime = TestnetRuntime
-            { configurationFile
-            , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultGenesisFilepath ShelleyEra
-            , testnetMagic
-            , poolNodes
-            , wallets = wallets
-            , delegators = []
-            }
+    let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tmpAbsPath
 
-      let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tmpAbsPath
+    node1sprocket <- H.headM $ poolSprockets runtime
+    execConfig <- H.mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
-      node1sprocket <- H.headM $ poolSprockets runtime
-      execConfig <- H.mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
+    forM_ wallets $ \wallet -> do
+      H.cat $ paymentSKey $ paymentKeyInfoPair wallet
+      H.cat $ paymentVKey $ paymentKeyInfoPair wallet
 
-      forM_ wallets $ \wallet -> do
-        H.cat $ paymentSKey $ paymentKeyInfoPair wallet
-        H.cat $ paymentVKey $ paymentKeyInfoPair wallet
+      utxos <- execCli' execConfig
+        [ "query", "utxo"
+        , "--address", Text.unpack $ paymentKeyInfoAddr wallet
+        , "--cardano-mode"
+        ]
 
-        utxos <- execCli' execConfig
-          [ "query", "utxo"
-          , "--address", Text.unpack $ paymentKeyInfoAddr wallet
-          , "--cardano-mode"
-          ]
+      H.note_ utxos
 
-        H.note_ utxos
+    stakePoolsFp <- H.note $ tmpAbsPath </> "current-stake-pools.json"
 
-      stakePoolsFp <- H.note $ tmpAbsPath </> "current-stake-pools.json"
+    H.assertExpectedSposInLedgerState stakePoolsFp testnetOptions execConfig
 
-      H.assertExpectedSposInLedgerState stakePoolsFp testnetOptions execConfig
-
-      pure runtime
+    pure runtime
   where
     writeGenesisSpecFile :: (MonadTest m, MonadIO m, HasCallStack) => ToJSON a => String -> a -> m ()
     writeGenesisSpecFile eraName toWrite = GHC.withFrozenCallStack $ do
       genesisJsonFile <- H.noteShow $ tmpAbsPath </> "genesis." <> eraName <> ".spec.json"
       H.evalIO $ LBS.writeFile genesisJsonFile $ Aeson.encode toWrite
-
-
