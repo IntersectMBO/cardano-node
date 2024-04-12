@@ -275,6 +275,15 @@ instance ( Show (BlockNodeToNodeVersion blk)
                , "nodeStartTime" .= biNodeStartTime
                ]
 
+  asMetrics (BlockForgingUpdate b) =
+    [ IntM "isForging"
+      (case  b of
+        EnabledBlockForging -> 1
+        DisabledBlockForging -> 0
+        NotEffective -> 0
+      )]
+  asMetrics _ = []
+
 instance MetaTrace  (StartupTrace blk) where
   namespaceFor StartupInfo {}  =
     Namespace [] ["Info"]
@@ -394,6 +403,10 @@ instance MetaTrace  (StartupTrace blk) where
     , "\n_niIpProducers_: shows the list of ip subscription addresses."
     ]
   documentFor _ns = Nothing
+
+  metricsDocFor (Namespace _ ["BlockForgingUpdate"]) =
+    [("isForging","Is this node forging blocks 0 = no, 1 = yes")]
+  metricsDocFor _ = []
 
   allNamespaces =
     [ Namespace [] ["Info"]

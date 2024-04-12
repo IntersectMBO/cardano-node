@@ -41,6 +41,8 @@ import           Cardano.Node.Protocol.Byron ()
 import           Cardano.Node.Protocol.Shelley ()
 import           Cardano.Node.Queries
 import qualified Cardano.Node.STM as STM
+import           Cardano.Node.Startup
+
 import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
@@ -335,7 +337,9 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
     , diffusionTracersExtra = diffusionTracersExtra' enableP2P
     -- TODO: startupTracer should ignore severity level (i.e. it should always
     -- be printed)!
-    , startupTracer = toLogObject' verb $ appendName "startup" tr
+    , startupTracer = toLogObject' verb (appendName "startup" tr)
+              <> Tracer (\(ev :: StartupTrace blk) -> traceForgeEnabledMetric ekgDirect ev)
+
     , shutdownTracer = toLogObject' verb $ appendName "shutdown" tr
     -- The remaining tracers are completely unused by the legacy tracing:
     , nodeInfoTracer = nullTracer
@@ -345,6 +349,19 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
     , peersTracer = nullTracer
     }
  where
+   traceForgeEnabledMetric :: Maybe EKGDirect -> StartupTrace blk -> IO ()
+   traceForgeEnabledMetric mbEKGDirect ev =
+      case mbEKGDirect of
+        Just ekgDirect' ->
+          case ev of
+              BlockForgingUpdate b -> sendEKGDirectInt ekgDirect' "isForge"
+                                        (case b of
+                                            EnabledBlockForging -> 1 :: Int
+                                            DisabledBlockForging -> 0 :: Int
+                                            NotEffective -> 0 :: Int)
+              _ -> pure ()
+        Nothing -> pure ()
+
    diffusionTracers = Diffusion.Tracers
      { Diffusion.dtMuxTracer                     = muxTracer
      , Diffusion.dtHandshakeTracer               = handshakeTracer
