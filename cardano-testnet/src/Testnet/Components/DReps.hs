@@ -10,6 +10,7 @@ module Testnet.Components.DReps
   , signTx
   , submitTx
   , failToSubmitTx
+  , retrieveTransactionId
   ) where
 
 import           Cardano.Api (AnyCardanoEra (..), FileDirection (In), ShelleyBasedEra (..),
@@ -304,3 +305,24 @@ failToSubmitTx execConfig cEra signedTx = GHC.withFrozenCallStack $ do
   case exitCode of
     ExitSuccess -> H.failMessage GHC.callStack "Transaction submission was expected to fail but it succeeded"
     _ -> return ()
+
+-- | Retrieves the transaction ID (governance action ID) from a signed
+-- transaction file using @cardano-cli@.
+--
+-- This function takes the following parameters:
+--
+-- * 'execConfig': Specifies the CLI execution configuration.
+-- * 'signedTx': Signed transaction to be submitted, obtained using 'signTx'.
+--
+-- Returns the transaction ID (governance action ID) as a 'String'.
+retrieveTransactionId
+  :: (MonadTest m, MonadCatch m, MonadIO m)
+  => H.ExecConfig
+  -> File SignedTx In
+  -> m String
+retrieveTransactionId execConfig signedTxBody = do
+  txidOutput <- H.execCli' execConfig
+    [ "transaction", "txid"
+    , "--tx-file", unFile signedTxBody
+    ]
+  return $ mconcat $ lines txidOutput

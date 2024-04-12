@@ -34,7 +34,8 @@ import           Lens.Micro
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
-import           Testnet.Components.DReps (createVotingTxBody, generateVoteFiles, signTx, submitTx)
+import           Testnet.Components.DReps (createVotingTxBody, generateVoteFiles,
+                   retrieveTransactionId, signTx, submitTx)
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
@@ -154,7 +155,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     ]
 
   txbodyFp <- H.note $ work </> "tx.body"
-  txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
   txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
 
@@ -167,22 +167,12 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     , "--out-file", txbodyFp
     ]
 
-  void $ H.execCli' execConfig
-    [ "conway", "transaction", "sign"
-    , "--tx-body-file", txbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet1
-    , "--out-file", txbodySignedFp
-    ]
+  signedProposalTx <- signTx execConfig cEra gov "signed-proposal"
+                           (File txbodyFp) [paymentKeyInfoPair wallet1]
 
-  void $ H.execCli' execConfig
-    [ "conway", "transaction", "submit"
-    , "--tx-file", txbodySignedFp
-    ]
+  submitTx execConfig cEra signedProposalTx
 
-  governanceActionTxId <- mconcat . lines <$> H.execCli' execConfig
-    [ "transaction", "txid"
-    , "--tx-file", txbodySignedFp
-    ]
+  governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
   !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex sbe (fromString governanceActionTxId))
                                         configurationFile
