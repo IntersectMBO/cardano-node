@@ -58,6 +58,7 @@ sys 0m0.837s
 
 Heap changes
 --------------------------------------------------------------------------------
+
 > grep -E "^{.*" bench/stdout-tools/5stdout | jq 'select(.ns == "Resources") | .data.Heap' | uniq
 real  1m5.810s
 user  1m7.716s
@@ -67,6 +68,19 @@ sys 0m3.674s
 real  0m54.360s
 user  0m53.606s
 sys 0m0.873s
+
+Heap changes (52 nodes)
+--------------------------------------------------------------------------------
+
+> time for i in `seq 0 51`; do echo "node-$i" && grep -E "^{.*" run/2024-04-05-22-32-6b142-891-value-40M64G-nomadperfssd-bage-nom/node-"$i"/stdout | jq --compact-output 'if .ns == "Resources" then .data.Heap else empty end' | uniq; done
+real  9m40.413s
+user  9m49.158s
+sys 1m4.572s
+
+> cabal run stdout-tools -- --run run/2024-04-05-22-32-6b142-891-value-40M64G-nomadperfssd-bage-nom --reducer heap-changes
+real  9m10.366s
+user  8m12.345s
+sys 0m46.550s
 
 -}
 
@@ -108,7 +122,9 @@ module Main (main) where
 --------------------------------------------------------------------------------
 
 -- base.
-import           Control.Applicative (some)
+import           Control.Applicative (some, (<|>))
+import           Control.Monad (when, foldM)
+import           Data.Foldable (toList)
 import           GHC.Generics
 import           Data.Kind (Type)
 
@@ -176,6 +192,8 @@ class Show r => Reducer r where
   initialOf :: r -> Accum r
   reducerOf :: r -> Accum r -> Cursor -> Accum r
   showAns   :: r -> Accum r -> String
+  printAns  :: r -> Accum r -> IO ()
+  printAns r acc = putStrLn $ showAns r acc
 
 data CountLines = CountLines
   deriving Show
@@ -210,6 +228,7 @@ instance Reducer CountStartLeadershipCheckPlus where
         else l
     )
   showAns  _ = show
+
 instance Reducer HeapChanges where
   type instance Accum HeapChanges = (Maybe Integer, Seq.Seq (UTCTime, Integer))
   initialOf _ = (Nothing, Seq.empty)
@@ -227,6 +246,9 @@ instance Reducer HeapChanges where
             else (Just actualHeap, sq Seq.|> (at cursorTrace, actualHeap))
       (Left _) -> ans
   showAns _ = show
+  printAns _ (_, sq) = mapM_
+    (\(t,h) -> putStrLn $ show t ++ ": " ++ show h)
+    (toList sq)
 
 instance Reducer MissedSlots where
   type instance Accum MissedSlots = (Maybe Integer, Seq.Seq Integer)
@@ -246,6 +268,19 @@ instance Reducer MissedSlots where
       (Left _) -> ans
   reducerOf _ ans (Cursor _ (Just _)) = ans
   showAns _ = show
+  printAns _ (_, sq) = do
+    ans <- foldM
+      (\maybePrevSlot lostSlot ->
+        case maybePrevSlot of
+          Nothing -> putStr (show lostSlot) >> return (Just lostSlot)
+          (Just prevSlot) ->
+            if prevSlot + 1 == lostSlot
+            then return (Just lostSlot)
+            else putStrLn (".." ++ show prevSlot) >> return Nothing
+      )
+      Nothing
+      (toList sq)
+    when (ans /= Nothing) (putStrLn "")
 
 instance Reducer OneSecondSilences where
   type instance Accum OneSecondSilences = (Maybe Trace, Seq.Seq (NominalDiffTime, Trace, Trace))
@@ -258,25 +293,46 @@ instance Reducer OneSecondSilences where
     then (Just cursorTrace, sq Seq.|> (diffTime, _prevMsg, cursorTrace))
     else (Just cursorTrace, sq)
   showAns   _ = show
+  printAns _ (_,sq) = mapM_
+    (\(ndt, t1, _) ->
+      putStrLn $ (show ndt) ++ " (" ++ (show $ at t1) ++ ")"
+    )
+    (toList sq)
 
 --------------------------------------------------------------------------------
 
 optsParser :: Opt.Parser CliOpts
 optsParser = CliOpts <$>
-        (map
-          -- Parse the optional file label, looks for ":" as separator.
-          (\str ->
-            case span (/= ':') str of
-              (f,"") -> ("",f)
-              (f, s) -> (f,drop 1 s)
+        (
+          (map
+            -- Parse the optional file label, looks for ":" as separator.
+            (\str ->
+              case span (/= ':') str of
+                (f,"") -> ("",f)
+                (f, s) -> (f,drop 1 s)
+            )
+            <$>
+            some (
+              Opt.strOption
+              (    Opt.long "file"
+                <> Opt.short 'f'
+                <> Opt.metavar "FILENAME"
+                <> Opt.help "Input file"
+              )
+            )
           )
-          <$>
-          some (
+        <|>
+          (
+            (\runDir -> map
+              (\n -> ("node-" ++ show n,runDir ++ "/node-" ++ show n ++ "/stdout"))
+              ([0..51]::[Int])
+            )
+            <$>
             Opt.strOption
-            (    Opt.long "file"
-              <> Opt.short 'f'
-              <> Opt.metavar "FILENAME"
-              <> Opt.help "Input file"
+            (    Opt.long "run"
+              <> Opt.short 'r'
+              <> Opt.metavar "RUN"
+              <> Opt.help "Run folder"
             )
           )
         )
@@ -286,10 +342,10 @@ optsParser = CliOpts <$>
           )
     <*> (some (
           (Opt.option $ Opt.eitherReader cliFilterReader)
-          (    Opt.long "filter"
-            <> Opt.short 'f'
-            <> Opt.metavar "FILTER"
-            <> Opt.help "Filter"
+          (    Opt.long "reducer"
+            <> Opt.short 'r'
+            <> Opt.metavar "REDUCER"
+            <> Opt.help "Reducer"
           )
         ))
 
@@ -314,7 +370,7 @@ run cliOpts@(CliOpts _ parallel ((MkReducer r):_)) = do
           (initialOf r)
           fp
         print logName
-        putStrLn $ showAns r ans
+        printAns r ans
       )
       (files cliOpts)
   else do
@@ -335,7 +391,7 @@ run cliOpts@(CliOpts _ parallel ((MkReducer r):_)) = do
     mapM_
       (\(logName,ans) -> do
         print logName
-        putStrLn $ showAns r ans
+        printAns r ans
       )
       ansParallel
   t1 <- getCurrentTime
