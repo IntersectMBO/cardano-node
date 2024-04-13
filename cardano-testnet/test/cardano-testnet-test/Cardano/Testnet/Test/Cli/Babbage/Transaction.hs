@@ -36,11 +36,13 @@ import           Testnet.Runtime
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test as H
 
 hprop_transaction :: Property
 hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "hprop_transaction-b.start" "hprop_transaction"
+
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -121,6 +123,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
     UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
     txouts2 <- H.noteShow $ L.unCoin . txOutValueLovelace . txOutValue . snd <$> Map.toList utxo2
     H.assert $ 5_000_001 `List.elem` txouts2
+  H.writeFile "hprop_transaction-b.stop" "hprop_transaction"
 
 txOutValue :: TxOut ctx era -> TxOutValue era
 txOutValue (TxOut _ v _ _) = v

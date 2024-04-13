@@ -40,6 +40,9 @@ sbe = ShelleyBasedEraConway
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRepRetirement/"'@
 hprop_drep_retirement :: Property
 hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "hprop_drep_retirement.start" "hprop_drep_retirement"
+
   -- Start a local test net
   conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -141,3 +144,4 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
   -- to witness that the number of dreps indeed decreased.
   checkDRepsNumber sbe configFile' socketPath' execConfig (sizeBefore - 1)
   H.success
+  H.writeFile "hprop_drep_retirement.stop" "hprop_drep_retirement"

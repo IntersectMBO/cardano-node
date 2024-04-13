@@ -32,6 +32,9 @@ import qualified Hedgehog.Extras.Test as H
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Treasury Growth/"'@
 prop_check_if_treasury_is_growing :: H.Property
 prop_check_if_treasury_is_growing = H.integrationRetryWorkspace 0 "growing-treasury" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "prop_check_if_treasury_is_growing.start" "prop_check_if_treasury_is_growing"
+
   -- Start testnet
   conf@Conf{tempAbsPath=TmpAbsolutePath tempAbsPath'} <- TN.mkConf tempAbsBasePath'
 
@@ -67,6 +70,7 @@ prop_check_if_treasury_is_growing = H.integrationRetryWorkspace 0 "growing-treas
      else do
        H.note_ "treasury is not growing"
        H.failure
+  H.writeFile "prop_check_if_treasury_is_growing.stop" "prop_check_if_treasury_is_growing"
   where
     handler :: AnyNewEpochState -> SlotNo -> BlockNo -> StateT (Map EpochNo Integer) IO LedgerStateCondition
     handler (AnyNewEpochState _ newEpochState) _slotNo _blockNo = do

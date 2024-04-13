@@ -52,6 +52,9 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 -- @cabal test cardano-testnet-test --test-options '-p "/ProposeNewConstitutionSPO/"'@
 hprop_ledger_events_propose_new_constitution_spo :: Property
 hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propose-new-constitution-spo" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "hprop_ledger_events_propose_new_constitution_spo.start" "hprop_ledger_events_propose_new_constitution_spo"
+
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -224,6 +227,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
 
   exitCode H./== ExitSuccess -- Dit it fail?
   H.assert $ "DisallowedVoters" `isInfixOf` stderr -- Did it fail for the expected reason?
+  H.writeFile "hprop_ledger_events_propose_new_constitution_spo.stop" "hprop_ledger_events_propose_new_constitution_spo"
 
 getConstitutionProposal
   :: (HasCallStack, MonadCatch m, MonadIO m, MonadTest m)

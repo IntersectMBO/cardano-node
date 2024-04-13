@@ -42,11 +42,13 @@ import           Hedgehog (Property)
 import qualified Hedgehog as H
 import           Hedgehog.Extras (threadDelay)
 import           Hedgehog.Extras.Stock (sprocketSystemName)
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test as H
 
 hprop_kes_period_info :: Property
 hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "hprop_kes_period_info.start" "hprop_kes_period_info"
+
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     -- TODO: Move yaml filepath specification into individual node options
@@ -341,3 +343,4 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
 
   spoLogFile <- H.note nodeStdout
   prop_node_minted_block spoLogFile
+  H.writeFile "hprop_kes_period_info.stop" "hprop_kes_period_info"

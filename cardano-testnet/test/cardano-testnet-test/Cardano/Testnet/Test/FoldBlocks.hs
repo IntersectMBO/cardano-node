@@ -40,6 +40,9 @@ instance Show FoldBlocksException where
 -- that main thread blocks on.
 prop_foldBlocks :: H.Property
 prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "prop_foldBlocks.start" "prop_foldBlocks"
+
   -- Start testnet
   conf <- TN.mkConf tempAbsBasePath'
 
@@ -77,4 +80,5 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
   -- test to finish.
   _ <- H.evalIO $ H.timeout 30_000_000 $ IO.readMVar lock
   H.assert True
+  H.writeFile "prop_foldBlocks.stop" "prop_foldBlocks"
 

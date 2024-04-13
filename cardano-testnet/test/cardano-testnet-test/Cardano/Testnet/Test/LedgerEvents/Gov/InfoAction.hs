@@ -46,6 +46,8 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/InfoAction/'@
 hprop_ledger_events_info_action :: Property
 hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "hprop_ledger_events_info_action.start" "hprop_ledger_events_info_action"
 
   -- Start a local test net
   conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
@@ -225,6 +227,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
       H.failMessage callStack
         $ "foldBlocksCheckInfoAction failed with: " <> displayError e
     Right _events -> success
+  H.writeFile "hprop_ledger_events_info_action.stop" "hprop_ledger_events_info_action"
 
 -- | Fold accumulator for checking action state
 data InfoActionState = InfoActionState

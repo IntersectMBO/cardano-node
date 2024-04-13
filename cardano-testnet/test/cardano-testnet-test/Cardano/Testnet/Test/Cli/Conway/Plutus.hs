@@ -49,6 +49,9 @@ import qualified Hedgehog.Extras as H
 -- Proposing NO
 hprop_plutus_v3 :: Property
 hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "hprop_plutus_v3.start" "hprop_plutus_v3"
+
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -220,5 +223,6 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
     , "--tx-file", spendScriptUTxOTx
     ]
   H.success
+  H.writeFile "hprop_plutus_v3.stop" "hprop_plutus_v3"
 
 

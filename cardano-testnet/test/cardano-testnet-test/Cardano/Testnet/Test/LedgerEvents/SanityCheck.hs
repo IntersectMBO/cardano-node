@@ -25,7 +25,7 @@ import           Testnet.Runtime
 
 import           Hedgehog
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test as H
 
 newtype AdditionalCatcher
   = IOE IOException
@@ -42,6 +42,9 @@ newtype AdditionalCatcher
 -- setting timeouts for expected results etc.
 hprop_ledger_events_sanity_check :: Property
 hprop_ledger_events_sanity_check = H.integrationWorkspace "ledger-events-sanity-check" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "hprop_ledger_events_sanity_check.start" "hprop_ledger_events_sanity_check"
+
   -- Start a local test net
   conf <- mkConf tempAbsBasePath'
 
@@ -75,6 +78,7 @@ hprop_ledger_events_sanity_check = H.integrationWorkspace "ledger-events-sanity-
     Right (Left e) ->
       H.failMessage callStack $ "foldBlocks failed with: " <> displayError e
     Right (Right _v) -> success
+  H.writeFile "hprop_ledger_events_sanity_check.stop" "hprop_ledger_events_sanity_check"
 
 
 foldBlocksAccumulator

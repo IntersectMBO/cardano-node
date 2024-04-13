@@ -43,6 +43,9 @@ import qualified Hedgehog.Extras.Test.Golden as H
 -- RECREATE_GOLDEN_FILES=1 as its prefix
 hprop_cli_queries :: Property
 hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "hprop_cli_queries.start" "hprop_cli_queries"
+
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
@@ -123,6 +126,7 @@ hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> 
   H.noteM_ $ H.execCli' execConfig [ "conway", "query", "drep-state", "--all-dreps"
                                    , "--out-file", drepStateOutFile]
   _ :: Aeson.Value <- H.leftFailM . H.readJsonFile $ drepStateOutFile
+  H.writeFile "hprop_cli_queries.stop" "hprop_cli_queries"
 
   H.success
 
@@ -152,4 +156,3 @@ assertArrayOfSize v n =
      failWrongType got = do
        H.note_ $ "Expected a JSON object, but received: " <> got
        H.failure
-
