@@ -31,12 +31,15 @@ import           Testnet.Runtime
 
 import           Hedgehog (Property)
 import qualified Hedgehog.Extras.Stock as H
-import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test as H
 import qualified Hedgehog.Internal.Property as H
 
 -- | Tests @query slot-number@ cardano-cli command that it returns correct slot numbers for provided utc time
 hprop_querySlotNumber :: Property
 hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "hprop_querySlotNumber.start" "hprop_querySlotNumber"
+
   H.note_ SYS.os
   conf <- mkConf tempAbsBasePath'
 
@@ -118,6 +121,8 @@ hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tem
       , testTime
       ]
     H.assertWith result isLeft
+
+  H.writeFile "hprop_querySlotNumber.stop" "hprop_querySlotNumber"
 
 formatTime :: DT.UTCTime -> String
 formatTime = DT.formatTime DT.defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ"

@@ -44,12 +44,14 @@ import           Testnet.SubmitApi
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test as H
 import qualified Hedgehog.Extras.Test.Golden as H
 
 hprop_transaction :: Property
 hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transaction" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "hprop_transaction-c.start" "hprop_transaction"
+
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -188,6 +190,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
     H.evalIO $ LBS.writeFile txFailedResponseYamlFp $ Aeson.encodePretty v
 
     H.diffFileVsGoldenFile txFailedResponseYamlFp txFailedResponseYamlGoldenFp
+  H.writeFile "hprop_transaction-c.stop" "hprop_transaction"
 
 redactHashLbs :: LBS.ByteString -> LBS.ByteString
 redactHashLbs =

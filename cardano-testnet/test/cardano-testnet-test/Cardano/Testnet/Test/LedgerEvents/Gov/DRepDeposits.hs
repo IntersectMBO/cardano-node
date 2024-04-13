@@ -36,6 +36,8 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRep Deposits/"'@
 hprop_ledger_events_drep_deposits :: Property
 hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "hprop_ledger_events_drep_deposits.start" "hprop_ledger_events_drep_deposits"
 
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
@@ -110,5 +112,6 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
 
   checkDRepState sbe (File configurationFile) (File socketPath) execConfig
     (\m -> if map L.drepDeposit (Map.elems m) == [L.Coin minDRepDeposit] then Just () else Nothing)
+  H.writeFile "hprop_ledger_events_drep_deposits.stop" "hprop_ledger_events_drep_deposits"
 
 

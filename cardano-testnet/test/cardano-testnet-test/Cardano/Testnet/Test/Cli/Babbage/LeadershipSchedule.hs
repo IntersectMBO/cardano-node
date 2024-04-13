@@ -48,13 +48,15 @@ import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import           Hedgehog.Extras (threadDelay)
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test as H
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/leadership-schedule/"'@
 hprop_leadershipSchedule :: Property
 hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "hprop_leadershipSchedule.start" "hprop_leadershipSchedule"
+
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
@@ -355,3 +357,4 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
     H.noteShow_ (expectedLeadershipSlotNumbers \\ leaderSlots)
     H.assert $ L.null (expectedLeadershipSlotNumbers \\ leaderSlots)
 -}
+  H.writeFile "hprop_leadershipSchedule.stop" "hprop_leadershipSchedule"

@@ -26,10 +26,13 @@ import           Testnet.Runtime
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test as H
 
 hprop_stakeSnapshot :: Property
 hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "conway-stake-snapshot" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "hprop_stakeSnapshot-c.start" "hprop_stakeSnapshot"
+
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -66,3 +69,4 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "conway-stake-snapshot" $ \t
         Aeson.Object kmPools -> KM.size kmPools === 3
         _ -> H.failure
     _ -> H.failure
+  H.writeFile "hprop_stakeSnapshot-c.stop" "hprop_stakeSnapshot"

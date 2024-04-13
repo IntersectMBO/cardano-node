@@ -184,6 +184,9 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
 
 hprop_shutdownOnSlotSynced :: Property
 hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "hprop_shutdownOnSlotSynced.start" "hprop_shutdownOnSlotSynced"
+
   -- Start a local test net
   -- TODO: Move yaml filepath specification into individual node options
   conf <- mkConf tempAbsBasePath'
@@ -228,11 +231,15 @@ hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-syn
 
   let epsilon = 50
   H.assertWithinTolerance slotTip maxSlot epsilon
+  H.writeFile "hprop_shutdownOnSlotSynced.stop" "hprop_shutdownOnSlotSynced"
 
 -- Execute this test with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/ShutdownOnSigint/"'@
 hprop_shutdownOnSigint :: Property
 hprop_shutdownOnSigint = H.integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "hprop_shutdownOnSigint.start" "hprop_shutdownOnSigint"
+
   -- Start a local test net
   -- TODO: Move yaml filepath specification into individual node options
   conf <- mkConf tempAbsBasePath'
@@ -263,6 +270,7 @@ hprop_shutdownOnSigint = H.integrationRetryWorkspace 2 "shutdown-on-sigint" $ \t
     [] -> H.failMessage callStack "Could not find close DB message."
     (Left err):_ -> H.failMessage callStack err
     (Right _):_ -> pure ()
+  H.writeFile "hprop_shutdownOnSigint.stop" "hprop_shutdownOnSigint"
 
 
 parseMsg :: String -> Maybe (Either String Integer)

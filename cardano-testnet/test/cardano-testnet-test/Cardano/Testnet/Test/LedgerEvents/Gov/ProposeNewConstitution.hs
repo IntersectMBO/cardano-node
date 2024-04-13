@@ -53,6 +53,9 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/ProposeAndRatifyNewConstitution/"'@
 hprop_ledger_events_propose_new_constitution :: Property
 hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-new-constitution" $ \tempAbsBasePath' -> do
+  H.threadDelay 1000
+  H.writeFile "hprop_ledger_events_propose_new_constitution.start" "hprop_ledger_events_propose_new_constitution"
+
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -279,6 +282,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   length (filter (== "VoteNo") votes) === 3
   length (filter (== "Abstain") votes) === 2
   length votes === numVotes
+  H.writeFile "hprop_ledger_events_propose_new_constitution.stop" "hprop_ledger_events_propose_new_constitution"
 
 foldBlocksCheckConstitutionWasRatified
   :: String -- submitted constitution hash
