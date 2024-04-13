@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -32,7 +33,8 @@ import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket,
                    NodeToClientVersion)
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion, PeerAdvertise)
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
+import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
 import           Ouroboros.Network.Subscription.Dns (DnsSubscriptionTarget (..))
@@ -108,15 +110,12 @@ data StartupTrace blk =
   -- | Log peer-to-peer network configuration, either on startup or when its
   -- updated.
   --
-  | NetworkConfig [(HotValency, WarmValency, Map RelayAccessPoint PeerAdvertise)]
+  | NetworkConfig [(HotValency, WarmValency, Map RelayAccessPoint (PeerAdvertise, PeerTrustable))]
                   (Map RelayAccessPoint PeerAdvertise)
-                  UseLedgerAfter
+                  UseLedgerPeers
 
-  -- | Warn when 'EnableP2P' is set.
-  | P2PWarning
-
-  -- | Warn when 'EnableP2P' is set.
-  | PeerSharingWarning
+  -- | Warn when 'DisabledP2P' is set.
+  | NonP2PWarning
 
   -- | Warn when 'ExperimentalProtocolsEnabled' is set and affects
   -- node-to-node protocol.
@@ -215,7 +214,7 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
     { niName            = nodeName
     , niProtocol        = pack . show . ncProtocol $ nc
     , niVersion         = pack . showVersion $ version
-    , niCommit          = gitRev
+    , niCommit          = $(gitRev)
     , niStartTime       = nodeStartTime
     , niSystemStartTime = systemStartTime
     }

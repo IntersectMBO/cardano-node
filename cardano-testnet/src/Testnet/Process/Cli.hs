@@ -126,11 +126,11 @@ cliNodeKeyGen tmpDir vkey skey counter = do
 -- returning JSON to stdout, and needs going through a file instead, probably
 -- you should add a similar function to this one.
 execCliStdoutToJson :: ()
-  => (Aeson.FromJSON a, MonadTest m, MonadCatch m, MonadIO m)
+  => (HasCallStack, Aeson.FromJSON a, MonadTest m, MonadCatch m, MonadIO m)
   => ExecConfig -- ^ The configuration with which to call the CLI
   -> [String] -- ^ The CLI command to execute
   -> m a
-execCliStdoutToJson execConfig cmd = do
+execCliStdoutToJson execConfig cmd = GHC.withFrozenCallStack $ do
   result <- execCli' execConfig cmd
   H.leftFail $ Aeson.eitherDecode $ Data.String.fromString result
 

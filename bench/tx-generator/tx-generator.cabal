@@ -100,13 +100,13 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.39
+                      , cardano-api ^>= 8.44
                       , cardano-binary
-                      , cardano-cli ^>= 8.20.2.0
+                      , cardano-cli ^>= 8.22
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data
-                      , cardano-git-rev
+                      , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-alonzo
                       , cardano-ledger-api
                       , cardano-ledger-byron
@@ -238,7 +238,7 @@ test-suite tx-generator-test
                         -fno-warn-missing-import-lists
                         -fno-warn-safe
                         -fno-warn-unsafe
-                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+                        -threaded -rtsopts "-with-rtsopts=-N -T"
 
 benchmark tx-generator-bench
   import:               project-config
@@ -256,4 +256,4 @@ benchmark tx-generator-bench
                         -fno-warn-missing-import-lists
                         -fno-warn-safe
                         -fno-warn-unsafe
-                        -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+                        -threaded -rtsopts "-with-rtsopts=-N -T"

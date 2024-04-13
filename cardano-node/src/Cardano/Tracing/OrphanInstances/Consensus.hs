@@ -48,6 +48,7 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (BlockingType
                    TraceChainSyncServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
+import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
@@ -139,6 +140,10 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
       ChainDB.UpdateLedgerDbTraceEvent {} -> Debug
     ChainDB.ChainSelectionForFutureBlock{} -> Debug
     ChainDB.PipeliningEvent {} -> Debug
+    ChainDB.AddedReprocessLoEBlocksToQueue -> Debug
+    ChainDB.PoppedReprocessLoEBlocksFromQueue -> Debug
+    ChainDB.ChainSelectionLoEDebug _ _ -> Debug
+
 
   getSeverityAnnotation (ChainDB.TraceLedgerReplayEvent ev) = case ev of
     LedgerDB.ReplayFromGenesis {} -> Info
@@ -176,7 +181,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.FollowerNewImmIterator {} -> Debug
   getSeverityAnnotation (ChainDB.TraceInitChainSelEvent ev) = case ev of
     ChainDB.StartedInitChainSelection{} -> Info
-    ChainDB.InitalChainSelected{} -> Info
+    ChainDB.InitialChainSelected{} -> Info
     ChainDB.InitChainSelValidation ev' -> case ev' of
       ChainDB.InvalidBlock{} -> Debug
       ChainDB.ValidCandidate {} -> Info
@@ -235,6 +240,10 @@ instance HasSeverityAnnotation (TraceChainSyncClientEvent blk) where
   getSeverityAnnotation (TraceRolledBack _) = Notice
   getSeverityAnnotation (TraceException _) = Warning
   getSeverityAnnotation (TraceTermination _) = Notice
+  getSeverityAnnotation (TraceValidatedHeader _) = Debug
+  getSeverityAnnotation (TraceWaitingBeyondForecastHorizon _) = Debug
+  getSeverityAnnotation (TraceAccessingForecastHorizon _) = Debug
+  getSeverityAnnotation (TraceGaveLoPToken _ _ _) = Debug
 
 
 instance HasPrivacyAnnotation (TraceChainSyncServerEvent blk)
@@ -486,6 +495,13 @@ instance ( ConvertRawHash blk
               "About to add block to queue: " <> renderRealPointAsPhrase pt
             FallingEdgeWith sz ->
               "Block added to queue: " <> renderRealPointAsPhrase pt <> " queue size " <> condenseT sz
+        ChainDB.AddedReprocessLoEBlocksToQueue ->
+          "Added request to queue to reprocess blocks postponed by LoE."
+        ChainDB.PoppedReprocessLoEBlocksFromQueue ->
+          "Poppped request from queue to reprocess blocks postponed by LoE."
+        ChainDB.ChainSelectionLoEDebug {} ->
+          "ChainDB LoE debug event"
+
         ChainDB.PoppedBlockFromQueue edgePt ->
           case edgePt of
             RisingEdge ->
@@ -603,7 +619,7 @@ instance ( ConvertRawHash blk
         ChainDB.FollowerNewImmIterator _ _ ->  "FollowerNewImmIterator"
       ChainDB.TraceInitChainSelEvent ev -> case ev of
         ChainDB.StartedInitChainSelection -> "Started initial chain selection"
-        ChainDB.InitalChainSelected -> "Initial chain selected"
+        ChainDB.InitialChainSelected -> "Initial chain selected"
         ChainDB.InitChainSelValidation e -> case e of
           ChainDB.InvalidBlock _err _pt -> "Invalid block found during Initial chain selection, truncating the candidate and retrying to select a best candidate."
           ChainDB.ValidCandidate af     -> "Valid candidate at tip " <> renderPointAsPhrase (AF.lastPoint af)
@@ -762,6 +778,13 @@ instance ( StandardHash blk
       [ "kind" .= String "UnexpectedPrevHash"
       , "expected" .= String (pack $ show expect)
       , "actual" .= String (pack $ show act)
+      ]
+  toObject _verb (CheckpointMismatch blockNumber hdrHashExpected hdrHashActual) =
+    mconcat
+      [ "kind" .= String "CheckpointMismatch"
+      , "blockNo" .= String (pack $ show blockNumber)
+      , "expected" .= String (pack $ show hdrHashExpected)
+      , "actual" .= String (pack $ show hdrHashActual)
       ]
   toObject verb (OtherHeaderEnvelopeError err) =
     toObject verb err
@@ -972,6 +995,20 @@ instance ( ConvertRawHash blk
         mconcat [ "kind" .= String "TraceAddBlockEvent.PipeliningEvent.OutdatedTentativeHeader"
                  , "block" .= renderPointForVerbosity verb (blockPoint hdr)
                  ]
+    ChainDB.AddedReprocessLoEBlocksToQueue ->
+       mconcat [ "kind" .= String "AddedReprocessLoEBlocksToQueue" ]
+    ChainDB.PoppedReprocessLoEBlocksFromQueue ->
+       mconcat [ "kind" .= String "PoppedReprocessLoEBlocksFromQueue" ]
+    ChainDB.ChainSelectionLoEDebug curChain loeFrag ->
+        mconcat [ "kind" .= String "ChainSelectionLoEDebug"
+                , "curChain" .= headAndAnchor curChain
+                , "loeFrag" .= headAndAnchor loeFrag
+                ]
+      where
+        headAndAnchor frag = Aeson.object
+          [ "anchor" .= renderPointForVerbosity verb (AF.anchorPoint frag)
+          , "head" .= renderPointForVerbosity verb (AF.headPoint frag)
+          ]
 
    where
      addedHdrsNewChain
@@ -1065,8 +1102,8 @@ instance ( ConvertRawHash blk
     ChainDB.FollowerNewImmIterator _ _ ->
       mconcat [ "kind" .= String "TraceFollowerEvent.FollowerNewImmIterator" ]
   toObject verb (ChainDB.TraceInitChainSelEvent ev) = case ev of
-    ChainDB.InitalChainSelected ->
-      mconcat ["kind" .= String "TraceFollowerEvent.InitalChainSelected"]
+    ChainDB.InitialChainSelected ->
+      mconcat ["kind" .= String "TraceFollowerEvent.InitialChainSelected"]
     ChainDB.StartedInitChainSelection ->
       mconcat ["kind" .= String "TraceFollowerEvent.StartedInitChainSelection"]
     ChainDB.InitChainSelValidation ev' -> case ev' of
@@ -1295,6 +1332,20 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
     TraceTermination reason ->
       mconcat [ "kind" .= String "ChainSyncClientEvent.TraceTermination"
                , "reason" .= String (pack $ show reason) ]
+    TraceValidatedHeader h ->
+      mconcat [ "kind" .= String "ChainSyncClientEvent.TraceValidatedHeader"
+              , tipToObject (tipFromHeader h) ]
+    TraceWaitingBeyondForecastHorizon slotNo ->
+      mconcat [ "kind" .= String "ChainSyncClientEvent.TraceWaitingBeyondForecastHorizon"
+               , "slot" .= condense slotNo  ]
+    TraceAccessingForecastHorizon slotNo ->
+      mconcat [ "kind" .= String "ChainSyncClientEvent.TraceAccessingForecastHorizon"
+               , "slot" .= condense slotNo  ]
+    TraceGaveLoPToken tokenGiven h bestBlockNumberPriorToH ->
+      mconcat [ "kind" .= String "ChainSyncClientEvent.TraceGaveLoPToken"
+               , "given" .= tokenGiven
+               , tipToObject (tipFromHeader h)
+               , "blockNo" .=  bestBlockNumberPriorToH ]
 
 instance ConvertRawHash blk
       => ToObject (TraceChainSyncServerEvent blk) where
@@ -1509,3 +1560,41 @@ instance ( RunNode blk
 instance ToObject (TraceLocalTxSubmissionServerEvent blk) where
   toObject _verb _ =
     mconcat [ "kind" .= String "TraceLocalTxSubmissionServerEvent" ]
+
+instance HasPrivacyAnnotation (TraceGsmEvent selection) where
+instance HasSeverityAnnotation (TraceGsmEvent selection) where
+  getSeverityAnnotation _ = Info
+instance ToObject selection => Transformable Text IO (TraceGsmEvent selection) where
+  trTransformer = trStructured
+
+instance ToObject selection => ToObject (TraceGsmEvent selection) where
+  toObject verb (GsmEventEnterCaughtUp i s) =
+    mconcat
+      [ "kind" .= String "GsmEventEnterCaughtUp"
+      , "peerNumber" .= toJSON i
+      , "currentSelection" .= toObject verb s
+      ]
+  toObject verb (GsmEventLeaveCaughtUp s a) =
+    mconcat
+      [ "kind" .= String "GsmEventLeaveCaughtUp"
+      , "currentSelection" .= toObject verb s
+      , "age" .= toJSON (show a)
+      ]
+  toObject _verb GsmEventPreSyncingToSyncing =
+    mconcat
+      [ "kind" .= String "GsmEventPreSyncingToSyncing"
+      ]
+  toObject _verb GsmEventSyncingToPreSyncing =
+    mconcat
+      [ "kind" .= String "GsmEventSyncingToPreSyncing"
+      ]
+
+instance ConvertRawHash blk => ToObject (Tip blk) where
+  toObject _verb TipGenesis =
+    mconcat [ "kind" .= String "TipGenesis" ]
+  toObject _verb (Tip slotNo hash bNo) =
+    mconcat [ "kind" .= String "Tip"
+            , "tipSlotNo" .= toJSON (unSlotNo slotNo)
+            , "tipHash" .= renderHeaderHash (Proxy @blk) hash
+            , "tipBlockNo" .= toJSON bNo
+            ]

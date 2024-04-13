@@ -1,14 +1,11 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-#if __GLASGOW_HASKELL__ >= 908
-{-# OPTIONS_GHC -Wno-x-partial #-}
-#endif
 
 module Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO
   ( hprop_ledger_events_propose_new_constitution_spo
@@ -26,6 +23,7 @@ import           Cardano.Testnet
 
 import           Prelude
 
+import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.Trans.State.Strict (put)
 import           Data.Bifunctor (Bifunctor (..))
 import           Data.List (isInfixOf)
@@ -71,7 +69,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   TestnetRuntime
     { testnetMagic
     , poolNodes
-    , wallets
+    , wallets=wallet0:_
     , configurationFile
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
@@ -127,7 +125,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "governance", "action", "create-constitution"
     , "--testnet"
-    , "--governance-action-deposit", show @Int 0 -- TODO: Get this from the node
+    , "--governance-action-deposit", show @Int 1_000_000 -- TODO: Get this from the node
     , "--deposit-return-stake-verification-key-file", stakeVkeyFp
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
@@ -139,12 +137,12 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   txbodyFp <- H.note $ work </> "tx.body"
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
-  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe $ head wallets
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "transaction", "build"
     , "--tx-in", Text.unpack $ renderTxIn txin1
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--proposal-file", constitutionActionFp
     , "--out-file", txbodyFp
     ]
@@ -152,7 +150,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", txbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ head wallets
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
     , "--out-file", txbodySignedFp
     ]
 
@@ -191,7 +189,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
       ]
 
   -- We need more UTxOs
-  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe $ head wallets
+  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   voteTxFp <- H.note $ work </> gov </> "vote.tx"
   voteTxBodyFp <- H.note $ work </> gov </> "vote.txbody"
@@ -200,7 +198,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "transaction", "build"
     , "--tx-in", Text.unpack $ renderTxIn txin2
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--vote-file", voteFp 1
     , "--vote-file", voteFp 2
     , "--vote-file", voteFp 3
@@ -211,7 +209,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", voteTxBodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ head wallets
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
     , "--signing-key-file", spoColdSkeyFp 1
     , "--signing-key-file", spoColdSkeyFp 2
     , "--signing-key-file", spoColdSkeyFp 3
@@ -228,16 +226,14 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   H.assert $ "DisallowedVoters" `isInfixOf` stderr -- Did it fail for the expected reason?
 
 getConstitutionProposal
-  :: HasCallStack
-  => MonadIO m
-  => MonadTest m
+  :: (HasCallStack, MonadCatch m, MonadIO m, MonadTest m)
   => NodeConfigFile In
   -> SocketPath
   -> EpochNo -- ^ The termination epoch: the constitution proposal must be found *before* this epoch
   -> m (Maybe (L.GovActionId StandardCrypto))
 getConstitutionProposal nodeConfigFile socketPath maxEpoch = do
   result <- runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
-      $ \(AnyNewEpochState actualEra newEpochState) ->
+      $ \(AnyNewEpochState actualEra newEpochState) _slotNb _blockNb ->
         caseShelleyToBabbageOrConwayEraOnwards
           (error $ "Expected Conway era onwards, got state in " <> docToString (pretty actualEra))
           (\cEra -> conwayEraOnwardsConstraints cEra $ do
@@ -246,7 +242,7 @@ getConstitutionProposal nodeConfigFile socketPath maxEpoch = do
                       . L.esLStateL
                       . L.lsUTxOStateL
                       . L.utxosGovStateL
-                      . L.cgProposalsL
+                      . L.cgsProposalsL
                 govActions = Map.toList $ L.proposalsActionsMap proposals
             case map (second L.gasAction) govActions of
               (govActionId, L.NewConstitution _ _) : _ -> do

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -7,7 +8,10 @@
 module Testnet.Components.Query
   ( QueryTip
   , EpochStateView
+  , checkDRepsNumber
+  , checkDRepState
   , getEpochState
+  , getMinDRepDeposit
   , queryTip
   , waitUntilEpoch
   , getEpochStateView
@@ -19,6 +23,7 @@ module Testnet.Components.Query
   ) where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Ledger (Credential, DRepState, KeyRole (DRepRole), StandardCrypto)
 import           Cardano.Api.Shelley (ShelleyLedgerEra, fromShelleyTxIn, fromShelleyTxOut)
 
 import           Cardano.CLI.Types.Output
@@ -28,7 +33,9 @@ import qualified Cardano.Ledger.UTxO as L
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
 import           Control.Monad.Trans.Resource
+import           Control.Monad.Trans.State.Strict (put)
 import           Data.Aeson
+import           Data.Aeson.Lens (_Integral, key)
 import           Data.Bifunctor (bimap)
 import           Data.IORef
 import           Data.List (sortOn)
@@ -41,9 +48,10 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Type.Equality
 import           GHC.Stack
-import           Lens.Micro ((^.))
+import           Lens.Micro ((^.), (^?))
 import           System.Directory (doesFileExist, removeFile)
 
+import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import           Testnet.Property.Assert
 import           Testnet.Property.Utils (runInBackground)
@@ -57,7 +65,7 @@ import           Hedgehog.Internal.Property (MonadTest)
 
 -- | Block and wait for the desired epoch.
 waitUntilEpoch
-  :: (MonadIO m, MonadTest m, HasCallStack)
+  :: (MonadCatch m, MonadIO m, MonadTest m, HasCallStack)
   => NodeConfigFile In
   -> SocketPath
   -> EpochNo -- ^ Desired epoch
@@ -65,7 +73,7 @@ waitUntilEpoch
 waitUntilEpoch nodeConfigFile socketPath desiredEpoch = withFrozenCallStack $ do
   result <- runExceptT $
     foldEpochState
-      nodeConfigFile socketPath QuickValidation desiredEpoch () (const $ pure ConditionNotMet)
+      nodeConfigFile socketPath QuickValidation desiredEpoch () (\_ _ _ -> pure ConditionNotMet)
   case result of
     Left (FoldBlocksApplyBlockError (TerminationEpochReached epochNo)) ->
       pure epochNo
@@ -127,7 +135,7 @@ getEpochStateView
 getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
   epochStateView <- liftIO $ newIORef Nothing
   runInBackground . runExceptT . foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) Nothing
-    $ \epochState -> do
+    $ \epochState _slotNb _blockNb -> do
         liftIO $ writeIORef epochStateView (Just epochState)
         pure ConditionNotMet
   pure . EpochStateView $ epochStateView
@@ -218,3 +226,88 @@ findLargestUtxoForPaymentKey epochStateView sbe address =
     . H.nothingFailM
     $ findLargestUtxoWithAddress epochStateView sbe (paymentKeyInfoAddr address)
 
+
+-- | @checkDRepsNumber config socket execConfig n@
+-- wait for the number of DReps being @n@ for two epochs. If
+-- this number is not attained before two epochs, the test is failed.
+checkDRepsNumber ::
+  (HasCallStack, MonadCatch m, MonadIO m, MonadTest m)
+  => ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
+  -> NodeConfigFile 'In
+  -> SocketPath
+  -> H.ExecConfig
+  -> Int
+  -> m ()
+checkDRepsNumber sbe configurationFile socketPath execConfig expectedDRepsNb =
+  checkDRepState sbe configurationFile socketPath execConfig
+    (\m -> if length m == expectedDRepsNb then Just () else Nothing)
+
+-- | @checkDRepState sbe configurationFile socketPath execConfig f@
+-- This functions helps check properties about the DRep state.
+-- It waits up to two epochs for the result of applying @f@ to the DRepState
+-- to become 'Just'. If @f@ keeps returning 'Nothing' the test fails.
+-- If @f@ returns 'Just', the contents of the 'Just' are returned.
+checkDRepState ::
+  (HasCallStack, MonadCatch m, MonadIO m, MonadTest m)
+  => ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
+  -> NodeConfigFile In
+  -> SocketPath
+  -> H.ExecConfig
+  -> (Map (Credential 'DRepRole StandardCrypto)
+          (DRepState StandardCrypto) -> Maybe a) -- ^ A function that checks whether the DRep state is correct or up to date
+                                                 -- and potentially inspects it.
+  -> m a
+checkDRepState sbe configurationFile socketPath execConfig f = do
+  QueryTipLocalStateOutput{mEpoch} <- P.execCliStdoutToJson execConfig [ "query", "tip" ]
+  currentEpoch <- H.evalMaybe mEpoch
+  let terminationEpoch = succ . succ $ currentEpoch
+  result <- runExceptT $ foldEpochState configurationFile socketPath QuickValidation terminationEpoch Nothing
+      $ \(AnyNewEpochState actualEra newEpochState) _slotNb _blockNb -> do
+        case testEquality sbe actualEra of
+          Just Refl -> do
+            let dreps = shelleyBasedEraConstraints sbe newEpochState
+                          ^. L.nesEsL
+                           . L.esLStateL
+                           . L.lsCertStateL
+                           . L.certVStateL
+                           . L.vsDRepsL
+            case f dreps of
+              Nothing -> pure ConditionNotMet
+              Just a -> do put $ Just a
+                           pure ConditionMet
+          Nothing -> do
+            error $ "Eras mismatch! expected: " <> show sbe <> ", actual: " <> show actualEra
+  case result of
+    Left (FoldBlocksApplyBlockError (TerminationEpochReached epochNo)) -> do
+      H.note_ $ unlines
+                  [ "checkDRepState: condition not met before termination epoch: " <> show epochNo
+                  , "This is likely an error of this test." ]
+      H.failure
+    Left err -> do
+      H.note_ $ unlines
+                  [ "checkDRepState: could not reach termination epoch: " <> docToString (prettyError err)
+                  , "This is probably an error unrelated to this test." ]
+      H.failure
+    Right (_, Nothing) -> do
+      H.note_ $ unlines
+                  [ "checkDRepState: foldEpochState returned Nothing: "
+                  , "This is probably an error related to foldEpochState." ]
+      H.failure
+    Right (_, Just val) ->
+      return val
+
+-- | Obtain minimum deposit amount for DRep registration from node
+getMinDRepDeposit ::
+  (MonadCatch m, MonadIO m, MonadTest m)
+  => H.ExecConfig
+  -> m Integer
+getMinDRepDeposit execConfig = do
+  govState :: Data.Aeson.Value <- P.execCliStdoutToJson execConfig [ "conway", "query", "gov-state"
+                                                                   , "--volatile-tip"
+                                                                   ]
+  let mMinDRepDeposit :: Maybe Integer
+      mMinDRepDeposit = govState ^? key "currentPParams"
+                                  . key "dRepDeposit"
+                                  . _Integral
+
+  H.evalMaybe mMinDRepDeposit

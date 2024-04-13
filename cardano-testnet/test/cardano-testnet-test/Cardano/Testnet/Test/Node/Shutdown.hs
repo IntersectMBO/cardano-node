@@ -13,13 +13,13 @@ module Cardano.Testnet.Test.Node.Shutdown
 import           Cardano.Api
 
 import           Cardano.Testnet
+import qualified Cardano.Testnet as Testnet
 
 import           Prelude
 
 import           Control.Monad
 import           Data.Aeson
 import           Data.Aeson.Types
-import           Data.Bifunctor
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Either (isRight)
 import qualified Data.List as L
@@ -52,6 +52,10 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 
 {- HLINT ignore "Redundant <&>" -}
+
+-- Execute this test with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Shutdown/"'@
+--
 -- TODO: Use cardanoTestnet in hprop_shutdown
 hprop_shutdown :: Property
 hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> do
@@ -96,7 +100,7 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
 
   -- 2. Create Alonzo genesis
   alonzoBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> shelleyDir </> "genesis.alonzo.spec.json"
-  gen <- H.evalEither $ first (docToString . prettyError) defaultAlonzoGenesis
+  gen <- Testnet.getDefaultAlonzoGenesis
   H.evalIO $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
 
   -- 2. Create Conway genesis
@@ -111,11 +115,14 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
     , "--start-time", formatIso8601 startTime
     ]
 
-
   byronGenesisHash <- getByronGenesisHash $ tempAbsPath' </> "byron/genesis.json"
-  H.renameFile (tempAbsPath' </> "shelley/genesis.json") (tempAbsPath' </> defaultShelleyGenesisFp)
-  shelleyGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> defaultShelleyGenesisFp) "ShelleyGenesisHash"
-  alonzoGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> "shelley/genesis.alonzo.json") "AlonzoGenesisHash"
+  -- Move the files to the paths expected by 'defaultYamlHardforkViaConfig' below
+  H.renameFile (tempAbsPath' </> "shelley/genesis.json")        (tempAbsPath' </> defaultGenesisFilepath ShelleyEra)
+  H.renameFile (tempAbsPath' </> "shelley/genesis.alonzo.json") (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)
+  H.renameFile (tempAbsPath' </> "shelley/genesis.conway.json") (tempAbsPath' </> defaultGenesisFilepath ConwayEra)
+
+  shelleyGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath ShelleyEra) "ShelleyGenesisHash"
+  alonzoGenesisHash  <- getShelleyGenesisHash (tempAbsPath' </> defaultGenesisFilepath AlonzoEra)  "AlonzoGenesisHash"
 
   let finalYamlConfig :: LBS.ByteString
       finalYamlConfig = encode . Object
@@ -220,9 +227,10 @@ hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-syn
     (Right s):_ -> return s
 
   let epsilon = 50
+  H.assertWithinTolerance slotTip maxSlot epsilon
 
-  H.assert (maxSlot <= slotTip && slotTip <= maxSlot + epsilon)
-
+-- Execute this test with:
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/ShutdownOnSigint/"'@
 hprop_shutdownOnSigint :: Property
 hprop_shutdownOnSigint = H.integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tempAbsBasePath' -> do
   -- Start a local test net
@@ -231,7 +239,6 @@ hprop_shutdownOnSigint = H.integrationRetryWorkspace 2 "shutdown-on-sigint" $ \t
 
   let fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 300
-        , cardanoSlotLength = 0.01
         }
   testnetRuntime
     <- cardanoTestnetDefault fastTestnetOptions conf

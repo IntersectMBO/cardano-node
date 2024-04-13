@@ -6,12 +6,15 @@ module Cardano.Testnet (
   -- ** Start a testnet
   cardanoTestnet,
   cardanoTestnetDefault,
+  requestAvailablePortNumbers,
 
   -- ** Testnet options
   CardanoTestnetOptions(..),
   TestnetNodeOptions(..),
   cardanoDefaultTestnetOptions,
   cardanoDefaultTestnetNodeOptions,
+  getDefaultAlonzoGenesis,
+  getDefaultShelleyGenesis,
 
   -- * Configuration
   Conf(..),
@@ -21,6 +24,10 @@ module Cardano.Testnet (
   makeLogDir,
   makeSocketDir,
   makeTmpBaseAbsPath,
+
+  -- * EpochState processsing helper functions
+  maybeExtractGovernanceActionIndex,
+  findCondition,
 
   -- * Processes
   procChairman,
@@ -36,6 +43,7 @@ module Cardano.Testnet (
   ) where
 
 import           Testnet.Components.Query
+import           Testnet.EpochStateProcessing
 import           Testnet.Filepath
 import           Testnet.Process.Run (procChairman)
 import           Testnet.Property.Utils

@@ -6,46 +6,52 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Testnet.Components.Configuration
-  ( convertToEraString
-  , createConfigYaml
+  ( anyEraToString
+  , createConfigJson
   , createSPOGenesisAndFiles
+  , eraToString
   , mkTopologyConfig
   , numSeededUTxOKeys
   , NumPools
   , numPools
+  , NumDReps
+  , numDReps
   ) where
 
 import           Cardano.Api.Ledger (StandardCrypto)
 import           Cardano.Api.Shelley hiding (Value, cardanoEra)
 
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Cardano.Node.Types
+import           Ouroboros.Network.PeerSelection.Bootstrap
 import           Ouroboros.Network.PeerSelection.LedgerPeers
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint
+import           Ouroboros.Network.PeerSelection.PeerTrustable
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers
 
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Encode.Pretty as Aeson
+import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.Aeson.Lens as L
-import           Data.Bifunctor
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Char (toLower)
 import qualified Data.List as List
 import           Data.String
-import           Data.Word (Word32)
+import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import           Lens.Micro
+import qualified System.Directory as System
 import           System.FilePath.Posix (takeDirectory, (</>))
 
 import           Testnet.Defaults
 import           Testnet.Filepath
 import           Testnet.Process.Run (execCli_)
 import           Testnet.Property.Utils
-import           Testnet.Start.Types (CardanoTestnetOptions (..))
+import           Testnet.Start.Types (CardanoTestnetOptions (..), anyEraToString, eraToString)
 
 import           Hedgehog
 import qualified Hedgehog as H
@@ -53,32 +59,28 @@ import qualified Hedgehog.Extras.Stock.Time as DTC
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
-
-createConfigYaml
-  :: (MonadTest m, MonadIO m, HasCallStack)
+-- | Returns JSON encoded hashes of the era, as well as the hard fork configuration toggle.
+createConfigJson :: ()
+  => (MonadTest m, MonadIO m, HasCallStack)
   => TmpAbsolutePath
-  -> AnyCardanoEra
+  -> AnyCardanoEra -- ^ The era used for generating the hard fork configuration toggle
   -> m LBS.ByteString
-createConfigYaml (TmpAbsolutePath tempAbsPath') anyCardanoEra' = GHC.withFrozenCallStack $ do
-  -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-  -- TODO: These genesis filepaths should not be hardcoded. Using the cli as a library
-  -- rather as an executable will allow us to get the genesis files paths in a more
-  -- direct fashion.
+createConfigJson (TmpAbsolutePath tempAbsPath) era = GHC.withFrozenCallStack $ do
+  byronGenesisHash <- getByronGenesisHash $ tempAbsPath </> "byron/genesis.json"
+  shelleyGenesisHash <- getHash ShelleyEra "ShelleyGenesisHash"
+  alonzoGenesisHash  <- getHash AlonzoEra  "AlonzoGenesisHash"
+  conwayGenesisHash  <- getHash ConwayEra  "ConwayGenesisHash"
 
-  byronGenesisHash <- getByronGenesisHash $ tempAbsPath' </> "byron/genesis.json"
-  shelleyGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> defaultShelleyGenesisFp) "ShelleyGenesisHash"
-  alonzoGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> "shelley/genesis.alonzo.json") "AlonzoGenesisHash"
-  conwayGenesisHash <- getShelleyGenesisHash (tempAbsPath' </> "shelley/genesis.conway.json") "ConwayGenesisHash"
-
-
-  return . Aeson.encode . Aeson.Object
+  return . Aeson.encodePretty . Aeson.Object
     $ mconcat [ byronGenesisHash
               , shelleyGenesisHash
               , alonzoGenesisHash
               , conwayGenesisHash
-              , defaultYamlHardforkViaConfig anyCardanoEra'
+              , defaultYamlHardforkViaConfig era
               ]
-
+   where
+    getHash :: (MonadTest m, MonadIO m) => CardanoEra a -> Text.Text -> m (Aeson.KeyMap Aeson.Value)
+    getHash e = getShelleyGenesisHash (tempAbsPath </> defaultGenesisFilepath e)
 
 numSeededUTxOKeys :: Int
 numSeededUTxOKeys = 3
@@ -88,38 +90,45 @@ newtype NumPools = NumPools Int
 numPools :: CardanoTestnetOptions -> NumPools
 numPools CardanoTestnetOptions { cardanoNodes } = NumPools $ length cardanoNodes
 
+newtype NumDReps = NumDReps Int
+
+numDReps :: CardanoTestnetOptions -> NumDReps
+numDReps CardanoTestnetOptions { cardanoNumDReps } = NumDReps cardanoNumDReps
+
 createSPOGenesisAndFiles
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => NumPools -- ^ The number of pools to make
+  -> NumDReps -- ^ The number of pools to make
   -> AnyCardanoEra -- ^ The era to use
   -> ShelleyGenesis StandardCrypto -- ^ The shelley genesis to use.
+  -> AlonzoGenesis -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
+  -> ConwayGenesis StandardCrypto -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
   -> TmpAbsolutePath
   -> m FilePath -- ^ Shelley genesis directory
-createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolutePath tempAbsPath') = do
-  let genesisShelleyFpAbs = tempAbsPath' </> defaultShelleyGenesisFp
-      genesisShelleyDirAbs = takeDirectory genesisShelleyFpAbs
+createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) era shelleyGenesis
+                         alonzoGenesis conwayGenesis (TmpAbsolutePath tempAbsPath) = GHC.withFrozenCallStack $ do
+  let inputGenesisShelleyFp = tempAbsPath </> genesisInputFilepath ShelleyEra
+      inputGenesisAlonzoFp  = tempAbsPath </> genesisInputFilepath AlonzoEra
+      inputGenesisConwayFp  = tempAbsPath </> genesisInputFilepath ConwayEra
+
+  -- We write the genesis files to disk, to pass them to create-testnet-data.
+  -- Then, create-testnet-data will output (possibly augmented/modified) versions
+  -- and we remove those input files (see below), to avoid confusion.
+  H.evalIO $ do
+    LBS.writeFile inputGenesisShelleyFp $ Aeson.encodePretty shelleyGenesis
+    LBS.writeFile inputGenesisAlonzoFp  $ Aeson.encodePretty alonzoGenesis
+    LBS.writeFile inputGenesisConwayFp  $ Aeson.encodePretty conwayGenesis
+
+  let genesisShelleyDirAbs = takeDirectory inputGenesisShelleyFp
   genesisShelleyDir <- H.createDirectoryIfMissing genesisShelleyDirAbs
   let testnetMagic = sgNetworkMagic shelleyGenesis
-      numStakeDelegators = 3
+      numStakeDelegators = 3 :: Int
       startTime = sgSystemStart shelleyGenesis
 
-  -- TODO: We need to read the genesis files into Haskell and modify them
-  -- based on cardano-testnet's cli parameters
-
-  -- We create the initial genesis file to avoid having to re-write the genesis file later
-  -- with the parameters we want. The user must provide genesis files or we will use a default.
-  -- We should *never* be modifying the genesis file after @cardanoTestnet@ is run because this
-  -- is sure to be a source of confusion if users provide genesis files and we are mutating them
-  -- without their knowledge.
-  H.evalIO $ LBS.writeFile genesisShelleyFpAbs $ encode shelleyGenesis
-
-  -- TODO: Remove this rewrite.
+ -- TODO: Remove this rewrite.
  -- 50 second epochs
  -- Epoch length should be "10 * k / f" where "k = securityParam, f = activeSlotsCoeff"
-  H.rewriteJsonFile @Value genesisShelleyFpAbs $ \o -> o
-    & L.key "protocolParams" .  L.key "rho" . L._Number  .~ 0.1
-    & L.key "protocolParams" .  L.key "tau" . L._Number  .~ 0.1
-    & L.key "protocolParams" . L.key "protocolVersion" . L.key "major" . L._Integer .~ 8
+  H.rewriteJsonFile @Value inputGenesisShelleyFp $ \o -> o
     & L.key "securityParam" . L._Integer .~ 5
     & L.key "updateQuorum" . L._Integer .~ 2
 
@@ -131,44 +140,35 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) era shelleyGenesis (TmpAbsolute
   H.note_ $ "Number of seeded UTxO keys: " <> show numSeededUTxOKeys
 
   execCli_
-    [ convertToEraString era, "genesis", "create-testnet-data"
-    , "--spec-shelley", genesisShelleyFpAbs
-    , "--testnet-magic", show @Word32 testnetMagic
-    , "--pools", show @Int numPoolNodes
-    , "--total-supply",     show @Int 2_000_000_000_000
-    , "--delegated-supply", show @Int 1_000_000_000_000
-    , "--stake-delegators", show @Int numStakeDelegators
+    [ anyEraToString era, "genesis", "create-testnet-data"
+    , "--spec-shelley", inputGenesisShelleyFp
+    , "--spec-alonzo",  inputGenesisAlonzoFp
+    , "--spec-conway",  inputGenesisConwayFp
+    , "--testnet-magic", show testnetMagic
+    , "--pools", show numPoolNodes
+    , "--total-supply",     show @Int 2_000_000_000_000 -- 2 trillions
+    , "--delegated-supply", show @Int 1_000_000_000_000 -- 1 trillion
+    , "--stake-delegators", show numStakeDelegators
     , "--utxo-keys", show numSeededUTxOKeys
-    , "--drep-keys", "3"
+    , "--drep-keys", show numDelReps
     , "--start-time", DTC.formatIso8601 startTime
-    , "--out-dir", tempAbsPath'
+    , "--out-dir", tempAbsPath
     ]
 
-  -- Here we move all of the keys etc generated by create-testnet-data
-  -- for the nodes to use
+  -- Remove the input files. We don't need them anymore, since create-testnet-data wrote new versions.
+  forM_ [inputGenesisShelleyFp, inputGenesisAlonzoFp, inputGenesisConwayFp] (liftIO . System.removeFile)
 
   -- Move all genesis related files
+  genesisByronDir <- H.createDirectoryIfMissing $ tempAbsPath </> "byron"
 
-  genesisByronDir <- H.createDirectoryIfMissing $ tempAbsPath' </> "byron"
+  files <- H.listDirectory tempAbsPath
+  forM_ files H.note
 
-  files <- H.listDirectory tempAbsPath'
-  forM_ files $ \file -> do
-    H.note file
-
-
-  -- TODO: This conway and alonzo genesis creation should be ultimately moved to create-testnet-data
-  alonzoConwayTestGenesisJsonTargetFile <- H.noteShow (genesisShelleyDir </> "genesis.alonzo.json")
-  gen <- H.evalEither $ first prettyError defaultAlonzoGenesis
-  H.evalIO $ LBS.writeFile alonzoConwayTestGenesisJsonTargetFile $ Aeson.encode gen
-
-  conwayConwayTestGenesisJsonTargetFile <- H.noteShow (genesisShelleyDir </> "genesis.conway.json")
-  H.evalIO $ LBS.writeFile conwayConwayTestGenesisJsonTargetFile $ Aeson.encode defaultConwayGenesis
-
-  H.renameFile (tempAbsPath' </> "byron-gen-command/genesis.json") (genesisByronDir </> "genesis.json")
-  -- TODO: create-testnet-data outputs the new shelley genesis do genesis.json
-  H.renameFile (tempAbsPath' </> "genesis.json") (genesisShelleyDir </> "genesis.shelley.json")
+  H.renameFile (tempAbsPath </> "byron-gen-command" </> "genesis.json") (genesisByronDir </> "genesis.json")
 
   return genesisShelleyDir
+  where
+    genesisInputFilepath e = "genesis-input." <> anyEraToString (AnyCardanoEra e) <> ".json"
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
@@ -176,7 +176,7 @@ ifaceAddress = "127.0.0.1"
 -- TODO: Reconcile all other mkTopologyConfig functions. NB: We only intend
 -- to support current era on mainnet and the upcoming era.
 mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> LBS.ByteString
-mkTopologyConfig numNodes allPorts port False = Aeson.encode topologyNonP2P
+mkTopologyConfig numNodes allPorts port False = Aeson.encodePretty topologyNonP2P
   where
     topologyNonP2P :: NonP2P.NetworkTopology
     topologyNonP2P =
@@ -186,7 +186,7 @@ mkTopologyConfig numNodes allPorts port False = Aeson.encode topologyNonP2P
                                (numNodes - 1)
         | peerPort <- allPorts List.\\ [port]
         ]
-mkTopologyConfig numNodes allPorts port True = Aeson.encode topologyP2P
+mkTopologyConfig numNodes allPorts port True = Aeson.encodePretty topologyP2P
   where
     rootConfig :: P2P.RootConfig
     rootConfig =
@@ -203,6 +203,7 @@ mkTopologyConfig numNodes allPorts port True = Aeson.encode topologyP2P
         [ P2P.LocalRootPeersGroup rootConfig
                                   (HotValency (numNodes - 1))
                                   (WarmValency (numNodes - 1))
+                                  IsNotTrustable
         ]
 
     topologyP2P :: P2P.NetworkTopology
@@ -210,8 +211,5 @@ mkTopologyConfig numNodes allPorts port True = Aeson.encode topologyP2P
       P2P.RealNodeTopology
         localRootPeerGroups
         []
-        (UseLedger DontUseLedger)
-
-
-convertToEraString :: AnyCardanoEra -> String
-convertToEraString = map toLower . docToString . pretty
+        DontUseLedgerPeers
+        DontUseBootstrapPeers

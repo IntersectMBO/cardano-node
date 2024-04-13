@@ -17,7 +17,6 @@
 module Cardano.Tracing.OrphanInstances.Network () where
 
 import           Cardano.Node.Queries (ConvertTxId)
-import           Cardano.Node.Types (UseLedger (..))
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.Render
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), Header, getHeader)
@@ -53,18 +52,22 @@ import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNodeVersion (..),
                    NodeToNodeVersionData (..), RemoteAddress, TraceSendRecv (..), WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
+import           Ouroboros.Network.PeerSelection.Bootstrap
 import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
-                   PeerSelectionCounters (..), PeerSelectionState (..), PeerSelectionTargets (..),
-                   TracePeerSelection (..))
+                   DebugPeerSelectionState (..), PeerSelectionCounters (..),
+                   PeerSelectionState (..), PeerSelectionTargets (..), TracePeerSelection (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers
-import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing)
+import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint
+import           Ouroboros.Network.PeerSelection.PeerTrustable
+import           Ouroboros.Network.PeerSelection.PublicRootPeers (PublicRootPeers)
+import qualified Ouroboros.Network.PeerSelection.PublicRootPeers as PublicRootPeers
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.LocalRootPeers
                    (TraceLocalRootPeers (..))
 import           Ouroboros.Network.PeerSelection.RootPeersDNS.PublicRootPeers
                    (TracePublicRootPeers (..))
 import qualified Ouroboros.Network.PeerSelection.State.EstablishedPeers as EstablishedPeers
+import           Ouroboros.Network.PeerSelection.State.KnownPeers (KnownPeerInfo (..))
 import qualified Ouroboros.Network.PeerSelection.State.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
                    LocalRootPeers, WarmValency (..))
@@ -115,7 +118,6 @@ import           Network.Mux (MiniProtocolNum (..), MuxTrace (..), WithMuxBearer
 import           Network.Socket (SockAddr (..))
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
 import           Network.TypedProtocol.Core (PeerHasAgency (..))
-import qualified Text.Read as Text
 
 {- HLINT ignore "Use record patterns" -}
 
@@ -223,7 +225,7 @@ instance HasSeverityAnnotation TraceLedgerPeers where
       PickedBigLedgerPeers {}        -> Info
       FetchingNewLedgerState {}      -> Info
       DisabledLedgerPeers {}         -> Info
-      TraceUseLedgerAfter {}         -> Info
+      TraceUseLedgerPeers {}         -> Info
       WaitingOnRequest {}            -> Debug
       RequestForPeers {}             -> Debug
       ReusingLedgerState {}          -> Debug
@@ -460,6 +462,16 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceDemoteHotBigLedgerPeerDone {}   -> Info
 
       TraceDemoteBigLedgerPeersAsynchronous {} -> Warning
+
+      TraceUseBootstrapPeersChanged {} -> Info
+      TraceBootstrapPeersFlagChangedWhilstInSensitiveState -> Info
+
+      TraceLedgerStateJudgementChanged {} -> Notice
+      TraceOnlyBootstrapPeers {}          -> Notice
+
+      TraceOutboundGovernorCriticalFailure {} -> Error
+
+      TraceDebugState {} -> Info
 
 instance HasPrivacyAnnotation (DebugPeerSelection addr)
 instance HasSeverityAnnotation (DebugPeerSelection addr) where
@@ -1343,10 +1355,10 @@ instance ToObject TraceLedgerPeers where
     mconcat
       [ "kind" .= String "DisabledLedgerPeers"
       ]
-  toObject _verb (TraceUseLedgerAfter ula) =
+  toObject _verb (TraceUseLedgerPeers ulp) =
     mconcat
-      [ "kind" .= String "UseLedgerAfter"
-      , "useLedgerAfter" .= UseLedger ula
+      [ "kind" .= String "UseLedgerPeers"
+      , "useLedgerPeers" .= ulp
       ]
   toObject _verb WaitingOnRequest =
     mconcat
@@ -1517,6 +1529,22 @@ instance ToObject TracePublicRootPeers where
              , "reason" .= show d
              ]
 
+instance ToJSON KnownPeerInfo where
+  toJSON (KnownPeerInfo
+            nKnownPeerFailCount
+            nKnownPeerTepid
+            nKnownPeerSharing
+            nKnownPeerAdvertise
+            nKnownSuccessfulConnection
+         ) =
+    Aeson.object [ "kind" .= String "KnownPeerInfo"
+                 , "failCount" .= nKnownPeerFailCount
+                 , "tepid" .= nKnownPeerTepid
+                 , "peerSharing" .= nKnownPeerSharing
+                 , "peerAdvertise" .= nKnownPeerAdvertise
+                 , "successfulConnection" .= nKnownSuccessfulConnection
+                 ]
+
 instance ToJSON PeerStatus where
   toJSON = String . pack . show
 
@@ -1548,6 +1576,15 @@ instance ToJSON PeerSelectionTargets where
                  , "targetActiveBigLedgerPeers" .= nActiveBigLedgerPeers
                  ]
 
+instance ToJSON peerAddr => ToJSON (PublicRootPeers peerAddr) where
+  toJSON prp =
+    Aeson.object [ "kind" .= String "PublicRootPeers"
+                 , "bootstrapPeers" .= PublicRootPeers.getBootstrapPeers prp
+                 , "ledgerPeers" .= PublicRootPeers.getLedgerPeers prp
+                 , "bigLedgerPeers" .= PublicRootPeers.getBigLedgerPeers prp
+                 , "publicConfigPeers" .= Map.keysSet (PublicRootPeers.getPublicConfigPeers prp)
+                 ]
+
 instance ToJSON RepromoteDelay where
   toJSON = toJSON . repromoteDelay
 
@@ -1573,7 +1610,7 @@ instance ToObject (TracePeerSelection SockAddr) where
              ]
   toObject _verb (TracePublicRootsResults res group dt) =
     mconcat [ "kind" .= String "PublicRootsResults"
-             , "result" .= Aeson.toJSONList (toList res)
+             , "result" .= toJSON res
              , "group" .= group
              , "diffTime" .= dt
              ]
@@ -1834,6 +1871,44 @@ instance ToObject (TracePeerSelection SockAddr) where
     mconcat [ "kind" .= String "KnownInboundConnection"
              , "peer" .= show addr
              , "peerSharing" .= show sharing ]
+  toObject _verb (TraceLedgerStateJudgementChanged new) =
+    mconcat [ "kind" .= String "LedgerStateJudgementChanged"
+             , "new" .= show new ]
+  toObject _verb TraceOnlyBootstrapPeers =
+    mconcat [ "kind" .= String "OnlyBootstrapPeers" ]
+  toObject _verb (TraceUseBootstrapPeersChanged ubp) =
+    mconcat [ "kind" .= String "UseBootstrapPeersChanged"
+             , "bootstrapPeers" .= show ubp ]
+  toObject _verb TraceBootstrapPeersFlagChangedWhilstInSensitiveState =
+    mconcat [ "kind" .= String "BootstrapPeersFlagChangedWhilstInSensitiveState"
+            ]
+  toObject _verb (TraceOutboundGovernorCriticalFailure err) =
+    mconcat [ "kind" .= String "OutboundGovernorCriticalFailure"
+             , "reason" .= show err
+             ]
+  toObject _verb (TraceDebugState mtime ds) =
+   mconcat [ "kind" .= String "DebugState"
+            , "monotonicTime" .= mtime
+            , "targets" .= peerSelectionTargetsToObject (dpssTargets ds)
+            , "localRootPeers" .= dpssLocalRootPeers ds
+            , "publicRootPeers" .= dpssPublicRootPeers ds
+            , "knownPeers" .= KnownPeers.allPeers (dpssKnownPeers ds)
+            , "establishedPeers" .= dpssEstablishedPeers ds
+            , "activePeers" .= dpssActivePeers ds
+            , "publicRootBackoffs" .= dpssPublicRootBackoffs ds
+            , "publicRootRetryTime" .= dpssPublicRootRetryTime ds
+            , "bigLedgerPeerBackoffs" .= dpssBigLedgerPeerBackoffs ds
+            , "bigLedgerPeerRetryTime" .= dpssBigLedgerPeerRetryTime ds
+            , "inProgressBigLedgerPeersReq" .= dpssInProgressBigLedgerPeersReq ds
+            , "inProgressPeerShareReqs" .= dpssInProgressPeerShareReqs ds
+            , "inProgressPromoteCold" .= dpssInProgressPromoteCold ds
+            , "inProgressPromoteWarm" .= dpssInProgressPromoteWarm ds
+            , "inProgressDemoteWarm" .= dpssInProgressDemoteWarm ds
+            , "inProgressDemoteHot" .= dpssInProgressDemoteHot ds
+            , "inProgressDemoteToCold" .= dpssInProgressDemoteToCold ds
+            , "upstreamyness" .= dpssUpstreamyness ds
+            , "fetchynessBlocks" .= dpssFetchynessBlocks ds
+            ]
 
 -- Connection manager abstract state.  For explanation of each state see
 -- <https://hydra.iohk.io/job/Cardano/ouroboros-network/native.network-docs.x86_64-linux/latest/download/2>
@@ -1879,17 +1954,24 @@ peerSelectionTargetsToObject
   PeerSelectionTargets { targetNumberOfRootPeers,
                          targetNumberOfKnownPeers,
                          targetNumberOfEstablishedPeers,
-                         targetNumberOfActivePeers } =
+                         targetNumberOfActivePeers,
+                         targetNumberOfKnownBigLedgerPeers,
+                         targetNumberOfEstablishedBigLedgerPeers,
+                         targetNumberOfActiveBigLedgerPeers
+                       } =
     Object $
       mconcat [ "roots" .= targetNumberOfRootPeers
                , "knownPeers" .= targetNumberOfKnownPeers
                , "established" .= targetNumberOfEstablishedPeers
                , "active" .= targetNumberOfActivePeers
+               , "knownBigLedgerPeers" .= targetNumberOfKnownBigLedgerPeers
+               , "establishedBigLedgerPeers" .= targetNumberOfEstablishedBigLedgerPeers
+               , "activeBigLedgerPeers" .= targetNumberOfActiveBigLedgerPeers
                ]
 
 instance ToObject (DebugPeerSelection SockAddr) where
   toObject verb (TraceGovernorState blockedAt wakeupAfter
-                   PeerSelectionState { targets, knownPeers, establishedPeers, activePeers, bigLedgerPeers })
+                   PeerSelectionState { targets, knownPeers, establishedPeers, activePeers, publicRootPeers })
       | verb <= NormalVerbosity =
     mconcat [ "kind" .= String "DebugPeerSelection"
              , "blockedAt" .= String (pack $ show blockedAt)
@@ -1907,6 +1989,8 @@ instance ToObject (DebugPeerSelection SockAddr) where
                                  ])
 
              ]
+    where
+     bigLedgerPeers = PublicRootPeers.getBigLedgerPeers publicRootPeers
   toObject _ (TraceGovernorState blockedAt wakeupAfter ev) =
     mconcat [ "kind" .= String "DebugPeerSelection"
              , "blockedAt" .= String (pack $ show blockedAt)
@@ -2326,6 +2410,8 @@ instance ToObject NtN.RemoteAddress where
     toObject _verb (SockAddrUnix path) =
         mconcat [ "path" .= show path ]
 
+instance ToJSON Time where
+  toJSON = String . pack . show
 
 instance ToObject NtN.RemoteConnectionId where
     toObject verb (NtN.ConnectionId l r) =
@@ -2438,11 +2524,50 @@ instance ToJSON addr
                ]
 
 instance FromJSON PeerSharing where
-  parseJSON = Aeson.withText "PeerSharing" $ \t ->
-    case Text.readMaybe (Text.unpack t) of
-      Nothing -> fail ("PeerSharing.parseJSON: could not parse value: "
-                     ++ Text.unpack t)
-      Just ps -> return ps
+  parseJSON = Aeson.withBool "PeerSharing" $ \b ->
+    pure $ if b then PeerSharingEnabled
+                else PeerSharingDisabled
 
 instance ToJSON PeerSharing where
-  toJSON = String . Text.pack . show
+  toJSON PeerSharingEnabled = Bool True
+  toJSON PeerSharingDisabled = Bool False
+
+instance FromJSON UseLedgerPeers where
+  parseJSON (Number slot) = return $
+    case compare slot 0 of
+      GT -> UseLedgerPeers (After (SlotNo (floor slot)))
+      EQ -> UseLedgerPeers Always
+      LT -> DontUseLedgerPeers
+  parseJSON invalid = fail $ "Parsing of slot number failed due to type mismatch. "
+                            <> "Encountered: " <> show invalid
+
+instance ToJSON LedgerStateJudgement where
+  toJSON YoungEnough = String "YoungEnough"
+  toJSON TooOld      = String "TooOld"
+
+instance FromJSON LedgerStateJudgement where
+  parseJSON (String "YoungEnough") = pure YoungEnough
+  parseJSON (String "TooOld")      = pure TooOld
+  parseJSON _                      = fail "Invalid JSON for LedgerStateJudgement"
+
+instance ToJSON UseLedgerPeers where
+  toJSON DontUseLedgerPeers                  = Number (-1)
+  toJSON (UseLedgerPeers Always)             = Number 0
+  toJSON (UseLedgerPeers (After (SlotNo s))) = Number (fromIntegral s)
+
+instance ToJSON UseBootstrapPeers where
+  toJSON DontUseBootstrapPeers   = Null
+  toJSON (UseBootstrapPeers dps) = toJSON dps
+
+instance FromJSON UseBootstrapPeers where
+  parseJSON Null = pure DontUseBootstrapPeers
+  parseJSON v    = UseBootstrapPeers <$> parseJSON v
+
+instance FromJSON PeerTrustable where
+  parseJSON = Aeson.withBool "PeerTrustable" $ \b ->
+    pure $ if b then IsTrustable
+                else IsNotTrustable
+
+instance ToJSON PeerTrustable where
+  toJSON IsTrustable = Bool True
+  toJSON IsNotTrustable = Bool False

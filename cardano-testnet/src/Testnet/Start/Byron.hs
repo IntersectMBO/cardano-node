@@ -3,6 +3,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
+{-# LANGUAGE NumericUnderscores #-}
 
 module Testnet.Start.Byron
   ( createByronGenesis
@@ -34,7 +35,7 @@ byronDefaultGenesisOptions = ByronGenesisOptions
   -- TODO: createByronGenesis should have a check that errors
   -- if totalBalance can be evenly split between numBftNodes
   -- with no remainder. Having a remainder results in rounding errors.
-  , byronTotalBalance = 8000000000000001
+  , byronTotalBalance = 8_000_000_001 -- 8 billions. Should be smaller than 'cardanoMaxSupply' in Testnet.Start.Types
   }
 
 -- TODO: We should not abuse the byron testnet options for genesis creation.

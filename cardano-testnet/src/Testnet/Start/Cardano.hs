@@ -1,13 +1,7 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-
-#if __GLASGOW_HASKELL__ >= 908
-{-# OPTIONS_GHC -Wno-x-partial #-}
-#endif
 
 module Testnet.Start.Cardano
   ( ForkPoint(..)
@@ -22,6 +16,9 @@ module Testnet.Start.Cardano
 
   , cardanoTestnet
   , cardanoTestnetDefault
+  , getDefaultAlonzoGenesis
+  , getDefaultShelleyGenesis
+  , requestAvailablePortNumbers
   ) where
 
 
@@ -30,6 +27,7 @@ import           Cardano.Api.Ledger (StandardCrypto)
 
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
+import           Cardano.Node.Configuration.Topology
 
 import           Prelude hiding (lines)
 
@@ -40,15 +38,21 @@ import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either
+import           Data.IORef
 import qualified Data.List as L
 import           Data.Maybe
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
 import qualified Data.Time.Clock as DTC
 import           Data.Word (Word32)
+import           GHC.IO.Unsafe (unsafePerformIO)
+import           GHC.Stack
 import qualified GHC.Stack as GHC
+import           Network.Socket (PortNumber)
 import           System.FilePath ((</>))
 import qualified System.Info as OS
+import           Text.Printf (printf)
 
 import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
@@ -60,20 +64,16 @@ import           Testnet.Runtime as TR hiding (shelleyGenesis)
 import qualified Testnet.Start.Byron as Byron
 import           Testnet.Start.Types
 
+import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
 import           Hedgehog.Extras (failMessage)
 import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
-{- HLINT ignore "Redundant flip" -}
-{- HLINT ignore "Redundant id" -}
-{- HLINT ignore "Use let" -}
-
-
 -- | There are certain conditions that need to be met in order to run
 -- a valid node cluster.
-testnetMinimumConfigurationRequirements :: CardanoTestnetOptions -> H.Integration ()
+testnetMinimumConfigurationRequirements :: MonadTest m => CardanoTestnetOptions -> m ()
 testnetMinimumConfigurationRequirements cTestnetOpts = do
   let actualLength = length (cardanoNodes cTestnetOpts)
   when (actualLength < 2) $ do
@@ -100,11 +100,58 @@ cardanoTestnetDefault :: ()
   -> H.Integration TestnetRuntime
 cardanoTestnetDefault opts conf = do
   alonzoGenesis <- H.evalEither $ first prettyError Defaults.defaultAlonzoGenesis
+  (startTime, shelleyGenesis) <- getDefaultShelleyGenesis opts
+  cardanoTestnet opts conf startTime shelleyGenesis alonzoGenesis Defaults.defaultConwayGenesis
+
+-- | An 'AlonzoGenesis' value that is fit to pass to 'cardanoTestnet'
+getDefaultAlonzoGenesis :: ()
+  => HasCallStack
+  => MonadTest m
+  => m AlonzoGenesis
+getDefaultAlonzoGenesis = H.evalEither $ first prettyError Defaults.defaultAlonzoGenesis
+
+-- | A start time and 'ShelleyGenesis' value that are fit to pass to 'cardanoTestnet'
+getDefaultShelleyGenesis :: ()
+  => HasCallStack
+  => MonadIO m
+  => MonadTest m
+  => CardanoTestnetOptions
+  -> m (UTCTime, ShelleyGenesis StandardCrypto)
+getDefaultShelleyGenesis opts = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
-  cardanoTestnet
-    opts conf startTime
-    (Defaults.defaultShelleyGenesis startTime opts) alonzoGenesis Defaults.defaultConwayGenesis
+  return (startTime, Defaults.defaultShelleyGenesis startTime opts)
+
+-- | Hardcoded testnet IP address
+testnetIpv4Address :: Text
+testnetIpv4Address = "127.0.0.1"
+
+-- | Starting port number, from which testnet nodes will get new ports.
+defaultTestnetNodeStartingPortNumber :: PortNumber
+defaultTestnetNodeStartingPortNumber = 23000
+
+-- | Global counter used to track which testnet node's ports were already allocated
+availablePortNumber :: IORef PortNumber
+availablePortNumber = unsafePerformIO $ newIORef defaultTestnetNodeStartingPortNumber
+{-# NOINLINE availablePortNumber #-}
+
+-- | Request a list of unused port numbers for testnet nodes. This shifts 'availablePortNumber' by
+-- 'maxPortsPerRequest' in order to make sure that each node gets an unique port.
+requestAvailablePortNumbers
+  :: HasCallStack
+  => MonadIO m
+  => MonadTest m
+  => Int -- ^ Number of ports to request
+  -> m [PortNumber]
+requestAvailablePortNumbers numberOfPorts
+  | numberOfPorts > fromIntegral maxPortsPerRequest = withFrozenCallStack $ do
+    H.note_ $ "Tried to allocate " <> show numberOfPorts <> " port numbers in one request. "
+      <> "It's allowed to allocate no more than " <> show maxPortsPerRequest <> " per request."
+    H.failure
+  | otherwise = liftIO $ atomicModifyIORef' availablePortNumber $ \n ->
+      (n + maxPortsPerRequest, [n..n + fromIntegral numberOfPorts - 1])
+    where
+      maxPortsPerRequest = 50
 
 -- | Setup a number of credentials and pools, like this:
 --
@@ -130,10 +177,6 @@ cardanoTestnetDefault opts conf = do
 -- > │   ├── genesis{1,2,3}
 -- > │   │   └── key.{skey,vkey}
 -- > │   └── README.md
--- > ├── logs
--- > │   └── pool3
--- > │       └── {stderr,stdout}.log
--- > ├── module
 -- > ├── pools-keys
 -- > │   ├── pool{1,2,3}
 -- > │   │   ├── byron-delegate.key
@@ -159,12 +202,13 @@ cardanoTestnetDefault opts conf = do
 -- >     └── utxo{1,2,3}
 -- >         └── utxo.{addr,skey,vkey}
 cardanoTestnet :: ()
+  => HasCallStack
   => CardanoTestnetOptions -- ^ The options to use. Must be consistent with the genesis files.
   -> Conf
   -> UTCTime -- ^ The starting time. Must be the same as the one in the shelley genesis.
-  -> ShelleyGenesis StandardCrypto -- ^ The shelley genesis to use, for example 'Defaults.defaultShelleyGenesis'.
+  -> ShelleyGenesis StandardCrypto -- ^ The shelley genesis to use, for example 'getDefaultShelleyGenesis' from this module.
                                    --   Some fields are overridden by the accompanying 'CardanoTestnetOptions'.
-  -> AlonzoGenesis -- ^ The alonzo genesis to use, for example 'Defaults.defaultAlonzoGenesis'.
+  -> AlonzoGenesis -- ^ The alonzo genesis to use, for example 'getDefaultAlonzoGenesis' from this module.
   -> ConwayGenesis StandardCrypto -- ^ The conway genesis to use, for example 'Defaults.defaultConwayGenesis'.
   -> H.Integration TestnetRuntime
 cardanoTestnet
@@ -176,7 +220,10 @@ cardanoTestnet
       testnetMagic = cardanoTestnetMagic testnetOptions
       numPoolNodes = length $ cardanoNodes testnetOptions
       nbPools = numPools testnetOptions
+      nbDReps = numDReps testnetOptions
       era = cardanoNodeEra testnetOptions
+
+  portNumbers <- requestAvailablePortNumbers numPoolNodes
 
    -- Sanity checks
   testnetMinimumConfigurationRequirements testnetOptions
@@ -211,17 +258,16 @@ cardanoTestnet
       (tmpAbsPath </> "byron.genesis.spec.json")
       (tmpAbsPath </> "byron-gen-command")
 
-    -- Write Alonzo genesis file
-    alonzoGenesisJsonFile <- H.noteShow $ tmpAbsPath </> "genesis.alonzo.spec.json"
-    H.evalIO $ LBS.writeFile alonzoGenesisJsonFile $ Aeson.encode alonzoGenesis
-
-    -- Write Conway genesis file
-    conwayGenesisJsonFile <- H.noteShow $ tmpAbsPath </> "genesis.conway.spec.json"
-    H.evalIO $ LBS.writeFile conwayGenesisJsonFile $ Aeson.encode conwayGenesis
+    -- Write specification files. Those are the same as the genesis files
+    -- used for launching the nodes, but omitting the content regarding stake, utxos, etc.
+    -- They are used by benchmarking: as templates to CLI commands,
+    -- as evidence of what was run, and as cache keys.
+    writeGenesisSpecFile "alonzo" alonzoGenesis
+    writeGenesisSpecFile "conway" conwayGenesis
 
     configurationFile <- H.noteShow $ tmpAbsPath </> "configuration.yaml"
 
-    _ <- createSPOGenesisAndFiles nbPools era shelleyGenesis (TmpAbsolutePath tmpAbsPath)
+    _ <- createSPOGenesisAndFiles nbPools nbDReps era shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
 
     poolKeys <- H.noteShow $ flip fmap [1..numPoolNodes] $ \n ->
       PoolNodeKeys
@@ -241,12 +287,12 @@ cardanoTestnet
     wallets <- forM [1..3] $ \idx -> do
       let paymentSKeyFile = makeUTxOSkeyFp idx
       let paymentVKeyFile = makeUTxOVKeyFp idx
-      let paymentAddrFile = tmpAbsPath </> "utxo-keys" </> "utxo" <> show @Int idx </> "utxo.addr"
+      let paymentAddrFile = tmpAbsPath </> "utxo-keys" </> "utxo" <> show idx </> "utxo.addr"
 
       execCli_
         [ "address", "build"
         , "--payment-verification-key-file", makeUTxOVKeyFp idx
-        , "--testnet-magic", show @Int testnetMagic
+        , "--testnet-magic", show testnetMagic
         , "--out-file", paymentAddrFile
         ]
 
@@ -260,126 +306,66 @@ cardanoTestnet
         , paymentKeyInfoAddr = Text.pack paymentAddr
         }
 
-    _delegators <- forM [1..3] $ \idx -> do
+    _delegators <- forM [1..3] $ \(idx :: Int) -> do
       pure $ Delegator
         { paymentKeyPair = PaymentKeyPair
-          { paymentSKey = tmpAbsPath </> "stake-delegator-keys/payment" <> show @Int idx <> ".skey"
-          , paymentVKey = tmpAbsPath </> "stake-delegator-keys/payment" <> show @Int idx <> ".vkey"
+          { paymentSKey = tmpAbsPath </> "stake-delegator-keys/payment" <> show idx <> ".skey"
+          , paymentVKey = tmpAbsPath </> "stake-delegator-keys/payment" <> show idx <> ".vkey"
           }
         , stakingKeyPair = StakingKeyPair
-          { stakingSKey = tmpAbsPath </> "stake-delegator-keys/staking" <> show @Int idx <> ".skey"
-          , stakingVKey = tmpAbsPath </> "stake-delegator-keys/staking" <> show @Int idx <> ".vkey"
+          { stakingSKey = tmpAbsPath </> "stake-delegator-keys/staking" <> show idx <> ".skey"
+          , stakingVKey = tmpAbsPath </> "stake-delegator-keys/staking" <> show idx <> ".vkey"
           }
         }
 
     -- TODO: This should come from the configuration!
     let poolKeyDir :: Int -> FilePath
-        poolKeyDir i = "pools-keys" </> "pool" <> show i
-        poolKeysFps = map poolKeyDir [1 .. numPoolNodes]
-
+        poolKeyDir i = "pools-keys" </> mkNodeName i
+        mkNodeName :: Int -> String
+        mkNodeName i = "pool" <> show i
 
     -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
-    finalYamlConfig <- createConfigYaml (TmpAbsolutePath tmpAbsPath) era
+    config <- createConfigJson (TmpAbsolutePath tmpAbsPath) era
 
-    H.evalIO $ LBS.writeFile configurationFile finalYamlConfig
+    H.evalIO $ LBS.writeFile configurationFile config
 
     -- Byron related
-
-    H.renameFile (tmpAbsPath </> "byron-gen-command/delegate-keys.000.key") (tmpAbsPath </> poolKeyDir 1 </> "byron-delegate.key")
-    H.renameFile (tmpAbsPath </> "byron-gen-command/delegate-keys.001.key") (tmpAbsPath </> poolKeyDir 2 </> "byron-delegate.key")
-    H.renameFile (tmpAbsPath </> "byron-gen-command/delegate-keys.002.key") (tmpAbsPath </> poolKeyDir 3 </> "byron-delegate.key")
-
-    H.renameFile (tmpAbsPath </> "byron-gen-command/delegation-cert.000.json") (tmpAbsPath </> poolKeyDir 1 </>"byron-delegation.cert")
-    H.renameFile (tmpAbsPath </> "byron-gen-command/delegation-cert.001.json") (tmpAbsPath </> poolKeyDir 2 </>"byron-delegation.cert")
-    H.renameFile (tmpAbsPath </> "byron-gen-command/delegation-cert.002.json") (tmpAbsPath </> poolKeyDir 3 </>"byron-delegation.cert")
-
-    H.writeFile (tmpAbsPath </> poolKeyDir 1 </> "port") "3001"
-    H.writeFile (tmpAbsPath </> poolKeyDir 2 </> "port") "3002"
-    H.writeFile (tmpAbsPath </> poolKeyDir 3 </> "port") "3003"
-
+    forM_ (zip [1..] portNumbers) $ \(i, portNumber) -> do
+      let iStr = printf "%03d" (i - 1)
+      H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegate-keys." <> iStr <> ".key") (tmpAbsPath </> poolKeyDir i </> "byron-delegate.key")
+      H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegation-cert." <> iStr <> ".json") (tmpAbsPath </> poolKeyDir i </> "byron-delegation.cert")
+      H.writeFile (tmpAbsPath </> poolKeyDir i </> "port") (show portNumber)
 
     -- Make topology files
-    -- TODO generalise this over the N BFT nodes and pool nodes
+    forM_ (zip [1..] portNumbers) $ \(i, myPortNumber) -> do
+      let producers = flip map (filter (/= myPortNumber) portNumbers) $ \otherProducerPort ->
+            RemoteAddress
+              { raAddress = testnetIpv4Address
+              , raPort = otherProducerPort
+              , raValency = 1
+              }
 
-    H.lbsWriteFile (tmpAbsPath </> poolKeyDir 1 </> "topology.json") $ encode $
-      object
-      [ "Producers" .= toJSON
-        [ object
-          [ "addr"    .= toJSON @String "127.0.0.1"
-          , "port"    .= toJSON @Int 3002
-          , "valency" .= toJSON @Int 1
-          ]
-        , object
-          [ "addr"    .= toJSON @String "127.0.0.1"
-          , "port"    .= toJSON @Int 3003
-          , "valency" .= toJSON @Int 1
-          ]
-        , object
-          [ "addr"    .= toJSON @String "127.0.0.1"
-          , "port"    .= toJSON @Int 3005
-          , "valency" .= toJSON @Int 1
-          ]
-        ]
-      ]
+      H.lbsWriteFile (tmpAbsPath </> poolKeyDir i </> "topology.json") . encode $
+        RealNodeTopology producers
 
-    H.lbsWriteFile (tmpAbsPath </> poolKeyDir 2 </> "topology.json")  $ encode $
-      object
-      [ "Producers" .= toJSON
-        [ object
-          [ "addr"    .= toJSON @String "127.0.0.1"
-          , "port"    .= toJSON @Int 3001
-          , "valency" .= toJSON @Int 1
-          ]
-        , object
-          [ "addr"    .= toJSON @String "127.0.0.1"
-          , "port"    .= toJSON @Int 3003
-          , "valency" .= toJSON @Int 1
-          ]
-        , object
-          [ "addr"    .= toJSON @String "127.0.0.1"
-          , "port"    .= toJSON @Int 3005
-          , "valency" .= toJSON @Int 1
-          ]
-        ]
-      ]
-
-    H.lbsWriteFile (tmpAbsPath </> poolKeyDir 3 </> "topology.json") $ encode $
-      object
-      [ "Producers" .= toJSON
-        [ object
-          [ "addr"    .= toJSON @String "127.0.0.1"
-          , "port"    .= toJSON @Int 3001
-          , "valency" .= toJSON @Int 1
-          ]
-        , object
-          [ "addr"    .= toJSON @String "127.0.0.1"
-          , "port"    .= toJSON @Int 3002
-          , "valency" .= toJSON @Int 1
-          ]
-        , object
-          [ "addr"    .= toJSON @String "127.0.0.1"
-          , "port"    .= toJSON @Int 3005
-          , "valency" .= toJSON @Int 1
-          ]
-        ]
-      ]
-
-    let spoNodesWithPortNos = L.zip poolKeysFps [3001..]
-    ePoolNodes <- forM (L.zip spoNodesWithPortNos poolKeys) $ \((node, port),key) -> do
-      let nodeName = tail $ dropWhile (/= '/') node
+    let keysWithPorts = L.zip3 [1..] poolKeys portNumbers
+    ePoolNodes <- forM keysWithPorts $ \(i, key, port) -> do
+      let nodeName = mkNodeName i
+          keyDir = tmpAbsPath </> poolKeyDir i
       H.note_ $ "Node name: " <> nodeName
-      eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath tmpAbsPath) nodeName port testnetMagic
-                                  [ "run"
-                                  , "--config", configurationFile
-                                  , "--topology", tmpAbsPath </> node </> "topology.json"
-                                  , "--database-path", tmpAbsPath </> node </> "db"
-                                  , "--shelley-kes-key", tmpAbsPath </> node </> "kes.skey"
-                                  , "--shelley-vrf-key", tmpAbsPath </> node </> "vrf.skey"
-                                  , "--byron-delegation-certificate", tmpAbsPath </> node </> "byron-delegation.cert"
-                                  , "--byron-signing-key", tmpAbsPath </> node </> "byron-delegate.key"
-                                  , "--shelley-operational-certificate", tmpAbsPath </> node </> "opcert.cert"
-                                  ]
-      return $ flip PoolNode key <$> eRuntime
+      eRuntime <- lift . lift . runExceptT $
+        startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetIpv4Address port testnetMagic
+          [ "run"
+          , "--config", configurationFile
+          , "--topology", keyDir </> "topology.json"
+          , "--database-path", keyDir </> "db"
+          , "--shelley-kes-key", keyDir </> "kes.skey"
+          , "--shelley-vrf-key", keyDir </> "vrf.skey"
+          , "--byron-delegation-certificate", keyDir </> "byron-delegation.cert"
+          , "--byron-signing-key", keyDir </> "byron-delegate.key"
+          , "--shelley-operational-certificate", keyDir </> "opcert.cert"
+          ]
+      pure $ flip PoolNode key <$> eRuntime
 
     if any isLeft ePoolNodes
     -- TODO: We can render this in a nicer way
@@ -403,7 +389,7 @@ cardanoTestnet
 
       let runtime = TestnetRuntime
             { configurationFile
-            , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultShelleyGenesisFp
+            , shelleyGenesisFile = tmpAbsPath </> Defaults.defaultGenesisFilepath ShelleyEra
             , testnetMagic
             , poolNodes
             , wallets = wallets
@@ -432,5 +418,10 @@ cardanoTestnet
       H.assertExpectedSposInLedgerState stakePoolsFp testnetOptions execConfig
 
       pure runtime
+  where
+    writeGenesisSpecFile :: (MonadTest m, MonadIO m, HasCallStack) => ToJSON a => String -> a -> m ()
+    writeGenesisSpecFile eraName toWrite = GHC.withFrozenCallStack $ do
+      genesisJsonFile <- H.noteShow $ tmpAbsPath </> "genesis." <> eraName <> ".spec.json"
+      H.evalIO $ LBS.writeFile genesisJsonFile $ Aeson.encode toWrite
 
 

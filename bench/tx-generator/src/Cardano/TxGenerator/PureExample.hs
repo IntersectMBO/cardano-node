@@ -6,24 +6,24 @@ module  Cardano.TxGenerator.PureExample
         (demo)
         where
 
-import           Control.Monad (foldM)
-import           Control.Monad.Trans.State.Strict
-import           Data.Either (fromRight)
-import           Data.List (foldl')
-import           Data.String (fromString)
-import           System.Exit (die)
-
 import           Cardano.Api
 import           Cardano.Api.Shelley (convertToLedgerProtocolParameters)
 
-import           Data.Aeson (eitherDecodeFileStrict')
-
+import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.FundQueue
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Tx (genTx, sourceToStoreTransaction)
 import           Cardano.TxGenerator.Types (TxEnvironment (..), TxGenError (..), TxGenerator)
 import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee)
 import           Cardano.TxGenerator.UTxO (makeToUTxOList, mkUTxOVariant)
+
+import           Control.Monad (foldM)
+import           Control.Monad.Trans.State.Strict
+import           Data.Aeson (eitherDecodeFileStrict')
+import           Data.Either (fromRight)
+import           Data.List (foldl')
+import           Data.String (fromString)
+import           System.Exit (die)
 
 import           Paths_tx_generator
 
@@ -72,7 +72,7 @@ genesisValue :: TxOutValue BabbageEra
 
 (genesisTxIn, genesisValue) =
   ( TxIn "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162" (TxIx 0)
-  , lovelaceToTxOutValue ShelleyBasedEraBabbage $ Lovelace 90000000000000
+  , lovelaceToTxOutValue ShelleyBasedEraBabbage $ L.Coin 90000000000000
   )
 
 genesisFund :: Fund
@@ -123,7 +123,7 @@ generateTx TxEnvironment{..}
     addNewOutputFunds :: [Fund] -> Generator ()
     addNewOutputFunds = put . foldl' insertFund emptyFundQueue
 
-    computeOutputValues :: [Lovelace] -> [Lovelace]
+    computeOutputValues :: [L.Coin] -> [L.Coin]
     computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 
@@ -164,10 +164,10 @@ generateTxPure TxEnvironment{..} inQueue
         collateralFunds :: (TxInsCollateral BabbageEra, [Fund])
         collateralFunds = (TxInsCollateralNone, [])
 
-    outValues = computeOutputValues $ map getFundLovelace inputs
+    outValues = computeOutputValues $ map getFundCoin inputs
     (outputs, toFunds) = makeToUTxOList (repeat computeUTxO) outValues
 
-    computeOutputValues :: [Lovelace] -> [Lovelace]
+    computeOutputValues :: [L.Coin] -> [L.Coin]
     computeOutputValues = inputsToOutputsWithFee fee numOfOutputs
       where numOfOutputs = 2
 

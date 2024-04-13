@@ -82,6 +82,22 @@ case "$op" in
         backend stop-all             "$dir"
         ;;
 
+    latency )
+
+        scenario_setup_exit_trap     "$dir"
+        # Trap start
+        ############
+        backend start-nodes          "$dir"
+        backend start-latencies      "$dir"
+        # Trap end
+        ##########
+
+        backend wait-latencies-stopped   "$dir"
+        scenario_cleanup_termination
+
+        backend stop-all             "$dir"
+        ;;
+
     chainsync )
         # When using the nomad backend `chaindb` must be called after
         # `backend start` because the node-#, generator and tracer directories

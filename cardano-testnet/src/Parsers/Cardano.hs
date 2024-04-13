@@ -61,6 +61,13 @@ optsTestnet envCli = CardanoTestnetOptions
       <>  OA.showDefault
       <>  OA.value (cardanoNodeLoggingFormat cardanoDefaultTestnetOptions)
       )
+  <*> OA.option auto
+      (   OA.long "num-dreps"
+      <>  OA.help "Number of delegate representatives (DReps) to generate"
+      <>  OA.metavar "NUMBER"
+      <>  OA.showDefault
+      <>  OA.value 3
+      )
 
 pNumSpoNodes :: Parser [TestnetNodeOptions]
 pNumSpoNodes =

@@ -3,23 +3,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
 module Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
   ( hprop_stakeSnapshot
   ) where
 
-import           Cardano.Api
+import           Cardano.Api as Api
 
-import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (..))
 import           Cardano.Testnet
 
 import           Prelude
 
+import           Control.Monad
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as KM
-import qualified Data.Time.Clock as DTC
-import           GHC.Stack (callStack)
 import qualified System.Info as SYS
 
 import           Testnet.Process.Cli (execCliStdoutToJson)
@@ -29,6 +25,7 @@ import           Testnet.Runtime
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 
 hprop_stakeSnapshot :: Property
@@ -42,30 +39,22 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "conway-stake-snapshot" $ \t
     era = BabbageEra
     options = cardanoDefaultTestnetOptions
                         { cardanoNodes = cardanoDefaultTestnetNodeOptions
-                        , cardanoSlotLength = 0.1
                         , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                         }
 
   TestnetRuntime
     { testnetMagic
     , poolNodes
+    , configurationFile
     } <- cardanoTestnetDefault options conf
 
   poolNode1 <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 
-  tipDeadline <- H.noteShowM $ DTC.addUTCTime 210 <$> H.noteShowIO DTC.getCurrentTime
+  void $ waitUntilEpoch (Api.File configurationFile)
+                        (Api.File $ IO.sprocketSystemName poolSprocket1) (EpochNo 3)
 
-  H.byDeadlineM 10 tipDeadline "Wait for two epochs" $ do
-    tip <- execCliStdoutToJson execConfig [ "query", "tip" ]
-
-    currEpoch <- case mEpoch tip of
-      Nothing -> H.failMessage callStack "cardano-cli query tip returned Nothing for EpochNo"
-      Just currEpoch -> return currEpoch
-
-    H.note_ $ "Current Epoch: " <> show currEpoch
-    H.assert $ currEpoch > 2
 
   json <- execCliStdoutToJson execConfig [ "query", "stake-snapshot", "--all-stake-pools" ]
 

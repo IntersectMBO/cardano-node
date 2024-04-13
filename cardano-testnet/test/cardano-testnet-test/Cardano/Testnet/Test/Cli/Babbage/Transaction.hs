@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -7,17 +6,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-#if __GLASGOW_HASKELL__ >= 908
-{-# OPTIONS_GHC -Wno-x-partial #-}
-#endif
-
-{- HLINT ignore "Redundant id" -}
-{- HLINT ignore "Redundant return" -}
-{- HLINT ignore "Use head" -}
-{- HLINT ignore "Use let" -}
-
 module Cardano.Testnet.Test.Cli.Babbage.Transaction
   ( hprop_transaction
   ) where
@@ -25,7 +13,9 @@ module Cardano.Testnet.Test.Cli.Babbage.Transaction
 import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Api.Ledger.Lens as A
+import           Cardano.Api.Shelley
 
+import qualified Cardano.Ledger.Core as L
 import           Cardano.Testnet
 
 import           Prelude
@@ -61,15 +51,13 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
     era = toCardanoEra sbe
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
     options = cardanoDefaultTestnetOptions
-      { cardanoNodes = cardanoDefaultTestnetNodeOptions
-      , cardanoSlotLength = 0.1
-      , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+      { cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
       }
 
   TestnetRuntime
     { testnetMagic
     , poolNodes
-    , wallets
+    , wallets=wallet0:_
     } <- cardanoTestnetDefault options conf
 
   poolNode1 <- H.headM poolNodes
@@ -82,7 +70,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
 
   void $ execCli' execConfig
     [ "babbage", "query", "utxo"
-    , "--address", Text.unpack $ paymentKeyInfoAddr $ head wallets
+    , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--cardano-mode"
     , "--out-file", work </> "utxo-1.json"
     ]
@@ -93,16 +81,25 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
 
   void $ execCli' execConfig
     [ "babbage", "transaction", "build"
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr $ head wallets
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin1
-    , "--tx-out", Text.unpack (paymentKeyInfoAddr (head wallets)) <> "+" <> show @Int 5_000_001
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_001
     , "--out-file", txbodyFp
     ]
+  cddlUnwitnessedTx <- H.readJsonFileOk txbodyFp
+  apiTx <- H.evalEither $ deserialiseTxLedgerCddl sbe cddlUnwitnessedTx
+  let txFee = L.unCoin $ extractTxFee apiTx
+
+  -- This is the current calculated fee.
+  -- It's a sanity check to see if anything has
+  -- changed regarding fee calculation.
+  -- 8.10 changed fee from 228 -> 330
+  330 H.=== txFee
 
   void $ execCli' execConfig
     [ "babbage", "transaction", "sign"
     , "--tx-body-file", txbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair $ wallets !! 0
+    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
     , "--out-file", txbodySignedFp
     ]
 
@@ -111,10 +108,11 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
     , "--tx-file", txbodySignedFp
     ]
 
+
   H.byDurationM 1 15 "Expected UTxO found" $ do
     void $ execCli' execConfig
       [ "babbage", "query", "utxo"
-      , "--address", Text.unpack $ paymentKeyInfoAddr $ head wallets
+      , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
       , "--cardano-mode"
       , "--out-file", work </> "utxo-2.json"
       ]
@@ -122,7 +120,6 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
     utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
     UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
     txouts2 <- H.noteShow $ L.unCoin . txOutValueLovelace . txOutValue . snd <$> Map.toList utxo2
-
     H.assert $ 5_000_001 `List.elem` txouts2
 
 txOutValue :: TxOut ctx era -> TxOutValue era
@@ -131,4 +128,8 @@ txOutValue (TxOut _ v _ _) = v
 txOutValueLovelace ::TxOutValue era -> L.Coin
 txOutValueLovelace = \case
   TxOutValueShelleyBased sbe v -> v ^. A.adaAssetL sbe
-  TxOutValueByron (Lovelace v) -> L.Coin v
+  TxOutValueByron v -> v
+
+extractTxFee :: Tx era -> L.Coin
+extractTxFee (ShelleyTx sbe ledgerTx) =
+  shelleyBasedEraConstraints sbe $ ledgerTx ^. (L.bodyTxL . L.feeTxBodyL)

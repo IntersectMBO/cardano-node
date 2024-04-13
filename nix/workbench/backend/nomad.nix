@@ -48,6 +48,12 @@ let
                 flake-output = "legacyPackages.x86_64-linux.findutils";
                 installable = "${flake-reference}/${gitrev}#${flake-output}";
               };
+              iputils = rec {
+                nix-store-path  = pkgs.iputils;
+                flake-reference = "github:intersectmbo/cardano-node";
+                flake-output = "legacyPackages.x86_64-linux.iputils";
+                installable = "${flake-reference}/${gitrev}#${flake-output}";
+              };
               gnutar = rec {
                 nix-store-path  = pkgs.gnutar;
                 flake-reference = "github:intersectmbo/cardano-node";

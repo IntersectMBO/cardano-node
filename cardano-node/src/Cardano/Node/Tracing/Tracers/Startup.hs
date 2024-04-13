@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
@@ -25,7 +26,6 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (SomeConsensusProtocol (..))
 import           Cardano.Node.Startup
-import           Cardano.Node.Types (UseLedger (..))
 import           Cardano.Slotting.Slot (EpochSize (..))
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Byron.Ledger.Conversions (fromByronEpochSlots,
@@ -41,7 +41,8 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
+                   UseLedgerPeers (..))
 
 import           Prelude
 
@@ -69,7 +70,7 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
       basicInfoCommon = BICommon $ BasicInfoCommon {
                 biProtocol = pack . show $ ncProtocol nc
               , biVersion  = pack . showVersion $ version
-              , biCommit   = gitRev
+              , biCommit   = $(gitRev)
               , biNodeStartTime = nodeStartTime
               , biConfigPath = fp
               , biNetworkMagic = getNetworkMagic $ Consensus.configBlock cfg
@@ -220,22 +221,19 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal (NetworkConfigUpdateError err) =
       mconcat [ "kind" .= String "NetworkConfigUpdateError"
                , "error" .= String err ]
-  forMachine _dtal (NetworkConfig localRoots publicRoots useLedgerAfter) =
+  forMachine _dtal (NetworkConfig localRoots publicRoots useLedgerPeers) =
       mconcat [ "kind" .= String "NetworkConfig"
                , "localRoots" .= toJSON localRoots
                , "publicRoots" .= toJSON publicRoots
-               , "useLedgerAfter" .= UseLedger useLedgerAfter
+               , "useLedgerAfter" .= useLedgerPeers
                ]
   forMachine _dtal NetworkConfigLegacy =
       mconcat [ "kind" .= String "NetworkConfigLegacy"
               , "message" .= String p2pNetworkConfigLegacyMessage
               ]
-  forMachine _dtal P2PWarning =
-      mconcat [ "kind" .= String "P2PWarning"
-               , "message" .= String p2pWarningMessage ]
-  forMachine _dtal PeerSharingWarning =
-      mconcat [ "kind" .= String "PeerSharingWarning"
-               , "message" .= String peerSharingWarningMessage ]
+  forMachine _dtal NonP2PWarning =
+      mconcat [ "kind" .= String "NonP2PWarning"
+               , "message" .= String nonP2PWarningMessage ]
   forMachine _ver (WarningDevelopmentNodeToNodeVersions ntnVersions) =
       mconcat [ "kind" .= String "WarningDevelopmentNodeToNodeVersions"
                , "message" .= String "enabled development network protocols"
@@ -306,10 +304,8 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["NetworkConfig"]
   namespaceFor NetworkConfigLegacy {}  =
     Namespace [] ["NetworkConfigLegacy"]
-  namespaceFor P2PWarning {}  =
-    Namespace [] ["P2PWarning"]
-  namespaceFor PeerSharingWarning {}  =
-    Namespace [] ["PeerSharingWarning"]
+  namespaceFor NonP2PWarning {}  =
+    Namespace [] ["NonP2PWarning"]
   namespaceFor WarningDevelopmentNodeToNodeVersions {}  =
     Namespace [] ["WarningDevelopmentNodeToNodeVersions"]
   namespaceFor WarningDevelopmentNodeToClientVersions {}  =
@@ -327,7 +323,7 @@ instance MetaTrace  (StartupTrace blk) where
   severityFor (Namespace _ ["NetworkConfigUpdate"]) _ = Just Notice
   severityFor (Namespace _ ["NetworkConfigUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["NetworkConfigUpdateUnsupported"]) _ = Just Warning
-  severityFor (Namespace _ ["P2PWarning"]) _ = Just Warning
+  severityFor (Namespace _ ["NonP2PWarning"]) _ = Just Warning
   severityFor (Namespace _ ["WarningDevelopmentNodeToNodeVersions"]) _ = Just Warning
   severityFor (Namespace _ ["WarningDevelopmentNodeToClientVersions"]) _ = Just Warning
   severityFor (Namespace _ ["BlockForgingUpdateError"]) _ = Just Error
@@ -362,7 +358,7 @@ instance MetaTrace  (StartupTrace blk) where
     ""
   documentFor (Namespace [] ["NetworkConfigLegacy"]) = Just
     ""
-  documentFor (Namespace [] ["P2PWarning"]) = Just
+  documentFor (Namespace [] ["NonP2PWarning"]) = Just
     ""
   documentFor (Namespace [] ["WarningDevelopmentNodeToNodeVersions"]) = Just
     ""
@@ -413,7 +409,7 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["NetworkConfigUpdateError"]
     , Namespace [] ["NetworkConfig"]
     , Namespace [] ["NetworkConfigLegacy"]
-    , Namespace [] ["P2PWarning"]
+    , Namespace [] ["NonP2PWarning"]
     , Namespace [] ["WarningDevelopmentNodeToNodeVersions"]
     , Namespace [] ["WarningDevelopmentNodeToClientVersions"]
     , Namespace [] ["Common"]
@@ -507,7 +503,7 @@ ppStartupInfoTrace NetworkConfigUpdate = "Performing topology configuration upda
 ppStartupInfoTrace NetworkConfigUpdateUnsupported =
   "Network topology reconfiguration is not supported in non-p2p mode"
 ppStartupInfoTrace (NetworkConfigUpdateError err) = err
-ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerAfter) =
+ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers) =
     pack
   $ intercalate "\n"
   [ "\nLocal Root Groups:"
@@ -515,16 +511,18 @@ ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerAfter) =
                                     localRoots)
   , "Public Roots:"
   , "  " ++ intercalate "\n  " (map show $ Map.assocs publicRoots)
-  , case useLedgerAfter of
-      UseLedgerAfter slotNo -> "Get root peers from the ledger after slot "
-                            ++ show (unSlotNo slotNo)
-      DontUseLedger         -> "Don't use ledger to get root peers."
+  , case useLedgerPeers of
+      DontUseLedgerPeers            ->
+        "Don't use ledger to get root peers."
+      UseLedgerPeers (After slotNo) ->
+        "Get root peers from the ledger after slot "
+        ++ show (unSlotNo slotNo)
+      UseLedgerPeers Always         ->
+        "Use ledger peers in any slot."
   ]
 ppStartupInfoTrace NetworkConfigLegacy = p2pNetworkConfigLegacyMessage
 
-ppStartupInfoTrace P2PWarning = p2pWarningMessage
-
-ppStartupInfoTrace PeerSharingWarning = peerSharingWarningMessage
+ppStartupInfoTrace NonP2PWarning = nonP2PWarningMessage
 
 ppStartupInfoTrace (WarningDevelopmentNodeToNodeVersions ntnVersions) =
      "enabled development node-to-node versions: "
@@ -559,10 +557,10 @@ ppStartupInfoTrace (BICommon BasicInfoCommon {..}) =
   <> ", Commit " <> showT biCommit
   <> ", Node start time " <> showT biNodeStartTime
 
-p2pWarningMessage :: Text
-p2pWarningMessage =
-      "You are using an early release of peer-to-peer capabilities, "
-   <> "please report any issues."
+nonP2PWarningMessage :: Text
+nonP2PWarningMessage =
+      "You are using legacy networking stack, "
+   <> "consider upgrading to the p2p network stack."
 
 p2pNetworkConfigLegacyMessage :: Text
 p2pNetworkConfigLegacyMessage =
@@ -572,16 +570,6 @@ p2pNetworkConfigLegacyMessage =
   , "See https://github.com/intersectmbo/cardano-node/issues/4559"
   , "Note that the legacy p2p format will be removed in `1.37` release."
   ]
-
-peerSharingWarningMessage :: Text
-peerSharingWarningMessage =
-    "Warning: Enabling PeerSharing can expose you to significant risks, including "
-  <> "the possibility of eclipse attacks. By turning on this feature, you may "
-  <> "inadvertently give malicious actors the ability to isolate your device, "
-  <> "manipulate your view of the network, and compromise your data integrity. "
-  <> "It is crucial to carefully consider the potential consequences before "
-  <> "enabling PeerSharing. If you are unsure, it is strongly advised to consult "
-  <> "a security expert for guidance. Proceed with caution."
 
 -- | Pretty print 'SocketOrSocketInfo'.
 --

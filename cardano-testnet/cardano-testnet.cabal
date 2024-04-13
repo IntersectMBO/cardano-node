@@ -32,21 +32,24 @@ library
   import:               project-config
 
   build-depends:        aeson
+                      , aeson-pretty
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 8.39
-                      , cardano-cli ^>= 8.20.2.0
+                      , cardano-api ^>= 8.44
+                      , cardano-cli ^>= 8.22
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
+                      , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-alonzo
+                      , cardano-ledger-binary
+                      , cardano-ledger-byron
+                      , cardano-ledger-conway
                       , cardano-ledger-conway
                       , cardano-ledger-core
-                      , cardano-git-rev
-                      , cardano-ledger-core
-                      , cardano-ledger-byron
+                      , cardano-ledger-core:testlib
                       , cardano-ledger-shelley
                       , cardano-node
-                      , cardano-ping ^>= 0.2.0.10
+                      , cardano-ping ^>= 0.2.0.13
                       , contra-tracer
                       , containers
                       , data-default-class
@@ -55,14 +58,14 @@ library
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras ^>= 0.6.1.0
+                      , hedgehog-extras < 0.6.2
                       , microlens
                       , lens-aeson
                       , mtl
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.11
+                      , ouroboros-network ^>= 0.13
                       , ouroboros-network-api
                       , prettyprinter
                       , process
@@ -71,7 +74,7 @@ library
                       , scientific
                       , si-timers
                       , stm
-                      , tasty
+                      , tasty ^>= 1.5
                       , tasty-expected-failure
                       , tasty-hedgehog
                       , text
@@ -86,10 +89,12 @@ library
                         Testnet.Start.Byron
                         Testnet.Start.Types
                         Testnet.Components.Configuration
+                        Testnet.Components.DReps
                         Testnet.Components.SPO
                         Testnet.Components.Query
                         Testnet.Defaults
                         Testnet.Filepath
+                        Testnet.EpochStateProcessing
                         Testnet.Property.Assert
                         Testnet.Property.Run
                         Testnet.Property.Utils
@@ -121,7 +126,7 @@ executable cardano-testnet
                       , cardano-testnet
                       , optparse-applicative-fork
 
-  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
 
 test-suite cardano-testnet-golden
   import:               project-config
@@ -148,11 +153,11 @@ test-suite cardano-testnet-golden
                       , hedgehog-extras
                       , process
                       , regex-compat
-                      , tasty
+                      , tasty ^>= 1.5
                       , tasty-hedgehog
                       , text
 
-  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
 
   build-tool-depends:   cardano-node:cardano-node
                       , cardano-cli:cardano-cli
@@ -170,8 +175,10 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
                         Cardano.Testnet.Test.Cli.Babbage.Transaction
                         Cardano.Testnet.Test.Cli.Conway.DRepRetirement
+                        Cardano.Testnet.Test.Cli.Conway.Plutus
                         Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
                         Cardano.Testnet.Test.Cli.KesPeriodInfo
+                        Cardano.Testnet.Test.Cli.Queries
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
                         Cardano.Testnet.Test.FoldBlocks
                         Cardano.Testnet.Test.Misc
@@ -179,7 +186,9 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
                         Cardano.Testnet.Test.LedgerEvents.Gov.InfoAction
                         Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO
+                        Cardano.Testnet.Test.LedgerEvents.Gov.DRepDeposits
                         Cardano.Testnet.Test.LedgerEvents.SanityCheck
+                        Cardano.Testnet.Test.LedgerEvents.TreasuryGrowth
 
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
@@ -195,7 +204,11 @@ test-suite cardano-testnet-test
                       , cardano-cli
                       , cardano-crypto-class
                       , cardano-ledger-conway
+                      , cardano-ledger-core
                       , cardano-ledger-shelley
+                      , cardano-node
+                      , cardano-slotting
+                      , cardano-strict-containers ^>= 0.1
                       , cardano-testnet
                       , containers
                       , directory
@@ -206,14 +219,16 @@ test-suite cardano-testnet-test
                       , http-conduit
                       , lens-aeson
                       , microlens
+                      , mtl
                       , process
                       , regex-compat
-                      , tasty
+                      , tasty ^>= 1.5
                       , text
                       , time
                       , transformers
+                      , vector
 
-  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
 
   build-tool-depends:   cardano-node:cardano-node
                       , cardano-cli:cardano-cli

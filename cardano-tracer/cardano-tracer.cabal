@@ -137,7 +137,7 @@ library
                       , bimap >= 0.4.0
                       , blaze-html
                       , bytestring
-                      , cardano-git-rev
+                      , cardano-git-rev ^>=0.2.2
                       , cardano-node
                       , cassava
                       , cborg
@@ -147,12 +147,12 @@ library
                       , directory
                       , ekg
                       , ekg-core
-                      , ekg-forward ^>= 0.4
+                      , ekg-forward ^>= 0.5
                       , extra
                       , filepath
                       , mime-mail
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.11
+                      , ouroboros-network ^>= 0.13
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal

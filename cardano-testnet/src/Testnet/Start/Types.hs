@@ -1,9 +1,13 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Start.Types
   ( CardanoTestnetOptions(..)
   , cardanoDefaultTestnetOptions
+
+  , anyEraToString
+  , eraToString
 
   , TestnetNodeOptions(..)
   , extraSpoNodeCliArgs
@@ -19,6 +23,7 @@ import           Cardano.Api hiding (cardanoEra)
 
 import           Prelude
 
+import           Data.Char (toLower)
 import           Data.Word
 import           GHC.Stack
 import           System.FilePath (addTrailingPathSeparator)
@@ -29,10 +34,6 @@ import           Hedgehog (MonadTest)
 import qualified Hedgehog.Extras as H
 
 
-{- HLINT ignore "Redundant flip" -}
-{- HLINT ignore "Redundant id" -}
-{- HLINT ignore "Use let" -}
-
 data CardanoTestnetOptions = CardanoTestnetOptions
   { -- | List of node options. Each option will result in a single node being
     -- created.
@@ -42,9 +43,10 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoSlotLength :: Double -- ^ Slot length, in seconds
   , cardanoTestnetMagic :: Int
   , cardanoActiveSlotsCoeff :: Double
-  , cardanoMaxSupply :: Word64 -- ^ The amount of ADA you are starting your testnet with
+  , cardanoMaxSupply :: Word64 -- ^ The amount of ADA you are starting your testnet with (forwarded to shelley genesis)
   , cardanoEnableP2P :: Bool
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
+  , cardanoNumDReps :: Int -- ^ The number of DReps to generate at creation
   } deriving (Eq, Show)
 
 cardanoDefaultTestnetOptions :: CardanoTestnetOptions
@@ -54,10 +56,11 @@ cardanoDefaultTestnetOptions = CardanoTestnetOptions
   , cardanoEpochLength = 500
   , cardanoSlotLength = 0.1
   , cardanoTestnetMagic = 42
-  , cardanoActiveSlotsCoeff = 0.1
-  , cardanoMaxSupply = 10020000000
+  , cardanoActiveSlotsCoeff = 0.05
+  , cardanoMaxSupply = 100_020_000_000 -- 100 billions. This amount should be bigger than the 'byronTotalBalance' in Testnet.Start.Byron
   , cardanoEnableP2P = False
   , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
+  , cardanoNumDReps = 3
   }
 
 -- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)
@@ -97,4 +100,10 @@ mkConf tempAbsPath' = withFrozenCallStack $ do
     { tempAbsPath = TmpAbsolutePath (addTrailingPathSeparator tempAbsPath')
     }
 
+-- | @anyEraToString (AnyCardanoEra ByronEra)@ returns @"byron"@
+anyEraToString :: AnyCardanoEra -> String
+anyEraToString (AnyCardanoEra e) = eraToString e
 
+-- | @eraToString ByronEra@ returns @"byron"@
+eraToString :: CardanoEra a -> String
+eraToString = map toLower . docToString . pretty

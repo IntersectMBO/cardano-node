@@ -1,6 +1,12 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+
 
 -- | All Byron and Shelley Genesis related functionality
 module Testnet.Defaults
@@ -8,45 +14,65 @@ module Testnet.Defaults
   , defaultByronProtocolParamsJsonValue
   , defaultYamlConfig
   , defaultConwayGenesis
+  , defaultDRepVkeyFp
+  , defaultDRepSkeyFp
   , defaultShelleyGenesis
-  , defaultShelleyGenesisFp
+  , defaultGenesisFilepath
   , defaultYamlHardforkViaConfig
   , defaultMainnetTopology
+  , plutusV3NonSpendingScript
+  , plutusV3SpendingScript
   ) where
 
 import           Cardano.Api (AnyCardanoEra (..), CardanoEra (..), pshow)
 import qualified Cardano.Api.Shelley as Api
 
-import           Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
-import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import           Cardano.Ledger.Alonzo.Scripts
+import           Cardano.Ledger.Alonzo.Core (PParams (..))
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
+import qualified Cardano.Ledger.Alonzo.Genesis as Ledger
 import           Cardano.Ledger.BaseTypes
+import qualified Cardano.Ledger.BaseTypes as Ledger
+import           Cardano.Ledger.Binary.Version ()
 import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Conway.Genesis
+import           Cardano.Ledger.Conway.PParams
+import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Plutus as Ledger
+import qualified Cardano.Ledger.Shelley as Ledger
 import           Cardano.Ledger.Shelley.Genesis
 import           Cardano.Node.Configuration.Topology
 import           Cardano.Tracing.Config
 
 import           Prelude
 
+import           Control.Monad
+import           Control.Monad.Identity (Identity)
 import           Data.Aeson (ToJSON (..), Value, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KeyMapAeson
-import           Data.Bifunctor
 import qualified Data.Default.Class as DefaultClass
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Maybe
 import           Data.Proxy
 import           Data.Ratio
 import           Data.Scientific
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
+import           Data.Typeable
 import qualified Data.Vector as Vector
-import           Data.Word
+import           GHC.Stack
+import           Lens.Micro
+import           Numeric.Natural
+import           System.FilePath ((</>))
 
+import           Test.Cardano.Ledger.Core.Rational
 import           Testnet.Start.Types
 
+{- HLINT ignore "Use underscore" -}
 
 instance Api.Error AlonzoGenesisError where
   prettyError (AlonzoGenErrCostModels e) =
@@ -56,83 +82,72 @@ instance Api.Error AlonzoGenesisError where
 
 data AlonzoGenesisError
   = AlonzoGenErrTooMuchPrecision Rational
-  | AlonzoGenErrCostModels Api.ProtocolParametersConversionError
+  | AlonzoGenErrCostModels (Map Ledger.Language Ledger.CostModelError)
   deriving Show
 
 defaultAlonzoGenesis :: Either AlonzoGenesisError AlonzoGenesis
 defaultAlonzoGenesis = do
-  es <- checkBoundedRational priceExecStepsRat
-  ms <- checkBoundedRational priceMemStepsRat
-  let execPrices = Prices ms es
-  costModels <- first AlonzoGenErrCostModels
-                  $ Api.toAlonzoCostModels apiCostModels
-  return $ AlonzoGenesis
-    { agCoinsPerUTxOWord = CoinPerWord $ Coin 34482
-    , agCostModels = costModels
-    , agPrices = execPrices
-    , agMaxTxExUnits = maxTxExUnits
-    , agMaxBlockExUnits = maxBlockExUnits
-    , agMaxValSize = 5000
-    , agCollateralPercentage = 150
-    , agMaxCollateralInputs = 3
-    }
+  let genesis = Api.alonzoGenesisDefaults
+      costModelsErrors = Ledger.costModelsErrors $ Ledger.agCostModels genesis
+      prices = Ledger.agPrices genesis
+
+  -- fail on cost models errors
+  unless (Map.null costModelsErrors)
+    . Left $ AlonzoGenErrCostModels costModelsErrors
+
+  -- double check that prices have correct values - they're set using unsafeBoundedRational in cardano-api
+  _priceExecSteps <- checkBoundedRational $ Ledger.prSteps prices
+  _priceMemSteps <- checkBoundedRational $ Ledger.prMem prices
+
+  pure genesis
   where
-
-    priceExecStepsRat = promoteRatio $ 721 % (10000000 :: Word64)
-    priceMemStepsRat = promoteRatio $ 577 % (10000 :: Word64)
-
-    checkBoundedRational r =
+    checkBoundedRational :: BoundedRational a => a -> Either AlonzoGenesisError a
+    checkBoundedRational v = do
+      let r = unboundRational v
       case boundRational r of
         Nothing -> Left $ AlonzoGenErrTooMuchPrecision r
         Just s -> return s
 
-    maxTxExUnits = Api.toAlonzoExUnits
-                     $ Api.ExecutionUnits
-                         { Api.executionSteps = 10000000000
-                         , Api.executionMemory = 14000000
-                         }
-    maxBlockExUnits = Api.toAlonzoExUnits
-                        $ Api.ExecutionUnits
-                            { Api.executionSteps = 20000000000
-                            , Api.executionMemory = 62000000
-                            }
-    apiCostModels =
-      let pv1 = Api.AnyPlutusScriptVersion Api.PlutusScriptV1
-          pv2 = Api.AnyPlutusScriptVersion Api.PlutusScriptV2
-      in mconcat [ Map.singleton pv1 defaultV1CostModel
-                 , Map.singleton pv2 defaultV2CostModel
-                 ]
-    defaultV1CostModel = Api.CostModel
-                           [ 205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475, 4
-                           , 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 100, 100
-                           , 23000, 100, 19537, 32, 175354, 32, 46417, 4, 221973, 511, 0, 1, 89141, 32, 497525
-                           , 14068, 4, 2, 196500, 453240, 220, 0, 1, 1, 1000, 28662, 4, 2, 245000, 216773, 62
-                           , 1, 1060367, 12586, 1, 208512, 421, 1, 187000, 1000, 52998, 1, 80436, 32, 43249, 32
-                           , 1000, 32, 80556, 1, 57667, 4, 1000, 10, 197145, 156, 1, 197145, 156, 1, 204924, 473
-                           , 1, 208896, 511, 1, 52467, 32, 64832, 32, 65493, 32, 22558, 32, 16563, 32, 76511, 32
-                           , 196500, 453240, 220, 0, 1, 1, 69522, 11687, 0, 1, 60091, 32, 196500, 453240, 220, 0
-                           , 1, 1, 196500, 453240, 220, 0, 1, 1, 806990, 30482, 4, 1927926, 82523, 4, 265318, 0
-                           , 4, 0, 85931, 32, 205665, 812, 1, 1, 41182, 32, 212342, 32, 31220, 32, 32696, 32, 43357
-                           , 32, 32247, 32, 38314, 32, 57996947, 18975, 10
-                           ]
-    defaultV2CostModel = Api.CostModel
-                           [ 205665, 812, 1, 1, 1000, 571, 0, 1, 1000, 24177, 4, 1, 1000, 32, 117366, 10475, 4
-                           , 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 23000, 100, 100, 100
-                           , 23000, 100, 19537, 32, 175354, 32, 46417, 4, 221973, 511, 0, 1, 89141, 32, 497525
-                           , 14068, 4, 2, 196500, 453240, 220, 0, 1, 1, 1000, 28662, 4, 2, 245000, 216773, 62
-                           , 1, 1060367, 12586, 1, 208512, 421, 1, 187000, 1000, 52998, 1, 80436, 32, 43249, 32
-                           , 1000, 32, 80556, 1, 57667, 4, 1000, 10, 197145, 156, 1, 197145, 156, 1, 204924, 473
-                           , 1, 208896, 511, 1, 52467, 32, 64832, 32, 65493, 32, 22558, 32, 16563, 32, 76511, 32
-                           , 196500, 453240, 220, 0, 1, 1, 69522, 11687, 0, 1, 60091, 32, 196500, 453240, 220, 0
-                           , 1, 1, 196500, 453240, 220, 0, 1, 1, 1159724, 392670, 0, 2, 806990, 30482, 4, 1927926
-                           , 82523, 4, 265318, 0, 4, 0, 85931, 32, 205665, 812, 1, 1, 41182, 32, 212342, 32, 31220
-                           , 32, 32696, 32, 43357, 32, 32247, 32, 38314, 32, 35892428, 10, 9462713, 1021, 10, 38887044
-                           , 32947, 10
-                           ]
-
-
 defaultConwayGenesis :: ConwayGenesis StandardCrypto
-defaultConwayGenesis = DefaultClass.def
+defaultConwayGenesis =
+  let upPParams :: UpgradeConwayPParams Identity
+      upPParams = UpgradeConwayPParams
+                    { ucppPoolVotingThresholds = poolVotingThresholds
+                    , ucppDRepVotingThresholds = drepVotingThresholds
+                    , ucppCommitteeMinSize = 0
+                    , ucppCommitteeMaxTermLength = EpochInterval 200
+                    , ucppGovActionLifetime = EpochInterval 1 -- One Epoch
+                    , ucppGovActionDeposit = Coin 1_000_000
+                    , ucppDRepDeposit = Coin 1_000_000
+                    , ucppDRepActivity = EpochInterval 100
+                    , ucppMinFeeRefScriptCostPerByte = 0 %! 1 -- FIXME GARBAGE VALUE
+                    }
+      drepVotingThresholds = DRepVotingThresholds
+        { dvtMotionNoConfidence = 0 %! 1
+        , dvtCommitteeNormal = 1 %! 2
+        , dvtCommitteeNoConfidence = 0 %! 1
+        , dvtUpdateToConstitution = 0 %! 2 -- TODO: Requires a constitutional committee when non-zero
+        , dvtHardForkInitiation = 1 %! 2
+        , dvtPPNetworkGroup = 1 %! 2
+        , dvtPPEconomicGroup = 1 %! 2
+        , dvtPPTechnicalGroup = 1 %! 2
+        , dvtPPGovGroup = 1 %! 2
+        , dvtTreasuryWithdrawal = 1 %! 2
+        }
+      poolVotingThresholds = PoolVotingThresholds
+         { pvtMotionNoConfidence = 1 %! 2
+         , pvtCommitteeNormal = 1 %! 2
+         , pvtCommitteeNoConfidence = 1 %! 2
+         , pvtHardForkInitiation = 1 %! 2
+         , pvtPPSecurityGroup = 1 %! 2
+         }
+  in ConwayGenesis
+      { cgUpgradePParams = upPParams
+      , cgConstitution = DefaultClass.def
+      , cgCommittee = DefaultClass.def
+      , cgDelegs = mempty
+      , cgInitialDReps = mempty
+      }
 
 
 
@@ -360,9 +375,9 @@ defaultYamlConfig =
 
     -- Genesis filepaths
     , ("ByronGenesisFile", "byron/genesis.json")
-    , ("ShelleyGenesisFile", Aeson.String $ Text.pack defaultShelleyGenesisFp)
-    , ("AlonzoGenesisFile", "shelley/genesis.alonzo.json")
-    , ("ConwayGenesisFile", "shelley/genesis.conway.json")
+    , ("ShelleyGenesisFile", genesisPath ShelleyEra)
+    , ("AlonzoGenesisFile",  genesisPath AlonzoEra)
+    , ("ConwayGenesisFile",  genesisPath ConwayEra)
 
     -- See: https://github.com/input-output-hk/cardano-ledger/blob/master/eras/byron/ledger/impl/doc/network-magic.md
     , ("RequiresNetworkMagic", "RequiresMagic")
@@ -378,6 +393,8 @@ defaultYamlConfig =
     , ("defaultBackends", Aeson.Array $ Vector.fromList ["KatipBK"])
     , ("options", Aeson.object mempty)
     ]
+  where
+    genesisPath era = Aeson.String $ Text.pack $ defaultGenesisFilepath era
 
 -- | We need a Byron genesis in order to be able to hardfork to the later Shelley based eras.
 -- The values here don't matter as the testnet conditions are ultimately determined
@@ -412,18 +429,58 @@ defaultShelleyGenesis
   :: UTCTime
   -> CardanoTestnetOptions
   -> Api.ShelleyGenesis StandardCrypto
-defaultShelleyGenesis startTime testnetOptions =
-  let testnetMagic = cardanoTestnetMagic testnetOptions
-      slotLength = cardanoSlotLength testnetOptions
-      epochLength = cardanoEpochLength testnetOptions
-      maxLovelaceLovelaceSupply = cardanoMaxSupply testnetOptions
-  in Api.shelleyGenesisDefaults
-        { Api.sgNetworkMagic = fromIntegral testnetMagic
-        , Api.sgSlotLength = secondsToNominalDiffTimeMicro $ realToFrac slotLength
+defaultShelleyGenesis startTime testnetOptions = do
+  let CardanoTestnetOptions
+        { cardanoTestnetMagic = testnetMagic
+        , cardanoSlotLength = slotLength
+        , cardanoEpochLength = epochLength
+        , cardanoMaxSupply = sgMaxLovelaceSupply
+        , cardanoActiveSlotsCoeff
+        , cardanoNodeEra
+        } = testnetOptions
+      -- f
+      activeSlotsCoeff = round (cardanoActiveSlotsCoeff * 100) % 100
+      -- make security param k satisfy: epochLength = 10 * k / f
+      -- TODO: find out why this actually degrates network stability - turned off for now
+      -- securityParam = ceiling $ fromIntegral epochLength * cardanoActiveSlotsCoeff / 10
+      pVer = eraToProtocolVersion cardanoNodeEra
+      protocolParams = Api.sgProtocolParams Api.shelleyGenesisDefaults
+      protocolParamsWithPVer = protocolParams & ppProtocolVersionL' .~ pVer
+  Api.shelleyGenesisDefaults
+        { Api.sgActiveSlotsCoeff = unsafeBoundedRational activeSlotsCoeff
         , Api.sgEpochLength = EpochSize $ fromIntegral epochLength
-        , Api.sgMaxLovelaceSupply = maxLovelaceLovelaceSupply
+        , Api.sgMaxLovelaceSupply
+        , Api.sgNetworkMagic = fromIntegral testnetMagic
+        , Api.sgProtocolParams = protocolParamsWithPVer
+        -- using default from shelley genesis k = 2160
+        -- , Api.sgSecurityParam = securityParam
+        , Api.sgSlotLength = secondsToNominalDiffTimeMicro $ realToFrac slotLength
         , Api.sgSystemStart = startTime
         }
+
+
+eraToProtocolVersion :: AnyCardanoEra -> ProtVer
+eraToProtocolVersion (AnyCardanoEra era) =
+  case era of
+    ByronEra -> error "eraToProtocolVersion: Byron not supported"
+    ShelleyEra -> mkProtVer (2, 0)
+    AllegraEra -> mkProtVer (3, 0)
+    MaryEra -> mkProtVer (4, 0)
+    -- Alonzo had an intra-era hardfork
+    AlonzoEra -> mkProtVer (6, 0)
+    -- Babbage had an intra-era hardfork
+    BabbageEra -> mkProtVer (8, 0)
+    ConwayEra -> mkProtVer (9, 0)
+
+-- TODO: Expose from cardano-api
+mkProtVer :: (Natural, Natural) -> ProtVer
+mkProtVer (majorProtVer, minorProtVer) =
+  case (`ProtVer` minorProtVer) <$> Ledger.mkVersion majorProtVer of
+    Just pVer -> pVer
+    Nothing -> error "mkProtVer: invalid protocol version"
+
+ppProtocolVersionL' ::  Lens' (PParams (Ledger.ShelleyEra StandardCrypto)) ProtVer
+ppProtocolVersionL' = Ledger.ppLens . Ledger.hkdProtocolVersionL @(Ledger.ShelleyEra StandardCrypto) @Identity
 
 defaultMainnetTopology :: NetworkTopology
 defaultMainnetTopology =
@@ -434,9 +491,52 @@ defaultMainnetTopology =
          }
   in RealNodeTopology [single]
 
--- TODO: These filepaths should really be decoded from the output of
--- create-testnet-data. We are still deciding the best way to pass this information
--- to cardano-testnet.
+defaultGenesisFilepath :: CardanoEra a -> FilePath
+defaultGenesisFilepath era =
+  -- This path is actually generated by create-testnet-data. Don't change it.
+  eraToString era <> "-genesis.json"
 
-defaultShelleyGenesisFp :: FilePath
-defaultShelleyGenesisFp = "shelley/genesis.shelley.json"
+-- | The relative path to DRep keys in directories created by cardano-testnet
+defaultDRepVkeyFp
+  :: Int -- ^ The DRep's index (starts at 1)
+  -> FilePath
+defaultDRepVkeyFp n = "drep-keys" </> ("drep" <> show n) </> "drep.vkey"
+
+-- | The relative path to DRep secret keys in directories created by cardano-testnet
+defaultDRepSkeyFp
+  :: Int -- ^ The DRep's index (starts at 1)
+  -> FilePath
+defaultDRepSkeyFp n = "drep-keys" </> ("drep" <> show n) </> "drep.skey"
+
+-- TODO: We should not hardcode a script like this. We need to move
+-- plutus-example from plutus apps to cardano-node-testnet. This will
+-- let us directly compile the plutus validators and avoid bit rotting of
+-- hardcoded plutus scripts.
+-- | Default plutus script that succeeds regardless of redeemer
+-- NB: This cannot be used as a spending script
+plutusV3NonSpendingScript :: Text
+plutusV3NonSpendingScript =
+  Text.unlines ["{"
+               , "\"type\": \"PlutusScriptV3\""
+               , ",\"description\": \"\""
+               , ",\"cborHex\": \"4746010100228001\""
+               , "}"
+               ]
+
+-- | Default plutus spending script that succeeds regardless of redeemer
+plutusV3SpendingScript :: Text
+plutusV3SpendingScript =
+  Text.unlines ["{"
+               , "\"type\": \"PlutusScriptV3\""
+               , ",\"description\": \"\""
+               , ",\"cborHex\": \"484701010022280001\""
+               , "}"
+               ]
+
+-- TODO: move to cardano-api
+unsafeBoundedRational :: forall r. (HasCallStack, Typeable r, BoundedRational r)
+                      => Rational
+                      -> r
+unsafeBoundedRational x = fromMaybe (error errMessage) $ boundRational x
+  where
+    errMessage = show (typeRep (Proxy @r)) <> " is out of bounds: " <> show x

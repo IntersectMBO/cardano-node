@@ -19,6 +19,7 @@ backend_nomadpodman() {
 
     # Overrided backend "methods"
 
+    # All sub-backends set these same jq envars.
     setenv-defaults )
       local usage="USAGE: wb backend $op BACKEND-DIR"
       local backend_dir=${1:?$usage}; shift
@@ -42,9 +43,9 @@ backend_nomadpodman() {
     ;;
 
     allocate-run )
-      allocate-run-nomadpodman              "$@"
-      # Does a pre allocation before calling the default/common allocation.
+      # Default allocation before calling the backend specific allocation.
       backend_nomad allocate-run            "$@"
+      allocate-run-nomadpodman              "$@"
     ;;
 
     # Called by `run.sh` without exit trap (unlike `scenario_setup_exit_trap`)!
@@ -59,7 +60,16 @@ backend_nomadpodman() {
       # unnecesary Nomad specific traffic (~99% happens waiting for node-0, the
       # first one it waits to stop inside a loop) and at the same time be less
       # sensitive to network failures.
-      backend_nomad wait-pools-stopped    1 "$@"
+      backend_nomad wait-pools-stopped      1 "$@"
+    ;;
+
+    wait-latencies-stopped )
+      # It passes the sleep time (in seconds) required argument.
+      # This time is different between local and cloud backends to avoid
+      # unnecesary Nomad specific traffic (~99% happens waiting for node-0, the
+      # first one it waits to stop inside a loop) and at the same time be less
+      # sensitive to network failures.
+      backend_nomad wait-latencies-stopped  1 "$@"
     ;;
 
     # All or clean up everything!
@@ -103,6 +113,10 @@ backend_nomadpodman() {
       backend_nomad start-healthchecks      "$@"
     ;;
 
+    start-latencies )
+      backend_nomad start-latencies         "$@"
+    ;;
+
     start-node )
       backend_nomad start-node              "$@"
     ;;
@@ -143,9 +157,7 @@ backend_nomadpodman() {
 
 }
 
-# Sets jq envars "profile_container_specs_file" ,"nomad_environment",
-# "nomad_task_driver" and "one_tracer_per_node".
-# It "overrides" completely `backend_nomad`'s `setenv-defaults`.
+# Sets the envars not shared by all the other sub-backends.
 setenv-defaults-nomadpodman() {
   local backend_dir="${1}"
 
@@ -168,13 +180,17 @@ allocate-run-nomadpodman() {
   # Create a nicely sorted and indented copy
   jq . "${profile_container_specs_file}" > "${dir}"/container-specs.json
 
-  # Create nomad folder and copy the Nomad job spec file to run.
-  mkdir -p "${dir}"/nomad
   # Select which version of the Nomad job spec file we are running and
   # create a nicely sorted and indented copy it "nomad/nomad-job.json".
   jq -r ".nomadJob.podman.oneTracerPerCluster" \
     "${dir}"/container-specs.json              \
   > "${dir}"/nomad/nomad-job.json
+  # Update the Nomad Job specs file accordingly
+  ## - Job Name
+  ### Must match `^[a-zA-Z0-9-]{1,128}$)` or it won't be possible to use it
+  ### as namespace.: "invalid name "2023-02-10-06.34.f178b.ci-test-bage.nom"".
+  local nomad_job_name=$(basename "${dir}")
+  backend_nomad allocate-run-nomad-job-patch-name "${dir}" "${nomad_job_name}"
   # The job file is "slightly" modified (jq) to suit the running environment.
   ## Empty the global namespace. Local runs ignore "${NOMAD_NAMESPACE:-}"
   backend_nomad allocate-run-nomad-job-patch-namespace "${dir}"

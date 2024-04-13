@@ -108,6 +108,12 @@ let
             inherit runJq;
           })
         healthcheck-service;
+
+      inherit
+        (pkgs.callPackage
+          ../service/latency.nix
+          {})
+        latency-service;
     };
 
   profile-names-json =
@@ -130,12 +136,7 @@ let
           ;
           nodeSpecsJson = mkNodeSpecsJson
             { inherit profileName profileJson;};
-          nodeSpecs =
-            let nodeSpecsValue = __fromJSON (__readFile nodeSpecsJson);
-            in if backend.validateNodeSpecs { inherit nodeSpecsValue; }
-              then nodeSpecsValue
-              else builtins.throw "Incompatible backend for the current profile"
-          ;
+          nodeSpecs = __fromJSON (__readFile nodeSpecsJson);
           genesisFiles =
             mkGenesisFiles
               { inherit profileName profileJson nodeSpecsJson; }
@@ -151,6 +152,7 @@ let
             generator-service
             tracer-service
             healthcheck-service
+            latency-service
           ;
         in
           pkgs.runCommand "workbench-profile-${profileName}"
@@ -191,12 +193,19 @@ let
                 { name                 = "healthcheck";
                   start                = start.JSON;
                 };
+              latencyService =
+                with healthcheck-service;
+                __toJSON
+                { name                 = "latency";
+                  start                = start.JSON;
+                };
               passAsFile =
                 [
                   "nodeServices"
                   "generatorService"
                   "tracerService"
                   "healthcheckService"
+                  "latencyService"
                   "topologyJson"
                   "topologyDot"
                 ];
@@ -211,6 +220,7 @@ let
             cp    $generatorServicePath         $out/generator-service.json
             cp    $tracerServicePath            $out/tracer-service.json
             cp    $healthcheckServicePath       $out/healthcheck-service.json
+            cp    $latencyServicePath           $out/latency-service.json
             ''
           //
           (
@@ -226,7 +236,7 @@ let
               };
               node-specs = {JSON = nodeSpecsJson; value = nodeSpecs;};
               genesis.files = genesisFiles;
-              inherit node-services generator-service tracer-service healthcheck-service;
+              inherit node-services generator-service tracer-service healthcheck-service latency-service;
             }
           )
   ;

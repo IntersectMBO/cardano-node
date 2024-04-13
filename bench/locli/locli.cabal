@@ -101,7 +101,7 @@ library
                       , attoparsec
                       , attoparsec-iso8601
                       , bytestring
-                      , cardano-git-rev
+                      , cardano-git-rev ^>= 0.2.2
                       , cardano-ledger-core
                       , cardano-prelude
                       , cardano-slotting
@@ -121,7 +121,7 @@ library
                       , optparse-generic
                       , ouroboros-consensus
                       -- for Data.SOP.Strict:
-                      , ouroboros-network ^>= 0.11
+                      , ouroboros-network ^>= 0.13
                       , ouroboros-network-api
                       , process
                       , quiet
@@ -170,12 +170,12 @@ test-suite test-locli
   hs-source-dirs:       test
   main-is:              test-locli.hs
   type:                 exitcode-stdio-1.0
-  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-N -T"
 
   build-depends:        cardano-prelude
                       , containers
                       , hedgehog
-                      , hedgehog-extras ^>= 0.6.1.0
+                      , hedgehog-extras < 0.6.2
                       , locli
                       , text
 

@@ -17,9 +17,11 @@ module Testnet.Property.Utils
   -- ** Genesis
   , getByronGenesisHash
   , getShelleyGenesisHash
+
+  , decodeEraUTxO
   ) where
 
-import           Cardano.Api (MonadIO, runExceptT)
+import           Cardano.Api
 
 import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
 import qualified Cardano.Crypto.Hash.Blake2b as Crypto
@@ -117,4 +119,7 @@ runInBackground act = void . H.evalM $ allocate (H.async act) cleanUp
   where
     cleanUp :: H.Async a -> IO ()
     cleanUp a = H.cancel a >> void (H.link a)
+
+decodeEraUTxO :: (IsShelleyBasedEra era, MonadTest m) => ShelleyBasedEra era -> Aeson.Value -> m (UTxO era)
+decodeEraUTxO _ = H.jsonErrorFail . Aeson.fromJSON
 

@@ -7,24 +7,25 @@ module  Cardano.TxGenerator.Tx
         (module Cardano.TxGenerator.Tx)
         where
 
+import           Cardano.Api
+import           Cardano.Api.Shelley (LedgerProtocolParameters)
+
+import qualified Cardano.Ledger.Coin as L
+import           Cardano.TxGenerator.Fund
+import           Cardano.TxGenerator.Types
+import           Cardano.TxGenerator.UTxO (ToUTxOList)
+
 import           Data.Bifunctor (bimap, second)
 import qualified Data.ByteString as BS (length)
 import           Data.Function ((&))
 import           Data.Maybe (mapMaybe)
-
-import           Cardano.Api
-import           Cardano.Api.Shelley (LedgerProtocolParameters)
-
-import           Cardano.TxGenerator.Fund
-import           Cardano.TxGenerator.Types
-import           Cardano.TxGenerator.UTxO (ToUTxOList)
 
 
 -- | 'CreateAndStore' is meant to represent building a transaction
 -- from a single number and presenting a function to carry out the
 -- needed side effects.
 -- This type alias is only used in "Cardano.Benchmarking.Wallet".
-type CreateAndStore m era           = Lovelace -> (TxOut CtxTx era, TxIx -> TxId -> m ())
+type CreateAndStore m era           = L.Coin -> (TxOut CtxTx era, TxIx -> TxId -> m ())
 
 -- | 'CreateAndStoreList' is meant to represent building a transaction
 -- and presenting a function to carry out the needed side effects.
@@ -41,7 +42,7 @@ type CreateAndStoreList m era split = split -> ([TxOut CtxTx era], TxId -> m ())
 -- arguments. "Cardano.Benchmarking.Script.PureExample" is the sole caller.
 -- @txGenerator@ is just 'genTx' partially applied in all uses of all
 -- these functions.
--- @inputFunds@ for this is a list of 'Lovelace' with some extra
+-- @inputFunds@ for this is a list of 'L.Coin' with some extra
 -- fields to throw away and coproducts maintaining distinctions that
 -- don't matter to these functions.
 -- The @inToOut@ argument seems to just sum and subtract the fee in
@@ -56,7 +57,7 @@ sourceToStoreTransaction ::
      Monad m
   => TxGenerator era
   -> FundSource m
-  -> ([Lovelace] -> split)
+  -> ([L.Coin] -> split)
   -> ToUTxOList era split
   -> FundToStoreList m                --inline to ToUTxOList
   -> m (Either TxGenError (Tx era))
@@ -65,10 +66,10 @@ sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore =
  where
   go inputFunds = do
     let
-      -- 'getFundLovelace' unwraps the 'TxOutValue' in a fund field
+      -- 'getFundCoin' unwraps the 'TxOutValue' in a fund field
       -- so it's all just 'Lovelace' instead of a coproduct
       -- maintaining distinctions.
-      outValues = inToOut $ map getFundLovelace inputFunds
+      outValues = inToOut $ map getFundCoin inputFunds
       (outputs, toFunds) = mkTxOut outValues
     case txGenerator inputFunds outputs of
         Left err -> return $ Left err
@@ -93,7 +94,7 @@ sourceToStoreTransactionNew ::
      Monad m
   => TxGenerator era
   -> FundSource m
-  -> ([Lovelace] -> split)
+  -> ([L.Coin] -> split)
   -> CreateAndStoreList m era split
   -> m (Either TxGenError (Tx era))
 sourceToStoreTransactionNew txGenerator fundSource valueSplitter toStore =
@@ -101,7 +102,7 @@ sourceToStoreTransactionNew txGenerator fundSource valueSplitter toStore =
  where
   go inputFunds = do
     let
-      split = valueSplitter $ map getFundLovelace inputFunds
+      split = valueSplitter $ map getFundCoin inputFunds
       (outputs, storeAction) = toStore split
     case txGenerator inputFunds outputs of
         Left err -> return $ Left err
@@ -136,14 +137,14 @@ sourceToStoreTransactionNew txGenerator fundSource valueSplitter toStore =
 sourceTransactionPreview ::
      TxGenerator era
   -> [Fund]
-  -> ([Lovelace] -> split)
+  -> ([L.Coin] -> split)
   -> CreateAndStoreList m era split
   -> Either TxGenError (Tx era)
 sourceTransactionPreview txGenerator inputFunds valueSplitter toStore =
   second fst $
     txGenerator inputFunds outputs
  where
-  split         = valueSplitter $ map getFundLovelace inputFunds
+  split         = valueSplitter $ map getFundCoin inputFunds
   (outputs, _)  = toStore split
 
 -- | 'genTx' seems to mostly be a wrapper for

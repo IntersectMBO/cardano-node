@@ -1,6 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
@@ -25,9 +25,11 @@ import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..), Node
 import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..),
                    LocalRootPeersGroups (..), NetworkTopology (..), NodeSetup (..),
                    PeerAdvertise (..), PublicRootPeers (..), RootConfig (..))
-import           Cardano.Node.Types (UseLedger (..))
 import           Cardano.Slotting.Slot (SlotNo (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.Bootstrap
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
+                   UseLedgerPeers (..))
+import           Ouroboros.Network.PeerSelection.PeerTrustable
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (DomainAccessPoint (..),
                    RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency (..),
@@ -51,7 +53,8 @@ genNetworkTopology =
   Gen.choice
     [ RealNodeTopology <$> genLocalRootPeersGroups
                        <*> Gen.list (Range.linear 0 10) genPublicRootPeers
-                       <*> genUseLedger
+                       <*> genUseLedgerPeers
+                       <*> genUseBootstrapPeers
     ]
 
 -- | Generate valid encodings of p2p topology files
@@ -146,7 +149,7 @@ genNodeSetup =
     <*> Gen.maybe (genNodeAddress' genNodeHostIPv4Address)
     <*> Gen.maybe (genNodeAddress' genNodeHostIPv6Address)
     <*> Gen.list (Range.linear 0 6) genRootConfig
-    <*> genUseLedger
+    <*> genUseLedgerPeers
 
 genDomainAddress :: Gen DomainAccessPoint
 genDomainAddress =
@@ -177,7 +180,7 @@ genLocalRootPeersGroup = do
     ra <- genRootConfig
     hval <- Gen.int (Range.linear 0 (length (rootAccessPoints ra)))
     wval <- WarmValency <$> Gen.int (Range.linear 0 hval)
-    return (LocalRootPeersGroup ra (HotValency hval) wval)
+    LocalRootPeersGroup ra (HotValency hval) wval <$> genPeerTrustable
 
 genLocalRootPeersGroups :: Gen LocalRootPeersGroups
 genLocalRootPeersGroups =
@@ -189,8 +192,18 @@ genPublicRootPeers =
   PublicRootPeers
     <$> genRootConfig
 
-genUseLedger :: Gen UseLedger
-genUseLedger = do
+genUseLedgerPeers :: Gen UseLedgerPeers
+genUseLedgerPeers = do
     slot <- Gen.integral (Range.linear (-1) 10) :: Gen Integer
-    if slot >= 0 then return $ UseLedger $ UseLedgerAfter $ SlotNo $ fromIntegral slot
-                 else return $ UseLedger   DontUseLedger
+    return $ case compare slot 0 of
+      GT -> UseLedgerPeers $ After $ SlotNo $ fromIntegral slot
+      EQ -> UseLedgerPeers Always
+      LT -> DontUseLedgerPeers
+
+genUseBootstrapPeers :: Gen UseBootstrapPeers
+genUseBootstrapPeers = do
+  domains <- Gen.list (Range.linear 0 6) genRelayAddress
+  Gen.element [ DontUseBootstrapPeers , UseBootstrapPeers domains ]
+
+genPeerTrustable :: Gen PeerTrustable
+genPeerTrustable = Gen.element [ IsNotTrustable, IsTrustable ]

@@ -47,6 +47,7 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
+import           Ouroboros.Consensus.Node.GSM
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
@@ -74,7 +75,6 @@ import qualified Data.IntPSQ as Pq
 import qualified Data.Text as Text
 import           Data.Time (DiffTime, NominalDiffTime)
 import           Data.Word (Word32, Word64)
-
 
 instance (LogFormatting adr, Show adr) => LogFormatting (ConnectionId adr) where
   forMachine _dtal (ConnectionId local' remote) =
@@ -154,39 +154,90 @@ instance (LogFormatting (LedgerUpdate blk), LogFormatting (LedgerWarning blk))
 
 instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
       => LogFormatting (TraceChainSyncClientEvent blk) where
-  forHuman (TraceDownloadedHeader pt) = mconcat
-    [ "While following a candidate chain, we rolled forward by downloading a"
-    , " header. "
-    , showT (headerPoint pt)
-    ]
-  forHuman (TraceRolledBack tip) =
-    "While following a candidate chain, we rolled back to the given point: "
-      <> showT tip
-  forHuman (TraceException exc) =
-    "An exception was thrown by the Chain Sync Client. "
-      <> showT exc
-  forHuman TraceFoundIntersection {} = mconcat
-    [ "We found an intersection between our chain fragment and the"
-    , " candidate's chain."
-    ]
-  forHuman (TraceTermination res) =
+  forHuman = \case
+    TraceDownloadedHeader pt ->
+      mconcat
+        [ "While following a candidate chain, we rolled forward by downloading a"
+        , " header. "
+        , showT (headerPoint pt)
+        ]
+    TraceRolledBack tip ->
+      "While following a candidate chain, we rolled back to the given point: " <> showT tip
+    TraceException exc ->
+      "An exception was thrown by the Chain Sync Client. " <> showT exc
+    TraceFoundIntersection {} ->
+      mconcat
+        [ "We found an intersection between our chain fragment and the"
+        , " candidate's chain."
+        ]
+    TraceTermination res ->
       "The client has terminated. " <> showT res
+    TraceValidatedHeader header ->
+      "The header has been validated" <> showT (headerHash header)
+    TraceWaitingBeyondForecastHorizon slotNo ->
+      mconcat
+        [ "The slot number " <> showT slotNo <> " is beyond the forecast horizon, the ChainSync client"
+        , " cannot yet validate a header in this slot and therefore is waiting"
+        ]
+    TraceAccessingForecastHorizon slotNo ->
+      mconcat
+        [ "The slot number " <> showT slotNo <> ", which was previously beyond the forecast horizon, has now"
+        , " entered it, and we can resume processing."
+        ]
+    TraceGaveLoPToken {} ->
+      mconcat
+        [ "Whether we added a token to the LoP bucket of the peer. Also carries"
+        , "the considered header and the best block number known prior to this"
+        , "header"
+        ]
 
-  forMachine _dtal (TraceDownloadedHeader h) =
-      mconcat [ "kind" .= String "DownloadedHeader"
-              , tipToObject (tipFromHeader h)
-              ]
-  forMachine dtal (TraceRolledBack tip) =
-      mconcat [ "kind" .= String "RolledBack"
-               , "tip" .= forMachine dtal tip ]
-  forMachine _dtal (TraceException exc) =
-      mconcat [ "kind" .= String "Exception"
-               , "exception" .= String (Text.pack $ show exc) ]
-  forMachine _dtal TraceFoundIntersection {} =
-      mconcat [ "kind" .= String "FoundIntersection" ]
-  forMachine _dtal (TraceTermination reason) =
-      mconcat [ "kind" .= String "Termination"
-               , "reason" .= String (Text.pack $ show reason) ]
+  forMachine dtal = \case
+    TraceDownloadedHeader h ->
+      mconcat
+        [ "kind" .= String "DownloadedHeader"
+        , tipToObject (tipFromHeader h)
+        ]
+    TraceRolledBack tip ->
+      mconcat
+        [ "kind" .= String "RolledBack"
+        , "tip" .= forMachine dtal tip
+        ]
+    TraceException exc ->
+      mconcat
+        [ "kind" .= String "Exception"
+        , "exception" .= String (Text.pack $ show exc)
+        ]
+    TraceFoundIntersection {} ->
+      mconcat
+        [ "kind" .= String "FoundIntersection"
+        ]
+    TraceTermination reason ->
+      mconcat
+        [ "kind" .= String "Termination"
+        , "reason" .= String (Text.pack $ show reason)
+        ]
+    TraceValidatedHeader header ->
+      mconcat
+        [ "kind" .= String "ValidatedHeader"
+        , "headerHash" .= showT (headerHash header)
+        ]
+    TraceWaitingBeyondForecastHorizon slotNo ->
+      mconcat
+        [ "kind" .= String "WaitingBeyondForecastHorizon"
+        , "slotNo" .= slotNo
+        ]
+    TraceAccessingForecastHorizon slotNo ->
+      mconcat
+        [ "kind" .= String "AccessingForecastHorizon"
+        , "slotNo" .= slotNo
+        ]
+    TraceGaveLoPToken tokenAdded header aBlockNo ->
+      mconcat
+        [ "kind" .= String "TraceGaveLoPToken"
+        , "tokenAdded" .= tokenAdded
+        , "headerHash" .= showT (headerHash header)
+        , "blockNo" .= aBlockNo
+        ]
 
 tipToObject :: forall blk. ConvertRawHash blk => Tip blk -> Aeson.Object
 tipToObject = \case
@@ -202,42 +253,88 @@ tipToObject = \case
     ]
 
 instance MetaTrace (TraceChainSyncClientEvent blk) where
-  namespaceFor TraceDownloadedHeader {} = Namespace [] ["DownloadedHeader"]
-  namespaceFor TraceRolledBack {} = Namespace [] ["RolledBack"]
-  namespaceFor TraceException {} = Namespace [] ["Exception"]
-  namespaceFor TraceFoundIntersection {} = Namespace [] ["FoundIntersection"]
-  namespaceFor TraceTermination {} = Namespace [] ["Termination"]
+  namespaceFor = \case
+    TraceDownloadedHeader {} ->
+      Namespace [] ["DownloadedHeader"]
+    TraceRolledBack {} ->
+      Namespace [] ["RolledBack"]
+    TraceException {} ->
+      Namespace [] ["Exception"]
+    TraceFoundIntersection {} ->
+      Namespace [] ["FoundIntersection"]
+    TraceTermination {} ->
+      Namespace [] ["Termination"]
+    TraceValidatedHeader {} ->
+      Namespace [] ["ValidatedHeader"]
+    TraceWaitingBeyondForecastHorizon {} ->
+      Namespace [] ["WaitingBeyondForecastHorizon"]
+    TraceAccessingForecastHorizon {} ->
+      Namespace [] ["AccessingForecastHorizon"]
+    TraceGaveLoPToken {} ->
+      Namespace [] ["GaveLoPToken"]
 
-  severityFor (Namespace _ ["DownloadedHeader"]) _ = Just Info
-  severityFor (Namespace _ ["RolledBack"]) _ = Just Notice
-  severityFor (Namespace _ ["Exception"]) _ = Just Warning
-  severityFor (Namespace _ ["FoundIntersection"]) _ = Just Info
-  severityFor (Namespace _ ["Termination"]) _ = Just Notice
-  severityFor _ _ = Nothing
+  severityFor ns _ =
+    case ns of
+      Namespace _ ["DownloadedHeader"] ->
+        Just Info
+      Namespace _ ["RolledBack"] ->
+        Just Notice
+      Namespace _ ["Exception"] ->
+        Just Warning
+      Namespace _ ["FoundIntersection"] ->
+        Just Info
+      Namespace _ ["Termination"] ->
+        Just Notice
+      Namespace _ ["ValidatedHeader"] ->
+        Just Debug
+      Namespace _ ["WaitingBeyondForecastHorizon"] ->
+        Just Debug
+      Namespace _ ["AccessingForecastHorizon"] ->
+        Just Debug
+      Namespace _ ["GaveLoPToken"] ->
+        Just Debug
+      _ ->
+        Nothing
 
-  documentFor (Namespace _ ["DownloadedHeader"]) = Just $ mconcat
-    [ "While following a candidate chain, we rolled forward by downloading a"
-    , " header."
-    ]
-  documentFor (Namespace _ ["RolledBack"]) = Just
-    "While following a candidate chain, we rolled back to the given point."
-  documentFor (Namespace _ ["Exception"]) = Just
-    "An exception was thrown by the Chain Sync Client."
-  documentFor (Namespace _ ["FoundIntersection"]) = Just $ mconcat
-    [ "We found an intersection between our chain fragment and the"
-    , " candidate's chain."
-    ]
-  documentFor (Namespace _ ["Termination"]) = Just
-    "The client has terminated."
-  documentFor _ = Nothing
+  documentFor ns =
+    case ns of
+      Namespace _ ["DownloadedHeader"] ->
+        Just $ mconcat
+          [ "While following a candidate chain, we rolled forward by downloading a"
+          , " header."
+          ]
+      Namespace _ ["RolledBack"] ->
+        Just "While following a candidate chain, we rolled back to the given point."
+      Namespace _ ["Exception"] ->
+        Just "An exception was thrown by the Chain Sync Client."
+      Namespace _ ["FoundIntersection"] ->
+        Just $ mconcat
+          [ "We found an intersection between our chain fragment and the"
+          , " candidate's chain."
+          ]
+      Namespace _ ["Termination"] ->
+        Just "The client has terminated."
+      Namespace _ ["ValidatedHeader"] ->
+        Just "The header has been validated"
+      Namespace _ ["WaitingBeyondForecastHorizon"] ->
+        Just "The slot number is beyond the forecast horizon"
+      Namespace _ ["AccessingForecastHorizon"] ->
+        Just "The slot number, which was previously beyond the forecast horizon, has now entered it"
+      Namespace _ ["GaveLoPToken"] ->
+        Just "May have added atoken to the LoP bucket of the peer"
+      _ ->
+        Nothing
 
   allNamespaces =
-    [
-      Namespace [] ["DownloadedHeader"]
+    [ Namespace [] ["DownloadedHeader"]
     , Namespace [] ["RolledBack"]
     , Namespace [] ["Exception"]
     , Namespace [] ["FoundIntersection"]
     , Namespace [] ["Termination"]
+    , Namespace [] ["ValidatedHeader"]
+    , Namespace [] ["WaitingBeyondForecastHorizon"]
+    , Namespace [] ["AccessingForecastHorizon"]
+    , Namespace [] ["GaveLoPToken"]
     ]
 
 --------------------------------------------------------------------------------
@@ -1052,7 +1149,7 @@ instance LogFormatting TraceStartLeadershipCheckPlus where
         mconcat [ "kind" .= String "TraceStartLeadershipCheck"
                 , "slot" .= toJSON (unSlotNo tsSlotNo)
                 , "utxoSize" .= Number (fromIntegral tsUtxoSize)
-                , "delegMapSize" .= Number (fromIntegral tsUtxoSize)
+                , "delegMapSize" .= Number (fromIntegral tsDelegMapSize)
                 , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
                 ]
   forHuman TraceStartLeadershipCheckPlus {..} =
@@ -1734,3 +1831,86 @@ instance MetaTrace (TraceKeepAliveClient remotePeer) where
   documentFor _ = Just ""
 
   allNamespaces = [Namespace [] ["KeepAliveClient"]]
+
+--------------------------------------------------------------------------------
+-- Gsm Tracer
+--------------------------------------------------------------------------------
+
+instance ( LogFormatting selection
+         , Show selection
+         ) => LogFormatting (TraceGsmEvent selection) where
+  forMachine dtal =
+    \case
+      GsmEventEnterCaughtUp i s ->
+        mconcat
+          [ "kind" .= String "GsmEventEnterCaughtUp"
+          , "peerNumber" .= i
+          , "currentSelection" .= forMachine dtal s
+          ]
+      GsmEventLeaveCaughtUp s a ->
+        mconcat
+          [ "kind" .= String "GsmEventLeaveCaughtUp"
+          , "currentSelection" .= forMachine dtal s
+          , "age" .= toJSON (show a)
+          ]
+      GsmEventPreSyncingToSyncing ->
+        mconcat
+          [ "kind" .= String "GsmEventPreSyncingToSyncing"
+          ]
+      GsmEventSyncingToPreSyncing ->
+        mconcat
+          [ "kind" .= String "GsmEventSyncingToPreSyncing"
+          ]
+
+  forHuman = showT
+
+instance MetaTrace (TraceGsmEvent selection) where
+  namespaceFor =
+    \case
+      GsmEventEnterCaughtUp {}        -> Namespace [] ["EnterCaughtUp"]
+      GsmEventLeaveCaughtUp {}        -> Namespace [] ["LeaveCaughtUp"]
+      GsmEventPreSyncingToSyncing {}  -> Namespace [] ["GsmEventPreSyncingToSyncing"]
+      GsmEventSyncingToPreSyncing {}  -> Namespace [] ["GsmEventSyncingToPreSyncing"]
+
+  severityFor ns _ =
+    case ns of
+      Namespace _ ["EnterCaughtUp"]               -> Just Info
+      Namespace _ ["LeaveCaughtUp"]               -> Just Info
+      Namespace _ ["GsmEventPreSyncingToSyncing"] -> Just Info
+      Namespace _ ["GsmEventSyncingToPreSyncing"] -> Just Info
+      Namespace _ _                               -> Nothing
+
+  documentFor = \case
+    Namespace _ ["EnterCaughtUp"] ->
+      Just "Node is caught up"
+    Namespace _ ["LeaveCaughtUp"] ->
+      Just "Node is not caught up"
+
+    Namespace _ ["GsmEventPreSyncingToSyncing"] ->
+      Just "The Honest Availability Assumption is now satisfied"
+    Namespace _ ["GsmEventSyncingToPreSyncing"] ->
+      Just "The Honest Availability Assumption is no longer satisfied"
+
+    Namespace _ _ ->
+      Nothing
+
+  allNamespaces =
+    [ Namespace [] ["EnterCaughtUp"]
+    , Namespace [] ["LeaveCaughtUp"]
+    , Namespace [] ["GsmEventPreSyncingToSyncing"]
+    , Namespace [] ["GsmEventSyncingToPreSyncing"]
+    ]
+
+instance ( StandardHash blk
+         , ConvertRawHash blk
+         ) => LogFormatting (Tip blk) where
+  forMachine _dtal TipGenesis =
+    mconcat [ "kind" .= String "TipGenesis" ]
+  forMachine _dtal (Tip slotNo hash bNo) =
+    mconcat [ "kind" .= String "Tip"
+            , "tipSlotNo" .= toJSON (unSlotNo slotNo)
+            , "tipHash" .= renderHeaderHash (Proxy @blk) hash
+            , "tipBlockNo" .= toJSON bNo
+            ]
+
+  forHuman = showT

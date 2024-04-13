@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE GADTs #-}
@@ -8,10 +7,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-#if __GLASGOW_HASKELL__ >= 908
-{-# OPTIONS_GHC -Wno-x-partial #-}
-#endif
-
 module Cardano.Testnet.Test.Cli.KesPeriodInfo
   ( hprop_kes_period_info
   ) where
@@ -19,15 +14,16 @@ module Cardano.Testnet.Test.Cli.KesPeriodInfo
 import           Cardano.Api as Api
 
 import           Cardano.CLI.Types.Output
+import           Cardano.Node.Configuration.Topology
 import           Cardano.Testnet
 import           Cardano.Testnet.Test.Misc
 
 import           Prelude
 
 import           Control.Monad
-import           Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson as J
+import           Data.Function
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           GHC.Stack (callStack)
@@ -49,8 +45,6 @@ import           Hedgehog.Extras.Stock (sprocketSystemName)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
-{- HLINT ignore "Use underscore" -}
-
 hprop_kes_period_info :: Property
 hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
@@ -64,20 +58,24 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
       anyEra = AnyCardanoEra era
       cTestnetOptions = cardanoDefaultTestnetOptions
                           { cardanoNodes = cardanoDefaultTestnetNodeOptions
-                          , cardanoSlotLength = 0.1
-                          , cardanoActiveSlotsCoeff = 0.1
                           , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+                          , cardanoActiveSlotsCoeff = 0.1
                           }
 
-  runTime@TestnetRuntime { configurationFile, testnetMagic, wallets } <- cardanoTestnetDefault cTestnetOptions conf
+  runTime@TestnetRuntime
+    { configurationFile
+    , testnetMagic
+    , wallets=wallet0:_
+    , poolNodes
+    } <- cardanoTestnetDefault cTestnetOptions conf
   node1sprocket <- H.headM $ poolSprockets runTime
   execConfig <- H.mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
   -- We get our UTxOs from here
-  let utxoAddr = Text.unpack $ paymentKeyInfoAddr $ head wallets
-      utxoSKeyFile = paymentSKey . paymentKeyInfoPair $ head wallets
+  let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
+      utxoSKeyFile = paymentSKey $ paymentKeyInfoPair wallet0
   void $ H.execCli' execConfig
-    [ convertToEraString anyEra, "query", "utxo"
+    [ anyEraToString anyEra, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
     , "--out-file", work </> "utxo-1.json"
@@ -129,6 +127,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
     tempAbsPath
     (cardanoNodeEra cTestnetOptions)
     testDelegatorVkeyFp
+    2_000_000
     testDelegatorRegCertFp
 
   -- Test stake address deleg  cert
@@ -143,7 +142,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   H.note_  "Get updated UTxO"
 
   void $ H.execCli' execConfig
-    [ convertToEraString anyEra, "query", "utxo"
+    [ anyEraToString anyEra, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
     , "--out-file", work </> "utxo-2.json"
@@ -155,12 +154,12 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
   txin2 <- H.noteShow =<< H.headM (Map.keys utxo2)
 
-  let eraFlag = convertToEraFlag $ cardanoNodeEra cTestnetOptions
+  let eraString = anyEraToString $ cardanoNodeEra cTestnetOptions
       delegRegTestDelegatorTxBodyFp = work </> "deleg-register-test-delegator.txbody"
 
   void $ execCli' execConfig
-    [ "transaction", "build"
-    , eraFlag
+    [ eraString
+    , "transaction", "build"
     , "--change-address", testDelegatorPaymentAddr -- NB: A large balance ends up at our test delegator's address
     , "--tx-in", Text.unpack $ renderTxIn txin2
     , "--tx-out", utxoAddr <> "+" <> show @Int 5_000_000
@@ -201,28 +200,12 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   let testSpoDir = work </> "test-spo"
       topologyFile = testSpoDir </> "topology.json"
   H.createDirectoryIfMissing_ testSpoDir
-  -- TODO: We need a way to automatically create this based on
-  -- the existing testnet
-  H.lbsWriteFile topologyFile $ Aeson.encode $
-    object
-    [ "Producers" .= toJSON
-      [ object
-        [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3002
-        , "valency" .= toJSON @Int 1
-        ]
-      , object
-        [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3001
-        , "valency" .= toJSON @Int 1
-        ]
-      , object
-        [ "addr"    .= toJSON @String "127.0.0.1"
-        , "port"    .= toJSON @Int 3003
-        , "valency" .= toJSON @Int 1
-        ]
-      ]
-    ]
+  let valency = 1
+      topology = RealNodeTopology $
+        flip map poolNodes $ \PoolNode{poolRuntime=NodeRuntime{nodeIpv4,nodePort}} ->
+            RemoteAddress nodeIpv4 nodePort valency
+  H.lbsWriteFile topologyFile $ Aeson.encode topology
+
   let testSpoVrfVKey = work </> "vrf.vkey"
       testSpoVrfSKey = work </> "vrf.skey"
       testSpoKesVKey = work </> "kes.vkey"
@@ -251,9 +234,10 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
       , "--out-file", testSpoOperationalCertFp
       ]
 
-  yamlBs <- createConfigYaml tempAbsPath (cardanoNodeEra cTestnetOptions)
-  H.lbsWriteFile configurationFile yamlBs
-  eRuntime <- lift . lift . runExceptT $ startNode tempAbsPath "test-spo" 3005 testnetMagic
+  jsonBS <- createConfigJson tempAbsPath (cardanoNodeEra cTestnetOptions)
+  H.lbsWriteFile configurationFile jsonBS
+  [newNodePortNumber] <- requestAvailablePortNumbers 1
+  eRuntime <- lift . lift . runExceptT $ startNode tempAbsPath "test-spo" "127.0.0.1" newNodePortNumber testnetMagic
         [ "run"
         , "--config", configurationFile
         , "--topology", topologyFile
@@ -264,7 +248,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
         ]
   NodeRuntime{ nodeStdout } <- H.evalEither eRuntime
 
-  threadDelay 5_000000
+  threadDelay 5_000_000
 
   stakeSnapshot1 <- execCli' execConfig
      [ "query", "stake-snapshot"
@@ -308,7 +292,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
         H.failMessage callStack "cardano-cli query tip returned Nothing for EpochNo"
       Just currEpoch -> return currEpoch
 
-  let nodeHasMintedEpoch = currEpoch + 3
+  let nodeHasMintedEpoch = currEpoch & succ & succ & succ
   currentEpoch <- waitUntilEpoch
                    (Api.File configurationFile)
                    (Api.File $ sprocketSystemName node1sprocket)
