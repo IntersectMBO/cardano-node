@@ -44,12 +44,12 @@ library
                       , containers
                       , aeson
 
-executable stdout-tools
+executable tq
   import:               project-config
 
   hs-source-dirs:       app
 
-  main-is:              stdout-tools.hs
+  main-is:              tq.hs
 
   build-depends:        time
                       , text

@@ -2,7 +2,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveGeneric #-}
 
--- All traces start with the same JSON object with an "at" and "ns" properties,
+-- All traces start with the a JSON object having an "at" and an "ns" property,
 -- use this assumption to build a "fast" decoder.
 -- {"at":"2024-03-30T00:30:27.015631111Z","ns":"Reflection.TracerInfo",...}
 --------------------------------------------------------------------------------
