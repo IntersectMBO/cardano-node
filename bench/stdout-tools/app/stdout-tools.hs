@@ -125,9 +125,8 @@ module Main (main) where
 import           Control.Applicative (some, (<|>))
 import           Control.Monad (when, foldM)
 import           Data.Foldable (toList)
-import           GHC.Generics
 import           Data.Kind (Type)
-
+import           GHC.Generics
 -- package: time.
 import           Data.Time.Clock
   ( UTCTime
@@ -147,7 +146,7 @@ import qualified Data.Aeson as Aeson
 import qualified Control.Concurrent.Async as Async
 -- package: optparse-applicative.
 import qualified Options.Applicative as Opt
-
+-- library.
 import qualified Data.Log as Log
 
 --------------------------------------------------------------------------------
@@ -306,11 +305,7 @@ optsParser = CliOpts <$>
         (
           (map
             -- Parse the optional file label, looks for ":" as separator.
-            (\str ->
-              case span (/= ':') str of
-                (f,"") -> ("",f)
-                (f, s) -> (f,drop 1 s)
-            )
+            addFileLabel
             <$>
             some (
               Opt.strOption
@@ -348,6 +343,11 @@ optsParser = CliOpts <$>
             <> Opt.help "Reducer"
           )
         ))
+  where
+    addFileLabel = \str ->
+      case span (/= ':') str of
+        (f,"") -> ("",f)
+        (f, s) -> (f,drop 1 s)
 
 --------------------------------------------------------------------------------
 
