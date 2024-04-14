@@ -7,18 +7,20 @@ module Data.Log (lineFoldl') where
 
 --------------------------------------------------------------------------------
 
+-- base.
 import           System.IO
   (
     Handle
   , withFile, IOMode (ReadMode)
   , hSetBuffering, BufferMode (NoBuffering)
   )
-
--- Using strict ByteString and Text
--- Text.Lazy has no streaming decoding support.
+-- package: bytestring.
 import qualified Data.ByteString as BS
+-- package: text.
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as TextE
+-- Using strict ByteString and Text
+-- Text.Lazy has no streaming decoding support.
 
 --------------------------------------------------------------------------------
 
@@ -48,7 +50,8 @@ lineFoldl' f initialAcc filePath = do
 
 lineFoldl'' :: Handle -> Decoder -> (a -> Text.Text -> a) -> a -> IO a
 lineFoldl'' handle decoder f initialAcc = do
-  (textLine, maybeDecoder) <- {-# SCC "lineFoldl''_nextLine" #-} nextLine handle decoder
+  (textLine, maybeDecoder) <- {-# SCC "lineFoldl''_nextLine" #-}
+                              nextLine handle decoder
   -- CRITICAL: MUST BE "STRICT" by function contract.
   --           I repeat, the accumulator function has to be strict!
   let !nextAcc = {-# SCC "lineFoldl''_f" #-} f initialAcc textLine
@@ -61,54 +64,50 @@ lineFoldl'' handle decoder f initialAcc = do
 -- The cycle is: Handle -> ByteString -> UTF-8 decode -> Text.Text
 data Decoder = Decoder
   -- TODO: Strict or not? Let the function caller decide?
-  -- Function `nextLine` is all about pattern matching this thing.
+  -- Function `nextLine` is all about pattern matching these things.
   { _unfinishedLine :: !Text.Text
   , _textLeft       :: !Text.Text
   , _byteStringLeft :: !BS.ByteString
   , _textDecoding   :: !(BS.ByteString -> TextE.Decoding)
   }
 
+-- Use empty `Text`s and create an empty/initial `Data.Text.Encoding.Some`
 initialDecoder :: Decoder
-initialDecoder =
-  Decoder
-    "" "" ""
-    -- Create an empty/initial `Data.Text.Encoding.Some`
-    TextE.streamDecodeUtf8
+initialDecoder = Decoder "" "" "" TextE.streamDecodeUtf8
 
 -- There's always at least one line present because I say so.
--- CRITICAL: Consume all fetched input first, not only the ByteString also the
---           already decoded Text, so the garbage collector can release that
---           memory before more input is consumed/created.
 nextLine :: Handle -> Decoder -> IO (Text.Text, Maybe Decoder)
------------------------------------------------------------------------------
--- Reads: Maybe a partial line but no decoded Text and no fetched ByteString.
------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- IO reads: Maybe a partial line but no decoded Text and no fetched ByteString.
+--------------------------------------------------------------------------------
 nextLine handle (Decoder unfinishedLine "" "" continue) = {-# SCC "nextLine_1" #-} do
   --print ((1::Int, unfinishedLine, "", "")::(Int,Text.Text,Text.Text,BS.ByteString))
   -- Use `Data.Text.IO.hGetChunk` ? It uses an unknown buffer size!
-  bs <- {-# SCC "nextLine_1_hGet" #-} BS.hGetNonBlocking handle (hGetBufferSizeMB * 1024 * 1024)
+  bs <- {-# SCC "nextLine_1_hGet" #-}
+        BS.hGetNonBlocking handle (hGetBufferSizeMB * 1024 * 1024)
   -- Also use BS.length ? To end if lower than requested ? But it's O(n)!
   if bs == BS.empty
-  -- Last line and no more input available!
+  -- Last (or maybe first of an empty file) line and no more input available!
   then return (unfinishedLine, Nothing)
-  -- Call `newLine` again to handle the fetched ByteString.
+  -- Call `newLine` again to handle the newly fetched ByteString.
   else nextLine handle $ Decoder unfinishedLine "" bs continue
--------------------------------------------------------------------------------
--- Maybe partial line, no decoded Text. Only fetched ByteString left to decode.
--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- UTF-8 decode: Maybe a partial line, no decoded Text and only some ByteString.
+--------------------------------------------------------------------------------
 nextLine handle (Decoder unfinishedLine "" bs continue) = {-# SCC "nextLine_2" #-} do
   --print ((2::Int, "", "", bs)::(Int,Text.Text,Text.Text,BS.ByteString))
   -- We only have a fetched ByteString and we only need to decode more Text.
-  -- This call keeps growing the heap!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  let (TextE.Some text' bs' continue') = {-# SCC "nextLine_2_decode" #-} continue bs
+  let (TextE.Some text' bs' continue') = {-# SCC "nextLine_2_decode" #-}
+                                         continue bs
   -- Call `nextLine` again to handle lines and partial lines.
   nextLine handle $ Decoder unfinishedLine text' bs' continue'
------------------
--- Newline split.
------------------
+------------------------------------------------------------------------------
+-- Newline split: everything to find newline characters or ask for more input.
+------------------------------------------------------------------------------
 nextLine handle (Decoder unfinishedLine text bs !continue) = {-# SCC "nextLine_3" #-} do
   --print ((5::Int, unfinishedLine, text, bs)::(Int,Text.Text,Text.Text,BS.ByteString))
-  let (consumed, remainder) = {-# SCC "nextLine_3_break" #-} Text.break (== '\n') text
+  let (consumed, remainder) = {-# SCC "nextLine_3_break" #-}
+                              Text.break (== '\n') text
   case remainder of
     -- No newline character found!
     -- break (== 1) []      -> ( [],      []      )
