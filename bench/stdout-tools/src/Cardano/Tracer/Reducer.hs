@@ -132,19 +132,20 @@ instance Reducer MissedSlots where
     when (ans /= Nothing) (putStrLn "")
 
 instance Reducer OneSecondSilences where
-  type instance Accum OneSecondSilences = (Maybe Trace.Trace, Seq.Seq (NominalDiffTime, Trace.Trace, Trace.Trace))
+  type instance Accum OneSecondSilences = (Maybe UTCTime, Seq.Seq (NominalDiffTime, UTCTime, UTCTime))
   initialOf _ = (Nothing, Seq.empty)
   reducerOf _ (Nothing, sq) (Left _) = (Nothing, sq)
-  reducerOf _ (Nothing, sq) (Right trace) = (Just trace, sq)
-  reducerOf _ (Just prevTrace, sq) (Left _) = (Just prevTrace, sq)
-  reducerOf _ (Just prevTrace, sq) (Right trace) =
-    let diffTime = diffUTCTime (Trace.at trace) (Trace.at prevTrace)
-    in if diffTime >  fromInteger 2
-    then (Just trace, sq Seq.|> (diffTime, prevTrace, trace))
-    else (Just trace, sq)
+  reducerOf _ (Nothing, sq) (Right trace) = (Just $ Trace.at trace, sq)
+  reducerOf _ (Just prevTraceAt, sq) (Left _) = (Just prevTraceAt, sq)
+  reducerOf _ (Just prevTraceAt, sq) (Right trace) =
+    let thisTraceAt = Trace.at trace
+        diffTime = diffUTCTime thisTraceAt prevTraceAt
+    in  if diffTime >  fromInteger 2
+    then (Just thisTraceAt, sq Seq.|> (diffTime, prevTraceAt, thisTraceAt))
+    else (Just thisTraceAt, sq)
   showAns   _ = show
   printAns _ (_,sq) = mapM_
     (\(ndt, t1, _) ->
-      putStrLn $ (show ndt) ++ " (" ++ (show $ Trace.at t1) ++ ")"
+      putStrLn $ (show ndt) ++ " (" ++ (show t1) ++ ")"
     )
     (toList sq)
