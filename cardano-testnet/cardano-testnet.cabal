@@ -4,7 +4,7 @@ name:                   cardano-testnet
 version:                8.8.0
 synopsis:               The cardano full node
 description:            The cardano full node.
-copyright:              2021-2023 Input Output Global Inc (IOG).
+copyright:              2021-2023 Input Output Global Inc (IOG), 2023-2024 Intersect.
 author:                 IOHK
 maintainer:             operations@iohk.io
 category:               Cardano,
