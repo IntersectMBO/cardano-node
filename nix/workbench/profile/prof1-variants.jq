@@ -258,7 +258,7 @@ def all_profile_variants:
           producer: 12582912 # 12×1024×1024
           # 7.5 GB for the nodes without the tx-generator.
           # Plus giving 3 GB for the Nix Store and 1.5GB of margin.
-        , explorer: 14155776 # 13.5×1024×1024
+        , explorer: 18874368 # 18×1024×1024
         }
       , keep_running: true
       }
