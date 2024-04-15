@@ -27,7 +27,7 @@ real  1m30.707s
 user  1m28.129s
 sys 0m8.124s
 
-> time cabal run stdout-tools -- --file big-node:bench/stdout-tools/5nodes.stdout --filter count-lines
+> time cabal run tq -- --file big-node:bench/stdout-tools/5nodes.stdout --reducer count-lines
 25581640
 real  0m11.630s
 user  0m10.836s
@@ -50,7 +50,7 @@ real  1m9.828s
 user  1m12.247s
 sys 0m5.901s
 
-$ time cabal run stdout-tools -- --file big-node:bench/stdout-tools/5nodes.stdout --filter count-FLSLCP
+$ time cabal run tq -- --file big-node:bench/stdout-tools/5nodes.stdout --reducer count-FLSLCP
 264150
 real  0m26.420s
 user  0m25.654s
@@ -64,7 +64,7 @@ real  1m5.810s
 user  1m7.716s
 sys 0m3.674s
 
-> time cabal run stdout-tools -- --file 5stdout:bench/stdout-tools/5stdout --filter heap-changes
+> time cabal run tq -- --file 5stdout:bench/stdout-tools/5stdout --reducer heap-changes
 real  0m54.360s
 user  0m53.606s
 sys 0m0.873s
@@ -77,7 +77,7 @@ real  9m40.413s
 user  9m49.158s
 sys 1m4.572s
 
-> cabal run stdout-tools -- --run run/2024-04-05-22-32-6b142-891-value-40M64G-nomadperfssd-bage-nom --reducer heap-changes
+> cabal run tq -- --run run/2024-04-05-22-32-6b142-891-value-40M64G-nomadperfssd-bage-nom --reducer heap-changes
 real  9m10.366s
 user  8m12.345s
 sys 0m46.550s
