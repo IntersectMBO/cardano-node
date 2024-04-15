@@ -58,16 +58,14 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
 
   -- Start foldBlocks in a separate thread
   H.evalIO $ do
-    a <- async $
-      forM (id @[Int] [1, 2 ..]) $ \i -> do
-        IO.appendFile "out.txt" $ "== " <> show i <> "==\n"
-        let handler :: Env -> LedgerState -> [Api.LedgerEvent] -> BlockInMode -> () -> IO ((), FoldStatus)
-            handler _env _ledgerState _ledgerEvents blockInCardanoMode _ = do
-              IO.appendFile "out.txt" $ show i <> ": " <> take 400 (show blockInCardanoMode) <> "\n"
-              STM.atomically $ STM.writeTVar tDone True
-              pure ((), ContinueFold)
-        e <- runExceptT (Api.foldBlocks (File configurationFile) (Api.File socketPathAbs) Api.QuickValidation () handler)
-        either (throw . FoldBlocksException) (\_ -> pure ()) e
+    a <- async $ do
+      let handler :: Env -> LedgerState -> [Api.LedgerEvent] -> BlockInMode -> () -> IO ((), FoldStatus)
+          handler _env _ledgerState _ledgerEvents blockInCardanoMode _ = do
+            IO.appendFile "out.txt" $ take 400 (show blockInCardanoMode) <> "\n"
+            STM.atomically $ STM.writeTVar tDone True
+            pure ((), ContinueFold)
+      e <- runExceptT (Api.foldBlocks (File configurationFile) (Api.File socketPathAbs) Api.QuickValidation () handler)
+      either (throw . FoldBlocksException) (\_ -> pure ()) e
     link a -- Throw async thread's exceptions in main thread
 
   _ <- H.evalIO $ H.timeout 30_000_000 $ STM.atomically $ do
