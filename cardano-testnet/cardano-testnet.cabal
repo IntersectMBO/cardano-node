@@ -222,6 +222,7 @@ test-suite cardano-testnet-test
                       , mtl
                       , process
                       , regex-compat
+                      , stm
                       , tasty ^>= 1.5
                       , text
                       , time
