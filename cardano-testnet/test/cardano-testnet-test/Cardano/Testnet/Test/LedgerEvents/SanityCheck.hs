@@ -17,15 +17,16 @@ import           Cardano.Testnet
 import           Prelude
 
 import           GHC.IO.Exception (IOException)
-import           GHC.Stack (callStack)
+import           GHC.Stack
 import           System.FilePath ((</>))
 
+import           Testnet.Components.TestWatchdog
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
 
 import           Hedgehog
+import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import qualified Hedgehog.Extras.Test.Base as H
 
 newtype AdditionalCatcher
   = IOE IOException
@@ -41,7 +42,7 @@ newtype AdditionalCatcher
 -- This sets the stage for more direct testing of clusters allowing us to avoid querying the node, dealing with serialization to and from disk,
 -- setting timeouts for expected results etc.
 hprop_ledger_events_sanity_check :: Property
-hprop_ledger_events_sanity_check = H.integrationWorkspace "ledger-events-sanity-check" $ \tempAbsBasePath' -> do
+hprop_ledger_events_sanity_check = H.integrationWorkspace "ledger-events-sanity-check" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf <- mkConf tempAbsBasePath'
 
@@ -61,9 +62,8 @@ hprop_ledger_events_sanity_check = H.integrationWorkspace "ledger-events-sanity-
   H.note_ $ "Abs path: " <> tempAbsBasePath'
   H.note_ $ "Socketpath: " <> socketPath
 
-
-  !ret <- runExceptT $ handleIOExceptT IOE
-                   $ runExceptT $ foldBlocks
+  !ret <- runExceptT $ handleIOExceptionsWith IOE
+                   $ evalIO $ runExceptT $ foldBlocks
                        (File $ configurationFile testnetRuntime)
                        (File socketPath)
                        FullValidation

@@ -32,6 +32,7 @@ import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.SPO
+import           Testnet.Components.TestWatchdog
 import           Testnet.Process.Cli
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run
@@ -46,7 +47,7 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
 hprop_kes_period_info :: Property
-hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> do
+hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     -- TODO: Move yaml filepath specification into individual node options
@@ -237,7 +238,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   jsonBS <- createConfigJson tempAbsPath (cardanoNodeEra cTestnetOptions)
   H.lbsWriteFile configurationFile jsonBS
   [newNodePortNumber] <- requestAvailablePortNumbers 1
-  eRuntime <- lift . lift . runExceptT $ startNode tempAbsPath "test-spo" "127.0.0.1" newNodePortNumber testnetMagic
+  eRuntime <- runExceptT $ startNode tempAbsPath "test-spo" "127.0.0.1" newNodePortNumber testnetMagic
         [ "run"
         , "--config", configurationFile
         , "--topology", topologyFile

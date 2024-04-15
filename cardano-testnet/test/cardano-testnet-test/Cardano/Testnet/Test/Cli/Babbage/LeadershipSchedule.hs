@@ -37,6 +37,7 @@ import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.SPO
+import           Testnet.Components.TestWatchdog
 import           Testnet.Process.Cli
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run
@@ -54,7 +55,7 @@ import qualified Hedgehog.Extras.Test.File as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/leadership-schedule/"'@
 hprop_leadershipSchedule :: Property
-hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> do
+hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
@@ -242,7 +243,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   jsonBS <- createConfigJson tempAbsPath (cardanoNodeEra cTestnetOptions)
   H.lbsWriteFile configurationFile jsonBS
   [newNodePort] <- requestAvailablePortNumbers 1
-  eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath work) "test-spo" "127.0.0.1" newNodePort testnetMagic
+  eRuntime <- runExceptT $ startNode (TmpAbsolutePath work) "test-spo" "127.0.0.1" newNodePort testnetMagic
         [ "run"
         , "--config", configurationFile
         , "--topology", topologyFile

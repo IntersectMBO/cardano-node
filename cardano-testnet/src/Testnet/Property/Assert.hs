@@ -56,7 +56,7 @@ newlineBytes :: Word8
 newlineBytes = 10
 
 readJsonLines :: (MonadTest m, MonadIO m, HasCallStack) => FilePath -> m [Value]
-readJsonLines fp = mapMaybe (Aeson.decode @Value) . LBS.split newlineBytes <$> H.evalIO (LBS.readFile fp)
+readJsonLines fp = withFrozenCallStack $ mapMaybe (Aeson.decode @Value) . LBS.split newlineBytes <$> H.evalIO (LBS.readFile fp)
 
 fileJsonGrep :: FilePath -> (Value -> Bool) -> IO Bool
 fileJsonGrep fp f = do

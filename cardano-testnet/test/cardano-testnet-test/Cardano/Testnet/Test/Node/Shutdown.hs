@@ -34,6 +34,7 @@ import qualified System.IO as IO
 import qualified System.Process as IO
 import           System.Process (interruptProcessGroupOf)
 
+import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
 import           Testnet.Process.Run
 import qualified Testnet.Property.Utils as H
@@ -58,7 +59,7 @@ import qualified Hedgehog.Extras.Test.Process as H
 --
 -- TODO: Use cardanoTestnet in hprop_shutdown
 hprop_shutdown :: Property
-hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> do
+hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   conf <- mkConf tempAbsBasePath'
   let tempBaseAbsPath' = makeTmpBaseAbsPath $ tempAbsPath conf
       tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
@@ -138,7 +139,7 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
 
   -- Run cardano-node with pipe as stdin.  Use 0 file descriptor as shutdown-ipc
 
-  eRes <- liftIO . runExceptT $ procNode
+  eRes <- H.evalIO . runExceptT $ procNode
                          [ "run"
                          , "--config", tempAbsPath' </> "configuration.yaml"
                          , "--topology", tempAbsPath' </> "mainnet-topology.json"
@@ -155,7 +156,7 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
                     , IO.cwd = Just tempBaseAbsPath'
                     }
 
-  eProcess <- lift $ lift $ runExceptT $ initiateProcess process
+  eProcess <- runExceptT $ initiateProcess process
   case eProcess of
     Left e -> H.failMessage GHC.callStack $ mconcat ["Failed to initiate node process: ", show e]
     Right (mStdin, _mStdout, _mStderr, pHandle, _releaseKey) -> do
@@ -183,7 +184,7 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
 
 
 hprop_shutdownOnSlotSynced :: Property
-hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> do
+hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-synced" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   -- Start a local test net
   -- TODO: Move yaml filepath specification into individual node options
   conf <- mkConf tempAbsBasePath'
@@ -232,7 +233,7 @@ hprop_shutdownOnSlotSynced = H.integrationRetryWorkspace 2 "shutdown-on-slot-syn
 -- Execute this test with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/ShutdownOnSigint/"'@
 hprop_shutdownOnSigint :: Property
-hprop_shutdownOnSigint = H.integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tempAbsBasePath' -> do
+hprop_shutdownOnSigint = H.integrationRetryWorkspace 2 "shutdown-on-sigint" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   -- Start a local test net
   -- TODO: Move yaml filepath specification into individual node options
   conf <- mkConf tempAbsBasePath'

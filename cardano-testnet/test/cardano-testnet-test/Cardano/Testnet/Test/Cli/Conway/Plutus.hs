@@ -29,6 +29,7 @@ import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.SPO
+import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run
@@ -48,7 +49,7 @@ import qualified Hedgehog.Extras as H
 -- Voting NO
 -- Proposing NO
 hprop_plutus_v3 :: Property
-hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> do
+hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath

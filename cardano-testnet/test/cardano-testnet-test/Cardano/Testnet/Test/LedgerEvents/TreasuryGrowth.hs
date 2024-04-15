@@ -21,6 +21,7 @@ import           Lens.Micro ((^.))
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
+import           Testnet.Components.TestWatchdog
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
 
@@ -31,7 +32,7 @@ import qualified Hedgehog.Extras.Test as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Treasury Growth/"'@
 prop_check_if_treasury_is_growing :: H.Property
-prop_check_if_treasury_is_growing = H.integrationRetryWorkspace 0 "growing-treasury" $ \tempAbsBasePath' -> do
+prop_check_if_treasury_is_growing = H.integrationRetryWorkspace 0 "growing-treasury" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   -- Start testnet
   conf@Conf{tempAbsPath=TmpAbsolutePath tempAbsPath'} <- TN.mkConf tempAbsBasePath'
 
@@ -52,7 +53,7 @@ prop_check_if_treasury_is_growing = H.integrationRetryWorkspace 0 "growing-treas
     socketPath' <- H.noteShowM $ H.sprocketArgumentName <$> H.headM (poolSprockets runtime)
     H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
 
-  (_condition, treasuryValues) <- H.leftFailM . runExceptT $
+  (_condition, treasuryValues) <- H.leftFailM . H.evalIO . runExceptT $
     Api.foldEpochState (File configurationFile) (Api.File socketPathAbs) Api.QuickValidation (EpochNo 10) M.empty handler
   H.note_ $ "treasury for last 5 epochs: " <> show treasuryValues
 

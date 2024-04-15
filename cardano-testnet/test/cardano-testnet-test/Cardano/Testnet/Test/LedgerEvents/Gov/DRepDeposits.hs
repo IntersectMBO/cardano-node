@@ -22,6 +22,7 @@ import           System.FilePath ((</>))
 import           Testnet.Components.DReps (createDRepRegistrationTxBody, failToSubmitTx,
                    generateDRepKeyPair, generateRegistrationCertificate, signTx, submitTx)
 import           Testnet.Components.Query (checkDRepState, getEpochStateView, getMinDRepDeposit)
+import           Testnet.Components.TestWatchdog
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime (PaymentKeyInfo (paymentKeyInfoPair), PoolNode (poolRuntime),
@@ -35,7 +36,7 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRep Deposits/"'@
 hprop_ledger_events_drep_deposits :: Property
-hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \tempAbsBasePath' -> do
+hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
 
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
