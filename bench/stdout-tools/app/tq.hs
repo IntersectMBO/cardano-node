@@ -1,9 +1,7 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE ExistentialQuantification #-}
 
 {-
@@ -208,16 +206,16 @@ optsParser = CliOpts <$>
           (    Opt.long "parallel"
             <> Opt.help "Process files in parallel"
           )
-    <*> (some (
+    <*> some (
           (Opt.option $ Opt.eitherReader cliFilterReader)
           (    Opt.long "reducer"
             <> Opt.short 'r'
             <> Opt.metavar "REDUCER"
             <> Opt.help "Reducer"
           )
-        ))
+        )
   where
-    addFileLabel = \str ->
+    addFileLabel str =
       case span (/= ':') str of
         (f,"") -> ("",f)
         (f, s) -> (f,drop 1 s)
