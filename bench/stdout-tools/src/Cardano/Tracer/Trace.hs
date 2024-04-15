@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveGeneric #-}
 
 -- All traces start with the a JSON object having an "at" and an "ns" property,
@@ -20,6 +19,7 @@ module Cardano.Tracer.Trace
 
 -- base.
 import           GHC.Generics
+
 -- package: time.
 import           Data.Time.Clock (UTCTime)
 -- package: text.
@@ -50,23 +50,34 @@ data Trace = Trace
 -- quite as expected) but here we pretend that we don't care.
 fromJson :: Text.Text -> Either Text.Text Trace
 fromJson text =
-  -- Assume '{"at":"'' is there
-  case Text.splitAt 7 text of
-    -- Property 'at' assumed as expected.
+  -- Look for '{"at":"''
+  case Text.splitAt 7 text of -- No cost center for the unavoidable simple part!
+    -- Property 'at' assumed correctly.
     ("{\"at\":\"", text') ->
-           -- Assume a date like '2024-04-11T12:01:33.2135764Z' is there.
-           -- The milliseconds part is variable, can't read a fix amount.
-      let (atText, text'' ) = Text.break (== '"') text'
-          -- Consume all the text until the next '"'.
-          -- First drop the date's last '"' ans assume ',"ns":"' is there.
-          (nsText, text''') = Text.break (== '"') (Text.drop 8 text'')
-      --in Left $ show (atText, text'', nsText, text''')
-      in  case ParseTime.parseUTCTime atText of
-            (Left err) -> Left $ Text.pack $ "parseUTCTime: " ++ err
-            (Right utcTime) -> Right $
-              -- Drop closing '",' of 'ns' and leave unconsumed as a new object.
-              Trace utcTime nsText ("{" <> (Text.drop 2 text'''))
-    _ -> Left "No {\"at\":\""
+          -- Assume a date like '2024-04-11T12:01:33.2135764Z' is there.
+          -- The milliseconds part is variable so we can't read a fixed amount.
+          -- TODO: Can we make it of a fixed number of decimals ???
+      let (atText, text'' ) = {-# SCC "fromJson_break_at" #-}
+                              Text.break (== '"') text' -- Looks for next '"'.
+          -- If this fails it's probably not a valid trace message.
+          parsedTime = {-# SCC "fromJson_parseUTCTime" #-}
+                       ParseTime.parseUTCTime atText
+      in case parsedTime of
+          -- First match the one one we want!
+          (Right utcTime) ->
+                -- Drop the date's last '"' and assume ',"ns":"' is there.
+            let text''' = {-# SCC "fromJson_drop_ns" #-}
+                          Text.drop 8 text''
+                -- Consume all the text until the next '"'.
+                (nsText, text'''') = {-# SCC "fromJson_break_ns" #-}
+                                    Text.break (== '"') (Text.drop 8 text''')
+               -- Drop closing '",' of 'ns' and leave the unconsumed Text, the
+               -- `Remainder`, as a new JSON object.
+            in Right $ Trace utcTime nsText ("{" <> Text.drop 2 text'''')
+          -- Probably not a Trace JSON object.
+          (Left _) -> Left text
+    -- Assumption failed.
+    _ -> Left text
 
 --------------------------------------------------------------------------------
 
@@ -81,7 +92,7 @@ data Remainder a = Remainder
 
 instance Aeson.ToJSON a => Aeson.ToJSON (Remainder a) where
   -- Only using a non-automatic instance because of "data" and "msgData".
-  toJSON p@(Remainder _ _ _ _) =
+  toJSON p = {-# SCC "Remainder_toJSON" #-}
     Aeson.object
       [ "data"   Aeson..= remainderData p
       , "sev"    Aeson..= sev           p
@@ -91,7 +102,7 @@ instance Aeson.ToJSON a => Aeson.ToJSON (Remainder a) where
 
 instance Aeson.FromJSON a => Aeson.FromJSON (Remainder a) where
   -- Only using a non-automatic instance because of "data" and "msgData".
-  parseJSON =
+  parseJSON = {-# SCC "Remainder_parseJSON" #-}
     Aeson.withObject "Remainder" $ \o -> do
       Remainder
         <$> o Aeson..: "data"
@@ -101,7 +112,7 @@ instance Aeson.FromJSON a => Aeson.FromJSON (Remainder a) where
 
 --------------------------------------------------------------------------------
 
-data DataWithSlot = DataWithSlot
+newtype DataWithSlot = DataWithSlot
   { slot :: Integer }
   deriving Generic
 
