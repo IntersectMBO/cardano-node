@@ -401,11 +401,9 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
     where go Nothing  acc = acc
           go (Just hash) acc =
             case partitionMbes $ mapMaybe (Map.lookup hash) machBlockMaps of
-              ([], _, ers) -> error $ mconcat
-                [ "No forger for hash ", show hash
-                , "\nErrors:\n"
-                ] ++ intercalate "\n" (show <$> ers)
-              blkEvs@(forgerEv:_, oEvs, ers) ->
+              -- enable analysis for chains with trace evidence not reaching back to Genesis
+              ([], _, _) -> acc
+              (forgerEv:_, oEvs, ers) ->
                 go (bfePrevBlock forgerEv) (liftBlockEvents forgerEv oEvs ers : acc)
 
    liftBlockEvents :: ForgerEvents NominalDiffTime -> [ObserverEvents NominalDiffTime] -> [BPError] -> BlockEvents
@@ -487,11 +485,10 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) =
       adoptions =
         (fmap (`sinceSlot` bfeSlotStart) . Map.lookup bfeBlock) `mapMaybe` adoptionMap
 
-      otherBlocks = otherBlockHashes <&>
-                    \blk ->
-                      let forger = findForger blk in
-                      (forger,
-                       fail' (bfeHost forger) bfeBlock (BPEFork blk))
+      -- enable analysis for chains with trace evidence not reaching back to Genesis
+      -- HACK: for this, we currently have to sacrifice analysing chain forks for height/slot battles
+      otherBlocks = []
+
       otherBlockHashes = Map.lookup bfeBlockNo heightMap
                          & strictMaybe
                          & handleMiss "height map"

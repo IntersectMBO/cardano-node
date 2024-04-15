@@ -232,7 +232,7 @@ EOF
 
     standard | full | std )
         local script=(
-            hash-timeline
+            # hash-timeline
             logs               $(test -n "$dump_logobjects" && echo 'dump-logobjects')
             read-context
 
