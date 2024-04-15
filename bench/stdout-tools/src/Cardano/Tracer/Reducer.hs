@@ -62,20 +62,19 @@ data OneSecondSilences = OneSecondSilences
 instance Reducer CountLines where
   type instance Accum CountLines = Int
   initialOf _ = 0
-  reducerOf _ = (\l _ -> l + 1)
+  reducerOf _ l _ = l + 1
   showAns   _ = show
 
 instance Reducer CountStartLeadershipCheckPlus where
   type instance Accum CountStartLeadershipCheckPlus = Int
   initialOf _ = 0
-  reducerOf _ = (\l eitherTrace ->
+  reducerOf _ l eitherTrace =
     case eitherTrace of
       (Left _) -> l
       (Right trace) ->
         if Trace.ns trace == "Forge.Loop.StartLeadershipCheckPlus"
         then l + 1
         else l
-    )
   showAns  _ = show
 
 instance Reducer HeapChanges where
@@ -103,7 +102,7 @@ instance Reducer MissedSlots where
   type instance Accum MissedSlots = (Maybe Integer, Seq.Seq Integer)
   initialOf _ = (Nothing, Seq.empty)
   reducerOf _ ans (Left _) = ans
-  reducerOf _ ans@(maybePrevSlot, !sq) (Right !(Trace.Trace _ "Forge.Loop.StartLeadershipCheckPlus" remainder)) =
+  reducerOf _ ans@(maybePrevSlot, !sq) (Right (Trace.Trace _ "Forge.Loop.StartLeadershipCheckPlus" remainder)) =
     case Aeson.eitherDecodeStrictText remainder of
       (Right !dataWithSlot) ->
         -- TODO: Use `unsnoc` when available
@@ -113,7 +112,7 @@ instance Reducer MissedSlots where
           (Just prevSlot) ->
             if actualSlot == prevSlot + 1
             then (Just actualSlot, sq)
-            else (Just actualSlot, sq Seq.>< (Seq.fromList [(prevSlot+1)..(actualSlot-1)]))
+            else (Just actualSlot, sq Seq.>< Seq.fromList [(prevSlot+1)..(actualSlot-1)])
       (Left _) -> ans
   reducerOf _ ans (Right _) = ans
   showAns _ = show
@@ -140,12 +139,12 @@ instance Reducer OneSecondSilences where
   reducerOf _ (Just prevTraceAt, sq) (Right trace) =
     let thisTraceAt = Trace.at trace
         diffTime = diffUTCTime thisTraceAt prevTraceAt
-    in  if diffTime >  fromInteger 2
+    in  if diffTime > 2
     then (Just thisTraceAt, sq Seq.|> (diffTime, prevTraceAt, thisTraceAt))
     else (Just thisTraceAt, sq)
   showAns   _ = show
   printAns _ (_,sq) = mapM_
     (\(ndt, t1, _) ->
-      putStrLn $ (show ndt) ++ " (" ++ (show t1) ++ ")"
+      putStrLn $ show ndt ++ " (" ++ show t1 ++ ")"
     )
     (toList sq)
