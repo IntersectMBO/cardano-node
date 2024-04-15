@@ -34,10 +34,6 @@ instance Exception FoldBlocksException
 instance Show FoldBlocksException where
   show (FoldBlocksException a) = displayError a
 
--- | This test starts a testnet with wery short timing, then starts
--- `foldBlocks` in another thread to listen for ledger state, ledger
--- events and block, and on reception writes this to the `lock` `MVar`
--- that main thread blocks on.
 prop_foldBlocks :: H.Property
 prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath' -> do
   -- Start testnet
@@ -63,10 +59,6 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
   -- Start foldBlocks in a separate thread
   H.evalIO $ do
     a <- async $
-      -- The `forever` is here because `foldBlocks` drains blocks
-      -- until current slot and then quits -- even if there are no
-      -- permanent (= older than the k parameter) blocks created. In
-      -- that case we simply restart `foldBlocks` again.
       forM (id @[Int] [1, 2 ..]) $ \i -> do
         IO.appendFile "out.txt" $ "== " <> show i <> "==\n"
         let handler :: Env -> LedgerState -> [Api.LedgerEvent] -> BlockInMode -> () -> IO ((), FoldStatus)
@@ -78,10 +70,6 @@ prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath'
         either (throw . FoldBlocksException) (\_ -> pure ()) e
     link a -- Throw async thread's exceptions in main thread
 
-  -- The `lock` is written to from within the `handler` above. It
-  -- tests that `foldBlocks` receives ledger state; once that happens,
-  -- handler is called, which then writes to the `lock` and allows the
-  -- test to finish.
   _ <- H.evalIO $ H.timeout 30_000_000 $ STM.atomically $ do
       done <- STM.readTVar tDone
       unless done STM.retry
