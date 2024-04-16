@@ -57,10 +57,9 @@ in project.shellFor {
         git branch 2> /dev/null | sed -n -e 's/^\* \(.*\)/(\1)/p'
     }
     export PS1="\n\[\033[1;32m\][nix-shell:\w]\[\033[01;36m\]\$(parse_git_branch)\[\033[0m\]\$ "
-
-    ${optionalString
-      workbenchDevMode
-      ''
+    ''
+    + optionalString workbenchDevMode
+    ''
     export WB_CARDANO_NODE_REPO_ROOT=$(git rev-parse --show-toplevel)
     export WB_CHAP_PATH=${chap}
     export WB_NIX_PLAN=${nixPlanJson}
@@ -70,15 +69,14 @@ in project.shellFor {
       $WB_CARDANO_NODE_REPO_ROOT/nix/workbench/wb $WB_EXTRA_FLAGS "$@"
     }
     export -f wb
-      ''}
-
-    ${optionalString
-      backend.useCabalRun
-      ''
+    ''
+    + optionalString backend.useCabalRun
+    ''
     . nix/workbench/lib-cabal.sh ${optionalString (profiling != "none") "--profiling-${profiling}"}
     cabal update
-      ''}
-
+    ''
+    +
+    ''
     export CARDANO_NODE_SOCKET_PATH=run/current/node-0/node.socket
 
     function workbench_atexit() {
@@ -87,16 +85,15 @@ in project.shellFor {
         fi
     }
     trap workbench_atexit EXIT
-
-    ${optionalString
-      withMainnet
-      ''
+    ''
+    + optionalString withMainnet
+    ''
     export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror.outputs.defaultPackage.x86_64-linux.outPath}
-      ''}
-
+    ''
+    + ''
     ${setLocale}
     ${commandHelp}
-  '';
+    '';
 
   inherit withHoogle;
 
