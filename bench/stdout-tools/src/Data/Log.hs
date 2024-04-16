@@ -66,10 +66,10 @@ lineFoldl'' handle decoder f initialAcc = do
 data Decoder = Decoder
   -- TODO: Strict or not? Let the function caller decide?
   -- Function `nextLine` is all about pattern matching these things.
-  { _unfinishedLine :: !Text.Text
-  , _textLeft       :: !Text.Text
-  , _byteStringLeft :: !BS.ByteString
-  , _textDecoding   :: !(BS.ByteString -> TextE.Decoding)
+  { _unfinishedLine :: Text.Text
+  , _textLeft       :: Text.Text
+  , _byteStringLeft :: BS.ByteString
+  , _textDecoding   :: (BS.ByteString -> TextE.Decoding)
   }
 
 -- Use empty `Text`s and create an empty/initial `Data.Text.Encoding.Some`
@@ -86,12 +86,13 @@ nextLine handle (Decoder unfinishedLine "" "" continue) = {-# SCC "nextLine_1" #
   -- Use `Data.Text.IO.hGetChunk` ? It uses an unknown buffer size!
   bs <- {-# SCC "nextLine_1_hGet" #-}
         BS.hGetNonBlocking handle (hGetBufferSizeMB * 1024 * 1024)
-  -- Also use BS.length ? To end if lower than requested ? But it's O(n)!
-  if bs == BS.empty
-  -- Last (or maybe first of an empty file) line and no more input available!
-  then return (unfinishedLine, Nothing)
+  -- Put the most common case first.
+  -- Use `BS.null` as much as possible because it's O(1).
+  if not $ BS.null bs
   -- Call `newLine` again to handle the newly fetched ByteString.
-  else nextLine handle $ Decoder unfinishedLine "" bs continue
+  then nextLine handle $ Decoder unfinishedLine "" bs continue
+  -- Last (or maybe first of an empty file) line and no more input available!
+  else return (unfinishedLine, Nothing)
 --------------------------------------------------------------------------------
 -- UTF-8 decode: Maybe a partial line, no decoded Text and only some ByteString.
 --------------------------------------------------------------------------------
@@ -109,32 +110,38 @@ nextLine handle (Decoder unfinishedLine text bs !continue) = {-# SCC "nextLine_3
   --print ((5::Int, unfinishedLine, text, bs)::(Int,Text.Text,Text.Text,BS.ByteString))
   let (consumed, remainder) = {-# SCC "nextLine_3_break" #-}
                               Text.break (== '\n') text
-  case remainder of
-    -- No newline character found!
-    -- break (== 1) []      -> ( [],      []      )
-    -- break (== 1) [0,0,0] -> ( [0,0,0], []      )
-    "" -> {-# SCC "nextLine_3_newline_no" #-} do
-      nextLine handle $ Decoder (unfinishedLine <> text) "" bs continue
-    -- One newline character was found!
-    -- break (== 1) [1]     -> ( []     , [1]     )
-    -- break (== 1) [1,0,0] -> ( []     , [1,0,0] )
-    -- break (== 1) [0,0,1] -> ( [0,0]  , [1]     )
-    -- break (== 1) [0,1,0] -> ( [0]    , [1,0]   )
-    _ -> {-# SCC "nextLine_3_newline_yes" #-} do
-      -- Remove the `\n`.
-      -- If `reminder` is not `empty`, a `\n` was found and it's the first char.
-      let text' = {-# SCC "nextLine_3_drop" #-} Text.drop 1 remainder
-      return $ case consumed of
-        -- Next character was a newline. Return the line buffer with no append.
-        -- break (== 1) [1]     -> ( []     , [1]     )
-        -- break (== 1) [1,0,0] -> ( []     , [1,0,0] )
-        "" -> {-# SCC "nextLine_3_append_no" #-}
-            ( unfinishedLine
-            , Just $ Decoder "" text' bs continue
-            )
-        -- break (== 1) [0,0,1] -> ( [0,0]  , [1]     )
-        -- break (== 1) [0,1,0] -> ( [0]    , [1,0]   )
-        _  -> {-# SCC "nextLine_3_append_yes" #-}
-            ( unfinishedLine <> consumed
-            , Just $ Decoder "" text' bs continue
-            )
+  -- Put the most common case first.
+  -- Use `Text.null` as much as possible because it's O(1).
+  if not $ Text.null remainder
+  -- One newline character was found!
+  -- break (== 1) [1]     -> ( []     , [1]     )
+  -- break (== 1) [1,0,0] -> ( []     , [1,0,0] )
+  -- break (== 1) [0,0,1] -> ( [0,0]  , [1]     )
+  -- break (== 1) [0,1,0] -> ( [0]    , [1,0]   )
+  then {-# SCC "nextLine_3_newline_yes" #-}
+    -- Remove the `\n`.
+    -- If `reminder` is not `empty`, a `\n` was found.
+    let text' = {-# SCC "nextLine_3_drop" #-} Text.drop 1 remainder
+    -- Put the most common case first.
+    -- Use `Text.null` as much as possible because it's O(1).
+    in if not $ Text.null consumed
+       -- break (== 1) [0,0,1] -> ( [0,0]  , [1]     )
+       -- break (== 1) [0,1,0] -> ( [0]    , [1,0]   )
+       then return $
+         {-# SCC "nextLine_3_append_yes" #-}
+         ( unfinishedLine <> consumed
+         , Just $ Decoder "" text' bs continue
+         )
+       -- Next character was a newline. Return the line buffer with no append.
+       -- break (== 1) [1]     -> ( []     , [1]     )
+       -- break (== 1) [1,0,0] -> ( []     , [1,0,0] )
+       else return $
+         {-# SCC "nextLine_3_append_no" #-}
+         ( unfinishedLine
+         , Just $ Decoder "" text' bs continue
+         )
+  -- No newline character found!
+  -- break (== 1) []      -> ( [],      []      )
+  -- break (== 1) [0,0,0] -> ( [0,0,0], []      )
+  else {-# SCC "nextLine_3_newline_no" #-} do
+    nextLine handle $ Decoder (unfinishedLine <> text) "" bs continue

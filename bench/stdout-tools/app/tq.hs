@@ -15,21 +15,21 @@ Count lines
 -rw-r--r-- 1 fmaste users 6.4G Apr 10 19:28 bench/stdout-tools/5nodes.stdout
 
 > time cat bench/stdout-tools/5nodes.stdout | wc -l
-real  0m1.946s
-user  0m0.105s
-sys 0m2.728s
+real  0m2.039s
+user  0m0.091s
+sys 0m2.842s
 
 > time jq --raw-input . bench/stdout-tools/5nodes.stdout | wc -l
 25581640
-real  1m30.707s
-user  1m28.129s
-sys 0m8.124s
+real  1m30.745s
+user  1m28.116s
+sys 0m8.150s
 
 > time cabal run tq -- --file big-node:bench/stdout-tools/5nodes.stdout --reducer count-lines
 25581640
-real  0m11.630s
-user  0m10.836s
-sys 0m0.826s
+real  0m15.387s
+user  0m13.194s
+sys 0m2.173s
 
 Count all the ns="Forge.Loop.StartLeadershipCheckPlus"
 --------------------------------------------------------------------------------
@@ -37,35 +37,35 @@ Count all the ns="Forge.Loop.StartLeadershipCheckPlus"
 -- Using jq for everything:
 > time jq --raw-input --compact-output 'try fromjson | if (type == "object" and has("at")) then select(.ns=="Forge.Loop.StartLeadershipCheckPlus") else empty end' bench/stdout-tools/5nodes.stdout | wc -l
 264150
-real  1m30.615s
-user  1m29.159s
-sys 0m1.502s
+real  1m28.688s
+user  1m27.187s
+sys 0m1.555s
 
 -- Using jq but first filter non JSON lines with grep:
 > time grep -E "^{.*" bench/stdout-tools/5nodes.stdout | jq --compact-output 'select(.ns == "Forge.Loop.StartLeadershipCheckPlus")' | wc -l
 264150
-real  1m9.828s
-user  1m12.247s
-sys 0m5.901s
+real  1m10.258s
+user  1m12.628s
+sys 0m5.999s
 
 $ time cabal run tq -- --file big-node:bench/stdout-tools/5nodes.stdout --reducer count-FLSLCP
 264150
-real  0m26.420s
-user  0m25.654s
-sys 0m0.837s
+real  0m30.316s
+user  0m28.140s
+sys 0m2.167s
 
 Heap changes
 --------------------------------------------------------------------------------
 
-> grep -E "^{.*" bench/stdout-tools/5stdout | jq 'select(.ns == "Resources") | .data.Heap' | uniq
-real  1m5.810s
-user  1m7.716s
-sys 0m3.674s
+> time grep -E "^{.*" bench/stdout-tools/5nodes.stdout | jq 'select(.ns == "Resources") | .data.Heap' | uniq
+real  1m8.960s
+user  1m11.298s
+sys 0m5.972s
 
-> time cabal run tq -- --file 5stdout:bench/stdout-tools/5stdout --reducer heap-changes
-real  0m54.360s
-user  0m53.606s
-sys 0m0.873s
+> time cabal run tq -- --file big-node:bench/stdout-tools/5nodes.stdout --reducer heap-changes
+real  1m1.578s
+user  0m59.291s
+sys 0m2.264s
 
 Heap changes (52 nodes)
 --------------------------------------------------------------------------------
