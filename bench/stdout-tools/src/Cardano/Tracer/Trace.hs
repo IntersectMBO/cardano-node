@@ -70,10 +70,12 @@ fromJson text =
                           Text.drop 8 text''
                 -- Consume all the text until the next '"'.
                 (nsText, text'''') = {-# SCC "fromJson_break_ns" #-}
-                                    Text.break (== '"') (Text.drop 8 text''')
-               -- Drop closing '",' of 'ns' and leave the unconsumed Text, the
-               -- `Remainder`, as a new JSON object.
-            in Right $ Trace utcTime nsText ("{" <> Text.drop 2 text'''')
+                                    Text.break (== '"') text'''
+                -- Drop closing '",' of 'ns' and leave the unconsumed Text, the
+                -- `Remainder`, as a new JSON object.
+                remainderText = {-# SCC "fromJson_remainder" #-}
+                                "{" <> Text.drop 2 text''''
+            in Right $ Trace utcTime nsText remainderText
           -- Probably not a Trace JSON object.
           (Left _) -> Left text
     -- Assumption failed.
