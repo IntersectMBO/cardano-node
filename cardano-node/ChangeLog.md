@@ -9,6 +9,11 @@
   - `--mempool-capacity-override` and `--no-mempool-capacity-override` can be set in the configuration file via the key `MempoolCapacityBytesOverride`.
   - `--snapshot-interval` can be set in the configuration file via the key `SnapshotInterval`.
   - `--num-of-disk-snapshots` can be set in the configuration file via the key `NumOfDiskSnapshots`.
+- Ledger peer snapshot path entry added to topology JSON parser,
+  which a new decoder function `readPeerSnapshotFile` processes
+  at startup and SIGHUP. Data is available to the diffusion layer
+  via TVar.
+
 
 ## 8.2.1 -- August 2023
 
