@@ -36,7 +36,7 @@ import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
 import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Exception (try)
 import qualified Control.Exception as Exception
-import           Control.Monad (forM_, unless, void, when)
+import           Control.Monad (forM, forM_, unless, void, when)
 import           Control.Monad.Class.MonadThrow (MonadThrow (..))
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT, runExceptT)
@@ -128,14 +128,10 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Tracing.Tracers
-import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers)
-import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
-
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (LedgerPeerSnapshot (..), UseLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable)
-
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
-
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -445,16 +441,24 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
         nt@TopologyP2P.RealNodeTopology
           { ntUseLedgerPeers
           , ntUseBootstrapPeers
+          , ntPeerSnapshotPath
           } <- TopologyP2P.readTopologyFileOrError (startupTracer tracers) nc
         let (localRoots, publicRoots) = producerAddresses nt
         traceWith (startupTracer tracers)
                 $ NetworkConfig localRoots
                                 publicRoots
                                 ntUseLedgerPeers
-        localRootsVar <- newTVarIO localRoots
-        publicRootsVar <- newTVarIO publicRoots
-        useLedgerVar   <- newTVarIO ntUseLedgerPeers
+                                ntPeerSnapshotPath
+        localRootsVar   <- newTVarIO localRoots
+        publicRootsVar  <- newTVarIO publicRoots
+        useLedgerVar    <- newTVarIO ntUseLedgerPeers
         useBootstrapVar <- newTVarIO ntUseBootstrapPeers
+        ledgerPeerSnapshotPathVar <- newTVarIO ntPeerSnapshotPath
+        ledgerPeerSnapshotVar <- newTVarIO =<< updateLedgerPeerSnapshot
+                                                (startupTracer tracers)
+                                                (readTVar ledgerPeerSnapshotPathVar)
+                                                (const . pure $ ())
+
         let nodeArgs = RunNodeArgs
               { rnTraceConsensus = consensusTracers tracers
               , rnTraceNTN       = nodeToNodeTracers tracers
@@ -487,6 +491,11 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 updateTopologyConfiguration
                   (startupTracer tracers) nc
                   localRootsVar publicRootsVar useLedgerVar useBootstrapVar
+                  ledgerPeerSnapshotPathVar
+                void $ updateLedgerPeerSnapshot
+                  (startupTracer tracers)
+                  (readTVar ledgerPeerSnapshotPathVar)
+                  (writeTVar ledgerPeerSnapshotVar)
                 traceWith (startupTracer tracers) (BlockForgingUpdate NotEffective)
               )
               Nothing
@@ -498,6 +507,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                   (readTVar publicRootsVar)
                   (readTVar useLedgerVar)
                   (readTVar useBootstrapVar)
+                  (readTVar ledgerPeerSnapshotVar)
           in
           Node.run
             nodeArgs {
@@ -505,6 +515,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                   -- reinstall `SIGHUP` handler
                   installP2PSigHUPHandler (startupTracer tracers) blockType nc nodeKernel
                                           localRootsVar publicRootsVar useLedgerVar useBootstrapVar
+                                          ledgerPeerSnapshotPathVar
                   rnNodeKernelHook nodeArgs registry nodeKernel
             }
             StdRunNodeArgs
@@ -673,17 +684,19 @@ installP2PSigHUPHandler :: Tracer IO (StartupTrace blk)
                         -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
                         -> StrictTVar IO UseLedgerPeers
                         -> StrictTVar IO UseBootstrapPeers
+                        -> StrictTVar IO (Maybe PeerSnapshotFile)
                         -> IO ()
 #ifndef UNIX
 installP2PSigHUPHandler _ _ _ _ _ _ _ _ = return ()
 #else
 installP2PSigHUPHandler startupTracer blockType nc nodeKernel localRootsVar publicRootsVar useLedgerVar
-                        useBootstrapPeersVar =
+                        useBootstrapPeersVar ledgerPeerSnapshotPathVar =
   void $ Signals.installHandler
     Signals.sigHUP
     (Signals.Catch $ do
       updateBlockForging startupTracer blockType nodeKernel nc
-      updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLedgerVar useBootstrapPeersVar
+      updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar
+                                  useLedgerVar useBootstrapPeersVar ledgerPeerSnapshotPathVar
     )
     Nothing
 #endif
@@ -768,9 +781,10 @@ updateTopologyConfiguration :: Tracer IO (StartupTrace blk)
                             -> StrictTVar IO (Map RelayAccessPoint PeerAdvertise)
                             -> StrictTVar IO UseLedgerPeers
                             -> StrictTVar IO UseBootstrapPeers
+                            -> StrictTVar IO (Maybe PeerSnapshotFile)
                             -> IO ()
 updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLedgerVar
-                            useBootsrapPeersVar = do
+                            useBootsrapPeersVar ledgerPeerSnapshotPathVar = do
     traceWith startupTracer NetworkConfigUpdate
     result <- try $ readTopologyFileOrError startupTracer nc
     case result of
@@ -780,16 +794,30 @@ updateTopologyConfiguration startupTracer nc localRootsVar publicRootsVar useLed
                 $ pack "Error reading topology configuration file:" <> err
       Right nt@RealNodeTopology { ntUseLedgerPeers
                                 , ntUseBootstrapPeers
+                                , ntPeerSnapshotPath
                                 } -> do
         let (localRoots, publicRoots) = producerAddresses nt
         traceWith startupTracer
-                $ NetworkConfig localRoots publicRoots ntUseLedgerPeers
+                $ NetworkConfig localRoots publicRoots ntUseLedgerPeers ntPeerSnapshotPath
         atomically $ do
           writeTVar localRootsVar localRoots
           writeTVar publicRootsVar publicRoots
           writeTVar useLedgerVar ntUseLedgerPeers
           writeTVar useBootsrapPeersVar ntUseBootstrapPeers
+          writeTVar ledgerPeerSnapshotPathVar ntPeerSnapshotPath
 #endif
+
+updateLedgerPeerSnapshot :: Tracer IO (StartupTrace blk)
+                         -> STM IO (Maybe PeerSnapshotFile)
+                         -> (Maybe LedgerPeerSnapshot -> STM IO ())
+                         -> IO (Maybe LedgerPeerSnapshot)
+updateLedgerPeerSnapshot startupTracer readLedgerPeerPath writeVar = do
+  mPeerSnapshotFile <- atomically readLedgerPeerPath
+  mLedgerPeerSnapshot <- forM mPeerSnapshotFile $ \f -> do
+    lps@(LedgerPeerSnapshot (wOrigin, _)) <- readPeerSnapshotFile f
+    lps <$ traceWith startupTracer (LedgerPeerSnapshotLoaded wOrigin)
+  atomically . writeVar $ mLedgerPeerSnapshot
+  pure mLedgerPeerSnapshot
 
 --------------------------------------------------------------------------------
 -- Helper functions
@@ -848,6 +876,7 @@ mkP2PArguments
   -> STM IO (Map RelayAccessPoint PeerAdvertise)
   -> STM IO UseLedgerPeers
   -> STM IO UseBootstrapPeers
+  -> STM IO (Maybe LedgerPeerSnapshot)
   -> Diffusion.ExtraArguments 'Diffusion.P2P IO
 mkP2PArguments NodeConfiguration {
                  ncTargetNumberOfRootPeers,
@@ -864,13 +893,15 @@ mkP2PArguments NodeConfiguration {
                daReadLocalRootPeers
                daReadPublicRootPeers
                daReadUseLedgerPeers
-               daReadUseBootstrapPeers =
+               daReadUseBootstrapPeers
+               daReadLedgerPeerSnapshot =
     Diffusion.P2PArguments P2P.ArgumentsExtra
       { P2P.daPeerSelectionTargets
       , P2P.daReadLocalRootPeers
       , P2P.daReadPublicRootPeers
       , P2P.daReadUseLedgerPeers
       , P2P.daReadUseBootstrapPeers
+      , P2P.daReadLedgerPeerSnapshot
       , P2P.daProtocolIdleTimeout   = ncProtocolIdleTimeout
       , P2P.daTimeWaitTimeout       = ncTimeWaitTimeout
       , P2P.daDeadlineChurnInterval = 3300

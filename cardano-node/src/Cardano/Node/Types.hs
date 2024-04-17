@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
@@ -12,6 +13,7 @@ module Cardano.Node.Types
   , ConfigYamlFilePath(..)
   , DbFile(..)
   , GenesisFile(..)
+  , PeerSnapshotFile (..)
   , ProtocolFilepaths (..)
   , GenesisHash(..)
   , MaxConcurrencyBulkSync(..)
@@ -45,6 +47,7 @@ import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word16, Word8)
+import           GHC.Generics (Generic)
 
 -- | Errors for the cardano-config module.
 data ConfigError =
@@ -75,6 +78,13 @@ newtype GenesisFile = GenesisFile
   { unGenesisFile :: FilePath }
   deriving stock (Eq, Ord)
   deriving newtype (IsString, Show)
+
+-- | Path containing a serialized ledger peer snapshot
+-- for use by diffusion layer to facilitate bootstrapping
+-- a node in Genesis consensus mode
+--
+newtype PeerSnapshotFile = PeerSnapshotFile { unPeerSnapshotFile :: FilePath }
+  deriving (Eq, Show, Generic, FromJSON, ToJSON)
 
 instance FromJSON GenesisFile where
   parseJSON (String genFp) = pure . GenesisFile $ Text.unpack genFp
