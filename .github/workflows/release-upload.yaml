@@ -28,7 +28,8 @@ jobs:
     - name: Get specific check run status
       run: |
         while [[ true ]]; do
-          conclusion=$(gh api repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs --jq '.check_runs[] | select(.name == "ci/hydra-build:required") | .conclusion')
+          check_runs=$(gh api repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs)
+          conclusion=$(echo $check_runs | jq '.check_runs[] | select(.name == "ci/hydra-build:required") | .conclusion')
           case "$conclusion" in
             success)
               echo "ci/hydra-build:required succeeded"
