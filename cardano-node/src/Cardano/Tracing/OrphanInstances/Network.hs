@@ -250,7 +250,7 @@ instance HasSeverityAnnotation TraceLedgerPeers where
       TraceLedgerPeersDomains {}     -> Debug
       TraceLedgerPeersResult {}      -> Debug
       TraceLedgerPeersFailure {}     -> Debug
-      UsingBigLedgerPeerSnapshot {}  -> Info
+      UsingBigLedgerPeerSnapshot {}  -> Debug
 
 
 instance HasPrivacyAnnotation (WithAddr addr ErrorPolicyTrace)
@@ -2002,9 +2002,6 @@ instance ToObject (TracePeerSelection SockAddr) where
   toObject _verb TraceBootstrapPeersFlagChangedWhilstInSensitiveState =
     mconcat [ "kind" .= String "BootstrapPeersFlagChangedWhilstInSensitiveState"
             ]
-  toObject _verb (TraceVerifyPeerSnapshot result) =
-    mconcat [ "kind" .= String "VerifyPeerSnapshot"
-            , "result" .= toJSON result ]
   toObject _verb (TraceOutboundGovernorCriticalFailure err) =
     mconcat [ "kind" .= String "OutboundGovernorCriticalFailure"
              , "reason" .= show err
