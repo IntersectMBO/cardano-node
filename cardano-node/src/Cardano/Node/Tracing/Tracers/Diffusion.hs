@@ -906,7 +906,7 @@ instance MetaTrace TraceLedgerPeers where
     severityFor (Namespace _ ["TraceLedgerPeersDomains"]) _ = Just Debug
     severityFor (Namespace _ ["TraceLedgerPeersResult"]) _ = Just Debug
     severityFor (Namespace _ ["TraceLedgerPeersFailure"]) _ = Just Debug
-    severityFor (Namespace _ ["UsingBigLedgerPeerSnapshot"]) _ = Just Info
+    severityFor (Namespace _ ["UsingBigLedgerPeerSnapshot"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor (Namespace _ ["PickedPeer"]) = Just
@@ -935,8 +935,9 @@ instance MetaTrace TraceLedgerPeers where
       ""
     documentFor (Namespace _ ["TraceLedgerPeersFailure"]) = Just
       ""
-    documentFor (Namespace _ ["UsingBigLedgerPeerSnapshot"]) = Just
-      ""
+    documentFor (Namespace _ ["UsingBigLedgerPeerSnapshot"]) = Just $ mconcat
+      [ "Trace for when a request for big ledger peers is fulfilled from the snapshot file"
+      , " defined in the topology configuration file."]
     documentFor _ = Nothing
 
     allNamespaces = [

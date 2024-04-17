@@ -250,7 +250,7 @@ instance HasSeverityAnnotation TraceLedgerPeers where
       TraceLedgerPeersDomains {}     -> Debug
       TraceLedgerPeersResult {}      -> Debug
       TraceLedgerPeersFailure {}     -> Debug
-      UsingBigLedgerPeerSnapshot {}  -> Info
+      UsingBigLedgerPeerSnapshot {}  -> Debug
 
 
 instance HasPrivacyAnnotation (WithAddr addr ErrorPolicyTrace)

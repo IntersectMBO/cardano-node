@@ -14,6 +14,7 @@ module Cardano.Node.Types
   , ConfigYamlFilePath(..)
   , DbFile(..)
   , GenesisFile(..)
+  , PeerSnapshotFile (..)
   , ProtocolFilepaths (..)
   , GenesisHash(..)
   , MaxConcurrencyBulkSync(..)
@@ -81,6 +82,14 @@ newtype GenesisFile = GenesisFile
   { unGenesisFile :: FilePath }
   deriving stock (Eq, Ord)
   deriving newtype (IsString, Show)
+
+-- | Path containing a serialized ledger peer snapshot
+-- for use by diffusion layer to facilitate bootstrapping
+-- a node in Genesis consensus mode
+--
+newtype PeerSnapshotFile = PeerSnapshotFile { unPeerSnapshotFile :: FilePath }
+  deriving stock (Eq, Show)
+  deriving newtype (FromJSON, ToJSON)
 
 instance FromJSON GenesisFile where
   parseJSON (String genFp) = pure . GenesisFile $ Text.unpack genFp
