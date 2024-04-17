@@ -61,10 +61,12 @@ def era_defaults($era):
 
   , node:
     { rts_flags_override:             []
+    , heap_limit:                     null                ## optional: heap limit in MB (translates to RTS flag -M)
     , shutdown_on_slot_synced:        null
     , shutdown_on_block_synced:       null
     , tracing_backend:                "trace-dispatcher"  ## or "iohk-monitoring"
     , tracer:                         true
+    , utxo_lmdb:                      false               ## use LMDB backend (instead of default in-mem) on a UTxO-HD node; will be ignored by non-UTxO-HD nodes
     , verbatim:
       {
       }
@@ -96,6 +98,8 @@ def era_defaults($era):
         { producer: {cores: 2, memory: 15000, memory_max: 16000}
         , explorer: {cores: 2, memory: 15000, memory_max: 16000}
         }
+      # Volumes like {source: "ssd1", destination: "/ssd1", read_only: false}
+      , host_volumes: null
       , fetch_logs_ssh: false
       }
     , aws:
@@ -103,13 +107,16 @@ def era_defaults($era):
         { producer: "c5.2xlarge"
         , explorer: "m5.4xlarge"
         }
+      # "attr.unique.platform.aws.public-ipv4" to bind and service definition.
+      , use_public_routing: false
       }
     , minimun_storage:
       { producer: 12582912 # 12×1024×1024
       , explorer: 14155776 # 13.5×1024×1024
       }
     , keep_running: false
+    , ssd_directory: null
     }
-
   }
+
 } | (.common * (.[$era] // {}));

@@ -128,6 +128,11 @@ let
       ];
     };
     instanceDbPath = cfg.databasePath i;
+    utxoLmdbParams = ["--v1-lmdb-ledger-db-backend"]
+      ++ lib.optionals (cfg.lmdbDatabasePath i != null)
+        [ "--ssd-database-dir ${cfg.lmdbDatabasePath i}"
+          # "--ssd-snapshot-tables"
+        ];
     cmd = builtins.filter (x: x != "") [
       "${cfg.executable} run"
       "--config ${nodeConfigFile}"
@@ -143,7 +148,8 @@ let
       "--tracer-socket-path-accept ${cfg.tracerSocketPathAccept i}"
     ] ++ lib.optionals (cfg.tracerSocketPathConnect i != null) [
       "--tracer-socket-path-connect ${cfg.tracerSocketPathConnect i}"
-    ] ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
+    ] ++ lib.optionals (cfg.withUtxoHdLmdb i) utxoLmdbParams
+      ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
       echo "Starting: ${concatStringsSep "\"\n   echo \"" cmd}"
       echo "..or, once again, in a single line:"
@@ -348,6 +354,16 @@ in {
         default = i : "${cfg.stateDir i}/${cfg.dbPrefix i}";
         apply = x : if builtins.isFunction x then x else _ : x;
         description = ''Node database path, for each instance.'';
+      };
+
+      lmdbDatabasePath = mkOption {
+        type = funcToOr nullOrStr;
+        default = null;
+        apply = x : if builtins.isFunction x then x else if x == null then _: null else _: x;
+        description = ''
+          Node UTxO-HD LMDB path for performant disk I/O, for each instance.
+          This could point to a direct-access SSD, with a specifically created journal-less file system and optimized mount options.
+        '';
       };
 
       socketPath = mkOption {
@@ -648,6 +664,13 @@ in {
         default = false;
       };
 
+      withUtxoHdLmdb = mkOption {
+        type = funcToOr types.bool;
+        default = false;
+        apply = x: if builtins.isFunction x then x else _: x;
+        description = ''On an UTxO-HD enabled node, the in-memory backend is the default. This activates the on-disk backend (LMDB) instead.'';
+      };
+
       extraArgs = mkOption {
         type = types.listOf types.str;
         default = [];
@@ -692,6 +715,7 @@ in {
   config = mkIf cfg.enable ( let
     stateDirBase = "/var/lib/";
     runDirBase = "/run/";
+    lmdbPaths = filter (x: x != null) (map (e: cfg.lmdbDatabasePath e) (builtins.genList lib.trivial.id cfg.instances));
     genInstanceConf = f: listToAttrs (if cfg.instances > 1
       then genList (i: let n = "cardano-node-${toString i}"; in nameValuePair n (f n i)) cfg.instances
       else [ (nameValuePair "cardano-node" (f "cardano-node" 0)) ]); in lib.mkMerge [
@@ -792,6 +816,10 @@ in {
         {
           assertion = !(cfg.systemdSocketActivation && cfg.useNewTopology);
           message = "Systemd socket activation cannot be used with p2p topology due to a systemd socket re-use issue.";
+        }
+        {
+          assertion = (length lmdbPaths) == (length (lib.lists.unique lmdbPaths));
+          message   = "When configuring multiple LMDB enabled nodes on one instance, lmdbDatabasePath must be unique.";
         }
       ];
     }

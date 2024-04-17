@@ -429,7 +429,7 @@ EOL
         local nomad_class
         nomad_class="$(jq -r .cluster.nomad.class "${WB_SHELL_PROFILE_DATA}"/profile.json)"
         local perf_nodes
-        perf_nodes="$(nomad node status -filter 'Status=="ready"' -filter "NodeClass==\"${nomad_class}\"" -json)"
+        perf_nodes="$(nomad node status -filter "Status==\"ready\" and NodeClass==\"${nomad_class}\"" -json)"
         # Create the base JSON string but without the "attributes" because those
         # are only available when fetching the status of individual nodes.
         local nodes_json

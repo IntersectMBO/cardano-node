@@ -2323,12 +2323,23 @@ backend_nomad() {
               # If the node in "${generator_task}" quits generators fails with:
               # tx-generator: MuxError MuxBearerClosed "<socket: 12> closed when reading data, waiting on next header True"
               # Service binary 'tx-generator' returned status: 1
+              msg "$(yellow "WARNING: supervisord program \"generator\" (inside Nomad Task \"${generator_task}\") quit with an error exit code!")"
+              # Give the node where tx-generator runs some time to quit.
+              msg "$(yellow " Waiting 60s to check the status of supervisord program \"${generator_task}\" (inside Nomad Task \"${generator_task}\")")"
+              sleep 30
               if backend_nomad is-task-program-running "${dir}" "${generator_task}" "${generator_task}" 5
               then
                 # This was not expected!
                 # But check it wasn't a race condition of a stopping cluster!
                 if ! test -f "${dir}"/flag/cluster-stopping
                 then
+                  msg "$(red "ERROR: supervisord program \"generator\" (inside Nomad Task \"${generator_task}\") quit with an error exit code while supervisord program \"${generator_task}\" (inside Nomad Task \"${generator_task}\") is still running!")"
+                  # The tx-generator can fail because something happened with
+                  # the nodes (out of memory?), this gives the nodes more time
+                  # to shutdown properly and/or show any possible cause of
+                  # trouble before being killed.
+                  msg "$(yellow "WARNING: Waiting one minute so nodes are not killed immediately")"
+                  sleep 60
                   touch "${dir}"/flag/cluster-stopping
                   fatal "Generator quit unexpectedly!!!"
                 fi
@@ -2337,14 +2348,14 @@ backend_nomad() {
                 touch "${dir}"/generator/quit
                 # Show the warning and continue with the counter
                 echo -ne "\n"
-                msg "$(yellow "WARNING: supervisord program \"generator\" (inside Nomad Task \"${generator_task}\" quit with an error exit code")"
+                msg "$(yellow "WARNING: supervisord program \"generator\" (inside Nomad Task \"${generator_task}\") quit with an error exit code but expected when supervisord program \"${generator_task}\" (inside Nomad Task \"${generator_task}\") is not running")"
                 msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
               fi
             else
               touch "${dir}"/generator/quit
               # Show the warning and continue with the counter
               echo -ne "\n"
-              msg "$(yellow "WARNING: supervisord program \"generator\" (inside Nomad Task \"${generator_task}\" quit with a non-error exit code")"
+              msg "$(yellow "WARNING: supervisord program \"generator\" (inside Nomad Task \"${generator_task}\") quit with a non-error exit code")"
               msg_ne "nomad: $(blue Waiting) until all pool nodes are stopped: 000000"
             fi
           fi # Finish generator checks.
@@ -3855,7 +3866,7 @@ client {
 
   # Specifies an arbitrary string used to logically group client nodes by
   # user-defined class. This can be used during job placement as a filter.
-  node_class = "perf" # Using the "world.dev.cardano.org" testing class for "perf".
+  node_class = "" # Make sure we are not using namespaces locally.
 
   # "artifact" parameters (fail fast!!!)
   ######################################
