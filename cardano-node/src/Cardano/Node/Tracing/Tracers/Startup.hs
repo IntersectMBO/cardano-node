@@ -25,6 +25,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (SomeConsensusProtocol (..))
 import           Cardano.Node.Startup
+import           Cardano.Node.Types (PeerSnapshotFile (..))
 import           Cardano.Slotting.Slot (EpochSize (..))
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Byron.Ledger.Conversions (fromByronEpochSlots,
@@ -56,7 +57,6 @@ import           Data.Version (showVersion)
 import           Network.Socket (SockAddr)
 
 import           Paths_cardano_node (version)
-
 
 getStartupInfo
   :: NodeConfiguration
@@ -214,17 +214,24 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal NetworkConfigUpdate =
       mconcat [ "kind" .= String "NetworkConfigUpdate"
                , "message" .= String "network configuration update" ]
+  forMachine _dtal (LedgerPeerSnapshotLoaded wOrigin) =
+      mconcat [ "kind" .= String "LedgerPeerSnapshotLoaded"
+              , "message" .= String (showT wOrigin)]
   forMachine _dtal NetworkConfigUpdateUnsupported =
       mconcat [ "kind" .= String "NetworkConfigUpdate"
               , "message" .= String "network topology reconfiguration is not supported in non-p2p mode" ]
   forMachine _dtal (NetworkConfigUpdateError err) =
       mconcat [ "kind" .= String "NetworkConfigUpdateError"
                , "error" .= String err ]
-  forMachine _dtal (NetworkConfig localRoots publicRoots useLedgerPeers) =
+  forMachine _dtal (NetworkConfig localRoots publicRoots useLedgerPeers peerSnapshotFileMaybe) =
       mconcat [ "kind" .= String "NetworkConfig"
                , "localRoots" .= toJSON localRoots
                , "publicRoots" .= toJSON publicRoots
                , "useLedgerAfter" .= useLedgerPeers
+               , "peerSnapshotFile" .=
+                   case peerSnapshotFileMaybe of
+                     Nothing -> Null
+                     Just (PeerSnapshotFile path) -> String (pack path)
                ]
   forMachine _dtal NetworkConfigLegacy =
       mconcat [ "kind" .= String "NetworkConfigLegacy"
@@ -295,6 +302,8 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["BlockForgingBlockTypeMismatch"]
   namespaceFor NetworkConfigUpdate {}  =
     Namespace [] ["NetworkConfigUpdate"]
+  namespaceFor LedgerPeerSnapshotLoaded {} =
+    Namespace [] ["LedgerPeerSnapshotLoaded"]
   namespaceFor NetworkConfigUpdateUnsupported {}  =
     Namespace [] ["NetworkConfigUpdateUnsupported"]
   namespaceFor NetworkConfigUpdateError {}  =
@@ -502,7 +511,7 @@ ppStartupInfoTrace NetworkConfigUpdate = "Performing topology configuration upda
 ppStartupInfoTrace NetworkConfigUpdateUnsupported =
   "Network topology reconfiguration is not supported in non-p2p mode"
 ppStartupInfoTrace (NetworkConfigUpdateError err) = err
-ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers) =
+ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers peerSnapshotFile) =
     pack
   $ intercalate "\n"
   [ "\nLocal Root Groups:"
@@ -518,8 +527,15 @@ ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerPeers) =
         ++ show (unSlotNo slotNo)
       UseLedgerPeers Always         ->
         "Use ledger peers in any slot."
+  , case peerSnapshotFile of
+      Nothing -> "Topology configuration does not specify ledger peer snapshot file"
+      Just p ->    "Topology configuration specifies ledger peer snapshot file: "
+                <> show (unPeerSnapshotFile p)
   ]
 ppStartupInfoTrace NetworkConfigLegacy = p2pNetworkConfigLegacyMessage
+
+ppStartupInfoTrace (LedgerPeerSnapshotLoaded wOrigin) =
+  "Topology: Peer snapshot containing ledger peers " <> showT wOrigin <> " loaded."
 
 ppStartupInfoTrace P2PWarning = p2pWarningMessage
 

@@ -18,6 +18,8 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProto
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol (ProtocolInstantiationError)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
+import           Cardano.Node.Types (PeerSnapshotFile)
+import           Cardano.Slotting.Slot (SlotNo, WithOrigin)
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.CanHardFork (shelleyLedgerConfig)
@@ -112,6 +114,7 @@ data StartupTrace blk =
   | NetworkConfig [(HotValency, WarmValency, Map RelayAccessPoint (PeerAdvertise, PeerTrustable))]
                   (Map RelayAccessPoint PeerAdvertise)
                   UseLedgerPeers
+                  (Maybe PeerSnapshotFile)
 
   -- | Warn when 'EnableP2P' is set.
   | P2PWarning
@@ -130,6 +133,7 @@ data StartupTrace blk =
   | BIShelley BasicInfoShelleyBased
   | BIByron BasicInfoByron
   | BINetwork BasicInfoNetwork
+  | LedgerPeerSnapshotLoaded (WithOrigin SlotNo)
 
 data EnabledBlockForging = EnabledBlockForging
                          | DisabledBlockForging
