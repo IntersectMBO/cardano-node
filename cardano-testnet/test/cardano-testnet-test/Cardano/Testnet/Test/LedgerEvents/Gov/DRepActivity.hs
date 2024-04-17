@@ -25,7 +25,7 @@ import           Data.ByteString.Lazy.Char8 (pack)
 import qualified Data.Map as Map
 import           Data.String
 import qualified Data.Text as Text
-import           Data.Word (Word32)
+import           Data.Word (Word32, Word64)
 import           GHC.Stack (callStack)
 import           Lens.Micro ((^?))
 import           System.FilePath ((</>))
@@ -94,80 +94,69 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
   dRepActivityBeforeFirstProp <- getDRepActivityValue execConfig
   dRepActivityBeforeFirstProp === 100 -- This is the default value
 
-  let firstPropVotes :: [(String, Int)]
-      firstPropVotes = zip (concatMap (uncurry replicate) [(6, "yes"), (4, "no")]) [1..]
-  annotateShow firstPropVotes
-
-  fgaInfo@(firstGovernanceActionTxId, firstGovernanceActionIndex) <-
-    makeActivityChangeProposal execConfig epochStateView (File configurationFile) (File socketPath)
-                               sbe gov "proposal1" Nothing 4 wallet0
-
-  voteChangeProposal execConfig epochStateView sbe gov "vote1"
-                     firstGovernanceActionTxId firstGovernanceActionIndex firstPropVotes wallet0
-
-  (EpochNo epochAfterFirstProp) <- getCurrentEpochNo epochStateView sbe
-  H.note_ $ "Epoch after first prop: " <> show epochAfterFirstProp
-
-  void $ waitUntilEpoch (File configurationFile) (File socketPath) (EpochNo (epochAfterFirstProp + 2))
-  dRepActivityAfterFirstProp <- getDRepActivityValue execConfig
-
-  dRepActivityAfterFirstProp === 4 -- This is what we just set, should work
-
-  result1 <- checkDRepState sbe (File configurationFile) (File socketPath) execConfig
-                            (Just . map (drepExpiry . snd) . Map.toList)
-  H.note_ $ "DRep expiration dates: " <> show result1
+  -- This proposal should pass
+  firstProposalInfo <- activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
+                                                  "firstProposal" wallet0 Nothing [(6, "yes"), (4, "no")] 4 4 2
 
   -- Second proposal (set activity to something else and it should fail, because of percentage being under 51)
-  let secondPropVotes :: [(String, Int)]
-      secondPropVotes = zip (concatMap (uncurry replicate) [(4, "yes")]) [1..]
-  annotateShow secondPropVotes
-
-  (secondGovernanceActionTxId, secondGovernanceActionIndex) <-
-    makeActivityChangeProposal execConfig epochStateView (File configurationFile) (File socketPath)
-                               sbe gov "proposal2" (Just fgaInfo) 7 wallet1
-
-  voteChangeProposal execConfig epochStateView sbe gov "vote2"
-                     secondGovernanceActionTxId secondGovernanceActionIndex secondPropVotes wallet1
-
-  (EpochNo epochAfterSecondProp) <- getCurrentEpochNo epochStateView sbe
-  H.note_ $ "Epoch after second prop: " <> show epochAfterSecondProp
-
-  void $ waitUntilEpoch (File configurationFile) (File socketPath) (EpochNo (epochAfterSecondProp + 5))
-  dRepActivityAfterSecondProp <- getDRepActivityValue execConfig
-
-  dRepActivityAfterSecondProp === 4 -- This is what we set in first prop, second prop should fail
-
-  result2 <- checkDRepState sbe (File configurationFile) (File socketPath) execConfig
-                            (Just . map (drepExpiry . snd) . Map.toList)
-  H.note_ $ "DRep expiration dates: " <> show result2
+  -- We expect to get what we set in first prop, second prop should fail
+  void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
+                                    "secondProposal" wallet1 (Just firstProposalInfo) [(4, "yes")] 7 4 5
 
   -- Third proposal (set activity to something else again and it should pass, because of inactivity)
-  let thirdPropVotes :: [(String, Int)]
-      thirdPropVotes = zip (concatMap (uncurry replicate) [(4, "yes")]) [1..]
-  annotateShow thirdPropVotes
+  -- Because 6 out of 10 were inactive, prop should pass
+  void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
+                                    "thirdProposal" wallet2 (Just firstProposalInfo) [(4, "yes")] 8 8 2
 
-  (thirdGovernanceActionTxId, thirdGovernanceActionIndex) <-
+
+activityChangeProposalTest
+  :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
+  => H.ExecConfig
+  -> EpochStateView
+  -> FilePath
+  -> FilePath
+  -> ShelleyBasedEra ConwayEra
+  -> FilePath
+  -> FilePath
+  -> PaymentKeyInfo
+  -> Maybe (String, Word32)
+  -> t (Int, String)
+  -> Word32
+  -> Integer
+  -> Word64
+  -> m (String, Word32)
+activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe work prefix
+                           wallet previousProposalInfo votes change expected epochsToWait = do
+
+  baseDir <- H.createDirectoryIfMissing $ work </> prefix
+
+  let propVotes :: [(String, Int)]
+      propVotes = zip (concatMap (uncurry replicate) votes) [1..]
+  annotateShow propVotes
+
+  thisProposal@(governanceActionTxId, governanceActionIndex) <-
     makeActivityChangeProposal execConfig epochStateView (File configurationFile) (File socketPath)
-                               sbe gov "proposal3" (Just fgaInfo) 8 wallet2
+                               sbe baseDir "proposal" previousProposalInfo change wallet
 
-  voteChangeProposal execConfig epochStateView sbe gov "vote3"
-                     thirdGovernanceActionTxId thirdGovernanceActionIndex thirdPropVotes wallet2
+  voteChangeProposal execConfig epochStateView sbe baseDir "vote"
+                     governanceActionTxId governanceActionIndex propVotes wallet
 
-  (EpochNo epochAfterThirdProp) <- getCurrentEpochNo epochStateView sbe
-  H.note_ $ "Epoch after third prop: " <> show epochAfterThirdProp
+  (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView sbe
+  H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
-  void $ waitUntilEpoch (File configurationFile) (File socketPath) (EpochNo (epochAfterThirdProp + 2))
-  dRepActivityAfterThirdProp <- getDRepActivityValue execConfig
+  void $ waitUntilEpoch (File configurationFile) (File socketPath) (EpochNo (epochAfterProp + epochsToWait))
+  dRepActivityAfterProp <- getDRepActivityValue execConfig
 
-  dRepActivityAfterThirdProp === 8 -- Because 6 out of 10 were inactive, third prop should pass
+  dRepActivityAfterProp === expected
 
   result3 <- checkDRepState sbe (File configurationFile) (File socketPath) execConfig
                             (Just . map (drepExpiry . snd) . Map.toList)
   H.note_ $ "DRep expiration dates: " <> show result3
 
+  return thisProposal
 
 makeActivityChangeProposal
-  :: (H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m, Foldable f)
+  :: (H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig
   -> EpochStateView
   -> NodeConfigFile 'In
@@ -175,7 +164,7 @@ makeActivityChangeProposal
   -> ShelleyBasedEra ConwayEra
   -> FilePath
   -> String
-  -> f (String, Word32)
+  -> Maybe (String, Word32)
   -> Word32
   -> PaymentKeyInfo
   -> m (String, Word32)
@@ -189,7 +178,6 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
 
   let stakeVkeyFp = baseDir </> "stake.vkey"
       stakeSKeyFp = baseDir </> "stake.skey"
-
 
   _ <- P.cliStakeAddressKeyGen baseDir
          $ P.KeyNames { P.verificationKeyFile = stakeVkeyFp
