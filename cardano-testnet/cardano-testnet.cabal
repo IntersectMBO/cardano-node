@@ -4,7 +4,7 @@ name:                   cardano-testnet
 version:                8.8.0
 synopsis:               The cardano full node
 description:            The cardano full node.
-copyright:              2021-2023 Input Output Global Inc (IOG).
+copyright:              2021-2023 Input Output Global Inc (IOG), 2023-2024 Intersect.
 author:                 IOHK
 maintainer:             operations@iohk.io
 category:               Cardano,
@@ -74,7 +74,7 @@ library
                       , scientific
                       , si-timers
                       , stm
-                      , tasty
+                      , tasty ^>= 1.5
                       , tasty-expected-failure
                       , tasty-hedgehog
                       , text
@@ -89,6 +89,7 @@ library
                         Testnet.Start.Byron
                         Testnet.Start.Types
                         Testnet.Components.Configuration
+                        Testnet.Components.DReps
                         Testnet.Components.SPO
                         Testnet.Components.Query
                         Testnet.Defaults
@@ -152,7 +153,7 @@ test-suite cardano-testnet-golden
                       , hedgehog-extras
                       , process
                       , regex-compat
-                      , tasty
+                      , tasty ^>= 1.5
                       , tasty-hedgehog
                       , text
 
@@ -185,6 +186,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
                         Cardano.Testnet.Test.LedgerEvents.Gov.InfoAction
                         Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO
+                        Cardano.Testnet.Test.LedgerEvents.Gov.DRepDeposits
                         Cardano.Testnet.Test.LedgerEvents.SanityCheck
                         Cardano.Testnet.Test.LedgerEvents.TreasuryGrowth
 
@@ -220,7 +222,7 @@ test-suite cardano-testnet-test
                       , mtl
                       , process
                       , regex-compat
-                      , tasty
+                      , tasty ^>= 1.5
                       , text
                       , time
                       , transformers

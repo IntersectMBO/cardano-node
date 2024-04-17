@@ -45,7 +45,6 @@ import           Prelude
 
 import           Control.Exception.Safe
 import           Control.Monad
-import qualified Control.Monad.Class.MonadTimer.SI as MT
 import           Control.Monad.State.Strict (StateT)
 import           Control.Monad.Trans.Resource
 import qualified Data.Aeson as A
@@ -57,6 +56,7 @@ import qualified GHC.IO.Handle as IO
 import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           Network.Socket (PortNumber)
+import           Prettyprinter (unAnnotate)
 import qualified System.Directory as IO
 import           System.Directory (doesDirectoryExist)
 import           System.FilePath
@@ -76,23 +76,23 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 import qualified Hedgehog.Extras.Test.Base as H
 
 data TestnetRuntime = TestnetRuntime
-  { configurationFile :: FilePath
-  , shelleyGenesisFile :: FilePath
-  , testnetMagic :: Int
-  , poolNodes :: [PoolNode]
-  , wallets :: [PaymentKeyInfo]
-  , delegators :: [Delegator]
+  { configurationFile :: !FilePath
+  , shelleyGenesisFile :: !FilePath
+  , testnetMagic :: !Int
+  , poolNodes :: ![PoolNode]
+  , wallets :: ![PaymentKeyInfo]
+  , delegators :: ![Delegator]
   }
 
 data NodeRuntime = NodeRuntime
-  { nodeName :: String
-  , nodeIpv4 :: Text
-  , nodePort :: PortNumber
-  , nodeSprocket :: Sprocket
-  , nodeStdinHandle :: IO.Handle
-  , nodeStdout :: FilePath
-  , nodeStderr :: FilePath
-  , nodeProcessHandle :: IO.ProcessHandle
+  { nodeName :: !String
+  , nodeIpv4 :: !Text
+  , nodePort :: !PortNumber
+  , nodeSprocket :: !Sprocket
+  , nodeStdinHandle :: !IO.Handle
+  , nodeStdout :: !FilePath
+  , nodeStderr :: !FilePath
+  , nodeProcessHandle :: !IO.ProcessHandle
   }
 
 data PoolNode = PoolNode
@@ -177,10 +177,18 @@ data NodeStartFailure
   = ProcessRelatedFailure ProcessError
   | ExecutableRelatedFailure ExecutableError
   | FileRelatedFailure IOException
-  | NodeExecutableError String
+  | NodeExecutableError (Doc Ann)
  -- | NodePortNotOpenError IOException
   | MaxSprocketLengthExceededError
   deriving Show
+
+instance Error NodeStartFailure where
+  prettyError = \case
+    ProcessRelatedFailure e -> "Cannot initiate process:" <+> pshow e
+    ExecutableRelatedFailure e -> "Cannot run cardano-node executable" <+> pshow e
+    FileRelatedFailure e -> "File error:" <+> prettyException e
+    NodeExecutableError e -> "Cardano node process did not start:" <+> unAnnotate e
+    MaxSprocketLengthExceededError -> "Max sprocket length exceeded"
 
 -- TODO: We probably want a check that this node has the necessary config files to run and
 -- if it doesn't we fail hard.
@@ -242,37 +250,32 @@ startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
   -- the process has started. This allows us to read stderr in order
   -- to fail early on errors generated from the cardano-node binary.
   _ <- liftIO (IO.getPid hProcess)
-    >>= hoistMaybe (NodeExecutableError $ mconcat ["startNode: ", node, "'s process did not start."])
-
-  -- allow network to thermalize before proceeding
-  -- FIXME: use ledger events to listen here instead of this workaround
-  liftIO $ MT.threadDelay 10
+    >>= hoistMaybe (NodeExecutableError $ "startNode:" <+> pretty node <+> "'s process did not start.")
 
   -- Wait for socket to be created
   eSprocketError <-
     Ping.waitForSprocket
-      20  -- timeout
+      30  -- timeout
       0.2 -- check interval
       sprocket
 
   -- If we do have anything on stderr, fail.
   stdErrContents <- liftIO $ IO.readFile nodeStderrFile
   unless (null stdErrContents)
-    $ left $ NodeExecutableError stdErrContents
+    $ left . NodeExecutableError $ pretty stdErrContents
 
   -- No stderr and no socket? Fail.
   firstExceptT
     (\ioex ->
-      NodeExecutableError . mconcat $
-        ["Socket ", socketAbsPath, " was not created after 20 seconds. There was no output on stderr. Exception: ", displayException ioex])
+      NodeExecutableError . hsep $
+        ["Socket", pretty socketAbsPath, "was not created after 20 seconds. There was no output on stderr. Exception:", prettyException ioex])
     $ hoistEither eSprocketError
 
   -- Ping node and fail on error
   Ping.pingNode (fromIntegral testnetMagic) sprocket
-    >>= (firstExceptT (NodeExecutableError . docToString . ("Ping error:" <+>) . prettyError) . hoistEither)
+    >>= (firstExceptT (NodeExecutableError . ("Ping error:" <+>) . prettyError) . hoistEither)
 
   pure $ NodeRuntime node ipv4 port sprocket stdIn nodeStdoutFile nodeStderrFile hProcess
-
 
 createDirectoryIfMissingNew :: HasCallStack => FilePath -> IO FilePath
 createDirectoryIfMissingNew directory = GHC.withFrozenCallStack $ do

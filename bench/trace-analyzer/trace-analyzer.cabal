@@ -6,7 +6,7 @@ synopsis:               See README for more info
 description:            See README for more info.
 category:               Cardano,
                         Trace,
-copyright:              2022-2023 Input Output Global Inc (IOG).
+copyright:              2022-2023 Input Output Global Inc (IOG), 2023-2024 Intersect.
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0

@@ -1,5 +1,18 @@
 import "epoch-timeline" as timeline;
 
+## For the Nomad perf-ssd cluster, we might want to artificially
+## cap the large RAM resources the instances provide.
+def nomad_memory_limit($limit):
+  { nomad:
+    { resources:
+      { producer:
+        { memory:       $limit
+        , memory_max:   $limit
+        }
+      }
+    }
+  };
+
 def all_profile_variants:
                                          1024    as $Ki
   |                                      1000000 as $M
@@ -52,6 +65,12 @@ def all_profile_variants:
       , delegators:                         (0.2 * $M)
       }
     } as $dataset_small
+  |
+    { genesis:
+      { utxo:                               (24 * $M)
+      , delegators:                         (1.2 * $M)
+      }
+    } as $dataset_24m
   |
     { genesis:
       { utxo:                               (30 * $M)
@@ -193,6 +212,7 @@ def all_profile_variants:
           { producer: "c5.2xlarge"
           , explorer: "m5.4xlarge"
           }
+        , use_public_routing: true
         }
       # We are requiring 10.5GB on the explorer node and 9GB on the others.
       , minimun_storage:
@@ -214,16 +234,21 @@ def all_profile_variants:
         { namespace: "perf-ssd"
         , class: "perf-ssd"
         , resources:
-          { producer: {cores: 32, memory: 64000, memory_max: 64000}
-          , explorer: {cores: 32, memory: 64000, memory_max: 64000}
+          { producer: {cores: 16, memory: 120000, memory_max: 124000}
+          , explorer: {cores: 16, memory: 120000, memory_max: 124000}
           }
+        , host_volumes: [
+            {source: "ssd1", destination: "/ssd1", read_only: false}
+          , {source: "ssd2", destination: "/ssd2", read_only: false}
+          ]
         , fetch_logs_ssh: true
         }
       , aws:
         { instance_type:
-          { producer: "c5.9xlarge"
-          , explorer: null
+          { producer: "r5d.4xlarge"
+          , explorer: "r5d.4xlarge"
           }
+        , use_public_routing: true
         }
       , minimun_storage: null
       , keep_running: true
@@ -257,6 +282,15 @@ def all_profile_variants:
       }
     ) as $nomad_perfssd_unicircle
   |
+    ($nomad_perfssd *
+      { composition:
+        { locations:                      ["eu-central-1", "us-east-1", "ap-southeast-2"]
+        , topology:                       "torus-dense"
+        , with_explorer:                  true
+        }
+      }
+    ) as $nomad_perfssd_dense
+  |
   ##
   ### Definition vocabulary:  filtering
   ##
@@ -275,8 +309,8 @@ def all_profile_variants:
     } as $compressed_timescale
   |
     { genesis:
-      { epoch_length:                   1800
-      , parameter_k:                    9
+      { epoch_length:                   1200
+      , parameter_k:                    6
       }
     } as $small_timescale
   |
@@ -542,6 +576,14 @@ def all_profile_variants:
     { scenario:                        "fixed-loaded"
     }) as $scenario_nomad_perf
   |
+   ($model_timescale * $nomad_perf_tps_saturation_value *
+    { scenario:                        "fixed-loaded"
+    }) as $scenario_nomad_perfssd
+  |
+   ($small_timescale * $nomad_perf_tps_saturation_value *
+    { scenario:                        "fixed-loaded"
+    }) as $scenario_nomad_perfssd_solo
+  |
    ($model_timescale * $model_tps_saturation_value *
     { scenario:                        "fixed-loaded"
     }) as $scenario_model
@@ -609,6 +651,23 @@ def all_profile_variants:
       , desc: "AWS c5-2xlarge cluster dataset, 7 epochs"
     }) as $nomad_perf_base
   |
+   ($scenario_nomad_perfssd * $compose_fiftytwo * $dataset_oct2021 * $for_8ep *
+    { node:
+        { shutdown_on_slot_synced:        64000
+        }
+      , analysis:
+        { filters:                        ["epoch3+", "size-full"]
+        }
+      , generator:
+        { init_cooldown:                  45
+        }
+      , genesis:
+        { funds_balance:                  20000000000000
+        , max_block_size:                 88000
+        }
+      , desc: "AWS c5-2xlarge cluster dataset, 7 epochs"
+    }) as $nomad_perfssd_base
+  |
    ($scenario_nomad_perf * $compose_fiftytwo * $dataset_oct2021 * $for_9ep * $plutus_base * $plutus_loop_counter *
     { node:
         { shutdown_on_slot_synced:        72000
@@ -628,8 +687,29 @@ def all_profile_variants:
     }) as $nomad_perf_plutus_base
   |
    ($scenario_latency * $compose_fiftytwo * $dataset_empty * $no_filtering *
-    { desc: "AWS c5-2xlarge cluster, stop when all latency services stop"
+    { desc: "AWS perf class cluster, stop when all latency services stop"
     }) as $nomad_perf_latency_base
+  |
+   ($scenario_latency * $compose_fiftytwo * $dataset_empty * $no_filtering *
+    { desc: "AWS perf-ssd class cluster, stop when all latency services stop"
+    }) as $nomad_perfssd_latency_base
+  |
+   ($scenario_nomad_perfssd_solo * $solo * $dataset_24m *
+    { node:
+        { shutdown_on_slot_synced:        7200
+        }
+      , analysis:
+        { filters:                        ["epoch3+", "size-full"]
+        }
+      , generator:
+        { epochs:                         6
+        }
+      , genesis:
+        { funds_balance:                  20000000000000
+        , max_block_size:                 88000
+        }
+      , desc: "AWS c5[d]-9xlarge utxoscale dataset, 6 epochs"
+    }) as $nomad_perfssd_solo_base
   |
    ($scenario_model * $quadruplet * $dataset_current * $for_7ep *
     { node:
@@ -708,6 +788,13 @@ def all_profile_variants:
   ##
   ### Actual profiles
   ##
+
+  ### Profile templates
+  ###
+  # UTxO scaling on a single node, mainnet blocksize, ~2h runtime (6 epochs) - default: 24mio UTxO, 64GB RAM cap
+    ($nomad_perfssd_solo_base * $nomad_perfssd_unicircle * $costmodel_v8_preview * $p2p
+    ) as $utxoscale_solo_template
+  |
 
   ### First, auto-named profiles:
   ###
@@ -798,6 +885,11 @@ def all_profile_variants:
     { name: "fast-oldtracing"
     }
 
+  ## Fast variants: single node with large, varying dataset sizes
+  , $fast_base * $solo * $dataset_24m *
+    { name: "faststartup-24M"
+    }
+
   ## CI variants: test duration, 3 blocks
   , $citest_base *
     { name: "ci-test"
@@ -848,6 +940,11 @@ def all_profile_variants:
     }
   , $cibench_base * $with_rtview *
     { name: "ci-bench-rtview"
+    }
+  , $cibench_base * $p2p *
+    { name: "ci-bench-lmdb"
+    , node:    { utxo_lmdb: true }
+    , cluster: { ssd_directory: "/tmp" }
     }
   , $cibench_base * $nomad_perf_torus * $p2p *
     { name: "ci-bench-nomadperf"
@@ -927,6 +1024,9 @@ def all_profile_variants:
   , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "value-nomadperf"
     }
+  , $nomad_perfssd_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
+    { name: "value-nomadperfssd"
+    }
   , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview * $old_tracing *
     { name: "value-oldtracing-nomadperf"
     }
@@ -935,6 +1035,9 @@ def all_profile_variants:
     }
   , $nomad_perf_latency_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "latency-nomadperf"
+    }
+  , $nomad_perfssd_latency_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
+    { name: "latency-nomadperfssd"
     }
 
 ## P&T Nomad cluster: 52 nodes, 3 regions, value-only (with old tracing variant) and Plutus, no P2P flavour
@@ -955,8 +1058,28 @@ def all_profile_variants:
   , $fast_base * $compose_fiftytwo * $nomad_perf_dense * $costmodel_v8_preview *
     { name: "fast-nomadperf-nop2p"
     }
-  , $fast_base * $solo * $nomad_perfssd_unicircle * $costmodel_v8_preview * $p2p *
+  , $fast_base * $compose_fiftytwo * $nomad_perfssd_dense * $costmodel_v8_preview * $p2p *
     { name: "fast-nomadperfssd"
+    }
+
+## P&T NomadSSD cluster: UTxO scale benchmarks on a single node
+  , $utxoscale_solo_template *
+    { name: "utxoscale-solo-24M64G-nomadperfssd"
+    }
+  , $utxoscale_solo_template *
+    { name: "utxoscale-solo-12M64G-nomadperfssd"
+    , genesis:
+      { utxo:                               (12 * $M)
+      }
+    }
+  , $utxoscale_solo_template *
+    { name: "utxoscale-solo-12M16G-nomadperfssd"
+    , genesis:
+      { utxo:                               (12 * $M)
+      }
+    , node:
+      { heap_limit:                         16384
+      }
     }
 
 ## Model value variant: 7 epochs (128GB RAM needed; 16GB for testing locally)
