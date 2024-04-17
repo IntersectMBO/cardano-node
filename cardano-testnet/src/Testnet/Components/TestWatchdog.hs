@@ -35,13 +35,13 @@ import qualified Hedgehog.Extras as H
 
 -- | Configuration for the watchdog.
 newtype WatchdogConfig = WatchdogConfig
-  { watchdogTimeout :: Int -- ^ Timeout in µs after which watchdog will kill the test case
+  { watchdogTimeout :: Int -- ^ Timeout in seconds after which watchdog will kill the test case
   }
 
 -- | Default watchdog config with 10 minutes timeout.
 defaultWatchdogConfig :: WatchdogConfig
 defaultWatchdogConfig = WatchdogConfig
-  { watchdogTimeout = 600_000_000
+  { watchdogTimeout = 600
   }
 
 -- | A watchdog
@@ -73,7 +73,7 @@ runWatchdog w@Watchdog{watchedThreadId, startTime, kickChan} = liftIO $ do
       pure ()
     Just (Kick timeout) -> do
       -- got a kick, wait for another period
-      threadDelay timeout
+      threadDelay $ timeout * 1_000_000
       runWatchdog w
     Nothing -> do
       -- we are out of scheduled timeouts, kill the monitored thread
@@ -82,7 +82,7 @@ runWatchdog w@Watchdog{watchedThreadId, startTime, kickChan} = liftIO $ do
 
 -- | Watchdog command
 data WatchdogCommand
-  = Kick !Int -- ^ Add another delay
+  = Kick !Int -- ^ Add another delay in seconds
   | PoisonPill -- ^ Stop the watchdog
 
 -- | Enqueue a kick for the watchdog. It will extend the timeout by another one defined in the watchdog
