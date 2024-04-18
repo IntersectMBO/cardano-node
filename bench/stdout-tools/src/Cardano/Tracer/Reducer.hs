@@ -68,24 +68,21 @@ instance Reducer CountLines where
 instance Reducer CountStartLeadershipCheckPlus where
   type instance Accum CountStartLeadershipCheckPlus = Int
   initialOf _ = 0
-  reducerOf _ l eitherTrace =
-    case eitherTrace of
-      (Left _) -> l
-      (Right trace) ->
-        if Trace.ns trace == "Forge.Loop.StartLeadershipCheckPlus"
-        then l + 1
-        else l
+  reducerOf _ l (Left _) = l
+  reducerOf _ l (Right (Trace.Trace _ "Forge.Loop.StartLeadershipCheckPlus" _)) = l + 1
+  reducerOf _ l _ = l
   showAns  _ = show
 
 instance Reducer HeapChanges where
   type instance Accum HeapChanges = (Maybe Integer, Seq.Seq (UTCTime, Integer))
   initialOf _ = (Nothing, Seq.empty)
   reducerOf _ ans (Left _) = ans
-  reducerOf _ ans@(maybePrevHeap, sq) (Right trace) =
-    case Aeson.eitherDecodeStrictText (Trace.remainder trace) of
-      (Right !remainder) ->
+  -- Filtering by first by namespace is way faster than decoding JSON.
+  reducerOf _ ans@(maybePrevHeap, sq) (Right trace@(Trace.Trace _ "Resources" remainder)) =
+    case Aeson.eitherDecodeStrictText remainder of
+      (Right !aeson) ->
         -- TODO: Use `unsnoc` when available
-        let actualHeap = Trace.resourcesHeap $ Trace.remainderData remainder
+        let actualHeap = Trace.resourcesHeap $ Trace.remainderData aeson
         in case maybePrevHeap of
           Nothing -> (Just actualHeap, Seq.singleton (Trace.at trace, actualHeap))
           (Just prevHeap) ->
@@ -93,6 +90,7 @@ instance Reducer HeapChanges where
             then ans
             else (Just actualHeap, sq Seq.|> (Trace.at trace, actualHeap))
       (Left _) -> ans
+  reducerOf _ ans _ = ans
   showAns _ = show
   printAns _ (_, sq) = mapM_
     (\(t,h) -> putStrLn $ show t ++ ": " ++ show h)
