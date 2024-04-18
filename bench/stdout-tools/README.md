@@ -11,9 +11,12 @@ ls -lah bench/stdout-tools/5nodes.stdout
 
 ### Count all lines
 
+Here we can observe the overhead of reading every line as a JSON trace message.
+
 #### ```wc```:
 ```
 time cat bench/stdout-tools/5nodes.stdout | wc -l
+25581640
 real    0m2.039s
 user    0m0.091s
 sys     0m2.842s
@@ -22,44 +25,54 @@ sys     0m2.842s
 ```
 time jq --raw-input . bench/stdout-tools/5nodes.stdout | wc -l
 25581640
-real    1m30.745s
-user    1m28.116s
-sys     0m8.150s
+real    1m32.285s
+user    1m29.735s
+sys     0m8.123s
 ```
 #### ```tq```:
 ```
 time cabal run tq -- --file big-node:bench/stdout-tools/5nodes.stdout --reducer count-lines
 25581640
-real    0m11.421s
-user    0m10.552s
-sys     0m0.885s
+real    0m15.385s
+user    0m13.138s
+sys     0m2.239s
 ```
 
 ### Count all the ```ns="Forge.Loop.StartLeadershipCheckPlus"```
 
+Also the overhead of being able to query JSON trace messages.
+
+#### ```grep```
+```
+time grep -E "^{.*" bench/stdout-tools/5nodes.stdout | grep "Forge.Loop.StartLeadershipCheckPlus" | wc -l
+264150
+real    0m4.250s
+user    0m3.525s
+sys     0m3.694s
+```
 #### Using ```jq``` for everything:
 ```
 time jq --raw-input --compact-output 'try fromjson | if (type == "object" and has("at")) then select(.ns=="Forge.Loop.StartLeadershipCheckPlus") else empty end' bench/stdout-tools/5nodes.stdout | wc -l
 264150
-real    1m30.012s
-user    1m28.719s
-sys     0m1.720s
+real    1m30.825s
+user    1m29.308s
+sys     0m1.567s
 ```
 #### Using ```jq``` but first filtering non valid JSON lines with ```grep```:
 ```
 time grep -E "^{.*" bench/stdout-tools/5nodes.stdout | jq --compact-output 'select(.ns == "Forge.Loop.StartLeadershipCheckPlus")' | wc -l
 264150
-real    1m7.787s
-user    1m9.871s
-sys     0m3.829s
+real    1m9.565s
+user    1m11.935s
+sys     0m6.041s
 ```
 #### ```tq```:
 ```
 time cabal run tq -- --file big-node:bench/stdout-tools/5nodes.stdout --reducer count-FLSLCP
 264150
-real    0m25.941s
-user    0m25.050s
-sys     0m0.906s
+real    0m29.974s
+user    0m27.712s
+sys     0m2.238s
 ```
 
 ### Heap changes
@@ -67,16 +80,16 @@ sys     0m0.906s
 #### Using ```jq``` but first filtering non valid JSON lines with ```grep```:
 ```
 time grep -E "^{.*" bench/stdout-tools/5nodes.stdout | jq 'select(.ns == "Resources") | .data.Heap' | uniq
-real    1m7.884s
-user    1m10.079s
-sys     0m3.379s
+real    1m8.410s
+user    1m10.831s
+sys     0m5.905s
 ```
 #### ```tq```:
 ```
 time cabal run tq -- --file big-node:bench/stdout-tools/5nodes.stdout --reducer heap-changes
-real    0m52.782s
-user    0m51.982s
-sys     0m0.914s
+real    0m31.425s
+user    0m29.182s
+sys     0m2.224s
 ```
 
 ## Benchmarks using an entire 52 nodes run
@@ -157,6 +170,8 @@ sys     0m46.550s
 
 ### Heap changes (in parallel)
 
+16 cores machine
+
 #### Using ```jq``` but first filtering non valid JSON lines with ```grep```:
 ```
 time bash -c "array=(); for i in \`seq 0 51\`; do echo \"node-\$i\" && grep -E \"^{.*\" run/2024-04-05-22-32-6b142-891-value-40M64G-nomadperfssd-bage-nom/node-\"\$i\"/stdout | jq --compact-output 'if .ns == \"Resources\" then .data.Heap else empty end' | uniq & array+=(\"\$!\"); done; wait \"\${array[@]}\""
@@ -170,4 +185,21 @@ time cabal run tq -- --run run/2024-04-05-22-32-6b142-891-value-40M64G-nomadperf
 real    2m33.630s
 user    38m24.001s
 sys     1m3.555s
+```
+
+32 cores machine
+
+#### Using ```jq``` but first filtering non valid JSON lines with ```grep```:
+```
+time bash -c "array=(); for i in \`seq 0 51\`; do echo \"node-\$i\" && grep -E \"^{.*\" run/2024-04-05-22-32-6b142-891-value-40M64G-nomadperfssd-bage-nom/node-\"\$i\"/stdout | jq --compact-output 'if .ns == \"Resources\" then .data.Heap else empty end' | uniq & array+=(\"\$!\"); done; wait \"\${array[@]}\""
+real    0m49.256s
+user    21m49.630s
+sys     2m37.604s
+```
+#### ```tq```:
+```
+time cabal run tq -- --run run/2024-04-05-22-32-6b142-891-value-40M64G-nomadperfssd-bage-nom --parallel --reducer heap-changes +RTS -N16
+real    1m18.268s
+user    36m0.719s
+sys     2m47.045s
 ```
