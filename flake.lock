@@ -10011,11 +10011,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1712857936,
-        "narHash": "sha256-1sqiovOrhLjiXT5tNbyXVC9XaWtrwQAs2oONKgsA7LI=",
+        "lastModified": 1713457858,
+        "narHash": "sha256-aefdR6B3lUAXC0kNvIKZcLF7fhBtlMB+oI7d6ZZ2y3E=",
         "owner": "input-output-hk",
         "repo": "UTxO-Scalability",
-        "rev": "37e57ee86457a541cb975fd96a8177e5c0885e9e",
+        "rev": "32e8c29d10bf410f397d1646dd478dc73a108547",
         "type": "github"
       },
       "original": {
