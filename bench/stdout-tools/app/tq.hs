@@ -76,6 +76,7 @@ instance Show ReducerElem where
 cliFilterReader :: String -> Either String ReducerElem
 cliFilterReader str = case str of
   "count-lines"  -> Right $ MkReducer Reducer.CountLines
+  "count-traces" -> Right $ MkReducer Reducer.CountTraces
   "count-FLSLCP" -> Right $ MkReducer Reducer.CountStartLeadershipCheckPlus
   "heap-changes" -> Right $ MkReducer Reducer.HeapChanges
   "missed-slots" -> Right $ MkReducer Reducer.MissedSlots
