@@ -44,6 +44,7 @@ library
                       , cardano-ledger-binary
                       , cardano-ledger-byron
                       , cardano-ledger-conway
+                      , cardano-ledger-api
                       , cardano-ledger-conway
                       , cardano-ledger-core
                       , cardano-ledger-core:testlib
