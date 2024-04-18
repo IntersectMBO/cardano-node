@@ -25,6 +25,7 @@ import           GHC.Stack (HasCallStack)
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query (checkDRepsNumber)
+import           Testnet.Components.TestWatchdog
 import qualified Testnet.Process.Cli as H
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
@@ -42,7 +43,7 @@ import qualified Hedgehog.Extras.Test.Golden as H
 -- If you want to recreate golden files, run the comment with
 -- RECREATE_GOLDEN_FILES=1 as its prefix
 hprop_cli_queries :: Property
-hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> do
+hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath

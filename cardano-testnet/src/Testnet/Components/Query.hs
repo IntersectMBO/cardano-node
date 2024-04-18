@@ -65,13 +65,13 @@ import           Hedgehog.Internal.Property (MonadTest)
 
 -- | Block and wait for the desired epoch.
 waitUntilEpoch
-  :: (MonadCatch m, MonadIO m, MonadTest m, HasCallStack)
+  :: (MonadIO m, MonadTest m, HasCallStack)
   => NodeConfigFile In
   -> SocketPath
   -> EpochNo -- ^ Desired epoch
   -> m EpochNo
 waitUntilEpoch nodeConfigFile socketPath desiredEpoch = withFrozenCallStack $ do
-  result <- runExceptT $
+  result <- H.evalIO . runExceptT $
     foldEpochState
       nodeConfigFile socketPath QuickValidation desiredEpoch () (\_ _ _ -> pure ConditionNotMet)
   case result of
@@ -91,7 +91,7 @@ queryTip
   -- ^ Output file
   -> ExecConfig
   -> m QueryTipLocalStateOutput
-queryTip (File fp) execConfig = do
+queryTip (File fp) execConfig = withFrozenCallStack $ do
   exists <- H.evalIO $ doesFileExist fp
   when exists $ H.evalIO $ removeFile fp
 
@@ -119,7 +119,7 @@ getEpochState :: MonadTest m
 getEpochState (EpochStateView esv) =
   withFrozenCallStack $
     H.byDurationM 0.5 15 "EpochStateView has not been initialized within 15 seconds" $
-      liftIO (readIORef esv) >>= maybe H.failure pure
+      H.evalIO (readIORef esv) >>= maybe H.failure pure
 
 
 -- | Create a background thread listening for new epoch states. New epoch states are available to access
@@ -133,7 +133,7 @@ getEpochStateView
   -> SocketPath -- ^ node socket path
   -> m EpochStateView
 getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
-  epochStateView <- liftIO $ newIORef Nothing
+  epochStateView <- H.evalIO $ newIORef Nothing
   runInBackground . runExceptT . foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) Nothing
     $ \epochState _slotNb _blockNb -> do
         liftIO $ writeIORef epochStateView (Just epochState)
@@ -257,11 +257,11 @@ checkDRepState ::
           (DRepState StandardCrypto) -> Maybe a) -- ^ A function that checks whether the DRep state is correct or up to date
                                                  -- and potentially inspects it.
   -> m a
-checkDRepState sbe configurationFile socketPath execConfig f = do
+checkDRepState sbe configurationFile socketPath execConfig f = withFrozenCallStack $ do
   QueryTipLocalStateOutput{mEpoch} <- P.execCliStdoutToJson execConfig [ "query", "tip" ]
   currentEpoch <- H.evalMaybe mEpoch
   let terminationEpoch = succ . succ $ currentEpoch
-  result <- runExceptT $ foldEpochState configurationFile socketPath QuickValidation terminationEpoch Nothing
+  result <- H.evalIO . runExceptT $ foldEpochState configurationFile socketPath QuickValidation terminationEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState) _slotNb _blockNb -> do
         case testEquality sbe actualEra of
           Just Refl -> do

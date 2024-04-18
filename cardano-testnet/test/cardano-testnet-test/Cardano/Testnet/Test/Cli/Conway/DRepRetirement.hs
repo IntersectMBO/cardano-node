@@ -21,6 +21,7 @@ import qualified Data.Text as Text
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
+import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
@@ -39,7 +40,7 @@ sbe = ShelleyBasedEraConway
 -- Execute this test with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRepRetirement/"'@
 hprop_drep_retirement :: Property
-hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempAbsBasePath' -> do
+hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath

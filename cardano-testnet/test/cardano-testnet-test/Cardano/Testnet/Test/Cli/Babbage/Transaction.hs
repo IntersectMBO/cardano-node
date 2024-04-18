@@ -29,6 +29,7 @@ import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
 import           Testnet.Components.SPO
+import           Testnet.Components.TestWatchdog
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run
 import qualified Testnet.Property.Utils as H
@@ -40,7 +41,7 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
 hprop_transaction :: Property
-hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbsBasePath' -> do
+hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath

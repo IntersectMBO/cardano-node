@@ -194,7 +194,11 @@ instance Error NodeStartFailure where
 -- if it doesn't we fail hard.
 -- | Start a node, creating file handles, sockets and temp-dirs.
 startNode
-  :: TmpAbsolutePath
+  :: HasCallStack
+  => MonadResource m
+  => MonadCatch m
+  => MonadFail m
+  => TmpAbsolutePath
   -- ^ The temporary absolute path
   -> String
   -- ^ The name of the node
@@ -206,7 +210,7 @@ startNode
   -- ^ Testnet magic
   -> [String]
   -- ^ The command --socket-path will be added automatically.
-  -> ExceptT NodeStartFailure (ResourceT IO) NodeRuntime
+  -> ExceptT NodeStartFailure m NodeRuntime
 startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
   let tempBaseAbsPath = makeTmpBaseAbsPath tp
       socketDir = makeSocketDir tp
@@ -220,8 +224,8 @@ startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
       socketRelPath = socketDir </> node </> "sock"
       sprocket = Sprocket tempBaseAbsPath socketRelPath
 
-  hNodeStdout <- handleIOExceptT FileRelatedFailure $ IO.openFile nodeStdoutFile IO.WriteMode
-  hNodeStderr <- handleIOExceptT FileRelatedFailure $ IO.openFile nodeStderrFile IO.ReadWriteMode
+  hNodeStdout <- handleIOExceptionsWith FileRelatedFailure . liftIO $ IO.openFile nodeStdoutFile IO.WriteMode
+  hNodeStderr <- handleIOExceptionsWith FileRelatedFailure . liftIO $ IO.openFile nodeStderrFile IO.ReadWriteMode
 
   unless (List.length (H.sprocketArgumentName sprocket) <= H.maxSprocketArgumentNameLength) $
      left MaxSprocketLengthExceededError
@@ -230,7 +234,7 @@ startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
 
   nodeProcess
     <- firstExceptT ExecutableRelatedFailure
-         $ hoistExceptT lift $ procNode $ mconcat
+         $ hoistExceptT liftIO $ procNode $ mconcat
                        [ nodeCmd
                        , [ "--socket-path", H.sprocketArgumentName sprocket
                          , "--port", show port
@@ -268,7 +272,7 @@ startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
   firstExceptT
     (\ioex ->
       NodeExecutableError . hsep $
-        ["Socket", pretty socketAbsPath, "was not created after 20 seconds. There was no output on stderr. Exception:", prettyException ioex])
+        ["Socket", pretty socketAbsPath, "was not created after 30 seconds. There was no output on stderr. Exception:", prettyException ioex])
     $ hoistEither eSprocketError
 
   -- Ping node and fail on error

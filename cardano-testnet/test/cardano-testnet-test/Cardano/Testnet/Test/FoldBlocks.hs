@@ -21,6 +21,7 @@ import           Control.Monad
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
+import           Testnet.Components.TestWatchdog
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
 
@@ -39,7 +40,7 @@ instance Show FoldBlocksException where
 -- events and block, and on reception writes this to the `lock` `MVar`
 -- that main thread blocks on.
 prop_foldBlocks :: H.Property
-prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath' -> do
+prop_foldBlocks = H.integrationRetryWorkspace 2 "foldblocks" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   -- Start testnet
   conf <- TN.mkConf tempAbsBasePath'
 
