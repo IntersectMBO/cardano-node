@@ -70,9 +70,9 @@ sys     0m6.041s
 ```
 time cabal run tq -- --file big-node:bench/stdout-tools/5nodes.stdout --reducer count-FLSLCP
 264150
-real    0m29.974s
-user    0m27.712s
-sys     0m2.238s
+real    0m19.904s
+user    0m17.629s
+sys     0m2.259s
 ```
 
 ### Heap changes
@@ -87,9 +87,9 @@ sys     0m5.905s
 #### ```tq```:
 ```
 time cabal run tq -- --file big-node:bench/stdout-tools/5nodes.stdout --reducer heap-changes
-real    0m31.425s
-user    0m29.182s
-sys     0m2.224s
+real    0m21.704s
+user    0m19.414s
+sys     0m2.280s
 ```
 
 ## Benchmarks using an entire 52 nodes run
@@ -199,7 +199,7 @@ sys     2m37.604s
 #### ```tq```:
 ```
 time cabal run tq -- --run run/2024-04-05-22-32-6b142-891-value-40M64G-nomadperfssd-bage-nom --parallel --reducer heap-changes +RTS -N16
-real    1m18.268s
-user    36m0.719s
-sys     2m47.045s
+real    1m8.057s
+user    31m6.545s
+sys     2m26.358s
 ```
