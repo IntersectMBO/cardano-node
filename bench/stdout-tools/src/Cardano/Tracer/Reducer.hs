@@ -7,6 +7,7 @@
 module Cardano.Tracer.Reducer
   ( Reducer (..)
   , CountLines (..)
+  , CountTraces (..)
   , CountStartLeadershipCheckPlus (..)
   , HeapChanges (..)
   , MissedSlots (..)
@@ -45,6 +46,9 @@ class Show r => Reducer r where
 data CountLines = CountLines
   deriving Show
 
+data CountTraces = CountTraces
+  deriving Show
+
 data CountStartLeadershipCheckPlus = CountStartLeadershipCheckPlus
   deriving Show
 
@@ -65,6 +69,13 @@ instance Reducer CountLines where
   reducerOf _ l _ = l + 1
   showAns   _ = show
 
+instance Reducer CountTraces where
+  type instance Accum CountTraces = Int
+  initialOf _ = 0
+  reducerOf _ l (Left _) = l
+  reducerOf _ l (Right _) = l + 1
+  showAns   _ = show
+
 instance Reducer CountStartLeadershipCheckPlus where
   type instance Accum CountStartLeadershipCheckPlus = Int
   initialOf _ = 0
@@ -77,18 +88,21 @@ instance Reducer HeapChanges where
   type instance Accum HeapChanges = (Maybe Integer, Seq.Seq (UTCTime, Integer))
   initialOf _ = (Nothing, Seq.empty)
   reducerOf _ ans (Left _) = ans
-  -- Filtering by first by namespace is way faster than decoding JSON.
-  reducerOf _ ans@(maybePrevHeap, sq) (Right trace@(Trace.Trace _ "Resources" remainder)) =
+  -- Filtering first by namespace is way faster than directly decoding JSON.
+  reducerOf _ ans@(maybePrevHeap, sq) (Right (Trace.Trace eitherAt "Resources" remainder)) =
     case Aeson.eitherDecodeStrictText remainder of
       (Right !aeson) ->
         -- TODO: Use `unsnoc` when available
         let actualHeap = Trace.resourcesHeap $ Trace.remainderData aeson
-        in case maybePrevHeap of
-          Nothing -> (Just actualHeap, Seq.singleton (Trace.at trace, actualHeap))
-          (Just prevHeap) ->
-            if actualHeap == prevHeap
-            then ans
-            else (Just actualHeap, sq Seq.|> (Trace.at trace, actualHeap))
+        in case eitherAt of
+          (Left err) -> error err
+          (Right at) ->
+            case maybePrevHeap of
+              Nothing -> (Just actualHeap, Seq.singleton (at, actualHeap))
+              (Just prevHeap) ->
+                if actualHeap == prevHeap
+                then ans
+                else (Just actualHeap, sq Seq.|> (at, actualHeap))
       (Left _) -> ans
   reducerOf _ ans _ = ans
   showAns _ = show
@@ -132,14 +146,14 @@ instance Reducer OneSecondSilences where
   type instance Accum OneSecondSilences = (Maybe UTCTime, Seq.Seq (NominalDiffTime, UTCTime, UTCTime))
   initialOf _ = (Nothing, Seq.empty)
   reducerOf _ (Nothing, sq) (Left _) = (Nothing, sq)
-  reducerOf _ (Nothing, sq) (Right trace) = (Just $ Trace.at trace, sq)
+  reducerOf _ (Nothing, sq) (Right (Trace.Trace (Right thisTraceAt) _ _)) = (Just thisTraceAt, sq)
   reducerOf _ (Just prevTraceAt, sq) (Left _) = (Just prevTraceAt, sq)
-  reducerOf _ (Just prevTraceAt, sq) (Right trace) =
-    let thisTraceAt = Trace.at trace
-        diffTime = diffUTCTime thisTraceAt prevTraceAt
+  reducerOf _ (Just prevTraceAt, sq) (Right (Trace.Trace (Right thisTraceAt) _ _)) =
+    let diffTime = diffUTCTime thisTraceAt prevTraceAt
     in  if diffTime > 2
     then (Just thisTraceAt, sq Seq.|> (diffTime, prevTraceAt, thisTraceAt))
     else (Just thisTraceAt, sq)
+  reducerOf _ _ (Right (Trace.Trace (Left err) _ _)) = error err
   showAns   _ = show
   printAns _ (_,sq) = mapM_
     (\(ndt, t1, _) ->

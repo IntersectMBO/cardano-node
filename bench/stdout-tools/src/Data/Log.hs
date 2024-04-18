@@ -86,13 +86,12 @@ nextLine handle (Decoder unfinishedLine "" "" continue) = {-# SCC "nextLine_1" #
   -- Use `Data.Text.IO.hGetChunk` ? It uses an unknown buffer size!
   bs <- {-# SCC "nextLine_1_hGet" #-}
         BS.hGetNonBlocking handle (hGetBufferSizeMB * 1024 * 1024)
-  -- Put the most common case first.
   -- Use `BS.null` as much as possible because it's O(1).
-  if not $ BS.null bs
-  -- Call `newLine` again to handle the newly fetched ByteString.
-  then nextLine handle $ Decoder unfinishedLine "" bs continue
+  if BS.null bs
   -- Last (or maybe first of an empty file) line and no more input available!
-  else return (unfinishedLine, Nothing)
+  then return (unfinishedLine, Nothing)
+  -- Call `newLine` again to handle the newly fetched ByteString.
+  else nextLine handle $ Decoder unfinishedLine "" bs continue
 --------------------------------------------------------------------------------
 -- UTF-8 decode: Maybe a partial line, no decoded Text and only some ByteString.
 --------------------------------------------------------------------------------
@@ -110,15 +109,19 @@ nextLine handle (Decoder unfinishedLine text bs !continue) = {-# SCC "nextLine_3
   --print ((5::Int, unfinishedLine, text, bs)::(Int,Text.Text,Text.Text,BS.ByteString))
   let (consumed, remainder) = {-# SCC "nextLine_3_break" #-}
                               Text.break (== '\n') text
-  -- Put the most common case first.
   -- Use `Text.null` as much as possible because it's O(1).
-  if not $ Text.null remainder
+  if Text.null remainder
+  -- No newline character found!
+  -- break (== 1) []      -> ( [],      []      )
+  -- break (== 1) [0,0,0] -> ( [0,0,0], []      )
+  then {-# SCC "nextLine_3_newline_no" #-} do
+    nextLine handle $ Decoder (unfinishedLine <> text) "" bs continue
   -- One newline character was found!
   -- break (== 1) [1]     -> ( []     , [1]     )
   -- break (== 1) [1,0,0] -> ( []     , [1,0,0] )
   -- break (== 1) [0,0,1] -> ( [0,0]  , [1]     )
   -- break (== 1) [0,1,0] -> ( [0]    , [1,0]   )
-  then {-# SCC "nextLine_3_newline_yes" #-}
+  else {-# SCC "nextLine_3_newline_yes" #-}
     -- Remove the `\n`.
     -- If `reminder` is not `empty`, a `\n` was found.
     let text' = {-# SCC "nextLine_3_drop" #-} Text.drop 1 remainder
@@ -140,8 +143,3 @@ nextLine handle (Decoder unfinishedLine text bs !continue) = {-# SCC "nextLine_3
          ( unfinishedLine
          , Just $ Decoder "" text' bs continue
          )
-  -- No newline character found!
-  -- break (== 1) []      -> ( [],      []      )
-  -- break (== 1) [0,0,0] -> ( [0,0,0], []      )
-  else {-# SCC "nextLine_3_newline_no" #-} do
-    nextLine handle $ Decoder (unfinishedLine <> text) "" bs continue

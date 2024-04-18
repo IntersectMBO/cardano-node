@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 -- All traces start with the a JSON object having an "at" and an "ns" property,
--- use this assumption to build a "fast" decoder.
+-- use this assumption to build a provably correct "fast" decoder.
 -- {"at":"2024-03-30T00:30:27.015631111Z","ns":"Reflection.TracerInfo",...}
 --------------------------------------------------------------------------------
 
@@ -33,14 +33,14 @@ import qualified Data.Aeson as Aeson
 --------------------------------------------------------------------------------
 
 -- Keep it simple!
--- Use this two properties to filter and if you need some more data, decode the
--- the remainder.
 -- Keep the same order commonly used for traces!
+-- Use `ns` and `at` to filter and only decode the `remainder` if needed.
 data Trace = Trace
-  -- Strict or keep thunks of `Data.Time.FromText.parseUTCTime` ???
-  { at :: UTCTime
+  -- Keep it non-strict, avoids executing the parser until requested.
+  { at :: Either String UTCTime
+  -- The namespace is the fastest way of filtering messages, use it first
   , ns :: Text.Text
-    -- Only do `fromJSON` if needed!
+    -- Only do `fromJSON` if needed, `Aeson` decoding is costly!
   , remainder :: Text.Text
   }
   deriving (Eq, Show)
@@ -52,38 +52,33 @@ fromJson :: Text.Text -> Either Text.Text Trace
 fromJson text =
   -- Look for '{"at":"''
   case Text.splitAt 7 text of -- No cost center for the unavoidable simple part!
-    -- Property 'at' assumed correctly.
+    -- Property 'at' found, please assume a valid trace message!
     ("{\"at\":\"", text') ->
-          -- Assume a date like '2024-04-11T12:01:33.2135764Z' is there.
+          -- Assume a date like '2024-04-11T12:01:33.2135764Z' is next.
           -- The milliseconds part is variable so we can't read a fixed amount.
           -- TODO: Can we make it of a fixed number of decimals ???
       let (atText, text'' ) = {-# SCC "fromJson_break_at" #-}
-                              Text.break (== '"') text' -- Looks for next '"'.
-          -- If this fails it's probably not a valid trace message.
-          parsedTime = {-# SCC "fromJson_parseUTCTime" #-}
-                       ParseTime.parseUTCTime atText
-      in case parsedTime of
-          -- First match the one one we want!
-          (Right utcTime) ->
-                -- Drop the date's last '"' and assume ',"ns":"' is there.
-            let text''' = {-# SCC "fromJson_drop_ns" #-}
-                          Text.drop 8 text''
-                -- Consume all the text until the next '"'.
-                (nsText, text'''') = {-# SCC "fromJson_break_ns" #-}
-                                    Text.break (== '"') text'''
-                -- Drop closing '",' of 'ns' and leave the unconsumed Text, the
-                -- `Remainder`, as a new JSON object.
-                remainderText = {-# SCC "fromJson_remainder" #-}
-                                "{" <> Text.drop 2 text''''
-            in Right $ Trace utcTime nsText remainderText
-          -- Probably not a Trace JSON object.
-          (Left _) -> Left text
+                              Text.break (== '"') text' -- Until next '"'.
+          -- If this fails it's provably not a valid trace message.
+          parseTimeOutput = {-# SCC "fromJson_parseUTCTime" #-}
+                            ParseTime.parseUTCTime atText
+              -- Drop the date's last '"' and assume ',"ns":"' is there.
+          text''' = {-# SCC "fromJson_drop_ns" #-}
+                    Text.drop 8 text'' -- Drops '","ns":"'.
+          -- Consume all the text until the next '"'.
+          (nsText, text'''') = {-# SCC "fromJson_break_ns" #-}
+                               Text.break (== '"') text''' -- Until next '"'.
+          -- Drop closing '",' of 'ns' and leave the unconsumed Text, the
+          -- `Remainder`, as a new JSON object.
+          remainderText = {-# SCC "fromJson_remainder" #-}
+                          "{" <> Text.drop 2 text''''
+      in Right $ Trace parseTimeOutput nsText remainderText
     -- Assumption failed.
     _ -> Left text
 
 --------------------------------------------------------------------------------
 
--- Keep the same order commonly used for traces!
+-- Keep the same order commonly used for trace messages!
 data Remainder a = Remainder
   { remainderData :: a
   , sev           :: Text.Text
@@ -93,7 +88,7 @@ data Remainder a = Remainder
   deriving (Eq, Show, Generic)
 
 instance Aeson.ToJSON a => Aeson.ToJSON (Remainder a) where
-  -- Only using a non-automatic instance because of "data" and "msgData".
+  -- Only using a non-automatic instance because of "data" and "remainderData".
   toJSON p = {-# SCC "Remainder_toJSON" #-}
     Aeson.object
       [ "data"   Aeson..= remainderData p
@@ -103,7 +98,7 @@ instance Aeson.ToJSON a => Aeson.ToJSON (Remainder a) where
       ]
 
 instance Aeson.FromJSON a => Aeson.FromJSON (Remainder a) where
-  -- Only using a non-automatic instance because of "data" and "msgData".
+  -- Only using a non-automatic instance because of "data" and "remainderData".
   parseJSON = {-# SCC "Remainder_parseJSON" #-}
     Aeson.withObject "Remainder" $ \o -> do
       Remainder
@@ -114,6 +109,8 @@ instance Aeson.FromJSON a => Aeson.FromJSON (Remainder a) where
 
 --------------------------------------------------------------------------------
 
+-- Helper for when you only need the slot number.
+-- { at:..., ns:"", data:{ ..., slot:0, ... } }
 newtype DataWithSlot = DataWithSlot
   { slot :: Integer }
   deriving Generic
