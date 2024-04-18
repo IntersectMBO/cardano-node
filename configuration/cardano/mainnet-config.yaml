@@ -32,6 +32,18 @@ LastKnownBlockVersion-Minor: 0
 LastKnownBlockVersion-Alt: 0
 MaxKnownMajorProtocolVersion: 2
 
+##### Network Configuration #####
+
+PeerSharing: True
+TargetNumberOfActivePeers: 20
+TargetNumberOfEstablishedPeers: 50
+TargetNumberOfKnownPeers: 100
+TargetNumberOfRootPeers: 60
+
+##### Version Information #####
+
+MinNodeVersion: 8.10.0
+
 ##### Logging configuration #####
 
 # Enable or disable logging overall
@@ -231,12 +243,6 @@ TraceTxOutbound: False
 
 # Trace TxSubmission protocol messages.
 TraceTxSubmissionProtocol: False
-
-
-TargetNumberOfActivePeers: 20
-TargetNumberOfEstablishedPeers: 50
-TargetNumberOfKnownPeers: 100
-TargetNumberOfRootPeers: 100
 
 ##### Fine grained logging control #####
 
