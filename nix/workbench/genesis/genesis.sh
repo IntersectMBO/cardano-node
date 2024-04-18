@@ -24,7 +24,17 @@ EOF
 }
 
 genesis() {
+set -euo pipefail
+
 local op=${1:-$(usage_genesis)}; shift
+
+if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
+    info genesis "$(red using modular configuration)"
+fi
+
+if [[ $WB_CREATE_TESTNET_DATA -eq 1 ]]; then
+    info genesis "$(red using create-testnet-data)"
+fi
 
 case "$op" in
     prepare-cache-entry )
@@ -115,74 +125,24 @@ case "$op" in
         return 0
         ;;
 
+    profile-cache-key)
+        if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
+          profile-cache-key-modular "$@"
+        else
+          profile-cache-key-jq "$@"
+        fi
+        ;;
+
     profile-cache-key-input )
-        [[ "$WB_MODULAR_GENESIS" -eq 1 ]] && { genesis "$op-modular" "$@"; return; }
-
-        local usage="USAGE:  wb genesis $op PROFILE-JSON"
-        local profile_json=${1:?$usage}
-
-        local args=(
-            --slurpfile profile      "$profile_json"
-            --arg       profile_json "$profile_json"
-            --sort-keys
-            --null-input
-            -L "$global_basedir/profile"
-            -L "$global_basedir/genesis"
-        )
-        jq 'include "genesis";
-
-           profile_genesis_cache_key($profile[0]; $profile_json)
-           ' "${args[@]}"
-        ;;
-
-    profile-cache-key-input-modular )
-        info genesis "profile-cache-key-input ($(red using modular configuration))"
-
-        local usage="USAGE:  wb genesis $op PROFILE-JSON"
-        local profile_json=${1:?$usage}
-
-        # nix wants absolute paths
-        profile_json=$(realpath "$profile_json")
-
-        # NOTE: jq is only used for formatting
-        evaluate --profile "${profile_json}" genesis.cache-key-input | jq
-        ;;
-
-    profile-cache-key )
-        [[ "$WB_MODULAR_GENESIS" -eq 1 ]] && { genesis "$op-modular" "$@"; return; }
-
-        local usage="USAGE:  wb genesis $op PROFILE-JSON"
-        local profile_json=${1:?$usage}
-
-        local args=(
-            --arg params_hash   "$(genesis profile-cache-key-input "$profile_json" | sha1sum | cut -c-7)"
-            --slurpfile profile "$profile_json"
-            --raw-output
-            -L "$global_basedir/profile"
-            -L "$global_basedir/genesis"
-        )
-        jq 'include "genesis";
-           profile_genesis_cache_entry_name($profile[0]; $params_hash)
-           ' "${args[@]}" "$profile_json"
-        ;;
-
-    profile-cache-key-modular )
-        info genesis "profile-cache-key ($(red using modular configuration))"
-
-        local usage="USAGE:  wb genesis $op PROFILE-JSON"
-        local profile_json=${1:?$usage}
-
-        # nix wants absolute paths
-        profile_json=$(realpath "$profile_json")
-
-        # NOTE:
-        # - the hash is different because nix cannot reproduce jq's pretty-printing
-        # - jq is only used for formatting
-        evaluate --profile "${profile_json}" genesis.cache-key | jq -r
+        if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
+          profile-cache-key-input-modular "$@"
+        else
+          profile-cache-key-input-jq "$@"
+        fi
         ;;
 
     genesis-from-preset )
-        local usage="USAGE:  wb genesis $op PRESET GENESIS-DIR"
+        local usage="USAGE: wb genesis $op PRESET GENESIS-DIR"
         local preset=${1:?$usage}
         local dir=${2:?$usage}
 
@@ -199,87 +159,24 @@ case "$op" in
           cp -f "$(profile preset-get-file "$preset" 'genesis file' genesis/"$f")" "$dir/$f"
         done;;
 
-    actually-genesis )
-        set -euo pipefail
-        [[ "$WB_MODULAR_GENESIS" -eq 1 ]] && { genesis "$op-modular" "$@"; return; }
-
-        local usage="USAGE:  wb genesis $op PROFILE-JSON NODE-SPECS DIR"
-        local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
-        local node_specs=${2:-$WB_SHELL_PROFILE_DATA/node-specs.json}
-        local dir=${3:-$(mktemp -d)}
-        local cache_key_input=${4:-$(genesis profile-cache-key-input "$WB_SHELL_PROFILE_DATA"/profile.json)}
-        local cache_key=${5:-$(genesis profile-cache-key "$WB_SHELL_PROFILE_DATA"/profile.json)}
-
-        progress "genesis" "new one: $(yellow profile) $(blue "$profile_json") $(yellow node_specs) $(blue "$node_specs") $(yellow dir) $(blue "$dir") $(yellow cache_key) $(blue "$cache_key") $(yellow cache_key_input) $(blue "$cache_key_input")"
-
-        rm -rf   "$dir"/{*-keys,byron,pools,nodes,*.json,*.params,*.version}
-        mkdir -p "$dir"
-
-        # We pass the network magic as an argument to cardano-cli, but, despite being required,
-        # it is only used to amend a default template while we are bringing our own. So we put it into
-        # the template too.
-        jq '$prof[0] as $p
-            | . * ($p.genesis.shelley // {})
-            | .networkMagic |= $p.genesis.network_magic
-            ' \
-          --slurpfile prof "$profile_json" \
-          "$global_basedir"/profile/presets/mainnet/genesis/genesis-shelley.json \
-          >"$dir"/genesis.spec.json
-
-        jq '$prof[0] as $p | . * ($p.genesis.alonzo // {})' \
-          --slurpfile prof "$profile_json" \
-          "$global_basedir"/profile/presets/mainnet/genesis/genesis.alonzo.json \
-          >"$dir"/genesis.alonzo.spec.json
-
-        jq '$prof[0] as $p | . * ($p.genesis.conway // {})' \
-          --slurpfile prof "$profile_json" \
-          "$global_basedir"/profile/presets/mainnet/genesis/genesis.conway.json \
-          >"$dir"/genesis.conway.spec.json
-
-        jq '
-          to_entries
-        | map( select(.value.kind == "pool") )
-        | map
-          ({ key:   (.value.i | tostring)
-           , value:
-             [{ "single host name":
-                { dnsName: .key
-                , port:    .value.port
-                }
-              }
-             ]
-           })
-        | from_entries
-        ' "$node_specs" > "$dir"/pool-relays.json
-
-        read -r -a args <<< "$(jq --raw-output '.cli_args.createStakedArgs | join(" ")' "$profile_json")"
-        create_staked_args=(
-            --genesis-dir "$dir"
-            --relay-specification-file "$dir/pool-relays.json"
-            "${args[@]}"
-        )
-        verbose "genesis" "$(colorise cardano-cli genesis create-staked "${create_staked_args[@]}")"
-        cardano-cli genesis create-staked "${create_staked_args[@]}"
-        mv "$dir"/genesis.json "$dir"/genesis-shelley.json
-        mv "$dir"/genesis.spec.json "$dir"/genesis-shelley.spec.json
-
-        info genesis "removing delegator keys.."
-        rm "$dir"/stake-delegator-keys -rf
-
-        info genesis "moving keys"
-        Massage_the_key_file_layout_to_match_AWS "$profile_json" "$node_specs" "$dir"
-
-        info genesis "sealing"
-        cat <<<"$cache_key_input"               > "$dir"/cache.key.input
-        cat <<<"$cache_key"                     > "$dir"/cache.key
-        cat <<<"$global_genesis_format_version" > "$dir"/layout.version
+    spec )
+        if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
+          spec-modular "$@"
+        else
+          spec-jq "$@"
+        fi
         ;;
 
-    actually-genesis-modular )
-        set -euo pipefail
-        info genesis "actually-genesis ($(red using modular configuration))"
+    pool-relays )
+        if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
+          pool-relays-modular "$@"
+        else
+          pool-relays-jq "$@"
+        fi
+        ;;
 
-        local usage="USAGE:  wb genesis $op PROFILE-JSON NODE-SPECS DIR"
+    actually-genesis )
+        local usage="USAGE: wb genesis $op PROFILE-JSON NODE-SPECS DIR"
         local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
         local node_specs=${2:-$WB_SHELL_PROFILE_DATA/node-specs.json}
         local dir=${3:-$(mktemp -d)}
@@ -288,37 +185,11 @@ case "$op" in
 
         progress "genesis" "new one: $(yellow profile) $(blue "$profile_json") $(yellow node_specs) $(blue "$node_specs") $(yellow dir) $(blue "$dir") $(yellow cache_key) $(blue "$cache_key") $(yellow cache_key_input) $(blue "$cache_key_input")"
 
-        rm -rf   "$dir"/{*-keys,byron,pools,nodes,*.json,*.params,*.version}
-        mkdir -p "$dir"
-
-        # nix wants absolute paths
-        profile_json=$(realpath "$profile_json")
-        node_specs=$(realpath "$node_specs")
-
-        local EVAL="evaluate --profile ${profile_json} --node-specs ${node_specs}"
-
-        # NOTE: jq is only used for formatting
-        $EVAL genesis.shelley | jq > "$dir/genesis.spec.json"
-        $EVAL genesis.alonzo | jq > "$dir/genesis.alonzo.spec.json"
-        $EVAL genesis.conway | jq > "$dir/genesis.conway.spec.json"
-        $EVAL genesis.pool-relays | jq > "$dir/pool-relays.json"
-
-        read -r -a args <<< "$($EVAL genesis.create-staked-args | jq -r)"
-        create_staked_args=(
-            --genesis-dir "$dir"
-            --relay-specification-file "$dir/pool-relays.json"
-            "${args[@]}"
-        )
-        verbose "genesis" "$(colorise cardano-cli genesis create-staked "${create_staked_args[@]}")"
-        cardano-cli genesis create-staked "${create_staked_args[@]}"
-        mv "$dir"/genesis.json "$dir"/genesis-shelley.json
-        mv "$dir"/genesis.spec.json "$dir"/genesis-shelley.spec.json
-
-        info genesis "removing delegator keys.."
-        rm "$dir"/stake-delegator-keys -rf
-
-        info genesis "moving keys"
-        Massage_the_key_file_layout_to_match_AWS "$profile_json" "$node_specs" "$dir"
+        if [[ $WB_CREATE_TESTNET_DATA -eq 1 ]]; then
+            genesis-create-testnet-data "$profile_json" "$dir"
+        else
+            genesis-create-staked "$profile_json" "$dir"
+        fi
 
         info genesis "sealing"
         cat <<<"$cache_key_input"               > "$dir"/cache.key.input
@@ -327,7 +198,7 @@ case "$op" in
         ;;
 
     derive-from-cache )
-        local usage="USAGE:  wb genesis $op PROFILE-OUT TIMING-JSON-EXPR CACHE-ENTRY-DIR OUTDIR"
+        local usage="USAGE: wb genesis $op PROFILE-OUT TIMING-JSON-EXPR CACHE-ENTRY-DIR OUTDIR"
         local profile=${1:?$usage}
         local timing=${2:?$usage}
         local cache_entry=${3:?$usage}
@@ -353,9 +224,9 @@ case "$op" in
         ln -s "$cache_entry"/cache.key.input      "$outdir"
         ln -s "$cache_entry"/layout.version       "$outdir"
 
-        ## keys
-        ln -s "$cache_entry"/delegate-keys        "$outdir"
-        ln -s "$cache_entry"/genesis-keys         "$outdir"
+        # create-testnet-data does not create these directories if there are no keys in them
+        [[ -d "$dir"/delegate-keys ]] && ln -s "$cache_entry"/delegate-keys "$outdir"
+        [[ -d "$dir"/genesis-keys  ]] && ln -s "$cache_entry"/genesis-keys  "$outdir"
 
         cp -a "$cache_entry"/node-keys            "$outdir"
         chmod -R go-rwx                           "$outdir"/node-keys
@@ -372,31 +243,7 @@ case "$op" in
         ;;
 
     finalise-cache-entry )
-        [[ "$WB_MODULAR_GENESIS" -eq 1 ]] && { genesis "$op-modular" "$@"; return; }
-
-        local usage="USAGE:  wb genesis $op PROFILE-JSON TIMING-JSON-EXPR DIR"
-        local profile_json=${1:?$usage}
-        local timing=${2:?$usage}
-        local dir=${3:?$usage}
-
-        if profile has-preset "$profile_json"; then
-          return
-        fi
-
-        progress "genesis" "deriving from cache:  $cache_entry -> $outdir"
-
-        genesis_byron "$(jq '.start' -r <<<"$timing")" "$dir" "$profile_json"
-
-        jq '. * { systemStart: $timing.systemStart }' --argjson timing "$timing" \
-          "$dir"/genesis-shelley.json |
-          sponge "$dir"/genesis-shelley.json
-        ;;
-
-    finalise-cache-entry-modular )
-        set -euo pipefail
-        info genesis "finalise-cache-entry ($(red using modular configuration))"
-
-        local usage="USAGE:  wb genesis $op PROFILE-JSON TIMING-JSON-EXPR DIR"
+        local usage="USAGE: wb genesis $op PROFILE-JSON TIMING-JSON-EXPR DIR"
         local profile_json=${1:?$usage}
         local timing=${2:?$usage}
         local dir=${3:?$usage}
@@ -410,26 +257,11 @@ case "$op" in
         local system_start_epoch
         system_start_epoch="$(jq '.start' -r <<<"$timing")"
 
-        # nix wants absolute paths
-        profile_json=$(realpath "$profile_json")
+        genesis-byron "$system_start_epoch" "$dir" "$profile_json"
 
-        evaluate --profile "$profile_json" genesis.byron > "$dir"/byron-protocol-params.json
-        read -r -a args <<< "$(evaluate --profile "${profile_json}" genesis.byron-genesis-args | jq -r)"
-
-        cli_args=(
-            --genesis-output-dir         "$dir"/byron
-            --protocol-parameters-file   "$dir"/byron-protocol-params.json
-            --start-time                 "$system_start_epoch"
-            "${args[@]}"
-        )
-        rm -rf "$dir"/byron
-
-        verbose "genesis" "$(colorise cardano-cli byron genesis genesis "${cli_args[@]}")"
-        cardano-cli byron genesis genesis "${cli_args[@]}"
-
-        # We need to change systemStart in genesis-shelley to make it compatible with system_start_epoch
         jq '. * { systemStart: $timing.systemStart }' --argjson timing "$timing" \
-          "$dir"/genesis-shelley.json | sponge "$dir"/genesis-shelley.json
+          "$dir"/genesis-shelley.json |
+          sponge "$dir"/genesis-shelley.json
         ;;
 
     * )
@@ -437,6 +269,146 @@ case "$op" in
       ;;
 
     esac
+}
+
+profile-cache-key-input-jq() {
+    set -euo pipefail
+    local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
+
+    local args=(
+        --slurpfile profile "$profile_json"
+        --arg profile_json "$profile_json"
+        --sort-keys
+        --null-input
+        -L "$global_basedir/profile"
+        -L "$global_basedir/genesis"
+    )
+    jq 'include "genesis"; profile_genesis_cache_key($profile[0]; $profile_json)' "${args[@]}"
+}
+
+profile-cache-key-input-modular() {
+    set -euo pipefail
+    local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
+
+    # nix wants absolute paths
+    profile_json=$(realpath "$profile_json")
+
+    # NOTE: jq is only used for formatting
+    evaluate --profile "${profile_json}" genesis.cache-key-input | jq
+}
+
+profile-cache-key-jq() {
+    set -euo pipefail
+    local usage="USAGE: wb genesis profile-cache-key PROFILE-JSON"
+    local profile_json=${1:?$usage}
+    local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
+
+    local args=(
+        --arg params_hash "$(genesis profile-cache-key-input "$profile_json" | sha1sum | cut -c-7)"
+        --slurpfile profile "$profile_json"
+        --raw-output
+        -L "$global_basedir/profile"
+        -L "$global_basedir/genesis"
+    )
+    jq 'include "genesis"; profile_genesis_cache_entry_name($profile[0]; $params_hash)' "${args[@]}" "$profile_json"
+}
+
+profile-cache-key-modular() {
+    local usage="USAGE: wb genesis profile-cache-key PROFILE-JSON"
+    local profile_json=${1:?$usage}
+
+    # nix wants absolute paths
+    profile_json=$(realpath "$profile_json")
+
+    # NOTE:
+    # - the hash is different because nix cannot reproduce jq's pretty-printing
+    # - jq is only used for formatting
+    evaluate --profile "${profile_json}" genesis.cache-key | jq -r
+}
+
+spec-jq() {
+    set -euo pipefail
+    local era=${1:?missing era}
+    local profile_json=${2:?missing profile_json}
+    # not needed in the jq version
+    # local node_specs=${3:?missing node_specs}
+
+    case "$1" in
+    shelley)
+        # We pass the network magic as an argument to cardano-cli, but, despite being required,
+        # it is only used to amend a default template while we are bringing our own. So we put it into
+        # the template too.
+        jq '$prof[0] as $p
+            | . * ($p.genesis.shelley // {})
+            | .networkMagic |= $p.genesis.network_magic
+            ' --slurpfile prof "$profile_json" \
+            "$global_basedir"/profile/presets/mainnet/genesis/genesis-shelley.json
+        ;;
+    alonzo)
+        jq '$prof[0] as $p | . * ($p.genesis.alonzo // {})' \
+            --slurpfile prof "$profile_json" \
+            "$global_basedir"/profile/presets/mainnet/genesis/genesis.alonzo.json
+        ;;
+    conway)
+        jq '$prof[0] as $p | . * ($p.genesis.conway // {})' \
+            --slurpfile prof "$profile_json" \
+            "$global_basedir"/profile/presets/mainnet/genesis/genesis.conway.json
+        ;;
+    *)
+        echo unknown era
+        exit 1
+        ;;
+    esac
+}
+
+spec-modular() {
+    set -euo pipefail
+    local era=${1:?missing era}
+    local profile_json=${2:?missing profile_json}
+    local node_specs=${3:?missing node_specs}
+
+    # nix wants absolute paths
+    profile_json=$(realpath "$profile_json")
+    node_specs=$(realpath "$node_specs")
+
+    # TODO: check for errors
+    # NOTE: jq is only used for to keep the same formatting as the jq version
+    evaluate --profile "$profile_json" --node-specs "$node_specs" "genesis.$era" | jq
+}
+
+pool-relays-jq() {
+    set -euo pipefail
+    local profile_json=${1:?missing profile_json}
+    # not needed in the jq version
+    # local node_specs=${2:?missing node_specs}
+
+    jq ' to_entries
+       | map( select(.value.kind == "pool") )
+       | map
+         ({ key:   (.value.i | tostring)
+          , value:
+            [{ "single host name":
+               { dnsName: .key
+               , port:    .value.port
+               }
+             }
+            ]
+          })
+       | from_entries
+       ' "$node_specs"
+}
+
+pool-relays-modular() {
+    set -euo pipefail
+    local profile_json=${1:?missing profile_json}
+    local node_specs=${2:?missing node_specs}
+
+    # nix wants absolute paths
+    profile_json=$(realpath "$profile_json")
+    node_specs=$(realpath "$node_specs")
+
+    # NOTE: jq is only used for to keep the same formatting as the jq version
+    evaluate --profile "$profile_json" --node-specs "$node_specs" genesis.pool-relays | jq
 }
 
 __KEY_ROOT=
@@ -539,11 +511,19 @@ key_genesis() {
     echo "$__KEY_ROOT/$stem$suffix"
 }
 
-genesis_byron()
-{
+genesis-byron() {
+    set -euo pipefail
+    if [[ $WB_MODULAR_GENESIS -eq 1 ]]; then
+      genesis-byron-modular "$@"
+    else
+      genesis-byron-jq "$@"
+    fi
+}
+
+genesis-byron-jq() {
     local system_start_epoch=$1
     local dir=$2
-    local prof_json=$3
+    local profile_json=$3
 
     jq '
       { heavyDelThd:       "300000"
@@ -575,15 +555,150 @@ genesis_byron()
         --genesis-output-dir         "$dir"/byron
         --protocol-parameters-file   "$dir"/byron-protocol-params.json
         --start-time                 "$system_start_epoch"
-        --k                          "$(jq '.genesis.parameter_k' "$prof_json")"
-        --protocol-magic             "$(jq '.genesis.network_magic' "$prof_json")"
+        --k                          "$(jq '.genesis.parameter_k' "$profile_json")"
+        --protocol-magic             "$(jq '.genesis.network_magic' "$profile_json")"
         --n-poor-addresses           1
         --n-delegate-addresses       1
         --total-balance              300000
         --delegate-share             0.9
         --avvm-entry-count           0
         --avvm-entry-balance         0
-        )
+    )
     rm -rf "$dir"/byron
+
+    verbose "genesis" "$(colorise cardano-cli byron genesis genesis "${cli_args[@]}")"
     cardano-cli byron genesis genesis "${cli_args[@]}"
+}
+
+genesis-byron-modular() {
+    local system_start_epoch=$1
+    local dir=$2
+    local profile_json=$3
+
+    # nix wants absolute paths
+    profile_json=$(realpath "$profile_json")
+
+    evaluate --profile "$profile_json" genesis.byron > "$dir"/byron-protocol-params.json
+    read -r -a args <<< "$(evaluate --profile "${profile_json}" genesis.byron-genesis-args | jq -r)"
+
+    cli_args=(
+        --genesis-output-dir         "$dir"/byron
+        --protocol-parameters-file   "$dir"/byron-protocol-params.json
+        --start-time                 "$system_start_epoch"
+        "${args[@]}"
+    )
+    rm -rf "$dir"/byron
+
+    verbose "genesis" "$(colorise cardano-cli byron genesis genesis "${cli_args[@]}")"
+    cardano-cli byron genesis genesis "${cli_args[@]}"
+}
+
+genesis-create-staked() {
+    local profile_json=$1
+    local dir=$2
+
+    rm -rf   "$dir"/{*-keys,byron,pools,nodes,*.json,*.params,*.version}
+    mkdir -p "$dir"
+
+    genesis spec shelley "$profile_json" >"$dir/genesis.spec.json"
+    genesis spec alonzo  "$profile_json" >"$dir/genesis.alonzo.spec.json"
+    genesis spec conway  "$profile_json" >"$dir/genesis.conway.spec.json"
+    genesis pool-relays  "$profile_json" >"$dir/pool-relays.json"
+
+    read -r -a args <<<"$(jq --raw-output '.cli_args.createStakedArgs | join(" ")' "$profile_json")"
+    create_staked_args=(
+        --genesis-dir "$dir"
+        --relay-specification-file "$dir/pool-relays.json"
+        "${args[@]}"
+    )
+    progress "genesis" "$(colorise cardano-cli genesis create-staked "${create_staked_args[@]}")"
+    cardano-cli genesis create-staked "${create_staked_args[@]}"
+
+    mv "$dir"/genesis.json "$dir"/genesis-shelley.json
+    mv "$dir"/genesis.spec.json "$dir"/genesis-shelley.spec.json
+
+    info genesis "removing delegator keys."
+    rm "$dir"/stake-delegator-keys -rf
+
+    info genesis "moving keys"
+    Massage_the_key_file_layout_to_match_AWS "$profile_json" "$node_specs" "$dir"
+}
+
+genesis-create-testnet-data() {
+    local profile_json=$1
+    local dir=$2
+
+    mkdir -p "$dir"
+
+    genesis spec shelley "$profile_json" >"$dir/shelley-genesis.spec.json"
+    genesis spec alonzo  "$profile_json" >"$dir/alonzo-genesis.spec.json"
+    genesis spec conway  "$profile_json" >"$dir/conway-genesis.spec.json"
+    genesis pool-relays  "$profile_json" >"$dir/pool-relays.json"
+
+    local era
+    era=$(jq --raw-output '.era' "$profile_json")
+
+    # TODO if profile_json.composition.dense_pool_density != 1 -> create-testnet-data does not support dense pools
+    read -r -a args <<<"$(jq --raw-output '.cli_args.createTestnetDataArgs | join(" ")' "$profile_json")"
+    create_testnet_data_args=(
+        --spec-shelley "$dir/shelley-genesis.spec.json"
+        --spec-alonzo  "$dir/alonzo-genesis.spec.json"
+        --spec-conway  "$dir/conway-genesis.spec.json"
+        --relays       "$dir/pool-relays.json"
+        --out-dir      "$dir"
+        "${args[@]}"
+    )
+    progress genesis "$(colorise cardano-cli "$era" create-testnet-data "${create_testnet_data_args[@]}")"
+    cardano-cli "$era" genesis create-testnet-data "${create_testnet_data_args[@]}"
+
+    # for comparison/compatibility
+
+    # genesis specs and finals
+    jq_fmutate "$dir/shelley-genesis.spec.json" -S .
+    jq_fmutate "$dir/shelley-genesis.json"      -S .
+    jq_fmutate "$dir/alonzo-genesis.spec.json"  -S .
+    jq_fmutate "$dir/alonzo-genesis.json"       -S .
+    jq_fmutate "$dir/conway-genesis.spec.json"  -S .
+    jq_fmutate "$dir/conway-genesis.json"       -S .
+
+    ln -s shelley-genesis.spec.json "$dir/genesis-shelley.spec.json"
+    ln -s shelley-genesis.json      "$dir/genesis-shelley.json"
+    ln -s alonzo-genesis.spec.json  "$dir/genesis.alonzo.spec.json"
+    ln -s alonzo-genesis.json       "$dir/genesis.alonzo.json"
+    ln -s conway-genesis.spec.json  "$dir/genesis.conway.spec.json"
+    ln -s conway-genesis.json       "$dir/genesis.conway.json"
+
+    shopt -s extglob
+
+    function link_keys() {
+        local from=${1}
+        local to=${2}
+
+        for k in "$dir/$from"/*/*; do
+            local path=${k//"$dir/"/}
+            local elems
+            IFS=/ read -a elems -r <<<"$path"
+            local no=${elems[1]##*([[:alpha:]])}
+            local keyname=${elems[2]%.*}
+            local keyext=${elems[2]##*.}
+            ln -s "../${path}" "$dir/${to}/${keyname}${no}.${keyext}"
+        done
+    }
+
+    mkdir -p "$dir/pools"
+    link_keys pools-keys pools
+
+    mkdir -p "$dir/utxo-keys"
+    link_keys utxo-keys utxo-keys
+
+    info genesis "removing delegator keys."
+    rm "$dir/stake-delegators" -rf
+
+    info genesis "removing dreps keys."
+    rm "$dir"/drep-keys -rf
+
+    info genesis "moving keys"
+    Massage_the_key_file_layout_to_match_AWS "$profile_json" "$node_specs" "$dir"
+
+    info genesis "create-testnet-data genesis available in $dir"
 }

@@ -10,6 +10,9 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 # By default the new genesis creation is disabled
 : "${WB_MODULAR_GENESIS:=0}"
 
+# Keep using wb create-staked by default
+: "${WB_CREATE_TESTNET_DATA:=0}"
+
 . "$global_basedir"/lib.sh
 . "$global_basedir"/env.sh
 . "$global_basedir"/chaindb.sh
