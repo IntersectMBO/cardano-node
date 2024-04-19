@@ -1,6 +1,6 @@
-# Benchs vs jq/grep
+# Benchs vs ```jq```/```grep```
 
-nix-shell OR nix-shell -p ghc cabal-install haskellPackages.eventlog2html jq
+Using GHC 8.10.7 inside ```nix-shell```
 
 ## Benchmarks using a log file that is five nodes' ```stdout``` files together
 
@@ -170,7 +170,12 @@ sys     0m46.550s
 
 ### Heap changes (in parallel)
 
-16 cores machine
+Not a direct comparison, ```tq``` presents the results in an useful way while
+what it's run in ```bash``` just outputs numbers in a "random" order, but still
+noteworthy. We can observe a minimum time penalty considering we are adding JSON
+decoding and filtering.
+
+8 cores / 16 threads machine (11th Generation i7)
 
 #### Using ```jq``` but first filtering non valid JSON lines with ```grep```:
 ```
@@ -187,7 +192,7 @@ user    38m24.001s
 sys     1m3.555s
 ```
 
-32 cores machine
+16 cores / 32 threads machine (Ryzen 9)
 
 #### Using ```jq``` but first filtering non valid JSON lines with ```grep```:
 ```
