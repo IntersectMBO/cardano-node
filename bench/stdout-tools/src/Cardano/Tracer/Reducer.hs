@@ -21,6 +21,7 @@ module Cardano.Tracer.Reducer
   -- Others (inspect the JSON data past the timestamp and namespace).
   , MissedSlots (..)
   , ResourcesChanges (..)
+  , UtxoSize (..)
 
   ) where
 
@@ -74,6 +75,9 @@ data ResourcesChanges = ResourcesChanges (Trace.DataResources -> Integer)
 
 instance Show ResourcesChanges where
   show _ = "ResourcesChanges"
+
+data UtxoSize = UtxoSize
+  deriving Show
 
 --------------------------------------------------------------------------------
 
@@ -170,6 +174,47 @@ instance Reducer ResourcesChanges where
                 if actualResource == prevResource
                 then ans
                 else (Just actualResource, sq Seq.|> (at, actualResource))
+      (Left _) -> ans
+  reducerOf _ ans _ = ans
+  showAns _ = show
+  printAns _ (_, sq) = mapM_
+    (\(t,h) -> putStrLn $ show t ++ ": " ++ show h)
+    (toList sq)
+
+{-
+  { "at":"2024-04-05T23:13:43.425867818Z"
+  , "ns":"Forge.Loop.StartLeadershipCheckPlus"
+  , "data":{
+      "chainDensity":0
+    , "delegMapSize":1002000
+    , "kind":"TraceStartLeadershipCheck"
+    , "slot":0
+    , "utxoSize":41002003
+  }
+  , "sev":"Info"
+  , "thread":"270"
+  , "host":"client-ssd-eu-01"
+}
+-}
+instance Reducer UtxoSize where
+  type instance Accum UtxoSize = (Maybe Integer, Seq.Seq (UTCTime, Integer))
+  initialOf _ = (Nothing, Seq.empty)
+  reducerOf _ ans (Left _) = ans
+  -- Filtering first by namespace is way faster than directly decoding JSON.
+  reducerOf UtxoSize ans@(maybePrevSize, sq) (Right (Trace.Trace eitherAt "Forge.Loop.StartLeadershipCheckPlus" remainder)) =
+    case Aeson.eitherDecodeStrictText remainder of
+      (Right !aeson) ->
+        -- TODO: Use `unsnoc` when available
+        let actualSize = Trace.utxoSize $ Trace.remainderData aeson
+        in case eitherAt of
+          (Left err) -> error err
+          (Right at) ->
+            case maybePrevSize of
+              Nothing -> (Just actualSize, Seq.singleton (at, actualSize))
+              (Just prevSize) ->
+                if actualSize == prevSize
+                then ans
+                else (Just actualSize, sq Seq.|> (at, actualSize))
       (Left _) -> ans
   reducerOf _ ans _ = ans
   showAns _ = show
