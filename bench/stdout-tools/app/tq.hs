@@ -81,9 +81,9 @@ cliReducerReader str = case str of
   "count-FLSLCP" -> Right $ MkReducer $ Reducer.CountNS "Forge.Loop.StartLeadershipCheckPlus"
   "2s-silences"  -> Right $ MkReducer $ Reducer.Silences 2
   "utxo-size"    -> Right $ MkReducer   Reducer.UtxoSize
-  "heap-changes" -> Right $ MkReducer $ Reducer.ResourcesChanges (Trace.resourcesHeap)
-  "live-changes" -> Right $ MkReducer $ Reducer.ResourcesChanges (Trace.resourcesLive)
-  "rss-changes"  -> Right $ MkReducer $ Reducer.ResourcesChanges (Trace.resourcesRSS)
+  "heap-changes" -> Right $ MkReducer $ Reducer.ResourcesChanges Trace.resourcesHeap
+  "live-changes" -> Right $ MkReducer $ Reducer.ResourcesChanges Trace.resourcesLive
+  "rss-changes"  -> Right $ MkReducer $ Reducer.ResourcesChanges Trace.resourcesRSS
   _ -> Left str
 
 main :: IO ()
@@ -213,7 +213,7 @@ run cliOpts@(CliOpts _ parallel ((MkReducer r):_)) = do
   return ()
 
 -- Allow to `fold'` through the log file but in JSON format.
-lineFoldl' :: (a -> (Either Text.Text Trace.Trace) -> a) -> a -> FilePath -> IO a
+lineFoldl' :: (a -> Either Text.Text Trace.Trace -> a) -> a -> FilePath -> IO a
 lineFoldl' f initialAcc filePath = do
   Log.lineFoldl'
     (\acc textLine ->
