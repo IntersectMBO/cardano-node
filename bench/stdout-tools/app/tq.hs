@@ -75,12 +75,14 @@ instance Show ReducerElem where
 
 cliFilterReader :: String -> Either String ReducerElem
 cliFilterReader str = case str of
-  "count-lines"  -> Right $ MkReducer Reducer.CountLines
-  "count-traces" -> Right $ MkReducer Reducer.CountTraces
-  "count-FLSLCP" -> Right $ MkReducer Reducer.CountStartLeadershipCheckPlus
-  "heap-changes" -> Right $ MkReducer Reducer.HeapChanges
-  "missed-slots" -> Right $ MkReducer Reducer.MissedSlots
-  "1s-silences"  -> Right $ MkReducer Reducer.OneSecondSilences
+  "count-lines"  -> Right $ MkReducer   Reducer.CountLines
+  "count-traces" -> Right $ MkReducer   Reducer.CountTraces
+  "missed-slots" -> Right $ MkReducer   Reducer.MissedSlots
+  "count-FLSLCP" -> Right $ MkReducer $ Reducer.CountNS "Forge.Loop.StartLeadershipCheckPlus"
+  "2s-silences"  -> Right $ MkReducer $ Reducer.Silences 2
+  "heap-changes" -> Right $ MkReducer $ Reducer.ResourcesChanges (Trace.resourcesHeap)
+  "live-changes" -> Right $ MkReducer $ Reducer.ResourcesChanges (Trace.resourcesLive)
+  "rss-changes"  -> Right $ MkReducer $ Reducer.ResourcesChanges (Trace.resourcesRSS)
   _ -> Left str
 
 main :: IO ()
