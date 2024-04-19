@@ -11,7 +11,7 @@ module Cardano.Tracer.Trace
   , fromJson
 
   , Remainder (remainderData, sev, thread, host)
-  , DataWithSlot (slot)
+  , DataWithSlot (slot), DataWithUtxoSize (utxoSize)
   , DataResources (..)
   ) where
 
@@ -118,6 +118,16 @@ newtype DataWithSlot = DataWithSlot
 instance Aeson.ToJSON DataWithSlot where
 
 instance Aeson.FromJSON DataWithSlot where
+
+-- Helper for when you only need the utxoSize number.
+-- { at:..., ns:"", data:{ ..., utxoSize:0, ... } }
+newtype DataWithUtxoSize = DataWithUtxoSize
+  { utxoSize :: Integer }
+  deriving Generic
+
+instance Aeson.ToJSON DataWithUtxoSize where
+
+instance Aeson.FromJSON DataWithUtxoSize where
 
 --------------------------------------------------------------------------------
 
