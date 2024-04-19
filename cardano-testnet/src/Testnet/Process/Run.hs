@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes #-}
+
 module Testnet.Process.Run
   ( bashPath
   , execCli
@@ -22,7 +24,6 @@ import           Control.Exception (IOException)
 import           Control.Monad
 import           Control.Monad.Catch
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra
 import           Control.Monad.Trans.Resource
@@ -180,22 +181,22 @@ data ProcessError
   deriving Show
 
 initiateProcess
-  :: CreateProcess
-  -> ExceptT ProcessError (ResourceT IO) (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle, ReleaseKey)
+  :: forall m. MonadCatch m
+  => MonadResource m
+  => CreateProcess
+  -> ExceptT ProcessError m (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle, ReleaseKey)
 initiateProcess cp = do
-
   (mhStdin, mhStdout, mhStderr, hProcess)
-    <- handlesExceptT resourceAndIOExceptionHandlers . lift $ IO.createProcess cp
+    <- handlesExceptT resourceAndIOExceptionHandlers . liftIO $ IO.createProcess cp
 
   releaseKey <- handlesExceptT resourceAndIOExceptionHandlers
                   . register $ IO.cleanupProcess (mhStdin, mhStdout, mhStderr, hProcess)
-
   return (mhStdin, mhStdout, mhStderr, hProcess, releaseKey)
 
 -- We can throw an IOException from createProcess or an ResourceCleanupException from the ResourceT monad
-resourceAndIOExceptionHandlers :: [Handler (ResourceT IO) ProcessError]
-resourceAndIOExceptionHandlers = [ Handler $ return . ProcessIOException
-                                 , Handler $ return . ResourceException
+resourceAndIOExceptionHandlers :: Applicative m => [Handler m ProcessError]
+resourceAndIOExceptionHandlers = [ Handler $ pure . ProcessIOException
+                                 , Handler $ pure . ResourceException
                                  ]
 
 

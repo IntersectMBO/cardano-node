@@ -37,6 +37,7 @@ import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.SPO
+import           Testnet.Components.TestWatchdog
 import           Testnet.Process.Cli
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run
@@ -46,7 +47,6 @@ import           Testnet.Runtime
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
-import           Hedgehog.Extras (threadDelay)
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
@@ -54,7 +54,7 @@ import qualified Hedgehog.Extras.Test.File as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/leadership-schedule/"'@
 hprop_leadershipSchedule :: Property
-hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> do
+hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
@@ -91,9 +91,17 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
   UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
-
+  let node1SocketPath = Api.File $ IO.sprocketSystemName node1sprocket
+      nodeConfigFile = Api.File configurationFile
+      termEpoch = EpochNo 15
   (stakePoolIdNewSpo, stakePoolColdSigningKey, stakePoolColdVKey, vrfSkey, _)
-    <- registerSingleSpo 1 tempAbsPath cTestnetOptions execConfig (txin1, utxoSKeyFile, utxoAddr)
+    <- registerSingleSpo 1 tempAbsPath
+         (Api.File configurationFile)
+         node1SocketPath
+         (EpochNo 10)
+         cTestnetOptions
+         execConfig
+         (txin1, utxoSKeyFile, utxoAddr)
 
   -- Create test stake address to delegate to the new stake pool
   -- NB: We need to fund the payment credential of the overall address
@@ -193,14 +201,14 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
            , "--tx-file", delegRegTestDelegatorTxFp
            ]
 
-  -- TODO: Can be removed if checkStakeKeyRegistered uses foldEpochState
-  threadDelay 15_000000
-
   -------------------------------------------------------------------
 
   let testDelegatorStakeAddressInfoOutFp = work </> "test-delegator-stake-address-info.json"
   void $ checkStakeKeyRegistered
            tempAbsPath
+           nodeConfigFile
+           node1SocketPath
+           termEpoch
            execConfig
            testDelegatorStakeAddress
            testDelegatorStakeAddressInfoOutFp
@@ -242,7 +250,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   jsonBS <- createConfigJson tempAbsPath (cardanoNodeEra cTestnetOptions)
   H.lbsWriteFile configurationFile jsonBS
   [newNodePort] <- requestAvailablePortNumbers 1
-  eRuntime <- lift . lift . runExceptT $ startNode (TmpAbsolutePath work) "test-spo" "127.0.0.1" newNodePort testnetMagic
+  eRuntime <- runExceptT $ startNode (TmpAbsolutePath work) "test-spo" "127.0.0.1" newNodePort testnetMagic
         [ "run"
         , "--config", configurationFile
         , "--topology", topologyFile
@@ -257,7 +265,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
 
   -- Wait for 2 epochs to pass
   void $ waitUntilEpoch (Api.File configurationFile)
-                        (Api.File $ IO.sprocketSystemName node1sprocket) (EpochNo 3)
+                        node1SocketPath (EpochNo 3)
 
   currentLeaderShipScheduleFile <- H.noteTempFile work "current-schedule.log"
 

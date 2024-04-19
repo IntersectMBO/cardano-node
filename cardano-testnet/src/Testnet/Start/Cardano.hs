@@ -91,7 +91,9 @@ startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
 -- | Like 'cardanoTestnet', but using defaults for all configuration files.
 -- See 'cardanoTestnet' for additional documentation.
-cardanoTestnetDefault :: ()
+cardanoTestnetDefault
+  :: ()
+  => HasCallStack
   => CardanoTestnetOptions
   -> Conf
   -> H.Integration TestnetRuntime
@@ -350,7 +352,7 @@ cardanoTestnet
       let nodeName = mkNodeName i
           keyDir = tmpAbsPath </> poolKeyDir i
       H.note_ $ "Node name: " <> nodeName
-      eRuntime <- lift . lift . runExceptT $
+      eRuntime <- runExceptT $
         startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetIpv4Address port testnetMagic
           [ "run"
           , "--config", configurationFile

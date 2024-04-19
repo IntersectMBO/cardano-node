@@ -38,6 +38,7 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
+import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
@@ -48,11 +49,10 @@ import           Hedgehog
 import qualified Hedgehog.Extras as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
-
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/ProposeAndRatifyNewConstitution/"'@
 hprop_ledger_events_propose_new_constitution :: Property
-hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-new-constitution" $ \tempAbsBasePath' -> do
+hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-new-constitution" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -140,6 +140,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
       , "policyid"
       , "--script-file", guardRailScriptFp
       ]
+
   void $ H.execCli' execConfig
     [ "conway", "governance", "action", "create-constitution"
     , "--testnet"
@@ -245,7 +246,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   -- We check that constitution was succcessfully ratified
 
   !eConstitutionAdopted
-    <- runExceptT $ foldEpochState
+    <- evalIO . runExceptT $ foldEpochState
                       (File configurationFile)
                       (File socketPath)
                       FullValidation
@@ -265,7 +266,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   -- Tally registered votes
 
-  finalGovFileBS <- liftIO $ LBS.readFile finalGovState
+  finalGovFileBS <- evalIO $ LBS.readFile finalGovState
 
   decodedFinalGovFile <- H.nothingFail (Aeson.decode finalGovFileBS :: Maybe Aeson.Value)
   let votes :: [Text]

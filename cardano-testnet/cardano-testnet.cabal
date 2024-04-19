@@ -44,6 +44,7 @@ library
                       , cardano-ledger-binary
                       , cardano-ledger-byron
                       , cardano-ledger-conway
+                      , cardano-ledger-api
                       , cardano-ledger-conway
                       , cardano-ledger-core
                       , cardano-ledger-core:testlib
@@ -92,6 +93,7 @@ library
                         Testnet.Components.DReps
                         Testnet.Components.SPO
                         Testnet.Components.Query
+                        Testnet.Components.TestWatchdog
                         Testnet.Defaults
                         Testnet.Filepath
                         Testnet.EpochStateProcessing
@@ -212,7 +214,6 @@ test-suite cardano-testnet-test
                       , cardano-testnet
                       , containers
                       , directory
-                      , exceptions
                       , filepath
                       , hedgehog
                       , hedgehog-extras
