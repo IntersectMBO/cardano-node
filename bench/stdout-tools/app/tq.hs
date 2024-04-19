@@ -73,13 +73,14 @@ data ReducerElem = forall r. (Show r, Reducer.Reducer r) => MkReducer r
 instance Show ReducerElem where
   show (MkReducer r) = show r
 
-cliFilterReader :: String -> Either String ReducerElem
-cliFilterReader str = case str of
+cliReducerReader :: String -> Either String ReducerElem
+cliReducerReader str = case str of
   "count-lines"  -> Right $ MkReducer   Reducer.CountLines
   "count-traces" -> Right $ MkReducer   Reducer.CountTraces
   "missed-slots" -> Right $ MkReducer   Reducer.MissedSlots
   "count-FLSLCP" -> Right $ MkReducer $ Reducer.CountNS "Forge.Loop.StartLeadershipCheckPlus"
   "2s-silences"  -> Right $ MkReducer $ Reducer.Silences 2
+  "utxo-size"    -> Right $ MkReducer   Reducer.UtxoSize
   "heap-changes" -> Right $ MkReducer $ Reducer.ResourcesChanges (Trace.resourcesHeap)
   "live-changes" -> Right $ MkReducer $ Reducer.ResourcesChanges (Trace.resourcesLive)
   "rss-changes"  -> Right $ MkReducer $ Reducer.ResourcesChanges (Trace.resourcesRSS)
@@ -116,6 +117,7 @@ optsParser = CliOpts <$>
           (
             (\runDir -> map
               (\n -> ("node-" ++ show n,runDir ++ "/node-" ++ show n ++ "/stdout"))
+              -- TODO: FIXME: Support smaller runs!!!!
               ([0..51]::[Int])
             )
             <$>
@@ -132,7 +134,7 @@ optsParser = CliOpts <$>
             <> Opt.help "Process files in parallel"
           )
     <*> some (
-          (Opt.option $ Opt.eitherReader cliFilterReader)
+          (Opt.option $ Opt.eitherReader cliReducerReader)
           (    Opt.long "reducer"
             <> Opt.short 'r'
             <> Opt.metavar "REDUCER"
