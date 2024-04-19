@@ -51,6 +51,7 @@ import qualified GHC.Stack as GHC
 import           Network.Socket (PortNumber)
 import           System.FilePath ((</>))
 import qualified System.Info as OS
+import qualified System.Random.Stateful as R
 import           Text.Printf (printf)
 
 import           Testnet.Components.Configuration
@@ -127,11 +128,15 @@ testnetIpv4Address = "127.0.0.1"
 
 -- | Starting port number, from which testnet nodes will get new ports.
 defaultTestnetNodeStartingPortNumber :: PortNumber
-defaultTestnetNodeStartingPortNumber = 23000
+defaultTestnetNodeStartingPortNumber = 20000
 
 -- | Global counter used to track which testnet node's ports were already allocated
 availablePortNumber :: IORef PortNumber
-availablePortNumber = unsafePerformIO $ newIORef defaultTestnetNodeStartingPortNumber
+availablePortNumber = unsafePerformIO $ do
+  let startingPort = toInteger defaultTestnetNodeStartingPortNumber
+  -- add a random offset to the starting port number to avoid clashes when starting multiple testnets
+  randomPart <- R.uniformRM (1,9) R.globalStdGen
+  newIORef . fromInteger $ startingPort + randomPart * 1000
 {-# NOINLINE availablePortNumber #-}
 
 -- | Request a list of unused port numbers for testnet nodes. This shifts 'availablePortNumber' by
