@@ -170,9 +170,6 @@ createSPOGenesisAndFiles (NumPools numPoolNodes) (NumDReps numDelReps) era shell
   where
     genesisInputFilepath e = "genesis-input." <> anyEraToString (AnyCardanoEra e) <> ".json"
 
-ifaceAddress :: String
-ifaceAddress = "127.0.0.1"
-
 -- TODO: Reconcile all other mkTopologyConfig functions. NB: We only intend
 -- to support current era on mainnet and the upcoming era.
 mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> LBS.ByteString
@@ -186,6 +183,8 @@ mkTopologyConfig numNodes allPorts port False = Aeson.encodePretty topologyNonP2
                                (numNodes - 1)
         | peerPort <- allPorts List.\\ [port]
         ]
+
+    ifaceAddress = "127.0.0.1"
 mkTopologyConfig numNodes allPorts port True = Aeson.encodePretty topologyP2P
   where
     rootConfig :: P2P.RootConfig
@@ -213,3 +212,6 @@ mkTopologyConfig numNodes allPorts port True = Aeson.encodePretty topologyP2P
         []
         DontUseLedgerPeers
         DontUseBootstrapPeers
+
+    ifaceAddress = "127.0.0.1"
+

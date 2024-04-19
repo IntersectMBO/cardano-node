@@ -24,6 +24,7 @@ import           Cardano.Api hiding (cardanoEra)
 import           Prelude
 
 import           Data.Char (toLower)
+import           Data.Text (Text)
 import           Data.Word
 import           GHC.Stack
 import           System.FilePath (addTrailingPathSeparator)
@@ -47,6 +48,7 @@ data CardanoTestnetOptions = CardanoTestnetOptions
   , cardanoEnableP2P :: Bool
   , cardanoNodeLoggingFormat :: NodeLoggingFormat
   , cardanoNumDReps :: Int -- ^ The number of DReps to generate at creation
+  , cardanoTestnetIp :: Maybe Text -- ^ The IP on which testnet will listen. If Nothing, then it will get a random local one
   } deriving (Eq, Show)
 
 cardanoDefaultTestnetOptions :: CardanoTestnetOptions
@@ -61,6 +63,7 @@ cardanoDefaultTestnetOptions = CardanoTestnetOptions
   , cardanoEnableP2P = False
   , cardanoNodeLoggingFormat = NodeLoggingFormatAsJson
   , cardanoNumDReps = 3
+  , cardanoTestnetIp = Nothing -- use random testnet IP
   }
 
 -- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)

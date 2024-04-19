@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Parsers.Cardano
   ( cmdCardano
   ) where
@@ -67,6 +68,13 @@ optsTestnet envCli = CardanoTestnetOptions
       <>  OA.metavar "NUMBER"
       <>  OA.showDefault
       <>  OA.value 3
+      )
+  <*> (optional . OA.option auto)
+      (   OA.long "ip-address"
+      <>  OA.help "IPv4 address on which testnet will listen"
+      <>  OA.metavar "IP"
+      <>  OA.showDefault
+      <>  OA.value "127.0.0.1"
       )
 
 pNumSpoNodes :: Parser [TestnetNodeOptions]

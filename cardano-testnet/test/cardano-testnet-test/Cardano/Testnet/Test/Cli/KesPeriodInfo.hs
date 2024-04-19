@@ -68,10 +68,12 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
     { configurationFile
     , testnetMagic
     , wallets=wallet0:_
-    , poolNodes
+    , poolNodes=poolNodes@(node0:_)
     } <- cardanoTestnetDefault cTestnetOptions conf
   node1sprocket <- H.headM $ poolSprockets runTime
   execConfig <- H.mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
+
+  let testnetIp = nodeIpv4 $ poolRuntime node0
 
   -- We get our UTxOs from here
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
@@ -249,7 +251,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   jsonBS <- createConfigJson tempAbsPath (cardanoNodeEra cTestnetOptions)
   H.lbsWriteFile configurationFile jsonBS
   [newNodePortNumber] <- requestAvailablePortNumbers 1
-  eRuntime <- runExceptT $ startNode tempAbsPath "test-spo" "127.0.0.1" newNodePortNumber testnetMagic
+  eRuntime <- runExceptT $ startNode tempAbsPath "test-spo" testnetIp newNodePortNumber testnetMagic
         [ "run"
         , "--config", configurationFile
         , "--topology", topologyFile
