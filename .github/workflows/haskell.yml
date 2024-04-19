@@ -232,7 +232,7 @@ jobs:
 
     - name: Create Release Tag
       id: create_release_tag
-      run: ｜
+      run: |
         echo "TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
 
     - name: Create Release
