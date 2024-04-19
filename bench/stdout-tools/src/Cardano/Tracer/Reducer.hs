@@ -44,7 +44,6 @@ import qualified Cardano.Tracer.Trace as Trace
 
 --------------------------------------------------------------------------------
 
-
 -- TODO: Show should not be here
 class Show r => Reducer r where
   type family Accum r :: Type
