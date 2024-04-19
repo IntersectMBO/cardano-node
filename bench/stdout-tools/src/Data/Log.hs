@@ -69,7 +69,7 @@ data Decoder = Decoder
   { _unfinishedLine :: Text.Text
   , _textLeft       :: Text.Text
   , _byteStringLeft :: BS.ByteString
-  , _textDecoding   :: (BS.ByteString -> TextE.Decoding)
+  , _textDecoding   :: BS.ByteString -> TextE.Decoding
   }
 
 -- Use empty `Text`s and create an empty/initial `Data.Text.Encoding.Some`

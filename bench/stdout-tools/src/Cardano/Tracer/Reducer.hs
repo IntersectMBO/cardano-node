@@ -48,7 +48,7 @@ import qualified Cardano.Tracer.Trace as Trace
 class Show r => Reducer r where
   type family Accum r :: Type
   initialOf :: r -> Accum r
-  reducerOf :: r -> Accum r -> (Either Text.Text Trace.Trace) -> Accum r
+  reducerOf :: r -> Accum r -> Either Text.Text Trace.Trace -> Accum r
   showAns   :: r -> Accum r -> String
   printAns  :: r -> Accum r -> IO ()
   printAns r acc = putStrLn $ showAns r acc
@@ -61,16 +61,16 @@ data CountLines = CountLines
 data CountTraces = CountTraces
   deriving Show
 
-data Silences = Silences NominalDiffTime
+newtype Silences = Silences NominalDiffTime
   deriving Show
 
-data CountNS = CountNS Text.Text
+newtype CountNS = CountNS Text.Text
   deriving Show
 
 data MissedSlots = MissedSlots
   deriving Show
 
-data ResourcesChanges = ResourcesChanges (Trace.DataResources -> Integer)
+newtype ResourcesChanges = ResourcesChanges (Trace.DataResources -> Integer)
 
 instance Show ResourcesChanges where
   show _ = "ResourcesChanges"
