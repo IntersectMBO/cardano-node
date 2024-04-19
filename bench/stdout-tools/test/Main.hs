@@ -34,7 +34,7 @@ tests =  Tasty.testGroup "stdout-tools"
   ]
 
 -- Allow to `fold'` through the log file but in JSON format.
-lineFoldl' :: (a -> (Either Text.Text Trace.Trace) -> a) -> a -> FilePath -> IO a
+lineFoldl' :: (a -> Either Text.Text Trace.Trace -> a) -> a -> FilePath -> IO a
 lineFoldl' f initialAcc filePath = do
   Log.lineFoldl'
     (\acc textLine -> f acc (Trace.fromJson textLine))
@@ -92,7 +92,7 @@ reducers = Tasty.testGroup
         500
   , testCase "ResourcesChanges" $ do
       fp <- Paths.getDataFileName "data/500-FLSLCP.stdout"
-      let reducer = Reducer.ResourcesChanges (Trace.resourcesHeap)
+      let reducer = Reducer.ResourcesChanges Trace.resourcesHeap
       ans <- lineFoldl'
         (Reducer.reducerOf reducer)
         (Reducer.initialOf reducer)
