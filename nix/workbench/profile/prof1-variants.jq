@@ -1025,6 +1025,23 @@ def all_profile_variants:
     { name: "value-M16G-nomadperf"
     }
   , $nomad_perf_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
+    { name: "value-16M32G-nomadperfssd"
+    , genesis:
+      { utxo: (16 * $M)
+        # This is to account for cloud genesis deployment (upload and download).
+        # Test run with 20M "utxo" and 450s "offset": nodes had from 108 to 189
+        # unneeded seconds as shown in 'ns:"BlockchainTime.StartTimeInTheFuture"'.
+      , extra_future_offset: 250
+      }
+    , cluster:
+      { nomad:
+        { resources:
+          # Minus 600 MB for the OS, same as with the 16 GB nomad-perf cluster.
+          { producer: {cores: 8, memory: 31400, memory_max: 31400} }
+        }
+      }
+    }
+  , $nomad_perf_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
     { name: "value-20M32G-nomadperfssd"
     , genesis:
       { utxo: (20 * $M)
