@@ -64,3 +64,21 @@ executable tq
 --  autogen-modules:      Paths_trace_analyzer
 --  other-modules:        Cardano.Tracer.Analyze.Process
 --                      , Cardano.Tracer.Analyze.Types
+
+test-suite stdout-tools-test
+  import:               project-config
+  hs-source-dirs:       test/
+  main-is:              Main.hs
+  type:                 exitcode-stdio-1.0
+  other-modules:        Paths_stdout_tools
+  autogen-modules:      Paths_stdout_tools
+  build-depends:        base
+                      , text
+                      , text-iso8601
+                      , containers
+                      , tasty
+                      , tasty-hunit
+                      , stdout-tools
+  ghc-options:          -threaded
+                        -rtsopts
+                        "-with-rtsopts=-T"
