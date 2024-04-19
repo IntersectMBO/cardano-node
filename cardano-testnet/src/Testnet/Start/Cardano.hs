@@ -19,7 +19,6 @@ module Testnet.Start.Cardano
   , getDefaultAlonzoGenesis
   , getDefaultShelleyGenesis
   , requestAvailablePortNumbers
-  , generateRandomLocalIpv4
   ) where
 
 
@@ -39,21 +38,19 @@ import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either
 import           Data.IORef
-import           Data.List (intercalate)
 import qualified Data.List as L
 import           Data.Maybe
-import           Data.String
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
 import qualified Data.Time.Clock as DTC
-import           Data.Word (Word32, Word8)
+import           Data.Word (Word32)
 import           GHC.IO.Unsafe (unsafePerformIO)
 import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           Network.Socket (PortNumber)
 import           System.FilePath ((</>))
 import qualified System.Info as OS
-import qualified System.Random.Stateful as R
 import           Text.Printf (printf)
 
 import           Testnet.Components.Configuration
@@ -124,14 +121,9 @@ getDefaultShelleyGenesis opts = do
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
   return (startTime, Defaults.defaultShelleyGenesis startTime opts)
 
--- | Generate a random localhost IP address
-generateRandomLocalIpv4 :: IsString s
-                        => MonadIO m
-                        => m s
-generateRandomLocalIpv4 = do
-  let prefix = "127."
-  parts :: [Word8] <- liftIO $ replicateM 3 $ R.uniformRM (1,254) R.globalStdGen
-  pure $ fromString $ prefix <> intercalate "." (map show parts)
+-- | Hardcoded testnet IP address
+testnetIpv4Address :: Text
+testnetIpv4Address = "127.0.0.1"
 
 -- | Starting port number, from which testnet nodes will get new ports.
 defaultTestnetNodeStartingPortNumber :: PortNumber
@@ -230,9 +222,6 @@ cardanoTestnet
       nbDReps = numDReps testnetOptions
       era = cardanoNodeEra testnetOptions
 
-  -- Generate random local IP address (if there was no address provided in the options) to avoid clashes
-  -- when starting multiple testnets. The IP is then available in NodeRuntime.
-  testnetIpv4Address <- maybe generateRandomLocalIpv4 pure $ cardanoTestnetIp testnetOptions
   portNumbers <- requestAvailablePortNumbers numPoolNodes
 
    -- Sanity checks

@@ -7,7 +7,6 @@ module Cardano.Testnet (
   cardanoTestnet,
   cardanoTestnetDefault,
   requestAvailablePortNumbers,
-  generateRandomLocalIpv4,
 
   -- ** Testnet options
   CardanoTestnetOptions(..),

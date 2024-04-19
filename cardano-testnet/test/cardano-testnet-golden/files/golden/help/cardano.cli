@@ -14,7 +14,6 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--enable-p2p BOOL]
   [--nodeLoggingFormat LOGGING_FORMAT]
   [--num-dreps NUMBER]
-  [--ip-address IP]
 
   Start a testnet in any era
 
@@ -42,6 +41,4 @@ Available options:
                            (default: NodeLoggingFormatAsJson)
   --num-dreps NUMBER       Number of delegate representatives (DReps) to
                            generate (default: 3)
-  --ip-address IP          IPv4 address on which testnet will listen
-                           (default: "127.0.0.1")
   -h,--help                Show this help text

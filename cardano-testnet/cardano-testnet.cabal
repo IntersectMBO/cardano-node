@@ -70,7 +70,6 @@ library
                       , ouroboros-network-api
                       , prettyprinter
                       , process
-                      , random
                       , resourcet
                       , safe-exceptions
                       , scientific

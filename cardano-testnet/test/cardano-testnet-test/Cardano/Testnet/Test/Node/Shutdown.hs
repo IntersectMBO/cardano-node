@@ -139,14 +139,13 @@ hprop_shutdown = H.integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' ->
 
   -- Run cardano-node with pipe as stdin.  Use 0 file descriptor as shutdown-ipc
 
-  localhostIp <- generateRandomLocalIpv4
   eRes <- H.evalIO . runExceptT $ procNode
                          [ "run"
                          , "--config", tempAbsPath' </> "configuration.yaml"
                          , "--topology", tempAbsPath' </> "mainnet-topology.json"
                          , "--database-path", tempAbsPath' </> "db"
                          , "--socket-path", IO.sprocketArgumentName sprocket
-                         , "--host-addr", localhostIp
+                         , "--host-addr", "127.0.0.1"
                          , "--port", show @Int port
                          , "--shutdown-ipc", "0"
                          ]

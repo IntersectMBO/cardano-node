@@ -70,13 +70,13 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
     { testnetMagic
     , wallets=wallet0:_
     , configurationFile
-    , poolNodes=poolNodes@(node0:_)
+    , poolNodes
     } <- cardanoTestnetDefault cTestnetOptions conf
+
   node1sprocket <- H.headM $ poolSprockets tr
   execConfig <- H.mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
   let sbe = shelleyBasedEra @BabbageEra
-      testnetIp = nodeIpv4 $ poolRuntime node0
 
   ----------------Need to register an SPO------------------
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
@@ -250,7 +250,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   jsonBS <- createConfigJson tempAbsPath (cardanoNodeEra cTestnetOptions)
   H.lbsWriteFile configurationFile jsonBS
   [newNodePort] <- requestAvailablePortNumbers 1
-  eRuntime <- runExceptT $ startNode (TmpAbsolutePath work) "test-spo" testnetIp newNodePort testnetMagic
+  eRuntime <- runExceptT $ startNode (TmpAbsolutePath work) "test-spo" "127.0.0.1" newNodePort testnetMagic
         [ "run"
         , "--config", configurationFile
         , "--topology", topologyFile

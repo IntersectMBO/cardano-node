@@ -16,7 +16,6 @@ Usage: cardano-testnet cardano [--num-pool-nodes COUNT]
   [--enable-p2p BOOL]
   [--nodeLoggingFormat LOGGING_FORMAT]
   [--num-dreps NUMBER]
-  [--ip-address IP]
 
   Start a testnet in any era
 
