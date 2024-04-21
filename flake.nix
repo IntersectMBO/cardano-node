@@ -7,7 +7,6 @@
   };
 
   inputs = {
-    utxo-scale.url = "github:input-output-hk/UTxO-Scalability";
     # IMPORTANT: report any change to nixpkgs channel in nix/default.nix:
     nixpkgs.follows = "haskellNix/nixpkgs-unstable";
     hostNixpkgs.follows = "nixpkgs";
@@ -82,7 +81,6 @@
     , nix2container
     , cardano-automation
     , em
-    , utxo-scale
     , ...
     }@input:
     let
@@ -114,31 +112,6 @@
                            nixpkgsSrcs = nixpkgs.outPath;
                            nixpkgsRev = nixpkgs.rev; };
           gitrev = final.customConfig.gitrev or self.rev or "0000000000000000000000000000000000000000";
-          inherit (utxo-scale.packages.${final.system}) mgdoc;
-          tx-generator-script = let
-            pkg = ## Local:
-                final.cardanoNodePackages.tx-generator
-                ## Imported by another repo, that adds an overlay:
-                  or final.tx-generator;
-                ## TODO:  that's actually a bit ugly and could be improved.
-            script = final.writeShellApplication {
-              name = "tx-generator-script";
-              text = ''
-                CARDANO_NODE_SOCKET_PATH="$(jq -r .localNodeSocketPath < "$2")"
-                export CARDANO_NODE_SOCKET_PATH
-                export CARDANO_NODE_NETWORK_ID=42
-                keyDir="$(dirname "$(jq -r .sigKey <"$2")")"
-                export MGDOC_SIGNING_KEY_PATH="$keyDir/utxo2.skey"
-                MGDOC_PAYMENT_ADDRESS="$(cardano-cli babbage address build --payment-verification-key-file "$keyDir"/utxo2.vkey --testnet-magic 42)"
-                export MGDOC_PAYMENT_ADDRESS
-                mgdoc --log2-shard-count 20 --log2-shard-size 7 &
-                mgdoc_pid="$!"
-                tx-generator "$@"
-                kill "$mgdoc_pid"
-              '';
-              runtimeInputs = [ pkg final.jq final.mgdoc final.cardano-cli final.coreutils ];
-            };
-          in script;
           commonLib = lib
             // iohkNix.lib
             // final.cardanoLib

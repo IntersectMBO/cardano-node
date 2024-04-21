@@ -141,7 +141,8 @@ let
           enable = mkOption { type = types.bool; default = false; description = ''Enable ${svcName}, ${svcDesc}.''; };
           package = mkOption {
             type = types.package;
-            default = svcPackageSelector pkgs;
+            default = pkgs.${svcName} or pkgs.cardanoNodePackages.${svcName} or
+              (throw "the 'pkgs' does not have ${svcName} -- please adjust service configuration.");
             description = ''The package for ${svcName} that should be used.'';
           };
           executable = mkOption {
