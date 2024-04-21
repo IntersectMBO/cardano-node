@@ -1114,11 +1114,11 @@ def all_profile_variants:
     , genesis:
       { utxo: 0
         # Account for slots db-synthesis creates, and the delay for it to run
-      , extra_future_offset: -770000
+      , extra_future_offset: -253300
       , funds_balance: 40000000000000
       }
     , node:
-      { shutdown_on_slot_synced: 864000
+      { shutdown_on_slot_synced: 324500
       , heap_limit:              32768
       }
     , generator:

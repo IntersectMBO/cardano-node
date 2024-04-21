@@ -572,11 +572,11 @@ EOF
 
         progress "run | genesis" "db-synth"
         date
-        time nix --refresh run github:shlevy/ouroboros-consensus/synth-tx#db-synthesizer -- \
+        time nix --refresh run github:shlevy/ouroboros-consensus/synth-tx-baseline#db-synthesizer -- \
             --config "$dir"/node-0/config.json --db "$dir"/genesis/db \
             --bulk-credentials-file "$dir"/genesis/pools/bulk1.creds \
             --genesis-utxo-signing-key-file "$dir"/genesis/utxo-keys/utxo2.skey \
-	    --slots 800000
+	    --slots 260500
 
         echo 42 > "$dir"/genesis/db/protocolMagicId
 
