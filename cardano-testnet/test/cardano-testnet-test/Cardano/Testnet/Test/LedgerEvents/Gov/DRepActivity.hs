@@ -11,7 +11,7 @@ module Cardano.Testnet.Test.LedgerEvents.Gov.DRepActivity
 
 import           Cardano.Api as Api
 import           Cardano.Api.Error (displayError)
-import           Cardano.Api.Ledger (DRepState (drepExpiry))
+import           Cardano.Api.Ledger (drepExpiry)
 
 import           Cardano.Testnet
 
@@ -30,8 +30,8 @@ import           GHC.Stack (callStack)
 import           Lens.Micro ((^?))
 import           System.FilePath ((</>))
 
-import           Testnet.Components.DReps (createVotingTxBody, generateVoteFiles,
-                   retrieveTransactionId, signTx, submitTx)
+import           Testnet.Components.DReps (createVotingTxBody, delegateToDRep, generateVoteFiles,
+                   registerDRep, retrieveTransactionId, signTx, submitTx)
 import           Testnet.Components.Query (EpochStateView, checkDRepState,
                    findLargestUtxoForPaymentKey, getCurrentEpochNo, getEpochStateView,
                    getMinDRepDeposit)
@@ -62,7 +62,7 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
       fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 100
         , cardanoNodeEra = cEra
-        , cardanoNumDReps = 10
+        , cardanoNumDReps = 1
         }
 
   TestnetRuntime
@@ -96,17 +96,34 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
 
   -- This proposal should pass
   firstProposalInfo <- activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
-                                                  "firstProposal" wallet0 Nothing [(6, "yes"), (4, "no")] 4 4 2
+                                                  "firstProposal" wallet0 Nothing [(1, "yes")] 10 10 3
+
+  -- Now we register two new DReps
+  drep2 <- registerDRep execConfig epochStateView sbe work "drep2" wallet1
+  delegateToDRep execConfig epochStateView configurationFile socketPath sbe work "drep2-delegation"
+                 wallet2 (defaultDelegatorStakeKeyPair 2) drep2
+
+  drep3 <- registerDRep execConfig epochStateView sbe work "drep3" wallet0
+  delegateToDRep execConfig epochStateView configurationFile socketPath sbe work "drep3-delegation"
+                 wallet1 (defaultDelegatorStakeKeyPair 3) drep3
+
+  expirationDates <- checkDRepState sbe (File configurationFile) (File socketPath) execConfig
+                                    (\m -> if length m == 3 then Just $ Map.map drepExpiry m else Nothing)
+  H.note_ $ "Expiration dates for the registered DReps: " ++ show expirationDates
 
   -- Second proposal (set activity to something else and it should fail, because of percentage being under 51)
   -- We expect to get what we set in first prop, second prop should fail
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
-                                    "secondProposal" wallet1 (Just firstProposalInfo) [(4, "yes")] 7 4 5
+                                    "secondProposal" wallet2 (Just firstProposalInfo) [(1, "yes")] 7 10 30
+
+
+  (EpochNo epochAfterTimeout) <- getCurrentEpochNo epochStateView sbe
+  H.note_ $ "Epoch after which we are going to test timeout: " <> show epochAfterTimeout
 
   -- Third proposal (set activity to something else again and it should pass, because of inactivity)
-  -- Because 6 out of 10 were inactive, prop should pass
+  -- Because 2 out of 3 were inactive, prop should pass
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
-                                    "thirdProposal" wallet2 (Just firstProposalInfo) [(4, "yes")] 8 8 2
+                                    "thirdProposal" wallet0 (Just firstProposalInfo) [(1, "yes")] 8 8 2
 
 
 activityChangeProposalTest
@@ -134,6 +151,9 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
       propVotes = zip (concatMap (uncurry replicate) votes) [1..]
   annotateShow propVotes
 
+  (EpochNo epochBeforeProp) <- getCurrentEpochNo epochStateView sbe
+  H.note_ $ "Epoch before \"" <> prefix <> "\" prop: " <> show epochBeforeProp
+
   thisProposal@(governanceActionTxId, governanceActionIndex) <-
     makeActivityChangeProposal execConfig epochStateView (File configurationFile) (File socketPath)
                                sbe baseDir "proposal" previousProposalInfo change wallet
@@ -148,10 +168,6 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
   dRepActivityAfterProp <- getDRepActivityValue execConfig
 
   dRepActivityAfterProp === expected
-
-  result3 <- checkDRepState sbe (File configurationFile) (File socketPath) execConfig
-                            (Just . map (drepExpiry . snd) . Map.toList)
-  H.note_ $ "DRep expiration dates: " <> show result3
 
   return thisProposal
 
@@ -232,7 +248,7 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
   !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex sbe (fromString governanceActionTxId))
                                         (unFile configurationFile)
                                         (unFile socketPath)
-                                        (EpochNo 30)
+                                        (EpochNo 40)
 
   governanceActionIndex <- case propSubmittedResult of
                              Left e ->

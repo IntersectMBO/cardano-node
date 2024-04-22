@@ -23,6 +23,7 @@ module Testnet.Defaults
   , defaultMainnetTopology
   , plutusV3NonSpendingScript
   , plutusV3SpendingScript
+  , defaultDelegatorStakeKeyPair
   ) where
 
 import           Cardano.Api (AnyCardanoEra (..), CardanoEra (..), pshow)
@@ -71,7 +72,7 @@ import           Numeric.Natural
 import           System.FilePath ((</>))
 
 import           Test.Cardano.Ledger.Core.Rational
-import           Testnet.Runtime (PaymentKeyPair (PaymentKeyPair))
+import           Testnet.Runtime (PaymentKeyPair (PaymentKeyPair), StakingKeyPair (StakingKeyPair))
 import           Testnet.Start.Types
 
 {- HLINT ignore "Use underscore" -}
@@ -513,6 +514,22 @@ defaultDRepSkeyFp n = "drep-keys" </> ("drep" <> show n) </> "drep.skey"
 -- | The relative path to DRep key pairs in directories created by cardano-testnet
 defaultDRepKeyPair :: Int -> PaymentKeyPair
 defaultDRepKeyPair n = PaymentKeyPair (defaultDRepVkeyFp n) (defaultDRepSkeyFp n)
+
+-- | The relative path to stake delegator stake keys in directories created by cardano-testnet
+defaultDelegatorStakeVkeyFp
+  :: Int -- ^ The Stake delegator index (starts at 1)
+  -> FilePath
+defaultDelegatorStakeVkeyFp n = "stake-delegators" </> ("delegator" <> show n) </> "staking.vkey"
+
+-- | The relative path to stake delegator stake secret keys in directories created by cardano-testnet
+defaultDelegatorStakeSkeyFp
+  :: Int -- ^ The Stake delegator index (starts at 1)
+  -> FilePath
+defaultDelegatorStakeSkeyFp n = "stake-delegators" </> ("delegator" <> show n) </> "staking.skey"
+
+-- | The relative path to stake delegator key pairs in directories created by cardano-testnet
+defaultDelegatorStakeKeyPair :: Int -> StakingKeyPair
+defaultDelegatorStakeKeyPair n = StakingKeyPair (defaultDelegatorStakeVkeyFp n) (defaultDelegatorStakeSkeyFp n)
 
 -- TODO: We should not hardcode a script like this. We need to move
 -- plutus-example from plutus apps to cardano-node-testnet. This will

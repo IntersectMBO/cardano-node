@@ -15,13 +15,14 @@ import           Cardano.Testnet
 
 import           Prelude
 
+import           Control.Monad (void)
 import qualified Data.Map as Map
 import           System.FilePath ((</>))
 
-import           Testnet.Components.DReps (createDRepRegistrationTxBody, failToSubmitTx,
-                   generateDRepKeyPair, generateRegistrationCertificate, signTx, submitTx)
+import           Testnet.Components.DReps (createCertificatePublicationTxBody, failToSubmitTx,
+                   generateDRepKeyPair, generateRegistrationCertificate, registerDRep, signTx)
 import           Testnet.Components.Query (checkDRepState, getEpochStateView, getMinDRepDeposit)
-import           Testnet.Components.TestWatchdog
+import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime (PaymentKeyInfo (paymentKeyInfoPair), PoolNode (poolRuntime),
@@ -88,8 +89,8 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
   drepKeyPair1 <- generateDRepKeyPair execConfig drepDir1 "keys"
   drepRegCert1 <- generateRegistrationCertificate execConfig drepDir1 "reg-cert"
                                                   drepKeyPair1 (minDRepDeposit - 1)
-  drepRegTxBody1 <- createDRepRegistrationTxBody execConfig epochStateView sbe drepDir1 "reg-cert-txbody"
-                                                 drepRegCert1 wallet0
+  drepRegTxBody1 <- createCertificatePublicationTxBody execConfig epochStateView sbe drepDir1 "reg-cert-txbody"
+                                                       drepRegCert1 wallet0
   drepSignedRegTx1 <- signTx execConfig cEra drepDir1 "signed-reg-tx"
                              drepRegTxBody1 [drepKeyPair1, paymentKeyInfoPair wallet0]
 
@@ -97,17 +98,7 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
 
   -- DRep 2 (enough deposit)
 
-  drepDir2 <- H.createDirectoryIfMissing $ gov </> "drep2"
-
-  drepKeyPair2 <- generateDRepKeyPair execConfig drepDir2 "keys"
-  drepRegCert2 <- generateRegistrationCertificate execConfig drepDir2 "reg-cert"
-                                                  drepKeyPair2 minDRepDeposit
-  drepRegTxBody2 <- createDRepRegistrationTxBody execConfig epochStateView sbe drepDir2 "reg-cert-txbody"
-                                                 drepRegCert2 wallet1
-  drepSignedRegTx2 <- signTx execConfig cEra drepDir2 "signed-reg-tx"
-                             drepRegTxBody2 [drepKeyPair2, paymentKeyInfoPair wallet1]
-
-  submitTx execConfig cEra drepSignedRegTx2
+  void $ registerDRep execConfig epochStateView sbe work "drep2" wallet1
 
   checkDRepState sbe (File configurationFile) (File socketPath) execConfig
     (\m -> if map L.drepDeposit (Map.elems m) == [L.Coin minDRepDeposit] then Just () else Nothing)

@@ -302,7 +302,12 @@ checkDRepState sbe configurationFile socketPath execConfig f = withFrozenCallSta
                   [ "checkDRepState: foldEpochState returned Nothing: "
                   , "This is probably an error related to foldEpochState." ]
       H.failure
-    Right (_, Just val) ->
+    Right (ConditionNotMet, Just _) -> do
+      H.note_ $ unlines
+                  [ "checkDRepState: foldEpochState returned Just and ConditionNotMet: "
+                  , "This is probably an error related to foldEpochState." ]
+      H.failure
+    Right (ConditionMet, Just val) ->
       return val
 
 -- | Obtain governance state from node (CLI query)
