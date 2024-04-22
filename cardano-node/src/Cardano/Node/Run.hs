@@ -34,19 +34,17 @@ import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
 import           Control.Concurrent.Class.MonadSTM.Strict
 import           Control.Exception (try)
 import qualified Control.Exception as Exception
-import           Control.Monad (forM_, unless, void, when)
+import           Control.Monad (forM, forM_, unless, void, when)
 import           Control.Monad.Class.MonadThrow (MonadThrow (..))
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT, runExceptT)
 import           Control.Monad.Trans.Except.Extra (left)
-import           Control.Monad.Trans.Maybe (MaybeT (..), mapMaybeT)
 import           "contra-tracer" Control.Tracer
 import           Data.Either (partitionEithers)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import           Data.Monoid (Last (..))
-import           Data.Foldable (traverse_)
 import           Data.Proxy (Proxy (..))
 import           Data.Text (Text, breakOn, pack)
 import qualified Data.Text as Text
@@ -792,18 +790,13 @@ updateLedgerPeerSnapshot :: Tracer IO (StartupTrace blk)
                          -> STM IO (Maybe PeerSnapshotFile)
                          -> (Maybe LedgerPeerSnapshot -> STM IO ())
                          -> IO (Maybe LedgerPeerSnapshot)
-updateLedgerPeerSnapshot startupTracer readLedgerPeerPath writeVar = runMaybeT $
-              (\io_m_lps -> do
-                  m_lps <- io_m_lps
-                  traverse_ (\(LedgerPeerSnapshot (wOrigin, _)) ->
-                               traceWith startupTracer
-                                         (LedgerPeerSnapshotLoaded wOrigin)) m_lps
-                  atomically . writeVar $ m_lps
-                  io_m_lps)
-              -- ^ ensures that snapshot payload TVar is updated to Nothing
-              -- if the path entry is removed from topology file sometime
-              -- before sighup
-  `mapMaybeT` (liftIO . readPeerSnapshotFile =<< MaybeT (atomically readLedgerPeerPath))
+updateLedgerPeerSnapshot startupTracer readLedgerPeerPath writeVar = do
+  mPeerSnapshotFile <- atomically readLedgerPeerPath
+  mLedgerPeerSnapshot <- forM mPeerSnapshotFile $ \f -> do
+    lps@(LedgerPeerSnapshot (wOrigin, _)) <- readPeerSnapshotFile f
+    lps <$ traceWith startupTracer (LedgerPeerSnapshotLoaded wOrigin)
+  atomically . writeVar $ mLedgerPeerSnapshot
+  pure mLedgerPeerSnapshot
 
 --------------------------------------------------------------------------------
 -- Helper functions
