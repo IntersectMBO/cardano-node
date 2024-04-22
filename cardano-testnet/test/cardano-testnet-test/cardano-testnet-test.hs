@@ -17,6 +17,7 @@ import qualified Cardano.Testnet.Test.Gov.CommitteeAddNew as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepDeposit as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepRetirement as Gov
 import qualified Cardano.Testnet.Test.Gov.NoConfidence as Gov
+import qualified Cardano.Testnet.Test.Gov.PredefinedNoConfidenceDRep as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitution as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryGrowth as Gov
@@ -39,7 +40,6 @@ import           Test.Tasty (TestTree)
 import qualified Test.Tasty.Ingredients as T
 import qualified Test.Tasty.Options as T
 import qualified Test.Tasty.Runners as T
-import qualified Cardano.Testnet.Test.Gov.PredefinedNoConfidenceDRep as Gov
 
 tests :: IO TestTree
 tests = do
