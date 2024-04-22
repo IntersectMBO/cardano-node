@@ -235,6 +235,13 @@ handleNodeWithTracers cmdPc nc0 p networkMagic blockType runP = do
           mapM_ (traceWith $ startupTracer tracers) startupInfo
           traceNodeStartupInfo (nodeStartupInfoTracer tracers) startupInfo
 
+          -- sends initial BlockForgingUpdate
+          blockForging <- snd (Api.protocolInfo runP)
+          traceWith (startupTracer tracers)
+                    (BlockForgingUpdate (if null blockForging
+                                          then EnabledBlockForging
+                                          else DisabledBlockForging))
+
           handleSimpleNode blockType runP p2pMode tracers nc
             (\nk -> do
                 setNodeKernel nodeKernelData nk
@@ -271,6 +278,13 @@ handleNodeWithTracers cmdPc nc0 p networkMagic blockType runP = do
 
           getStartupInfo nc p fp
             >>= mapM_ (traceWith $ startupTracer tracers)
+
+          blockForging <- snd (Api.protocolInfo runP)
+          traceWith (startupTracer tracers)
+                    (BlockForgingUpdate (if null blockForging
+                                          then EnabledBlockForging
+                                          else DisabledBlockForging))
+
 
           -- We ignore peer logging thread if it dies, but it will be killed
           -- when 'handleSimpleNode' terminates.
