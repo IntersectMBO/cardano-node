@@ -96,7 +96,7 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
 
   -- This proposal should pass
   firstProposalInfo <- activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
-                                                  "firstProposal" wallet0 Nothing [(1, "yes")] 10 10 3
+                                                  "firstProposal" wallet0 Nothing [(1, "yes")] 6 6 3
 
   -- Now we register two new DReps
   drep2 <- registerDRep execConfig epochStateView sbe work "drep2" wallet1
@@ -111,19 +111,23 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
                                     (\m -> if length m == 3 then Just $ Map.map drepExpiry m else Nothing)
   H.note_ $ "Expiration dates for the registered DReps: " ++ show expirationDates
 
-  -- Second proposal (set activity to something else and it should fail, because of percentage being under 51)
-  -- We expect to get what we set in first prop, second prop should fail
+  -- Proposals before expiration (set activity to something else and it should fail).
+  -- We send three because DRep won't expire if there is not enough activity
+  -- (opportunites to participate). This is accounted for by the dormant epoch count
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
-                                    "secondProposal" wallet2 (Just firstProposalInfo) [(1, "yes")] 7 10 30
-
+                                    "secondProposal" wallet2 (Just firstProposalInfo) [(1, "yes")] 7 6 3
+  void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
+                                    "thirdProposal" wallet0 (Just firstProposalInfo) [(1, "yes")] 7 6 3
+  void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
+                                    "fourthProposal" wallet1 (Just firstProposalInfo) [(1, "yes")] 7 6 3
 
   (EpochNo epochAfterTimeout) <- getCurrentEpochNo epochStateView sbe
   H.note_ $ "Epoch after which we are going to test timeout: " <> show epochAfterTimeout
 
-  -- Third proposal (set activity to something else again and it should pass, because of inactivity)
-  -- Because 2 out of 3 were inactive, prop should pass
+  -- Last proposal (set activity to something else again and it should pass, because of inactivity)
+  -- Because 2 out of 3 DReps were inactive, prop should pass
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
-                                    "thirdProposal" wallet0 (Just firstProposalInfo) [(1, "yes")] 8 8 2
+                                    "lastProposal" wallet2 (Just firstProposalInfo) [(1, "yes")] 8 8 3
 
 
 activityChangeProposalTest
