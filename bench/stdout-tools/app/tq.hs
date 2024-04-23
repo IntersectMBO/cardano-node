@@ -163,7 +163,7 @@ run cliOpts@(CliOpts _ parallel ((MkReducer r):_)) = do
     ------------------------------------
     mapM_
       (\(logName,fp) -> do
-        ans <- lineFoldl'
+        ans <- Log.lineFoldl'
           (Reducer.reducerOf r)
           (Reducer.initialOf r)
           fp
@@ -179,7 +179,7 @@ run cliOpts@(CliOpts _ parallel ((MkReducer r):_)) = do
     ---------------------------------------------------------
     ansParallel <- Async.mapConcurrently
       (\(logName,fp) -> do
-        ans <- lineFoldl'
+        ans <- Log.lineFoldl'
           (Reducer.reducerOf r)
           (Reducer.initialOf r)
           fp
@@ -212,15 +212,16 @@ run cliOpts@(CliOpts _ parallel ((MkReducer r):_)) = do
   -- End
   return ()
 
--- Allow to `fold'` through the log file but in JSON format.
-lineFoldl' :: (a -> Either Text.Text Trace.Trace -> a) -> a -> FilePath -> IO a
-lineFoldl' f initialAcc filePath = do
+-- Like `lineFoldl'` but with a filter for which raw lines to apply a function.
+_filterLineFoldl' :: (a -> Text.Text -> (Maybe a)) -> a -> FilePath -> IO a
+_filterLineFoldl' f initialAcc filePath = do
   Log.lineFoldl'
     (\acc textLine ->
-      -- CRITICAL: Has to be "STRICT" to keep `Log.lineFoldl'`'s behaviour.
-      --           I repeat, the accumulator function has to be strict!
-      let !nextAcc = f acc (Trace.fromJson textLine)
-      in nextAcc
+      case f acc textLine of
+        Nothing -> acc
+        -- CRITICAL: Has to be "STRICT" to keep `Log.lineFoldl'`'s behaviour.
+        --           I repeat, the accumulator function has to be strict!
+        Just !nextAcc -> nextAcc
     )
     initialAcc
     filePath

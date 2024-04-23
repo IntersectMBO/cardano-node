@@ -6,8 +6,6 @@ module Main (main) where
 
 import           Data.Either (fromRight)
 
--- package: text.
-import qualified Data.Text as Text
 -- package: text-iso8601-0.1
 import qualified Data.Time.FromText as ParseTime
 -- package: containers.
@@ -33,14 +31,6 @@ tests =  Tasty.testGroup "stdout-tools"
       reducers
   ]
 
--- Allow to `fold'` through the log file but in JSON format.
-lineFoldl' :: (a -> Either Text.Text Trace.Trace -> a) -> a -> FilePath -> IO a
-lineFoldl' f initialAcc filePath = do
-  Log.lineFoldl'
-    (\acc textLine -> f acc (Trace.fromJson textLine))
-    initialAcc
-    filePath
-
 -- Create what profiles use and compare with previous profiles outputs.
 reducers :: Tasty.TestTree
 reducers = Tasty.testGroup
@@ -48,7 +38,7 @@ reducers = Tasty.testGroup
   [ testCase "CountLines" $ do
       fp <- Paths.getDataFileName "data/500-FLSLCP.stdout"
       let reducer = Reducer.CountLines
-      ans <- lineFoldl'
+      ans <- Log.lineFoldl'
         (Reducer.reducerOf reducer)
         (Reducer.initialOf reducer)
         fp
@@ -63,7 +53,7 @@ reducers = Tasty.testGroup
   ,  testCase "CountTraces" $ do
       fp <- Paths.getDataFileName "data/500-FLSLCP.stdout"
       let reducer = Reducer.CountTraces
-      ans <- lineFoldl'
+      ans <- Log.lineFoldl'
         (Reducer.reducerOf reducer)
         (Reducer.initialOf reducer)
         fp
@@ -78,7 +68,7 @@ reducers = Tasty.testGroup
   , testCase "CountNS" $ do
       fp <- Paths.getDataFileName "data/500-FLSLCP.stdout"
       let reducer = Reducer.CountNS "Forge.Loop.StartLeadershipCheckPlus"
-      ans <- lineFoldl'
+      ans <- Log.lineFoldl'
         (Reducer.reducerOf reducer)
         (Reducer.initialOf reducer)
         fp
@@ -93,7 +83,7 @@ reducers = Tasty.testGroup
   , testCase "ResourcesChanges" $ do
       fp <- Paths.getDataFileName "data/500-FLSLCP.stdout"
       let reducer = Reducer.ResourcesChanges Trace.resourcesHeap
-      ans <- lineFoldl'
+      ans <- Log.lineFoldl'
         (Reducer.reducerOf reducer)
         (Reducer.initialOf reducer)
         fp
@@ -125,7 +115,7 @@ reducers = Tasty.testGroup
   , testCase "UtxoSize" $ do
       fp <- Paths.getDataFileName "data/500-FLSLCP.stdout"
       let reducer = Reducer.UtxoSize
-      ans <- lineFoldl'
+      ans <- Log.lineFoldl'
         (Reducer.reducerOf reducer)
         (Reducer.initialOf reducer)
         fp
@@ -208,6 +198,50 @@ reducers = Tasty.testGroup
           , ( fromRight (error "parseUTCTime") $
                 ParseTime.parseUTCTime "2024-04-05T23:21:47.00015339Z"
             , 41013866
+            )
+        ])
+  , testCase "Silences" $ do
+      fp <- Paths.getDataFileName "data/500-FLSLCP.stdout"
+      let reducer = Reducer.Silences 2
+      ans <- Log.lineFoldl'
+        (Reducer.reducerOf reducer)
+        (Reducer.initialOf reducer)
+        fp
+      assertEqual
+        ("Show silences equal or greater than 2 seconds (\"" ++ fp ++ "\")")
+        (snd ans)
+        {--
+          grep -E "^{.*" bench/stdout-tools/data/500-FLSLCP.stdout | jq -r --compact-output '.at[:20] | strptime("%Y-%m-%dT%H:%M:%S.")[4:6]' | uniq
+          [1,44]
+          ...
+          [1,55]
+          [2,13]
+          ...
+          [5,26]
+          [5,44]
+          ...
+          [8,48]
+          [9,10]
+          ...
+        --}
+        (Seq.fromList [
+            ( 18.173283409
+            , fromRight (error "parseUTCTime") $
+                ParseTime.parseUTCTime "2024-04-05T23:01:55.14162815Z"
+            , fromRight (error "parseUTCTime") $
+                ParseTime.parseUTCTime "2024-04-05T23:02:13.314911559Z"
+            )
+          , ( 18.175087624
+            , fromRight (error "parseUTCTime") $
+                ParseTime.parseUTCTime "2024-04-05T23:05:26.18240123Z"
+            , fromRight (error "parseUTCTime") $
+                ParseTime.parseUTCTime "2024-04-05T23:05:44.357488854Z"
+            )
+          , ( 22.01487267
+            , fromRight (error "parseUTCTime") $
+                ParseTime.parseUTCTime "2024-04-05T23:08:48.243125617Z"
+            , fromRight (error "parseUTCTime") $
+                ParseTime.parseUTCTime "2024-04-05T23:09:10.257998287Z"
             )
         ])
   ]

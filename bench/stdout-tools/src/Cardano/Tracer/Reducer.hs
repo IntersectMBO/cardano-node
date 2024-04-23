@@ -41,6 +41,7 @@ import qualified Data.Sequence as Seq
 import qualified Data.Aeson as Aeson
 -- library.
 import qualified Cardano.Tracer.Trace as Trace
+import qualified Cardano.Tracer.Filter as Filter
 
 --------------------------------------------------------------------------------
 
@@ -48,7 +49,7 @@ import qualified Cardano.Tracer.Trace as Trace
 class Show r => Reducer r where
   type family Accum r :: Type
   initialOf :: r -> Accum r
-  reducerOf :: r -> Accum r -> Either Text.Text Trace.Trace -> Accum r
+  reducerOf :: r -> Accum r -> Text.Text -> Accum r
   showAns   :: r -> Accum r -> String
   printAns  :: r -> Accum r -> IO ()
   printAns r acc = putStrLn $ showAns r acc
@@ -89,22 +90,35 @@ instance Reducer CountLines where
 instance Reducer CountTraces where
   type instance Accum CountTraces = Int
   initialOf _ = 0
-  reducerOf _ l (Left _) = l
-  reducerOf _ l (Right _) = l + 1
+  reducerOf _ l textLine = do
+    let traceFilter =
+             return textLine
+         >>= Filter.filterOf  Filter.ParseTrace
+         >>= Filter.filterOf  Filter.RightTrace
+    case traceFilter of
+      Nothing -> l
+      Just _ -> l + 1
   showAns   _ = show
 
 instance Reducer Silences where
   type instance Accum Silences = (Maybe UTCTime, Seq.Seq (NominalDiffTime, UTCTime, UTCTime))
   initialOf _ = (Nothing, Seq.empty)
-  reducerOf _ (Nothing, sq) (Left _) = (Nothing, sq)
-  reducerOf _ (Nothing, sq) (Right (Trace.Trace (Right thisTraceAt) _ _)) = (Just thisTraceAt, sq)
-  reducerOf _ (Just prevTraceAt, sq) (Left _) = (Just prevTraceAt, sq)
-  reducerOf (Silences s) (Just prevTraceAt, sq) (Right (Trace.Trace (Right thisTraceAt) _ _)) =
-    let diffTime = diffUTCTime thisTraceAt prevTraceAt
-    in  if diffTime >= s
-    then (Just thisTraceAt, sq Seq.|> (diffTime, prevTraceAt, thisTraceAt))
-    else (Just thisTraceAt, sq)
-  reducerOf _ _ (Right (Trace.Trace (Left err) _ _)) = error err
+  reducerOf (Silences s) ans@(maybePrevAt, sq) textLine = do
+    let traceFilter =
+             return textLine
+         >>= Filter.filterOf  Filter.ParseTrace
+         >>= Filter.filterOf  Filter.RightTrace
+         >>= Filter.filterOf  Filter.RightAt
+    case traceFilter of
+      Nothing -> ans
+      Just (thisTraceAt, _) -> 
+        case maybePrevAt of
+          Nothing -> (Just thisTraceAt, sq)
+          (Just prevTraceAt) ->
+            let diffTime = diffUTCTime thisTraceAt prevTraceAt
+            in  if diffTime >= s
+            then (Just thisTraceAt, sq Seq.|> (diffTime, prevTraceAt, thisTraceAt))
+            else (Just thisTraceAt, sq)
   showAns   _ = show
   printAns _ (_,sq) = mapM_
     (\(ndt, t1, _) ->
@@ -115,30 +129,42 @@ instance Reducer Silences where
 instance Reducer CountNS where
   type instance Accum CountNS = Int
   initialOf _ = 0
-  reducerOf _ l (Left _) = l
-  reducerOf (CountNS ns) l (Right (Trace.Trace _ text _)) =
-    if text == ns
-    then l + 1
-    else l
+  reducerOf (CountNS ns) l textLine = do
+    let traceFilter =
+             return textLine
+         >>= Filter.filterOf  Filter.ParseTrace
+         >>= Filter.filterOf  Filter.RightTrace
+         -- Filtering first by namespace is way faster than directly decoding JSON.
+         >>= Filter.filterOf (Filter.Namespace ns)
+    case traceFilter of
+      Nothing -> l
+      Just _ -> l + 1
   showAns  _ = show
 
 instance Reducer MissedSlots where
   type instance Accum MissedSlots = (Maybe Integer, Seq.Seq Integer)
   initialOf _ = (Nothing, Seq.empty)
-  reducerOf _ ans (Left _) = ans
-  reducerOf _ ans@(maybePrevSlot, !sq) (Right (Trace.Trace _ "Forge.Loop.StartLeadershipCheckPlus" remainder)) =
-    case Aeson.eitherDecodeStrictText remainder of
-      (Right !dataWithSlot) ->
-        -- TODO: Use `unsnoc` when available
-        let actualSlot = Trace.slot $ Trace.remainderData dataWithSlot
-        in case maybePrevSlot of
-          Nothing -> (Just actualSlot, Seq.empty)
-          (Just prevSlot) ->
-            if actualSlot == prevSlot + 1
-            then (Just actualSlot, sq)
-            else (Just actualSlot, sq Seq.>< Seq.fromList [(prevSlot+1)..(actualSlot-1)])
-      (Left _) -> ans
-  reducerOf _ ans (Right _) = ans
+  reducerOf MissedSlots ans@(maybePrevSlot, !sq) textLine = do
+    let traceFilter =
+             return textLine
+         >>= Filter.filterOf  Filter.ParseTrace
+         >>= Filter.filterOf  Filter.RightTrace
+         -- Filtering first by namespace is way faster than directly decoding JSON.
+         >>= Filter.filterOf (Filter.Namespace "Forge.Loop.StartLeadershipCheckPlus")
+    case traceFilter of
+      Nothing -> ans
+      Just (Trace.Trace _ _ remainder) ->
+        case Aeson.eitherDecodeStrictText remainder of
+        (Right !dataWithSlot) ->
+          -- TODO: Use `unsnoc` when available
+          let actualSlot = Trace.slot $ Trace.remainderData dataWithSlot
+          in case maybePrevSlot of
+            Nothing -> (Just actualSlot, Seq.empty)
+            (Just prevSlot) ->
+              if actualSlot == prevSlot + 1
+              then (Just actualSlot, sq)
+              else (Just actualSlot, sq Seq.>< Seq.fromList [(prevSlot+1)..(actualSlot-1)])
+        (Left _) -> ans
   showAns _ = show
   printAns _ (_, sq) = do
     ans <- foldM
@@ -157,24 +183,24 @@ instance Reducer MissedSlots where
 instance Reducer ResourcesChanges where
   type instance Accum ResourcesChanges = (Maybe Integer, Seq.Seq (UTCTime, Integer))
   initialOf _ = (Nothing, Seq.empty)
-  reducerOf _ ans (Left _) = ans
-  -- Filtering first by namespace is way faster than directly decoding JSON.
-  reducerOf (ResourcesChanges f) ans@(maybePrevResource, sq) (Right (Trace.Trace eitherAt "Resources" remainder)) =
-    case Aeson.eitherDecodeStrictText remainder of
-      (Right !aeson) ->
-        -- TODO: Use `unsnoc` when available
-        let actualResource = f $ Trace.remainderData aeson
-        in case eitherAt of
-          (Left err) -> error err
-          (Right at) ->
-            case maybePrevResource of
-              Nothing -> (Just actualResource, Seq.singleton (at, actualResource))
-              (Just prevResource) ->
-                if actualResource == prevResource
-                then ans
-                else (Just actualResource, sq Seq.|> (at, actualResource))
-      (Left _) -> ans
-  reducerOf _ ans _ = ans
+  reducerOf (ResourcesChanges f) ans@(maybePrevResource, sq) textLine = do
+    let traceFilter =
+             return textLine
+         >>= Filter.filterOf  Filter.ParseTrace
+         >>= Filter.filterOf  Filter.RightTrace
+         -- Filtering first by namespace is way faster than directly decoding JSON.
+         >>= Filter.filterOf (Filter.Namespace "Resources")
+         >>= Filter.filterOf  Filter.RightAt
+         >>= Filter.filterOf (Filter.Resource f)
+    case traceFilter of
+      Nothing -> ans
+      Just (at, actualResource) ->
+        case maybePrevResource of
+          Nothing -> (Just actualResource, Seq.singleton (at, actualResource))
+          (Just prevResource) ->
+            if actualResource == prevResource
+            then ans
+            else (Just actualResource, sq Seq.|> (at, actualResource))
   showAns _ = show
   printAns _ (_, sq) = mapM_
     (\(t,h) -> putStrLn $ show t ++ ": " ++ show h)
@@ -198,24 +224,24 @@ instance Reducer ResourcesChanges where
 instance Reducer UtxoSize where
   type instance Accum UtxoSize = (Maybe Integer, Seq.Seq (UTCTime, Integer))
   initialOf _ = (Nothing, Seq.empty)
-  reducerOf _ ans (Left _) = ans
-  -- Filtering first by namespace is way faster than directly decoding JSON.
-  reducerOf UtxoSize ans@(maybePrevSize, sq) (Right (Trace.Trace eitherAt "Forge.Loop.StartLeadershipCheckPlus" remainder)) =
-    case Aeson.eitherDecodeStrictText remainder of
-      (Right !aeson) ->
-        -- TODO: Use `unsnoc` when available
-        let actualSize = Trace.utxoSize $ Trace.remainderData aeson
-        in case eitherAt of
-          (Left err) -> error err
-          (Right at) ->
-            case maybePrevSize of
-              Nothing -> (Just actualSize, Seq.singleton (at, actualSize))
-              (Just prevSize) ->
-                if actualSize == prevSize
-                then ans
-                else (Just actualSize, sq Seq.|> (at, actualSize))
-      (Left _) -> ans
-  reducerOf _ ans _ = ans
+  reducerOf UtxoSize ans@(maybePrevSize, sq) textLine = do
+    let traceFilter =
+             return textLine
+         >>= Filter.filterOf  Filter.ParseTrace
+         >>= Filter.filterOf  Filter.RightTrace
+         -- Filtering first by namespace is way faster than directly decoding JSON.
+         >>= Filter.filterOf (Filter.Namespace "Forge.Loop.StartLeadershipCheckPlus")
+         >>= Filter.filterOf  Filter.RightAt
+         >>= Filter.filterOf  Filter.UtxoSize
+    case traceFilter of
+      Nothing -> ans
+      Just (at, actualSize) ->
+        case maybePrevSize of
+          Nothing -> (Just actualSize, Seq.singleton (at, actualSize))
+          (Just prevSize) ->
+            if actualSize == prevSize
+            then ans
+            else (Just actualSize, sq Seq.|> (at, actualSize))
   showAns _ = show
   printAns _ (_, sq) = mapM_
     (\(t,h) -> putStrLn $ show t ++ ": " ++ show h)
