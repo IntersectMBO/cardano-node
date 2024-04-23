@@ -46,8 +46,7 @@ library
                       , cardano-ledger-conway
                       , cardano-ledger-api
                       , cardano-ledger-conway
-                      , cardano-ledger-core
-                      , cardano-ledger-core:testlib
+                      , cardano-ledger-core:{cardano-ledger-core, testlib}
                       , cardano-ledger-shelley
                       , cardano-node
                       , cardano-ping ^>= 0.2.0.13
@@ -55,13 +54,16 @@ library
                       , containers
                       , data-default-class
                       , cborg
+                      , containers
+                      , contra-tracer
+                      , data-default-class
                       , directory
                       , exceptions
                       , filepath
                       , hedgehog
                       , hedgehog-extras < 0.6.2
-                      , microlens
                       , lens-aeson
+                      , microlens
                       , mtl
                       , network
                       , network-mux
@@ -186,10 +188,11 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.FoldBlocks
                         Cardano.Testnet.Test.Misc
 
-                        Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
-                        Cardano.Testnet.Test.LedgerEvents.Gov.InfoAction
-                        Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO
                         Cardano.Testnet.Test.LedgerEvents.Gov.DRepDeposits
+                        Cardano.Testnet.Test.LedgerEvents.Gov.InfoAction
+                        Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
+                        Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO
+                        Cardano.Testnet.Test.LedgerEvents.Gov.TreasuryWithdrawal
                         Cardano.Testnet.Test.LedgerEvents.SanityCheck
                         Cardano.Testnet.Test.LedgerEvents.TreasuryGrowth
 

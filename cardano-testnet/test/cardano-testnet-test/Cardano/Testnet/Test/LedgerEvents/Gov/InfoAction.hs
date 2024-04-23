@@ -59,7 +59,6 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
       era = toCardanoEra sbe
       fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 100
-        , cardanoSlotLength = 0.1
         , cardanoNodeEra = AnyCardanoEra era
         }
 
