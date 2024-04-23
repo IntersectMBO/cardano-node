@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -37,7 +36,6 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import qualified Testnet.Process.Cli as P
-import           Testnet.Process.Cli (execCliStdoutToJson)
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
 import           Testnet.Runtime
@@ -57,7 +55,8 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
-  let sbe = ShelleyBasedEraConway
+  let ceo = ConwayEraOnwardsConway
+      sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       fastTestnetOptions = cardanoDefaultTestnetOptions
@@ -121,11 +120,13 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
       spoColdSkeyFp :: Int -> FilePath
       spoColdSkeyFp n = tempAbsPath' </> "pools-keys" </> "pool" <> show n </> "cold.skey"
 
+  minDRepDeposit <- getMinDRepDeposit execConfig ceo
+
   -- Create constitution proposal
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "governance", "action", "create-constitution"
     , "--testnet"
-    , "--governance-action-deposit", show @Int 1_000_000 -- TODO: Get this from the node
+    , "--governance-action-deposit", show minDRepDeposit
     , "--deposit-return-stake-verification-key-file", stakeVkeyFp
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
@@ -164,7 +165,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
     , "--tx-file", txbodySignedFp
     ]
 
-  QueryTipLocalStateOutput{mEpoch} <- execCliStdoutToJson execConfig [ "query", "tip" ]
+  QueryTipLocalStateOutput{mEpoch} <- queryTip execConfig
   currentEpoch <- H.evalMaybe mEpoch
   -- Proposal should be there already, so don't wait a lot:
   let terminationEpoch = succ . succ $ currentEpoch

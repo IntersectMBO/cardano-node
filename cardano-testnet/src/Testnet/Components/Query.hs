@@ -3,17 +3,17 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Testnet.Components.Query
-  ( QueryTip
-  , EpochStateView
+  ( EpochStateView
   , checkDRepsNumber
   , checkDRepState
   , getEpochState
   , getMinDRepDeposit
+  , getGovState
   , queryTip
   , waitUntilEpoch
+  , waitForEpochs
   , getEpochStateView
   , findAllUtxos
   , findUtxosWithAddress
@@ -27,14 +27,14 @@ import           Cardano.Api.Ledger (Credential, DRepState, KeyRole (DRepRole), 
 import           Cardano.Api.Shelley (ShelleyLedgerEra, fromShelleyTxIn, fromShelleyTxOut)
 
 import           Cardano.CLI.Types.Output
+import           Cardano.Ledger.BaseTypes (EpochInterval, addEpochInterval)
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.UTxO as L
 
 import           Control.Exception.Safe (MonadCatch)
-import           Control.Monad
 import           Control.Monad.Trans.Resource
 import           Control.Monad.Trans.State.Strict (put)
-import           Data.Aeson
+import           Data.Aeson as A
 import           Data.Aeson.Lens (_Integral, key)
 import           Data.Bifunctor (bimap)
 import           Data.IORef
@@ -47,15 +47,15 @@ import           Data.Ord (Down (..))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Type.Equality
+import           GHC.Exts (IsList (..))
 import           GHC.Stack
 import           Lens.Micro ((^.), (^?))
-import           System.Directory (doesFileExist, removeFile)
 
-import qualified Testnet.Process.Cli as P
-import qualified Testnet.Process.Run as H
+import qualified Testnet.Process.Cli as H
 import           Testnet.Property.Assert
 import           Testnet.Property.Utils (runInBackground)
 import           Testnet.Runtime
+import           Testnet.Start.Types (eraToString)
 
 import qualified Hedgehog as H
 import           Hedgehog.Extras (MonadAssertion)
@@ -69,7 +69,7 @@ waitUntilEpoch
   => NodeConfigFile In
   -> SocketPath
   -> EpochNo -- ^ Desired epoch
-  -> m EpochNo
+  -> m EpochNo -- ^ The epoch number reached
 waitUntilEpoch nodeConfigFile socketPath desiredEpoch = withFrozenCallStack $ do
   result <- H.evalIO . runExceptT $
     foldEpochState
@@ -85,26 +85,27 @@ waitUntilEpoch nodeConfigFile socketPath desiredEpoch = withFrozenCallStack $ do
         <> "- invalid foldEpochState behaviour, result: " <> show res
       H.failure
 
+-- | Wait for the number of epochs
+waitForEpochs
+  :: MonadTest m
+  => MonadCatch m
+  => MonadIO m
+  => ExecConfig
+  -> NodeConfigFile In
+  -> SocketPath
+  -> EpochInterval  -- ^ Number of epochs to wait
+  -> m EpochNo -- ^ The epoch number reached
+waitForEpochs execConfig nodeConfigFile socketPath interval = withFrozenCallStack $ do
+  currentEpoch <- H.nothingFailM $ mEpoch <$> queryTip execConfig
+  waitUntilEpoch nodeConfigFile socketPath $ addEpochInterval currentEpoch interval
+
+-- | Query the tip of the blockchain
 queryTip
   :: (MonadCatch m, MonadIO m, MonadTest m, HasCallStack)
-  => File QueryTip Out
-  -- ^ Output file
-  -> ExecConfig
+  => ExecConfig
   -> m QueryTipLocalStateOutput
-queryTip (File fp) execConfig = withFrozenCallStack $ do
-  exists <- H.evalIO $ doesFileExist fp
-  when exists $ H.evalIO $ removeFile fp
-
-  void $ H.execCli' execConfig
-    [ "query",  "tip"
-    , "--out-file", fp
-    ]
-
-  tipJSON <- H.leftFailM $ H.readJsonFile fp
-  H.noteShowM $ H.jsonErrorFail $ fromJSON @QueryTipLocalStateOutput tipJSON
-
--- | Type level tag for a file storing query tip
-data QueryTip
+queryTip execConfig = withFrozenCallStack $
+  H.execCliStdoutToJson execConfig [ "query", "tip" ]
 
 -- | A read-only mutable pointer to an epoch state, updated automatically
 newtype EpochStateView = EpochStateView (IORef (Maybe AnyNewEpochState))
@@ -125,7 +126,7 @@ getEpochState (EpochStateView esv) =
 -- | Create a background thread listening for new epoch states. New epoch states are available to access
 -- through 'EpochStateView', using query functions.
 getEpochStateView
-  :: forall m. HasCallStack
+  :: HasCallStack
   => MonadResource m
   => MonadTest m
   => MonadCatch m
@@ -167,7 +168,7 @@ findAllUtxos epochStateView sbe = withFrozenCallStack $ do
 
 -- | Retrieve utxos from the epoch state view for an address.
 findUtxosWithAddress
-  :: forall era m. HasCallStack
+  :: HasCallStack
   => MonadAssertion m
   => MonadIO m
   => MonadTest m
@@ -186,14 +187,14 @@ findUtxosWithAddress epochStateView sbe address = withFrozenCallStack $ do
         (deserialiseAddress AsAddressAny address)
 
   let utxos' = M.filter (\(TxOut txAddr _ _ _)  -> txAddr == address') utxos
-  H.note_ $ show utxos'
+  H.note_ $ unlines (map show $ toList utxos')
   pure utxos'
   where
     maybeToEither e = maybe (Left e) Right
 
 -- | Retrieve a one largest utxo
 findLargestUtxoWithAddress
-  :: forall era m. HasCallStack
+  :: HasCallStack
   => MonadAssertion m
   => MonadIO m
   => MonadTest m
@@ -212,7 +213,6 @@ findLargestUtxoWithAddress epochStateView sbe address = withFrozenCallStack $ do
 findLargestUtxoForPaymentKey
   :: MonadTest m
   => MonadAssertion m
-  => MonadCatch m
   => MonadIO m
   => HasCallStack
   => EpochStateView
@@ -220,25 +220,29 @@ findLargestUtxoForPaymentKey
   -> PaymentKeyInfo
   -> m TxIn
 findLargestUtxoForPaymentKey epochStateView sbe address =
-  withFrozenCallStack $
-    fmap fst
-    . H.noteShowM
-    . H.nothingFailM
-    $ findLargestUtxoWithAddress epochStateView sbe (paymentKeyInfoAddr address)
+  withFrozenCallStack $ do
+    utxo <- fmap fst
+      . H.nothingFailM
+      $ findLargestUtxoWithAddress epochStateView sbe (paymentKeyInfoAddr address)
+    H.note_ $ "Largest UTxO for " <> T.unpack (paymentKeyInfoAddr address) <> ": " <> show utxo
+    pure utxo
 
 
 -- | @checkDRepsNumber config socket execConfig n@
 -- wait for the number of DReps being @n@ for two epochs. If
 -- this number is not attained before two epochs, the test is failed.
-checkDRepsNumber ::
-  (HasCallStack, MonadCatch m, MonadIO m, MonadTest m)
+checkDRepsNumber
+  :: HasCallStack
+  => MonadCatch m
+  => MonadIO m
+  => MonadTest m
   => ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
   -> NodeConfigFile 'In
   -> SocketPath
   -> H.ExecConfig
   -> Int
   -> m ()
-checkDRepsNumber sbe configurationFile socketPath execConfig expectedDRepsNb =
+checkDRepsNumber sbe configurationFile socketPath execConfig expectedDRepsNb = withFrozenCallStack $
   checkDRepState sbe configurationFile socketPath execConfig
     (\m -> if length m == expectedDRepsNb then Just () else Nothing)
 
@@ -247,18 +251,22 @@ checkDRepsNumber sbe configurationFile socketPath execConfig expectedDRepsNb =
 -- It waits up to two epochs for the result of applying @f@ to the DRepState
 -- to become 'Just'. If @f@ keeps returning 'Nothing' the test fails.
 -- If @f@ returns 'Just', the contents of the 'Just' are returned.
-checkDRepState ::
-  (HasCallStack, MonadCatch m, MonadIO m, MonadTest m)
+checkDRepState
+  :: HasCallStack
+  => MonadCatch m
+  => MonadIO m
+  => MonadTest m
   => ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
   -> NodeConfigFile In
   -> SocketPath
   -> H.ExecConfig
   -> (Map (Credential 'DRepRole StandardCrypto)
-          (DRepState StandardCrypto) -> Maybe a) -- ^ A function that checks whether the DRep state is correct or up to date
-                                                 -- and potentially inspects it.
+          (DRepState StandardCrypto)
+      -> Maybe a) -- ^ A function that checks whether the DRep state is correct or up to date
+                  -- and potentially inspects it.
   -> m a
 checkDRepState sbe configurationFile socketPath execConfig f = withFrozenCallStack $ do
-  QueryTipLocalStateOutput{mEpoch} <- P.execCliStdoutToJson execConfig [ "query", "tip" ]
+  QueryTipLocalStateOutput{mEpoch} <- queryTip execConfig
   currentEpoch <- H.evalMaybe mEpoch
   let terminationEpoch = succ . succ $ currentEpoch
   result <- H.evalIO . runExceptT $ foldEpochState configurationFile socketPath QuickValidation terminationEpoch Nothing
@@ -296,18 +304,35 @@ checkDRepState sbe configurationFile socketPath execConfig f = withFrozenCallSta
     Right (_, Just val) ->
       return val
 
--- | Obtain minimum deposit amount for DRep registration from node
-getMinDRepDeposit ::
-  (MonadCatch m, MonadIO m, MonadTest m)
+-- | Obtain governance state from node (CLI query)
+getGovState
+  :: HasCallStack
+  => MonadCatch m
+  => MonadIO m
+  => MonadTest m
   => H.ExecConfig
+  -> ConwayEraOnwards era
+  -> m A.Value -- ^ The governance state
+getGovState execConfig ceo = withFrozenCallStack $ do
+  let eraName = eraToString $ toCardanoEra ceo
+  H.execCliStdoutToJson execConfig
+      [ eraName, "query", "gov-state" , "--volatile-tip" ]
+
+
+-- | Obtain minimum deposit amount for DRep registration from node
+getMinDRepDeposit
+  :: HasCallStack
+  => MonadCatch m
+  => MonadIO m
+  => MonadTest m
+  => H.ExecConfig
+  -> ConwayEraOnwards era
   -> m Integer
-getMinDRepDeposit execConfig = do
-  govState :: Data.Aeson.Value <- P.execCliStdoutToJson execConfig [ "conway", "query", "gov-state"
-                                                                   , "--volatile-tip"
-                                                                   ]
+getMinDRepDeposit execConfig ceo = withFrozenCallStack $ do
+  govState <- getGovState execConfig ceo
   let mMinDRepDeposit :: Maybe Integer
       mMinDRepDeposit = govState ^? key "currentPParams"
                                   . key "dRepDeposit"
                                   . _Integral
-
   H.evalMaybe mMinDRepDeposit
+
