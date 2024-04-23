@@ -96,7 +96,7 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
 
   -- This proposal should pass
   firstProposalInfo <- activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
-                                                  "firstProposal" wallet0 Nothing [(1, "yes")] 6 6 3
+                                                  "firstProposal" wallet0 Nothing [(1, "yes")] 6 (Just 6) 3
 
   -- Now we register two new DReps
   drep2 <- registerDRep execConfig epochStateView sbe work "drep2" wallet1
@@ -115,11 +115,11 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
   -- We send three because DRep won't expire if there is not enough activity
   -- (opportunites to participate). This is accounted for by the dormant epoch count
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
-                                    "secondProposal" wallet2 (Just firstProposalInfo) [(1, "yes")] 7 6 3
+                                    "secondProposal" wallet2 (Just firstProposalInfo) [(1, "yes")] 7 (Just 6) 3
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
-                                    "thirdProposal" wallet0 (Just firstProposalInfo) [(1, "yes")] 7 6 3
+                                    "thirdProposal" wallet0 (Just firstProposalInfo) [(1, "yes")] 7 (Just 6) 3
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
-                                    "fourthProposal" wallet1 (Just firstProposalInfo) [(1, "yes")] 7 6 3
+                                    "fourthProposal" wallet1 (Just firstProposalInfo) [(1, "yes")] 7 (Just 6) 3
 
   (EpochNo epochAfterTimeout) <- getCurrentEpochNo epochStateView sbe
   H.note_ $ "Epoch after which we are going to test timeout: " <> show epochAfterTimeout
@@ -127,7 +127,7 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
   -- Last proposal (set activity to something else again and it should pass, because of inactivity)
   -- Because 2 out of 3 DReps were inactive, prop should pass
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
-                                    "lastProposal" wallet2 (Just firstProposalInfo) [(1, "yes")] 8 8 3
+                                    "lastProposal" wallet2 (Just firstProposalInfo) [(1, "yes")] 8 (Just 8) 3
 
 
 activityChangeProposalTest
@@ -143,11 +143,11 @@ activityChangeProposalTest
   -> Maybe (String, Word32)
   -> t (Int, String)
   -> Word32
-  -> Integer
+  -> Maybe Integer
   -> Word64
   -> m (String, Word32)
 activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe work prefix
-                           wallet previousProposalInfo votes change expected epochsToWait = do
+                           wallet previousProposalInfo votes change mExpected epochsToWait = do
 
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
@@ -169,9 +169,10 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
   void $ waitUntilEpoch (File configurationFile) (File socketPath) (EpochNo (epochAfterProp + epochsToWait))
-  dRepActivityAfterProp <- getDRepActivityValue execConfig
-
-  dRepActivityAfterProp === expected
+  case mExpected of
+    Nothing -> return ()
+    Just expected -> do dRepActivityAfterProp <- getDRepActivityValue execConfig
+                        dRepActivityAfterProp === expected
 
   return thisProposal
 
