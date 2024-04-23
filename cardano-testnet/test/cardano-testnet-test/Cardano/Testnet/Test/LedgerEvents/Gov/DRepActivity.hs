@@ -57,7 +57,8 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let sbe = ShelleyBasedEraConway
+  let ceo = ConwayEraOnwardsConway
+      sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       fastTestnetOptions = cardanoDefaultTestnetOptions
@@ -92,15 +93,15 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
   -- This proposal should pass
-  void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
+  void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "firstProposal" wallet0 [(1, "yes")] 3 (Just 3) 3
 
   -- Now we register two new DReps
-  drep2 <- registerDRep execConfig epochStateView sbe work "drep2" wallet1
+  drep2 <- registerDRep execConfig epochStateView ceo work "drep2" wallet1
   delegateToDRep execConfig epochStateView configurationFile socketPath sbe work "drep2-delegation"
                  wallet2 (defaultDelegatorStakeKeyPair 2) drep2
 
-  drep3 <- registerDRep execConfig epochStateView sbe work "drep3" wallet0
+  drep3 <- registerDRep execConfig epochStateView ceo work "drep3" wallet0
   delegateToDRep execConfig epochStateView configurationFile socketPath sbe work "drep3-delegation"
                  wallet1 (defaultDelegatorStakeKeyPair 3) drep3
 
@@ -110,14 +111,14 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
 
   -- This proposal should fail because there is 2 DReps that don't vote (out of 3)
   -- and we have the stake distributed evenly
-  void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
+  void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                   "failingProposal" wallet2 [(1, "yes")] 4 (Just 3) 3
 
   -- We now send a bunch of proposals to make sure that the 2 new DReps expire.
   -- because DReps won't expire if there is not enough activity (opportunites to participate).
   -- This is accounted for by the dormant epoch count
   sequence_
-    [activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
+    [activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     ("fillerProposalNum" ++ show proposalNum) wallet [(1, "yes")]
                                     (fromIntegral $ 4 + proposalNum) Nothing 3
      | (proposalNum, wallet) <- zip [1..(4 :: Int)] (cycle [wallet0, wallet1, wallet2])]
@@ -127,7 +128,7 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
 
   -- Last proposal (set activity to something else again and it should pass, because of inactivity)
   -- Because 2 out of 3 DReps were inactive, prop should pass
-  void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
+  void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "lastProposal" wallet0 [(1, "yes")] 9 (Just 9) 3
 
 activityChangeProposalTest
@@ -136,7 +137,7 @@ activityChangeProposalTest
   -> EpochStateView
   -> FilePath
   -> FilePath
-  -> ShelleyBasedEra ConwayEra
+  -> ConwayEraOnwards ConwayEra
   -> FilePath
   -> FilePath
   -> PaymentKeyInfo
@@ -145,8 +146,11 @@ activityChangeProposalTest
   -> Maybe Integer
   -> Word64
   -> m (String, Word32)
-activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe work prefix
+activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo work prefix
                            wallet votes change mExpected epochsToWait = do
+
+  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+
   mPreviousProposalInfo <- getLastPParamUpdateActionId execConfig
 
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
@@ -159,7 +163,7 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
 
   thisProposal@(governanceActionTxId, governanceActionIndex) <-
     makeActivityChangeProposal execConfig epochStateView (File configurationFile) (File socketPath)
-                               sbe baseDir "proposal" mPreviousProposalInfo change wallet
+                               ceo baseDir "proposal" mPreviousProposalInfo change wallet
 
   voteChangeProposal execConfig epochStateView sbe baseDir "vote"
                      governanceActionTxId governanceActionIndex propVotes wallet
@@ -181,7 +185,7 @@ makeActivityChangeProposal
   -> EpochStateView
   -> NodeConfigFile 'In
   -> SocketPath
-  -> ShelleyBasedEra ConwayEra
+  -> ConwayEraOnwards ConwayEra
   -> FilePath
   -> String
   -> Maybe (String, Word32)
@@ -189,9 +193,10 @@ makeActivityChangeProposal
   -> PaymentKeyInfo
   -> m (String, Word32)
 makeActivityChangeProposal execConfig epochStateView configurationFile socketPath
-                           sbe work prefix prevGovActionInfo drepActivity wallet = do
+                           ceo work prefix prevGovActionInfo drepActivity wallet = do
 
-  let era = toCardanoEra sbe
+  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      era = toCardanoEra sbe
       cEra = AnyCardanoEra era
 
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
@@ -212,7 +217,7 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
     , "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
 
-  minDRepDeposit <- getMinDRepDeposit execConfig
+  minDRepDeposit <- getMinDRepDeposit execConfig ceo
 
   proposalFile <- H.note $ baseDir </> "sample-proposFal-anchor"
 

@@ -21,8 +21,9 @@ module Testnet.Components.DReps
   , getLastPParamUpdateActionId
   ) where
 
-import           Cardano.Api (AnyCardanoEra (..), ConwayEra, EpochNo (EpochNo), FileDirection (In),
-                   MonadIO, ShelleyBasedEra (..), ToCardanoEra (toCardanoEra), renderTxIn)
+import           Cardano.Api (AnyCardanoEra (..), ConwayEra, ConwayEraOnwards, EpochNo (EpochNo),
+                   FileDirection (In), MonadIO, ShelleyBasedEra (..), ToCardanoEra (toCardanoEra),
+                   conwayEraOnwardsToShelleyBasedEra, renderTxIn)
 
 import           Cardano.CLI.Types.Common (File (..))
 
@@ -366,7 +367,7 @@ retrieveTransactionId execConfig signedTxBody = do
 --                     using the 'getEpochStateView' function.
 -- * 'configurationFile': Path to the node configuration file as returned by 'cardanoTestnetDefault'.
 -- * 'socketPath': Path to the cardano-node unix socket file.
--- * 'sbe': The Shelley-based era (e.g., 'ShelleyBasedEraConway') in which the transaction will be constructed.
+-- * 'sbe': The conway era onwards witness for the era in which the transaction will be constructed.
 -- * 'work': Base directory path where the signed transaction file will be stored.
 -- * 'prefix': Name for the subfolder that will be created under 'work' folder to store the output keys.
 -- * 'wallet': Payment key information associated with the transaction,
@@ -376,16 +377,17 @@ retrieveTransactionId execConfig signedTxBody = do
 registerDRep :: (MonadCatch m, MonadIO m, MonadTest m, H.MonadAssertion m)
   => H.ExecConfig
   -> EpochStateView
-  -> ShelleyBasedEra ConwayEra
+  -> ConwayEraOnwards ConwayEra
   -> FilePath
   -> FilePath
   -> PaymentKeyInfo
   -> m PaymentKeyPair
-registerDRep execConfig epochStateView sbe work prefix wallet = do
-  let era = toCardanoEra sbe
+registerDRep execConfig epochStateView ceo work prefix wallet = do
+  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      era = toCardanoEra sbe
       cEra = AnyCardanoEra era
 
-  minDRepDeposit <- getMinDRepDeposit execConfig
+  minDRepDeposit <- getMinDRepDeposit execConfig ceo
 
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
   drepKeyPair <- generateDRepKeyPair execConfig baseDir "keys"
