@@ -23,12 +23,12 @@ import           Prelude
 
 import           Control.Monad
 import           Control.Monad.State.Strict (StateT)
-import qualified Data.Aeson.Lens as AL
 import           Data.Maybe
 import           Data.Maybe.Strict
 import           Data.String
-import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Word
+import           GHC.Exts (IsList (..))
 import           GHC.Stack (callStack)
 import           Lens.Micro
 import           System.FilePath ((</>))
@@ -101,8 +101,6 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   H.note_ $ "Socketpath: " <> socketPath
   H.note_ $ "Foldblocks config file: " <> configurationFile
 
-  minDRepDeposit <- getMinDRepDeposit execConfig ceo
-
   -- Create Conway constitution
   gov <- H.createDirectoryIfMissing $ work </> "governance"
   proposalAnchorFile <- H.note $ gov </> "sample-proposal-anchor"
@@ -141,6 +139,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
       , "--script-file", guardRailScriptFp
       ]
 
+  minDRepDeposit <- getMinDRepDeposit epochStateView ceo
   void $ H.execCli' execConfig
     [ "conway", "governance", "action", "create-constitution"
     , "--testnet"
@@ -214,17 +213,13 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   void $ evalEither eConstitutionAdopted
 
   -- Tally registered votes
-  govState <- getGovState execConfig ceo
-  let votes :: [Text]
-      votes = govState ^.. AL.key "proposals"
-                         . AL.nth 0
-                         . AL.key "dRepVotes"
-                         . AL.members
-                         . AL._String
+  govState <- getGovState epochStateView ceo
+  govActionState <- H.headM $ govState ^. L.cgsProposalsL . L.pPropsL . to toList
+  let votes = govActionState ^. L.gasDRepVotesL . to toList
 
-  length (filter (== "VoteYes") votes) === 4
-  length (filter (== "VoteNo") votes) === 3
-  length (filter (== "Abstain") votes) === 2
+  length (filter ((== L.VoteYes) . snd) votes) === 4
+  length (filter ((== L.VoteNo) . snd) votes) === 3
+  length (filter ((== L.Abstain) . snd) votes) === 2
   length votes === numVotes
 
 foldBlocksCheckConstitutionWasRatified

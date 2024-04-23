@@ -11,7 +11,6 @@ module Cardano.Testnet.Test.Cli.Conway.DRepRetirement
   ) where
 
 import           Cardano.Api
-import qualified Cardano.Api as Api
 
 import           Cardano.Testnet
 
@@ -89,10 +88,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
                       , P.signingKeyFile = stakeSKeyFp
                       }
   let sizeBefore = 3
-      configFile' = Api.File configurationFile
-      socketPath' = Api.File socketPath
-
-  checkDRepsNumber sbe configFile' socketPath' execConfig sizeBefore
+  checkDRepsNumber epochStateView sbe sizeBefore
 
   -- Deregister first DRep
   let dreprRetirementCertFile = gov </> "drep-keys" <> "drep1.retirementcert"
@@ -140,5 +136,5 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
 
   -- The important bit is that we pass (sizeBefore - 1) as the last argument,
   -- to witness that the number of dreps indeed decreased.
-  checkDRepsNumber sbe configFile' socketPath' execConfig (sizeBefore - 1)
+  checkDRepsNumber epochStateView sbe (sizeBefore - 1)
   H.success
