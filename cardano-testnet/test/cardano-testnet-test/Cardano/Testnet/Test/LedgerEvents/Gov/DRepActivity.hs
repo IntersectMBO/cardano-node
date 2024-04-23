@@ -31,7 +31,8 @@ import           Lens.Micro ((^?))
 import           System.FilePath ((</>))
 
 import           Testnet.Components.DReps (createVotingTxBody, delegateToDRep, generateVoteFiles,
-                   registerDRep, retrieveTransactionId, signTx, submitTx)
+                   getLastPParamUpdateActionId, registerDRep, retrieveTransactionId, signTx,
+                   submitTx)
 import           Testnet.Components.Query (EpochStateView, checkDRepState,
                    findLargestUtxoForPaymentKey, getCurrentEpochNo, getEpochStateView,
                    getMinDRepDeposit)
@@ -90,13 +91,9 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
-  -- First proposal (set activity to something feasible in the test)
-  dRepActivityBeforeFirstProp <- getDRepActivityValue execConfig
-  dRepActivityBeforeFirstProp === 100 -- This is the default value
-
   -- This proposal should pass
-  firstProposalInfo <- activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
-                                                  "firstProposal" wallet0 Nothing [(1, "yes")] 6 (Just 6) 3
+  void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
+                                    "firstProposal" wallet0 [(1, "yes")] 3 (Just 3) 3
 
   -- Now we register two new DReps
   drep2 <- registerDRep execConfig epochStateView sbe work "drep2" wallet1
@@ -111,15 +108,19 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
                                     (\m -> if length m == 3 then Just $ Map.map drepExpiry m else Nothing)
   H.note_ $ "Expiration dates for the registered DReps: " ++ show expirationDates
 
-  -- Proposals before expiration (set activity to something else and it should fail).
-  -- We send three because DRep won't expire if there is not enough activity
-  -- (opportunites to participate). This is accounted for by the dormant epoch count
+  -- This proposal should fail because there is 2 DReps that don't vote (out of 3)
+  -- and we have the stake distributed evenly
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
-                                    "secondProposal" wallet2 (Just firstProposalInfo) [(1, "yes")] 7 (Just 6) 3
-  void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
-                                    "thirdProposal" wallet0 (Just firstProposalInfo) [(1, "yes")] 7 (Just 6) 3
-  void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
-                                    "fourthProposal" wallet1 (Just firstProposalInfo) [(1, "yes")] 7 (Just 6) 3
+                                  "failingProposal" wallet2 [(1, "yes")] 4 (Just 3) 3
+
+  -- We now send a bunch of proposals to make sure that the 2 new DReps expire.
+  -- because DReps won't expire if there is not enough activity (opportunites to participate).
+  -- This is accounted for by the dormant epoch count
+  sequence_
+    [activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
+                                    ("fillerProposalNum" ++ show proposalNum) wallet [(1, "yes")]
+                                    (fromIntegral $ 4 + proposalNum) Nothing 3
+     | (proposalNum, wallet) <- zip [1..(4 :: Int)] (cycle [wallet0, wallet1, wallet2])]
 
   (EpochNo epochAfterTimeout) <- getCurrentEpochNo epochStateView sbe
   H.note_ $ "Epoch after which we are going to test timeout: " <> show epochAfterTimeout
@@ -127,8 +128,7 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
   -- Last proposal (set activity to something else again and it should pass, because of inactivity)
   -- Because 2 out of 3 DReps were inactive, prop should pass
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe gov
-                                    "lastProposal" wallet2 (Just firstProposalInfo) [(1, "yes")] 8 (Just 8) 3
-
+                                    "lastProposal" wallet0 [(1, "yes")] 9 (Just 9) 3
 
 activityChangeProposalTest
   :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
@@ -140,17 +140,16 @@ activityChangeProposalTest
   -> FilePath
   -> FilePath
   -> PaymentKeyInfo
-  -> Maybe (String, Word32)
   -> t (Int, String)
   -> Word32
   -> Maybe Integer
   -> Word64
   -> m (String, Word32)
 activityChangeProposalTest execConfig epochStateView configurationFile socketPath sbe work prefix
-                           wallet previousProposalInfo votes change mExpected epochsToWait = do
+                           wallet votes change mExpected epochsToWait = do
+  mPreviousProposalInfo <- getLastPParamUpdateActionId execConfig
 
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
-
   let propVotes :: [(String, Int)]
       propVotes = zip (concatMap (uncurry replicate) votes) [1..]
   annotateShow propVotes
@@ -160,7 +159,7 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
 
   thisProposal@(governanceActionTxId, governanceActionIndex) <-
     makeActivityChangeProposal execConfig epochStateView (File configurationFile) (File socketPath)
-                               sbe baseDir "proposal" previousProposalInfo change wallet
+                               sbe baseDir "proposal" mPreviousProposalInfo change wallet
 
   voteChangeProposal execConfig epochStateView sbe baseDir "vote"
                      governanceActionTxId governanceActionIndex propVotes wallet

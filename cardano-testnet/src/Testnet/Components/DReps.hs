@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Testnet.Components.DReps
@@ -17,10 +18,11 @@ module Testnet.Components.DReps
   , retrieveTransactionId
   , registerDRep
   , delegateToDRep
+  , getLastPParamUpdateActionId
   ) where
 
 import           Cardano.Api (AnyCardanoEra (..), ConwayEra, EpochNo (EpochNo), FileDirection (In),
-                   ShelleyBasedEra (..), ToCardanoEra (toCardanoEra), renderTxIn)
+                   MonadIO, ShelleyBasedEra (..), ToCardanoEra (toCardanoEra), renderTxIn)
 
 import           Cardano.CLI.Types.Common (File (..))
 
@@ -28,12 +30,16 @@ import           Prelude
 
 import           Control.Monad (forM, void)
 import           Control.Monad.Catch (MonadCatch)
-import           Control.Monad.IO.Class (MonadIO)
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Lens as AL
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word32)
 import           GHC.IO.Exception (ExitCode (..))
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
+import           Lens.Micro ((^?))
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query (EpochStateView, findLargestUtxoForPaymentKey,
@@ -43,7 +49,7 @@ import           Testnet.Runtime (PaymentKeyInfo (paymentKeyInfoAddr, paymentKey
                    PaymentKeyPair (..), StakingKeyPair (StakingKeyPair, stakingSKey))
 import           Testnet.Start.Types (anyEraToString)
 
-import           Hedgehog (MonadTest)
+import           Hedgehog (MonadTest, evalMaybe)
 import qualified Hedgehog.Extras as H
 
 -- | Generates a key pair for a decentralized representative (DRep) using @cardano-cli@.
@@ -455,3 +461,43 @@ delegateToDRep execConfig epochStateView configurationFile socketPath sbe work p
   -- Wait two epochs
   (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView sbe
   void $ waitUntilEpoch (File configurationFile) (File socketPath) (EpochNo (epochAfterProp + 2))
+
+-- | This function obtains the identifier for the last enacted parameter update proposal
+-- if any.
+--
+-- This function takes the following parameter:
+--
+-- * 'execConfig': Specifies the CLI execution configuration.
+--
+-- If no previous proposal was enacted, the function returns 'Nothing'.
+-- If there was a previous enacted proposal, the function returns a tuple with its transaction
+-- identifier (as a 'String') and the action index (as a 'Word32').
+getLastPParamUpdateActionId :: (MonadTest m, MonadCatch m, MonadIO m) => H.ExecConfig -> m (Maybe (String, Word32))
+getLastPParamUpdateActionId execConfig = do
+  govStateString <- H.execCli' execConfig
+    [ "conway", "query", "gov-state"
+    , "--volatile-tip"
+    ]
+
+  govStateJSON <- H.nothingFail (Aeson.decode (LBS.pack govStateString) :: Maybe Aeson.Value)
+  let mLastPParamUpdateActionId :: Maybe Aeson.Value
+      mLastPParamUpdateActionId = govStateJSON
+                             ^? AL.key "nextRatifyState"
+                              . AL.key "nextEnactState"
+                              . AL.key "prevGovActionIds"
+                              . AL.key "PParamUpdate"
+  lastPParamUpdateActionId <- evalMaybe mLastPParamUpdateActionId
+
+  if lastPParamUpdateActionId == Aeson.Null
+  then return Nothing
+  else do let mActionIx :: Maybe Integer
+              mActionIx = lastPParamUpdateActionId
+                        ^? AL.key "govActionIx"
+                         . AL._Integer
+              mTxId :: Maybe Text
+              mTxId = lastPParamUpdateActionId
+                    ^? AL.key "txId"
+                     . AL._String
+          actionIx <- evalMaybe mActionIx
+          txId <- evalMaybe mTxId
+          return (Just (Text.unpack txId, fromIntegral actionIx))
