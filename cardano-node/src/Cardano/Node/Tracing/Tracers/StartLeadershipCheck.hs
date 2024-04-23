@@ -13,15 +13,10 @@ module Cardano.Node.Tracing.Tracers.StartLeadershipCheck
   ) where
 
 
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import           Cardano.Logging
-
-import           Control.Concurrent.STM (atomically)
-import           Data.IORef (readIORef)
-import           Data.Word (Word64)
-
-import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (BlockNo (..), blockNo, unBlockNo)
-
+import           Cardano.Node.Queries (LedgerQueries (..), NodeKernelData (..))
+import           Cardano.Slotting.Slot (fromWithOrigin)
 import           Ouroboros.Consensus.Block (SlotNo (..))
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.Ledger.Abstract (IsLedger)
@@ -29,11 +24,12 @@ import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Node (NodeKernel (..))
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import qualified Ouroboros.Network.AnchoredFragment as AF
+import           Ouroboros.Network.Block (BlockNo (..), blockNo, unBlockNo)
 
-import           Cardano.Node.Queries (LedgerQueries (..), NodeKernelData (..))
-import           Cardano.Slotting.Slot (fromWithOrigin)
-
-import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import           Control.Concurrent.STM (atomically)
+import           Data.IORef (readIORef)
+import           Data.Word (Word64)
 
 
 type ForgeTracerType blk = Either (TraceForgeEvent blk)
