@@ -1076,37 +1076,29 @@ def all_profile_variants:
       }
     }
   , $nomad_perf_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
-    { name: "value-30M32G-nomadperfssd"
+    { name: "value-32M32G-nomadperfssd"
     , genesis:
-      { utxo: (30 * $M)
+      { utxo: (32 * $M)
         # This is to account for cloud genesis deployment (upload and download).
         # Test run with 32M "utxo" and 400s "offset": ~12 nodes had up to 10
         # unneeded seconds as shown in 'ns:"BlockchainTime.StartTimeInTheFuture"'.
       , extra_future_offset: 350
       }
-    , cluster:
-      { nomad:
-        { resources:
-          # Minus 600 MB for the OS, same as with the 16 GB nomad-perf cluster.
-          { producer: {cores: 8, memory: 31400, memory_max: 31400} }
-        }
+    , node:
+      { heap_limit: 32768
       }
     }
   , $nomad_perf_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
-    { name: "value-40M32G-nomadperfssd"
+    { name: "value-42M32G-nomadperfssd"
     , genesis:
-      { utxo: (40 * $M)
+      { utxo: (42 * $M)
         # This is to account for cloud genesis deployment (upload and download).
         # Test run with 42M "utxo" and 900s "offset": nodes had from 3 to 244
         # unneeded seconds as shown in 'ns:"BlockchainTime.StartTimeInTheFuture"'.
       , extra_future_offset: 700
       }
-    , cluster:
-      { nomad:
-        { resources:
-          # Minus 600 MB for the OS, same as with the 16 GB nomad-perf cluster.
-          { producer: {cores: 8, memory: 31400, memory_max: 31400} }
-        }
+    , node:
+      { heap_limit: 32768
       }
     }
   , $nomad_perf_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
