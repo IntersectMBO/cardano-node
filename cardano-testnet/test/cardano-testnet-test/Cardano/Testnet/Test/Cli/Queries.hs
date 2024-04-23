@@ -11,7 +11,6 @@ module Cardano.Testnet.Test.Cli.Queries
   ) where
 
 import           Cardano.Api
-import qualified Cardano.Api as Api
 
 import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput)
 import           Cardano.Testnet
@@ -24,7 +23,7 @@ import qualified Data.Vector as Vector
 import           GHC.Stack (HasCallStack)
 import           System.FilePath ((</>))
 
-import           Testnet.Components.Query (checkDRepsNumber)
+import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import qualified Testnet.Process.Cli as H
 import qualified Testnet.Process.Run as H
@@ -72,13 +71,15 @@ hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> 
       socketBase = IO.sprocketBase poolSprocket1 -- /tmp
       socketPath = socketBase </> socketName'
 
+  epochStateView <- getEpochStateView (File configurationFile) (File socketPath)
+
   H.note_ $ "Sprocket: " <> show poolSprocket1
   H.note_ $ "Abs path: " <> tempAbsBasePath'
   H.note_ $ "Socketpath: " <> socketPath
   H.note_ $ "Foldblocks config file: " <> configurationFile
 
   -- TODO: we could wait less: waiting 1 block should suffice.
-  checkDRepsNumber sbe (Api.File configurationFile) (Api.File socketPath) execConfig 3
+  checkDRepsNumber epochStateView sbe 3
 
   -- protocol-parameters to stdout
   protocolParametersOut <- H.execCli' execConfig

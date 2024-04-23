@@ -11,7 +11,7 @@ module Testnet.Components.Query
   , getEpochState
   , getMinDRepDeposit
   , getGovState
-  , queryTip
+  , getEpochNo
   , waitUntilEpoch
   , waitForEpochs
   , getEpochStateView
@@ -26,16 +26,17 @@ import           Cardano.Api as Api
 import           Cardano.Api.Ledger (Credential, DRepState, KeyRole (DRepRole), StandardCrypto)
 import           Cardano.Api.Shelley (ShelleyLedgerEra, fromShelleyTxIn, fromShelleyTxOut)
 
-import           Cardano.CLI.Types.Output
+import qualified Cardano.Ledger.Api as L
 import           Cardano.Ledger.BaseTypes (EpochInterval, addEpochInterval)
+import qualified Cardano.Ledger.Coin as L
+import qualified Cardano.Ledger.Conway.Governance as L
+import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.UTxO as L
 
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad.Trans.Resource
 import           Control.Monad.Trans.State.Strict (put)
-import           Data.Aeson as A
-import           Data.Aeson.Lens (_Integral, key)
 import           Data.Bifunctor (bimap)
 import           Data.IORef
 import           Data.List (sortOn)
@@ -49,18 +50,15 @@ import qualified Data.Text as T
 import           Data.Type.Equality
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
-import           Lens.Micro ((^.), (^?))
+import           Lens.Micro (to, (^.))
 
-import qualified Testnet.Process.Cli as H
 import           Testnet.Property.Assert
 import           Testnet.Property.Utils (runInBackground)
 import           Testnet.Runtime
-import           Testnet.Start.Types (eraToString)
 
 import qualified Hedgehog as H
 import           Hedgehog.Extras (MonadAssertion)
 import qualified Hedgehog.Extras as H
-import           Hedgehog.Extras.Test.Process (ExecConfig)
 import           Hedgehog.Internal.Property (MonadTest)
 
 -- | Block and wait for the desired epoch.
@@ -88,27 +86,22 @@ waitUntilEpoch nodeConfigFile socketPath desiredEpoch = withFrozenCallStack $ do
 -- | Wait for the number of epochs
 waitForEpochs
   :: MonadTest m
-  => MonadCatch m
+  => MonadAssertion m
   => MonadIO m
-  => ExecConfig
-  -> NodeConfigFile In
-  -> SocketPath
+  => EpochStateView
+  -> ShelleyBasedEra era
   -> EpochInterval  -- ^ Number of epochs to wait
   -> m EpochNo -- ^ The epoch number reached
-waitForEpochs execConfig nodeConfigFile socketPath interval = withFrozenCallStack $ do
-  currentEpoch <- H.nothingFailM $ mEpoch <$> queryTip execConfig
-  waitUntilEpoch nodeConfigFile socketPath $ addEpochInterval currentEpoch interval
-
--- | Query the tip of the blockchain
-queryTip
-  :: (MonadCatch m, MonadIO m, MonadTest m, HasCallStack)
-  => ExecConfig
-  -> m QueryTipLocalStateOutput
-queryTip execConfig = withFrozenCallStack $
-  H.execCliStdoutToJson execConfig [ "query", "tip" ]
+waitForEpochs epochStateView@EpochStateView{nodeConfigPath, socketPath} sbe interval = withFrozenCallStack $ do
+  currentEpoch <- getEpochNo epochStateView sbe
+  waitUntilEpoch nodeConfigPath socketPath $ addEpochInterval currentEpoch interval
 
 -- | A read-only mutable pointer to an epoch state, updated automatically
-newtype EpochStateView = EpochStateView (IORef (Maybe AnyNewEpochState))
+data EpochStateView = EpochStateView
+  { nodeConfigPath :: !(NodeConfigFile In)
+  , socketPath :: !SocketPath
+  , epochStateView :: !(IORef (Maybe AnyNewEpochState))
+  }
 
 -- | Get epoch state from the view. If the state isn't available, retry waiting up to 15 seconds. Fails when
 -- the state is not available after 15 seconds.
@@ -117,10 +110,10 @@ getEpochState :: MonadTest m
               => MonadIO m
               => EpochStateView
               -> m AnyNewEpochState
-getEpochState (EpochStateView esv) =
+getEpochState EpochStateView{epochStateView} =
   withFrozenCallStack $
     H.byDurationM 0.5 15 "EpochStateView has not been initialized within 15 seconds" $
-      H.evalIO (readIORef esv) >>= maybe H.failure pure
+      H.evalIO (readIORef epochStateView) >>= maybe H.failure pure
 
 
 -- | Create a background thread listening for new epoch states. New epoch states are available to access
@@ -139,7 +132,7 @@ getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
     $ \epochState _slotNb _blockNb -> do
         liftIO $ writeIORef epochStateView (Just epochState)
         pure ConditionNotMet
-  pure . EpochStateView $ epochStateView
+  pure $ EpochStateView nodeConfigFile socketPath epochStateView
 
 -- | Retrieve all UTxOs map from the epoch state view.
 findAllUtxos
@@ -233,18 +226,18 @@ findLargestUtxoForPaymentKey epochStateView sbe address =
 -- this number is not attained before two epochs, the test is failed.
 checkDRepsNumber
   :: HasCallStack
-  => MonadCatch m
+  => MonadAssertion m
   => MonadIO m
   => MonadTest m
-  => ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
-  -> NodeConfigFile 'In
-  -> SocketPath
-  -> H.ExecConfig
+  => EpochStateView
+  -> ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
   -> Int
   -> m ()
-checkDRepsNumber sbe configurationFile socketPath execConfig expectedDRepsNb = withFrozenCallStack $
-  checkDRepState sbe configurationFile socketPath execConfig
-    (\m -> if length m == expectedDRepsNb then Just () else Nothing)
+checkDRepsNumber epochStateView sbe expectedDRepsNumber = withFrozenCallStack $
+  checkDRepState epochStateView sbe $ \dreps ->
+    if length dreps == expectedDRepsNumber
+       then Just ()
+       else Nothing
 
 -- | @checkDRepState sbe configurationFile socketPath execConfig f@
 -- This functions helps check properties about the DRep state.
@@ -253,23 +246,20 @@ checkDRepsNumber sbe configurationFile socketPath execConfig expectedDRepsNb = w
 -- If @f@ returns 'Just', the contents of the 'Just' are returned.
 checkDRepState
   :: HasCallStack
-  => MonadCatch m
+  => MonadAssertion m
   => MonadIO m
   => MonadTest m
-  => ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
-  -> NodeConfigFile In
-  -> SocketPath
-  -> H.ExecConfig
+  => EpochStateView
+  -> ShelleyBasedEra ConwayEra -- ^ The era in which the test runs
   -> (Map (Credential 'DRepRole StandardCrypto)
           (DRepState StandardCrypto)
       -> Maybe a) -- ^ A function that checks whether the DRep state is correct or up to date
                   -- and potentially inspects it.
   -> m a
-checkDRepState sbe configurationFile socketPath execConfig f = withFrozenCallStack $ do
-  QueryTipLocalStateOutput{mEpoch} <- queryTip execConfig
-  currentEpoch <- H.evalMaybe mEpoch
+checkDRepState epochStateView@EpochStateView{nodeConfigPath, socketPath} sbe f = withFrozenCallStack $ do
+  currentEpoch <- getEpochNo epochStateView sbe
   let terminationEpoch = succ . succ $ currentEpoch
-  result <- H.evalIO . runExceptT $ foldEpochState configurationFile socketPath QuickValidation terminationEpoch Nothing
+  result <- H.evalIO . runExceptT $ foldEpochState nodeConfigPath socketPath QuickValidation terminationEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState) _slotNb _blockNb -> do
         case testEquality sbe actualEra of
           Just Refl -> do
@@ -307,32 +297,41 @@ checkDRepState sbe configurationFile socketPath execConfig f = withFrozenCallSta
 -- | Obtain governance state from node (CLI query)
 getGovState
   :: HasCallStack
-  => MonadCatch m
+  => MonadAssertion m
   => MonadIO m
   => MonadTest m
-  => H.ExecConfig
+  => EpochStateView
   -> ConwayEraOnwards era
-  -> m A.Value -- ^ The governance state
-getGovState execConfig ceo = withFrozenCallStack $ do
-  let eraName = eraToString $ toCardanoEra ceo
-  H.execCliStdoutToJson execConfig
-      [ eraName, "query", "gov-state" , "--volatile-tip" ]
-
+  -> m (L.ConwayGovState (ShelleyLedgerEra era)) -- ^ The governance state
+getGovState epochStateView ceo = withFrozenCallStack $ do
+  AnyNewEpochState sbe' newEpochState <- getEpochState epochStateView
+  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+  Refl <- H.leftFail $ assertErasEqual sbe sbe'
+  pure $ conwayEraOnwardsConstraints ceo $ newEpochState ^. L.newEpochStateGovStateL
 
 -- | Obtain minimum deposit amount for DRep registration from node
 getMinDRepDeposit
   :: HasCallStack
-  => MonadCatch m
+  => MonadAssertion m
   => MonadIO m
   => MonadTest m
-  => H.ExecConfig
+  => EpochStateView
   -> ConwayEraOnwards era
-  -> m Integer
-getMinDRepDeposit execConfig ceo = withFrozenCallStack $ do
-  govState <- getGovState execConfig ceo
-  let mMinDRepDeposit :: Maybe Integer
-      mMinDRepDeposit = govState ^? key "currentPParams"
-                                  . key "dRepDeposit"
-                                  . _Integral
-  H.evalMaybe mMinDRepDeposit
+  -> m Integer -- ^ The governance state
+getMinDRepDeposit epochStateView ceo = withFrozenCallStack $ do
+  govState <- getGovState epochStateView ceo
+  pure $ conwayEraOnwardsConstraints ceo $ govState ^. L.cgsCurPParamsL . L.ppDRepDepositL . to L.unCoin
 
+-- | Return current epoch number
+getEpochNo
+  :: HasCallStack
+  => MonadAssertion m
+  => MonadIO m
+  => MonadTest m
+  => EpochStateView
+  -> ShelleyBasedEra era
+  -> m EpochNo
+getEpochNo epochStateView sbe = withFrozenCallStack $ do
+  AnyNewEpochState sbe' newEpochState <- getEpochState epochStateView
+  Refl <- H.leftFail $ assertErasEqual sbe sbe'
+  pure $ newEpochState ^. L.nesELL

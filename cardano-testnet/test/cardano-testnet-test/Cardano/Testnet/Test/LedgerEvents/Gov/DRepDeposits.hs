@@ -79,7 +79,7 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
-  minDRepDeposit <- getMinDRepDeposit execConfig ceo
+  minDRepDeposit <- getMinDRepDeposit epochStateView ceo
 
   -- DRep 1 (not enough deposit)
 
@@ -109,7 +109,9 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
 
   submitTx execConfig cEra drepSignedRegTx2
 
-  checkDRepState sbe (File configurationFile) (File socketPath) execConfig
-    (\m -> if map L.drepDeposit (Map.elems m) == [L.Coin minDRepDeposit] then Just () else Nothing)
+  checkDRepState epochStateView sbe $ \m ->
+    if map L.drepDeposit (Map.elems m) == [L.Coin minDRepDeposit]
+       then Just ()
+       else Nothing
 
 
