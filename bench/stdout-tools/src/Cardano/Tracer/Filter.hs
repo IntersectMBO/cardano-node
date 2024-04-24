@@ -43,12 +43,13 @@ class Filter f where
 -- Identity and composition.
 --------------------------------------------------------------------------------
 
-data Id = Id
+-- TODO: More than a proper `id` it's the no-filter filter.
+data Id io = Id
   deriving Show
 
-instance Filter Id where
-  type instance FilterInput  Id = Text.Text
-  type instance FilterOutput Id = Text.Text
+instance Filter (Id io) where
+  type instance FilterInput  (Id io) = io
+  type instance FilterOutput (Id io) = io
   filterOf _ = Just
 
 data Compose f1 f2 = Compose f1 f2
