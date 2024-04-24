@@ -1,8 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ExistentialQuantification #-}
 
 {-- RTS params: +RTS -xc -s -l -hc
 
@@ -45,16 +42,13 @@ module Main (main) where
 import           Control.Applicative (some, (<|>))
 -- package: time.
 import           Data.Time.Clock (getCurrentTime, diffUTCTime)
--- package: text.
-import qualified Data.Text as Text
 -- package: async.
 import qualified Control.Concurrent.Async as Async
 -- package: optparse-applicative.
 import qualified Options.Applicative as Opt
 -- library.
-import qualified Data.Log as Log
-import qualified Cardano.Tracer.Trace as Trace
 import qualified Cardano.Tracer.Reducer as Reducer
+import qualified Cardano.Tracer.FilterReduce as FilterReduce
 
 --------------------------------------------------------------------------------
 
@@ -64,26 +58,21 @@ data CliOpts = CliOpts
     files      :: [(String, FilePath)]
   , inParallel :: Bool
   -- "--reducer" arguments.
-  , reducers   :: [ReducerElem]
+  , builtins   :: [FilterReduce.FilterReduce]
   }
   deriving Show
 
-data ReducerElem = forall r. (Show r, Reducer.Reducer r) => MkReducer r
-
-instance Show ReducerElem where
-  show (MkReducer r) = show r
-
-cliReducerReader :: String -> Either String ReducerElem
-cliReducerReader str = case str of
-  "count-lines"  -> Right $ MkReducer   Reducer.CountLines
-  "count-traces" -> Right $ MkReducer   Reducer.CountTraces
-  "missed-slots" -> Right $ MkReducer   Reducer.MissedSlots
-  "count-FLSLCP" -> Right $ MkReducer $ Reducer.CountNS "Forge.Loop.StartLeadershipCheckPlus"
-  "2s-silences"  -> Right $ MkReducer $ Reducer.Silences 2
-  "utxo-size"    -> Right $ MkReducer   Reducer.UtxoSize
-  "heap-changes" -> Right $ MkReducer $ Reducer.ResourcesChanges Trace.resourcesHeap
-  "live-changes" -> Right $ MkReducer $ Reducer.ResourcesChanges Trace.resourcesLive
-  "rss-changes"  -> Right $ MkReducer $ Reducer.ResourcesChanges Trace.resourcesRSS
+cliFunctionReader :: String -> Either String FilterReduce.FilterReduce
+cliFunctionReader str = case str of
+  "count-lines"  -> Right $ FilterReduce.countLines
+  "count-traces" -> Right $ FilterReduce.countTraces
+  "2s-silences"  -> Right $ FilterReduce.silences 2
+  "count-FLSLCP" -> Right $ FilterReduce.countNamespace "Forge.Loop.StartLeadershipCheckPlus"
+  "missed-slots" -> Right $ FilterReduce.missedSlots
+  "utxo-size"    -> Right $ FilterReduce.utxoSize
+  "heap-changes" -> Right $ FilterReduce.heapChanges
+  "live-changes" -> Right $ FilterReduce.liveChanges
+  "rss-changes"  -> Right $ FilterReduce.rssChanges
   _ -> Left str
 
 main :: IO ()
@@ -134,11 +123,11 @@ optsParser = CliOpts <$>
             <> Opt.help "Process files in parallel"
           )
     <*> some (
-          (Opt.option $ Opt.eitherReader cliReducerReader)
-          (    Opt.long "reducer"
-            <> Opt.short 'r'
-            <> Opt.metavar "REDUCER"
-            <> Opt.help "Reducer"
+          (Opt.option $ Opt.eitherReader cliFunctionReader)
+          (    Opt.long "builtin"
+            <> Opt.short 'b'
+            <> Opt.metavar "BUILTIN"
+            <> Opt.help "Builtin"
           )
         )
   where
@@ -151,9 +140,9 @@ optsParser = CliOpts <$>
 
 run :: CliOpts -> IO ()
 run (CliOpts _ _ []) = putStrLn "Nothing to do, bye!"
-run cliOpts@(CliOpts _ parallel ((MkReducer r):_)) = do
+run cliOpts@(CliOpts _ parallel (b@(FilterReduce.MkFilterReduce f r):_)) = do
   t0 <- getCurrentTime
-  print r
+  print b
   if not parallel
   then do
     ------------------------------------
@@ -163,10 +152,7 @@ run cliOpts@(CliOpts _ parallel ((MkReducer r):_)) = do
     ------------------------------------
     mapM_
       (\(logName,fp) -> do
-        ans <- Log.lineFoldl'
-          (Reducer.reducerOf r)
-          (Reducer.initialOf r)
-          fp
+        ans <- FilterReduce.filterReduce f r fp
         print logName
         Reducer.printAns r ans
       )
@@ -179,10 +165,7 @@ run cliOpts@(CliOpts _ parallel ((MkReducer r):_)) = do
     ---------------------------------------------------------
     ansParallel <- Async.mapConcurrently
       (\(logName,fp) -> do
-        ans <- Log.lineFoldl'
-          (Reducer.reducerOf r)
-          (Reducer.initialOf r)
-          fp
+        ans <- FilterReduce.filterReduce f r fp
         return (logName, ans)
       )
       (files cliOpts)
@@ -194,37 +177,8 @@ run cliOpts@(CliOpts _ parallel ((MkReducer r):_)) = do
       ansParallel
   t1 <- getCurrentTime
   print $ diffUTCTime t1 t0
-
-{-- TODO: Switch to open type families for "sequential" and "parallel" folds.
-  mapM_
-    (\(logName,fp) -> do
-
-      ans <- lineFoldl'
-        (\accs cursor -> zipWith (\r' acc -> reducerOf r' acc cursor) rs accs)
-        (map initialOf rs)
-        fp
-      print logName
-      mapM_ (\(r, acc) -> putStrLn $ showAns r acc) (zip rs ans)
-    )
-    (files cliOpts)
---}
-
   -- End
   return ()
-
--- Like `lineFoldl'` but with a filter for which raw lines to apply a function.
-_filterLineFoldl' :: (a -> Text.Text -> (Maybe a)) -> a -> FilePath -> IO a
-_filterLineFoldl' f initialAcc filePath = do
-  Log.lineFoldl'
-    (\acc textLine ->
-      case f acc textLine of
-        Nothing -> acc
-        -- CRITICAL: Has to be "STRICT" to keep `Log.lineFoldl'`'s behaviour.
-        --           I repeat, the accumulator function has to be strict!
-        Just !nextAcc -> nextAcc
-    )
-    initialAcc
-    filePath
 
 --------------------------------------------------------------------------------
 

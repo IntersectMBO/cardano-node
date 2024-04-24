@@ -37,6 +37,7 @@ library
                         Cardano.Tracer.Trace
                         Cardano.Tracer.Filter
                         Cardano.Tracer.Reducer
+                        Cardano.Tracer.FilterReduce
   build-depends:        base >=4.12 && <5
                       , time
                       , bytestring
@@ -53,7 +54,6 @@ executable tq
   main-is:              tq.hs
 
   build-depends:        time
-                      , text
                       , async
                       , optparse-applicative
                       , stdout-tools
@@ -74,6 +74,7 @@ test-suite stdout-tools-test
   other-modules:        Paths_stdout_tools
   autogen-modules:      Paths_stdout_tools
   build-depends:        base
+                      , text
                       , text-iso8601
                       , containers
                       , tasty

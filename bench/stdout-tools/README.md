@@ -31,7 +31,7 @@ sys     0m8.123s
 ```
 #### ```tq```:
 ```
-time cabal run tq -- --file big-node:bench/stdout-tools/5nodes.stdout --reducer count-lines
+time cabal run tq -- --file big-node:bench/stdout-tools/5nodes.stdout --builtin count-lines
 25581640
 real    0m15.385s
 user    0m13.138s
@@ -68,7 +68,7 @@ sys     0m6.041s
 ```
 #### ```tq```:
 ```
-time cabal run tq -- --file big-node:bench/stdout-tools/5nodes.stdout --reducer count-FLSLCP
+time cabal run tq -- --file big-node:bench/stdout-tools/5nodes.stdout --builtin count-FLSLCP
 264150
 real    0m19.904s
 user    0m17.629s
@@ -86,7 +86,7 @@ sys     0m5.905s
 ```
 #### ```tq```:
 ```
-time cabal run tq -- --file big-node:bench/stdout-tools/5nodes.stdout --reducer heap-changes
+time cabal run tq -- --file big-node:bench/stdout-tools/5nodes.stdout --builtin heap-changes
 real    0m21.704s
 user    0m19.414s
 sys     0m2.280s
@@ -162,7 +162,7 @@ sys     1m4.572s
 ```
 #### ```tq```:
 ```
-cabal run tq -- --run run/2024-04-05-22-32-6b142-891-value-40M64G-nomadperfssd-bage-nom --reducer heap-changes
+cabal run tq -- --run run/2024-04-05-22-32-6b142-891-value-40M64G-nomadperfssd-bage-nom --builtin heap-changes
 real    9m10.366s
 user    8m12.345s
 sys     0m46.550s
@@ -186,7 +186,7 @@ sys     2m25.412s
 ```
 #### ```tq```:
 ```
-time cabal run tq -- --run run/2024-04-05-22-32-6b142-891-value-40M64G-nomadperfssd-bage-nom --parallel --reducer heap-changes +RTS -N16
+time cabal run tq -- --run run/2024-04-05-22-32-6b142-891-value-40M64G-nomadperfssd-bage-nom --parallel --builtin heap-changes +RTS -N16
 real    2m33.630s
 user    38m24.001s
 sys     1m3.555s
@@ -201,10 +201,16 @@ real    0m49.256s
 user    21m49.630s
 sys     2m37.604s
 ```
-#### ```tq```:
+#### ```tq``` with ```-N16``` and ```-N32```:
 ```
-time cabal run tq -- --run run/2024-04-05-22-32-6b142-891-value-40M64G-nomadperfssd-bage-nom --parallel --reducer heap-changes +RTS -N16
-real    1m8.057s
-user    31m6.545s
-sys     2m26.358s
+time cabal run tq -- --run run/2024-04-05-22-32-6b142-891-value-40M64G-nomadperfssd-bage-nom --parallel --builtin heap-changes +RTS -N16
+real    1m1.637s
+user    14m30.614s
+sys     1m22.834s
+```
+```
+time cabal run tq -- --run run/2024-04-05-22-32-6b142-891-value-40M64G-nomadperfssd-bage-nom --parallel --builtin heap-changes +RTS -N32
+real    1m8.595s
+user    31m11.555s
+sys     2m34.934s
 ```
