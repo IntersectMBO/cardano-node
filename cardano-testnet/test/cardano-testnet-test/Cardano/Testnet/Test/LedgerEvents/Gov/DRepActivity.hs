@@ -93,8 +93,11 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
   -- This proposal should pass
+  let firstTargetDRepActivity = 3
+      epochsToWaitAfterProposal = 3
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
-                                    "firstProposal" wallet0 [(1, "yes")] 3 (Just 3) 3
+                                    "firstProposal" wallet0 [(1, "yes")] firstTargetDRepActivity
+                                    (Just firstTargetDRepActivity) epochsToWaitAfterProposal
 
   -- Now we register two new DReps
   drep2 <- registerDRep execConfig epochStateView ceo work "drep2" wallet1
@@ -111,25 +114,31 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
 
   -- This proposal should fail because there is 2 DReps that don't vote (out of 3)
   -- and we have the stake distributed evenly
+  let secondTargetDRepActivity = firstTargetDRepActivity + 1
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
-                                  "failingProposal" wallet2 [(1, "yes")] 4 (Just 3) 3
+                                    "failingProposal" wallet2 [(1, "yes")] secondTargetDRepActivity
+                                    (Just firstTargetDRepActivity) epochsToWaitAfterProposal
 
   -- We now send a bunch of proposals to make sure that the 2 new DReps expire.
   -- because DReps won't expire if there is not enough activity (opportunites to participate).
   -- This is accounted for by the dormant epoch count
+  let numOfFillerProposals = 4 :: Int
   sequence_
     [activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
-                                    ("fillerProposalNum" ++ show proposalNum) wallet [(1, "yes")]
-                                    (fromIntegral $ 4 + proposalNum) Nothing 3
-     | (proposalNum, wallet) <- zip [1..(4 :: Int)] (cycle [wallet0, wallet1, wallet2])]
+                                ("fillerProposalNum" ++ show proposalNum) wallet [(1, "yes")]
+                                (secondTargetDRepActivity + fromIntegral proposalNum)
+                                Nothing epochsToWaitAfterProposal
+     | (proposalNum, wallet) <- zip [1..numOfFillerProposals] (cycle [wallet0, wallet1, wallet2])]
 
   (EpochNo epochAfterTimeout) <- getCurrentEpochNo epochStateView
   H.note_ $ "Epoch after which we are going to test timeout: " <> show epochAfterTimeout
 
   -- Last proposal (set activity to something else again and it should pass, because of inactivity)
   -- Because 2 out of 3 DReps were inactive, prop should pass
+  let lastTargetDRepActivity = secondTargetDRepActivity + fromIntegral numOfFillerProposals + 1
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
-                                    "lastProposal" wallet0 [(1, "yes")] 9 (Just 9) 3
+                                    "lastProposal" wallet0 [(1, "yes")] lastTargetDRepActivity
+                                    (Just lastTargetDRepActivity) epochsToWaitAfterProposal
 
 activityChangeProposalTest
   :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
@@ -143,7 +152,7 @@ activityChangeProposalTest
   -> PaymentKeyInfo
   -> t (Int, String)
   -> Word32
-  -> Maybe Integer
+  -> Maybe Word32
   -> Word64
   -> m (String, Word32)
 activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo work prefix
@@ -175,7 +184,7 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
   case mExpected of
     Nothing -> return ()
     Just expected -> do dRepActivityAfterProp <- getDRepActivityValue execConfig
-                        dRepActivityAfterProp === expected
+                        dRepActivityAfterProp === fromIntegral expected
 
   return thisProposal
 
