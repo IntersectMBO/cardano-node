@@ -1,14 +1,11 @@
 {-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies #-}
 
 --------------------------------------------------------------------------------
 module Main (main) where
 
 import           Data.Either (fromRight)
 
--- package: text.
-import qualified Data.Text as Text
 -- package: text-iso8601-0.1
 import qualified Data.Time.FromText as ParseTime
 -- package: containers.
@@ -17,9 +14,6 @@ import qualified Data.Sequence as Seq
 import qualified Test.Tasty           as Tasty
 import           Test.Tasty.HUnit
 
-import qualified Cardano.Tracer.Trace as Trace
-import qualified Cardano.Tracer.Filter as Filter
-import qualified Cardano.Tracer.Reducer as Reducer
 import qualified Cardano.Tracer.FilterReduce as FilterReduce
 
 import qualified Paths_stdout_tools as Paths
@@ -41,8 +35,7 @@ reducers = Tasty.testGroup
   "Cardano.Tracer.Reducer"
   [ testCase "CountLines" $ do
       fp <- Paths.getDataFileName "data/500-FLSLCP.stdout"
-      let f = Filter.Id
-          r = Reducer.Count :: Reducer.Count Text.Text
+      let (f,r) = FilterReduce.countLines
       ans <- FilterReduce.filterReduce f r fp
       assertEqual
         ("Count lines (\"" ++ fp ++ "\")")
@@ -54,8 +47,7 @@ reducers = Tasty.testGroup
         15383
   ,  testCase "CountTraces" $ do
       fp <- Paths.getDataFileName "data/500-FLSLCP.stdout"
-      let f = Filter.ParseTrace Filter.<-> Filter.RightTrace
-          r = Reducer.Count :: Reducer.Count Trace.Trace
+      let (f,r) = FilterReduce.countTraces
       ans <- FilterReduce.filterReduce f r fp
       assertEqual
         ("Count provably \"valid\" traces (\"" ++ fp ++ "\")")
@@ -68,12 +60,7 @@ reducers = Tasty.testGroup
   , testCase "CountNS" $ do
       fp <- Paths.getDataFileName "data/500-FLSLCP.stdout"
       -- "Forge.Loop.StartLeadershipCheckPlus"
-      let f = Filter.ParseTrace
-              Filter.<->
-              Filter.RightTrace
-              Filter.<->
-              Filter.Namespace "Forge.Loop.StartLeadershipCheckPlus"
-          r = Reducer.Count :: Reducer.Count Trace.Trace
+      let (f,r) = FilterReduce.countNamespace "Forge.Loop.StartLeadershipCheckPlus"
       ans <- FilterReduce.filterReduce f r fp
       assertEqual
         ("Count Forge.Loop.StartLeadershipCheckPlus (\"" ++ fp ++ "\")")
@@ -85,16 +72,7 @@ reducers = Tasty.testGroup
         500
   , testCase "ResourcesChanges" $ do
       fp <- Paths.getDataFileName "data/500-FLSLCP.stdout"
-      let f = Filter.ParseTrace
-              Filter.<->
-              Filter.RightTrace
-              Filter.<->
-              Filter.Namespace "Resources"
-              Filter.<->
-              Filter.RightAt
-              Filter.<->
-              (Filter.AesonWithAt :: Filter.AesonWithAt (Trace.Remainder Trace.DataResources))
-          r = Reducer.Changes (Trace.resourcesHeap . Trace.remainderData)
+      let (f,r) = FilterReduce.heapChanges
       ans <- FilterReduce.filterReduce f r fp
       assertEqual
         ("Heap memory changes (\"" ++ fp ++ "\")")
@@ -123,16 +101,7 @@ reducers = Tasty.testGroup
         ])
   , testCase "UtxoSize" $ do
       fp <- Paths.getDataFileName "data/500-FLSLCP.stdout"
-      let f = Filter.ParseTrace
-              Filter.<->
-              Filter.RightTrace
-              Filter.<->
-              Filter.Namespace "Forge.Loop.StartLeadershipCheckPlus"
-              Filter.<->
-              Filter.RightAt
-              Filter.<->
-              (Filter.AesonWithAt :: Filter.AesonWithAt (Trace.Remainder Trace.DataWithUtxoSize))
-          r = Reducer.Changes (Trace.utxoSize . Trace.remainderData)
+      let (f,r) = FilterReduce.utxoSize
       ans <- FilterReduce.filterReduce f r fp
       assertEqual
         ("UTxO set size changes (\"" ++ fp ++ "\")")
@@ -217,12 +186,7 @@ reducers = Tasty.testGroup
         ])
   , testCase "Silences" $ do
       fp <- Paths.getDataFileName "data/500-FLSLCP.stdout"
-      let f = Filter.ParseTrace
-              Filter.<->
-              Filter.RightTrace
-              Filter.<->
-              Filter.RightAt
-          r = Reducer.Silences 2
+      let (f,r) = FilterReduce.silences 2
       ans <- FilterReduce.filterReduce f r fp
       assertEqual
         ("Show silences equal or greater than 2 seconds (\"" ++ fp ++ "\")")
