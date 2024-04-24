@@ -171,7 +171,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
   -- wait for an epoch before using wallet0 again
-  void $ waitForEpochs epochStateView sbe (EpochInterval 1)
+  void $ waitForEpochs epochStateView (EpochInterval 1)
 
   txin3 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
@@ -202,7 +202,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
     , "--tx-file", txbodySignedFp
     ]
 
-  currentEpoch <- getEpochNo epochStateView sbe
+  currentEpoch <- getCurrentEpochNo epochStateView
   let terminationEpoch = succ . succ $ currentEpoch
   L.GovActionIx governanceActionIndex <- fmap L.gaidGovActionIx . H.nothingFailM $
     getTreasuryWithdrawalProposal (File configurationFile) (File socketPath) terminationEpoch
@@ -255,7 +255,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
   -- }}}
 
   withdrawals <- H.nothingFailM $
-    getEpochNo epochStateView sbe >>=
+    getCurrentEpochNo epochStateView >>=
       getAnyWithdrawals (File configurationFile) (File socketPath) . (`L.addEpochInterval` EpochInterval 5)
 
   H.noteShow_ withdrawals

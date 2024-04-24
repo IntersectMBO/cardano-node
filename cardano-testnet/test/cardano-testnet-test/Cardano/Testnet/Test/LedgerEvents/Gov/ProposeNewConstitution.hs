@@ -27,7 +27,6 @@ import           Data.Maybe
 import           Data.Maybe.Strict
 import           Data.String
 import qualified Data.Text as Text
-import           Data.Word
 import           GHC.Exts (IsList (..))
 import           GHC.Stack (callStack)
 import           Lens.Micro

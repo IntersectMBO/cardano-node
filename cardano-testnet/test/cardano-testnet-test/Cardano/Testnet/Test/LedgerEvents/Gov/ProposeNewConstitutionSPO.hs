@@ -163,7 +163,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
     , "--tx-file", txbodySignedFp
     ]
 
-  currentEpoch <- getEpochNo epochStateView sbe
+  currentEpoch <- getCurrentEpochNo epochStateView
   -- Proposal should be there already, so don't wait a lot:
   let terminationEpoch = succ . succ $ currentEpoch
 

@@ -11,7 +11,7 @@ module Testnet.Components.Query
   , getEpochState
   , getMinDRepDeposit
   , getGovState
-  , getEpochNo
+  , getCurrentEpochNo
   , waitUntilEpoch
   , waitForEpochs
   , getEpochStateView
@@ -20,7 +20,6 @@ module Testnet.Components.Query
   , findLargestUtxoWithAddress
   , findLargestUtxoForPaymentKey
   , startLedgerNewEpochStateLogging
-  , getCurrentEpochNo
   ) where
 
 import           Cardano.Api as Api
@@ -90,11 +89,10 @@ waitForEpochs
   => MonadAssertion m
   => MonadIO m
   => EpochStateView
-  -> ShelleyBasedEra era
   -> EpochInterval  -- ^ Number of epochs to wait
   -> m EpochNo -- ^ The epoch number reached
-waitForEpochs epochStateView@EpochStateView{nodeConfigPath, socketPath} sbe interval = withFrozenCallStack $ do
-  currentEpoch <- getEpochNo epochStateView sbe
+waitForEpochs epochStateView@EpochStateView{nodeConfigPath, socketPath} interval = withFrozenCallStack $ do
+  currentEpoch <- getCurrentEpochNo epochStateView
   waitUntilEpoch nodeConfigPath socketPath $ addEpochInterval currentEpoch interval
 
 -- | A read-only mutable pointer to an epoch state, updated automatically
@@ -258,24 +256,21 @@ checkDRepState
                   -- and potentially inspects it.
   -> m a
 checkDRepState epochStateView@EpochStateView{nodeConfigPath, socketPath} sbe f = withFrozenCallStack $ do
-  currentEpoch <- getEpochNo epochStateView sbe
+  currentEpoch <- getCurrentEpochNo epochStateView
   let terminationEpoch = succ . succ $ currentEpoch
   result <- H.evalIO . runExceptT $ foldEpochState nodeConfigPath socketPath QuickValidation terminationEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState) _slotNb _blockNb -> do
-        case testEquality sbe actualEra of
-          Just Refl -> do
-            let dreps = shelleyBasedEraConstraints sbe newEpochState
-                          ^. L.nesEsL
-                           . L.esLStateL
-                           . L.lsCertStateL
-                           . L.certVStateL
-                           . L.vsDRepsL
-            case f dreps of
-              Nothing -> pure ConditionNotMet
-              Just a -> do put $ Just a
-                           pure ConditionMet
-          Nothing -> do
-            error $ "Eras mismatch! expected: " <> show sbe <> ", actual: " <> show actualEra
+        Refl <- either error pure $ assertErasEqual sbe actualEra
+        let dreps = shelleyBasedEraConstraints sbe newEpochState
+                      ^. L.nesEsL
+                       . L.esLStateL
+                       . L.lsCertStateL
+                       . L.certVStateL
+                       . L.vsDRepsL
+        case f dreps of
+          Nothing -> pure ConditionNotMet
+          Just a -> do put $ Just a
+                       pure ConditionMet
   case result of
     Left (FoldBlocksApplyBlockError (TerminationEpochReached epochNo)) -> do
       H.note_ $ unlines
@@ -328,16 +323,17 @@ getMinDRepDeposit epochStateView ceo = withFrozenCallStack $ do
   govState <- getGovState epochStateView ceo
   pure $ conwayEraOnwardsConstraints ceo $ govState ^. L.cgsCurPParamsL . L.ppDRepDepositL . to L.unCoin
 
--- | Return current epoch number
-getEpochNo
+-- | Return current-ish epoch number.
+-- Because we're using Ledger's 'NewEpochState', the returned epoch number won't be reflecting the current
+-- epoch number during the transiontion between the epochs. In other cases it will be the true number of the
+-- current epoch.
+getCurrentEpochNo
   :: HasCallStack
   => MonadAssertion m
   => MonadIO m
   => MonadTest m
   => EpochStateView
-  -> ShelleyBasedEra era
   -> m EpochNo
-getEpochNo epochStateView sbe = withFrozenCallStack $ do
-  AnyNewEpochState sbe' newEpochState <- getEpochState epochStateView
-  Refl <- H.leftFail $ assertErasEqual sbe sbe'
+getCurrentEpochNo epochStateView = withFrozenCallStack $ do
+  AnyNewEpochState _ newEpochState <- getEpochState epochStateView
   pure $ newEpochState ^. L.nesELL
