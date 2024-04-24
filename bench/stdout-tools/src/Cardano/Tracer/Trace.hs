@@ -113,7 +113,7 @@ instance Aeson.FromJSON a => Aeson.FromJSON (Remainder a) where
 -- { at:..., ns:"", data:{ ..., slot:0, ... } }
 newtype DataWithSlot = DataWithSlot
   { slot :: Integer }
-  deriving Generic
+  deriving (Eq, Show, Generic)
 
 instance Aeson.ToJSON DataWithSlot where
 
@@ -123,7 +123,7 @@ instance Aeson.FromJSON DataWithSlot where
 -- { at:..., ns:"", data:{ ..., utxoSize:0, ... } }
 newtype DataWithUtxoSize = DataWithUtxoSize
   { utxoSize :: Integer }
-  deriving Generic
+  deriving (Eq, Show, Generic)
 
 instance Aeson.ToJSON DataWithUtxoSize where
 
