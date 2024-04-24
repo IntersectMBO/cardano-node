@@ -97,7 +97,7 @@ data RightAt = RightAt
   deriving Show
 
 -- Filter valid `Trace`s by namespace (`ns`).
-data Namespace = Namespace Text.Text
+newtype Namespace = Namespace Text.Text
   deriving Show
 
 -- Convert the remainder.

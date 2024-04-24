@@ -59,7 +59,7 @@ newtype Silences = Silences NominalDiffTime
 data MissedSlots = MissedSlots
   deriving Show
 
-data Changes t = Changes (t -> Integer)
+newtype Changes t = Changes (t -> Integer)
 
 instance Show (Changes t) where
   show _ = "Changes"
