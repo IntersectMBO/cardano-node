@@ -64,15 +64,15 @@ data CliOpts = CliOpts
 
 cliFunctionReader :: String -> Either String FilterReduce.FilterReduce
 cliFunctionReader str = case str of
-  "count-lines"  -> Right $ FilterReduce.countLines
-  "count-traces" -> Right $ FilterReduce.countTraces
+  "count-lines"  -> Right   FilterReduce.countLines
+  "count-traces" -> Right   FilterReduce.countTraces
   "2s-silences"  -> Right $ FilterReduce.silences 2
   "count-FLSLCP" -> Right $ FilterReduce.countNamespace "Forge.Loop.StartLeadershipCheckPlus"
-  "missed-slots" -> Right $ FilterReduce.missedSlots
-  "utxo-size"    -> Right $ FilterReduce.utxoSize
-  "heap-changes" -> Right $ FilterReduce.heapChanges
-  "live-changes" -> Right $ FilterReduce.liveChanges
-  "rss-changes"  -> Right $ FilterReduce.rssChanges
+  "missed-slots" -> Right   FilterReduce.missedSlots
+  "utxo-size"    -> Right   FilterReduce.utxoSize
+  "heap-changes" -> Right   FilterReduce.heapChanges
+  "live-changes" -> Right   FilterReduce.liveChanges
+  "rss-changes"  -> Right   FilterReduce.rssChanges
   _ -> Left str
 
 main :: IO ()

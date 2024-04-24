@@ -75,8 +75,8 @@ filterReduce :: ( Filter.Filter f
 filterReduce f r filePath = do
   Log.lineFoldl'
     (\ !acc textLine ->
-      case (Filter.filterOf f) textLine of
-        (Just filterOutput) -> (Reducer.reducerOf r) acc filterOutput
+      case Filter.filterOf f textLine of
+        (Just filterOutput) -> Reducer.reducerOf r acc filterOutput
         Nothing -> acc
     )
     (Reducer.initialOf r)
