@@ -1052,6 +1052,19 @@ def all_profile_variants:
       { ssd_directory:                      "/ssd1"
       }
     }
+  , $nomad_perfssd_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
+    { name: "value-32M32G-lmdb-nomadperfssd"
+    , genesis:
+      { utxo:                               (32 * $M)
+      }
+    , node:
+      { heap_limit:                         32768
+      , utxo_lmdb:                          true
+      }
+    , cluster:
+      { ssd_directory:                      "/ssd1"
+      }
+    }
 
 ## P&T Nomad cluster: 52 nodes, 3 regions, value-only (with old tracing variant) and Plutus, no P2P flavour
   , $nomad_perf_base * $nomad_perf_dense * $costmodel_v8_preview *
