@@ -10,17 +10,19 @@ module Cardano.Tracer.FilterReduce
   (
     FilterReduce (MkFilterReduce), (<|>), filterReduce
 
-  , countLines
-  , countTraces
+  , countLines, countLinesFR
+  , countTraces, countTracesFR
 
-  , silences
+  , silences, silencesFR
 
-  , countNamespace
+  , countNamespace, countNamespaceFR
 
-  , missedSlots
+  , missedSlots, missedSlotsFR
 
-  , utxoSize
-  , heapChanges, liveChanges, rssChanges
+  , utxoSize, utxoSizeFR
+  , heapChanges, heapChangesFR
+  , liveChanges, liveChangesFR
+  , rssChanges, rssChangesFR
   ) where
 
 --------------------------------------------------------------------------------
@@ -84,18 +86,29 @@ filterReduce f r filePath = do
 
 --------------------------------------------------------------------------------
 
-countLines :: FilterReduce
-countLines = MkFilterReduce
+countLines :: (Filter.Id Text.Text, Reducer.Count Text.Text)
+countLines = (,)
   Filter.Id
-  (Reducer.Count :: Reducer.Count Text.Text)
+  Reducer.Count
 
-countTraces :: FilterReduce
-countTraces = MkFilterReduce
+countLinesFR :: FilterReduce
+countLinesFR = uncurry MkFilterReduce countLines
+
+countTraces :: (Filter.Compose Filter.ParseTrace Filter.RightTrace, Reducer.Count Trace.Trace)
+countTraces = (,)
   (Filter.ParseTrace Filter.<-> Filter.RightTrace)
-  (Reducer.Count :: Reducer.Count Trace.Trace)
+  Reducer.Count
 
-silences :: NominalDiffTime -> FilterReduce
-silences s = MkFilterReduce
+countTracesFR :: FilterReduce
+countTracesFR = uncurry MkFilterReduce countTraces
+
+silences :: NominalDiffTime
+         -> ( Filter.Compose
+                (Filter.Compose Filter.ParseTrace Filter.RightTrace)
+                Filter.RightAt
+            , Reducer.Silences
+            )
+silences s = (,)
   ( Filter.ParseTrace
     Filter.<->
     Filter.RightTrace
@@ -104,8 +117,16 @@ silences s = MkFilterReduce
   )
   (Reducer.Silences s)
 
-countNamespace :: Text.Text -> FilterReduce
-countNamespace ns = MkFilterReduce
+silencesFR :: NominalDiffTime -> FilterReduce
+silencesFR s = uncurry MkFilterReduce (silences s)
+
+countNamespace :: Text.Text
+               -> ( Filter.Compose
+                   (Filter.Compose Filter.ParseTrace Filter.RightTrace)
+                   Filter.Namespace
+                  , Reducer.Count Trace.Trace
+                  )
+countNamespace ns = (,)
   ( Filter.ParseTrace
     Filter.<->
     Filter.RightTrace
@@ -114,8 +135,18 @@ countNamespace ns = MkFilterReduce
   )
   (Reducer.Count :: Reducer.Count Trace.Trace)
 
-missedSlots :: FilterReduce
-missedSlots = MkFilterReduce
+countNamespaceFR :: Text.Text -> FilterReduce
+countNamespaceFR ns = uncurry MkFilterReduce (countNamespace ns)
+
+missedSlots :: ( Filter.Compose
+                   (Filter.Compose
+                     (Filter.Compose Filter.ParseTrace Filter.RightTrace)
+                     Filter.Namespace
+                   )
+                   (Filter.Aeson Trace.DataWithSlot)
+               , Reducer.MissedSlots
+               )
+missedSlots = (,)
   ( Filter.ParseTrace
     Filter.<->
     Filter.RightTrace
@@ -126,8 +157,21 @@ missedSlots = MkFilterReduce
   )
   Reducer.MissedSlots
 
-utxoSize :: FilterReduce
-utxoSize = MkFilterReduce
+missedSlotsFR :: FilterReduce
+missedSlotsFR = uncurry MkFilterReduce missedSlots
+
+utxoSize :: ( Filter.Compose
+               (Filter.Compose
+                 (Filter.Compose
+                   (Filter.Compose Filter.ParseTrace Filter.RightTrace)
+                   Filter.Namespace
+                 )
+                 Filter.RightAt
+               )
+               (Filter.AesonWithAt (Trace.Remainder Trace.DataWithUtxoSize))
+           , Reducer.Changes (Trace.Remainder Trace.DataWithUtxoSize)
+           )
+utxoSize = (,)
   ( Filter.ParseTrace
     Filter.<->
     Filter.RightTrace
@@ -140,8 +184,21 @@ utxoSize = MkFilterReduce
   )
   (Reducer.Changes (Trace.utxoSize . Trace.remainderData))
 
-heapChanges :: FilterReduce
-heapChanges = MkFilterReduce
+utxoSizeFR :: FilterReduce
+utxoSizeFR = uncurry MkFilterReduce utxoSize
+
+heapChanges :: ( Filter.Compose
+                   (Filter.Compose
+                     (Filter.Compose
+                       (Filter.Compose Filter.ParseTrace Filter.RightTrace)
+                       Filter.Namespace
+                     )
+                     Filter.RightAt
+                   )
+                   (Filter.AesonWithAt (Trace.Remainder Trace.DataResources))
+               , Reducer.Changes (Trace.Remainder Trace.DataResources)
+               )
+heapChanges = (,)
   ( Filter.ParseTrace
     Filter.<->
     Filter.RightTrace
@@ -154,8 +211,21 @@ heapChanges = MkFilterReduce
   )
   (Reducer.Changes (Trace.resourcesHeap . Trace.remainderData))
 
-liveChanges :: FilterReduce
-liveChanges = MkFilterReduce
+heapChangesFR :: FilterReduce
+heapChangesFR = uncurry MkFilterReduce heapChanges
+
+liveChanges :: ( Filter.Compose
+                   (Filter.Compose
+                     (Filter.Compose
+                       (Filter.Compose Filter.ParseTrace Filter.RightTrace)
+                       Filter.Namespace
+                     )
+                     Filter.RightAt
+                   )
+                   (Filter.AesonWithAt (Trace.Remainder Trace.DataResources))
+               , Reducer.Changes (Trace.Remainder Trace.DataResources)
+               )
+liveChanges = (,)
   ( Filter.ParseTrace
     Filter.<->
     Filter.RightTrace
@@ -168,8 +238,21 @@ liveChanges = MkFilterReduce
   )
   (Reducer.Changes (Trace.resourcesLive . Trace.remainderData))
 
-rssChanges :: FilterReduce
-rssChanges = MkFilterReduce
+liveChangesFR :: FilterReduce
+liveChangesFR = uncurry MkFilterReduce liveChanges
+
+rssChanges :: ( Filter.Compose
+                  (Filter.Compose
+                    (Filter.Compose
+                      (Filter.Compose Filter.ParseTrace Filter.RightTrace)
+                      Filter.Namespace
+                    )
+                    Filter.RightAt
+                  )
+                  (Filter.AesonWithAt (Trace.Remainder Trace.DataResources))
+              , Reducer.Changes (Trace.Remainder Trace.DataResources)
+              )
+rssChanges = (,)
   ( Filter.ParseTrace
     Filter.<->
     Filter.RightTrace
@@ -181,6 +264,9 @@ rssChanges = MkFilterReduce
     (Filter.AesonWithAt :: Filter.AesonWithAt (Trace.Remainder Trace.DataResources))
   )
   (Reducer.Changes (Trace.resourcesRSS . Trace.remainderData))
+
+rssChangesFR :: FilterReduce
+rssChangesFR = uncurry MkFilterReduce rssChanges
 
 --------------------------------------------------------------------------------
 
