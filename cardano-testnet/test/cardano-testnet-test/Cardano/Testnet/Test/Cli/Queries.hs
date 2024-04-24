@@ -4,8 +4,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-{- HLINT ignore "Use head" -}
-
 module Cardano.Testnet.Test.Cli.Queries
   ( hprop_cli_queries
   ) where
@@ -19,10 +17,13 @@ import           Prelude
 
 import           Control.Monad (forM_)
 import qualified Data.Aeson as Aeson
+import           Data.String
+import qualified Data.Text as T
 import qualified Data.Vector as Vector
 import           GHC.Stack (HasCallStack)
 import           System.FilePath ((</>))
 
+import           Testnet.Components.Configuration (eraToString)
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import qualified Testnet.Process.Cli as H
@@ -50,6 +51,7 @@ hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> 
   let sbe = ShelleyBasedEraConway
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
+      eraName = eraToString era
       fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 100
         , cardanoSlotLength = 0.1
@@ -78,55 +80,100 @@ hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> 
   H.note_ $ "Socketpath: " <> socketPath
   H.note_ $ "Foldblocks config file: " <> configurationFile
 
-  -- TODO: we could wait less: waiting 1 block should suffice.
   checkDRepsNumber epochStateView sbe 3
 
-  -- protocol-parameters to stdout
-  protocolParametersOut <- H.execCli' execConfig
-                             [ "conway", "query", "protocol-parameters" ]
-  H.diffVsGoldenFile
-    protocolParametersOut
-    "test/cardano-testnet-test/files/golden/queries/protocolParametersOut.txt"
-  -- protocol-parameters to a file
-  let protocolParametersOutFile = work </> "protocol-parameters-out.json"
-  H.noteM_ $ H.execCli' execConfig [ "conway", "query", "protocol-parameters"
-                                   , "--out-file", protocolParametersOutFile]
-  H.diffFileVsGoldenFile
-    protocolParametersOutFile
-    "test/cardano-testnet-test/files/golden/queries/protocolParametersFileOut.json"
 
-  -- tip to stdout
-  _ :: QueryTipLocalStateOutput <- H.noteShowM $ H.execCliStdoutToJson execConfig [ "conway", "query", "tip" ]
-  -- tip to a file
-  let tipOutFile = work </> "tip-out.json"
-  H.noteM_ $ H.execCli' execConfig [ "conway", "query", "tip"
-                                   , "--out-file", tipOutFile]
-  _ :: QueryTipLocalStateOutput <- H.leftFailM . H.readJsonFile $ tipOutFile
+  -- protocol-parameters
+  do
+    -- to stdout
+    protocolParametersOut <- H.execCli' execConfig [ eraName, "query", "protocol-parameters" ]
+    H.diffVsGoldenFile
+      protocolParametersOut
+      "test/cardano-testnet-test/files/golden/queries/protocolParametersOut.txt"
+    -- protocol-parameters to a file
+    let protocolParametersOutFile = work </> "protocol-parameters-out.json"
+    H.noteM_ $ H.execCli' execConfig [ eraName, "query", "protocol-parameters"
+                                     , "--out-file", protocolParametersOutFile]
+    H.diffFileVsGoldenFile
+      protocolParametersOutFile
+      "test/cardano-testnet-test/files/golden/queries/protocolParametersFileOut.json"
 
-  -- stake-pools to stdout
-  stakePoolsOut <- H.execCli' execConfig [ "conway", "query", "stake-pools" ]
-  length (lines stakePoolsOut) H.=== 3 -- Because, by default, 3 stake pools are created
-  -- Light test of the query's answer, the ids should exist:
-  forM_ (lines stakePoolsOut) $ \stakePoolId -> do
-    H.execCli' execConfig [ "conway", "query", "pool-state"
-                          , "--stake-pool-id", stakePoolId ]
-  -- stake-pools to a file
-  let stakePoolsOutFile = work </> "stake-pools-out.json"
-  H.noteM_ $ H.execCli' execConfig [ "conway", "query", "stake-pools"
-                                   , "--out-file", stakePoolsOutFile]
+  -- tip
+  do
+    -- to stdout
+    _ :: QueryTipLocalStateOutput <- H.noteShowM $ H.execCliStdoutToJson execConfig [ eraName, "query", "tip" ]
+    -- to a file
+    let tipOutFile = work </> "tip-out.json"
+    H.noteM_ $ H.execCli' execConfig [ eraName, "query", "tip"
+                                     , "--out-file", tipOutFile]
+    _ :: QueryTipLocalStateOutput <- H.readJsonFileOk tipOutFile
+    pure ()
 
-  -- query drep-state to stdout
-  -- TODO: deserialize to a Haskell value when
-  -- https://github.com/IntersectMBO/cardano-cli/issues/606 is tackled
-  dreps :: Aeson.Value <- H.noteShowM $ H.execCliStdoutToJson execConfig [ "conway", "query", "drep-state", "--all-dreps"]
-  assertArrayOfSize dreps 3
-  -- query drep-state to a file
-  let drepStateOutFile = work </> "drep-state-out.json"
-  H.noteM_ $ H.execCli' execConfig [ "conway", "query", "drep-state", "--all-dreps"
-                                   , "--out-file", drepStateOutFile]
-  _ :: Aeson.Value <- H.leftFailM . H.readJsonFile $ drepStateOutFile
+  -- stake-pools
+  do
+    -- to stdout
+    stakePoolsOut <- H.execCli' execConfig [ eraName, "query", "stake-pools" ]
+    H.assertWith stakePoolsOut $ \pools ->
+      length (lines pools) == 3 -- Because, by default, 3 stake pools are created
+    -- Light test of the query's answer, the ids should exist:
+    forM_ (lines stakePoolsOut) $ \stakePoolId -> do
+      H.execCli' execConfig [ eraName, "query", "pool-state"
+                            , "--stake-pool-id", stakePoolId ]
+    -- to a file
+    let stakePoolsOutFile = work </> "stake-pools-out.json"
+    H.noteM_ $ H.execCli' execConfig [ eraName, "query", "stake-pools" , "--out-file", stakePoolsOutFile]
+
+  -- stake-distribution
+  do
+    -- to stdout
+    stakeDistrOut <- H.execCli' execConfig [ eraName, "query", "stake-distribution" ]
+    -- stake addresses with stake
+    let stakeAddresses = map (both T.strip . T.breakOn " " . T.strip . fromString) . drop 2 . lines $ stakeDistrOut
+    H.assertWith stakeAddresses $ \sa ->
+      -- Because, by default, 3 stake pools are created
+      length sa == 3
+    -- Light test of the query's answer, the ids should exist:
+    forM_ stakeAddresses $ \(stakePoolId, _) -> do
+      H.execCli' execConfig [ eraName, "query", "pool-state"
+                            , "--stake-pool-id", T.unpack stakePoolId ]
+    -- to a file
+    let stakePoolsOutFile = work </> "stake-pools-out.json"
+    H.noteM_ $ H.execCli' execConfig [ eraName, "query", "stake-pools"
+                                     , "--out-file", stakePoolsOutFile]
+
+  -- gov-state
+  do
+    -- to stdout
+    H.execCli' execConfig [ eraName, "query", "gov-state" ]
+      >>=
+        (`H.diffVsGoldenFile`
+            "test/cardano-testnet-test/files/golden/queries/govStateOut.json")
+    -- to a file
+    let govStateOutFile = work </> "gov-state-out.json"
+    H.noteM_ $ H.execCli' execConfig [ eraName, "query", "gov-state", "--out-file", govStateOutFile]
+    H.diffFileVsGoldenFile
+      govStateOutFile
+      "test/cardano-testnet-test/files/golden/queries/govStateOut.json"
+
+  -- drep-state
+  do
+    -- to stdout
+    -- TODO: deserialize to a Haskell value when
+    -- https://github.com/IntersectMBO/cardano-cli/issues/606 is tackled
+    dreps :: Aeson.Value <- H.noteShowM $ H.execCliStdoutToJson execConfig [ eraName, "query", "drep-state", "--all-dreps"]
+    assertArrayOfSize dreps 3
+    -- to a file
+    let drepStateOutFile = work </> "drep-state-out.json"
+    H.noteM_ $ H.execCli' execConfig [ eraName, "query", "drep-state", "--all-dreps"
+                                     , "--out-file", drepStateOutFile]
+    _ :: Aeson.Value <- H.readJsonFileOk drepStateOutFile
+    pure ()
+
 
   H.success
+
+both :: (a -> b) -> (a, a) -> (b, b)
+both f ~(x, y) = (f x, f y)
 
 -- | @assertArrayOfSize v n@ checks that the value is a JSON array of size @n@,
 -- otherwise it fails the test.
