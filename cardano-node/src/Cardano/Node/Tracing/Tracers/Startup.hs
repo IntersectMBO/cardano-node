@@ -276,7 +276,7 @@ instance ( Show (BlockNodeToNodeVersion blk)
                ]
 
   asMetrics (BlockForgingUpdate b) =
-    [ IntM "can_forge_blocks"
+    [ IntM "forging_enabled"
       (case  b of
         EnabledBlockForging -> 1
         DisabledBlockForging -> 0
@@ -405,7 +405,8 @@ instance MetaTrace  (StartupTrace blk) where
   documentFor _ns = Nothing
 
   metricsDocFor (Namespace _ ["BlockForgingUpdate"]) =
-    [("can_forge_blocks","Can this node forging blocks (is it provided with block forging credentials) 0 = no, 1 = yes")]
+    [("forging_enabled","Can this node forge blocks? (Is it provided with block forging credentials) 0 = no, 1 = yes")]
+
 
   metricsDocFor _ = []
 
