@@ -123,7 +123,7 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
                                     (fromIntegral $ 4 + proposalNum) Nothing 3
      | (proposalNum, wallet) <- zip [1..(4 :: Int)] (cycle [wallet0, wallet1, wallet2])]
 
-  (EpochNo epochAfterTimeout) <- getCurrentEpochNo epochStateView sbe
+  (EpochNo epochAfterTimeout) <- getCurrentEpochNo epochStateView
   H.note_ $ "Epoch after which we are going to test timeout: " <> show epochAfterTimeout
 
   -- Last proposal (set activity to something else again and it should pass, because of inactivity)
@@ -158,7 +158,7 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
       propVotes = zip (concatMap (uncurry replicate) votes) [1..]
   annotateShow propVotes
 
-  (EpochNo epochBeforeProp) <- getCurrentEpochNo epochStateView sbe
+  (EpochNo epochBeforeProp) <- getCurrentEpochNo epochStateView
   H.note_ $ "Epoch before \"" <> prefix <> "\" prop: " <> show epochBeforeProp
 
   thisProposal@(governanceActionTxId, governanceActionIndex) <-
@@ -168,7 +168,7 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
   voteChangeProposal execConfig epochStateView sbe baseDir "vote"
                      governanceActionTxId governanceActionIndex propVotes wallet
 
-  (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView sbe
+  (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
   void $ waitUntilEpoch (File configurationFile) (File socketPath) (EpochNo (epochAfterProp + epochsToWait))

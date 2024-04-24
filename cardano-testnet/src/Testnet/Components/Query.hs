@@ -345,12 +345,7 @@ getMinDRepDeposit execConfig ceo = withFrozenCallStack $ do
 -- | Obtain current epoch number using 'getEpochState'
 getCurrentEpochNo :: (MonadTest m, MonadAssertion m, MonadIO m)
   => EpochStateView
-  -> ShelleyBasedEra ConwayEra
   -> m EpochNo
-getCurrentEpochNo epochStateView sbe = do
-  AnyNewEpochState actualEra newEpochState <- getEpochState epochStateView
-  case testEquality sbe actualEra of
-    Just Refl -> return $ shelleyBasedEraConstraints sbe newEpochState
-                            ^. L.nesELL
-    Nothing ->
-      error $ "Eras mismatch! expected: " <> show sbe <> ", actual: " <> show actualEra
+getCurrentEpochNo epochStateView = do
+  AnyNewEpochState _ newEpochState <- getEpochState epochStateView
+  return $ newEpochState ^. L.nesELL

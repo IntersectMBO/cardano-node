@@ -461,7 +461,7 @@ delegateToDRep execConfig epochStateView configurationFile socketPath sbe work p
   submitTx execConfig cEra repRegSignedRegTx1
 
   -- Wait two epochs
-  (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView sbe
+  (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView
   void $ waitUntilEpoch (File configurationFile) (File socketPath) (EpochNo (epochAfterProp + 2))
 
 -- | This function obtains the identifier for the last enacted parameter update proposal
