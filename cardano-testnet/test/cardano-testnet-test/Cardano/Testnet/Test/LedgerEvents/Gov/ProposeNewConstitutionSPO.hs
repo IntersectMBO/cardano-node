@@ -22,15 +22,14 @@ import           Prelude
 
 import           Control.Monad.Trans.State.Strict (put)
 import           Data.Bifunctor (Bifunctor (..))
-import           Data.List (isInfixOf)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           Data.Word
 import           GHC.Stack (HasCallStack)
 import           Lens.Micro
-import           System.Exit (ExitCode (ExitSuccess))
 import           System.FilePath ((</>))
 
+import           Testnet.Components.DReps (failToSubmitTx)
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import qualified Testnet.Process.Cli as P
@@ -215,13 +214,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
     ]
 
   -- Call should fail, because SPOs are unallowed to vote on the constitution
-  (exitCode, _, stderr) <- H.execCliAny execConfig
-    [ "conway", "transaction", "submit"
-    , "--tx-file", voteTxFp
-    ]
-
-  exitCode H./== ExitSuccess -- Dit it fail?
-  H.assert $ "DisallowedVoters" `isInfixOf` stderr -- Did it fail for the expected reason?
+  failToSubmitTx execConfig cEra (File voteTxFp) "DisallowedVoters"
 
 getConstitutionProposal
   :: (HasCallStack, MonadIO m, MonadTest m)
