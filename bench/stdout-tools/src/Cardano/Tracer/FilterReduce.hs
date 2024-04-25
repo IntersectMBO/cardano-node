@@ -143,7 +143,7 @@ missedSlots :: ( Filter.Compose
                      (Filter.Compose Filter.ParseTrace Filter.RightTrace)
                      Filter.Namespace
                    )
-                   (Filter.Aeson Trace.DataWithSlot)
+                   (Filter.Aeson (Trace.Remainder Trace.DataWithSlot))
                , Reducer.MissedSlots
                )
 missedSlots = (,)
@@ -153,7 +153,7 @@ missedSlots = (,)
     Filter.<->
     Filter.Namespace "Forge.Loop.StartLeadershipCheckPlus"
     Filter.<->
-    (Filter.Aeson :: Filter.Aeson Trace.DataWithSlot)
+    (Filter.Aeson :: Filter.Aeson (Trace.Remainder Trace.DataWithSlot))
   )
   Reducer.MissedSlots
 
