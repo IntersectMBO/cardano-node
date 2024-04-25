@@ -66,7 +66,9 @@ cliFunctionReader :: String -> Either String FilterReduce.FilterReduce
 cliFunctionReader str = case str of
   "count-lines"  -> Right   FilterReduce.countLinesFR
   "count-traces" -> Right   FilterReduce.countTracesFR
-  "2s-silences"  -> Right $ FilterReduce.silencesFR 2
+  "2s-silences"  -> Right $ FilterReduce.silencesFR  2
+  "5s-silences"  -> Right $ FilterReduce.silencesFR  5
+  "10s-silences" -> Right $ FilterReduce.silencesFR 10
   "count-FLSLCP" -> Right $ FilterReduce.countNamespaceFR "Forge.Loop.StartLeadershipCheckPlus"
   "missed-slots" -> Right   FilterReduce.missedSlotsFR
   "utxo-size"    -> Right   FilterReduce.utxoSizeFR

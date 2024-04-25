@@ -135,5 +135,12 @@ instance Reducer (Changes t) where
         else (Just actual, sq Seq.|> (at, actual))
   showAns _ = show
   printAns _ (_, sq) = mapM_
-    (\(t,h) -> putStrLn $ show t ++ ": " ++ show h)
+    (\(t,h) ->
+      let showT = show t
+          size  = length showT
+          extra = if size < 33 -- "2024-04-06 05:55:39.600335766 UTC"
+                  then replicate (33 - size) ' '
+                  else ""
+      in putStrLn $ showT ++ "; " ++ extra ++ show h
+    )
     (toList sq)
