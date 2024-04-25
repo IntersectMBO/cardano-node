@@ -2,7 +2,7 @@
 name: Feature request
 about: Submit a feature request
 title: "[FR] - "
-labels: "type: enhancement"
+labels: ["type: enhancement", "needs triage"]
 assignees: ''
 
 ---

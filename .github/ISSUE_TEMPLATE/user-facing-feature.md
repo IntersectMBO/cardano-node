@@ -2,7 +2,7 @@
 name: User facing feature
 about: For internal use only; Open a user-facing feature tracking file
 title: "[FEATURE] - "
-labels: ["type: internal-feature", "user type: internal"]
+labels: ["type: internal-feature", "user type: internal", "needs triage"]
 assignees: ''
 
 ---
