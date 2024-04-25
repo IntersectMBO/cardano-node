@@ -260,7 +260,7 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
                       , P.signingKeyFile = stakeSKeyFp
                       }
 
-  proposalAnchorFile <- H.note $ baseDir </> "sample-proposFal-anchor"
+  proposalAnchorFile <- H.note $ baseDir </> "sample-proposal-anchor"
   H.writeFile proposalAnchorFile "dummy anchor data"
 
   proposalAnchorDataHash <- H.execCli' execConfig
@@ -270,7 +270,7 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
 
   minDRepDeposit <- getMinDRepDeposit execConfig ceo
 
-  proposalFile <- H.note $ baseDir </> "sample-proposFal-anchor"
+  proposalFile <- H.note $ baseDir </> "sample-proposal-anchor"
 
   void $ H.execCli' execConfig $
     [ "conway", "governance", "action", "create-protocol-parameters-update"
