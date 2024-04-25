@@ -1,12 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Testnet.Components.DReps
-  ( SomeKeyPair(..)
-  , VoteFile
+  ( VoteFile
   , generateDRepKeyPair
   , generateRegistrationCertificate
   , createCertificatePublicationTxBody
@@ -46,8 +44,8 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Query (EpochStateView, findLargestUtxoForPaymentKey,
                    getCurrentEpochNo, getMinDRepDeposit, waitUntilEpoch)
 import qualified Testnet.Process.Run as H
-import           Testnet.Runtime (PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair),
-                   PaymentKeyPair (..), StakingKeyPair (StakingKeyPair, stakingSKey))
+import           Testnet.Runtime (KeyPair(..), PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair),
+                   PaymentKeyPair (..), StakingKeyPair (..), SomeKeyPair (..))
 import           Testnet.Start.Types (anyEraToString)
 
 import           Hedgehog (MonadTest, evalMaybe)
@@ -200,23 +198,6 @@ createVotingTxBody execConfig epochStateView sbe work prefix votes wallet = do
 -- Transaction signing
 
 data SignedTx
-
-class KeyPair a where
-  secretKey :: a -> FilePath
-
-instance KeyPair PaymentKeyPair where
-  secretKey :: PaymentKeyPair -> FilePath
-  secretKey = paymentSKey
-
-instance KeyPair StakingKeyPair where
-  secretKey :: StakingKeyPair -> FilePath
-  secretKey = stakingSKey
-
-data SomeKeyPair = forall a . KeyPair a => SomeKeyPair a
-
-instance KeyPair SomeKeyPair where
-  secretKey :: SomeKeyPair -> FilePath
-  secretKey (SomeKeyPair x) = secretKey x
 
 -- | Calls @cardano-cli@ to signs a transaction body using the specified key pairs.
 --
