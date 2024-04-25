@@ -96,9 +96,8 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
 
   -- This proposal should pass
   let minEpochsToWaitIfChanging = 0 -- The change already provides a min bound
-      maxEpochsToWaitAfterProposal = 10 -- If it takes more than 10 epochs we give up in any case
       minEpochsToWaitIfNotChanging = 3 -- We cannot wait for change since there is no change (we wait a bit)
-      maxEpochsToWaitIfNotChanging = 4 -- The timeout can be much shorter for the same reason
+      maxEpochsToWaitAfterProposal = 10 -- If it takes more than 10 epochs we give up in any case
       firstTargetDRepActivity = 3
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "firstProposal" wallet0 [(1, "yes")] firstTargetDRepActivity
@@ -124,7 +123,7 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "failingProposal" wallet2 [(1, "yes")] secondTargetDRepActivity
                                     minEpochsToWaitIfNotChanging (Just firstTargetDRepActivity)
-                                    maxEpochsToWaitIfNotChanging
+                                    maxEpochsToWaitAfterProposal
 
   -- We now send a bunch of proposals to make sure that the 2 new DReps expire.
   -- because DReps won't expire if there is not enough activity (opportunites to participate).
@@ -135,7 +134,7 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
                                 ("fillerProposalNum" ++ show proposalNum) wallet [(1, "yes")]
                                 (secondTargetDRepActivity + fromIntegral proposalNum)
                                 minEpochsToWaitIfNotChanging Nothing
-                                maxEpochsToWaitIfNotChanging
+                                maxEpochsToWaitAfterProposal
      | (proposalNum, wallet) <- zip [1..numOfFillerProposals] (cycle [wallet0, wallet1, wallet2])]
 
   (EpochNo epochAfterTimeout) <- getCurrentEpochNo epochStateView
@@ -182,7 +181,7 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
 
   thisProposal@(governanceActionTxId, governanceActionIndex) <-
     makeActivityChangeProposal execConfig epochStateView (File configurationFile) (File socketPath)
-                               ceo baseDir "proposal" mPreviousProposalInfo change wallet
+                               ceo baseDir "proposal" mPreviousProposalInfo change wallet (epochBeforeProp + maxWait)
 
   voteChangeProposal execConfig epochStateView sbe baseDir "vote"
                      governanceActionTxId governanceActionIndex propVotes wallet
@@ -242,9 +241,10 @@ makeActivityChangeProposal
   -> Maybe (String, Word32)
   -> Word32
   -> PaymentKeyInfo
+  -> Word64
   -> m (String, Word32)
 makeActivityChangeProposal execConfig epochStateView configurationFile socketPath
-                           ceo work prefix prevGovActionInfo drepActivity wallet = do
+                           ceo work prefix prevGovActionInfo drepActivity wallet timeout = do
 
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
@@ -308,12 +308,12 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
   !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex sbe (fromString governanceActionTxId))
                                         (unFile configurationFile)
                                         (unFile socketPath)
-                                        (EpochNo 40)
+                                        (EpochNo timeout)
 
   governanceActionIndex <- case propSubmittedResult of
                              Left e ->
                                H.failMessage callStack
-                                 $ "findCondition failed with: " <> displayError e
+                                 $ "makeActivityChangeProposal failed waiting for gov action with: " <> displayError e
                              Right Nothing ->
                                H.failMessage callStack "Couldn't find proposal."
                              Right (Just a) -> return a
