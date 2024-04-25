@@ -32,6 +32,7 @@ import           Control.Monad (forM, void)
 import           Control.Monad.Catch (MonadCatch)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as AL
+import           Data.List (isInfixOf)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word32)
@@ -247,15 +248,20 @@ failToSubmitTx
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> AnyCardanoEra -- ^ Specifies the current Cardano era.
   -> File SignedTx In -- ^ Signed transaction to be submitted, obtained using 'signTx'.
+  -> String -- ^ Substring of the error to check for to ensure submission failed for
+            -- the right reason.
   -> m ()
-failToSubmitTx execConfig cEra signedTx = GHC.withFrozenCallStack $ do
-  (exitCode, _, _) <- H.execFlexAny' execConfig "cardano-cli" "CARDANO_CLI"
+failToSubmitTx execConfig cEra signedTx reasonForFailure = GHC.withFrozenCallStack $ do
+  (exitCode, _, stderr) <- H.execFlexAny' execConfig "cardano-cli" "CARDANO_CLI"
                                      [ anyEraToString cEra, "transaction", "submit"
                                      , "--tx-file", unFile signedTx
                                      ]
-  case exitCode of
+  case exitCode of -- Did it fail?
     ExitSuccess -> H.failMessage GHC.callStack "Transaction submission was expected to fail but it succeeded"
-    _ -> return ()
+    _ -> if reasonForFailure `isInfixOf` stderr -- Did it fail for the expected reason?
+         then return ()
+         else H.failMessage GHC.callStack $ "Transaction submission failed for the wrong reason (not " ++
+                                            show reasonForFailure ++ "): " ++ stderr
 
 -- | Retrieves the transaction ID (governance action ID) from a signed
 -- transaction file using @cardano-cli@.
