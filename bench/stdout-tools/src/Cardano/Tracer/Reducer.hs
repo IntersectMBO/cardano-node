@@ -93,13 +93,13 @@ instance Reducer Silences where
     (toList sq)
 
 instance Reducer MissedSlots where
-  type instance Elem  MissedSlots = Trace.DataWithSlot
+  type instance Elem  MissedSlots = Trace.Remainder Trace.DataWithSlot
   type instance Accum MissedSlots = (Maybe Integer, Seq.Seq Integer)
   initialOf _ = (Nothing, Seq.empty)
   -- TODO: Bench this strictness annotation!
-  reducerOf MissedSlots (maybePrevSlot, !sq) dataWithSlot = do
+  reducerOf MissedSlots (maybePrevSlot, !sq) aeson = do
     -- TODO: Use `unsnoc` when available
-    let actualSlot = Trace.slot dataWithSlot
+    let actualSlot = (Trace.slot . Trace.remainderData) aeson
     case maybePrevSlot of
       Nothing -> (Just actualSlot, Seq.empty)
       (Just prevSlot) ->
