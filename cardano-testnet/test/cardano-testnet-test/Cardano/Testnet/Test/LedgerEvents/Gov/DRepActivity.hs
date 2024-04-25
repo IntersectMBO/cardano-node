@@ -11,23 +11,25 @@ module Cardano.Testnet.Test.LedgerEvents.Gov.DRepActivity
 
 import           Cardano.Api as Api
 import           Cardano.Api.Error (displayError)
-import           Cardano.Api.Ledger (drepExpiry)
+import           Cardano.Api.Ledger (EpochInterval (EpochInterval), drepExpiry)
 
+import           Cardano.Ledger.Conway.Core (curPParamsGovStateL)
+import           Cardano.Ledger.Conway.PParams (ppDRepActivityL)
+import           Cardano.Ledger.Shelley.API (NewEpochState (..))
+import           Cardano.Ledger.Shelley.LedgerState (epochStateGovStateL, nesEpochStateL)
 import           Cardano.Testnet
 
 import           Prelude
 
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Lens as AL
-import           Data.ByteString.Lazy.Char8 (pack)
+import           Control.Monad.Trans.State.Strict (StateT)
 import qualified Data.Map as Map
 import           Data.String
 import qualified Data.Text as Text
 import           Data.Word (Word32, Word64)
 import           GHC.Stack (callStack)
-import           Lens.Micro ((^?))
+import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
 
 import           Testnet.Components.DReps (createVotingTxBody, delegateToDRep, generateVoteFiles,
@@ -93,11 +95,15 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
   -- This proposal should pass
-  let firstTargetDRepActivity = 3
-      epochsToWaitAfterProposal = 3
+  let minEpochsToWaitIfChanging = 0 -- The change already provides a min bound
+      maxEpochsToWaitAfterProposal = 10 -- If it takes more than 10 epochs we give up in any case
+      minEpochsToWaitIfNotChanging = 3 -- We cannot wait for change since there is no change (we wait a bit)
+      maxEpochsToWaitIfNotChanging = 4 -- The timeout can be much shorter for the same reason
+      firstTargetDRepActivity = 3
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "firstProposal" wallet0 [(1, "yes")] firstTargetDRepActivity
-                                    (Just firstTargetDRepActivity) epochsToWaitAfterProposal
+                                    minEpochsToWaitIfChanging (Just firstTargetDRepActivity)
+                                    maxEpochsToWaitAfterProposal
 
   -- Now we register two new DReps
   drep2 <- registerDRep execConfig epochStateView ceo work "drep2" wallet1
@@ -117,7 +123,8 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
   let secondTargetDRepActivity = firstTargetDRepActivity + 1
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "failingProposal" wallet2 [(1, "yes")] secondTargetDRepActivity
-                                    (Just firstTargetDRepActivity) epochsToWaitAfterProposal
+                                    minEpochsToWaitIfNotChanging (Just firstTargetDRepActivity)
+                                    maxEpochsToWaitIfNotChanging
 
   -- We now send a bunch of proposals to make sure that the 2 new DReps expire.
   -- because DReps won't expire if there is not enough activity (opportunites to participate).
@@ -127,7 +134,8 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
     [activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                 ("fillerProposalNum" ++ show proposalNum) wallet [(1, "yes")]
                                 (secondTargetDRepActivity + fromIntegral proposalNum)
-                                Nothing epochsToWaitAfterProposal
+                                minEpochsToWaitIfNotChanging Nothing
+                                maxEpochsToWaitIfNotChanging
      | (proposalNum, wallet) <- zip [1..numOfFillerProposals] (cycle [wallet0, wallet1, wallet2])]
 
   (EpochNo epochAfterTimeout) <- getCurrentEpochNo epochStateView
@@ -138,7 +146,8 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
   let lastTargetDRepActivity = secondTargetDRepActivity + fromIntegral numOfFillerProposals + 1
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "lastProposal" wallet0 [(1, "yes")] lastTargetDRepActivity
-                                    (Just lastTargetDRepActivity) epochsToWaitAfterProposal
+                                    minEpochsToWaitIfChanging (Just lastTargetDRepActivity)
+                                    maxEpochsToWaitAfterProposal
 
 activityChangeProposalTest
   :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
@@ -152,11 +161,12 @@ activityChangeProposalTest
   -> PaymentKeyInfo
   -> t (Int, String)
   -> Word32
+  -> Word64
   -> Maybe Word32
   -> Word64
   -> m (String, Word32)
 activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo work prefix
-                           wallet votes change mExpected epochsToWait = do
+                           wallet votes change minWait mExpected maxWait = do
 
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
 
@@ -180,13 +190,45 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
   (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
-  void $ waitUntilEpoch (File configurationFile) (File socketPath) (EpochNo (epochAfterProp + epochsToWait))
-  case mExpected of
-    Nothing -> return ()
-    Just expected -> do dRepActivityAfterProp <- getDRepActivityValue execConfig
-                        dRepActivityAfterProp === fromIntegral expected
+  waitAndCheck epochAfterProp
 
   return thisProposal
+
+  where
+    waitAndCheck :: (MonadTest m, MonadIO m)
+                 => Word64 -> m ()
+    waitAndCheck epochAfterProp = do
+      !eProposalResult
+        <- evalIO . runExceptT $ foldEpochState
+                                    (File configurationFile)
+                                    (File socketPath)
+                                    FullValidation
+                                    (EpochNo (epochAfterProp + maxWait))
+                                    ()
+                                    (\epochState _ _ -> filterEpochState (isSuccess epochAfterProp) epochState)
+      void $ evalEither eProposalResult
+
+    filterEpochState :: (EpochNo -> EpochInterval -> Bool) -> AnyNewEpochState -> StateT () IO LedgerStateCondition
+    filterEpochState f (AnyNewEpochState sbe newEpochState) =
+        caseShelleyToBabbageOrConwayEraOnwards
+          (const $ error "activityChangeProposalTest: Only conway era onwards supported")
+          (const $ do
+            let pParams = newEpochState ^. nesEpochStateL . epochStateGovStateL . curPParamsGovStateL . ppDRepActivityL
+                currEpoch = nesEL newEpochState
+            return (if f currEpoch pParams
+                    then ConditionMet
+                    else ConditionNotMet)
+          )
+          sbe
+
+    isSuccess :: Word64 -> EpochNo -> EpochInterval -> Bool
+    isSuccess epochAfterProp (EpochNo epochNo) (EpochInterval epochInterval) =
+      (epochAfterProp + minWait <= epochNo) &&
+      (case mExpected of
+        Nothing -> True
+        Just expected -> epochInterval == expected) &&
+      (epochNo <= epochAfterProp + maxWait)
+
 
 makeActivityChangeProposal
   :: (H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
@@ -305,19 +347,3 @@ voteChangeProposal execConfig epochStateView sbe work prefix governanceActionTxI
   voteTxFp <- signTx execConfig cEra baseDir "signed-vote-tx" voteTxBodyFp
                      (paymentKeyInfoPair wallet:[defaultDRepKeyPair n | (_, n) <- votes])
   submitTx execConfig cEra voteTxFp
-
-
-getDRepActivityValue :: (MonadTest m, MonadCatch m, MonadIO m) => H.ExecConfig -> m Integer
-getDRepActivityValue execConfig = do
-  govStateString <- H.execCli' execConfig
-    [ "conway", "query", "gov-state"
-    , "--volatile-tip"
-    ]
-
-  govStateJSON <- H.nothingFail (Aeson.decode (pack govStateString) :: Maybe Aeson.Value)
-  let mDRepActivityValue :: Maybe Integer
-      mDRepActivityValue = govStateJSON
-                             ^? AL.key "currentPParams"
-                              . AL.key "dRepActivity"
-                              . AL._Integer
-  evalMaybe mDRepActivityValue
