@@ -29,7 +29,7 @@ import           GHC.Stack (HasCallStack)
 import           Lens.Micro
 import           System.FilePath ((</>))
 
-import           Testnet.Components.DReps (failToSubmitTx)
+import           Testnet.Components.DReps (failToSubmitTx, signTx, submitTx)
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import qualified Testnet.Process.Cli as P
@@ -133,7 +133,6 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
     ]
 
   txbodyFp <- H.note $ work </> "tx.body"
-  txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
   txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
@@ -145,21 +144,13 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
     , "--out-file", txbodyFp
     ]
 
-  H.noteM_ $ H.execCli' execConfig
-    [ "conway", "transaction", "sign"
-    , "--tx-body-file", txbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
-    , "--out-file", txbodySignedFp
-    ]
+  txBodySigned <- signTx execConfig cEra work "signed" (File txbodyFp) [paymentKeyInfoPair wallet0]
 
-  H.noteM_ $ H.execCli' execConfig
-    [ "conway", "transaction", "submit"
-    , "--tx-file", txbodySignedFp
-    ]
+  submitTx execConfig cEra txBodySigned
 
   txidString <- mconcat . lines <$> H.execCli' execConfig
     [ "transaction", "txid"
-    , "--tx-file", txbodySignedFp
+    , "--tx-file", unFile txBodySigned
     ]
 
   currentEpoch <- getCurrentEpochNo epochStateView
