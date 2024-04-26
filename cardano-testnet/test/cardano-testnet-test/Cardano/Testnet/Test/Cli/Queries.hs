@@ -130,10 +130,10 @@ hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> 
     -- to stdout
     stakeDistrOut <- H.execCli' execConfig [ eraName, "query", "stake-distribution" ]
     liftIO $ writeFile ("/tmp/stake-distribution-after_stdout_flagless") stakeDistrOut
-    stakeDistrOut' <- H.execCli' execConfig [ eraName, "query", "stake-distribution", "--output-text" ]
-    liftIO $ writeFile ("/tmp/stake-distribution-after_stdout_text") stakeDistrOut'
-    stakeDistrOut'' <- H.execCli' execConfig [ eraName, "query", "stake-distribution", "--output-json" ]
-    liftIO $ writeFile ("/tmp/stake-distribution-after_stdout_json") stakeDistrOut''
+    -- stakeDistrOut' <- H.execCli' execConfig [ eraName, "query", "stake-distribution", "--output-text" ]
+    -- liftIO $ writeFile ("/tmp/stake-distribution-after_stdout_text") stakeDistrOut'
+    -- stakeDistrOut'' <- H.execCli' execConfig [ eraName, "query", "stake-distribution", "--output-json" ]
+    -- liftIO $ writeFile ("/tmp/stake-distribution-after_stdout_json") stakeDistrOut''
     -- stake addresses with stake
     let stakeAddresses = map (both T.strip . T.breakOn " " . T.strip . fromString) . drop 2 . lines $ stakeDistrOut
     H.assertWith stakeAddresses $ \sa ->
@@ -145,17 +145,17 @@ hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> 
                             , "--stake-pool-id", T.unpack stakePoolId ]
     -- to a file
     let stakePoolsOutFile = work </> "stake-pools-out.json"
-        stakePoolsOutFilePrime = work </> "stake-pools-out-prime.json"
-        stakePoolsOutFilePPrime = work </> "stake-pools-out-pprime.json"
+        -- stakePoolsOutFilePrime = work </> "stake-pools-out-prime.json"
+        -- stakePoolsOutFilePPrime = work </> "stake-pools-out-pprime.json"
     H.noteM_ $ H.execCli' execConfig [ eraName, "query", "stake-distribution"
                                      , "--out-file", stakePoolsOutFile]
-    H.noteM_ $ H.execCli' execConfig [ eraName, "query", "stake-distribution"
-                                     , "--out-file", stakePoolsOutFilePrime, "--output-text"]
-    H.noteM_ $ H.execCli' execConfig [ eraName, "query", "stake-distribution"
-                                     , "--out-file", stakePoolsOutFilePPrime, "--output-json"]
-    liftIO $ writeFile ("/tmp/stake-distribution-after_file_flagless") stakePoolsOutFile
-    liftIO $ writeFile ("/tmp/stake-distribution-after_file_text") stakePoolsOutFilePrime
-    liftIO $ writeFile ("/tmp/stake-distribution-after_file_json") stakePoolsOutFilePPrime
+    -- H.noteM_ $ H.execCli' execConfig [ eraName, "query", "stake-distribution"
+    --                                  , "--out-file", stakePoolsOutFilePrime, "--output-text"]
+    -- H.noteM_ $ H.execCli' execConfig [ eraName, "query", "stake-distribution"
+    --                                  , "--out-file", stakePoolsOutFilePPrime, "--output-json"]
+    liftIO $ copyFile  stakePoolsOutFile ("/tmp/stake-distribution-after_file_flagless") 
+    -- liftIO $ copyFile  stakePoolsOutFilePrime ("/tmp/stake-distribution-after_file_text") 
+    -- liftIO $ copyFile  stakePoolsOutFilePPrime ("/tmp/stake-distribution-after_file_json") 
 
   -- gov-state
   do
