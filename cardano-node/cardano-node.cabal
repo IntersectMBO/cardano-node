@@ -144,7 +144,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.44
+                      , cardano-api ^>= 8.45
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
