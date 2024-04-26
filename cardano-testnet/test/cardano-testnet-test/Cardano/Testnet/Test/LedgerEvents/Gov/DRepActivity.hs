@@ -28,7 +28,7 @@ import qualified Data.Map as Map
 import           Data.String
 import qualified Data.Text as Text
 import           Data.Word (Word32, Word64)
-import           GHC.Stack (callStack)
+import           GHC.Stack (HasCallStack, callStack)
 import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
 
@@ -52,7 +52,7 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRep Activity/"'@
 hprop_check_drep_activity :: Property
 hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBasePath' -> do
-    -- Start a local test net
+  -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
@@ -149,7 +149,7 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
                                     maxEpochsToWaitAfterProposal
 
 activityChangeProposalTest
-  :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
+  :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
   => H.ExecConfig
   -> EpochStateView
   -> FilePath
@@ -230,7 +230,7 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
 
 
 makeActivityChangeProposal
-  :: (H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
+  :: (HasCallStack, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig
   -> EpochStateView
   -> NodeConfigFile 'In
@@ -320,7 +320,7 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
 
   return (governanceActionTxId, governanceActionIndex)
 
-voteChangeProposal :: (MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m)
+voteChangeProposal :: (HasCallStack, MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m)
   => H.ExecConfig
   -> EpochStateView
   -> ShelleyBasedEra ConwayEra

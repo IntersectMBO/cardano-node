@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Testnet.Components.DReps
@@ -31,7 +32,6 @@ import           Control.Monad (forM, void)
 import           Control.Monad.Catch (MonadCatch)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as AL
-import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word32)
@@ -43,9 +43,11 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Query (EpochStateView, findLargestUtxoForPaymentKey,
                    getCurrentEpochNo, getMinDRepDeposit, waitUntilEpoch)
+import qualified Testnet.Process.Cli as H
 import qualified Testnet.Process.Run as H
-import           Testnet.Runtime (KeyPair(..), PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair),
-                   PaymentKeyPair (..), StakingKeyPair (..), SomeKeyPair (..))
+import           Testnet.Runtime (KeyPair (..),
+                   PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair), PaymentKeyPair (..),
+                   SomeKeyPair (..), StakingKeyPair (..))
 import           Testnet.Start.Types (anyEraToString)
 
 import           Hedgehog (MonadTest, evalMaybe)
@@ -363,12 +365,10 @@ getLastPParamUpdateActionId :: (MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> m (Maybe (String, Word32))
 getLastPParamUpdateActionId execConfig = do
-  govStateString <- H.execCli' execConfig
+  govStateJSON :: Aeson.Value <- H.execCliStdoutToJson execConfig
     [ "conway", "query", "gov-state"
     , "--volatile-tip"
     ]
-
-  govStateJSON <- H.nothingFail (Aeson.decode (LBS.pack govStateString) :: Maybe Aeson.Value)
   let mLastPParamUpdateActionId :: Maybe Aeson.Value
       mLastPParamUpdateActionId = govStateJSON
                              ^? AL.key "nextRatifyState"
