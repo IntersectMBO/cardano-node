@@ -35,8 +35,8 @@ library
                       , aeson-pretty
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 8.44
-                      , cardano-cli ^>= 8.22
+                      , cardano-api:{cardano-api, internal} ^>= 8.46
+                      , cardano-cli ^>= 8.23
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2
@@ -68,7 +68,7 @@ library
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.14
+                      , ouroboros-network ^>= 0.16
                       , ouroboros-network-api
                       , prettyprinter
                       , process
