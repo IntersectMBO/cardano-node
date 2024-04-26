@@ -204,13 +204,13 @@ preExecutePlutusV2 (major, _minor) (PlutusScript _ (PlutusScriptSerialised scrip
       , PlutusV2.txInfoFee = mempty
       , PlutusV2.txInfoMint = mempty
       , PlutusV2.txInfoDCert = []
-      , PlutusV2.txInfoWdrl = PlutusV2.fromList []
+      , PlutusV2.txInfoWdrl = PlutusV2.unsafeFromList []
       , PlutusV2.txInfoValidRange = PlutusV2.always
       , PlutusV2.txInfoSignatories = []
-      , PlutusV2.txInfoData = PlutusV2.fromList []
+      , PlutusV2.txInfoData = PlutusV2.unsafeFromList []
       , PlutusV2.txInfoId = PlutusV2.TxId ""
       , PlutusV2.txInfoReferenceInputs = []
-      , PlutusV2.txInfoRedeemers = PlutusV2.fromList []
+      , PlutusV2.txInfoRedeemers = PlutusV2.unsafeFromList []
       }
 
 preExecutePlutusV3 ::
@@ -255,13 +255,13 @@ preExecutePlutusV3 (major, _minor) (PlutusScript _ (PlutusScriptSerialised (scri
       , PlutusV3.txInfoFee = 0
       , PlutusV3.txInfoMint = mempty
       , PlutusV3.txInfoTxCerts = []
-      , PlutusV3.txInfoWdrl = PlutusV3.fromList []
+      , PlutusV3.txInfoWdrl = PlutusV3.unsafeFromList []
       , PlutusV3.txInfoValidRange = PlutusV3.always
       , PlutusV3.txInfoSignatories = []
-      , PlutusV3.txInfoData = PlutusV3.fromList []
+      , PlutusV3.txInfoData = PlutusV3.unsafeFromList []
       , PlutusV3.txInfoId = PlutusV3.TxId ""
       , PlutusV3.txInfoReferenceInputs = []
-      , PlutusV3.txInfoRedeemers = PlutusV3.fromList []
+      , PlutusV3.txInfoRedeemers = PlutusV3.unsafeFromList []
       , PlutusV3.txInfoVotes = AssocMap.empty
       , PlutusV3.txInfoProposalProcedures = []
       , PlutusV3.txInfoCurrentTreasuryAmount = Nothing

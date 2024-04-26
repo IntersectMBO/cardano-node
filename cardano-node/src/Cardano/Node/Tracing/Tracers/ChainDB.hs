@@ -504,10 +504,17 @@ instance ( LogFormatting (Header blk)
   forMachine _dtal ChainDB.PoppedReprocessLoEBlocksFromQueue =
       mconcat [ "kind" .= String "PoppedReprocessLoEBlocksFromQueue" ]
   forMachine dtal (ChainDB.ChainSelectionLoEDebug curChain loeFrag) =
-      mconcat [ "kind" .= String "ChainSelectionLoEDebug"
-              , "curChain" .= headAndAnchor curChain
-              , "loeFrag" .= headAndAnchor loeFrag
-              ]
+      case loeFrag of
+        ChainDB.LoEEnabled loeF ->
+          mconcat [ "kind" .= String "ChainSelectionLoEDebug"
+                  , "curChain" .= headAndAnchor curChain
+                  , "loeFrag" .= headAndAnchor loeF
+                  ]
+        ChainDB.LoEDisabled ->
+          mconcat [ "kind" .= String "ChainSelectionLoEDebug"
+                  , "curChain" .= headAndAnchor curChain
+                  , "loeFrag" .= String "LoE is disabled"
+                  ]
     where
       headAndAnchor frag = object
         [ "anchor" .= forMachine dtal (AF.anchorPoint frag)
@@ -1179,7 +1186,8 @@ instance ConvertRawHash blk
   forHuman (ChainDB.OpenedImmutableDB immTip chunk) =
           "Opened imm db with immutable tip at " <> renderPointAsPhrase immTip <>
           " and chunk " <> showT chunk
-  forHuman ChainDB.OpenedVolatileDB = "Opened vol db"
+  forHuman (ChainDB.OpenedVolatileDB maxSlotN) =
+    "Opened vol db with max slot number " <> showT maxSlotN
   forHuman ChainDB.OpenedLgrDB = "Opened lgr db"
   forHuman ChainDB.StartedOpeningDB = "Started opening Chain DB"
   forHuman ChainDB.StartedOpeningImmutableDB = "Started opening Immutable DB"
@@ -1198,8 +1206,9 @@ instance ConvertRawHash blk
     mconcat [ "kind" .= String "OpenedImmutableDB"
              , "immtip" .= forMachine dtal immTip
              , "epoch" .= String ((Text.pack . show) epoch) ]
-  forMachine _dtal ChainDB.OpenedVolatileDB =
-      mconcat [ "kind" .= String "OpenedVolatileDB" ]
+  forMachine _dtal (ChainDB.OpenedVolatileDB maxSlotN) =
+      mconcat [ "kind" .= String "OpenedVolatileDB"
+               , "maxSlotNo" .= String (showT maxSlotN) ]
   forMachine _dtal ChainDB.OpenedLgrDB =
       mconcat [ "kind" .= String "OpenedLgrDB" ]
   forMachine _dtal ChainDB.StartedOpeningDB =
@@ -1989,17 +1998,21 @@ instance StandardHash blk => LogFormatting (VolDB.TraceEvent blk) where
       mconcat [ "kind" .= String "InvalidFileNames"
                , "files" .= String (Text.pack . show $ map show fsPaths)
               ]
+    forMachine _dtal VolDB.DBClosed =
+      mconcat [ "kind" .= String "DBClosed" ]
 
 instance MetaTrace (VolDB.TraceEvent blk) where
     namespaceFor VolDB.DBAlreadyClosed {} = Namespace [] ["DBAlreadyClosed"]
     namespaceFor VolDB.BlockAlreadyHere {} = Namespace [] ["BlockAlreadyHere"]
     namespaceFor VolDB.Truncate {} = Namespace [] ["Truncate"]
     namespaceFor VolDB.InvalidFileNames {} = Namespace [] ["InvalidFileNames"]
+    namespaceFor VolDB.DBClosed {} = Namespace [] ["DBClosed"]
 
     severityFor  (Namespace _ ["DBAlreadyClosed"]) _ = Just Debug
     severityFor  (Namespace _ ["BlockAlreadyHere"]) _ = Just Debug
     severityFor  (Namespace _ ["Truncate"]) _ = Just Debug
     severityFor  (Namespace _ ["InvalidFileNames"]) _ = Just Debug
+    severityFor  (Namespace _ ["DBClosed"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     documentFor  (Namespace _ ["DBAlreadyClosed"]) = Just
@@ -2010,6 +2023,8 @@ instance MetaTrace (VolDB.TraceEvent blk) where
       "Truncates a file up to offset because of the error."
     documentFor  (Namespace _ ["InvalidFileNames"]) = Just
       "Reports a list of invalid file paths."
+    documentFor  (Namespace _ ["DBClosed"]) = Just
+      "Closing the volatile DB"
     documentFor _ = Nothing
 
     allNamespaces =
@@ -2017,6 +2032,7 @@ instance MetaTrace (VolDB.TraceEvent blk) where
       , Namespace [] ["BlockAlreadyHere"]
       , Namespace [] ["Truncate"]
       , Namespace [] ["InvalidFileNames"]
+      , Namespace [] ["DBClosed"]
       ]
 
 

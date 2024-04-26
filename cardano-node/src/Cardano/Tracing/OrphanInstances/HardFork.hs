@@ -396,6 +396,7 @@ instance ( ToJSON (BlockNodeToClientVersion x)
 instance ToJSON HardForkSpecificNodeToClientVersion where
     toJSON HardForkSpecificNodeToClientVersion1 = String "HardForkSpecificNodeToClientVersion1"
     toJSON HardForkSpecificNodeToClientVersion2 = String "HardForkSpecificNodeToClientVersion2"
+    toJSON HardForkSpecificNodeToClientVersion3 = String "HardForkSpecificNodeToClientVersion3"
 
 instance (ToJSON (BlockNodeToClientVersion blk)) => ToJSON (EraNodeToClientVersion blk) where
     toJSON EraNodeToClientDisabled = String "EraNodeToClientDisabled"

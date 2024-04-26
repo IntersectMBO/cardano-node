@@ -14,7 +14,7 @@ import           Cardano.Logging hiding (traceWith)
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Queries
 import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Consensus.Util.NormalForm.StrictTVar (StrictTVar, readTVar)
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (viewChainSyncState, csCandidate)
 import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.AnchoredFragment as Net
 import           Ouroboros.Network.Block (unSlotNo)
@@ -33,7 +33,6 @@ import           "contra-tracer" Control.Tracer
 import           Data.Aeson (ToJSON (..), Value (..), toJSON, (.=))
 import           Data.Functor ((<&>))
 import qualified Data.List as List
-import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.Text (Text)
@@ -101,10 +100,10 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
   tuple3pop :: (a, b, c) -> (a, b)
   tuple3pop (a, b, _) = (a, b)
 
-  getCandidates
-    :: StrictTVar IO (Map peer (StrictTVar IO (Net.AnchoredFragment (Header blk))))
-    -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
-  getCandidates var = readTVar var >>= traverse readTVar
+  -- getCandidates
+  --   :: StrictTVar IO (Map peer (StrictTVar IO (Net.AnchoredFragment (Header blk))))
+  --   -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
+  getCandidates handle = viewChainSyncState handle csCandidate
 
   extractPeers :: NodeKernel IO RemoteAddress LocalConnectionId blk
                 -> IO [PeerT blk]
@@ -114,7 +113,7 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
                                        . Net.readFetchClientsStateVars
                                        . getFetchClientRegistry $ kernel
                                      )
-    candidates <- STM.atomically . getCandidates . getNodeCandidates $ kernel
+    candidates <- STM.atomically . getCandidates . getChainSyncHandles $ kernel
 
     let peers = flip Map.mapMaybeWithKey candidates $ \cid af ->
                   maybe Nothing

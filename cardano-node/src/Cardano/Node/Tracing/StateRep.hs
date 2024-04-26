@@ -208,7 +208,7 @@ traceNodeStateChainDB _scp tr ev =
           traceWith tr $ NodeOpeningDbs $ OpenedImmutableDB (pointSlot p) chunk
         ChainDB.StartedOpeningVolatileDB ->
           traceWith tr $ NodeOpeningDbs StartedOpeningVolatileDB
-        ChainDB.OpenedVolatileDB ->
+        ChainDB.OpenedVolatileDB _maxSlotN ->
           traceWith tr $ NodeOpeningDbs OpenedVolatileDB
         ChainDB.StartedOpeningLgrDB ->
           traceWith tr $ NodeOpeningDbs StartedOpeningLgrDB

@@ -28,12 +28,10 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.VRF.Class as Crypto
 import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
-import qualified Cardano.Ledger.Allegra.Scripts as Allegra
 import qualified Cardano.Ledger.Alonzo.Plutus.Evaluate as Alonzo
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..), AlonzoUtxoPredFailure,
                    AlonzoUtxosPredFailure, AlonzoUtxowPredFailure (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Api as Ledger
 import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
@@ -78,7 +76,7 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
-import           Data.Aeson (Value (..), object)
+import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.List.NonEmpty as NonEmpty
@@ -398,6 +396,15 @@ instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) whe
             , "actualPolicyHash" .= actualPolicyHash
             , "expectedPolicyHash" .= expectedPolicyHash
             ]
+  toObject _ (Conway.DisallowedProposalDuringBootstrap proposal) =
+    mconcat [ "kind" .= String "DisallowedProposalDuringBootstrap"
+            , "proposal" .= proposal
+            ]
+    
+  toObject _ (Conway.DisallowedVotesDuringBootstrap votes) =
+    mconcat [ "kind" .= String "DisallowedVotesDuringBootstrap"
+            , "votes" .= votes
+            ]
 
 instance
   ( Core.Crypto (Consensus.EraCrypto era)
@@ -570,16 +577,6 @@ instance
              , "network" .= network
              , "addrs"   .= addrs
              ]
-
-
-instance ToJSON Allegra.ValidityInterval where
-  toJSON vi =
-    Aeson.object $
-        [ "invalidBefore"    .= x | x <- mbfield (Allegra.invalidBefore    vi) ]
-     ++ [ "invalidHereafter" .= x | x <- mbfield (Allegra.invalidHereafter vi) ]
-    where
-      mbfield SNothing  = []
-      mbfield (SJust x) = [x]
 
 instance
   ( ToObject (Ledger.EraRuleFailure "PPUP" ledgerera)
@@ -1150,32 +1147,6 @@ instance
   toObject verb (Alonzo.UpdateFailure pFailure) =
     toObject verb pFailure
 
-deriving newtype instance ToJSON Alonzo.IsValid
-
-instance ToJSON Alonzo.TagMismatchDescription where
-  toJSON tmd = case tmd of
-    Alonzo.PassedUnexpectedly ->
-      object
-        [ "kind" .= String "TagMismatchDescription"
-        , "error" .= String "PassedUnexpectedly"
-        ]
-    Alonzo.FailedUnexpectedly forReasons ->
-      object
-        [ "kind" .= String "TagMismatchDescription"
-        , "error" .= String "FailedUnexpectedly"
-        , "reconstruction" .= forReasons
-        ]
-
-instance ToJSON Alonzo.FailureDescription where
-  toJSON f = case f of
-    Alonzo.PlutusFailure t _bs ->
-      object
-        [ "kind" .= String "FailureDescription"
-        , "error" .= String "PlutusFailure"
-        , "description" .= t
-        -- , "reconstructionDetail" .= bs
-        ]
-
 instance
   ( Ledger.Era ledgerera
   , Show (PredicateFailure (Ledger.EraRule "LEDGERS" ledgerera))
@@ -1387,6 +1358,214 @@ instance
 instance ToObject (Ledger.VoidEraRule rule era) where
   -- NOTE: There are no values of type 'Ledger.VoidEraRule rule era'
   toObject _ = \case
+
+instance
+  ( Ledger.Era ledgerera
+  , ToObject (PredicateFailure (Ledger.EraRule "UTXOS" ledgerera))
+  , Show (Ledger.Value ledgerera)
+  , ToJSON (Ledger.Value ledgerera)
+  , ToJSON (Ledger.TxOut ledgerera)
+  , Core.Crypto (Ledger.EraCrypto ledgerera)
+  ) => ToObject (Conway.ConwayUtxoPredFailure ledgerera) where
+  toObject v = \case
+    Conway.UtxosFailure utxosPredFailure -> toObject v utxosPredFailure
+    Conway.BadInputsUTxO badInputs ->
+      mconcat [ "kind" .= String "BadInputsUTxO"
+              , "badInputs" .= badInputs
+              , "error" .= renderBadInputsUTxOErr badInputs
+              ]
+    Conway.OutsideValidityIntervalUTxO validityInterval slot ->
+      mconcat [ "kind" .= String "ExpiredUTxO"
+              , "validityInterval" .= validityInterval
+              , "slot" .= slot
+              ]
+    Conway.MaxTxSizeUTxO txsize maxtxsize ->
+      mconcat [ "kind" .= String "MaxTxSizeUTxO"
+              , "size" .= txsize
+              , "maxSize" .= maxtxsize
+              ]
+    Conway.InputSetEmptyUTxO ->
+      mconcat [ "kind" .= String "InputSetEmptyUTxO" ]
+    Conway.FeeTooSmallUTxO minfee txfee ->
+      mconcat [ "kind" .= String "FeeTooSmallUTxO"
+              , "minimum" .= minfee
+              , "fee" .= txfee
+              ]
+    Conway.ValueNotConservedUTxO consumed produced ->
+      mconcat [ "kind" .= String "ValueNotConservedUTxO"
+              , "consumed" .= consumed
+              , "produced" .= produced
+              , "error" .= renderValueNotConservedErr consumed produced
+              ]
+    Conway.WrongNetwork network addrs ->
+      mconcat [ "kind" .= String "WrongNetwork"
+              , "network" .= network
+              , "addrs"   .= addrs
+              ]
+    Conway.WrongNetworkWithdrawal network addrs ->
+      mconcat [ "kind" .= String "WrongNetworkWithdrawal"
+              , "network" .= network
+              , "addrs"   .= addrs
+              ]
+    Conway.OutputTooSmallUTxO badOutputs ->
+      mconcat [ "kind" .= String "OutputTooSmallUTxO"
+              , "outputs" .= badOutputs
+              , "error" .= String
+                ( mconcat
+                  [ "The output is smaller than the allow minimum "
+                  , "UTxO value defined in the protocol parameters"
+                  ]
+                )
+              ]
+    Conway.OutputBootAddrAttrsTooBig badOutputs ->
+      mconcat [ "kind" .= String "OutputBootAddrAttrsTooBig"
+              , "outputs" .= badOutputs
+              , "error" .= String "The Byron address attributes are too big"
+              ]
+    Conway.OutputTooBigUTxO badOutputs ->
+      mconcat [ "kind" .= String "OutputTooBigUTxO"
+              , "outputs" .= badOutputs
+              , "error" .= String "Too many asset ids in the tx output"
+              ]
+    Conway.InsufficientCollateral computedBalance suppliedFee ->
+      mconcat [ "kind" .= String "InsufficientCollateral"
+              , "balance" .= computedBalance
+              , "txfee" .= suppliedFee
+              ]
+    Conway.ScriptsNotPaidUTxO utxos ->
+      mconcat [ "kind" .= String "ScriptsNotPaidUTxO"
+              , "utxos" .= utxos
+              ]
+    Conway.ExUnitsTooBigUTxO pParamsMaxExUnits suppliedExUnits ->
+      mconcat [ "kind" .= String "ExUnitsTooBigUTxO"
+              , "maxexunits" .= pParamsMaxExUnits
+              , "exunits" .= suppliedExUnits
+              ]
+    Conway.CollateralContainsNonADA inputs ->
+      mconcat [ "kind" .= String "CollateralContainsNonADA"
+              , "inputs" .= inputs
+              ]
+    Conway.WrongNetworkInTxBody actualNetworkId netIdInTxBody ->
+      mconcat [ "kind" .= String "WrongNetworkInTxBody"
+              , "networkid" .= actualNetworkId
+              , "txbodyNetworkId" .= netIdInTxBody
+              ]
+    Conway.OutsideForecast slotNum ->
+      mconcat [ "kind" .= String "OutsideForecast"
+              , "slot" .= slotNum
+              ]
+    Conway.TooManyCollateralInputs maxCollateralInputs numberCollateralInputs ->
+      mconcat [ "kind" .= String "TooManyCollateralInputs"
+              , "max" .= maxCollateralInputs
+              , "inputs" .= numberCollateralInputs
+              ]
+    Conway.NoCollateralInputs ->
+      mconcat [ "kind" .= String "NoCollateralInputs" ]
+    Conway.IncorrectTotalCollateralField provided declared ->
+      mconcat [ "kind" .= String "UnequalCollateralReturn"
+              , "collateralProvided" .= provided
+              , "collateralDeclared" .= declared
+              ]
+    Conway.BabbageOutputTooSmallUTxO outputs ->
+      mconcat [ "kind" .= String "BabbageOutputTooSmall"
+              , "outputs" .= outputs
+              ]
+    Conway.BabbageNonDisjointRefInputs nonDisjointInputs ->
+      mconcat [ "kind" .= String "BabbageNonDisjointRefInputs"
+              , "outputs" .= nonDisjointInputs
+              ]
+
+instance
+  ( Api.ShelleyLedgerEra era ~ ledgerera
+  , Api.IsShelleyBasedEra era
+  , Ledger.Era ledgerera
+  , Ledger.EraCrypto ledgerera ~ StandardCrypto
+  , Show (Ledger.Value ledgerera)
+  , ToObject (PredicateFailure (Ledger.EraRule "UTXO" ledgerera))
+  , ToJSON (Ledger.Value ledgerera)
+  , ToJSON (Ledger.TxOut ledgerera)
+  ) => ToObject (Conway.ConwayUtxowPredFailure ledgerera) where
+  toObject v = \case
+    Conway.UtxoFailure utxoPredFail -> toObject v utxoPredFail
+    Conway.InvalidWitnessesUTXOW ws ->
+      mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
+              , "invalidWitnesses" .= map textShow ws
+              ]
+    Conway.MissingVKeyWitnessesUTXOW ws ->
+      mconcat [ "kind" .= String "MissingVKeyWitnessesUTXOW"
+              , "missingWitnesses" .= ws
+              ]
+    Conway.MissingScriptWitnessesUTXOW scripts ->
+      mconcat [ "kind" .= String "MissingScriptWitnessesUTXOW"
+              , "missingScripts" .= scripts
+              ]
+    Conway.ScriptWitnessNotValidatingUTXOW failedScripts ->
+      mconcat [ "kind" .= String "ScriptWitnessNotValidatingUTXOW"
+              , "failedScripts" .= failedScripts
+              ]
+    Conway.MissingTxBodyMetadataHash hash ->
+      mconcat [ "kind" .= String "MissingTxMetadata"
+              , "txBodyMetadataHash" .= hash
+              ]
+    Conway.MissingTxMetadata hash ->
+      mconcat [ "kind" .= String "MissingTxMetadata"
+              , "txBodyMetadataHash" .= hash
+              ]
+    Conway.ConflictingMetadataHash txBodyMetadataHash fullMetadataHash ->
+      mconcat [ "kind" .= String "ConflictingMetadataHash"
+              , "txBodyMetadataHash" .= txBodyMetadataHash
+              , "fullMetadataHash" .= fullMetadataHash
+              ]
+    Conway.InvalidMetadata ->
+      mconcat [ "kind" .= String "InvalidMetadata"
+              ]
+    Conway.ExtraneousScriptWitnessesUTXOW scripts ->
+      mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
+              , "extraneousScripts" .= Set.map renderScriptHash scripts
+              ]
+    Conway.MissingRedeemers scripts ->
+      mconcat [ "kind" .= String "MissingRedeemers"
+              , "scripts" .= renderMissingRedeemers Api.shelleyBasedEra scripts
+              ]
+    Conway.MissingRequiredDatums required received ->
+      mconcat [ "kind" .= String "MissingRequiredDatums"
+              , "required" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
+                                      (Set.toList required)
+              , "received" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
+                                      (Set.toList received)
+              ]
+    Conway.NotAllowedSupplementalDatums disallowed acceptable ->
+      mconcat [ "kind" .= String "NotAllowedSupplementalDatums"
+              , "disallowed" .= Set.toList disallowed
+              , "acceptable" .= Set.toList acceptable
+              ]
+    Conway.PPViewHashesDontMatch ppHashInTxBody ppHashFromPParams ->
+      mconcat [ "kind" .= String "PPViewHashesDontMatch"
+              , "fromTxBody" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashInTxBody)
+              , "fromPParams" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashFromPParams)
+              ]
+    Conway.UnspendableUTxONoDatumHash ins ->
+      mconcat [ "kind" .= String "MissingRequiredSigners"
+              , "txins" .= Set.toList ins
+              ]
+    Conway.ExtraRedeemers rs ->
+      Api.caseShelleyToMaryOrAlonzoEraOnwards
+        (const mempty)
+        (\alonzoOnwards ->
+           mconcat
+             [ "kind" .= String "ExtraRedeemers"
+             , "rdmrs" .=  map (Api.toScriptIndex alonzoOnwards) rs
+             ]
+        )
+        (Api.shelleyBasedEra :: Api.ShelleyBasedEra era)
+    Conway.MalformedScriptWitnesses scripts ->
+      mconcat [ "kind" .= String "MalformedScriptWitnesses"
+              , "scripts" .= scripts
+              ]
+    Conway.MalformedReferenceScripts scripts ->
+      mconcat [ "kind" .= String "MalformedReferenceScripts"
+              , "scripts" .= scripts
+              ]
 
 --------------------------------------------------------------------------------
 -- Helper functions
