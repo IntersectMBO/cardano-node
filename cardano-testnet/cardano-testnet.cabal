@@ -193,6 +193,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
                         Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO
                         Cardano.Testnet.Test.LedgerEvents.Gov.TreasuryWithdrawal
+                        Cardano.Testnet.Test.LedgerEvents.Gov.DRepActivity
                         Cardano.Testnet.Test.LedgerEvents.SanityCheck
                         Cardano.Testnet.Test.LedgerEvents.TreasuryGrowth
 
@@ -218,6 +219,7 @@ test-suite cardano-testnet-test
                       , cardano-testnet
                       , containers
                       , directory
+                      , exceptions
                       , filepath
                       , hedgehog
                       , hedgehog-extras

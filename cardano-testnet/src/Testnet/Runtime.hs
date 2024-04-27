@@ -6,6 +6,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Testnet.Runtime
   ( LeadershipSlot(..)
@@ -18,6 +20,8 @@ module Testnet.Runtime
   , PoolNode(..)
   , PoolNodeKeys(..)
   , Delegator(..)
+  , KeyPair(..)
+  , SomeKeyPair(..)
   , allNodes
   , poolSprockets
   , poolNodeStdout
@@ -134,6 +138,22 @@ data LeadershipSlot = LeadershipSlot
   , slotTime    :: Text
   } deriving (Eq, Show, Generic, FromJSON)
 
+class KeyPair a where
+  secretKey :: a -> FilePath
+
+instance KeyPair PaymentKeyPair where
+  secretKey :: PaymentKeyPair -> FilePath
+  secretKey = paymentSKey
+
+instance KeyPair StakingKeyPair where
+  secretKey :: StakingKeyPair -> FilePath
+  secretKey = stakingSKey
+
+data SomeKeyPair = forall a . KeyPair a => SomeKeyPair a
+
+instance KeyPair SomeKeyPair where
+  secretKey :: SomeKeyPair -> FilePath
+  secretKey (SomeKeyPair x) = secretKey x
 
 poolNodeStdout :: PoolNode -> FilePath
 poolNodeStdout = nodeStdout . poolRuntime

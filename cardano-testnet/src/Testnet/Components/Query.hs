@@ -20,6 +20,7 @@ module Testnet.Components.Query
   , findLargestUtxoWithAddress
   , findLargestUtxoForPaymentKey
   , startLedgerNewEpochStateLogging
+  , getCurrentEpochNo
   ) where
 
 import           Cardano.Api as Api
@@ -301,7 +302,12 @@ checkDRepState sbe configurationFile socketPath execConfig f = withFrozenCallSta
                   [ "checkDRepState: foldEpochState returned Nothing: "
                   , "This is probably an error related to foldEpochState." ]
       H.failure
-    Right (_, Just val) ->
+    Right (ConditionNotMet, Just _) -> do
+      H.note_ $ unlines
+                  [ "checkDRepState: foldEpochState returned Just and ConditionNotMet: "
+                  , "This is probably an error related to foldEpochState." ]
+      H.failure
+    Right (ConditionMet, Just val) ->
       return val
 
 -- | Obtain governance state from node (CLI query)
@@ -336,3 +342,10 @@ getMinDRepDeposit execConfig ceo = withFrozenCallStack $ do
                                   . _Integral
   H.evalMaybe mMinDRepDeposit
 
+-- | Obtain current epoch number using 'getEpochState'
+getCurrentEpochNo :: (MonadTest m, MonadAssertion m, MonadIO m)
+  => EpochStateView
+  -> m EpochNo
+getCurrentEpochNo epochStateView = do
+  AnyNewEpochState _ newEpochState <- getEpochState epochStateView
+  return $ newEpochState ^. L.nesELL
