@@ -292,7 +292,7 @@ registerDRep execConfig epochStateView ceo work prefix wallet = do
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
 
-  minDRepDeposit <- getMinDRepDeposit execConfig ceo
+  minDRepDeposit <- getMinDRepDeposit epochStateView ceo
 
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
   drepKeyPair <- generateDRepKeyPair execConfig baseDir "keys"
