@@ -41,26 +41,12 @@ jobs:
         a+${{ github.event_name }}
         b+${{ github.workflow_ref }}
         c+${{ github.job }}
-        d+${{ matrix.ghc }}
-        e+${{ matrix.cabal }}
-        f+${{ matrix.os }}
-        g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
+        d+${{ matrix.compiler-nix-name }}
+        e+${{ matrix.platform }}
+        f+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
       cancel-in-progress: true
 
     steps:
-    - name: Concurrency group
-      run: >
-        echo
-        a+${{ github.event_name }}
-        b+${{ github.workflow_ref }}
-        c+${{ github.job }}
-        d+${{ matrix.ghc }}
-        e+${{ matrix.cabal }}
-        f+${{ matrix.os }}
-        g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
-
-    - uses: actions/checkout@v4
-
     - name: Install GHC and Cabal
       uses: input-output-hk/actions/devx@latest
       with:
@@ -70,7 +56,19 @@ jobs:
         # for now we'll set minimal to false, as minimal-iog images don't exist.
         minimal: false
         iog: true
-        
+
+    - name: Concurrency group
+      run: >
+        echo
+        a+${{ github.event_name }}
+        b+${{ github.workflow_ref }}
+        c+${{ github.job }}
+        d+${{ matrix.compiler-nix-name }}
+        e+${{ matrix.platform }}
+        f+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
+
+    - uses: actions/checkout@v4
+
     - name: Cabal update
       run: cabal update
 
