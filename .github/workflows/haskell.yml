@@ -88,6 +88,10 @@ jobs:
         echo "# cabal.project.local"
         cat cabal.project.local
 
+    - name: Sanity Check Pkg-Config
+      shell: bash
+      run: pkg-config --list-all
+
     # A dry run `build all` operation does *NOT* downlaod anything, it just looks at the package
     # indices to generate an install plan.
     - name: Build dry run
