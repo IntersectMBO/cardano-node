@@ -3,8 +3,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-
 
 module Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO
   ( hprop_ledger_events_propose_new_constitution_spo
@@ -24,15 +22,15 @@ import           Control.Monad.Trans.State.Strict (put)
 import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import           Data.Word
 import           GHC.Stack (HasCallStack)
 import           Lens.Micro
 import           System.FilePath ((</>))
 
 import           Testnet.Components.DReps (createVotingTxBody, failToSubmitTx, signTx, submitTx)
 import           Testnet.Components.Query
+import           Testnet.Components.SPO (generateVoteFiles)
 import           Testnet.Components.TestWatchdog
-import           Testnet.Defaults (defaultSPOColdKeyPair, defaultSPOColdVKeyFp)
+import           Testnet.Defaults (defaultSPOColdKeyPair, defaultSPOKeys)
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
@@ -160,21 +158,11 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
 
   let L.GovActionIx governanceActionIndex = L.gaidGovActionIx govActionId
 
-  let voteFp :: Int -> FilePath
-      voteFp n = work </> gov </> "vote-" <> show n
-
-  H.forConcurrently_ [1..3] $ \n -> do
-    H.execCli' execConfig
-      [ "conway", "governance", "vote", "create"
-      , "--yes"
-      , "--governance-action-tx-id", txidString
-      , "--governance-action-index", show @Word32 governanceActionIndex
-      , "--cold-verification-key-file", defaultSPOColdVKeyFp n
-      , "--out-file", voteFp n
-      ]
+  votes <- generateVoteFiles ceo execConfig work "vote-files" txidString governanceActionIndex
+                             [(defaultSPOKeys n, "yes") | n <- [1..3]]
 
   -- Submit votes
-  txBody <- createVotingTxBody execConfig epochStateView sbe work "tx-body" [File $ voteFp n | n <- [1..3]] wallet0
+  txBody <- createVotingTxBody execConfig epochStateView sbe work "tx-body" votes wallet0
 
   signedTx <- signTx execConfig cEra work "signed-tx"
                      txBody (SomeKeyPair (paymentKeyInfoPair wallet0)
