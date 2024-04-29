@@ -29,9 +29,10 @@ import           GHC.Stack (HasCallStack)
 import           Lens.Micro
 import           System.FilePath ((</>))
 
-import           Testnet.Components.DReps (failToSubmitTx, signTx, submitTx)
+import           Testnet.Components.DReps (createVotingTxBody, failToSubmitTx, signTx, submitTx)
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
+import           Testnet.Defaults (defaultSPOColdKeyPair, defaultSPOColdVKeyFp)
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Utils as H
@@ -111,12 +112,6 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
                       , P.signingKeyFile = stakeSKeyFp
                       }
 
-  let spoColdVkeyFp :: Int -> FilePath
-      spoColdVkeyFp n = tempAbsPath' </> "pools-keys" </> "pool" <> show n </> "cold.vkey"
-
-      spoColdSkeyFp :: Int -> FilePath
-      spoColdSkeyFp n = tempAbsPath' </> "pools-keys" </> "pool" <> show n </> "cold.skey"
-
   minDRepDeposit <- getMinDRepDeposit epochStateView ceo
 
   -- Create constitution proposal
@@ -154,11 +149,13 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
     ]
 
   currentEpoch <- getCurrentEpochNo epochStateView
+
   -- Proposal should be there already, so don't wait a lot:
   let terminationEpoch = succ . succ $ currentEpoch
 
   mGovActionId <- getConstitutionProposal (Api.File configurationFile) (Api.File socketPath) terminationEpoch
   govActionId <- H.evalMaybe mGovActionId
+
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
 
   let L.GovActionIx governanceActionIndex = L.gaidGovActionIx govActionId
@@ -172,40 +169,19 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
       , "--yes"
       , "--governance-action-tx-id", txidString
       , "--governance-action-index", show @Word32 governanceActionIndex
-      , "--cold-verification-key-file", spoColdVkeyFp n
+      , "--cold-verification-key-file", defaultSPOColdVKeyFp n
       , "--out-file", voteFp n
       ]
 
-  -- We need more UTxOs
-  txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
-
-  voteTxFp <- H.note $ work </> gov </> "vote.tx"
-  voteTxBodyFp <- H.note $ work </> gov </> "vote.txbody"
-
   -- Submit votes
-  H.noteM_ $ H.execCli' execConfig
-    [ "conway", "transaction", "build"
-    , "--tx-in", Text.unpack $ renderTxIn txin2
-    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
-    , "--vote-file", voteFp 1
-    , "--vote-file", voteFp 2
-    , "--vote-file", voteFp 3
-    , "--witness-override", show @Int 4
-    , "--out-file", voteTxBodyFp
-    ]
+  txBody <- createVotingTxBody execConfig epochStateView sbe work "tx-body" [File $ voteFp n | n <- [1..3]] wallet0
 
-  H.noteM_ $ H.execCli' execConfig
-    [ "conway", "transaction", "sign"
-    , "--tx-body-file", voteTxBodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
-    , "--signing-key-file", spoColdSkeyFp 1
-    , "--signing-key-file", spoColdSkeyFp 2
-    , "--signing-key-file", spoColdSkeyFp 3
-    , "--out-file", voteTxFp
-    ]
+  signedTx <- signTx execConfig cEra work "signed-tx"
+                     txBody (SomeKeyPair (paymentKeyInfoPair wallet0)
+                             :[SomeKeyPair $ defaultSPOColdKeyPair n | n <- [1..3]])
 
   -- Call should fail, because SPOs are unallowed to vote on the constitution
-  failToSubmitTx execConfig cEra (File voteTxFp) "DisallowedVoters"
+  failToSubmitTx execConfig cEra signedTx "DisallowedVoters"
 
 getConstitutionProposal
   :: (HasCallStack, MonadIO m, MonadTest m)

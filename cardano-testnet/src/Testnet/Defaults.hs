@@ -18,13 +18,16 @@ module Testnet.Defaults
   , defaultDRepSkeyFp
   , defaultDRepKeyPair
   , defaultDelegatorStakeKeyPair
+  , defaultSPOKeys
+  , defaultSPOColdKeyPair
+  , defaultSPOColdVKeyFp
+  , defaultSPOColdSKeyFp
   , defaultShelleyGenesis
   , defaultGenesisFilepath
   , defaultYamlHardforkViaConfig
   , defaultMainnetTopology
   , plutusV3NonSpendingScript
   , plutusV3SpendingScript
-  , defaultSPOKeys
   ) where
 
 import           Cardano.Api (AnyCardanoEra (..), CardanoEra (..), pshow)
@@ -74,7 +77,7 @@ import           System.FilePath ((</>))
 
 import           Test.Cardano.Ledger.Core.Rational
 import           Testnet.Runtime (PaymentKeyPair (PaymentKeyPair), PoolNodeKeys (..),
-                   StakingKeyPair (StakingKeyPair))
+                   SPOColdKeyPair (..), StakingKeyPair (StakingKeyPair))
 import           Testnet.Start.Types
 
 {- HLINT ignore "Use underscore" -}
@@ -517,12 +520,24 @@ defaultDRepSkeyFp n = "drep-keys" </> ("drep" <> show n) </> "drep.skey"
 defaultDRepKeyPair :: Int -> PaymentKeyPair
 defaultDRepKeyPair n = PaymentKeyPair (defaultDRepVkeyFp n) (defaultDRepSkeyFp n)
 
+-- | The relative path to SPO cold verification key in directories created by cardano-testnet
+defaultSPOColdVKeyFp :: Int -> FilePath
+defaultSPOColdVKeyFp n = "pools-keys" </> "pool" <> show n </> "cold.vkey"
+
+-- | The relative path to SPO cold secret key in directories created by cardano-testnet
+defaultSPOColdSKeyFp :: Int -> FilePath
+defaultSPOColdSKeyFp n = "pools-keys" </> "pool" <> show n </> "cold.skey"
+
+-- | The relative path to SPO key cold key pair in directories created by cardano-testnet
+defaultSPOColdKeyPair :: Int -> SPOColdKeyPair
+defaultSPOColdKeyPair n = SPOColdKeyPair (defaultSPOColdVKeyFp n) (defaultSPOColdSKeyFp n)
+
 -- | The relative path to SPO key pairs in directories created by cardano-testnet
 defaultSPOKeys :: Int -> PoolNodeKeys
 defaultSPOKeys n =
   PoolNodeKeys
-    { poolNodeKeysColdVkey = "pools-keys" </> "pool" ++ show n </> "cold.vkey"
-    , poolNodeKeysColdSkey = "pools-keys" </> "pool" ++ show n </> "cold.skey"
+    { poolNodeKeysColdVkey = defaultSPOColdVKeyFp n
+    , poolNodeKeysColdSkey = defaultSPOColdSKeyFp n
     , poolNodeKeysVrfVkey = "pools-keys" </> "pool" ++ show n </> "vrf.vkey"
     , poolNodeKeysVrfSkey = "pools-keys" </> "pool" ++ show n </> "vrf.skey"
     , poolNodeKeysStakingVkey = "pools-keys" </> "pool" ++ show n </> "staking-reward.vkey"

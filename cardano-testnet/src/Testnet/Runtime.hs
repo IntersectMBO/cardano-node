@@ -1,13 +1,13 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE InstanceSigs #-}
 
 module Testnet.Runtime
   ( LeadershipSlot(..)
@@ -20,6 +20,7 @@ module Testnet.Runtime
   , PoolNode(..)
   , PoolNodeKeys(..)
   , Delegator(..)
+  , SPOColdKeyPair(..)
   , KeyPair(..)
   , SomeKeyPair(..)
   , allNodes
@@ -113,6 +114,11 @@ data PoolNodeKeys = PoolNodeKeys
   , poolNodeKeysStakingSkey :: FilePath
   } deriving (Eq, Show)
 
+data SPOColdKeyPair = SPOColdKeyPair
+  { spoColdVKey :: FilePath
+  , spoColdSKey :: FilePath
+  } deriving (Eq, Show)
+
 data PaymentKeyPair = PaymentKeyPair
   { paymentVKey :: FilePath
   , paymentSKey :: FilePath
@@ -148,6 +154,10 @@ instance KeyPair PaymentKeyPair where
 instance KeyPair StakingKeyPair where
   secretKey :: StakingKeyPair -> FilePath
   secretKey = stakingSKey
+
+instance KeyPair SPOColdKeyPair where
+  secretKey :: SPOColdKeyPair -> FilePath
+  secretKey = spoColdSKey
 
 data SomeKeyPair = forall a . KeyPair a => SomeKeyPair a
 

@@ -168,8 +168,7 @@ generateVoteFiles execConfig work prefix governanceActionTxId governanceActionIn
       ]
     return path
 
--- | Composes a decentralized representative (DRep) voting transaction body
--- (without signing) using @cardano-cli@.
+-- | Composes a voting transaction body (without signing) using @cardano-cli@.
 --
 -- Returns the generated @File TxBody In@ file path to the transaction body.
 createVotingTxBody
@@ -186,7 +185,7 @@ createVotingTxBody
                     -- as returned by 'cardanoTestnetDefault'.
   -> m (File TxBody In)
 createVotingTxBody execConfig epochStateView sbe work prefix votes wallet = do
-  let dRepVotingTxBody = File (work </> prefix <> ".txbody")
+  let votingTxBody = File (work </> prefix <> ".txbody")
   walletLargestUTXO <- findLargestUtxoForPaymentKey epochStateView sbe wallet
   void $ H.execCli' execConfig $
     [ "conway", "transaction", "build"
@@ -194,9 +193,9 @@ createVotingTxBody execConfig epochStateView sbe work prefix votes wallet = do
     , "--tx-in", Text.unpack $ renderTxIn walletLargestUTXO
     ] ++ (concat [["--vote-file", voteFile] | File voteFile <- votes]) ++
     [ "--witness-override", show @Int (length votes)
-    , "--out-file", unFile dRepVotingTxBody
+    , "--out-file", unFile votingTxBody
     ]
-  return dRepVotingTxBody
+  return votingTxBody
 
 -- Transaction signing
 
