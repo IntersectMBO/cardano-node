@@ -90,7 +90,10 @@ jobs:
 
     - name: Sanity Check Pkg-Config
       shell: bash
-      run: pkg-config --list-all
+      run: |
+        pkg-config --list-all
+        pkg-config --libs openssl
+        pkg-config --cflags openssl
 
     # A dry run `build all` operation does *NOT* downlaod anything, it just looks at the package
     # indices to generate an install plan.
