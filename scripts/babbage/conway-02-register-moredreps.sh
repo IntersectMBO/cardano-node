@@ -42,7 +42,7 @@ mkdir -p "$DREP_DIR"
 
 # GENERATE DREP KEYS
 
-for i in {1..3}; do
+for i in {4..6}; do
   $CARDANO_CLI conway governance drep key-gen \
     --verification-key-file "${DREP_DIR}/drep${i}.vkey" \
     --signing-key-file "${DREP_DIR}/drep${i}.skey"
@@ -52,7 +52,7 @@ done
 
 drepDeposit=$($CARDANO_CLI conway query gov-state --testnet-magic $NETWORK_MAGIC | jq -r .currentPParams.dRepDeposit)
 
-for i in {1..3}; do
+for i in {4..6}; do
   $CARDANO_CLI conway governance drep registration-certificate \
     --drep-verification-key-file "${DREP_DIR}/drep${i}.vkey" \
     --key-reg-deposit-amt "$drepDeposit" \
@@ -63,9 +63,9 @@ $CARDANO_CLI conway transaction build \
   --testnet-magic $NETWORK_MAGIC \
   --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
   --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
-  --certificate-file "${TRANSACTIONS_DIR}/drep1-reg.cert" \
-  --certificate-file "${TRANSACTIONS_DIR}/drep2-reg.cert" \
-  --certificate-file "${TRANSACTIONS_DIR}/drep3-reg.cert" \
+  --certificate-file "${TRANSACTIONS_DIR}/drep4-reg.cert" \
+  --certificate-file "${TRANSACTIONS_DIR}/drep5-reg.cert" \
+  --certificate-file "${TRANSACTIONS_DIR}/drep6-reg.cert" \
   --witness-override 4 \
   --out-file "${TRANSACTIONS_DIR}/drep-reg-tx.raw"
 
@@ -73,9 +73,9 @@ $CARDANO_CLI conway transaction sign \
   --testnet-magic $NETWORK_MAGIC \
   --tx-body-file "${TRANSACTIONS_DIR}/drep-reg-tx.raw" \
   --signing-key-file "${UTXO_DIR}/payment1.skey" \
-  --signing-key-file "${DREP_DIR}/drep1.skey" \
-  --signing-key-file "${DREP_DIR}/drep2.skey" \
-  --signing-key-file "${DREP_DIR}/drep3.skey" \
+  --signing-key-file "${DREP_DIR}/drep4.skey" \
+  --signing-key-file "${DREP_DIR}/drep5.skey" \
+  --signing-key-file "${DREP_DIR}/drep6.skey" \
   --out-file "${TRANSACTIONS_DIR}/drep-reg-tx.signed"
 
 $CARDANO_CLI conway transaction submit \
@@ -86,41 +86,6 @@ cardano-cli query tip --testnet-magic 42
 
 sleep 5
 
-# GENERATE DELEGATION CERTIFICATES FROM STAKE ADDRESSES TO THE DREPS
-
-for i in {1..3}; do
-  $CARDANO_CLI conway stake-address vote-delegation-certificate \
-    --stake-verification-key-file "${UTXO_DIR}/stake${i}.vkey" \
-    --drep-verification-key-file "${DREP_DIR}/drep${i}.vkey" \
-    --out-file "${TRANSACTIONS_DIR}/drep-deleg${i}.cert"
-done
-
-$CARDANO_CLI conway transaction build \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
-  --certificate-file "${TRANSACTIONS_DIR}/drep-deleg1.cert" \
-  --certificate-file "${TRANSACTIONS_DIR}/drep-deleg2.cert" \
-  --certificate-file "${TRANSACTIONS_DIR}/drep-deleg3.cert" \
-  --witness-override 4 \
-  --out-file "${TRANSACTIONS_DIR}/drep-deleg-tx.raw"
-
-$CARDANO_CLI conway transaction sign \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-body-file "${TRANSACTIONS_DIR}/drep-deleg-tx.raw" \
-  --signing-key-file "${UTXO_DIR}/payment1.skey" \
-  --signing-key-file "${UTXO_DIR}/stake1.skey" \
-  --signing-key-file "${UTXO_DIR}/stake2.skey" \
-  --signing-key-file "${UTXO_DIR}/stake3.skey" \
-  --out-file "${TRANSACTIONS_DIR}/drep-deleg-tx.signed"
-
-$CARDANO_CLI conway transaction submit \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-file "${TRANSACTIONS_DIR}/drep-deleg-tx.signed"
-
-cardano-cli query tip --testnet-magic 42
-
-sleep 5
 
 # QUERY DREP STATE TO CONFIRM
 
