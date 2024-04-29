@@ -476,7 +476,7 @@ instance
   , Core.Crypto (Ledger.EraCrypto ledgerera)
   ) => ToObject (ShelleyUtxowPredFailure ledgerera) where
   toObject _verb (ExtraneousScriptWitnessesUTXOW extraneousScripts) =
-    mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
+    mconcat [ "kind" .= String "ExtraneousScriptWitnessesUTXOW"
              , "extraneousScripts" .= Set.map renderScriptHash extraneousScripts
              ]
   toObject _verb (InvalidWitnessesUTXOW wits') =
