@@ -128,8 +128,11 @@ jobs:
     # Now we install the dependencies. If the cache was found and restored in the previous step,
     # this should be a no-op, but if the cache key was not found we need to build stuff so we can
     # cache it for the next step.
-    - name: Install HsOpenSSL
-      run: cabal build HsOpenSSL --enable-tests --only-dependencies -j --ghc-option=-j4 -v3
+    - name: Install HsOpenSSL dependencies
+      run: cabal build HsOpenSSL --enable-tests --only-dependencies -j --ghc-option=-j4
+
+    - name: Install HsOpenSSL 
+      run: cabal build HsOpenSSL --enable-tests -j --ghc-option=-j4 -v3
 
     - name: Install dependencies
       run: cabal build all --enable-tests --only-dependencies -j --ghc-option=-j4
