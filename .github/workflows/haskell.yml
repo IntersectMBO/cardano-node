@@ -131,6 +131,11 @@ jobs:
     - name: Install HsOpenSSL dependencies
       run: cabal build HsOpenSSL --enable-tests --only-dependencies -j --ghc-option=-j4
 
+    - name: Show paths
+      run: |
+        ls C:\\msys2\mingw64
+        ls /mingw64
+
     - name: Install HsOpenSSL 
       run: cabal build HsOpenSSL --enable-tests -j --ghc-option=-j4 -v3
 
