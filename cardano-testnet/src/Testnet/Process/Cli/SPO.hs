@@ -427,7 +427,7 @@ generateVoteFiles ceo execConfig work prefix governanceActionTxId governanceActi
   forM (zip [(1 :: Integer)..] allVotes) $ \(idx, (spoKeys, vote)) -> do
     let path = File (baseDir </> "vote-spo-" <> show idx)
     void $ execCli' execConfig
-      [ eraToString $ toCardanoEra ceo , "governance", "vote", "create"
+      [ eraToString $ toCardanoEra ceo, "governance", "vote", "create"
       , "--" ++ vote
       , "--governance-action-tx-id", governanceActionTxId
       , "--governance-action-index", show @Word32 governanceActionIndex
