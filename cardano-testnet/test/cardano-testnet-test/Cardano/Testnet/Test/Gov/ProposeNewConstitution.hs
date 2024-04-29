@@ -231,8 +231,7 @@ filterRatificationState c guardRailScriptHash (AnyNewEpochState sbe newEpochStat
           constitution = rState ^. Ledger.rsEnactStateL . Ledger.ensConstitutionL
           constitutionAnchorHash = Ledger.anchorDataHash $ Ledger.constitutionAnchor constitution
           L.ScriptHash constitutionScriptHash = fromMaybe (error "filterRatificationState: consitution does not have a guardrail script")
-                                                $ strictMaybeToMaybe $ constitution ^. Ledger.constitutionScriptL
+                                                  $ strictMaybeToMaybe $ constitution ^. Ledger.constitutionScriptL
       Text.pack c == renderSafeHashAsHex constitutionAnchorHash && L.hashToTextAsHex constitutionScriptHash == Text.pack guardRailScriptHash
-
     )
     sbe

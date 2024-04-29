@@ -40,10 +40,12 @@ import           Testnet.Components.Query (EpochStateView, assertNewEpochState,
                    findLargestUtxoForPaymentKey, getCurrentEpochNo, getEpochStateView, getGovState,
                    getMinDRepDeposit, watchEpochStateView)
 import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
-import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
-import           Testnet.Process.Cli.DRep (createCertificatePublicationTxBody, createVotingTxBody,
-                   generateVoteFiles)
+import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair,
+                   defaultSpoColdKeyPair, defaultSpoKeys)
+import qualified Testnet.Process.Cli.DRep as DRep
+import           Testnet.Process.Cli.DRep (createCertificatePublicationTxBody, createVotingTxBody)
 import qualified Testnet.Process.Cli.Keys as P
+import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.Transaction (retrieveTransactionId, signTx, submitTx)
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
@@ -208,8 +210,6 @@ desiredPoolNumberProposalTest
   -> m (String, Word32)
 desiredPoolNumberProposalTest execConfig epochStateView ceo work prefix wallet
                               previousProposalInfo votes change minWait mExpected maxWait = do
-  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
-
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
   let propVotes :: [DefaultDRepVote]
@@ -220,8 +220,8 @@ desiredPoolNumberProposalTest execConfig epochStateView ceo work prefix wallet
     makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo baseDir "proposal"
                                         previousProposalInfo (fromIntegral change) wallet
 
-  voteChangeProposal execConfig epochStateView sbe baseDir "vote"
-                     governanceActionTxId governanceActionIndex propVotes wallet
+  voteChangeProposal execConfig epochStateView ceo baseDir "vote"
+                     governanceActionTxId governanceActionIndex propVotes [] wallet
 
   (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
@@ -318,36 +318,52 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
 -- a default DRep (from the ones created by 'cardanoTestnetDefault')
 type DefaultDRepVote = (String, Int)
 
+-- A pair of a vote string (i.e: "yes", "no", or "abstain") and the number of
+-- a default SPO (from the ones created by 'cardanoTestnetDefault')
+type DefaultSPOVote = (String, Int)
+
 -- | Create and issue votes for (or against) a government proposal with default
--- Delegate Representative (DReps created by 'cardanoTestnetDefault') using @cardano-cli@.
+-- Delegate Representative (DReps created by 'cardanoTestnetDefault') and
+-- default Stake Pool Operatorsusing using @cardano-cli@.
 voteChangeProposal :: (MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
-  -> ShelleyBasedEra ConwayEra -- ^ The Shelley-based witness for ConwayEra (i.e: ShelleyBasedEraConway).
+  -> ConwayEraOnwards ConwayEra -- ^ The @ConwayEraOnwards@ witness for the Conway era.
   -> FilePath -- ^ Base directory path where the subdirectory with the intermediate files will be created.
   -> String -- ^ Name for the subdirectory that will be created for storing the intermediate files.
   -> String -- ^ Transaction id of the governance action to vote.
   -> Word32 -- ^ Index of the governance action to vote in the transaction.
   -> [DefaultDRepVote] -- ^ List of votes to issue as pairs of the vote and the number of DRep that votes it.
+  -> [DefaultSPOVote] -- ^ List of votes to issue as pairs of the vote and the number of DRep that votes it.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transactions
   -> m ()
-voteChangeProposal execConfig epochStateView sbe work prefix
-                   governanceActionTxId governanceActionIndex votes wallet = do
+voteChangeProposal execConfig epochStateView ceo work prefix
+                   governanceActionTxId governanceActionIndex drepVotes spoVotes wallet = do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
-  let era = toCardanoEra sbe
+  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      era = toCardanoEra sbe
       cEra = AnyCardanoEra era
 
-  voteFiles <- generateVoteFiles execConfig baseDir "vote-files"
-                                 governanceActionTxId governanceActionIndex
-                                 [(defaultDRepKeyPair idx, vote) | (vote, idx) <- votes]
+  drepVoteFiles <- DRep.generateVoteFiles execConfig baseDir "drep-vote-files"
+                                          governanceActionTxId governanceActionIndex
+                                          [(defaultDRepKeyPair idx, vote) | (vote, idx) <- drepVotes]
+
+  spoVoteFiles <- SPO.generateVoteFiles ceo execConfig baseDir "spo-vote-files"
+                                        governanceActionTxId governanceActionIndex
+                                        [(defaultSpoKeys idx, vote) | (vote, idx) <- spoVotes]
+
+  let voteFiles = drepVoteFiles ++ spoVoteFiles
 
   voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe baseDir "vote-tx-body"
                                      voteFiles wallet
 
   voteTxFp <- signTx execConfig cEra baseDir "signed-vote-tx" voteTxBodyFp
-                     (SomeKeyPair (paymentKeyInfoPair wallet):[SomeKeyPair $ defaultDRepKeyPair n | (_, n) <- votes])
+                     (SomeKeyPair (paymentKeyInfoPair wallet):
+                      [SomeKeyPair $ defaultDRepKeyPair n | (_, n) <- drepVotes] ++
+                      [SomeKeyPair $ defaultSpoColdKeyPair n | (_, n) <- drepVotes]
+                     )
   submitTx execConfig cEra voteTxFp
 
 -- | Obtains the @desiredPoolNumberValue@ from the protocol parameters.
