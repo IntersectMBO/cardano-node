@@ -66,6 +66,23 @@ executable tq
 --  other-modules:        Cardano.Tracer.Analyze.Process
 --                      , Cardano.Tracer.Analyze.Types
 
+executable rts-flags
+  main-is:              app/rts-flags.hs
+  default-language:     Haskell2010
+  build-depends:        base >= 4.14 && < 5
+  ghc-options:          -threaded
+                        -rtsopts=all
+
+executable lmdb-test
+  main-is:              app/lmdb-test.hs
+  default-language:     Haskell2010
+  build-depends:        base >= 4.14 && < 5
+                      , cardano-lmdb-simple
+                      , array
+                      , random
+  ghc-options:          -threaded
+                        -rtsopts=all
+
 test-suite stdout-tools-test
   import:               project-config
   hs-source-dirs:       test/
