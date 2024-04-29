@@ -69,6 +69,7 @@ jobs:
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
+        pacman-packages: "openssl"
 
     - name: Install system dependencies
       uses: input-output-hk/actions/base@latest
