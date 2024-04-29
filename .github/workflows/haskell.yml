@@ -94,6 +94,10 @@ jobs:
         pkg-config --list-all
         pkg-config --libs openssl
         pkg-config --cflags openssl
+        pkg-config --libs libssl
+        pkg-config --cflags libssl
+        pkg-config --libs libcrypto
+        pkg-config --cflags libcrypto
 
     # A dry run `build all` operation does *NOT* downlaod anything, it just looks at the package
     # indices to generate an install plan.
