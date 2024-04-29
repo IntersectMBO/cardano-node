@@ -26,7 +26,8 @@ import           GHC.Stack (HasCallStack)
 import           Lens.Micro
 import           System.FilePath ((</>))
 
-import           Testnet.Components.DReps (createVotingTxBody, failToSubmitTx, signTx, submitTx)
+import           Testnet.Components.DReps (createVotingTxBody, failToSubmitTx,
+                   retrieveTransactionId, signTx, submitTx)
 import           Testnet.Components.Query
 import           Testnet.Components.SPO (generateVoteFiles)
 import           Testnet.Components.TestWatchdog
@@ -125,26 +126,23 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
     , "--out-file", constitutionActionFp
     ]
 
-  txbodyFp <- H.note $ work </> "tx.body"
+  txBodyFp <- H.note $ work </> "proposal-tx-body.body"
 
-  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
+  txIn1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "transaction", "build"
-    , "--tx-in", Text.unpack $ renderTxIn txin1
+    , "--tx-in", Text.unpack $ renderTxIn txIn1
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--proposal-file", constitutionActionFp
-    , "--out-file", txbodyFp
+    , "--out-file", txBodyFp
     ]
 
-  txBodySigned <- signTx execConfig cEra work "signed" (File txbodyFp) [paymentKeyInfoPair wallet0]
+  txBodySigned <- signTx execConfig cEra work "proposal-signed-tx" (File txBodyFp) [paymentKeyInfoPair wallet0]
 
   submitTx execConfig cEra txBodySigned
 
-  txidString <- mconcat . lines <$> H.execCli' execConfig
-    [ "transaction", "txid"
-    , "--tx-file", unFile txBodySigned
-    ]
+  txIdString <- retrieveTransactionId execConfig txBodySigned
 
   currentEpoch <- getCurrentEpochNo epochStateView
 
@@ -158,18 +156,18 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
 
   let L.GovActionIx governanceActionIndex = L.gaidGovActionIx govActionId
 
-  votes <- generateVoteFiles ceo execConfig work "vote-files" txidString governanceActionIndex
+  votes <- generateVoteFiles ceo execConfig work "vote-files" txIdString governanceActionIndex
                              [(defaultSPOKeys n, "yes") | n <- [1..3]]
 
   -- Submit votes
-  txBody <- createVotingTxBody execConfig epochStateView sbe work "tx-body" votes wallet0
+  votesTxBody <- createVotingTxBody execConfig epochStateView sbe work "vote-tx-body" votes wallet0
 
-  signedTx <- signTx execConfig cEra work "signed-tx"
-                     txBody (SomeKeyPair (paymentKeyInfoPair wallet0)
-                             :[SomeKeyPair $ defaultSPOColdKeyPair n | n <- [1..3]])
+  votesSignedTx <- signTx execConfig cEra work "vote-signed-tx"
+                     votesTxBody (SomeKeyPair (paymentKeyInfoPair wallet0)
+                                  :[SomeKeyPair $ defaultSPOColdKeyPair n | n <- [1..3]])
 
   -- Call should fail, because SPOs are unallowed to vote on the constitution
-  failToSubmitTx execConfig cEra signedTx "DisallowedVoters"
+  failToSubmitTx execConfig cEra votesSignedTx "DisallowedVoters"
 
 getConstitutionProposal
   :: (HasCallStack, MonadIO m, MonadTest m)
