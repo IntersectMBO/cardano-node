@@ -406,12 +406,12 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile s
               currentRegistedPoolsJson
   return (poolId, poolColdSkeyFp, poolColdVkeyFp, vrfSkeyFp, vrfVkeyFp)
 
-
 -- | Generates Stake Pool Operator (SPO) voting files (without signing)
 -- using @cardano-cli@.
 --
 -- This function takes the following parameters:
 --
+-- * 'ceo': The conway era onwards witness for the era in which the transaction will be constructed.
 -- * 'execConfig': Specifies the CLI execution configuration.
 -- * 'work': Base directory path where the voting files and directories will be
 --           stored.
@@ -426,19 +426,20 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile s
 -- Returns a list of generated @File VoteFile In@ representing the paths to
 -- the generated voting files.
 generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m)
-  => H.ExecConfig
+  => ConwayEraOnwards era
+  -> H.ExecConfig
   -> FilePath
   -> String
   -> String
   -> Word32
   -> [(PoolNodeKeys, [Char])]
   -> m [File VoteFile In]
-generateVoteFiles execConfig work prefix governanceActionTxId governanceActionIndex allVotes = do
+generateVoteFiles ceo execConfig work prefix governanceActionTxId governanceActionIndex allVotes = do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
   forM (zip [(1 :: Integer)..] allVotes) $ \(idx, (spoKeys, vote)) -> do
     let path = File (baseDir </> "vote-" <> show idx)
     void $ H.execCli' execConfig
-      [ "conway", "governance", "vote", "create"
+      [ eraToString $ toCardanoEra ceo , "governance", "vote", "create"
       , "--" ++ vote
       , "--governance-action-tx-id", governanceActionTxId
       , "--governance-action-index", show @Word32 governanceActionIndex
@@ -446,4 +447,3 @@ generateVoteFiles execConfig work prefix governanceActionTxId governanceActionIn
       , "--out-file", unFile path
       ]
     return path
-
