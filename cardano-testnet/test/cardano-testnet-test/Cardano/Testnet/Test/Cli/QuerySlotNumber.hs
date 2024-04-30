@@ -37,7 +37,7 @@ import qualified Hedgehog.Internal.Property as H
 
 -- | Tests @query slot-number@ cardano-cli command that it returns correct slot numbers for provided utc time
 hprop_querySlotNumber :: Property
-hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_querySlotNumber = integrationRetryWorkspace 0 "query-slot-number" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf <- mkConf tempAbsBasePath'
 

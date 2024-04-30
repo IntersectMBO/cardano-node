@@ -29,7 +29,7 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 
 hprop_stakeSnapshot :: Property
-hprop_stakeSnapshot = integrationRetryWorkspace 2 "conway-stake-snapshot" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_stakeSnapshot = integrationRetryWorkspace 0 "conway-stake-snapshot" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath

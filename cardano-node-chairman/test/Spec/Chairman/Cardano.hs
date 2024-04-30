@@ -15,7 +15,7 @@ import           Spec.Chairman.Chairman (chairmanOver)
 
 -- TODO: Conway broken in conway
 hprop_chairman :: H.Property
-hprop_chairman = integrationRetryWorkspace 2 "cardano-chairman" $ \tempAbsPath' -> do
+hprop_chairman = integrationRetryWorkspace 0 "cardano-chairman" $ \tempAbsPath' -> do
   conf <- mkConf tempAbsPath'
 
   allNodes' <- fmap nodeName . allNodes <$> cardanoTestnetDefault cardanoDefaultTestnetOptions conf

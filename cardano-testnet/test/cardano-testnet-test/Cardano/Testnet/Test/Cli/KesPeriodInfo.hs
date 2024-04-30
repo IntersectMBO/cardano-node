@@ -48,7 +48,7 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
 hprop_kes_period_info :: Property
-hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_kes_period_info = integrationRetryWorkspace 0 "kes-period-info" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     -- TODO: Move yaml filepath specification into individual node options

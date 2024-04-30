@@ -28,28 +28,12 @@ jobs:
         # If you edit these versions, make sure the version in the lonely macos-latest job below is updated accordingly
         ghc: ["9.6.4", "9.8.1"]
         cabal: ["3.10.2.1"]
-        os: [windows-latest, ubuntu-latest]
-        include:
-          # Using include, to make sure there will only be one macOS job, even if the matrix gets expanded later on.
-          # We want a single job, because macOS runners are scarce.
-          - os: macos-latest
-            cabal: "3.10.2.1"
-            ghc: "9.6.4"
+        os: [ubuntu-latest]
+        n: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
 
     env:
       # Modify this value to "invalidate" the cabal cache.
       CABAL_CACHE_VERSION: "2024-04-24"
-
-    concurrency:
-      group: >
-        a+${{ github.event_name }}
-        b+${{ github.workflow_ref }}
-        c+${{ github.job }}
-        d+${{ matrix.ghc }}
-        e+${{ matrix.cabal }}
-        f+${{ matrix.os }}
-        g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
-      cancel-in-progress: true
 
     steps:
     - name: Concurrency group
@@ -154,7 +138,7 @@ jobs:
       if: ${{ failure() }}
       uses: actions/upload-artifact@v4
       with:
-        name: failed-test-workspaces-${{ matrix.os }}-ghc${{ matrix.ghc }}-cabal${{ matrix.cabal }}.tgz
+        name: failed-test-workspaces-${{ matrix.os }}-ghc${{ matrix.ghc }}-cabal${{ matrix.cabal }}-${{ matrix.n }}.tgz
         path: ${{ runner.temp }}/workspaces.tgz
 
     - name: "Tar artifacts"

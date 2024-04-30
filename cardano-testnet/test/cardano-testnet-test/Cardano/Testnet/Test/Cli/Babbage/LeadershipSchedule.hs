@@ -54,7 +54,7 @@ import qualified Hedgehog.Extras.Test.File as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/leadership-schedule/"'@
 hprop_leadershipSchedule :: Property
-hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_leadershipSchedule = integrationRetryWorkspace 0 "babbage-leadership-schedule" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
