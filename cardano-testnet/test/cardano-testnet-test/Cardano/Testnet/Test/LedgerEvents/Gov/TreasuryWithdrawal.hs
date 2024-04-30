@@ -69,7 +69,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
         , cardanoActiveSlotsCoeff = 0.3
         }
 
-  testnetRuntime@TestnetRuntime
+  TestnetRuntime
     { testnetMagic
     , poolNodes
     , wallets=wallet0:wallet1:_
@@ -91,8 +91,6 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
   H.note_ $ "Abs path: " <> tempAbsBasePath'
   H.note_ $ "Socketpath: " <> socketPath
   H.note_ $ "Foldblocks config file: " <> configurationFile
-
-  startLedgerNewEpochStateLogging testnetRuntime tempAbsPath'
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
   proposalAnchorFile <- H.note $ work </> gov </> "sample-proposal-anchor"

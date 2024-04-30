@@ -62,7 +62,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
         , cardanoNodeEra = AnyCardanoEra era
         }
 
-  testnetRuntime@TestnetRuntime
+  TestnetRuntime
     { testnetMagic
     , poolNodes
     , wallets=wallet0:wallet1:_
@@ -79,8 +79,6 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
       socketPath = socketBase </> socketName'
 
   epochStateView <- getEpochStateView (File configurationFile) (File socketPath)
-
-  startLedgerNewEpochStateLogging testnetRuntime tempAbsPath'
 
   H.note_ $ "Sprocket: " <> show poolSprocket1
   H.note_ $ "Abs path: " <> tempAbsBasePath'

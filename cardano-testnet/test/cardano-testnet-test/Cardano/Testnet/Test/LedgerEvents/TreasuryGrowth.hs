@@ -45,12 +45,9 @@ prop_check_if_treasury_is_growing = H.integrationRetryWorkspace 0 "growing-treas
 
   runtime@TestnetRuntime{configurationFile} <- cardanoTestnetDefault options conf
 
-  -- uncomment for epoch state live access
-  -- startLedgerNewEpochStateLogging runtime tempAbsBasePath'
-
   -- Get socketPath
   socketPathAbs <- do
-    socketPath' <- H.noteShowM $ H.sprocketArgumentName <$> H.headM (poolSprockets runtime)
+    socketPath' <- H.sprocketArgumentName <$> H.headM (poolSprockets runtime)
     H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
 
   (_condition, treasuryValues) <- H.leftFailM . H.evalIO . runExceptT $

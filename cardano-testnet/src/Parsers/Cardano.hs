@@ -68,6 +68,11 @@ optsTestnet envCli = CardanoTestnetOptions
       <>  OA.showDefault
       <>  OA.value 3
       )
+  <*> OA.flag False True
+      (   OA.long "enable-new-epoch-state-logging"
+      <>  OA.help "Enable new epoch state logging to logs/ledger-epoch-state.log"
+      <>  OA.showDefault
+      )
 
 pNumSpoNodes :: Parser [TestnetNodeOptions]
 pNumSpoNodes =
