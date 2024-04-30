@@ -64,15 +64,14 @@ jobs:
         g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
 
     - name: Install Haskell
-      uses: input-output-hk/actions/haskell@latest
+      uses: input-output-hk/actions/haskell@js/fix-runner-issues
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
-        pacman-packages: "openssl"
 
     - name: Install system dependencies
-      uses: input-output-hk/actions/base@latest
+      uses: input-output-hk/actions/base@js/fix-runner-issues
       with:
         use-sodium-vrf: true # default is true
 
