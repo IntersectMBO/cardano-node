@@ -327,6 +327,12 @@ voteChangeProposal execConfig epochStateView sbe work prefix governanceActionTxI
                      (SomeKeyPair (paymentKeyInfoPair wallet):[SomeKeyPair $ defaultDRepKeyPair n | (_, n) <- votes])
   submitTx execConfig cEra voteTxFp
 
+-- | Obtains the @desiredPoolNumberValue@ from the protocol parameters.
+-- The @desiredPoolNumberValue@ or (@k@ in the spec) is the protocol parameter
+-- that defines what is the optimal number of SPOs. It is a tradeoff between
+-- decentralization and efficiency and the spec suggest it should be between 100 an 1000.
+-- Changing this parameter will inderectly affect how easy it is to saturate a pool in order to
+-- incentivize that the number of SPOs states close to the parameter value.
 getDesiredPoolNumberValue :: (MonadTest m, MonadCatch m, MonadIO m) => H.ExecConfig -> m Integer
 getDesiredPoolNumberValue execConfig = do
   govStateString <- H.execCli' execConfig
