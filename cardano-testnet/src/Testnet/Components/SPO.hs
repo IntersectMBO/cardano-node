@@ -409,30 +409,21 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile s
 -- | Generates Stake Pool Operator (SPO) voting files (without signing)
 -- using @cardano-cli@.
 --
--- This function takes the following parameters:
---
--- * 'ceo': The conway era onwards witness for the era in which the transaction will be constructed.
--- * 'execConfig': Specifies the CLI execution configuration.
--- * 'work': Base directory path where the voting files and directories will be
---           stored.
--- * 'prefix': Name for the subfolder that will be created under 'work' to store
---             the output voting files.
--- * 'governanceActionTxId': Transaction ID string of the governance action.
--- * 'governanceActionIndex': Index of the governance action.
--- * 'allVotes': List of tuples where each tuple contains a 'PoolNodeKeys'
---               representing the SPO keys and a 'String' representing the
---               vote type (i.e: "yes", "no", or "abstain").
 --
 -- Returns a list of generated @File VoteFile In@ representing the paths to
 -- the generated voting files.
 generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m)
-  => ConwayEraOnwards era
-  -> H.ExecConfig
-  -> FilePath
-  -> String
-  -> String
-  -> Word32
-  -> [(PoolNodeKeys, [Char])]
+  => ConwayEraOnwards era -- ^ The conway era onwards witness for the era in which the transaction will be constructed.
+  -> H.ExecConfig -- ^ Specifies the CLI execution configuration.
+  -> FilePath -- ^ Base directory path where the voting files and directories will be
+              -- stored
+  -> String -- ^ Name for the subfolder that will be created under 'work' to store
+            -- the output voting files.
+  -> String -- ^ Transaction ID string of the governance action.
+  -> Word32 -- ^ Index of the governance action.
+  -> [(PoolNodeKeys, [Char])] -- ^ List of tuples where each tuple contains a 'PoolNodeKeys'
+                              -- representing the SPO keys and a 'String' representing the
+                              -- vote type (i.e: "yes", "no", or "abstain").
   -> m [File VoteFile In]
 generateVoteFiles ceo execConfig work prefix governanceActionTxId governanceActionIndex allVotes = do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
