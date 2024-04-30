@@ -18,23 +18,19 @@ on:
         required: false
         default: some
 
+defaults:
+  run:
+    shell: devx {0}
+
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.platform == 'x86_64-linux' && 'ubuntu-latest' || 'macos-latest' }}
 
     strategy:
       fail-fast: false
       matrix:
-        # If you edit these versions, make sure the version in the lonely macos-latest job below is updated accordingly
-        ghc: ["9.6.4", "9.8.1"]
-        cabal: ["3.10.2.1"]
-        os: [windows-latest, ubuntu-latest]
-        include:
-          # Using include, to make sure there will only be one macOS job, even if the matrix gets expanded later on.
-          # We want a single job, because macOS runners are scarce.
-          - os: macos-latest
-            cabal: "3.10.2.1"
-            ghc: "9.6.4"
+        platform: [ x86_64-linux, x86_64-darwin ]
+        compiler-nix-name: [ ghc96, ghc98 ] # , ghc810 ]
 
     env:
       # Modify this value to "invalidate" the cabal cache.
@@ -63,25 +59,22 @@ jobs:
         f+${{ matrix.os }}
         g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
 
-    - name: Install Haskell
-      uses: input-output-hk/actions/haskell@latest
-      id: setup-haskell
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: ${{ matrix.cabal }}
-
-    - name: Install system dependencies
-      uses: input-output-hk/actions/base@latest
-      with:
-        use-sodium-vrf: true # default is true
-
     - uses: actions/checkout@v4
 
+    - name: Install GHC and Cabal
+      uses: input-output-hk/actions/devx@latest
+      with:
+        platform: ${{ matrix.platform }}
+        target-platform: ${{ matrix.target-platform }}
+        compiler-nix-name: ${{ matrix.compiler-nix-name }}
+        # for now we'll set minimal to false, as minimal-iog images don't exist.
+        minimal: false
+        iog: true
+        
     - name: Cabal update
       run: cabal update
 
     - name: Configure build
-      shell: bash
       run: |
         cp .github/workflows/cabal.project.local.ci cabal.project.local
         echo "# cabal.project.local"
@@ -145,7 +138,6 @@ jobs:
       if: ${{ failure() }}
       env:
         TMP: ${{ runner.temp }}
-      shell: bash
       run: |
         cd $TMP
         find . -name 'module' -type f -exec dirname {} \; | xargs -L1 basename | sort -u | xargs tar -czvf workspaces.tgz
@@ -158,7 +150,6 @@ jobs:
         path: ${{ runner.temp }}/workspaces.tgz
 
     - name: "Tar artifacts"
-      shell: bash
       run: |
         mkdir -p artifacts
 
@@ -176,7 +167,6 @@ jobs:
 
     - name: Delete socket files in chairman tests in preparation for uploading artifacts
       if: ${{ always() }}
-      shell: bash
       run: |
         if [ -d "${{ runner.temp }}/chairman" ]; then
           find "${{ runner.temp }}/chairman" -type s -exec rm -f {} \;
