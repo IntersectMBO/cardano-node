@@ -17,17 +17,12 @@ import qualified Cardano.Testnet.Test.SubmitApi.Transaction
 import           Prelude
 
 import qualified System.Environment as E
-import qualified System.Exit as IO
-import qualified System.IO as IO
 import           System.IO (BufferMode (LineBuffering), hSetBuffering, hSetEncoding, stdout, utf8)
 
 import           Testnet.Property.Run (ignoreOnMacAndWindows, ignoreOnWindows)
 
 import qualified Test.Tasty as T
 import           Test.Tasty (TestTree)
-import qualified Test.Tasty.Ingredients as T
-import qualified Test.Tasty.Options as T
-import qualified Test.Tasty.Runners as T
 
 tests :: IO TestTree
 tests = do
@@ -92,21 +87,6 @@ tests = do
         
     ]
 
-defaultMainWithIngredientsAndOptions :: [T.Ingredient] -> T.OptionSet -> T.TestTree -> IO ()
-defaultMainWithIngredientsAndOptions ins opts testTree = do
-  T.installSignalHandlers
-  parsedOpts <- T.parseOptions ins testTree
-  let opts' = opts <> parsedOpts
-
-  case T.tryIngredients ins opts' testTree of
-    Nothing -> do
-      IO.hPutStrLn IO.stderr
-        "No ingredients agreed to run. Something is wrong either with your ingredient set or the options."
-      IO.exitFailure
-    Just act -> do
-      ok <- act
-      if ok then IO.exitSuccess else IO.exitFailure
-
 main :: IO ()
 main = do
   Crypto.cryptoInit
@@ -115,6 +95,4 @@ main = do
   hSetEncoding stdout utf8
   args <- E.getArgs
 
-  let opts = T.singleOption $ T.NumThreads 1
-
-  E.withArgs args $ tests >>= defaultMainWithIngredientsAndOptions T.defaultIngredients opts
+  E.withArgs args $ tests >>= T.defaultMainWithIngredients T.defaultIngredients
