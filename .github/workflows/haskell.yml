@@ -87,17 +87,6 @@ jobs:
         echo "# cabal.project.local"
         cat cabal.project.local
 
-    - name: Sanity Check Pkg-Config
-      shell: bash
-      run: |
-        pkg-config --list-all
-        pkg-config --libs openssl
-        pkg-config --cflags openssl
-        pkg-config --libs libssl
-        pkg-config --cflags libssl
-        pkg-config --libs libcrypto
-        pkg-config --cflags libcrypto
-
     # A dry run `build all` operation does *NOT* downlaod anything, it just looks at the package
     # indices to generate an install plan.
     - name: Build dry run
@@ -127,17 +116,6 @@ jobs:
     # Now we install the dependencies. If the cache was found and restored in the previous step,
     # this should be a no-op, but if the cache key was not found we need to build stuff so we can
     # cache it for the next step.
-    - name: Install HsOpenSSL dependencies
-      run: cabal build HsOpenSSL --enable-tests --only-dependencies -j --ghc-option=-j4
-
-    - name: Show paths
-      run: |
-        ls C:\\msys2\mingw64
-        ls /mingw64
-
-    - name: Install HsOpenSSL 
-      run: cabal build HsOpenSSL --enable-tests -j --ghc-option=-j4 -v3
-
     - name: Install dependencies
       run: cabal build all --enable-tests --only-dependencies -j --ghc-option=-j4
 
