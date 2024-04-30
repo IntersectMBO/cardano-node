@@ -406,17 +406,16 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile s
               currentRegistedPoolsJson
   return (poolId, poolColdSkeyFp, poolColdVkeyFp, vrfSkeyFp, vrfVkeyFp)
 
--- | Generates Stake Pool Operator (SPO) voting files (without signing)
--- using @cardano-cli@.
---
+-- | Generates Stake Pool Operator (SPO) voting files, using @cardano-cli@.
 --
 -- Returns a list of generated @File VoteFile In@ representing the paths to
 -- the generated voting files.
 generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m)
-  => ConwayEraOnwards era -- ^ The conway era onwards witness for the era in which the transaction will be constructed.
+  => ConwayEraOnwards era -- ^ The conway era onwards witness for the era in which the
+                          -- transaction will be constructed.
   -> H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> FilePath -- ^ Base directory path where the voting files and directories will be
-              -- stored
+              -- stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' to store
             -- the output voting files.
   -> String -- ^ Transaction ID string of the governance action.
