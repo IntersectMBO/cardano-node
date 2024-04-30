@@ -243,7 +243,7 @@ submitTx execConfig cEra signedTx =
 -- If the submission succeeds unexpectedly, it raises a failure message that is
 -- meant to be caught by @Hedgehog@.
 failToSubmitTx
-  :: (MonadTest m, MonadCatch m, MonadIO m)
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> AnyCardanoEra -- ^ Specifies the current Cardano era.
   -> File SignedTx In -- ^ Signed transaction to be submitted, obtained using 'signTx'.
