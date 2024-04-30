@@ -32,6 +32,7 @@ import           Control.Monad (forM, void)
 import           Control.Monad.Catch (MonadCatch)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as AL
+import           Data.List (isInfixOf)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word32)
@@ -167,8 +168,11 @@ generateVoteFiles execConfig work prefix governanceActionTxId governanceActionIn
       ]
     return path
 
--- | Composes a decentralized representative (DRep) voting transaction body
--- (without signing) using @cardano-cli@.
+-- | Composes a voting transaction body file using @cardano-cli@.
+-- For the transaction to be valid it needs witnesses corresponding
+-- to the spent UTxOs and votes issued (typically these witnesses are
+-- cryptographic signatures). This function does not sign the transaction,
+-- that can be done with 'signTx'.
 --
 -- Returns the generated @File TxBody In@ file path to the transaction body.
 createVotingTxBody
@@ -185,7 +189,7 @@ createVotingTxBody
                     -- as returned by 'cardanoTestnetDefault'.
   -> m (File TxBody In)
 createVotingTxBody execConfig epochStateView sbe work prefix votes wallet = do
-  let dRepVotingTxBody = File (work </> prefix <> ".txbody")
+  let votingTxBody = File (work </> prefix <> ".txbody")
   walletLargestUTXO <- findLargestUtxoForPaymentKey epochStateView sbe wallet
   void $ H.execCli' execConfig $
     [ "conway", "transaction", "build"
@@ -193,9 +197,9 @@ createVotingTxBody execConfig epochStateView sbe work prefix votes wallet = do
     , "--tx-in", Text.unpack $ renderTxIn walletLargestUTXO
     ] ++ (concat [["--vote-file", voteFile] | File voteFile <- votes]) ++
     [ "--witness-override", show @Int (length votes)
-    , "--out-file", unFile dRepVotingTxBody
+    , "--out-file", unFile votingTxBody
     ]
-  return dRepVotingTxBody
+  return votingTxBody
 
 -- Transaction signing
 
@@ -243,19 +247,24 @@ submitTx execConfig cEra signedTx =
 -- If the submission succeeds unexpectedly, it raises a failure message that is
 -- meant to be caught by @Hedgehog@.
 failToSubmitTx
-  :: (MonadTest m, MonadCatch m, MonadIO m)
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> AnyCardanoEra -- ^ Specifies the current Cardano era.
   -> File SignedTx In -- ^ Signed transaction to be submitted, obtained using 'signTx'.
+  -> String -- ^ Substring of the error to check for to ensure submission failed for
+            -- the right reason.
   -> m ()
-failToSubmitTx execConfig cEra signedTx = GHC.withFrozenCallStack $ do
-  (exitCode, _, _) <- H.execFlexAny' execConfig "cardano-cli" "CARDANO_CLI"
+failToSubmitTx execConfig cEra signedTx reasonForFailure = GHC.withFrozenCallStack $ do
+  (exitCode, _, stderr) <- H.execFlexAny' execConfig "cardano-cli" "CARDANO_CLI"
                                      [ anyEraToString cEra, "transaction", "submit"
                                      , "--tx-file", unFile signedTx
                                      ]
-  case exitCode of
+  case exitCode of -- Did it fail?
     ExitSuccess -> H.failMessage GHC.callStack "Transaction submission was expected to fail but it succeeded"
-    _ -> return ()
+    _ -> if reasonForFailure `isInfixOf` stderr -- Did it fail for the expected reason?
+         then return ()
+         else H.failMessage GHC.callStack $ "Transaction submission failed for the wrong reason (not " ++
+                                            show reasonForFailure ++ "): " ++ stderr
 
 -- | Retrieves the transaction ID (governance action ID) from a signed
 -- transaction file using @cardano-cli@.
