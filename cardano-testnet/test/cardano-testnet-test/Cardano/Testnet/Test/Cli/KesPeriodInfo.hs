@@ -53,7 +53,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/kes-period-info/"'@
 hprop_kes_period_info :: Property
-hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_kes_period_info = integrationRetryWorkspace 0 "kes-period-info" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     -- TODO: Move yaml filepath specification into individual node options

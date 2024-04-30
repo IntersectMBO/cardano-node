@@ -16,7 +16,7 @@ import qualified Hedgehog.Extras as H
 import           Spec.Chairman.Chairman (chairmanOver)
 
 hprop_chairman :: H.Property
-hprop_chairman = integrationRetryWorkspace 2 "cardano-chairman" $ \tempAbsPath' -> H.runWithDefaultWatchdog_ $ do
+hprop_chairman = integrationRetryWorkspace 0 "cardano-chairman" $ \tempAbsPath' -> H.runWithDefaultWatchdog_ $ do
   conf <- mkConf tempAbsPath'
 
   allNodes' <- allNodes <$> cardanoTestnetDefault def def conf
