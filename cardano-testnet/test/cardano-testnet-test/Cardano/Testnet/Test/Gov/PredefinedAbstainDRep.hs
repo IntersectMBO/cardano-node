@@ -46,7 +46,16 @@ import           Testnet.Types (KeyPair (..),
 import           Hedgehog
 import qualified Hedgehog.Extras as H
 
--- | Execute me with:
+-- | This test creates a default testnet with three DReps and one stake holder delegated to each.
+-- We then do a proposal for an arbitrary parameter change (in this case to the
+-- @desiredNumberOfPools@ parameter) to check that it fails, when the first DRep votes "yes" and the
+-- last two vote "no". Later we chack that if we change the stake holders under the DReps that vote
+-- "no" to delegate to the automate "always abstain" DRep, the same kind of proposal passes.
+-- 
+-- This test is meant to ensure that delegating to "always abstain" has the desired effect of
+-- counting as abstaining for the stake delegated.
+--
+-- Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Predefined Abstain DRep/"'@
 hprop_check_predefined_abstain_drep :: Property
 hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \tempAbsBasePath' -> do
