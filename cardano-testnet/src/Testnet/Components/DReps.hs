@@ -168,7 +168,11 @@ generateVoteFiles execConfig work prefix governanceActionTxId governanceActionIn
       ]
     return path
 
--- | Composes a voting transaction body (without signing) using @cardano-cli@.
+-- | Composes a voting transaction body file using @cardano-cli@.
+-- For the transaction to be valid it needs witnesses corresponding
+-- to the spent UTxOs and votes issued (typically these witnesses are
+-- cryptographic signatures). This function does not sign the transaction,
+-- that can be done with 'signTx'.
 --
 -- Returns the generated @File TxBody In@ file path to the transaction body.
 createVotingTxBody
