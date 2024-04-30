@@ -18,7 +18,6 @@ import           Cardano.Api.Ledger (EpochInterval (EpochInterval), KeyRole (Sta
                    StandardCrypto)
 import           Cardano.Api.ReexposeLedger (Coin, Credential)
 
-import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (..))
 import qualified Cardano.Ledger.BaseTypes as L
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -154,7 +153,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
 
   -- {{{ Create treasury withdrawal
   let withdrawalAmount = 3_300_777 :: Integer
-  govActionDeposit <- getMinDRepDeposit execConfig ceo
+  govActionDeposit <- getMinDRepDeposit epochStateView ceo
   void $ H.execCli' execConfig
     [ eraName, "governance", "action", "create-treasury-withdrawal"
     , "--testnet"
@@ -172,7 +171,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
   -- wait for an epoch before using wallet0 again
-  void $ waitForEpochs execConfig (File configurationFile) (File socketPath) (EpochInterval 1)
+  void $ waitForEpochs epochStateView (EpochInterval 1)
 
   txin3 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
@@ -203,7 +202,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
     , "--tx-file", txbodySignedFp
     ]
 
-  currentEpoch <- H.nothingFailM $ mEpoch <$> queryTip execConfig
+  currentEpoch <- getCurrentEpochNo epochStateView
   let terminationEpoch = succ . succ $ currentEpoch
   L.GovActionIx governanceActionIndex <- fmap L.gaidGovActionIx . H.nothingFailM $
     getTreasuryWithdrawalProposal (File configurationFile) (File socketPath) terminationEpoch
@@ -256,7 +255,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
   -- }}}
 
   withdrawals <- H.nothingFailM $
-    H.nothingFailM (mEpoch <$> queryTip execConfig) >>=
+    getCurrentEpochNo epochStateView >>=
       getAnyWithdrawals (File configurationFile) (File socketPath) . (`L.addEpochInterval` EpochInterval 5)
 
   H.noteShow_ withdrawals

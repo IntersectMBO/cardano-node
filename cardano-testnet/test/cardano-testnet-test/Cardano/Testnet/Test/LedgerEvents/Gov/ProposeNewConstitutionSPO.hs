@@ -14,8 +14,6 @@ import           Cardano.Api
 import qualified Cardano.Api as Api
 import           Cardano.Api.Ledger
 
-import           Cardano.CLI.Types.Output (QueryTipLocalStateOutput (QueryTipLocalStateOutput),
-                   mEpoch)
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet
@@ -120,7 +118,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
       spoColdSkeyFp :: Int -> FilePath
       spoColdSkeyFp n = tempAbsPath' </> "pools-keys" </> "pool" <> show n </> "cold.skey"
 
-  minDRepDeposit <- getMinDRepDeposit execConfig ceo
+  minDRepDeposit <- getMinDRepDeposit epochStateView ceo
 
   -- Create constitution proposal
   H.noteM_ $ H.execCli' execConfig
@@ -165,8 +163,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
     , "--tx-file", txbodySignedFp
     ]
 
-  QueryTipLocalStateOutput{mEpoch} <- queryTip execConfig
-  currentEpoch <- H.evalMaybe mEpoch
+  currentEpoch <- getCurrentEpochNo epochStateView
   -- Proposal should be there already, so don't wait a lot:
   let terminationEpoch = succ . succ $ currentEpoch
 

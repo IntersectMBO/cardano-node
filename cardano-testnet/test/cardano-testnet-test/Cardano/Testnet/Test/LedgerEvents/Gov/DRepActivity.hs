@@ -113,8 +113,10 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
   delegateToDRep execConfig epochStateView configurationFile socketPath sbe work "drep3-delegation"
                  wallet1 (defaultDelegatorStakeKeyPair 3) drep3
 
-  expirationDates <- checkDRepState sbe (File configurationFile) (File socketPath) execConfig
-                                    (\m -> if length m == 3 then Just $ Map.map drepExpiry m else Nothing)
+  expirationDates <- checkDRepState epochStateView sbe $ \m ->
+    if length m == 3
+       then Just $ Map.map drepExpiry m
+       else Nothing
   H.note_ $ "Expiration dates for the registered DReps: " ++ show expirationDates
 
   -- This proposal should fail because there is 2 DReps that don't vote (out of 3)
@@ -268,7 +270,7 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
     , "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
 
-  minDRepDeposit <- getMinDRepDeposit execConfig ceo
+  minDRepDeposit <- getMinDRepDeposit epochStateView ceo
 
   proposalFile <- H.note $ baseDir </> "sample-proposal-anchor"
 
