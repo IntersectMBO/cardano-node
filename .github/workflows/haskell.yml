@@ -32,7 +32,8 @@ jobs:
         include:
           # Using include, to make sure there will only be one macOS job, even if the matrix gets expanded later on.
           # We want a single job, because macOS runners are scarce.
-          - os: macos-latest
+          # It appears that macOS latest is aarch64 M1s now.
+          - os: macos-13
             cabal: "3.10.2.1"
             ghc: "9.6.4"
 
