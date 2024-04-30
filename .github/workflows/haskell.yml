@@ -202,11 +202,11 @@ jobs:
     # to restore the original path.  Do note that some test might need msys2
     # and will silently fail if msys2 is not in path. See the "Run tests" step.
     #
-    - name: Setup tmate session
-      if: ${{ failure() }}
-      uses: mxschmitt/action-tmate@v3
-#     with:
-#        limit-access-to-actor: true
+    # - name: Setup tmate session
+      # if: ${{ failure() }}
+      # uses: mxschmitt/action-tmate@v3
+      # with:
+      #   limit-access-to-actor: true
 
   build-complete:
     needs: [build]
