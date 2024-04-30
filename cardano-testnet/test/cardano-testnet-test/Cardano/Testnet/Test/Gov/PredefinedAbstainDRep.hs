@@ -188,7 +188,7 @@ desiredPoolNumberProposalTest execConfig epochStateView configurationFile socket
 
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
-  let propVotes :: [(String, Int)]
+  let propVotes :: [DefaultDRepVote]
       propVotes = zip (concatMap (uncurry replicate) votes) [1..]
   annotateShow propVotes
 
@@ -299,18 +299,26 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView configurationFile 
 
   return (governanceActionTxId, governanceActionIndex)
 
+-- A pair of a vote string (i.e: "yes", "no", or "abstain") and the number of
+-- a default DRep (from the ones created by 'cardanoTestnetDefault')
+type DefaultDRepVote = (String, Int)
+
+-- | Create and issue votes for (or against) a government proposal with default
+-- Delegate Representative (DReps created by 'cardanoTestnetDefault') using @cardano-cli@.
 voteChangeProposal :: (MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m)
-  => H.ExecConfig
-  -> EpochStateView
-  -> ShelleyBasedEra ConwayEra
-  -> FilePath
-  -> FilePath
-  -> String
-  -> Word32
-  -> [([Char], Int)]
-  -> PaymentKeyInfo
+  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
+  -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
+                    -- using the 'getEpochStateView' function.
+  -> ShelleyBasedEra ConwayEra -- ^ The Shelley-based witness for ConwayEra (i.e: ShelleyBasedEraConway).
+  -> FilePath -- ^ Base directory path where the subdirectory with the intermediate files will be created.
+  -> String -- ^ Name for the subdirectory that will be created for storing the intermediate files.
+  -> String -- ^ Transaction id of the governance action to vote.
+  -> Word32 -- ^ Index of the governance action to vote in the transaction.
+  -> [DefaultDRepVote] -- ^ List of votes to issue as pairs of the vote and the number of DRep that votes it.
+  -> PaymentKeyInfo -- ^ Wallet that will pay for the transactions
   -> m ()
-voteChangeProposal execConfig epochStateView sbe work prefix governanceActionTxId governanceActionIndex votes wallet = do
+voteChangeProposal execConfig epochStateView sbe work prefix
+                   governanceActionTxId governanceActionIndex votes wallet = do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
   let era = toCardanoEra sbe
