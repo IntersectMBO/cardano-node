@@ -29,12 +29,13 @@ jobs:
         ghc: ["9.6.4", "9.8.1"]
         cabal: ["3.10.2.1"]
         os: [windows-latest, ubuntu-latest]
-        include:
-          # Using include, to make sure there will only be one macOS job, even if the matrix gets expanded later on.
-          # We want a single job, because macOS runners are scarce.
-          - os: macos-latest
-            cabal: "3.10.2.1"
-            ghc: "9.6.4"
+        # Temporarily disabled macOS builds due to broken CI on that platform.
+        # include:
+        #   # Using include, to make sure there will only be one macOS job, even if the matrix gets expanded later on.
+        #   # We want a single job, because macOS runners are scarce.
+        #   - os: macos-latest
+        #     cabal: "3.10.2.1"
+        #     ghc: "9.6.4"
 
     env:
       # Modify this value to "invalidate" the cabal cache.
@@ -63,6 +64,28 @@ jobs:
         f+${{ matrix.os }}
         g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
 
+    - name: Install haskell (macos)
+      if: startsWith(matrix.os, 'macos')
+      uses: haskell-actions/setup@v2
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: ${{ matrix.cabal }}
+
+    - name: Install openssl (macos)
+      if: startsWith(matrix.os, 'macos')
+      run: brew install openssl
+
+    - name: Install ghcup on macos
+      if: startsWith(matrix.os, 'macos')
+      shell: bash
+      run: |
+        GHCUP_DIR=$(dirname $(find "$HOME" -name ghcup -type f | head -n 1 | xargs) | xargs)
+        echo "GHCUP_DIR=$GHCUP_DIR" | tee -a $GITHUB_ENV
+        echo "PATH=$GHCUP_DIR:$PATH" | tee -a $GITHUB_ENV
+
+    - name: Ghcup version
+      run: ghcup --version
+
     - name: Install Haskell
       uses: input-output-hk/actions/haskell@latest
       id: setup-haskell
@@ -74,6 +97,22 @@ jobs:
       uses: input-output-hk/actions/base@latest
       with:
         use-sodium-vrf: true # default is true
+
+    - name: "Re-install openssl on Windows"
+      if: runner.os == 'Windows'
+      shell: C:/msys64/usr/bin/bash.exe -e '{0}'
+      env:
+        MSYSTEM: MINGW64
+        # do not ever change to $HOME by yourself.
+        CHERE_INVOKING: 1
+        # do we want to inherit the path?
+        # MSYS2_PATH_TYPE: inherit
+      run: |
+        /usr/bin/pacman --noconfirm -R mingw-w64-x86_64-openssl
+
+        curl -O https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-openssl-3.2.1-1-any.pkg.tar.zst
+
+        /usr/bin/pacman --noconfirm -U mingw-w64-x86_64-openssl-3.2.1-1-any.pkg.tar.zst
 
     - uses: actions/checkout@v4
 
