@@ -25,7 +25,7 @@ import           Data.ByteString.Lazy.Char8 (pack)
 import           Data.String (fromString)
 import qualified Data.Text as Text
 import           Data.Word (Word32)
-import           GHC.Stack (callStack)
+import           GHC.Stack (HasCallStack, callStack)
 import           Lens.Micro ((^?))
 import           System.FilePath ((</>))
 
@@ -51,7 +51,7 @@ import qualified Hedgehog.Extras as H
 -- @desiredNumberOfPools@ parameter) to check that it fails, when the first DRep votes "yes" and the
 -- last two vote "no". Later we chack that if we change the stake holders under the DReps that vote
 -- "no" to delegate to the automate "always abstain" DRep, the same kind of proposal passes.
--- 
+--
 -- This test is meant to ensure that delegating to "always abstain" has the desired effect of
 -- counting as abstaining for the stake delegated.
 --
@@ -122,7 +122,7 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
                                        wallet0 Nothing [(1, "yes")] newNumberOfDesiredPools2 newNumberOfDesiredPools2 2
 
 delegateToAlwaysAbstain
-  :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m)
+  :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m)
   => H.ExecConfig
   -> EpochStateView
   -> NodeConfigFile 'In
@@ -167,7 +167,7 @@ delegateToAlwaysAbstain execConfig epochStateView configurationFile socketPath s
   void $ waitUntilEpoch configurationFile socketPath (EpochNo (epochAfterProp + 2))
 
 desiredPoolNumberProposalTest
-  :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
+  :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
   => H.ExecConfig
   -> EpochStateView
   -> NodeConfigFile 'In
@@ -210,7 +210,7 @@ desiredPoolNumberProposalTest execConfig epochStateView configurationFile socket
   return thisProposal
 
 makeDesiredPoolNumberChangeProposal
-  :: (H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
+  :: (HasCallStack, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig
   -> EpochStateView
   -> NodeConfigFile 'In
