@@ -92,7 +92,7 @@ $SED -i "${ROOT}/configuration.yaml" \
      -e '/ByronGenesisFile/ aAlonzoGenesisFile: genesis/shelley/genesis.alonzo.json' \
      -e '/ByronGenesisFile/ aConwayGenesisFile: genesis/shelley/genesis.conway.json' \
      -e 's/RequiresNoMagic/RequiresMagic/' \
-     -e 's/LastKnownBlockVersion-Major: 0/LastKnownBlockVersion-Major: 6/' \
+     -e 's/LastKnownBlockVersion-Major: 0/LastKnownBlockVersion-Major: 8/' \
      -e 's/LastKnownBlockVersion-Minor: 2/LastKnownBlockVersion-Minor: 0/'
 
   echo "TestShelleyHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
@@ -100,8 +100,9 @@ $SED -i "${ROOT}/configuration.yaml" \
   echo "TestMaryHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
   echo "TestAlonzoHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
   echo "TestBabbageHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "TestConwayHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "ExperimentalProtocolsEnabled: True" >> "${ROOT}/configuration.yaml"
+ # echo "TestConwayHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
+  echo "ExperimentalProtocolsEnabled: False" >> "${ROOT}/configuration.yaml"
+  echo "ExperimentalHardForksEnabled: True" >> "${ROOT}/configuration.yaml"
 
 # Because in Babbage the overlay schedule and decentralization parameter
 # are deprecated, we must use the "create-staked" cli command to create
