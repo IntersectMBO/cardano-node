@@ -17,13 +17,17 @@ module Testnet.Defaults
   , defaultDRepVkeyFp
   , defaultDRepSkeyFp
   , defaultDRepKeyPair
+  , defaultDelegatorStakeKeyPair
+  , defaultSPOKeys
+  , defaultSPOColdKeyPair
+  , defaultSPOColdVKeyFp
+  , defaultSPOColdSKeyFp
   , defaultShelleyGenesis
   , defaultGenesisFilepath
   , defaultYamlHardforkViaConfig
   , defaultMainnetTopology
   , plutusV3NonSpendingScript
   , plutusV3SpendingScript
-  , defaultDelegatorStakeKeyPair
   ) where
 
 import           Cardano.Api (AnyCardanoEra (..), CardanoEra (..), pshow)
@@ -72,7 +76,8 @@ import           Numeric.Natural
 import           System.FilePath ((</>))
 
 import           Test.Cardano.Ledger.Core.Rational
-import           Testnet.Runtime (PaymentKeyPair (PaymentKeyPair), StakingKeyPair (StakingKeyPair))
+import           Testnet.Runtime (PaymentKeyPair (PaymentKeyPair), PoolNodeKeys (..),
+                   SPOColdKeyPair (..), StakingKeyPair (StakingKeyPair))
 import           Testnet.Start.Types
 
 {- HLINT ignore "Use underscore" -}
@@ -514,6 +519,30 @@ defaultDRepSkeyFp n = "drep-keys" </> ("drep" <> show n) </> "drep.skey"
 -- | The relative path to DRep key pairs in directories created by cardano-testnet
 defaultDRepKeyPair :: Int -> PaymentKeyPair
 defaultDRepKeyPair n = PaymentKeyPair (defaultDRepVkeyFp n) (defaultDRepSkeyFp n)
+
+-- | The relative path to SPO cold verification key in directories created by cardano-testnet
+defaultSPOColdVKeyFp :: Int -> FilePath
+defaultSPOColdVKeyFp n = "pools-keys" </> "pool" <> show n </> "cold.vkey"
+
+-- | The relative path to SPO cold secret key in directories created by cardano-testnet
+defaultSPOColdSKeyFp :: Int -> FilePath
+defaultSPOColdSKeyFp n = "pools-keys" </> "pool" <> show n </> "cold.skey"
+
+-- | The relative path to SPO key cold key pair in directories created by cardano-testnet
+defaultSPOColdKeyPair :: Int -> SPOColdKeyPair
+defaultSPOColdKeyPair n = SPOColdKeyPair (defaultSPOColdVKeyFp n) (defaultSPOColdSKeyFp n)
+
+-- | The relative path to SPO key pairs in directories created by cardano-testnet
+defaultSPOKeys :: Int -> PoolNodeKeys
+defaultSPOKeys n =
+  PoolNodeKeys
+    { poolNodeKeysColdVkey = defaultSPOColdVKeyFp n
+    , poolNodeKeysColdSkey = defaultSPOColdSKeyFp n
+    , poolNodeKeysVrfVkey = "pools-keys" </> "pool" ++ show n </> "vrf.vkey"
+    , poolNodeKeysVrfSkey = "pools-keys" </> "pool" ++ show n </> "vrf.skey"
+    , poolNodeKeysStakingVkey = "pools-keys" </> "pool" ++ show n </> "staking-reward.vkey"
+    , poolNodeKeysStakingSkey = "pools-keys" </> "pool" ++ show n </> "staking-reward.skey"
+    }
 
 -- | The relative path to stake delegator stake keys in directories created by cardano-testnet
 defaultDelegatorStakeVkeyFp

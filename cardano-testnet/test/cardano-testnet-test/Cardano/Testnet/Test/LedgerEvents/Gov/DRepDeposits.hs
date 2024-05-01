@@ -94,7 +94,7 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
   drepSignedRegTx1 <- signTx execConfig cEra drepDir1 "signed-reg-tx"
                              drepRegTxBody1 [drepKeyPair1, paymentKeyInfoPair wallet0]
 
-  failToSubmitTx execConfig cEra drepSignedRegTx1
+  failToSubmitTx execConfig cEra drepSignedRegTx1 "ConwayDRepIncorrectDeposit"
 
   -- DRep 2 (enough deposit)
 

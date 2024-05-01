@@ -14,6 +14,7 @@ module Testnet.Components.SPO
   , createStakeKeyDeregistrationCertificate
   , decodeEraUTxO
   , registerSingleSpo
+  , generateVoteFiles
   ) where
 
 import qualified Cardano.Api.Ledger as L
@@ -32,21 +33,24 @@ import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import           Data.Word (Word32)
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import           Lens.Micro
 import           System.FilePath.Posix ((</>))
 
+import           Testnet.Components.DReps (VoteFile)
 import           Testnet.Filepath
-import           Testnet.Process.Cli
+import           Testnet.Process.Cli hiding (File, unFile)
+import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run (execCli, execCli', execCli_)
 import           Testnet.Property.Utils
+import           Testnet.Runtime (PoolNodeKeys (poolNodeKeysColdVkey))
 import           Testnet.Start.Types
 
 import           Hedgehog
 import           Hedgehog.Extras (ExecConfig)
-import qualified Hedgehog.Extras.Test.Base as H
-import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras as H
 
 checkStakePoolRegistered
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
@@ -401,3 +405,35 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile s
               poolColdVkeyFp
               currentRegistedPoolsJson
   return (poolId, poolColdSkeyFp, poolColdVkeyFp, vrfSkeyFp, vrfVkeyFp)
+
+-- | Generates Stake Pool Operator (SPO) voting files, using @cardano-cli@.
+--
+-- Returns a list of generated @File VoteFile In@ representing the paths to
+-- the generated voting files.
+generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m)
+  => ConwayEraOnwards era -- ^ The conway era onwards witness for the era in which the
+                          -- transaction will be constructed.
+  -> H.ExecConfig -- ^ Specifies the CLI execution configuration.
+  -> FilePath -- ^ Base directory path where the voting files and directories will be
+              -- stored.
+  -> String -- ^ Name for the subfolder that will be created under 'work' to store
+            -- the output voting files.
+  -> String -- ^ Transaction ID string of the governance action.
+  -> Word32 -- ^ Index of the governance action.
+  -> [(PoolNodeKeys, [Char])] -- ^ List of tuples where each tuple contains a 'PoolNodeKeys'
+                              -- representing the SPO keys and a 'String' representing the
+                              -- vote type (i.e: "yes", "no", or "abstain").
+  -> m [File VoteFile In]
+generateVoteFiles ceo execConfig work prefix governanceActionTxId governanceActionIndex allVotes = do
+  baseDir <- H.createDirectoryIfMissing $ work </> prefix
+  forM (zip [(1 :: Integer)..] allVotes) $ \(idx, (spoKeys, vote)) -> do
+    let path = File (baseDir </> "vote-" <> show idx)
+    void $ H.execCli' execConfig
+      [ eraToString $ toCardanoEra ceo , "governance", "vote", "create"
+      , "--" ++ vote
+      , "--governance-action-tx-id", governanceActionTxId
+      , "--governance-action-index", show @Word32 governanceActionIndex
+      , "--cold-verification-key-file", poolNodeKeysColdVkey spoKeys
+      , "--out-file", unFile path
+      ]
+    return path
