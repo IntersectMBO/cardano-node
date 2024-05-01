@@ -123,15 +123,16 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
 
 delegateToAlwaysAbstain
   :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m)
-  => H.ExecConfig
-  -> EpochStateView
-  -> NodeConfigFile 'In
-  -> File Socket 'InOut
-  -> ShelleyBasedEra ConwayEra
-  -> FilePath
-  -> String
-  -> PaymentKeyInfo
-  -> KeyPair StakingKey
+  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
+  -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
+                    -- using the 'getEpochStateView' function.
+  -> NodeConfigFile 'In -- ^ Path to the node configuration file as returned by 'cardanoTestnetDefault'.
+  -> File Socket 'InOut -- ^ Path to the cardano-node unix socket file.
+  -> ShelleyBasedEra ConwayEra -- ^ The Shelley-based era (e.g., 'ConwayEra') in which the transaction will be constructed.
+  -> FilePath -- ^ Base directory path where generated files will be stored.
+  -> String -- ^ Name for the subfolder that will be created under 'work' folder.
+  -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
+  -> KeyPair StakingKey -- ^ Staking key pair used for delegation.
   -> m ()
 delegateToAlwaysAbstain execConfig epochStateView configurationFile socketPath sbe work prefix
                         payingWallet skeyPair@(KeyPair vKeyFile _sKeyFile) = do
@@ -168,19 +169,21 @@ delegateToAlwaysAbstain execConfig epochStateView configurationFile socketPath s
 
 desiredPoolNumberProposalTest
   :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
-  => H.ExecConfig
-  -> EpochStateView
-  -> NodeConfigFile 'In
-  -> File Socket 'InOut
-  -> ConwayEraOnwards ConwayEra
-  -> FilePath
-  -> FilePath
-  -> PaymentKeyInfo
-  -> Maybe (String, Word32)
-  -> t (Int, String)
-  -> Integer
-  -> Integer
-  -> Integer
+  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
+  -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
+  -> NodeConfigFile 'In -- ^ Path to the node configuration file as returned by 'cardanoTestnetDefault'.
+  -> File Socket 'InOut -- ^ Path to the cardano-node unix socket file.
+  -> ConwayEraOnwards ConwayEra -- ^ The ConwaysEraOnwards witness for the Conway era
+  -> FilePath -- ^ Base directory path where generated files will be stored.
+  -> String -- ^ Name for the subfolder that will be created under 'work' folder.
+  -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
+  -> Maybe (String, Word32) -- ^ The transaction identifier and index of the previous passed
+                            -- governance action if any.
+  -> t (Int, String) -- ^ Model of votes to issue as a list of pairs of amount of each vote
+                     -- together with the vote (i.e: "yes", "no", "abstain")
+  -> Integer -- ^ What to change the @desiredPoolNumber@ to
+  -> Integer -- ^ What the expected result is of the change
+  -> Integer -- ^ How many epochs to wait before checking the result
   -> m (String, Word32)
 desiredPoolNumberProposalTest execConfig epochStateView configurationFile socketPath ceo work prefix
                               wallet previousProposalInfo votes change expected epochsToWait = do
@@ -211,16 +214,18 @@ desiredPoolNumberProposalTest execConfig epochStateView configurationFile socket
 
 makeDesiredPoolNumberChangeProposal
   :: (HasCallStack, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
-  => H.ExecConfig
-  -> EpochStateView
-  -> NodeConfigFile 'In
-  -> SocketPath
-  -> ConwayEraOnwards ConwayEra
-  -> FilePath
-  -> String
-  -> Maybe (String, Word32)
-  -> Word32
-  -> PaymentKeyInfo
+  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
+  -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
+  -> NodeConfigFile 'In -- ^ Absolute path to the "configuration.yaml" file for the testnet
+                        -- as returned by the 'cardanoTestnetDefault' function.
+  -> SocketPath -- ^ Path to the cardano-node unix socket file.
+  -> ConwayEraOnwards ConwayEra -- ^ The conway era onwards witness for the era in which the transaction will be constructed.
+  -> FilePath -- ^ Base directory path where generated files will be stored.
+  -> String -- ^ Name for the subfolder that will be created under 'work' folder.
+  -> Maybe (String, Word32) -- ^ The transaction identifier and index of the previous passed
+                            -- governance action if any.
+  -> Word32 -- ^ What to change the @desiredPoolNumber@ to
+  -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
   -> m (String, Word32)
 makeDesiredPoolNumberChangeProposal execConfig epochStateView configurationFile socketPath
                                     ceo work prefix prevGovActionInfo desiredPoolNumber wallet = do
