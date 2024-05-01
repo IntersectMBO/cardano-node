@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
@@ -11,6 +12,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -19,6 +21,11 @@
 {-# OPTIONS_GHC -Wno-orphans  #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 -- needs different instances on ghc8 and on ghc9
+#if __GLASGOW_HASKELL__ < 904
+-- Pattern synonym record fields with GHC-8.10 is issuing the `-Wname-shadowing`
+-- warning.
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+#endif
 
 
 module Cardano.Tracing.Tracers
@@ -93,7 +100,9 @@ import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..))
 import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
 import           Ouroboros.Network.NodeToClient (LocalAddress)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
-import           Ouroboros.Network.PeerSelection.Governor (PeerSelectionCounters (..))
+import           Ouroboros.Network.PeerSelection.Governor (ChurnCounters (..),
+                   PeerSelectionCounters, PeerSelectionView (..))
+import qualified Ouroboros.Network.PeerSelection.Governor as Governor
 import           Ouroboros.Network.Point (fromWithOrigin)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (ShowQuery)
 import           Ouroboros.Network.TxSubmission.Inbound
@@ -363,8 +372,14 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
                tracerOnOff (tracePublicRootPeers trSel)
                             verb "PublicRootPeers" tr
            , P2P.dtTracePeerSelectionTracer =
-               tracerOnOff (tracePeerSelection trSel)
-                            verb "PeerSelection" tr
+                  tracerOnOff (tracePeerSelection trSel)
+                               verb "PeerSelection" tr
+               <> tracePeerSelectionTracerMetrics
+                    (tracePeerSelection trSel)
+                    ekgDirect
+           , P2P.dtTraceChurnCounters =
+               traceChurnCountersMetrics
+                 ekgDirect
            , P2P.dtDebugPeerSelectionInitiatorTracer =
                tracerOnOff (traceDebugPeerSelectionInitiatorTracer trSel)
                             verb "DebugPeerSelection" tr
@@ -1447,6 +1462,26 @@ traceConnectionManagerTraceMetrics (OnOff True) (Just ekgDirect) = cmtTracer
       _ -> return ()
 
 
+tracePeerSelectionTracerMetrics
+    :: forall peeraddr.
+       OnOff TracePeerSelection
+    -> Maybe EKGDirect
+    -> Tracer IO (Governor.TracePeerSelection peeraddr)
+tracePeerSelectionTracerMetrics _             Nothing          = nullTracer
+tracePeerSelectionTracerMetrics (OnOff False) _                = nullTracer
+tracePeerSelectionTracerMetrics (OnOff True)  (Just ekgDirect) = pstTracer
+  where
+    pstTracer :: Tracer IO (Governor.TracePeerSelection peeraddr)
+    pstTracer = Tracer $ \a -> do
+      case a of
+        Governor.TraceChurnAction duration action _ ->
+          sendEKGDirectDouble
+            ekgDirect
+            ("cardano.node.metrics.peerSelection.churn." <> Text.pack (show action) <> ".duration")
+            (realToFrac duration)
+        _ -> pure ()
+
+
 tracePeerSelectionCountersMetrics
     :: OnOff TracePeerSelectionCounters
     -> Maybe EKGDirect
@@ -1456,13 +1491,68 @@ tracePeerSelectionCountersMetrics (OnOff False) _                = nullTracer
 tracePeerSelectionCountersMetrics (OnOff True)  (Just ekgDirect) = pscTracer
   where
     pscTracer :: Tracer IO PeerSelectionCounters
-    pscTracer = Tracer $ \(PeerSelectionCounters cold warm hot coldBigLedgerPeers warmBigLedgerPeers hotBigLedgerPeers _) -> do
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.cold" cold
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.warm" warm
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hot"  hot
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.coldBigLedgerPeers" coldBigLedgerPeers
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.warmBigLedgerPeers" warmBigLedgerPeers
-      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hotBigLedgerPeers" hotBigLedgerPeers
+    pscTracer = Tracer $ \psc -> do
+      let PeerSelectionCountersHWC {..} = psc
+      -- Deprecated counters; they will be removed in a future version
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.cold" numberOfColdPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.warm" numberOfWarmPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hot"  numberOfHotPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.coldBigLedgerPeers" numberOfColdBigLedgerPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.warmBigLedgerPeers" numberOfWarmBigLedgerPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hotBigLedgerPeers" numberOfHotBigLedgerPeers
+
+      let PeerSelectionCounters {..} = psc
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.RootPeers" numberOfRootPeers
+
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.KnownPeers" numberOfKnownPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ColdPeersPromotions" numberOfColdPeersPromotions
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.EstablishedPeers" numberOfEstablishedPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.WarmPeersDemotions" numberOfWarmPeersDemotions
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.WarmPeersPromotions" numberOfWarmPeersPromotions
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActivePeers" numberOfActivePeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActivePeersDemotions" numberOfActivePeersDemotions
+
+
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.KnownBigLedgerPeers" numberOfKnownBigLedgerPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ColdBigLedgerPeersPromotions" numberOfColdBigLedgerPeersPromotions
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.EstablishedBigLedgerPeers" numberOfEstablishedBigLedgerPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.WarmBigLedgerPeersDemotions" numberOfWarmBigLedgerPeersDemotions
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.WarmBigLedgerPeersPromotions" numberOfWarmBigLedgerPeersPromotions
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActiveBigLedgerPeers" numberOfActiveBigLedgerPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActiveBigLedgerPeersDemotions" numberOfActiveBigLedgerPeersDemotions
+
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.KnownLocalRootPeers" numberOfKnownLocalRootPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.EstablishedLocalRootPeers" numberOfEstablishedLocalRootPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.WarmLocalRootPeersPromotions" numberOfWarmLocalRootPeersPromotions
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActiveLocalRootPeers" numberOfActiveLocalRootPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActiveLocalRootPeersDemotions" numberOfActiveLocalRootPeersDemotions
+
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.KnownNonRootPeers" numberOfKnownNonRootPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ColdNonRootPeersPromotions" numberOfColdNonRootPeersPromotions
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.EstablishedNonRootPeers" numberOfEstablishedNonRootPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.WarmNonRootPeersDemotions" numberOfWarmNonRootPeersDemotions
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.WarmNonRootPeersPromotions" numberOfWarmNonRootPeersPromotions
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActiveNonRootPeers" numberOfActiveNonRootPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActiveNonRootPeersDemotions" numberOfActiveNonRootPeersDemotions
+
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.KnownBootstrapPeers" numberOfKnownBootstrapPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ColdBootstrapPeersPromotions" numberOfColdBootstrapPeersPromotions
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.EstablishedBootstrapPeers" numberOfEstablishedBootstrapPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.WarmBootstrapPeersDemotions" numberOfWarmBootstrapPeersDemotions
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.WarmBootstrapPeersPromotions" numberOfWarmBootstrapPeersPromotions
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActiveBootstrapPeers" numberOfActiveBootstrapPeers
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.ActiveBootstrapPeersDemotions" numberOfActiveBootstrapPeersDemotions
+
+
+traceChurnCountersMetrics
+    :: Maybe EKGDirect
+    -> Tracer IO ChurnCounters
+traceChurnCountersMetrics Nothing = nullTracer
+traceChurnCountersMetrics (Just ekgDirect) = churnTracer
+  where
+    churnTracer :: Tracer IO ChurnCounters
+    churnTracer = Tracer $ \(ChurnCounter action c) ->
+      sendEKGDirectInt ekgDirect ("cardano.node.metrics.peerSelection.churn." <> Text.pack (show action)) c
 
 
 traceInboundGovernorCountersMetrics
