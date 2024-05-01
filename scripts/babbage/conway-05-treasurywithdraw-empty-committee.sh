@@ -177,13 +177,17 @@ cardano-cli conway transaction build \
   --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --out-file /dev/stdout | jq -r 'keys[0]')" \
   --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
   --vote-file "${TRANSACTIONS_DIR}/treasury-drep1.vote" \
-  --witness-override 2 \
+  --vote-file "${TRANSACTIONS_DIR}/treasury-drep2.vote" \
+  --vote-file "${TRANSACTIONS_DIR}/treasury-drep3.vote" \
+  --witness-override 4 \
   --out-file "${TRANSACTIONS_DIR}/treasury-dreps-vote-tx.raw"
 
 cardano-cli conway transaction sign \
   --tx-body-file "${TRANSACTIONS_DIR}/treasury-dreps-vote-tx.raw" \
   --signing-key-file "${UTXO_DIR}/payment1.skey" \
   --signing-key-file "${DREP_DIR}/drep1.skey" \
+  --signing-key-file "${DREP_DIR}/drep2.skey" \
+  --signing-key-file "${DREP_DIR}/drep3.skey" \
   --out-file "${TRANSACTIONS_DIR}/treasury-dreps-vote-tx.signed"
 
 cardano-cli conway transaction submit \
