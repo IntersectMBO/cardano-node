@@ -31,8 +31,6 @@ sprocket() {
   fi
 }
 
-CARDANO_CLI="${CARDANO_CLI:-cardano-cli}"
-NETWORK_MAGIC=42
 ROOT=example
 DREP_DIR=example/dreps
 UTXO_DIR=example/utxo-keys
@@ -46,78 +44,71 @@ mkdir -p "$TRANSACTIONS_DIR"
 # becuase this will not be receiving rewards so at the end of the script the only balance at the rewards account will be the funds
 # withdrown from treasury
 
-$CARDANO_CLI conway address key-gen \
+cardano-cli conway address key-gen \
 --verification-key-file "${UTXO_DIR}/payment4.vkey" \
 --signing-key-file "${UTXO_DIR}/payment4.skey" \
 
-$CARDANO_CLI conway stake-address key-gen \
+cardano-cli conway stake-address key-gen \
 --verification-key-file "${UTXO_DIR}/stake4.vkey" \
 --signing-key-file "${UTXO_DIR}/stake4.skey"
 
-$CARDANO_CLI conway address build \
+cardano-cli conway address build \
 --payment-verification-key-file "${UTXO_DIR}/payment4.vkey" \
 --stake-verification-key-file "${UTXO_DIR}/stake4.vkey" \
---testnet-magic $NETWORK_MAGIC \
 --out-file "${UTXO_DIR}/payment4.addr"
 
-$CARDANO_CLI conway stake-address build \
+cardano-cli conway stake-address build \
 --stake-verification-key-file "${UTXO_DIR}/stake4.vkey" \
---testnet-magic $NETWORK_MAGIC \
 --out-file "${UTXO_DIR}/stake4.addr"
 
 # Fund the payment4.addr
 
-$CARDANO_CLI conway transaction build \
-    --testnet-magic $NETWORK_MAGIC \
-    --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+cardano-cli conway transaction build \
+    --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --out-file /dev/stdout | jq -r 'keys[0]')" \
     --tx-out "$(cat ${UTXO_DIR}/payment4.addr)+100000000" \
     --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
     --out-file "${TRANSACTIONS_DIR}/fund-pay4-tx.raw"
 
-$CARDANO_CLI conway transaction sign --testnet-magic ${NETWORK_MAGIC} \
+cardano-cli conway transaction sign \
     --tx-body-file "${TRANSACTIONS_DIR}/fund-pay4-tx.raw" \
     --signing-key-file "${UTXO_DIR}/payment1.skey" \
     --out-file "${TRANSACTIONS_DIR}/fund-pay4-tx.signed"
 
-$CARDANO_CLI conway transaction submit \
-    --testnet-magic $NETWORK_MAGIC \
+cardano-cli conway transaction submit \
     --tx-file  "${TRANSACTIONS_DIR}/fund-pay4-tx.signed"
 
 sleep 5
 
 # Register stake4.addr
 
-keyDeposit=$($CARDANO_CLI conway query protocol-parameters --testnet-magic $NETWORK_MAGIC | jq .keyDeposit)
+keyDeposit=$(cardano-cli conway query protocol-parameters | jq .stakeAddressDeposit)
 
-$CARDANO_CLI conway stake-address registration-certificate \
+cardano-cli conway stake-address registration-certificate \
   --stake-verification-key-file "${UTXO_DIR}/stake4.vkey" \
   --key-reg-deposit-amt "$keyDeposit" \
   --out-file "${TRANSACTIONS_DIR}/stake4-reg.cert"
 
-$CARDANO_CLI conway transaction build \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment4.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+cardano-cli conway transaction build \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment4.addr")" --out-file /dev/stdout | jq -r 'keys[0]')" \
   --change-address "$(cat ${UTXO_DIR}/payment4.addr)" \
   --certificate-file "${TRANSACTIONS_DIR}/stake4-reg.cert" \
   --witness-override 2 \
   --out-file "${TRANSACTIONS_DIR}/reg-stake4-tx.raw"
 
-$CARDANO_CLI conway transaction sign --testnet-magic $NETWORK_MAGIC \
+cardano-cli conway transaction sign \
   --tx-body-file "${TRANSACTIONS_DIR}/reg-stake4-tx.raw" \
   --signing-key-file "${UTXO_DIR}/payment4.skey" \
   --signing-key-file "${UTXO_DIR}/stake4.skey" \
   --out-file "${TRANSACTIONS_DIR}/reg-stake4-tx.signed"
 
-$CARDANO_CLI conway transaction submit \
-  --testnet-magic $NETWORK_MAGIC \
+cardano-cli conway transaction submit \
   --tx-file "${TRANSACTIONS_DIR}/reg-stake4-tx.signed"
 
 sleep 5
 
 # The rewards address is empty, show that
 
-$CARDANO_CLI conway query stake-address-info \
-  --testnet-magic $NETWORK_MAGIC \
+cardano-cli conway query stake-address-info \
   --address "$(cat "${UTXO_DIR}/stake4.addr")"
 
 # Proceed creating a treasury withdrawal
@@ -127,16 +118,16 @@ $CARDANO_CLI conway query stake-address-info \
 wget https://tinyurl.com/3wrwb2as -O "${TRANSACTIONS_DIR}/govActionJustification.txt"
 
 
-TREASURY=$(cardano-cli conway query ledger-state --testnet-magic 42 | jq -r '.stateBefore.esAccountState.treasury')
+TREASURY=$(cardano-cli conway query ledger-state | jq -r '.stateBefore.esAccountState.treasury')
 echo "The Treasury currently has a balance of ${TREASURY}"
 
 WITHDRAW_AMOUNT=$((TREASURY / 100 ))
 echo "Our proposal will attempt to withdraw 1% of the treasury: $WITHDRAW_AMOUNT"
 
-govActDeposit=$($CARDANO_CLI conway query gov-state --testnet-magic $NETWORK_MAGIC | jq .enactState.curPParams.govActionDeposit)
-proposalHash="$($CARDANO_CLI conway governance hash --file-text ${TRANSACTIONS_DIR}/govActionJustification.txt)"
+govActDeposit=$(cardano-cli conway query gov-state | jq .currentPParams.govActionDeposit)
+proposalHash="$(cardano-cli conway governance hash anchor-data --file-text ${TRANSACTIONS_DIR}/govActionJustification.txt)"
 
-$CARDANO_CLI conway governance action create-treasury-withdrawal \
+cardano-cli conway governance action create-treasury-withdrawal \
   --testnet \
   --governance-action-deposit "$govActDeposit" \
   --deposit-return-stake-verification-key-file "${UTXO_DIR}/stake1.vkey" \
@@ -146,30 +137,27 @@ $CARDANO_CLI conway governance action create-treasury-withdrawal \
   --transfer "${WITHDRAW_AMOUNT}" \
   --out-file "${TRANSACTIONS_DIR}/treasury.action"
 
-$CARDANO_CLI conway transaction build \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+cardano-cli conway transaction build \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --out-file /dev/stdout | jq -r 'keys[0]')" \
   --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
   --proposal-file "${TRANSACTIONS_DIR}/treasury.action" \
   --witness-override 2 \
   --out-file "${TRANSACTIONS_DIR}/treasury-tx.raw"
 
-$CARDANO_CLI conway transaction sign \
-  --testnet-magic $NETWORK_MAGIC \
+cardano-cli conway transaction sign \
   --tx-body-file "${TRANSACTIONS_DIR}/treasury-tx.raw" \
   --signing-key-file "${UTXO_DIR}/payment1.skey" \
   --out-file "${TRANSACTIONS_DIR}/treasury-tx.signed"
 
-$CARDANO_CLI conway transaction submit \
-  --testnet-magic $NETWORK_MAGIC \
+cardano-cli conway transaction submit \
   --tx-file "${TRANSACTIONS_DIR}/treasury-tx.signed"
 
 sleep 5
 
-$CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals'
+cardano-cli conway query gov-state --testnet-magic 42 | jq -r '.proposals'
 
-ID="$($CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].actionId.txId')"
-IX="$($CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].actionId.govActionIx')"
+ID="$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r '.proposals[0].actionId.txId')"
+IX="$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r '.proposals[0].actionId.govActionIx')"
 
 
 ### ---------
@@ -177,7 +165,7 @@ IX="$($CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals
 ### ---------
 
 for i in {1..3}; do
-  $CARDANO_CLI conway governance vote create \
+  cardano-cli conway governance vote create \
     --yes \
     --governance-action-tx-id "${ID}" \
     --governance-action-index "${IX}" \
@@ -185,39 +173,36 @@ for i in {1..3}; do
     --out-file "${TRANSACTIONS_DIR}/treasury-drep${i}.vote"
 done
 
-$CARDANO_CLI conway transaction build \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+cardano-cli conway transaction build \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --out-file /dev/stdout | jq -r 'keys[0]')" \
   --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
   --vote-file "${TRANSACTIONS_DIR}/treasury-drep1.vote" \
   --witness-override 2 \
   --out-file "${TRANSACTIONS_DIR}/treasury-dreps-vote-tx.raw"
 
-$CARDANO_CLI conway transaction sign \
-  --testnet-magic $NETWORK_MAGIC \
+cardano-cli conway transaction sign \
   --tx-body-file "${TRANSACTIONS_DIR}/treasury-dreps-vote-tx.raw" \
   --signing-key-file "${UTXO_DIR}/payment1.skey" \
   --signing-key-file "${DREP_DIR}/drep1.skey" \
   --out-file "${TRANSACTIONS_DIR}/treasury-dreps-vote-tx.signed"
 
-$CARDANO_CLI conway transaction submit \
-  --testnet-magic $NETWORK_MAGIC \
+cardano-cli conway transaction submit \
   --tx-file "${TRANSACTIONS_DIR}/treasury-dreps-vote-tx.signed"
 
 sleep 5
 
-$CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals'
+cardano-cli conway query gov-state | jq -r '.proposals'
 
-expiresAfter=$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].expiresAfter')
+expiresAfter=$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r '.proposals[0].expiresAfter')
 
 echo "ONCE THE VOTING PERIOD ENDS ON EPOCH ${expiresAfter}, WE SHOULD SEE THE FUNDS FROM THE TREASURY IN STAKE4.ADDR"
 
-tip=$(cardano-cli query tip --testnet-magic 42 | jq .)
+tip=$(cardano-cli query tip | jq .)
 current_epoch=$(echo $tip | jq .epoch)
 slots_to_epoch_end=$(echo $tip | jq .slotsToEpochEnd)
 
 sleep $((60 * (expiresAfter - current_epoch) + slots_to_epoch_end / 10))
 
-$CARDANO_CLI conway query stake-address-info --testnet-magic "$NETWORK_MAGIC" --address "$(cat "${UTXO_DIR}/stake4.addr")"
+cardano-cli conway query stake-address-info --address "$(cat "${UTXO_DIR}/stake4.addr")"
 
-$CARDANO_CLI conway query stake-address-info --testnet-magic "$NETWORK_MAGIC" --address "$(cat "${UTXO_DIR}/stake1.addr")"
+cardano-cli conway query stake-address-info --address "$(cat "${UTXO_DIR}/stake1.addr")"

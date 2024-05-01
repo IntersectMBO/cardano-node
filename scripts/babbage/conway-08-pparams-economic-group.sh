@@ -30,66 +30,64 @@ sprocket() {
   fi
 }
 
-CARDANO_CLI="${CARDANO_CLI:-cardano-cli}"
-NETWORK_MAGIC=42
 UTXO_DIR=example/utxo-keys
 TRANSACTIONS_DIR=example/transactions
 CC_DIR=example/cc
 DREP_DIR=example/dreps
+POOL_DIR=example/pools
 
 mkdir -p "$TRANSACTIONS_DIR"
 mkdir -p "$CC_DIR"
 
-$CARDANO_CLI conway query gov-state --testnet-magic $NETWORK_MAGIC | jq -r '.enactState.curPParams.keyDeposit'
+cardano-cli conway query gov-state | jq -r '.currentPParams.govActionDeposit'
 
 wget https://tinyurl.com/3wrwb2as -O "${TRANSACTIONS_DIR}/govActionJustification.txt"
 
-govActDeposit=$($CARDANO_CLI conway query gov-state --testnet-magic $NETWORK_MAGIC | jq .enactState.curPParams.govActionDeposit)
-proposalHash="$($CARDANO_CLI conway governance hash --file-text ${TRANSACTIONS_DIR}/govActionJustification.txt)"
+govActDeposit=$(cardano-cli conway query gov-state | jq .currentPParams.govActionDeposit)
+proposalHash="$(cardano-cli conway governance hash anchor-data --file-text ${TRANSACTIONS_DIR}/govActionJustification.txt)"
 
-$CARDANO_CLI conway governance action create-protocol-parameters-update \
+cardano-cli conway governance action create-protocol-parameters-update \
 --testnet \
 --governance-action-deposit "$govActDeposit" \
---stake-verification-key-file "${UTXO_DIR}/stake1.vkey" \
+--deposit-return-stake-verification-key-file "${UTXO_DIR}/stake1.vkey" \
 --anchor-url https://tinyurl.com/3wrwb2as  \
 --anchor-data-hash "$proposalHash" \
---key-reg-deposit-amt 3000000 \
+--new-governance-action-deposit 3567000000 \
 --out-file "${TRANSACTIONS_DIR}/pparams.action"
 # --governance-action-tx-id "$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r .enactState.prevGovActionIds.pgaPParamUpdate.txId)" \
 # --governance-action-index "$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r .enactState.prevGovActionIds.pgaPParamUpdate.govActionIx)" \
 
 
-$CARDANO_CLI conway transaction build \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+cardano-cli conway transaction build \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --out-file /dev/stdout | jq -r 'keys[0]')" \
   --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
   --proposal-file "${TRANSACTIONS_DIR}/pparams.action" \
   --witness-override 2 \
   --out-file "${TRANSACTIONS_DIR}/pparams-tx.raw"
 
-$CARDANO_CLI conway transaction sign \
-  --testnet-magic $NETWORK_MAGIC \
+cardano-cli conway transaction sign \
   --tx-body-file "${TRANSACTIONS_DIR}/pparams-tx.raw" \
   --signing-key-file "${UTXO_DIR}/payment1.skey" \
   --signing-key-file "${UTXO_DIR}/stake1.skey" \
   --out-file "${TRANSACTIONS_DIR}/pparams-tx.signed"
 
-$CARDANO_CLI conway transaction submit \
-  --testnet-magic $NETWORK_MAGIC \
+cardano-cli conway transaction submit \
   --tx-file "${TRANSACTIONS_DIR}/pparams-tx.signed"
 
 
 sleep 5
 
-ID="$($CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].actionId.txId')"
-IX="$($CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].actionId.govActionIx')"
+cardano-cli conway query gov-state | jq -r '.proposals'
+
+ID="$(cardano-cli conway query gov-state | jq -r '.proposals[0].actionId.txId')"
+IX="$(cardano-cli conway query gov-state | jq -r '.proposals[0].actionId.govActionIx')"
 
 ### ---------
 # DREP VOTES
 ### ---------
 
 for i in {1..3}; do
-  $CARDANO_CLI conway governance vote create \
+  cardano-cli conway governance vote create \
     --yes \
     --governance-action-tx-id "${ID}" \
     --governance-action-index "${IX}" \
@@ -97,9 +95,8 @@ for i in {1..3}; do
     --out-file "${TRANSACTIONS_DIR}/pparams-drep${i}.vote"
 done
 
-$CARDANO_CLI conway transaction build \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+cardano-cli conway transaction build \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --out-file /dev/stdout | jq -r 'keys[0]')" \
   --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
   --vote-file "${TRANSACTIONS_DIR}/pparams-drep1.vote" \
   --vote-file "${TRANSACTIONS_DIR}/pparams-drep2.vote" \
@@ -107,8 +104,7 @@ $CARDANO_CLI conway transaction build \
   --witness-override 4 \
   --out-file "${TRANSACTIONS_DIR}/pparams-dreps-vote-tx.raw"
 
-$CARDANO_CLI conway transaction sign \
-  --testnet-magic $NETWORK_MAGIC \
+cardano-cli conway transaction sign \
   --tx-body-file "${TRANSACTIONS_DIR}/pparams-dreps-vote-tx.raw" \
   --signing-key-file "${UTXO_DIR}/payment1.skey" \
   --signing-key-file "${DREP_DIR}/drep1.skey" \
@@ -116,66 +112,102 @@ $CARDANO_CLI conway transaction sign \
   --signing-key-file "${DREP_DIR}/drep3.skey" \
   --out-file "${TRANSACTIONS_DIR}/pparams-dreps-vote-tx.signed"
 
-$CARDANO_CLI conway transaction submit \
-  --testnet-magic $NETWORK_MAGIC \
+cardano-cli conway transaction submit \
   --tx-file "${TRANSACTIONS_DIR}/pparams-dreps-vote-tx.signed"
 
 sleep 5
 
 # Check the state for Drep votes
 
-$CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals'
+cardano-cli conway query gov-state | jq -r '.proposals'
 
-# ### ----------––––––––
-# # CC VOTES
-# ### ----------––––––––
+
+### ----------
+# SPO VOTES
+### ----------
 
 for i in {1..3}; do
-  $CARDANO_CLI conway governance vote create \
+  cardano-cli conway governance vote create \
     --yes \
     --governance-action-tx-id "${ID}" \
     --governance-action-index "${IX}" \
-    --cc-hot-verification-key-file "${CC_DIR}/hot${i}-cc.vkey" \
-    --out-file "${TRANSACTIONS_DIR}/pparams-cc${i}.vote"
+    --cold-verification-key-file "${POOL_DIR}/cold${i}.vkey" \
+    --out-file "${TRANSACTIONS_DIR}/info-spo${i}.vote"
 done
 
-$CARDANO_CLI conway transaction build \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+cardano-cli conway transaction build \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --out-file /dev/stdout | jq -r 'keys[0]')" \
   --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
-  --vote-file "${TRANSACTIONS_DIR}/pparams-cc1.vote" \
-  --vote-file "${TRANSACTIONS_DIR}/pparams-cc2.vote" \
-  --vote-file "${TRANSACTIONS_DIR}/pparams-cc3.vote" \
+  --vote-file "${TRANSACTIONS_DIR}/info-spo1.vote" \
+  --vote-file "${TRANSACTIONS_DIR}/info-spo2.vote" \
+  --vote-file "${TRANSACTIONS_DIR}/info-spo3.vote" \
   --witness-override 4 \
-  --out-file "${TRANSACTIONS_DIR}/pparams-cc-votes-tx.raw"
+  --out-file "${TRANSACTIONS_DIR}/info-spo-votes-tx.raw"
 
-$CARDANO_CLI conway transaction sign \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-body-file "${TRANSACTIONS_DIR}/pparams-cc-votes-tx.raw" \
+cardano-cli conway transaction sign \
+  --tx-body-file "${TRANSACTIONS_DIR}/info-spo-votes-tx.raw" \
   --signing-key-file "${UTXO_DIR}/payment1.skey" \
-  --signing-key-file "${CC_DIR}/hot1-cc.skey" \
-  --signing-key-file "${CC_DIR}/hot2-cc.skey" \
-  --signing-key-file "${CC_DIR}/hot3-cc.skey" \
-  --out-file "${TRANSACTIONS_DIR}/pparams-cc-votes-tx.signed"
+  --signing-key-file "${POOL_DIR}/cold1.skey" \
+  --signing-key-file "${POOL_DIR}/cold2.skey" \
+  --signing-key-file "${POOL_DIR}/cold3.skey" \
+  --out-file "${TRANSACTIONS_DIR}/info-spo-votes-tx.signed"
 
-$CARDANO_CLI conway transaction submit \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-file "${TRANSACTIONS_DIR}/pparams-cc-votes-tx.signed"
+cardano-cli conway transaction submit \
+  --tx-file "${TRANSACTIONS_DIR}/info-spo-votes-tx.signed"
 
 sleep 5
 
+cardano-cli conway query gov-state | jq -r '.proposals'
+# # ### ----------––––––––
+# # # CC VOTES
+# # ### ----------––––––––
+
+# for i in {1..3}; do
+#   cardano-cli conway governance vote create \
+#     --yes \
+#     --governance-action-tx-id "${ID}" \
+#     --governance-action-index "${IX}" \
+#     --cc-hot-verification-key-file "${CC_DIR}/hot${i}-cc.vkey" \
+#     --out-file "${TRANSACTIONS_DIR}/pparams-cc${i}.vote"
+# done
+
+# cardano-cli conway transaction build \
+#   --testnet-magic $NETWORK_MAGIC \
+#   --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+#   --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
+#   --vote-file "${TRANSACTIONS_DIR}/pparams-cc1.vote" \
+#   --vote-file "${TRANSACTIONS_DIR}/pparams-cc2.vote" \
+#   --vote-file "${TRANSACTIONS_DIR}/pparams-cc3.vote" \
+#   --witness-override 4 \
+#   --out-file "${TRANSACTIONS_DIR}/pparams-cc-votes-tx.raw"
+
+# cardano-cli conway transaction sign \
+#   --testnet-magic $NETWORK_MAGIC \
+#   --tx-body-file "${TRANSACTIONS_DIR}/pparams-cc-votes-tx.raw" \
+#   --signing-key-file "${UTXO_DIR}/payment1.skey" \
+#   --signing-key-file "${CC_DIR}/hot1-cc.skey" \
+#   --signing-key-file "${CC_DIR}/hot2-cc.skey" \
+#   --signing-key-file "${CC_DIR}/hot3-cc.skey" \
+#   --out-file "${TRANSACTIONS_DIR}/pparams-cc-votes-tx.signed"
+
+# cardano-cli conway transaction submit \
+#   --testnet-magic $NETWORK_MAGIC \
+#   --tx-file "${TRANSACTIONS_DIR}/pparams-cc-votes-tx.signed"
+
+# sleep 5
+
 # Check the state for DREP and SPO votes
 
-$CARDANO_CLI conway query gov-state --testnet-magic 42 | jq -r '.proposals'
+cardano-cli conway query gov-state | jq -r '.proposals'
 
-expiresAfter=$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r '.proposals.[].expiresAfter')
+expiresAfter=$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r '.proposals[0].expiresAfter')
 
 echo "ONCE THE VOTING PERIOD ENDS ON EPOCH ${expiresAfter}, WE SHOULD SEE THE NEW PROTOCOL PARAMETERS RATIFIED"
 
-tip=$(cardano-cli query tip --testnet-magic 42 | jq .)
+tip=$(cardano-cli query tip | jq .)
 current_epoch=$(echo $tip | jq .epoch)
 slots_to_epoch_end=$(echo $tip | jq .slotsToEpochEnd)
 
 sleep $((60 * (expiresAfter - current_epoch) + slots_to_epoch_end / 10))
 
-$CARDANO_CLI conway query gov-state --testnet-magic $NETWORK_MAGIC | jq -r '.enactState.curPParams.keyDeposit'
+cardano-cli conway query gov-state | jq -r '.currentPParams.govActionDeposit'

@@ -101,7 +101,7 @@ $SED -i "${ROOT}/configuration.yaml" \
   echo "TestAlonzoHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
   echo "TestBabbageHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
  # echo "TestConwayHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "ExperimentalProtocolsEnabled: False" >> "${ROOT}/configuration.yaml"
+  echo "ExperimentalProtocolsEnabled: True" >> "${ROOT}/configuration.yaml"
   echo "ExperimentalHardForksEnabled: True" >> "${ROOT}/configuration.yaml"
 
 # Because in Babbage the overlay schedule and decentralization parameter
