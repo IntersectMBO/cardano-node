@@ -25,10 +25,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # If you edit these versions, make sure the version in the lonely macos-latest job below is updated accordingly
-        ghc: ["9.6.4", "9.8.1"]
-        cabal: ["3.10.2.1"]
-        os: [windows-latest, ubuntu-latest]
         include:
           # Using include, to make sure there will only be one macOS job, even if the matrix gets expanded later on.
           # We want a single job, because macOS runners are scarce.
@@ -70,10 +66,6 @@ jobs:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
 
-    - name: Install openssl (macos)
-      if: startsWith(matrix.os, 'macos')
-      run: brew install openssl
-
     - name: Install ghcup on macos
       if: startsWith(matrix.os, 'macos')
       shell: bash
@@ -96,6 +88,15 @@ jobs:
       uses: input-output-hk/actions/base@latest
       with:
         use-sodium-vrf: true # default is true
+
+    - name: Install openssl-3.0.13 on macos
+      if: startsWith(matrix.os, 'macos')
+      run: |
+        brew update
+        brew install openssl@3.0
+        export PKG_CONFIG_PATH="/opt/homebrew/opt/openssl@3.0/lib/pkgconfig:$PKG_CONFIG_PATH"
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" | tee -a $GITHUB_ENV
+        pkg-config --libs openssl
 
     - name: "Re-install openssl on Windows"
       if: runner.os == 'Windows'
