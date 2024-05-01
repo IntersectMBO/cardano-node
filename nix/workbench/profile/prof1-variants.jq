@@ -1055,29 +1055,79 @@ def all_profile_variants:
   , $nomad_perfssd_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
     # With Heap=15600 and cgroup=15600, it fails with this last Resource 
     # {"at":"2024-04-30T16:19:44.021576813Z","ns":"Resources","data":{"Alloc":141171447312,"CentiBlkIO":0,"CentiCpu":13759,"CentiGC":7847,"CentiMut":5910,"FsRd":53248,"FsWr":53248,"GcsMajor":6,"GcsMinor":4966,"Heap":16263413760,"Live":15819374448,"NetRd":0,"NetWr":0,"RSS":16316493824,"Threads":9,"kind":"ResourceStats"},"sev":"Info","thread":"19","host":"client-ssd-eu-14"}
-    { name: "value-16M-tight-lmdb-nomadperfssd"
+    { name: "value-dbsynth-16M-tight-lmdb-nomadperfssd"
     , genesis:
-      { utxo:                               (16 * $M)
+      { utxo:                               0
+        # Account for slots db-synthesis creates, and the delay for it to run
+      , extra_future_offset:                -253300
+      , funds_balance:                      40000000000000
       }
     , node:
-      { # run 2024-04-22-13-25-282ba-891-value-16M32G-lmdb-nomadperfssd-bage-nom
+      { shutdown_on_slot_synced:            324500
+        ################################################
+        # run 2024-04-21-09-51-fcfae-891-value-dbsynth-32G-nomadperfssd-bage-nom
+        # (That is really a db-synth 16M UTxO)
+        # From "at":"2024-04-21T12:20:40.040123173Z"
+        # to:  "at":"2024-04-22T05:54:36.348109498Z"
+        # Heap of node-0:
+        # 2024-04-21 12:20:40.041679013 UTC; 2322595840  ( 2215)
+        # 2024-04-21 12:20:54.347858029 UTC; 3263168512  ( 3112)
+        # 2024-04-21 12:21:03.721528513 UTC; 5407506432  ( 5157)
+        # 2024-04-21 12:21:15.741329625 UTC; 5474615296  ( 5221)
+        # 2024-04-21 12:21:21.8475613 UTC;   10399776768 ( 9918)
+        # 2024-04-21 12:21:40.135136717 UTC; 14555283456 (13881)
+        # 2024-04-21 12:22:01.807118393 UTC; 15523119104 (14804)
+        # 2024-04-21 13:33:29.063615409 UTC; 15680405504
+        # 2024-04-21 14:44:03.140934538 UTC; 15880683520
+        # 2024-04-21 14:44:23.980727612 UTC; 16110321664
+        # 2024-04-21 14:44:43.830264762 UTC; 16175333376
+        # 2024-04-21 14:50:01.52784188 UTC;  16179527680
+        # 2024-04-21 17:06:01.315559798 UTC; 16713252864
+        # 2024-04-21 17:06:19.074896749 UTC; 16979591168
+        # 2024-04-22 02:31:27.278095505 UTC; 17056137216
+        # 2024-04-22 02:31:46.691042294 UTC; 17100177408
+        # 2024-04-22 04:53:05.901672153 UTC; 17109614592
+        # 2024-04-22 04:53:23.436650726 UTC; 17167286272 (16372)
+        ################################################
+        # run 2024-04-22-13-25-282ba-891-value-16M32G-lmdb-nomadperfssd-bage-nom
+        # From "at":"2024-04-22T13:46:54.870482067Z"
+        # to:  "at":"2024-04-23T07:33:32.359678902Z"
         # Heap of node-0:
         # 2024-04-22 13:46:54.871878713 UTC; 18048090112 (17212)
         # 2024-04-22 13:47:08.277467792 UTC; 20589838336 (19636)
-        # 2024-04-22 15:45:36.828095457 UTC; 13135511552 (12527)
-        heap_limit:                         15000 # Assuming RTS 0.8 * limit
+        # 2024-04-22 15:45:36.828095457 UTC; 13135511552 (12527) (pretty stable)
+      , heap_limit:                         15700 # Assuming RTS 0.8 * limit
       , utxo_lmdb:                          true
       }
+    # generator tx count doesn't account for synth slots
+    , generator:
+      { tx_count: 768000
+      }
     , cluster:
-      { # run 2024-04-22-13-25-282ba-891-value-16M32G-lmdb-nomadperfssd-bage-nom
+      { # run 2024-04-21-09-51-fcfae-891-value-dbsynth-32G-nomadperfssd-bage-nom
+        # (That is really a db-synth 16M UTxO)
+        # From "at":"2024-04-21T12:20:40.040123173Z"
+        # to:  "at":"2024-04-22T05:54:36.346875485Z"
+        # RSS of node-0:
+        # 2024-04-21 12:20:40.041679013 UTC; 2374238208  ( 2264)
+        # ... Load db folder ?
+        # 2024-04-21 12:21:15.741329625 UTC; 5527621632  ( 5271)
+        # 2024-04-21 12:21:21.8475613 UTC;   10452484096 ( 9968)
+        # 2024-04-21 12:21:23.854137486 UTC; 10453561344 ( 9969)
+        # 2024-04-21 12:21:40.135136717 UTC; 14608953344 (13932)
+        # ... ("slowly" goes up)
+        # 2024-04-22 04:53:27.439301646 UTC; 17221124096 (16423)
+        ################################################
+        # run 2024-04-22-13-25-282ba-891-value-16M32G-lmdb-nomadperfssd-bage-nom
+        # From "at":"2024-04-22T13:46:54.870482067Z"
+        # to:  "at":"2024-04-23T07:33:32.359678902Z"
         # RSS of node-0:
         # 2024-04-22 13:46:54.871878713 UTC; 18099585024 (17261)
-        # ... goes up to (probably loading genesis file)
-        # 2024-04-22 15:42:57.535351141 UTC; 22917529600 (21856)
-        # 2024-04-22 15:45:36.828095457 UTC; 15463256064 (14747)
-        # ... slowly goes up through the run
-        # 2024-04-23 07:32:16.258172645 UTC; 16898580480 (16116)
-        nomad: {resources: {producer: {cores: 16, memory: 15500, memory_max: 15500}}}
+        # 2024-04-22 13:46:55.874216851 UTC; 18100391936 (17262)
+        # 2024-04-22 13:47:08.277467792 UTC; 20642803712 (19687)
+        # ... ("slowly" goes up)
+        # 2024-04-22 14:07:53.346608489 UTC; 21192962048 (20211)
+        nomad: {resources: {producer: {cores: 16, memory: 16500, memory_max: 16500}}}
       , ssd_directory:                      "/ssd1"
       }
     }

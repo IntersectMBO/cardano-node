@@ -557,7 +557,13 @@ backend_nomad() {
                 --numeric-owner                                \
                 --owner="$(${coreutils_path}/bin/id --user)"   \
                 --group="$(${coreutils_path}/bin/id --group)"  \
-            &
+		&& backend_nomad task-exec "${dir}" "${node}"  \
+		"${coreutils_path}"/bin/mv                     \
+		"${state_dir}"/genesis/db                      \
+		"${state_dir}"/"${node}"                       \
+	        && backend_nomad task-exec "${dir}" "${node}"  \
+	        "${coreutils_path}"/bin/rm -f                  \
+		"${state_dir}"/genesis.tar.zst &
             unpacks_array+=("$!")
           done
           # Wait and check!
