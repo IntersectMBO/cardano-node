@@ -134,6 +134,7 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
   void $ desiredPoolNumberProposalTest execConfig epochStateView ceo gov "secondProposal"
                                        wallet0 Nothing [(1, "yes")] newNumberOfDesiredPools2 0 (Just newNumberOfDesiredPools2) 10
 
+-- | Delegates a staking key pair to the "always abstain" automated DRep
 delegateToAlwaysAbstain
   :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Typeable era)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
@@ -148,16 +149,18 @@ delegateToAlwaysAbstain
 delegateToAlwaysAbstain execConfig epochStateView sbe work prefix =
   delegateToAutomaticDRep execConfig epochStateView sbe work prefix "--always-abstain"
 
+-- | Delegates to a staking key pair with the delegation preference set to automatic.
 delegateToAutomaticDRep
   :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Typeable era)
-  => H.ExecConfig
-  -> EpochStateView
-  -> ShelleyBasedEra era
-  -> FilePath
-  -> String
-  -> String
-  -> PaymentKeyInfo
-  -> KeyPair StakingKey
+  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
+  -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
+                    -- using the 'getEpochStateView' function.
+  -> ShelleyBasedEra era -- ^ The Shelley-based era (e.g., 'ConwayEra') in which the transaction will be constructed.
+  -> FilePath -- ^ Base directory path where generated files will be stored.
+  -> String -- ^ Name for the subfolder that will be created under 'work' folder.
+  -> String -- ^ Additional command-line arguments for the delegation.
+  -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
+  -> KeyPair StakingKey -- ^ Staking key pair used for delegation.
   -> m ()
 delegateToAutomaticDRep execConfig epochStateView sbe work prefix
                         flag payingWallet skeyPair@(KeyPair vKeyFile _sKeyFile) = do
