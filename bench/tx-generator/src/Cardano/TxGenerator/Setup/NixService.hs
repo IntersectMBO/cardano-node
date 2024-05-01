@@ -1,12 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.TxGenerator.Setup.NixService
-       ( NixServiceOptions(..)
+       ( NixServiceOptions (..)
        , getNodeConfigFile
        , setNodeConfigFile
        , txGenTxParams
@@ -24,9 +25,11 @@ import           Cardano.Node.Types (AdjustFilePaths (..))
 import           Cardano.TxGenerator.Internal.Orphans ()
 import           Cardano.TxGenerator.Types
 
-import           Data.Aeson
+import           Data.Aeson (FromJSON (..), Options (fieldLabelModifier), (.:), (.:?))
+import qualified Data.Aeson as Aeson (Options, defaultOptions, genericParseJSON, withObject)
 import           Data.List.NonEmpty (NonEmpty)
 import           Data.Maybe (fromMaybe)
+import qualified Data.Time.Clock as Clock (DiffTime)
 import           GHC.Generics (Generic)
 
 
@@ -42,6 +45,7 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_init_cooldown    :: Double
   , _nix_era              :: AnyCardanoEra
   , _nix_plutus           :: Maybe TxGenPlutusParams
+  , _nix_keepalive        :: Maybe Clock.DiffTime
   , _nix_nodeConfigFile       :: Maybe FilePath
   , _nix_cardanoTracerSocket  :: Maybe FilePath
   , _nix_sigKey               :: SigningKeyFile In
@@ -59,14 +63,11 @@ setNodeConfigFile opts filePath = opts {_nix_nodeConfigFile = Just filePath }
 
 -- dropping the '_nix_ prefix of above Haskell ADT field labels is assumed
 -- to match JSON attribute names as provided by the Nix service definition
-jsonOptions :: Options
-jsonOptions = defaultOptions { fieldLabelModifier = stripPrefix }
-  where
-    stripPrefix :: String -> String
-    stripPrefix = drop 5
+jsonOptions :: Aeson.Options
+jsonOptions = Aeson.defaultOptions { fieldLabelModifier = drop 5 }
 
 instance FromJSON NixServiceOptions where
-  parseJSON = genericParseJSON jsonOptions
+  parseJSON = Aeson.genericParseJSON jsonOptions
 
 instance AdjustFilePaths NixServiceOptions where
   adjustFilePaths f opts
@@ -79,7 +80,7 @@ instance AdjustFilePaths NixServiceOptions where
 -- | This deserialization is not a general one for that type, but custom-tailored
 --   to the service definition in: nix/nixos/tx-generator-service.nix
 instance FromJSON TxGenPlutusParams where
-  parseJSON = withObject "TxGenPlutusParams" $ \o ->
+  parseJSON = Aeson.withObject "TxGenPlutusParams" $ \o ->
     PlutusOn
       <$> o .: "type"
       <*> o .: "script"
