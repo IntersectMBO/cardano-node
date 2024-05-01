@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,27 +11,28 @@ module Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
   ) where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyLedgerEra)
 import           Cardano.Api.Error (displayError)
 import           Cardano.Api.IO.Base (Socket)
 
+import           Cardano.Ledger.Conway.Core (ppNOptL)
+import           Cardano.Ledger.Conway.Governance (ConwayGovState, cgsCurPParamsL)
+import           Cardano.Ledger.Core (EraPParams)
 import           Cardano.Testnet
 
 import           Prelude
 
 import           Control.Monad (void)
 import           Control.Monad.Catch (MonadCatch)
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Lens as AL
-import           Data.ByteString.Lazy.Char8 (pack)
 import           Data.String (fromString)
 import qualified Data.Text as Text
 import           Data.Word (Word32)
 import           GHC.Stack (HasCallStack, callStack)
-import           Lens.Micro ((^?))
+import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query (EpochStateView, findLargestUtxoForPaymentKey,
-                   getCurrentEpochNo, getEpochStateView, getMinDRepDeposit)
+                   getCurrentEpochNo, getEpochStateView, getGovState, getMinDRepDeposit)
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
 import           Testnet.Process.Cli.DRep (createCertificatePublicationTxBody, createVotingTxBody,
                    generateVoteFiles)
@@ -100,7 +102,7 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
-  initialDesiredNumberOfPools <- getDesiredPoolNumberValue execConfig
+  initialDesiredNumberOfPools <- getDesiredPoolNumberValue epochStateView ceo
 
   let newNumberOfDesiredPools = initialDesiredNumberOfPools + 1
 
@@ -206,7 +208,7 @@ desiredPoolNumberProposalTest execConfig epochStateView configurationFile socket
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
   void $ waitUntilEpoch configurationFile socketPath (EpochNo (epochAfterProp + fromIntegral epochsToWait))
-  desiredPoolNumberAfterProp <- getDesiredPoolNumberValue execConfig
+  desiredPoolNumberAfterProp <- getDesiredPoolNumberValue epochStateView ceo
 
   desiredPoolNumberAfterProp === expected
 
@@ -346,17 +348,11 @@ voteChangeProposal execConfig epochStateView sbe work prefix
 -- decentralization and efficiency and the spec suggest it should be between 100 an 1000.
 -- Changing this parameter will inderectly affect how easy it is to saturate a pool in order to
 -- incentivize that the number of SPOs states close to the parameter value.
-getDesiredPoolNumberValue :: (MonadTest m, MonadCatch m, MonadIO m) => H.ExecConfig -> m Integer
-getDesiredPoolNumberValue execConfig = do
-  govStateString <- H.execCli' execConfig
-    [ "conway", "query", "gov-state"
-    , "--volatile-tip"
-    ]
-
-  govStateJSON <- H.nothingFail (Aeson.decode (pack govStateString) :: Maybe Aeson.Value)
-  let mTargetPoolNum :: Maybe Integer
-      mTargetPoolNum = govStateJSON
-                             ^? AL.key "currentPParams"
-                              . AL.key "stakePoolTargetNum"
-                              . AL._Integer
-  evalMaybe mTargetPoolNum
+getDesiredPoolNumberValue :: (EraPParams (ShelleyLedgerEra era), H.MonadAssertion m, MonadTest m, MonadIO m)
+  => EpochStateView
+  -> ConwayEraOnwards era
+  -> m Integer
+getDesiredPoolNumberValue epochStateView ceo = do
+   govState :: ConwayGovState era <- getGovState epochStateView ceo
+   return $ toInteger $ govState ^. cgsCurPParamsL
+                                  . ppNOptL
