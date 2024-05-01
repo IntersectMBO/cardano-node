@@ -102,7 +102,7 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
 
   initialDesiredNumberOfPools <- getDesiredPoolNumberValue execConfig
 
-  let newNumberOfDesiredPools = fromIntegral (initialDesiredNumberOfPools + 1)
+  let newNumberOfDesiredPools = initialDesiredNumberOfPools + 1
 
   -- Do some proposal and vote yes with the first DRep only
   -- and assert that proposal does NOT pass.
@@ -117,7 +117,7 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
 
   -- Do some other proposal and vote yes with first DRep only
   -- and assert the new proposal passes now.
-  let newNumberOfDesiredPools2 = fromIntegral (newNumberOfDesiredPools + 1)
+  let newNumberOfDesiredPools2 = newNumberOfDesiredPools + 1
   void $ desiredPoolNumberProposalTest execConfig epochStateView configurationFile socketPath ceo gov "secondProposal"
                                        wallet0 Nothing [(1, "yes")] newNumberOfDesiredPools2 newNumberOfDesiredPools2 2
 
