@@ -96,7 +96,7 @@ hprop_check_predefined_no_confidence_drep = H.integrationWorkspace "test-activit
   -- and assert that proposal passes.
   initialDesiredNumberOfPools <- getDesiredPoolNumberValue epochStateView ceo
 
-  let newNumberOfDesiredPools = fromIntegral (initialDesiredNumberOfPools + 1)
+  let newNumberOfDesiredPools = initialDesiredNumberOfPools + 1
 
   firstProposalInfo <- desiredPoolNumberProposalTest execConfig epochStateView ceo gov "firstProposal"
                                                      wallet1 Nothing [(3, "yes")] newNumberOfDesiredPools 0 (Just newNumberOfDesiredPools) 10
