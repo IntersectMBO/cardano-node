@@ -7,15 +7,13 @@ def profile_cli_args($p):
 { common:
   { createStackedArgs:
     ([ "--supply",                 fmt_decimal_10_5($p.genesis.funds_balance)
-     , "--gen-utxo-keys",          2
+     , "--gen-utxo-keys",          1
      , "--gen-genesis-keys",       $p.composition.n_bft_hosts
      , "--supply-delegated",       fmt_decimal_10_5($p.derived.supply_delegated)
      , "--gen-pools",              $p.composition.n_pools
      , "--gen-stake-delegs",       $p.derived.delegators_effective
      , "--num-stuffed-utxo",       fmt_decimal_10_5($p.derived.utxo_stuffed)
      , "--testnet-magic",          $p.genesis.network_magic
-     , "--bulk-pool-cred-files",   1
-     , "--bulk-pools-per-file",    $p.composition.n_pools
      ] +
      if $p.composition.dense_pool_density != 1
      then

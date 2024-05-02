@@ -570,16 +570,6 @@ EOF
         cp "$dir"/genesis/genesis.alonzo.json  "$dir"/genesis.alonzo.json
         echo >&2
 
-        progress "run | genesis" "db-synth"
-        date
-        time nix --refresh run github:shlevy/ouroboros-consensus/synth-tx-baseline#db-synthesizer -- \
-            --config "$dir"/node-0/config.json --db "$dir"/genesis/db \
-            --bulk-credentials-file "$dir"/genesis/pools/bulk1.creds \
-            --genesis-utxo-signing-key-file "$dir"/genesis/utxo-keys/utxo2.skey \
-            --slots 260500 # TODO: Change to the amount needed for profile
-
-        echo 42 > "$dir"/genesis/db/protocolMagicId
-
         ## 8. deploy genesis
         progress "run | genesis" "deploying.."
         backend deploy-genesis "$dir"
