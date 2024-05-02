@@ -27,6 +27,7 @@ import qualified Data.Map as Map
 import           Data.String (fromString)
 import qualified Data.Text as Text
 import           Data.Word (Word32)
+import           GHC.Stack (HasCallStack)
 import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
 
@@ -263,7 +264,7 @@ makeUpdateConstitutionalCommitteeProposal execConfig epochStateView ceo work pre
   return (governanceActionTxId, governanceActionIndex)
 
 delegateToAlwaysNoConfidence
-  :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Typeable era)
+  :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Typeable era, HasCallStack)
   => H.ExecConfig
   -> EpochStateView
   -> ShelleyBasedEra era
@@ -276,7 +277,7 @@ delegateToAlwaysNoConfidence execConfig epochStateView sbe work prefix =
   delegateToAutomaticDRep execConfig epochStateView sbe work prefix "--always-no-confidence"
 
 testNoConfidenceProposal
-  :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
+  :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t, HasCallStack)
   => H.ExecConfig
   -> EpochStateView
   -> ConwayEraOnwards ConwayEra
