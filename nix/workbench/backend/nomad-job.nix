@@ -1384,7 +1384,7 @@ let
       ]
       ++
       (if nodeSpec.name == "explorer"
-      then ["-M14000m"]
+      then ["-M32000m"]
       else []
       )
       )

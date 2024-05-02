@@ -1052,24 +1052,123 @@ def all_profile_variants:
       { ssd_directory:                      "/ssd1"
       }
     }
+
+### We need: 0.0196 GB extra (Bash 880, 6736 supervisord, 862 sh, start.sh 599, 3896 tracer, 6684 nomad exec, 854 sh)
+# journalctl of:
+# - value-16M-tight-lmdb-nomadperfssd
+# - - 14000 Heap
+# - -  6000 Grace
+# - - 15000 Max
+# May 02 13:41:55 client-ssd-eu-02 kernel: cardano-node:w invoked oom-killer: gfp_mask=0xcc0(GFP_KERNEL), order=0, oom_score_adj=0
+# May 02 13:41:55 client-ssd-eu-02 kernel: CPU: 8 PID: 328994 Comm: cardano-node:w Not tainted 6.1.64 #1-NixOS
+# May 02 13:41:55 client-ssd-eu-02 kernel: Hardware name: Amazon EC2 r5d.4xlarge/, BIOS 1.0 10/16/2017
+# May 02 13:41:55 client-ssd-eu-02 kernel: Call Trace:
+# May 02 13:41:55 client-ssd-eu-02 kernel:  <TASK>
+# May 02 13:41:55 client-ssd-eu-02 kernel:  dump_stack_lvl+0x44/0x5c
+# May 02 13:41:55 client-ssd-eu-02 kernel:  dump_header+0x4a/0x211
+# May 02 13:41:55 client-ssd-eu-02 kernel:  oom_kill_process.cold+0xb/0x10
+# May 02 13:41:55 client-ssd-eu-02 kernel:  out_of_memory+0x1ee/0x520
+# May 02 13:41:55 client-ssd-eu-02 kernel:  mem_cgroup_out_of_memory+0x134/0x150
+# May 02 13:41:55 client-ssd-eu-02 kernel:  try_charge_memcg+0x696/0x780
+# May 02 13:41:55 client-ssd-eu-02 kernel:  charge_memcg+0x39/0xf0
+# May 02 13:41:55 client-ssd-eu-02 kernel:  __mem_cgroup_charge+0x28/0x80
+# May 02 13:41:55 client-ssd-eu-02 kernel:  __handle_mm_fault+0x8df/0xb80
+# May 02 13:41:55 client-ssd-eu-02 kernel:  handle_mm_fault+0xdb/0x2d0
+# May 02 13:41:55 client-ssd-eu-02 kernel:  do_user_addr_fault+0x191/0x570
+# May 02 13:41:55 client-ssd-eu-02 kernel:  exc_page_fault+0x66/0x150
+# May 02 13:41:55 client-ssd-eu-02 kernel:  asm_exc_page_fault+0x22/0x30
+# May 02 13:41:55 client-ssd-eu-02 kernel: RIP: 0033:0x7f336777c93f
+# May 02 13:41:55 client-ssd-eu-02 kernel: Code: 00 00 62 61 7d 28 e7 87 00 20 00 00 62 61 7d 28 e7 8f 20 20 00 00 62 61 7d 28 e7 97 40 20 00 00 62 61 7d 28 e7 9f 60 20 00 00 <62> 61 7d 28 e7>
+# May 02 13:41:55 client-ssd-eu-02 kernel: RSP: 002b:00007f3357ffaad8 EFLAGS: 00010207
+# May 02 13:41:55 client-ssd-eu-02 kernel: RAX: 000000457c604010 RBX: 000000457c604010 RCX: 0000000000000020
+# May 02 13:41:55 client-ssd-eu-02 kernel: RDX: 00000000000034d3 RSI: 00000042498100c0 RDI: 00000045c3d10040
+# May 02 13:41:55 client-ssd-eu-02 kernel: RBP: 000000440273a8c8 R08: ffffffffffffffd0 R09: 0000004200335a30
+# May 02 13:41:55 client-ssd-eu-02 kernel: R10: 0000000000003341 R11: 00000000020d0000 R12: 000000420037f8f8
+# May 02 13:41:55 client-ssd-eu-02 kernel: R13: 0000000003f5ac18 R14: 0000000000000020 R15: 00000044027330c0
+# May 02 13:41:55 client-ssd-eu-02 kernel:  </TASK>
+# May 02 13:41:55 client-ssd-eu-02 kernel: memory: usage 15872000kB, limit 15872000kB, failcnt 18175
+# May 02 13:41:55 client-ssd-eu-02 kernel: swap: usage 0kB, limit 9007199254740988kB, failcnt 0
+# May 02 13:41:55 client-ssd-eu-02 kernel: Memory cgroup stats for /nomad.slice/526365c0-60b3-aecc-a6bb-dcdfe7323a6d.node-3.scope:
+# May 02 13:41:55 client-ssd-eu-02 kernel: anon 16206172160
+#                                          file 0
+#                                          kernel 46637056
+#                                          kernel_stack 311296
+#                                          pagetables 32337920
+#                                          sec_pagetables 0
+#                                          percpu 0
+#                                          sock 0
+#                                          vmalloc 0
+#                                          shmem 0
+#                                          zswap 0
+#                                          zswapped 0
+#                                          file_mapped 0
+#                                          file_dirty 0
+#                                          file_writeback 0
+#                                          swapcached 0
+#                                          anon_thp 0
+#                                          file_thp 0
+#                                          shmem_thp 0
+#                                          inactive_anon 36864
+#                                          active_anon 16205996032
+#                                          inactive_file 0
+#                                          active_file 0
+#                                          unevictable 0
+#                                          slab_reclaimable 13345344
+#                                          slab_unreclaimable 489984
+#                                          slab 13835328
+#                                          workingset_refault_anon 0
+#                                          workingset_refault_file 4
+#                                          workingset_activate_anon 0
+#                                          workingset_activate_file 0
+#                                          workingset_restore_anon 0
+#                                          workingset_restore_file 0
+#                                          workingset_nodereclaim 0
+#                                          pgscan 1126024
+#                                          pgsteal 1126024
+#                                          pgscan_kswapd 0
+#                                          pgscan_direct 1126024
+#                                          pgsteal_kswapd 0
+#                                          pgsteal_direct 1126024
+#                                          pgfault 3990572
+#                                          pgmajfault 0
+#                                          pgrefill 0
+#                                          pgactivate 0
+#                                          pgdeactivate 0
+#                                          pglazyfree 0
+#                                          pglazyfreed 0
+#                                          zswpin 0
+#                                          zswpout 0
+#                                          thp_fault_alloc 0
+#                                          thp_collapse_alloc 0
+# May 02 13:41:55 client-ssd-eu-02 kernel: Tasks state (memory values in pages):
+# May 02 13:41:55 client-ssd-eu-02 kernel: [  pid  ]   uid  tgid total_vm      rss pgtables_bytes swapents oom_score_adj name
+# May 02 13:41:55 client-ssd-eu-02 kernel: [ 328847] 65534 328847     1222      880    45056        0             0 bash
+# May 02 13:41:55 client-ssd-eu-02 kernel: [ 328867] 65534 328867     7663     6736    98304        0             0 .supervisord-wr
+# May 02 13:41:55 client-ssd-eu-02 kernel: [ 328942] 65534 328942     1215      862    45056        0             0 sh
+# May 02 13:41:55 client-ssd-eu-02 kernel: [ 328943] 65534 328943      977      599    40960        0             0 start.sh
+# May 02 13:41:55 client-ssd-eu-02 kernel: [ 328944] 65534 328944 268519294     3896   151552        0             0 cardano-tracer
+# May 02 13:41:55 client-ssd-eu-02 kernel: [ 328971] 65534 328971     7631     6684    98304        0             0 .supervisorctl-
+# May 02 13:41:55 client-ssd-eu-02 kernel: [ 328987] 65534 328987     1215      854    45056        0             0 sh
+# May 02 13:41:55 client-ssd-eu-02 kernel: [ 328988] 65534 328988 268566933  3960225 31887360        0             0 cardano-node
   , $nomad_perfssd_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
     { name: "value-16M-tight-lmdb-nomadperfssd"
     , genesis:
       { utxo:                               (16 * $M)
       }
     , node:
-      { # run 2024-04-22-13-25-282ba-891-value-16M32G-lmdb-nomadperfssd-bage-nom
+      { # Heap changes:
+        # run 2024-04-22-13-25-282ba-891-value-16M32G-lmdb-nomadperfssd-bage-nom
         # From: "at":"2024-04-22T13:46:54.870482067Z"
         # To:   "at":"2024-04-23T07:33:32.359678902Z"
         # 2024-04-22 13:46:54.871878713 UTC; 18048090112 (17212)
         # 2024-04-22 13:47:08.277467792 UTC; 20589838336 (19636)
         # 2024-04-22 15:45:36.828095457 UTC; 13135511552 (12527)
-        heap_limit:                         14000 # Assuming RTS 0.9 * limit
-      , rts_flags_override:                 ["-Mgrace6000m"]
+        heap_limit:                         32000
       , utxo_lmdb:                          true
       }
     , cluster:
-      { # run 2024-04-22-13-25-282ba-891-value-16M32G-lmdb-nomadperfssd-bage-nom
+      { # RSS changes:
+        # run 2024-04-22-13-25-282ba-891-value-16M32G-lmdb-nomadperfssd-bage-nom
         # From: "at":"2024-04-22T13:46:54.870482067Z"
         # To:   "at":"2024-04-23T07:33:32.359678902Z"
         # 2024-04-22 13:46:54.871878713 UTC; 18099585024 (17261)
@@ -1081,39 +1180,13 @@ def all_profile_variants:
         # ... slowly up
         # 2024-04-23 07:32:16.258172645 UTC; 16898580480 (16115)
         # 2024-04-23 07:33:32.320972015 UTC; 15801413632 (15069)
-        nomad: {resources: {producer: {cores: 16, memory: 15000, memory_max: 15000}}}
+        nomad: {resources: {producer: {cores: 16, memory: 64000, memory_max: 64000}}}
       , ssd_directory:                      "/ssd1"
       }
     }
-  , $nomad_perfssd_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
-    # With Heap=15600 and cgroup=15600, it fails with this last Resource 
-    # {"at":"2024-04-30T16:19:44.021576813Z","ns":"Resources","data":{"Alloc":141171447312,"CentiBlkIO":0,"CentiCpu":13759,"CentiGC":7847,"CentiMut":5910,"FsRd":53248,"FsWr":53248,"GcsMajor":6,"GcsMinor":4966,"Heap":16263413760,"Live":15819374448,"NetRd":0,"NetWr":0,"RSS":16316493824,"Threads":9,"kind":"ResourceStats"},"sev":"Info","thread":"19","host":"client-ssd-eu-14"}
-    { name: "value-16M-tight-lmdb-nomadperfssd"
-    , genesis:
-      { utxo:                               (16 * $M)
-      }
-    , node:
-      { # run 2024-04-22-13-25-282ba-891-value-16M32G-lmdb-nomadperfssd-bage-nom
-        # Heap of node-0:
-        # 2024-04-22 13:46:54.871878713 UTC; 18048090112 (17212)
-        # 2024-04-22 13:47:08.277467792 UTC; 20589838336 (19636)
-        # 2024-04-22 15:45:36.828095457 UTC; 13135511552 (12527)
-        heap_limit:                         15000 # Assuming RTS 0.8 * limit
-      , utxo_lmdb:                          true
-      }
-    , cluster:
-      { # run 2024-04-22-13-25-282ba-891-value-16M32G-lmdb-nomadperfssd-bage-nom
-        # RSS of node-0:
-        # 2024-04-22 13:46:54.871878713 UTC; 18099585024 (17261)
-        # ... goes up to (probably loading genesis file)
-        # 2024-04-22 15:42:57.535351141 UTC; 22917529600 (21856)
-        # 2024-04-22 15:45:36.828095457 UTC; 15463256064 (14747)
-        # ... slowly goes up through the run
-        # 2024-04-23 07:32:16.258172645 UTC; 16898580480 (16116)
-        nomad: {resources: {producer: {cores: 16, memory: 15500, memory_max: 15500}}}
-      , ssd_directory:                      "/ssd1"
-      }
-    }
+
+
+
   , $nomad_perfssd_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
     { name: "value-32M32G-lmdb-nomadperfssd"
     , genesis:

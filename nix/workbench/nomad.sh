@@ -611,6 +611,22 @@ EOL
           wb nomad clients ssh "${node_name}" df \
         | grep /dev/disk/by-label/nixos | tr -s " " | cut -d" " -f4
       ;;
+##### clients -> set-cgroup-memory-max )########################################
+      set-cgroup-memory-max )
+        local usage="USAGE: wb nomad clients ${subop} JOB-FILE NODE|TASK-NAME BYTES"
+        local job_file=${1:?$usage};  shift
+        local task_name=${1:?$usage}; shift
+        local bytes=${1:?$usage}; shift
+        # Set /sys/fs/cgroup/nomad.slice/ALLOC-ID.TASK-NAME.scope/memory.max
+        # Example:
+        # echo 18252928000 > /sys/fs/cgroup/nomad.slice/b0ec2016-47b7-1d3b-a462-e952eafd7f2c.node-3.scope/memory.max
+        local alloc_id
+        alloc_id=$(wb nomad job task-name-allocation-id "${job_file}" "${task_name}")
+        local node_name
+        node_name=$(wb nomad job task-name-node-name    "${job_file}" "${task_name}")
+        wb nomad clients ssh "${node_name}" \
+          "echo ${bytes} > /sys/fs/cgroup/nomad.slice/${alloc_id}.${task_name}.scope/memory.max"
+      ;;
 ####### clients -> * )##########################################################
         * )
           usage_nomad
