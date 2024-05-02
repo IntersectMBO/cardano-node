@@ -1053,6 +1053,39 @@ def all_profile_variants:
       }
     }
   , $nomad_perfssd_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
+    { name: "value-16M-tight-lmdb-nomadperfssd"
+    , genesis:
+      { utxo:                               (16 * $M)
+      }
+    , node:
+      { # run 2024-04-22-13-25-282ba-891-value-16M32G-lmdb-nomadperfssd-bage-nom
+        # From: "at":"2024-04-22T13:46:54.870482067Z"
+        # To:   "at":"2024-04-23T07:33:32.359678902Z"
+        # 2024-04-22 13:46:54.871878713 UTC; 18048090112 (17212)
+        # 2024-04-22 13:47:08.277467792 UTC; 20589838336 (19636)
+        # 2024-04-22 15:45:36.828095457 UTC; 13135511552 (12527)
+        heap_limit:                         14000 # Assuming RTS 0.9 * limit
+      , rts_flags_override:                 ["-Mgrace6000m"]
+      , utxo_lmdb:                          true
+      }
+    , cluster:
+      { # run 2024-04-22-13-25-282ba-891-value-16M32G-lmdb-nomadperfssd-bage-nom
+        # From: "at":"2024-04-22T13:46:54.870482067Z"
+        # To:   "at":"2024-04-23T07:33:32.359678902Z"
+        # 2024-04-22 13:46:54.871878713 UTC; 18099585024 (17261)
+        # 2024-04-22 13:46:55.874216851 UTC; 18100391936 (17261)
+        # 2024-04-22 13:47:08.277467792 UTC; 20642803712 (19686)
+        # up until
+        # 2024-04-22 15:42:57.535351141 UTC; 22917529600 (21855)
+        # 2024-04-22 15:45:36.828095457 UTC; 15463256064 (14746)
+        # ... slowly up
+        # 2024-04-23 07:32:16.258172645 UTC; 16898580480 (16115)
+        # 2024-04-23 07:33:32.320972015 UTC; 15801413632 (15069)
+        nomad: {resources: {producer: {cores: 16, memory: 15000, memory_max: 15000}}}
+      , ssd_directory:                      "/ssd1"
+      }
+    }
+  , $nomad_perfssd_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
     # With Heap=15600 and cgroup=15600, it fails with this last Resource 
     # {"at":"2024-04-30T16:19:44.021576813Z","ns":"Resources","data":{"Alloc":141171447312,"CentiBlkIO":0,"CentiCpu":13759,"CentiGC":7847,"CentiMut":5910,"FsRd":53248,"FsWr":53248,"GcsMajor":6,"GcsMinor":4966,"Heap":16263413760,"Live":15819374448,"NetRd":0,"NetWr":0,"RSS":16316493824,"Threads":9,"kind":"ResourceStats"},"sev":"Info","thread":"19","host":"client-ssd-eu-14"}
     { name: "value-dbsynth-16M-tight-lmdb-nomadperfssd"
