@@ -183,7 +183,7 @@ updateConstitutionalCommittee execConfig epochStateView ceo work prefix
   return thisProposal
 
 makeUpdateConstitutionalCommitteeProposal
-  :: (H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m, Foldable f)
+  :: (HasCallStack, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m, Foldable f)
   => H.ExecConfig
   -> EpochStateView
   -> ConwayEraOnwards ConwayEra
