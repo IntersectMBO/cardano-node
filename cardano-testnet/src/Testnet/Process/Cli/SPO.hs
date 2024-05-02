@@ -408,7 +408,7 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile s
 -- Returns a list of generated @File VoteFile In@ representing the paths to
 -- the generated voting files.
 -- TODO: unify with DRep.generateVoteFiles
-generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m)
+generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m, HasCallStack)
   => ConwayEraOnwards era -- ^ The conway era onwards witness for the era in which the
                           -- transaction will be constructed.
   -> H.ExecConfig -- ^ Specifies the CLI execution configuration.
