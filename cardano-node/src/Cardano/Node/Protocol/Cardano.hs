@@ -228,7 +228,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- version of protocol /after/ Babbage, i.e. Conway.
           Praos.babbageProtVer =
             if npcExperimentalHardForksEnabled
-              then ProtVer (natVersion @9) 0
+              then ProtVer (natVersion @10) 0
               else ProtVer (natVersion @8) 0,
           Praos.babbageMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
@@ -240,7 +240,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- If Conway is enabled, this is the Conway protocol version.
           Praos.conwayProtVer =
             if npcExperimentalHardForksEnabled
-              then ProtVer (natVersion @9) 0
+              then ProtVer (natVersion @10) 0
               else ProtVer (natVersion @8) 0,
           Praos.conwayMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
