@@ -15,7 +15,7 @@ import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet
-import           Cardano.Testnet.Test.Gov.PredefinedAbstainDRep (AutomaticDRepFlag (..),
+import           Cardano.Testnet.Test.Gov.PredefinedAbstainDRep (AutomaticDRepType (..),
                    delegateToAutomaticDRep, desiredPoolNumberProposalTest,
                    getDesiredPoolNumberValue, voteChangeProposal)
 
