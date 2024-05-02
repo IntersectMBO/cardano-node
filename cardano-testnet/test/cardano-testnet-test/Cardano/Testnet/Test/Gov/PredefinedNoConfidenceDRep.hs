@@ -15,14 +15,14 @@ import qualified Cardano.Api.Ledger as L
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet
-import           Cardano.Testnet.Test.Gov.PredefinedAbstainDRep (delegateToAutomaticDRep,
-                   desiredPoolNumberProposalTest, getDesiredPoolNumberValue, voteChangeProposal)
+import           Cardano.Testnet.Test.Gov.PredefinedAbstainDRep (AutomaticDRepFlag (..),
+                   delegateToAutomaticDRep, desiredPoolNumberProposalTest,
+                   getDesiredPoolNumberValue, voteChangeProposal)
 
 import           Prelude
 
 import           Control.Monad (void)
 import           Control.Monad.Catch (MonadCatch)
-import           Data.Data (Typeable)
 import qualified Data.Map as Map
 import           Data.String (fromString)
 import qualified Data.Text as Text
@@ -39,7 +39,7 @@ import           Testnet.Process.Cli.Transaction (retrieveTransactionId, signTx,
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
 import           Testnet.Types (KeyPair (..), PaymentKeyInfo (..), PoolNode (..),
-                   SomeKeyPair (SomeKeyPair), StakingKey, TestnetRuntime (..), nodeSocketPath)
+                   SomeKeyPair (SomeKeyPair), TestnetRuntime (..), nodeSocketPath)
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
@@ -101,11 +101,11 @@ hprop_check_predefined_no_confidence_drep = H.integrationWorkspace "test-activit
   firstProposalInfo <- desiredPoolNumberProposalTest execConfig epochStateView ceo gov "firstProposal"
                                                      wallet1 Nothing [(3, "yes")] newNumberOfDesiredPools 0 (Just newNumberOfDesiredPools) 10
 
-  -- Take the last two stake delegators and delegate them to "No Confidence".
-  delegateToAlwaysNoConfidence execConfig epochStateView sbe gov "delegateToNoConfidence1"
-                               wallet2 (defaultDelegatorStakeKeyPair 2)
-  delegateToAlwaysNoConfidence execConfig epochStateView sbe gov "delegateToNoConfidence2"
-                               wallet2 (defaultDelegatorStakeKeyPair 3)
+  -- Take the last two stake delegators and delegate them to "No Confidence" automatic DRep.
+  delegateToAutomaticDRep execConfig epochStateView sbe work
+                          "delegateToNoConfidence1" NoConfidenceDRep wallet2 (defaultDelegatorStakeKeyPair 2)
+  delegateToAutomaticDRep execConfig epochStateView sbe work
+                          "delegateToNoConfidence2" NoConfidenceDRep wallet2 (defaultDelegatorStakeKeyPair 3)
 
   -- Do some other proposal and vote yes with all the DReps
   -- and assert the new proposal does NOT pass.
@@ -262,21 +262,6 @@ makeUpdateConstitutionalCommitteeProposal execConfig epochStateView ceo work pre
   governanceActionIndex <- H.nothingFailM $ watchEpochStateView epochStateView (return . maybeExtractGovernanceActionIndex (fromString governanceActionTxId)) (EpochInterval 1)
 
   return (governanceActionTxId, governanceActionIndex)
-
--- | Delegate a staking key pair to the automated no confidence DRep.
-delegateToAlwaysNoConfidence
-  :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Typeable era, HasCallStack)
-  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
-  -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
-                    -- using the 'getEpochStateView' function.
-  -> ShelleyBasedEra era -- ^ The Shelley based era witness for ConwayEra
-  -> FilePath -- ^ Base directory path where generated files will be stored.
-  -> String -- ^ Name for the subfolder that will be created under 'work' folder.
-  -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
-  -> KeyPair StakingKey -- ^ Staking key pair used for delegation.
-  -> m ()
-delegateToAlwaysNoConfidence execConfig epochStateView sbe work prefix =
-  delegateToAutomaticDRep execConfig epochStateView sbe work prefix "--always-no-confidence"
 
 -- Run a no confidence motion and check the result. Vote "yes" with 3 SPOs. Check the no
 -- confidence motion passes.

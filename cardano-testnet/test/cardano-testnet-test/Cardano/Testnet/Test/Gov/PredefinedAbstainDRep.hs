@@ -6,7 +6,8 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
-  ( hprop_check_predefined_abstain_drep
+  ( AutomaticDRepFlag(..)
+  , hprop_check_predefined_abstain_drep
   , delegateToAutomaticDRep
   , desiredPoolNumberProposalTest
   , getDesiredPoolNumberValue
@@ -122,11 +123,11 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
   void $ desiredPoolNumberProposalTest execConfig epochStateView ceo gov "firstProposal"
                                        wallet0 Nothing [(1, "yes")] newNumberOfDesiredPools 3 (Just initialDesiredNumberOfPools) 10
 
-  -- Take the last two stake delegators and delegate them to "Abstain".
-  delegateToAlwaysAbstain execConfig epochStateView sbe gov "delegateToAbstain1"
-                          wallet1 (defaultDelegatorStakeKeyPair 2)
-  delegateToAlwaysAbstain execConfig epochStateView sbe gov "delegateToAbstain2"
-                          wallet2 (defaultDelegatorStakeKeyPair 3)
+  -- Take the last two stake delegators and delegate them to "AlwaysAbstainDRep".
+  delegateToAutomaticDRep execConfig epochStateView sbe gov "delegateToAbstain1"
+                          AlwaysAbstainDRep wallet1 (defaultDelegatorStakeKeyPair 2)
+  delegateToAutomaticDRep execConfig epochStateView sbe gov "delegateToAbstain2"
+                          AlwaysAbstainDRep wallet2 (defaultDelegatorStakeKeyPair 3)
 
   -- Do some other proposal and vote yes with first DRep only
   -- and assert the new proposal passes now.
@@ -134,22 +135,10 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
   void $ desiredPoolNumberProposalTest execConfig epochStateView ceo gov "secondProposal"
                                        wallet0 Nothing [(1, "yes")] newNumberOfDesiredPools2 0 (Just newNumberOfDesiredPools2) 10
 
--- | Delegates a staking key pair to the "always abstain" automated DRep
-delegateToAlwaysAbstain
-  :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Typeable era)
-  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
-  -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
-                    -- using the 'getEpochStateView' function.
-  -> ShelleyBasedEra era -- ^ The Shelley-based era (e.g., 'ConwayEra') in which the transaction will be constructed.
-  -> FilePath -- ^ Base directory path where generated files will be stored.
-  -> String -- ^ Name for the subfolder that will be created under 'work' folder.
-  -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
-  -> KeyPair StakingKey -- ^ Staking key pair used for delegation.
-  -> m ()
-delegateToAlwaysAbstain execConfig epochStateView sbe work prefix =
-  delegateToAutomaticDRep execConfig epochStateView sbe work prefix "--always-abstain"
+-- | Which automatic DRep to delegate to
+data AutomaticDRepFlag = AlwaysAbstainDRep
+                       | NoConfidenceDRep
 
--- | Delegates a staking key pair to an automatic DRep.
 delegateToAutomaticDRep
   :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Typeable era)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
@@ -158,13 +147,11 @@ delegateToAutomaticDRep
   -> ShelleyBasedEra era -- ^ The Shelley-based era (e.g., 'ConwayEra') in which the transaction will be constructed.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
-  -> String -- ^ Additional command-line argument for the delegation.
+  -> AutomaticDRepFlag -- ^ Which type of automatic DRep to delegate to.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
   -> KeyPair StakingKey -- ^ Staking key pair used for delegation.
   -> m ()
-delegateToAutomaticDRep execConfig epochStateView sbe work prefix
-                        flag payingWallet skeyPair@(KeyPair vKeyFile _sKeyFile) = do
-
+delegateToAutomaticDRep execConfig epochStateView sbe work prefix flag payingWallet skeyPair@(KeyPair vKeyFile _sKeyFile) = do
   let era = toCardanoEra sbe
       cEra = AnyCardanoEra era
 
@@ -174,7 +161,9 @@ delegateToAutomaticDRep execConfig epochStateView sbe work prefix
   let voteDelegationCertificatePath = baseDir </> "delegation-certificate.delegcert"
   void $ H.execCli' execConfig
     [ anyEraToString cEra, "stake-address", "vote-delegation-certificate"
-    , flag
+    , case flag of
+        AlwaysAbstainDRep -> "--always-abstain"
+        NoConfidenceDRep -> "--always-no-confidence"
     , "--stake-verification-key-file", unFile vKeyFile
     , "--out-file", voteDelegationCertificatePath
     ]
