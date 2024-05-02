@@ -109,7 +109,7 @@ hprop_check_predefined_no_confidence_drep = H.integrationWorkspace "test-activit
 
   -- Do some other proposal and vote yes with all the DReps
   -- and assert the new proposal does NOT pass.
-  let newNumberOfDesiredPools2 = fromIntegral (newNumberOfDesiredPools + 1)
+  let newNumberOfDesiredPools2 = newNumberOfDesiredPools + 1
 
   void $ desiredPoolNumberProposalTest execConfig epochStateView ceo gov "secondProposal"
                                        wallet0 (Just firstProposalInfo) [(3, "yes")] newNumberOfDesiredPools2 3 (Just newNumberOfDesiredPools) 10
