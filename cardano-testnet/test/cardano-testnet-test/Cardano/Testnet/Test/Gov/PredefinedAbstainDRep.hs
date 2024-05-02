@@ -149,7 +149,7 @@ delegateToAlwaysAbstain
 delegateToAlwaysAbstain execConfig epochStateView sbe work prefix =
   delegateToAutomaticDRep execConfig epochStateView sbe work prefix "--always-abstain"
 
--- | Delegates to a staking key pair with the delegation preference set to automatic.
+-- | Delegates a staking key pair to an automatic DRep.
 delegateToAutomaticDRep
   :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Typeable era)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
@@ -158,7 +158,7 @@ delegateToAutomaticDRep
   -> ShelleyBasedEra era -- ^ The Shelley-based era (e.g., 'ConwayEra') in which the transaction will be constructed.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
-  -> String -- ^ Additional command-line arguments for the delegation.
+  -> String -- ^ Additional command-line argument for the delegation.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
   -> KeyPair StakingKey -- ^ Staking key pair used for delegation.
   -> m ()

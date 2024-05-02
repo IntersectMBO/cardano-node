@@ -263,7 +263,7 @@ makeUpdateConstitutionalCommitteeProposal execConfig epochStateView ceo work pre
 
   return (governanceActionTxId, governanceActionIndex)
 
--- | Delegate to a staking key pair with the delegation preference set to always no confidence.
+-- | Delegate a staking key pair to the automated no confidence DRep.
 delegateToAlwaysNoConfidence
   :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Typeable era, HasCallStack)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
@@ -278,16 +278,20 @@ delegateToAlwaysNoConfidence
 delegateToAlwaysNoConfidence execConfig epochStateView sbe work prefix =
   delegateToAutomaticDRep execConfig epochStateView sbe work prefix "--always-no-confidence"
 
+-- Run a no confidence motion and check the result. Vote "yes" with 3 SPOs. Check the no
+-- confidence motion passes.
 testNoConfidenceProposal
   :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t, HasCallStack)
-  => H.ExecConfig
-  -> EpochStateView
-  -> ConwayEraOnwards ConwayEra
-  -> FilePath
-  -> FilePath
-  -> PaymentKeyInfo
-  -> (String, Word32)
-  -> t (Int, String)
+  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
+  -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
+                    -- using the 'getEpochStateView' function.
+  -> ConwayEraOnwards ConwayEra -- ^ The Shelley based era witness for ConwayEra onwards.
+  -> FilePath -- ^ Base directory path where generated files will be stored.
+  -> String -- ^ Name for the subfolder that will be created under 'work' folder.
+  -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
+  -> (String, Word32) -- ^ Tuple containing the preivous proposal transaction id and index.
+  -> t (Int, String) -- ^ Model of DRep votes for proposal, list of pairs with an amount
+                     -- of votes and the and type of vote (i.e: "yes", "no", or "abstain").
   -> m (String, Word32)
 testNoConfidenceProposal execConfig epochStateView ceo work prefix
                          wallet previousProposalInfo votes = do
