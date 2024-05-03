@@ -50,6 +50,8 @@ import           Testnet.Types (KeyPair (..),
 import           Hedgehog
 import qualified Hedgehog.Extras as H
 import Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
+import Testnet.Components.Configuration (anyEraToString)
+import Data.Data (Typeable)
 
 -- | This test creates a default testnet with three DReps delegated to by three
 -- separate stake holders (one per DRep). We then do a proposal for an arbitrary
@@ -130,13 +132,13 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
                                        wallet0 Nothing [(1, "yes")] newNumberOfDesiredPools2 0 (Just newNumberOfDesiredPools2) 10
 
 delegateToAlwaysAbstain
-  :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m)
+  :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Typeable era)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
   -> NodeConfigFile 'In -- ^ Path to the node configuration file as returned by 'cardanoTestnetDefault'.
   -> File Socket 'InOut -- ^ Path to the cardano-node unix socket file.
-  -> ShelleyBasedEra ConwayEra -- ^ The Shelley-based era (e.g., 'ConwayEra') in which the transaction will be constructed.
+  -> ShelleyBasedEra era -- ^ The Shelley-based era (e.g., 'ConwayEra') in which the transaction will be constructed.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
@@ -153,7 +155,7 @@ delegateToAlwaysAbstain execConfig epochStateView configurationFile socketPath s
   -- Create vote delegation certificate
   let voteDelegationCertificatePath = baseDir </> "delegation-certificate.delegcert"
   void $ H.execCli' execConfig
-    [ "conway", "stake-address", "vote-delegation-certificate"
+    [ anyEraToString cEra, "stake-address", "vote-delegation-certificate"
     , "--always-abstain"
     , "--stake-verification-key-file", unFile vKeyFile
     , "--out-file", voteDelegationCertificatePath
