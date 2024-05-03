@@ -35,6 +35,7 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Query (EpochStateView, findLargestUtxoForPaymentKey,
                    getCurrentEpochNo, getEpochStateView, getMinDRepDeposit, watchEpochStateView)
+import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
 import           Testnet.Defaults (defaultDelegatorStakeKeyPair)
 import qualified Testnet.Process.Cli.Keys as P
 import           Testnet.Process.Cli.Transaction (retrieveTransactionId, signTx, submitTx)
@@ -49,7 +50,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Predefined No Confidence DRep/"'@
 hprop_check_predefined_no_confidence_drep :: Property
-hprop_check_predefined_no_confidence_drep = H.integrationWorkspace "test-activity" $ \tempAbsBasePath' -> do
+hprop_check_predefined_no_confidence_drep = H.integrationWorkspace "test-activity" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
