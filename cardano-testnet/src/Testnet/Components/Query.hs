@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Components.Query
@@ -20,14 +21,16 @@ module Testnet.Components.Query
   , findUtxosWithAddress
   , findLargestUtxoWithAddress
   , findLargestUtxoForPaymentKey
+  , waitAndCheckNewEpochState
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Ledger (Credential, DRepState, KeyRole (DRepRole), StandardCrypto)
+import           Cardano.Api.Ledger (Credential, DRepState, EpochInterval (..), KeyRole (DRepRole),
+                   StandardCrypto)
 import           Cardano.Api.Shelley (ShelleyLedgerEra, fromShelleyTxIn, fromShelleyTxOut)
 
 import qualified Cardano.Ledger.Api as L
-import           Cardano.Ledger.BaseTypes (EpochInterval, addEpochInterval)
+import           Cardano.Ledger.BaseTypes (addEpochInterval)
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.PParams as L
@@ -35,8 +38,9 @@ import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.UTxO as L
 
 import           Control.Exception.Safe (MonadCatch)
+import           Control.Monad (void)
 import           Control.Monad.Trans.Resource
-import           Control.Monad.Trans.State.Strict (put)
+import           Control.Monad.Trans.State.Strict (StateT, put)
 import           Data.Bifunctor (bimap)
 import           Data.IORef
 import           Data.List (sortOn)
@@ -48,9 +52,10 @@ import           Data.Ord (Down (..))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Type.Equality
+import           Data.Word (Word64)
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
-import           Lens.Micro (to, (^.))
+import           Lens.Micro (Lens', to, (^.))
 
 import           Testnet.Property.Assert
 import           Testnet.Property.Util (runInBackground)
@@ -353,3 +358,40 @@ getCurrentEpochNo
 getCurrentEpochNo epochStateView = withFrozenCallStack $ do
   AnyNewEpochState _ newEpochState <- getEpochState epochStateView
   pure $ newEpochState ^. L.nesELL
+
+waitAndCheckNewEpochState :: forall m era value. (MonadAssertion m, MonadTest m, MonadIO m, Eq value)
+                          => EpochStateView -> NodeConfigFile In -> SocketPath -> ShelleyBasedEra era -> EpochInterval -> Maybe value -> EpochInterval
+                          -> Lens' (L.NewEpochState (ShelleyLedgerEra era)) value -> m ()
+waitAndCheckNewEpochState epochStateView configurationFile socketPath sbe (EpochInterval minWait) mExpected (EpochInterval maxWait) lens = do
+  (EpochNo curEpoch) <- getCurrentEpochNo epochStateView
+  eProposalResult
+    <- H.evalIO . runExceptT $ foldEpochState
+                                configurationFile
+                                socketPath
+                                FullValidation
+                                (EpochNo (curEpoch + fromIntegral maxWait))
+                                ()
+                                (\epochState _ _ -> filterEpochState (isSuccess curEpoch) epochState)
+  void $ H.evalEither eProposalResult
+  where
+    filterEpochState :: (EpochNo -> value -> Bool) -> AnyNewEpochState -> StateT () IO LedgerStateCondition
+    filterEpochState f (AnyNewEpochState actualEra newEpochState) =
+        caseShelleyToBabbageOrConwayEraOnwards
+          (const $ error "waitAndCheck: Only conway era onwards supported")
+          (const $ do
+            Refl <- either error pure $ assertErasEqual sbe actualEra
+            let val = newEpochState ^. lens
+                currEpoch = L.nesEL newEpochState
+            return (if f currEpoch val
+                    then ConditionMet
+                    else ConditionNotMet)
+          )
+          sbe
+
+    isSuccess :: Word64 -> EpochNo -> value -> Bool
+    isSuccess epochAfterProp (EpochNo epochNo) value =
+      (epochAfterProp + fromIntegral minWait <= epochNo) &&
+      (case mExpected of
+        Nothing -> True
+        Just expected -> value == expected) &&
+      (epochNo <= epochAfterProp + fromIntegral maxWait)

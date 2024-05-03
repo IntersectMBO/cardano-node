@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,11 +11,12 @@ module Cardano.Testnet.Test.Gov.DRepActivity
   ) where
 
 import           Cardano.Api as Api
+import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyLedgerEra)
 import           Cardano.Api.Error (displayError)
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval), drepExpiry)
 
-import           Cardano.Ledger.Conway.Core (curPParamsGovStateL)
-import           Cardano.Ledger.Conway.PParams (ppDRepActivityL)
+import           Cardano.Ledger.Conway.Core (EraGov, curPParamsGovStateL)
+import           Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL)
 import           Cardano.Ledger.Shelley.LedgerState (epochStateGovStateL, nesEpochStateL)
 import           Cardano.Testnet
 
@@ -28,13 +30,11 @@ import           Data.String
 import qualified Data.Text as Text
 import           Data.Word (Word32, Word64)
 import           GHC.Stack
-import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
-import           Testnet.EpochStateProcessing (watchEpochStateView)
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.Transaction
@@ -155,7 +155,8 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
 -- and issues the specified votes using default DReps. Optionally, it also
 -- waits checks the expected effect of the proposal.
 activityChangeProposalTest
-  :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t, Typeable era)
+  :: forall m t era . (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t, Typeable era,
+      EraGov (ShelleyLedgerEra era), ConwayEraPParams (ShelleyLedgerEra era))
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
@@ -199,26 +200,11 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
   (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
-  void $ waitForEpochs epochStateView minWait
-  forM_ mExpected $ \expected ->
-    H.nothingFailM $ watchEpochStateView epochStateView (isDRepActivityUpdated expected) maxWait
+  waitAndCheckNewEpochState epochStateView configurationFile socketPath sbe minWait mExpected maxWait
+                            (nesEpochStateL . epochStateGovStateL . curPParamsGovStateL . ppDRepActivityL)
 
   return thisProposal
 
-  where
-    isDRepActivityUpdated :: (HasCallStack, MonadTest m)
-              => EpochInterval -> AnyNewEpochState -> m (Maybe ())
-    isDRepActivityUpdated (EpochInterval expected) (AnyNewEpochState sbe newEpochState) =
-      caseShelleyToBabbageOrConwayEraOnwards
-        (const $ error "activityChangeProposalTest: Only conway era onwards supported")
-        (const $ do
-          let (EpochInterval epochInterval) = newEpochState ^. nesEpochStateL . epochStateGovStateL . curPParamsGovStateL . ppDRepActivityL
-          return (if epochInterval == expected then Just () else Nothing)
-        )
-        sbe
-
--- | Create a proposal to change the DRep activity interval.
--- Return the transaction id and the index of the governance action.
 makeActivityChangeProposal
   :: (HasCallStack, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m, Typeable era)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
