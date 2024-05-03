@@ -38,6 +38,7 @@ import           Testnet.Components.DReps (createVotingTxBody, delegateToDRep, g
 import           Testnet.Components.Query (EpochStateView, checkDRepState,
                    findLargestUtxoForPaymentKey, getCurrentEpochNo, getEpochStateView,
                    getMinDRepDeposit)
+import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
@@ -51,7 +52,7 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRep Activity/"'@
 hprop_check_drep_activity :: Property
-hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBasePath' -> do
+hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
