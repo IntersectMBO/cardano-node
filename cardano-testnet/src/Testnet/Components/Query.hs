@@ -359,9 +359,22 @@ getCurrentEpochNo epochStateView = withFrozenCallStack $ do
   AnyNewEpochState _ newEpochState <- getEpochState epochStateView
   pure $ newEpochState ^. L.nesELL
 
-waitAndCheckNewEpochState :: forall m era value. (MonadAssertion m, MonadTest m, MonadIO m, Eq value)
-                          => EpochStateView -> NodeConfigFile In -> SocketPath -> ConwayEraOnwards era -> EpochInterval -> Maybe value -> EpochInterval
-                          -> Lens' (L.NewEpochState (ShelleyLedgerEra era)) value -> m ()
+-- | Waits for a minimum of @minWait@ epochs and a maximum of @maxWait@ epochs for
+-- the value pointed by the @lens@ to become the same as the @mExpected@ (if it is not 'Nothing').
+-- If the value is not reached within the time frame, the test fails. If @mExpected@ is 'Nothing',
+-- the value is not checked, but the function will sitll wait for @minWait@ epochs.
+waitAndCheckNewEpochState
+  :: forall m era value.
+     (MonadAssertion m, MonadTest m, MonadIO m, Eq value)
+  => EpochStateView -- ^ Current epoch state view. It can be obtained using the 'getEpochStateView' function.
+  -> NodeConfigFile In -- ^ The file path to the configuration file.
+  -> SocketPath -- ^ The file path to the unix socket file to connect to the @cardano-node@.
+  -> ConwayEraOnwards era -- ^ Witness for the current era that shows it is Conway or onwards.
+  -> EpochInterval -- ^ The minimum wait time in epochs.
+  -> Maybe value -- ^ The expected value to check in the epoch state.
+  -> EpochInterval -- ^ The maximum wait time in epochs.
+  -> Lens' (L.NewEpochState (ShelleyLedgerEra era)) value -- ^ The lens to access the specific value in the epoch state.
+  -> m ()
 waitAndCheckNewEpochState epochStateView configurationFile socketPath ceo (EpochInterval minWait) mExpected (EpochInterval maxWait) lens = do
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
   (EpochNo curEpoch) <- getCurrentEpochNo epochStateView
