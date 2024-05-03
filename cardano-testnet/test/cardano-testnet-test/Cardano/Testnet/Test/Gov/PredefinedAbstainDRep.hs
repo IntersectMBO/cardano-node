@@ -50,6 +50,7 @@ import           Testnet.Types (KeyPair (..),
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
+import Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
 
 -- | This test creates a default testnet with three DReps and one stake holder delegated to each.
 -- We then do a proposal for an arbitrary parameter change (in this case to the
@@ -63,7 +64,7 @@ import qualified Hedgehog.Extras as H
 -- Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Predefined Abstain DRep/"'@
 hprop_check_predefined_abstain_drep :: Property
-hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \tempAbsBasePath' -> do
+hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
