@@ -8,13 +8,13 @@ import qualified Cardano.Crypto.Init as Crypto
 import qualified Cardano.Testnet.Test.Cli.Babbage.LeadershipSchedule
 import qualified Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
 import qualified Cardano.Testnet.Test.Cli.Babbage.Transaction
-import qualified Cardano.Testnet.Test.Cli.Conway.DRepRetirement as DRepRetirement
 import qualified Cardano.Testnet.Test.Cli.Conway.Plutus
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.Queries
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldBlocks
 import qualified Cardano.Testnet.Test.LedgerEvents.Gov.DRepDeposits
+import qualified Cardano.Testnet.Test.LedgerEvents.Gov.DRepRetirement as DRepRetirement
 import qualified Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitution
 import qualified Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO as LedgerEvents
 import qualified Cardano.Testnet.Test.LedgerEvents.Gov.TreasuryWithdrawal as LedgerEvents
