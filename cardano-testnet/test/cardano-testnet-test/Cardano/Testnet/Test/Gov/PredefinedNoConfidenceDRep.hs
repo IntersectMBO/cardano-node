@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -23,6 +24,7 @@ import           Prelude
 
 import           Control.Monad (void)
 import           Control.Monad.Catch (MonadCatch)
+import           Control.Monad.Trans.Control (MonadBaseControl)
 import qualified Data.Map as Map
 import           Data.String (fromString)
 import qualified Data.Text as Text
@@ -134,7 +136,7 @@ filterCommittee (AnyNewEpochState sbe newEpochState) =
     sbe
 
 updateConstitutionalCommittee
-  :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
+  :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, MonadBaseControl IO m, Foldable t, HasCallStack)
   => H.ExecConfig
   -> EpochStateView
   -> ConwayEraOnwards ConwayEra
@@ -266,7 +268,7 @@ makeUpdateConstitutionalCommitteeProposal execConfig epochStateView ceo work pre
 -- Run a no confidence motion and check the result. Vote "yes" with 3 SPOs. Check the no
 -- confidence motion passes.
 testNoConfidenceProposal
-  :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t, HasCallStack)
+  :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, MonadBaseControl IO m, Foldable t, HasCallStack)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
@@ -302,9 +304,8 @@ testNoConfidenceProposal execConfig epochStateView ceo work prefix
 
   return thisProposal
 
-
 makeNoConfidenceProposal
-  :: (H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
+  :: (H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => H.ExecConfig
   -> EpochStateView
   -> ConwayEraOnwards ConwayEra

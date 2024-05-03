@@ -28,6 +28,7 @@ import           Prelude
 
 import           Control.Monad (void)
 import           Control.Monad.Catch (MonadCatch)
+import           Control.Monad.Trans.Control (MonadBaseControl)
 import           Data.Data (Typeable)
 import           Data.String (fromString)
 import qualified Data.Text as Text
@@ -184,7 +185,7 @@ delegateToAutomaticDRep execConfig epochStateView sbe work prefix flag payingWal
   void $ waitForEpochs epochStateView (EpochInterval 1)
 
 desiredPoolNumberProposalTest
-  :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
+  :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, MonadBaseControl IO m, Foldable t)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
   -> ConwayEraOnwards ConwayEra -- ^ The ConwaysEraOnwards witness for the Conway era
@@ -317,7 +318,7 @@ type DefaultSPOVote = (String, Int)
 -- | Create and issue votes for (or against) a government proposal with default
 -- Delegate Representative (DReps created by 'cardanoTestnetDefault') and
 -- default Stake Pool Operatorsusing using @cardano-cli@.
-voteChangeProposal :: (Typeable era, MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m)
+voteChangeProposal :: (Typeable era, MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m, MonadBaseControl IO m)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
   -> ConwayEraOnwards era -- ^ The @ConwayEraOnwards@ witness for the current era.

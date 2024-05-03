@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -25,6 +26,7 @@ import qualified Cardano.Ledger.UMap as L
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.State.Strict as StateT
+import           Control.Monad.Trans.Control (MonadBaseControl)
 import qualified Data.Aeson as Aeson
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -47,6 +49,7 @@ import           Testnet.Types
 import           Hedgehog
 import           Hedgehog.Extras (ExecConfig)
 import qualified Hedgehog.Extras as H
+import           Hedgehog.Extras.Test.Concurrent (forConcurrently)
 
 checkStakePoolRegistered
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
@@ -408,7 +411,7 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile s
 -- Returns a list of generated @File VoteFile In@ representing the paths to
 -- the generated voting files.
 -- TODO: unify with DRep.generateVoteFiles
-generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m, HasCallStack)
+generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m, HasCallStack, MonadBaseControl IO m)
   => ConwayEraOnwards era -- ^ The conway era onwards witness for the era in which the
                           -- transaction will be constructed.
   -> H.ExecConfig -- ^ Specifies the CLI execution configuration.
@@ -424,7 +427,7 @@ generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m, HasCallStack)
   -> m [File VoteFile In]
 generateVoteFiles ceo execConfig work prefix governanceActionTxId governanceActionIndex allVotes = do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
-  forM (zip [(1 :: Integer)..] allVotes) $ \(idx, (spoKeys, vote)) -> do
+  forConcurrently (zip [(1 :: Integer)..] allVotes) $ \(idx, (spoKeys, vote)) -> do
     let path = File (baseDir </> "vote-spo-" <> show idx)
     void $ execCli' execConfig
       [ eraToString $ toCardanoEra ceo, "governance", "vote", "create"
