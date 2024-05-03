@@ -360,9 +360,10 @@ getCurrentEpochNo epochStateView = withFrozenCallStack $ do
   pure $ newEpochState ^. L.nesELL
 
 waitAndCheckNewEpochState :: forall m era value. (MonadAssertion m, MonadTest m, MonadIO m, Eq value)
-                          => EpochStateView -> NodeConfigFile In -> SocketPath -> ShelleyBasedEra era -> EpochInterval -> Maybe value -> EpochInterval
+                          => EpochStateView -> NodeConfigFile In -> SocketPath -> ConwayEraOnwards era -> EpochInterval -> Maybe value -> EpochInterval
                           -> Lens' (L.NewEpochState (ShelleyLedgerEra era)) value -> m ()
-waitAndCheckNewEpochState epochStateView configurationFile socketPath sbe (EpochInterval minWait) mExpected (EpochInterval maxWait) lens = do
+waitAndCheckNewEpochState epochStateView configurationFile socketPath ceo (EpochInterval minWait) mExpected (EpochInterval maxWait) lens = do
+  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
   (EpochNo curEpoch) <- getCurrentEpochNo epochStateView
   eProposalResult
     <- H.evalIO . runExceptT $ foldEpochState
@@ -371,11 +372,11 @@ waitAndCheckNewEpochState epochStateView configurationFile socketPath sbe (Epoch
                                 FullValidation
                                 (EpochNo (curEpoch + fromIntegral maxWait))
                                 ()
-                                (\epochState _ _ -> filterEpochState (isSuccess curEpoch) epochState)
+                                (\epochState _ _ -> filterEpochState (isSuccess curEpoch) epochState sbe)
   void $ H.evalEither eProposalResult
   where
-    filterEpochState :: (EpochNo -> value -> Bool) -> AnyNewEpochState -> StateT () IO LedgerStateCondition
-    filterEpochState f (AnyNewEpochState actualEra newEpochState) =
+    filterEpochState :: (EpochNo -> value -> Bool) -> AnyNewEpochState -> ShelleyBasedEra era -> StateT () IO LedgerStateCondition
+    filterEpochState f (AnyNewEpochState actualEra newEpochState) sbe =
         caseShelleyToBabbageOrConwayEraOnwards
           (const $ error "waitAndCheck: Only conway era onwards supported")
           (const $ do
