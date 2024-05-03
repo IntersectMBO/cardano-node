@@ -43,7 +43,6 @@ import qualified Testnet.Process.Cli.Keys as P
 import           Testnet.Process.Cli.Transaction (retrieveTransactionId, signTx, submitTx)
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
-import           Testnet.Runtime
 import           Testnet.Types (KeyPair (..),
                    PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair), PoolNode (..),
                    SomeKeyPair (SomeKeyPair), StakingKey, TestnetRuntime (..), nodeSocketPath)
@@ -82,7 +81,7 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
         , cardanoNumDReps = 3
         }
 
-  testnetRuntime@TestnetRuntime
+  TestnetRuntime
     { testnetMagic
     , poolNodes
     , wallets=wallet0:wallet1:wallet2:_
@@ -96,8 +95,6 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
   let socketPath = nodeSocketPath poolRuntime
 
   epochStateView <- getEpochStateView configurationFile socketPath
-
-  startLedgerNewEpochStateLogging testnetRuntime tempAbsPath'
 
   H.note_ $ "Sprocket: " <> show poolSprocket1
   H.note_ $ "Abs path: " <> tempAbsBasePath'
