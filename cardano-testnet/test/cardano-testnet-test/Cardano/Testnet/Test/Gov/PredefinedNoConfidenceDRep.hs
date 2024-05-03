@@ -69,7 +69,7 @@ hprop_check_predefined_no_confidence_drep = H.integrationWorkspace "test-activit
         , cardanoNumDReps = 3
         }
 
-  _testnetRuntime@TestnetRuntime
+  TestnetRuntime
     { testnetMagic
     , poolNodes
     , wallets=wallet0:wallet1:wallet2:_
