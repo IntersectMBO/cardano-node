@@ -355,8 +355,8 @@ voteChangeProposal execConfig epochStateView sbe work prefix
 -- The @desiredPoolNumberValue@ or (@k@ in the spec) is the protocol parameter
 -- that defines what is the optimal number of SPOs. It is a tradeoff between
 -- decentralization and efficiency and the spec suggest it should be between 100 an 1000.
--- Changing this parameter will inderectly affect how easy it is to saturate a pool in order to
--- incentivize that the number of SPOs states close to the parameter value.
+-- Changing this parameter will indirectly affect how easy it is to saturate a pool in order to
+-- incentivize that the number of SPOs stays close to the parameter value.
 getDesiredPoolNumberValue :: (EraPParams (ShelleyLedgerEra era), H.MonadAssertion m, MonadTest m, MonadIO m)
   => EpochStateView
   -> ConwayEraOnwards era
