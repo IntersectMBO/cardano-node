@@ -63,7 +63,6 @@ import qualified GHC.Stack as GHC
 import           Network.Socket (PortNumber)
 import           Prettyprinter (unAnnotate)
 import qualified System.Directory as IO
-import           System.Directory (doesDirectoryExist)
 import           System.FilePath
 import qualified System.IO as IO
 import qualified System.Process as IO
@@ -332,8 +331,9 @@ createSubdirectoryIfMissingNew parent subdirectory = GHC.withFrozenCallStack $ d
 -- | Start ledger's new epoch state logging for the first node in the background.
 -- Logs will be placed in <tmp workspace directory>/logs/ledger-new-epoch-state.log
 -- The logging thread will be cancelled when `MonadResource` releases all resources.
+-- Idempotent.
 startLedgerNewEpochStateLogging
-  :: forall m. HasCallStack
+  :: HasCallStack
   => MonadCatch m
   => MonadResource m
   => MonadTest m
@@ -342,24 +342,30 @@ startLedgerNewEpochStateLogging
   -> m ()
 startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStack $ do
   let logDir = makeLogDir (TmpAbsolutePath tmpWorkspace)
+      -- used as a lock to start only a single instance of epoch state logging
       logFile = logDir </> "ledger-epoch-state.log"
 
-  H.evalIO (doesDirectoryExist logDir) >>= \case
+  H.evalIO (IO.doesDirectoryExist logDir) >>= \case
     True -> pure ()
     False -> do
       H.note_ $ "Log directory does not exist: " <> logDir <> " - cannot start logging epoch states"
       H.failure
 
-  socketPath <- H.noteM $ H.sprocketSystemName <$> H.headM (poolSprockets testnetRuntime)
-  _ <- runInBackground . runExceptT $
-    foldEpochState
-      (File $ configurationFile testnetRuntime)
-      (Api.File socketPath)
-      Api.QuickValidation
-      (EpochNo maxBound)
-      ()
-      (\epochState _ _ -> handler logFile epochState)
-  H.note_ $ "Started logging epoch states to to: " <> logFile
+  H.evalIO (IO.doesFileExist logFile) >>= \case
+    True -> do
+      H.note_ $ "Epoch states logging to " <> logFile <> " is already started."
+    False -> do
+      H.evalIO $ appendFile logFile ""
+      socketPath <- H.noteM $ H.sprocketSystemName <$> H.headM (poolSprockets testnetRuntime)
+      _ <- runInBackground . runExceptT $
+        foldEpochState
+          (File $ configurationFile testnetRuntime)
+          (Api.File socketPath)
+          Api.QuickValidation
+          (EpochNo maxBound)
+          ()
+          (\epochState _ _ -> handler logFile epochState)
+      H.note_ $ "Started logging epoch states to: " <> logFile
   where
     handler :: FilePath -> AnyNewEpochState -> StateT () IO LedgerStateCondition
     handler outputFp anyNewEpochState = handleException . liftIO $ do

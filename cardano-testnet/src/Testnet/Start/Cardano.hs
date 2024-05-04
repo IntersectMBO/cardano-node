@@ -418,6 +418,9 @@ cardanoTestnet
 
     H.assertExpectedSposInLedgerState stakePoolsFp testnetOptions execConfig
 
+    when (cardanoEnableNewEpochStateLogging testnetOptions) $
+      TR.startLedgerNewEpochStateLogging runtime tempBaseAbsPath
+
     pure runtime
   where
     writeGenesisSpecFile :: (MonadTest m, MonadIO m, HasCallStack) => ToJSON a => String -> a -> m ()
