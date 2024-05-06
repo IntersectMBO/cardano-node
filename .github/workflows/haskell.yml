@@ -32,8 +32,7 @@ jobs:
         include:
           # Using include, to make sure there will only be one macOS job, even if the matrix gets expanded later on.
           # We want a single job, because macOS runners are scarce.
-          # It appears that macOS latest is aarch64 M1s now, so using a fixed version, not "macos-latest".
-          - os: macos-13
+          - os: macos-latest
             cabal: "3.10.2.1"
             ghc: "9.6.4"
 
@@ -202,11 +201,11 @@ jobs:
     # to restore the original path.  Do note that some test might need msys2
     # and will silently fail if msys2 is not in path. See the "Run tests" step.
     #
-    # - name: Setup tmate session
-    #  if: ${{ failure() }}
-    #  uses: mxschmitt/action-tmate@v3
-    #  with:
-    #     limit-access-to-actor: true
+    - name: Setup tmate session
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
+      with:
+         limit-access-to-actor: true
 
   build-complete:
     needs: [build]
