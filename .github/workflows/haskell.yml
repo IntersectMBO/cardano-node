@@ -65,14 +65,14 @@ jobs:
         g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
 
     - name: Install Haskell
-      uses: input-output-hk/actions/haskell@js/fix-runner-issues
+      uses: input-output-hk/actions/haskell@latest
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
 
     - name: Install system dependencies
-      uses: input-output-hk/actions/base@js/fix-runner-issues
+      uses: input-output-hk/actions/base@latest
       with:
         use-sodium-vrf: true # default is true
 
@@ -202,11 +202,11 @@ jobs:
     # to restore the original path.  Do note that some test might need msys2
     # and will silently fail if msys2 is not in path. See the "Run tests" step.
     #
-    - name: Setup tmate session
-      if: ${{ failure() }}
-      uses: mxschmitt/action-tmate@v3
-      with:
-        limit-access-to-actor: true
+    # - name: Setup tmate session
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
+    #   with:
+    #     limit-access-to-actor: true
 
   build-complete:
     needs: [build]
