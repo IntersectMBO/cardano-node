@@ -510,11 +510,47 @@ defaultCommitteeSkeyFp n = "committee-keys" </> "committee" <> show n <> ".skey"
 -- | The relative path to DRep keys in directories created by cardano-testnet
 defaultDRepKeyPair
   :: Int -- ^ The DRep's index (starts at 1)
-  -> KeyPair PaymentKey
-defaultDRepKeyPair n =
-  KeyPair
-    { verificationKey = File $ "drep-keys" </> ("drep" <> show n) </> "drep.vkey"
-    , signingKey = File $ "drep-keys" </> ("drep" <> show n) </> "drep.skey"
+  -> FilePath
+defaultDRepVkeyFp n = "drep-keys" </> ("drep" <> show n) </> "drep.vkey"
+
+-- | The relative path to DRep secret keys in directories created by cardano-testnet
+defaultDRepSkeyFp
+  :: Int -- ^ The DRep's index (starts at 1)
+  -> FilePath
+defaultDRepSkeyFp n = "drep-keys" </> ("drep" <> show n) </> "drep.skey"
+
+defaultCommitteeKeyPair :: Int -> PaymentKeyPair
+defaultCommitteeKeyPair n = PaymentKeyPair (defaultCommitteeVkeyFp n) (defaultCommitteeSkeyFp n)
+
+-- | The relative path to DRep key pairs in directories created by cardano-testnet
+defaultDRepKeyPair :: Int -> PaymentKeyPair
+defaultDRepKeyPair n = PaymentKeyPair (defaultDRepVkeyFp n) (defaultDRepSkeyFp n)
+
+defaultSPOKeyPair :: Int -> PaymentKeyPair
+defaultSPOKeyPair n = PaymentKeyPair (defaultSPOColdVKeyFp n) (defaultSPOColdSKeyFp n)
+
+-- | The relative path to SPO cold verification key in directories created by cardano-testnet
+defaultSPOColdVKeyFp :: Int -> FilePath
+defaultSPOColdVKeyFp n = "pools-keys" </> "pool" <> show n </> "cold.vkey"
+
+-- | The relative path to SPO cold secret key in directories created by cardano-testnet
+defaultSPOColdSKeyFp :: Int -> FilePath
+defaultSPOColdSKeyFp n = "pools-keys" </> "pool" <> show n </> "cold.skey"
+
+-- | The relative path to SPO key cold key pair in directories created by cardano-testnet
+defaultSPOColdKeyPair :: Int -> SPOColdKeyPair
+defaultSPOColdKeyPair n = SPOColdKeyPair (defaultSPOColdVKeyFp n) (defaultSPOColdSKeyFp n)
+
+-- | The relative path to SPO key pairs in directories created by cardano-testnet
+defaultSPOKeys :: Int -> PoolNodeKeys
+defaultSPOKeys n =
+  PoolNodeKeys
+    { poolNodeKeysColdVkey = defaultSPOColdVKeyFp n
+    , poolNodeKeysColdSkey = defaultSPOColdSKeyFp n
+    , poolNodeKeysVrfVkey = "pools-keys" </> "pool" ++ show n </> "vrf.vkey"
+    , poolNodeKeysVrfSkey = "pools-keys" </> "pool" ++ show n </> "vrf.skey"
+    , poolNodeKeysStakingVkey = "pools-keys" </> "pool" ++ show n </> "staking-reward.vkey"
+    , poolNodeKeysStakingSkey = "pools-keys" </> "pool" ++ show n </> "staking-reward.skey"
     }
 
 -- | The relative path to DRep secret keys in directories created by cardano-testnet
