@@ -5,7 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Testnet.Test.LedgerEvents.Gov.DRepActivity
+module Cardano.Testnet.Test.Gov.DRepActivity
   ( hprop_check_drep_activity
   ) where
 

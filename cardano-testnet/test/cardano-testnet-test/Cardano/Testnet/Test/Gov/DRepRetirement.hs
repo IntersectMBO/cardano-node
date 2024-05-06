@@ -6,7 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Testnet.Test.LedgerEvents.Gov.DRepRetirement
+module Cardano.Testnet.Test.Gov.DRepRetirement
   ( hprop_drep_retirement
   ) where
 

@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Testnet.Test.LedgerEvents.Gov.ProposeNewConstitutionSPO
+module Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO
   ( hprop_ledger_events_propose_new_constitution_spo
   ) where
 
