@@ -124,10 +124,14 @@ jobs:
     - name: Build all
       run: cabal build all --enable-tests
 
+    - name: Hack around TMP paths
+      run: |
+        mkdir -p /home/runner/_
+
     - name: Run tests
       env:
-        TMPDIR: ${{ runner.temp }}
-        TMP: ${{ runner.temp }}
+        TMPDIR: /home/runner/_
+        TMP: /home/runner/_
         KEEP_WORKSPACE: 1
       run: |
         cabal test cardano-testnet cardano-node cardano-node-chairman cardano-submit-api
