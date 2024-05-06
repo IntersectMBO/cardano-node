@@ -7,7 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Testnet.Test.LedgerEvents.Gov.InfoAction
+module Cardano.Testnet.Test.Gov.InfoAction
   ( hprop_ledger_events_info_action
   ) where
 

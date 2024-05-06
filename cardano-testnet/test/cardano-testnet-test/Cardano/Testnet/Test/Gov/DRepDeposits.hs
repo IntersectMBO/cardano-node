@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Cardano.Testnet.Test.LedgerEvents.Gov.DRepDeposits
+module Cardano.Testnet.Test.Gov.DRepDeposits
   ( hprop_ledger_events_drep_deposits
   ) where
 
