@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ x86_64-linux, x86_64-darwin ]
+        platform: [ x86_64-linux, x86_64-darwin, aarch64-darwin ]
         compiler-nix-name: [ ghc96, ghc98 ] # , ghc810 ]
 
     env:
@@ -73,11 +73,7 @@ jobs:
       run: cabal update
 
     - name: Configure build
-      run: |
-        echo "${{ runner.temp }}"
-        echo "$TMPDIR"
-        echo "$TMP"
-      
+      run: |      
         cp .github/workflows/cabal.project.local.ci cabal.project.local
         echo "# cabal.project.local"
         cat cabal.project.local
@@ -128,19 +124,12 @@ jobs:
     - name: Build all
       run: cabal build all --enable-tests
 
-    - name: Hack around TMP paths
-      run: |
-        mkdir -p /home/runner/_
-
     - name: Run tests
       env:
-        TMPDIR: /home/runner/_
-        TMP: /home/runner/_
         KEEP_WORKSPACE: 1
       run: |
-        echo "${{ runner.temp }}"
-        echo "$TMPDIR"
-        echo "$TMP"
+        export TMPDIR="${{ runner.temp }}"
+        export TMP="${{ runner.temp }}"
         cabal test cardano-testnet cardano-node cardano-node-chairman cardano-submit-api
 
     - name: Tar failed tests workspaces
