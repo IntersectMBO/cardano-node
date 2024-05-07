@@ -74,6 +74,10 @@ jobs:
 
     - name: Configure build
       run: |
+        echo "${{ runner.temp }}"
+        echo "$TMPDIR"
+        echo "$TMP"
+      
         cp .github/workflows/cabal.project.local.ci cabal.project.local
         echo "# cabal.project.local"
         cat cabal.project.local
@@ -134,6 +138,9 @@ jobs:
         TMP: /home/runner/_
         KEEP_WORKSPACE: 1
       run: |
+        echo "${{ runner.temp }}"
+        echo "$TMPDIR"
+        echo "$TMP"
         cabal test cardano-testnet cardano-node cardano-node-chairman cardano-submit-api
 
     - name: Tar failed tests workspaces
