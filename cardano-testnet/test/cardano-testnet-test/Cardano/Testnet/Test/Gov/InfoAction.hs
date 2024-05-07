@@ -36,7 +36,7 @@ import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
-import qualified Testnet.Property.Utils as H
+import qualified Testnet.Property.Util as H
 import           Testnet.Runtime
 
 import           Hedgehog

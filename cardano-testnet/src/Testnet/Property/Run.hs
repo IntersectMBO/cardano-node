@@ -23,7 +23,7 @@ import qualified System.Exit as IO
 import qualified System.Info as SYS
 import qualified System.IO as IO
 
-import qualified Testnet.Property.Utils as H
+import qualified Testnet.Property.Util as H
 import           Testnet.Start.Types
 
 import           Hedgehog (Property)
