@@ -492,10 +492,6 @@ instance LogFormatting (TracePeerSelection SockAddr) where
   forMachine _dtal (TraceChurnMode c) =
     mconcat [ "kind" .= String "ChurnMode"
              , "event" .= show c ]
-  forMachine _dtal (TraceKnownInboundConnection addr sharing) =
-    mconcat [ "kind" .= String "KnownInboundConnection"
-            , "peer" .= toJSON addr
-            , "peerSharing" .= String (pack . show $ sharing) ]
   forMachine _dtal (TraceLedgerStateJudgementChanged new) =
     mconcat [ "kind" .= String "LedgerStateJudgementChanged"
             , "new" .= show new ]
@@ -511,6 +507,13 @@ instance LogFormatting (TracePeerSelection SockAddr) where
     mconcat [ "kind" .= String "OutboundGovernorCriticalFailure"
             , "reason" .= show err
             ]
+  forMachine _dtal (TracePickInboundPeers targetKnown actualKnown selected available) =
+    mconcat [ "kind" .= String "TracePickInboundPeers"
+             , "targetKnown" .= targetKnown
+             , "actualKnown" .= actualKnown
+             , "selected"    .= Map.keys selected
+             , "available"   .= available
+             ]
   forMachine _dtal (TraceDebugState mtime ds) =
     mconcat [ "kind" .= String "DebugState"
             , "monotonicTime" .= show mtime
@@ -634,8 +637,6 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["ChurnWait"]
     namespaceFor TraceChurnMode {}             =
       Namespace [] ["ChurnMode"]
-    namespaceFor TraceKnownInboundConnection {} =
-      Namespace [] ["KnownInboundConnection"]
     namespaceFor TraceLedgerStateJudgementChanged {} =
       Namespace [] ["LedgerStateJudgementChanged"]
     namespaceFor TraceOnlyBootstrapPeers {} =
@@ -646,6 +647,8 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["BootstrapPeersFlagChangedWhilstInSensitiveState"]
     namespaceFor TraceOutboundGovernorCriticalFailure {} =
       Namespace [] ["OutboundGovernorCriticalFailure"]
+    namespaceFor TracePickInboundPeers {} =
+      Namespace [] ["PickInboundPeers"]
     namespaceFor TraceDebugState {} =
       Namespace [] ["DebugState"]
 
@@ -1480,6 +1483,16 @@ forMachineGov _dtal (InboundGovernor.TrInboundGovernorError err) =
   mconcat [ "kind" .= String "InboundGovernorError"
             , "remoteSt" .= String (pack . show $ err)
             ]
+forMachineGov _dtal (InboundGovernor.TrMaturedConnections matured _) =
+  mconcat [ "kind" .= String "MaturedConnections"
+            , "maturedConnections" .= matured
+            ]
+forMachineGov _dtal (InboundGovernor.TrInactive inactive) =
+  mconcat [ "kind" .= String "Inactive"
+            , "inactiveConnections" .= inactive
+            ]
+
+
 
 instance MetaTrace (InboundGovernorTrace addr) where
     namespaceFor TrNewConnection {}         = Namespace [] ["NewConnection"]
@@ -1501,6 +1514,9 @@ instance MetaTrace (InboundGovernorTrace addr) where
                                 Namespace [] ["UnexpectedlyFalseAssertion"]
     namespaceFor InboundGovernor.TrInboundGovernorError {} =
                                 Namespace [] ["InboundGovernorError"]
+    namespaceFor InboundGovernor.TrMaturedConnections {} =
+                                Namespace [] ["MaturedConnections"]
+    namespaceFor InboundGovernor.TrInactive {} = Namespace [] ["Inactive"]
 
     severityFor (Namespace _ ["NewConnection"]) _ = Just Debug
     severityFor (Namespace _ ["ResponderRestarted"]) _ = Just Debug
@@ -1544,6 +1560,8 @@ instance MetaTrace (InboundGovernorTrace addr) where
     documentFor (Namespace _ ["RemoteState"]) = Just ""
     documentFor (Namespace _ ["UnexpectedlyFalseAssertion"]) = Just ""
     documentFor (Namespace _ ["InboundGovernorError"]) = Just ""
+    documentFor (Namespace _ ["MaturedConnections"]) = Just ""
+    documentFor (Namespace _ ["Inactive"]) = Just ""
     documentFor _ = Nothing
 
     metricsDocFor (Namespace [] ["InboundGovernorCounters"]) =

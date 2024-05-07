@@ -437,7 +437,6 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceGovernorWakeup        {} -> Info
       TraceChurnWait             {} -> Info
       TraceChurnMode             {} -> Info
-      TraceKnownInboundConnection {} -> Info
 
       TraceForgetBigLedgerPeers  {} -> Info
 
@@ -473,6 +472,8 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceOutboundGovernorCriticalFailure {} -> Error
 
       TraceDebugState {} -> Info
+
+      TracePickInboundPeers {} -> Info
 
 instance HasPrivacyAnnotation (DebugPeerSelection addr)
 instance HasSeverityAnnotation (DebugPeerSelection addr) where
@@ -562,6 +563,8 @@ instance HasSeverityAnnotation (InboundGovernorTrace addr) where
       InboundGovernor.TrUnexpectedlyFalseAssertion {}
                                                    -> Error
       InboundGovernor.TrInboundGovernorError {}    -> Error
+      InboundGovernor.TrMaturedConnections {}      -> Info
+      InboundGovernor.TrInactive {}                -> Info
 
 instance HasPrivacyAnnotation (Server.RemoteTransitionTrace addr)
 instance HasSeverityAnnotation (Server.RemoteTransitionTrace addr) where
@@ -1869,10 +1872,6 @@ instance ToObject (TracePeerSelection SockAddr) where
   toObject _verb (TraceChurnMode c) =
     mconcat [ "kind" .= String "ChurnMode"
              , "event" .= show c ]
-  toObject _verb (TraceKnownInboundConnection addr sharing) =
-    mconcat [ "kind" .= String "KnownInboundConnection"
-             , "peer" .= show addr
-             , "peerSharing" .= show sharing ]
   toObject _verb (TraceLedgerStateJudgementChanged new) =
     mconcat [ "kind" .= String "LedgerStateJudgementChanged"
              , "new" .= show new ]
@@ -1887,6 +1886,13 @@ instance ToObject (TracePeerSelection SockAddr) where
   toObject _verb (TraceOutboundGovernorCriticalFailure err) =
     mconcat [ "kind" .= String "OutboundGovernorCriticalFailure"
              , "reason" .= show err
+             ]
+  toObject _verb (TracePickInboundPeers targetKnown actualKnown selected available) =
+    mconcat [ "kind" .= String "PickInboundPeers"
+             , "targetKnown" .= targetKnown
+             , "actualKnown" .= actualKnown
+             , "selected"    .= Map.keys selected
+             , "available"   .= available
              ]
   toObject _verb (TraceDebugState mtime ds) =
    mconcat [ "kind" .= String "DebugState"
@@ -2515,6 +2521,17 @@ instance (ToJSON addr, Show addr)
     mconcat [ "kind" .= String "InboundGovernorError"
              , "remoteSt" .= String (pack . show $ err)
              ]
+  toObject _verb (InboundGovernor.TrMaturedConnections matured imatured) =
+    mconcat [ "kind" .= String "MaturedConnections"
+             , "maturedConnections" .= matured
+             , "imaturedConnections" .= imatured
+             ]
+  toObject _verb (InboundGovernor.TrInactive inactive) =
+    mconcat [ "kind" .= String "Inactive"
+             , "inactiveConnections" .= inactive
+             ]
+
+
 
 instance ToJSON addr
       => ToObject (Server.RemoteTransitionTrace addr) where
