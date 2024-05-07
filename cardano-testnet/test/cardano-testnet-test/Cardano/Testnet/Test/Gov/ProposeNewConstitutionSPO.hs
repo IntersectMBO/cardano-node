@@ -19,12 +19,14 @@ import           Prelude
 
 import           Control.Monad.Trans.State.Strict (put)
 import           Data.Bifunctor (Bifunctor (..))
+import           Data.List (isInfixOf)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
 import           Lens.Micro
 import           System.FilePath ((</>))
 
+import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
@@ -32,8 +34,8 @@ import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
 import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.Transaction
-import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Process.Run (execCli', execCliAny, mkExecConfig)
+import           Testnet.Property.Util (integrationWorkspace, isBootstrapPhase)
 import           Testnet.Types
 
 import           Hedgehog
@@ -134,34 +136,42 @@ hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose
 
   txBodySigned <- signTx execConfig cEra work "proposal-signed-tx" (File txBodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet0]
 
-  submitTx execConfig cEra txBodySigned
+  bootstrapPhase <- isBootstrapPhase (anyEraToString cEra) execConfig
+  if bootstrapPhase then do
+    (_code, _out, err) <- execCliAny execConfig
+      [ anyEraToString cEra, "transaction", "submit"
+      , "--tx-file", unFile txBodySigned
+      ]
+    assert ("DisallowedProposalDuringBootstrap" `isInfixOf` err)
+  else do
+    submitTx execConfig cEra txBodySigned
 
-  txIdString <- retrieveTransactionId execConfig txBodySigned
+    txIdString <- retrieveTransactionId execConfig txBodySigned
 
-  currentEpoch <- getCurrentEpochNo epochStateView
+    currentEpoch <- getCurrentEpochNo epochStateView
 
-  -- Proposal should be there already, so don't wait a lot:
-  let terminationEpoch = succ . succ $ currentEpoch
+    -- Proposal should be there already, so don't wait a lot:
+    let terminationEpoch = succ . succ $ currentEpoch
 
-  mGovActionId <- getConstitutionProposal configurationFile socketPath terminationEpoch
-  govActionId <- H.evalMaybe mGovActionId
+    mGovActionId <- getConstitutionProposal configurationFile socketPath terminationEpoch
+    govActionId <- H.evalMaybe mGovActionId
 
-  -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
+    -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
 
-  let L.GovActionIx governanceActionIndex = L.gaidGovActionIx govActionId
+    let L.GovActionIx governanceActionIndex = L.gaidGovActionIx govActionId
 
-  votes <- SPO.generateVoteFiles ceo execConfig work "vote-files" txIdString governanceActionIndex
-                             [(defaultSpoKeys n, "yes") | n <- [1..3]]
+    votes <- SPO.generateVoteFiles ceo execConfig work "vote-files" txIdString governanceActionIndex
+                              [(defaultSpoKeys n, "yes") | n <- [1..3]]
 
-  -- Submit votes
-  votesTxBody <- createVotingTxBody execConfig epochStateView sbe work "vote-tx-body" votes wallet0
+    -- Submit votes
+    votesTxBody <- createVotingTxBody execConfig epochStateView sbe work "vote-tx-body" votes wallet0
 
-  votesSignedTx <- signTx execConfig cEra work "vote-signed-tx"
-                     votesTxBody (SomeKeyPair (paymentKeyInfoPair wallet0)
-                                  :[SomeKeyPair $ defaultSpoColdKeyPair n | n <- [1..3]])
+    votesSignedTx <- signTx execConfig cEra work "vote-signed-tx"
+                      votesTxBody (SomeKeyPair (paymentKeyInfoPair wallet0)
+                                    :[SomeKeyPair $ defaultSpoColdKeyPair n | n <- [1..3]])
 
-  -- Call should fail, because SPOs are unallowed to vote on the constitution
-  failToSubmitTx execConfig cEra votesSignedTx "DisallowedVoters"
+    -- Call should fail, because SPOs are unallowed to vote on the constitution
+    failToSubmitTx execConfig cEra votesSignedTx "DisallowedVoters"
 
 getConstitutionProposal
   :: (HasCallStack, MonadIO m, MonadTest m)
