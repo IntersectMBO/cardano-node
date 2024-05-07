@@ -36,26 +36,30 @@ in project.shellFor {
 
     . nix/workbench/lib.sh
 
-    export WB_SHELL_PROFILE=${profileName}
-    export WB_SHELL_PROFILE_DATA=${profileData}
     export WB_BACKEND=${backend.name}
     export WB_BACKEND_DATA=${backendData}
+    export WB_CREATE_TESTNET_DATA=''${WB_CREATE_TESTNET_DATA:-0}
     export WB_DEPLOYMENT_NAME=''${WB_DEPLOYMENT_NAME:-$(basename $(pwd))}
-    progress "profile name"           $WB_SHELL_PROFILE
-    progress "WB_SHELL_PROFILE_DATA=" $WB_SHELL_PROFILE_DATA
-    progress "backend name"           $WB_BACKEND
-    progress "WB_BACKEND_DATA="       $WB_BACKEND_DATA
-    progress "deployment name"        $WB_DEPLOYMENT_NAME
-    progress "params"                 'useCabalRun=${toString backend.useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiling=${toString profiling}'
+    export WB_MODULAR_GENESIS=''${WB_MODULAR_GENESIS:-0}
+    export WB_SHELL_PROFILE=${profileName}
+    export WB_SHELL_PROFILE_DATA=${profileData}
+
+    progress "profile name"            $WB_SHELL_PROFILE
+    progress "backend name"            $WB_BACKEND
+    progress "deployment name"         $WB_DEPLOYMENT_NAME
+    progress "params"                  'useCabalRun=${toString backend.useCabalRun} workbenchDevMode=${toString workbenchDevMode} profiling=${toString profiling}'
+    progress "WB_BACKEND_DATA="        $WB_BACKEND_DATA
+    progress "WB_CREATE_TESTNET_DATA=" $WB_CREATE_TESTNET_DATA
+    progress "WB_MODULAR_GENESIS="     $WB_MODULAR_GENESIS
+    progress "WB_SHELL_PROFILE_DATA="  $WB_SHELL_PROFILE_DATA
 
     function parse_git_branch() {
         git branch 2> /dev/null | sed -n -e 's/^\* \(.*\)/(\1)/p'
     }
     export PS1="\n\[\033[1;32m\][nix-shell:\w]\[\033[01;36m\]\$(parse_git_branch)\[\033[0m\]\$ "
-
-    ${optionalString
-      workbenchDevMode
-      ''
+    ''
+    + optionalString workbenchDevMode
+    ''
     export WB_CARDANO_NODE_REPO_ROOT=$(git rev-parse --show-toplevel)
     export WB_CHAP_PATH=${chap}
     export WB_NIX_PLAN=${nixPlanJson}
@@ -65,15 +69,14 @@ in project.shellFor {
       $WB_CARDANO_NODE_REPO_ROOT/nix/workbench/wb $WB_EXTRA_FLAGS "$@"
     }
     export -f wb
-      ''}
-
-    ${optionalString
-      backend.useCabalRun
-      ''
+    ''
+    + optionalString backend.useCabalRun
+    ''
     . nix/workbench/lib-cabal.sh ${optionalString (profiling != "none") "--profiling-${profiling}"}
     cabal update
-      ''}
-
+    ''
+    +
+    ''
     export CARDANO_NODE_SOCKET_PATH=run/current/node-0/node.socket
 
     function workbench_atexit() {
@@ -82,16 +85,15 @@ in project.shellFor {
         fi
     }
     trap workbench_atexit EXIT
-
-    ${optionalString
-      withMainnet
-      ''
+    ''
+    + optionalString withMainnet
+    ''
     export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror.outputs.defaultPackage.x86_64-linux.outPath}
-      ''}
-
+    ''
+    + ''
     ${setLocale}
     ${commandHelp}
-  '';
+    '';
 
   inherit withHoogle;
 
