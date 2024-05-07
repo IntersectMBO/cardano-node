@@ -12,11 +12,11 @@ import qualified Data.List as L
 import           Options.Applicative
 import qualified Options.Applicative as OA
 
-import           Testnet.Process.Cli
+import           Testnet.Process.Cli (pNetworkId)
 import           Testnet.Property.Util
-import           Testnet.Runtime (readNodeLoggingFormat)
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
+import           Testnet.Types (readNodeLoggingFormat)
 
 
 optsTestnet :: EnvCli -> Parser CardanoTestnetOptions

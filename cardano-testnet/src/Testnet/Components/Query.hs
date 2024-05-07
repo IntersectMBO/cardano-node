@@ -19,7 +19,6 @@ module Testnet.Components.Query
   , findUtxosWithAddress
   , findLargestUtxoWithAddress
   , findLargestUtxoForPaymentKey
-  , startLedgerNewEpochStateLogging
   ) where
 
 import           Cardano.Api as Api
@@ -54,7 +53,7 @@ import           Lens.Micro (to, (^.))
 
 import           Testnet.Property.Assert
 import           Testnet.Property.Util (runInBackground)
-import           Testnet.Runtime
+import           Testnet.Types
 
 import qualified Hedgehog as H
 import           Hedgehog.Extras (MonadAssertion)

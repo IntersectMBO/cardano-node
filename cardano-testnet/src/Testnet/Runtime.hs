@@ -1,50 +1,17 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Runtime
-  ( LeadershipSlot(..)
-  , NodeLoggingFormat(..)
-  , PaymentKeyInfo(..)
-  , PaymentKeyPair(..)
-  , StakingKeyPair(..)
-  , TestnetRuntime(..)
-  , NodeRuntime(..)
-  , PoolNode(..)
-  , PoolNodeKeys(..)
-  , Delegator(..)
-  , SPOColdKeyPair(..)
-  , KeyPair(..)
-  , SomeKeyPair(..)
-  , allNodes
-  , poolSprockets
-  , poolNodeStdout
-  , readNodeLoggingFormat
-  , startNode
-  , ShelleyGenesis(..)
-  , shelleyGenesis
-  , getStartTime
-  , fromNominalDiffTimeMicro
+  ( startNode
   , startLedgerNewEpochStateLogging
   ) where
 
 import           Cardano.Api
 import qualified Cardano.Api as Api
-
-import qualified Cardano.Chain.Genesis as G
-import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
-import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Ledger.Shelley.Genesis
-import           Cardano.Node.Configuration.POM
-import qualified Cardano.Node.Protocol.Byron as Byron
-import           Cardano.Node.Types
 
 import           Prelude
 
@@ -52,12 +19,8 @@ import           Control.Exception.Safe
 import           Control.Monad
 import           Control.Monad.State.Strict (StateT)
 import           Control.Monad.Trans.Resource
-import qualified Data.Aeson as A
 import qualified Data.List as List
 import           Data.Text (Text, unpack)
-import           Data.Time.Clock (UTCTime)
-import           GHC.Generics (Generic)
-import qualified GHC.IO.Handle as IO
 import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           Network.Socket (PortNumber)
@@ -71,136 +34,13 @@ import           Testnet.Filepath
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run
 import           Testnet.Property.Util (runInBackground)
-import           Testnet.Start.Types
+import           Testnet.Types hiding (testnetMagic)
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 import qualified Hedgehog.Extras.Test.Base as H
-
-data TestnetRuntime = TestnetRuntime
-  { configurationFile :: !FilePath
-  , shelleyGenesisFile :: !FilePath
-  , testnetMagic :: !Int
-  , poolNodes :: ![PoolNode]
-  , wallets :: ![PaymentKeyInfo]
-  , delegators :: ![Delegator]
-  }
-
-data NodeRuntime = NodeRuntime
-  { nodeName :: !String
-  , nodeIpv4 :: !Text
-  , nodePort :: !PortNumber
-  , nodeSprocket :: !Sprocket
-  , nodeStdinHandle :: !IO.Handle
-  , nodeStdout :: !FilePath
-  , nodeStderr :: !FilePath
-  , nodeProcessHandle :: !IO.ProcessHandle
-  }
-
-data PoolNode = PoolNode
-  { poolRuntime :: NodeRuntime
-  , poolKeys :: PoolNodeKeys
-  }
-
-data PoolNodeKeys = PoolNodeKeys
-  { poolNodeKeysColdVkey :: FilePath
-  , poolNodeKeysColdSkey :: FilePath
-  , poolNodeKeysVrfVkey :: FilePath
-  , poolNodeKeysVrfSkey :: FilePath
-  , poolNodeKeysStakingVkey :: FilePath
-  , poolNodeKeysStakingSkey :: FilePath
-  } deriving (Eq, Show)
-
-data SPOColdKeyPair = SPOColdKeyPair
-  { spoColdVKey :: FilePath
-  , spoColdSKey :: FilePath
-  } deriving (Eq, Show)
-
-data PaymentKeyPair = PaymentKeyPair
-  { paymentVKey :: FilePath
-  , paymentSKey :: FilePath
-  } deriving (Eq, Show)
-
-data PaymentKeyInfo = PaymentKeyInfo
-  { paymentKeyInfoPair :: PaymentKeyPair
-  , paymentKeyInfoAddr :: Text
-  } deriving (Eq, Show)
-
-data StakingKeyPair = StakingKeyPair
-  { stakingVKey :: FilePath
-  , stakingSKey :: FilePath
-  } deriving (Eq, Show)
-
-data Delegator = Delegator
-  { paymentKeyPair :: PaymentKeyPair
-  , stakingKeyPair :: StakingKeyPair
-  } deriving (Eq, Show)
-
-data LeadershipSlot = LeadershipSlot
-  { slotNumber  :: Int
-  , slotTime    :: Text
-  } deriving (Eq, Show, Generic, FromJSON)
-
-class KeyPair a where
-  secretKey :: a -> FilePath
-
-instance KeyPair PaymentKeyPair where
-  secretKey :: PaymentKeyPair -> FilePath
-  secretKey = paymentSKey
-
-instance KeyPair StakingKeyPair where
-  secretKey :: StakingKeyPair -> FilePath
-  secretKey = stakingSKey
-
-instance KeyPair SPOColdKeyPair where
-  secretKey :: SPOColdKeyPair -> FilePath
-  secretKey = spoColdSKey
-
-data SomeKeyPair = forall a . KeyPair a => SomeKeyPair a
-
-instance KeyPair SomeKeyPair where
-  secretKey :: SomeKeyPair -> FilePath
-  secretKey (SomeKeyPair x) = secretKey x
-
-poolNodeStdout :: PoolNode -> FilePath
-poolNodeStdout = nodeStdout . poolRuntime
-
-poolSprockets :: TestnetRuntime -> [Sprocket]
-poolSprockets = fmap (nodeSprocket . poolRuntime) . poolNodes
-
-shelleyGenesis :: (H.MonadTest m, MonadIO m, HasCallStack) => TestnetRuntime -> m (ShelleyGenesis StandardCrypto)
-shelleyGenesis TestnetRuntime{shelleyGenesisFile} = withFrozenCallStack $
-  H.evalEither =<< H.evalIO (A.eitherDecodeFileStrict' shelleyGenesisFile)
-
-getStartTime
-  :: (H.MonadTest m, MonadIO m, HasCallStack)
-  => FilePath -> TestnetRuntime -> m UTCTime
-getStartTime tempRootPath TestnetRuntime{configurationFile} = withFrozenCallStack $ H.evalEither <=< H.evalIO . runExceptT $ do
-  byronGenesisFile <-
-    decodeNodeConfiguration configurationFile >>= \case
-      NodeProtocolConfigurationCardano NodeByronProtocolConfiguration{npcByronGenesisFile} _ _ _ _ ->
-        pure $ unGenesisFile npcByronGenesisFile
-  let byronGenesisFilePath = tempRootPath </> byronGenesisFile
-  G.gdStartTime . G.configGenesisData <$> decodeGenesisFile byronGenesisFilePath
-  where
-    decodeNodeConfiguration :: FilePath -> ExceptT String IO NodeProtocolConfiguration
-    decodeNodeConfiguration file = do
-      partialNodeCfg <- ExceptT $ A.eitherDecodeFileStrict' file
-      fmap ncProtocolConfig . liftEither . makeNodeConfiguration $ defaultPartialNodeConfiguration <> partialNodeCfg
-    decodeGenesisFile :: FilePath -> ExceptT String IO G.Config
-    decodeGenesisFile fp = withExceptT (docToString . prettyError) $
-      Byron.readGenesis (GenesisFile fp) Nothing RequiresNoMagic
-
-readNodeLoggingFormat :: String -> Either String NodeLoggingFormat
-readNodeLoggingFormat = \case
-  "json" -> Right NodeLoggingFormatAsJson
-  "text" -> Right NodeLoggingFormatAsText
-  s -> Left $ "Unrecognised node logging format: " <> show s <> ".  Valid options: \"json\", \"text\""
-
-allNodes :: TestnetRuntime -> [NodeRuntime]
-allNodes tr = fmap poolRuntime (poolNodes tr)
 
 data NodeStartFailure
   = ProcessRelatedFailure ProcessError
@@ -359,7 +199,7 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
       socketPath <- H.noteM $ H.sprocketSystemName <$> H.headM (poolSprockets testnetRuntime)
       _ <- runInBackground . runExceptT $
         foldEpochState
-          (File $ configurationFile testnetRuntime)
+          (configurationFile testnetRuntime)
           (Api.File socketPath)
           Api.QuickValidation
           (EpochNo maxBound)

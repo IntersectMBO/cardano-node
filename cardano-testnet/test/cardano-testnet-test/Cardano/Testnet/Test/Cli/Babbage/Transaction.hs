@@ -33,7 +33,7 @@ import           Testnet.Components.TestWatchdog
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run
 import qualified Testnet.Property.Util as H
-import           Testnet.Runtime
+import           Testnet.Types
 
 import           Hedgehog (Property)
 import qualified Hedgehog as H
@@ -100,7 +100,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "babbage-transaction" $ \tempA
   void $ execCli' execConfig
     [ "babbage", "transaction", "sign"
     , "--tx-body-file", txbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
     , "--out-file", txbodySignedFp
     ]
 

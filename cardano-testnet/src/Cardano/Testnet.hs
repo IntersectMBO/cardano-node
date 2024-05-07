@@ -48,6 +48,6 @@ import           Testnet.EpochStateProcessing
 import           Testnet.Filepath
 import           Testnet.Process.Run (procChairman)
 import           Testnet.Property.Util
-import           Testnet.Runtime
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
+import           Testnet.Types
