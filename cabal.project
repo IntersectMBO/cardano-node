@@ -31,6 +31,8 @@ packages:
   trace-dispatcher
   trace-resources
   trace-forward
+  ../ouroboros-network/ouroboros-network
+  ../ouroboros-network/ouroboros-network-framework
 
 program-options
   ghc-options: -Werror
