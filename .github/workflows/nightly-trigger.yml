@@ -23,10 +23,18 @@ jobs:
         git checkout -b nightly
         git push origin nightly --force
 
-    - name: Invoke workflow
+    - name: Invoke workflow (Windows)
       uses: input-output-hk/workflow-dispatch@v1
       with:
         workflow: .github/workflows/haskell.yml
+        ref: nightly
+        token: ${{ secrets.MACHINE_TOKEN }}
+        inputs: '{ "reason": "nightly", "tests": "all" }'
+
+    - name: Invoke workflow (macOS & Linux)
+      uses: input-output-hk/workflow-dispatch@v1
+      with:
+        workflow: .github/workflows/devx.yml
         ref: nightly
         token: ${{ secrets.MACHINE_TOKEN }}
         inputs: '{ "reason": "nightly", "tests": "all" }'
