@@ -1,5 +1,7 @@
 {
     "collateralPercentage": 150,
+    "committeeMaxTermLength": 200,
+    "committeeMinSize": 0,
     "costModels": {
         "PlutusV1": [
             205665,
@@ -582,12 +584,28 @@
             1
         ]
     },
+    "dRepActivity": 100,
+    "dRepDeposit": 1000000,
+    "dRepVotingThresholds": {
+        "committeeNoConfidence": 0,
+        "committeeNormal": 0.5,
+        "hardForkInitiation": 0.5,
+        "motionNoConfidence": 0,
+        "ppEconomicGroup": 0.5,
+        "ppGovGroup": 0.5,
+        "ppNetworkGroup": 0.5,
+        "ppTechnicalGroup": 0.5,
+        "treasuryWithdrawal": 0.5,
+        "updateToConstitution": 0
+    },
     "decentralization": null,
     "executionUnitPrices": {
         "priceMemory": 5.77e-2,
         "priceSteps": 7.21e-5
     },
     "extraPraosEntropy": null,
+    "govActionDeposit": 1000000,
+    "govActionLifetime": 1,
     "maxBlockBodySize": 65536,
     "maxBlockExecutionUnits": {
         "memory": 62000000,
@@ -601,11 +619,19 @@
     },
     "maxTxSize": 16384,
     "maxValueSize": 5000,
+    "minFeeRefScriptCostPerByte": 0,
     "minPoolCost": 0,
     "minUTxOValue": null,
     "monetaryExpansion": 0.1,
     "poolPledgeInfluence": 0,
     "poolRetireMaxEpoch": 18,
+    "poolVotingThresholds": {
+        "committeeNoConfidence": 0.5,
+        "committeeNormal": 0.5,
+        "hardForkInitiation": 0.5,
+        "motionNoConfidence": 0.5,
+        "ppSecurityGroup": 0.5
+    },
     "protocolVersion": {
         "major": 9,
         "minor": 0
