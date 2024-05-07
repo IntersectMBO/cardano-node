@@ -18,12 +18,12 @@ on:
         required: false
         default: some
 
-defaults:
-  run:
-    shell: devx {0}
-
 jobs:
   build:
+    defaults:
+      run:
+        shell: devx {0}
+  
     runs-on: ${{ matrix.platform == 'x86_64-linux' && 'ubuntu-latest' || 'macos-latest' }}
 
     strategy:
