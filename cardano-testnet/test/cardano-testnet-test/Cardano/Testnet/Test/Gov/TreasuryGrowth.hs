@@ -2,7 +2,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Testnet.Test.LedgerEvents.TreasuryGrowth where
+module Cardano.Testnet.Test.Gov.TreasuryGrowth where
 
 import           Cardano.Api hiding (cardanoEra)
 import qualified Cardano.Api as Api

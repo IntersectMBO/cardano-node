@@ -6,7 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Testnet.Test.Cli.Conway.DRepRetirement
+module Cardano.Testnet.Test.Gov.DRepRetirement
   ( hprop_drep_retirement
   ) where
 

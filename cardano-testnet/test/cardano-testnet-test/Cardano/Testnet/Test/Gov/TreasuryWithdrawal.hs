@@ -9,7 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Testnet.Test.LedgerEvents.Gov.TreasuryWithdrawal
+module Cardano.Testnet.Test.Gov.TreasuryWithdrawal
   ( hprop_ledger_events_treasury_withdrawal
   ) where
 
