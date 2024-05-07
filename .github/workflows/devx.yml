@@ -1,4 +1,4 @@
-name: Haskell CI
+name: Haskell CI (DevX Shell)
 
 on:
   pull_request: # Required for workflows to be able to be approved from forks
