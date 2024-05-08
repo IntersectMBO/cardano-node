@@ -10,6 +10,7 @@ module Testnet.Components.Query
   , checkDRepState
   , getEpochState
   , getMinDRepDeposit
+  , getMinGovActionDeposit
   , getGovState
   , getCurrentEpochNo
   , waitUntilEpoch
@@ -312,6 +313,19 @@ getGovState epochStateView ceo = withFrozenCallStack $ do
   Refl <- H.leftFail $ assertErasEqual sbe sbe'
   pure $ conwayEraOnwardsConstraints ceo $ newEpochState ^. L.newEpochStateGovStateL
 
+-- | Obtain minimum deposit amount for governance action from node
+getMinGovActionDeposit
+  :: HasCallStack
+  => MonadAssertion m
+  => MonadIO m
+  => MonadTest m
+  => EpochStateView
+  -> ConwayEraOnwards era
+  -> m Integer -- ^ The minimum deposit
+getMinGovActionDeposit epochStateView ceo = withFrozenCallStack $ do
+  govState <- getGovState epochStateView ceo
+  pure $ conwayEraOnwardsConstraints ceo $ govState ^. L.cgsCurPParamsL . L.ppGovActionDepositL  . to L.unCoin
+
 -- | Obtain minimum deposit amount for DRep registration from node
 getMinDRepDeposit
   :: HasCallStack
@@ -320,7 +334,7 @@ getMinDRepDeposit
   => MonadTest m
   => EpochStateView
   -> ConwayEraOnwards era
-  -> m Integer -- ^ The governance state
+  -> m Integer -- ^ The minimum deposit
 getMinDRepDeposit epochStateView ceo = withFrozenCallStack $ do
   govState <- getGovState epochStateView ceo
   pure $ conwayEraOnwardsConstraints ceo $ govState ^. L.cgsCurPParamsL . L.ppDRepDepositL . to L.unCoin

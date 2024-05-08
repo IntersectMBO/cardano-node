@@ -163,7 +163,7 @@ generateVoteFiles
 generateVoteFiles execConfig work prefix governanceActionTxId governanceActionIndex allVotes = do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
   forM (zip [(1 :: Integer)..] allVotes) $ \(idx, (drepKeyPair, vote)) -> do
-    let path = File (baseDir </> "vote-" <> show idx)
+    let path = File (baseDir </> "vote-drep-" <> show idx)
     void $ H.execCli' execConfig
       [ "conway", "governance", "vote", "create"
       , "--" ++ vote
