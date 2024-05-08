@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+#./postBuildHook.local "$@"
+postBuildHook.s3 "$@"

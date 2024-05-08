@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+CACHE=$HOME/.cabal-build-cache
+
+mkdir -p $CACHE
+
+if [ -f $CACHE/$1.tar.gz ]; then
+    echo "Cache hit"
+    tar -xzf $CACHE/$1.tar.gz
+    exit 0
+else
+    echo "Cache miss"
+    exit 1
+fi

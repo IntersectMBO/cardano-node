@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+#./preBuildHook.local "$@"
+preBuildHook.s3 "$@"

@@ -73,11 +73,8 @@ jobs:
     - name: add patched cabal
       run: |
         mkdir ~/bin
-        mkdir cabalHooks
         curl -L https://ci.zw3rk.com/job/input-output-hk-haskell-nix-example/pullrequest-2/x86_64-linux.cabal-install-static/latest/download/1 | gunzip > ~/bin/cabal
-        curl -L https://ci.zw3rk.com/job/input-output-hk-haskell-nix-example/pullrequest-2/x86_64-linux.cabal-install-hooks/latest/download/1 | tar xzf - -C ./cabalHooks
         chmod +x ~/bin/cabal
-        chmod +x ./cabalHooks/*Hook*
 
     - name: Cabal update
       run: ~/bin/cabal update

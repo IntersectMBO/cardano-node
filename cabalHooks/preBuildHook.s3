@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+. "$(dirname "${BASH_SOURCE[0]}")/s3-credentials.bash"
+
+CACHE_KEY="$1.tar.gz"
+
+# Check if artifact exists in S3 (with endpoint and credentials)
+aws s3 ls s3://$CACHE_BUCKET/devx-shell/$CACHE_KEY --endpoint-url $AWS_ENDPOINT > /dev/null 2>&1
+
+if [ $? -eq 0 ]; then
+  echo "Cache hit - downloading from S3"
+  aws s3 cp s3://$CACHE_BUCKET/devx-shell/$CACHE_KEY - --endpoint-url $AWS_ENDPOINT | tar -xz
+else
+  echo "Cache miss"
+  exit 1
+fi
