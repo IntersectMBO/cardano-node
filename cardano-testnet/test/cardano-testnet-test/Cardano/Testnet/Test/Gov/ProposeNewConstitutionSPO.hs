@@ -26,15 +26,15 @@ import           GHC.Stack (HasCallStack)
 import           Lens.Micro
 import           System.FilePath ((</>))
 
-import           Testnet.Components.DReps (createVotingTxBody, failToSubmitTx,
-                   retrieveTransactionId, signTx, submitTx)
+import           Testnet.Components.DRep (createVotingTxBody, failToSubmitTx, retrieveTransactionId,
+                   signTx, submitTx)
 import           Testnet.Components.Query
 import           Testnet.Components.SPO (generateVoteFiles)
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults (defaultSPOColdKeyPair, defaultSPOKeys)
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
-import qualified Testnet.Property.Utils as H
+import qualified Testnet.Property.Util as H
 import           Testnet.Runtime
 
 import           Hedgehog

@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Testnet.Components.DReps
+module Testnet.Components.DRep
   ( VoteFile
   , generateDRepKeyPair
   , generateRegistrationCertificate

@@ -39,12 +39,12 @@ import qualified GHC.Stack as GHC
 import           Lens.Micro
 import           System.FilePath.Posix ((</>))
 
-import           Testnet.Components.DReps (VoteFile)
+import           Testnet.Components.DRep (VoteFile)
 import           Testnet.Filepath
 import           Testnet.Process.Cli hiding (File, unFile)
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run (execCli, execCli', execCli_)
-import           Testnet.Property.Utils
+import           Testnet.Property.Util
 import           Testnet.Runtime (PoolNodeKeys (poolNodeKeysColdVkey))
 import           Testnet.Start.Types
 

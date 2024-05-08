@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Cardano.Testnet.Test.Gov.DRepDeposits
+module Cardano.Testnet.Test.Gov.DRepDeposit
   ( hprop_ledger_events_drep_deposits
   ) where
 
@@ -19,12 +19,12 @@ import           Control.Monad (void)
 import qualified Data.Map as Map
 import           System.FilePath ((</>))
 
-import           Testnet.Components.DReps (createCertificatePublicationTxBody, failToSubmitTx,
+import           Testnet.Components.DRep (createCertificatePublicationTxBody, failToSubmitTx,
                    generateDRepKeyPair, generateRegistrationCertificate, registerDRep, signTx)
 import           Testnet.Components.Query (checkDRepState, getEpochStateView, getMinDRepDeposit)
 import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
 import qualified Testnet.Process.Run as H
-import qualified Testnet.Property.Utils as H
+import qualified Testnet.Property.Util as H
 import           Testnet.Runtime (PaymentKeyInfo (paymentKeyInfoPair), PoolNode (poolRuntime),
                    TestnetRuntime (TestnetRuntime, configurationFile, poolNodes, testnetMagic, wallets))
 

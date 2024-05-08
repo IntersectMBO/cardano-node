@@ -90,24 +90,24 @@ library
   hs-source-dirs:       src
   exposed-modules:      Cardano.Testnet
                         Parsers.Run
-                        Testnet.Start.Byron
-                        Testnet.Start.Types
                         Testnet.Components.Configuration
-                        Testnet.Components.DReps
-                        Testnet.Components.SPO
+                        Testnet.Components.DRep
                         Testnet.Components.Query
+                        Testnet.Components.SPO
                         Testnet.Components.TestWatchdog
                         Testnet.Defaults
-                        Testnet.Filepath
                         Testnet.EpochStateProcessing
-                        Testnet.Property.Assert
-                        Testnet.Property.Run
-                        Testnet.Property.Utils
+                        Testnet.Filepath
+                        Testnet.Ping
                         Testnet.Process.Cli
                         Testnet.Process.Run
+                        Testnet.Property.Assert
+                        Testnet.Property.Run
+                        Testnet.Property.Util
                         Testnet.Runtime
+                        Testnet.Start.Byron
+                        Testnet.Start.Types
                         Testnet.SubmitApi
-                        Testnet.Ping
 
   other-modules:        Parsers.Cardano
                         Parsers.Help
@@ -182,19 +182,19 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.Conway.Plutus
                         Cardano.Testnet.Test.Cli.Conway.StakeSnapshot
                         Cardano.Testnet.Test.Cli.KesPeriodInfo
-                        Cardano.Testnet.Test.Cli.Queries
+                        Cardano.Testnet.Test.Cli.Query
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
                         Cardano.Testnet.Test.FoldBlocks
                         Cardano.Testnet.Test.Misc
 
-                        Cardano.Testnet.Test.Gov.DRepDeposits
+                        Cardano.Testnet.Test.Gov.DRepActivity
+                        Cardano.Testnet.Test.Gov.DRepDeposit
                         Cardano.Testnet.Test.Gov.DRepRetirement
                         Cardano.Testnet.Test.Gov.InfoAction
                         Cardano.Testnet.Test.Gov.ProposeNewConstitution
                         Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO
-                        Cardano.Testnet.Test.Gov.TreasuryWithdrawal
-                        Cardano.Testnet.Test.Gov.DRepActivity
                         Cardano.Testnet.Test.Gov.TreasuryGrowth
+                        Cardano.Testnet.Test.Gov.TreasuryWithdrawal
                         Cardano.Testnet.Test.SanityCheck
 
                         Cardano.Testnet.Test.Node.Shutdown

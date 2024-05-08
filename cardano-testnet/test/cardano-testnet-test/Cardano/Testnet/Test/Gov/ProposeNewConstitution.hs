@@ -11,6 +11,7 @@ module Cardano.Testnet.Test.Gov.ProposeNewConstitution
 
 import           Cardano.Api as Api
 import           Cardano.Api.Error (displayError)
+import           Cardano.Api.Ledger (EpochInterval (..))
 
 import qualified Cardano.Crypto.Hash as L
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -33,14 +34,14 @@ import           Lens.Micro
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
-import           Testnet.Components.DReps (createVotingTxBody, generateVoteFiles,
+import           Testnet.Components.DRep (createVotingTxBody, generateVoteFiles,
                    retrieveTransactionId, signTx, submitTx)
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
-import qualified Testnet.Property.Utils as H
+import qualified Testnet.Property.Util as H
 import           Testnet.Runtime
 
 import           Hedgehog
@@ -198,20 +199,10 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
                      (paymentKeyInfoPair wallet0:[defaultDRepKeyPair n | (_, n) <- allVotes])
   submitTx execConfig cEra voteTxFp
 
-  -- We check that constitution was succcessfully ratified
+  _ <- waitForEpochs epochStateView (EpochInterval 1)
 
-  !eConstitutionAdopted
-    <- evalIO . runExceptT $ foldEpochState
-                      (File configurationFile)
-                      (File socketPath)
-                      FullValidation
-                      (EpochNo 10)
-                      ()
-                      (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
-
-  void $ evalEither eConstitutionAdopted
-
-  -- Tally registered votes
+  -- Count votes before checking for ratification. It may happen that the proposal gets removed after
+  -- ratification because of a long waiting time, so we won't be able to access votes.
   govState <- getGovState epochStateView ceo
   govActionState <- H.headM $ govState ^. L.cgsProposalsL . L.pPropsL . to toList
   let votes = govActionState ^. L.gasDRepVotesL . to toList
@@ -220,6 +211,16 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   length (filter ((== L.VoteNo) . snd) votes) === 3
   length (filter ((== L.Abstain) . snd) votes) === 2
   length votes === numVotes
+
+  -- We check that constitution was succcessfully ratified
+  void . H.leftFailM . evalIO . runExceptT $
+    foldEpochState
+      (File configurationFile)
+      (File socketPath)
+      FullValidation
+      (EpochNo 10)
+      ()
+      (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
 
 foldBlocksCheckConstitutionWasRatified
   :: String -- submitted constitution hash
@@ -237,7 +238,7 @@ filterRatificationState
   -> String -- ^ Submitted guard rail script hash
   -> AnyNewEpochState
   -> Bool
-filterRatificationState c guardRailScriptHash (AnyNewEpochState sbe newEpochState) =
+filterRatificationState c guardRailScriptHash (AnyNewEpochState sbe newEpochState) = do
   caseShelleyToBabbageOrConwayEraOnwards
     (const $ error "filterRatificationState: Only conway era supported")
 

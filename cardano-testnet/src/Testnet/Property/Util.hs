@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Testnet.Property.Utils
+module Testnet.Property.Util
   ( integration
   , integrationRetryWorkspace
   , integrationWorkspace

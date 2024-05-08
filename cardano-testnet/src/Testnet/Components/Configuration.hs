@@ -49,7 +49,7 @@ import           System.FilePath.Posix (takeDirectory, (</>))
 import           Testnet.Defaults
 import           Testnet.Filepath
 import           Testnet.Process.Run (execCli_)
-import           Testnet.Property.Utils
+import           Testnet.Property.Util
 import           Testnet.Start.Types (CardanoTestnetOptions (..), anyEraToString, eraToString)
 
 import           Hedgehog

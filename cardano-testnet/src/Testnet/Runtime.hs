@@ -70,7 +70,7 @@ import qualified System.Process as IO
 import           Testnet.Filepath
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run
-import           Testnet.Property.Utils (runInBackground)
+import           Testnet.Property.Util (runInBackground)
 import           Testnet.Start.Types
 
 import           Hedgehog (MonadTest)
