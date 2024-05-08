@@ -181,6 +181,41 @@ executable tx-generator
   build-depends:        base
                       , tx-generator
 
+test-suite tx-generator-json
+  import:               project-config, with-library
+
+  hs-source-dirs:       test
+  main-is:              JSON.hs
+  type:                 exitcode-stdio-1.0
+  default-language:     Haskell2010
+  ghc-options:          -threaded
+                        -Wall
+                        -rtsopts
+                        "-with-rtsopts=-T"
+
+  build-depends:        base
+                      , adjunctions
+                      , aeson
+                      , bytestring
+                      , cardano-node
+                      , extra
+                      , transformers
+                      , transformers-except
+                      , tx-generator
+
+  other-modules:        Paths_tx_generator
+  autogen-modules:      Paths_tx_generator
+
+  build-depends:        base
+                      , adjunctions
+                      , aeson
+                      , bytestring
+                      , cardano-node
+                      , extra
+                      , transformers
+                      , transformers-except
+                      , tx-generator
+
 test-suite tx-generator-apitest
   import:               project-config, with-library
 
