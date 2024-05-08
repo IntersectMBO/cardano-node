@@ -64,7 +64,7 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 100
+        { cardanoEpochLength = 200
         , cardanoNodeEra = cEra
         , cardanoNumDReps = 1
         }
@@ -93,8 +93,8 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
 
   -- This proposal should pass
   let minEpochsToWaitIfChanging = 0 -- The change already provides a min bound
-      minEpochsToWaitIfNotChanging = 3 -- We cannot wait for change since there is no change (we wait a bit)
-      maxEpochsToWaitAfterProposal = 10 -- If it takes more than 10 epochs we give up in any case
+      minEpochsToWaitIfNotChanging = 2 -- We cannot wait for change since there is no change (we wait a bit)
+      maxEpochsToWaitAfterProposal = 2 -- If it takes more than 2 epochs we give up in any case
       firstTargetDRepActivity = 3
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "firstProposal" wallet0 [(1, "yes")] firstTargetDRepActivity
