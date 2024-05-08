@@ -32,7 +32,7 @@ import qualified Hedgehog.Extras as H
 hprop_ledger_events_drep_deposits :: Property
 hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
 
-  -- Start a local test net
+
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
