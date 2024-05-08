@@ -23,6 +23,9 @@ jobs:
     defaults:
       run:
         shell: devx {0}
+    env:
+      CABAL_AWS_ACCESS_KEY_ID: ${{ secrets.CABAL_AWS_ACCESS_KEY_ID }}
+      CABAL_AWS_SECRET_ACCESS_KEY: ${{ secrets.CABAL_AWS_SECRET_ACCESS_KEY }}      
   
     runs-on: ${{ matrix.platform == 'x86_64-linux' && 'ubuntu-latest' || 'macos-latest' }}
 
@@ -69,8 +72,17 @@ jobs:
 
     - uses: actions/checkout@v4
 
+    - name: add patched cabal
+      run: |
+        mkdir ~/bin
+        mkdir cabalHooks
+        curl -L https://ci.zw3rk.com/job/input-output-hk-haskell-nix-example/pullrequest-2/x86_64-linux.cabal-install-static/latest/download/1 | gunzip > ~/bin/cabal
+        curl -L https://ci.zw3rk.com/job/input-output-hk-haskell-nix-example/pullrequest-2/x86_64-linux.cabal-install-hooks/latest/download/1 | tar xzf - -C ./cabalHooks
+        chmod +x ~/bin/cabal
+        chmod +x ./cabalHooks/*Hook*
+
     - name: Cabal update
-      run: cabal update
+      run: ~/bin/cabal update
 
     - name: Configure build
       run: |      
@@ -81,7 +93,7 @@ jobs:
     # A dry run `build all` operation does *NOT* downlaod anything, it just looks at the package
     # indices to generate an install plan.
     - name: Build dry run
-      run: cabal build all --enable-tests --dry-run --minimize-conflict-set
+      run: ~/bin/cabal build all --enable-tests --dry-run --minimize-conflict-set
 
     # From the install plan we generate a dependency list.
     - name: Record dependencies
@@ -108,7 +120,7 @@ jobs:
     # this should be a no-op, but if the cache key was not found we need to build stuff so we can
     # cache it for the next step.
     - name: Install dependencies
-      run: cabal build all --enable-tests --only-dependencies -j --ghc-option=-j4
+      run: ~/bin/cabal build all --enable-tests --only-dependencies -j --ghc-option=-j4
 
     # Always store the cabal cache.
     # This can fail (benign failure) if there is already a hash at that key.
@@ -122,7 +134,7 @@ jobs:
 
     # Now we build.
     - name: Build all
-      run: cabal build all --enable-tests
+      run: ~/bin/cabal build all --enable-tests
 
     - name: Run tests
       env:
@@ -130,7 +142,7 @@ jobs:
       run: |
         export TMPDIR="${{ runner.temp }}"
         export TMP="${{ runner.temp }}"
-        cabal test cardano-testnet cardano-node cardano-node-chairman cardano-submit-api
+        ~/bin/cabal test cardano-testnet cardano-node cardano-node-chairman cardano-submit-api
 
     - name: Tar failed tests workspaces
       if: ${{ failure() }}
