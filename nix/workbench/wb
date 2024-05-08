@@ -10,6 +10,9 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 # By default the new genesis creation is disabled
 : "${WB_MODULAR_GENESIS:=0}"
 
+# Keep using wb create-staked by default
+: "${WB_CREATE_TESTNET_DATA:=0}"
+
 . "$global_basedir"/lib.sh
 . "$global_basedir"/env.sh
 . "$global_basedir"/chaindb.sh
@@ -37,10 +40,10 @@ usage_main() {
     set +x
     test $# -lt 1 || msg "Unknown op: $1"
      __usage "OP" "Top-level OPs" <<EOF
-    $(red profile)      ($(red p))      Cluster profile ops.  Default subop is $(yellow $profile_default_op)
-    $(red run)          ($(red r))      Managing cluster runs.  Default subop is $(yellow $run_default_op)
-    $(red analyse)      ($(red a))      Analyse cluster runs.  Default subop is $(yellow $analyse_default_op)
-    $(red publish)      ($(red u))      Bench data publish.  Default subop is $(yellow $publish_default_op)
+    $(red profile)      ($(red p))      Cluster profile ops.   Default subop is $(yellow "${profile_default_op:?"profile_default_op not set"}")
+    $(red run)          ($(red r))      Managing cluster runs. Default subop is $(yellow "${run_default_op:?"run_default_op not set"}")
+    $(red analyse)      ($(red a))      Analyse cluster runs.  Default subop is $(yellow "${analyse_default_op:?"analyse_default_op not set"}")
+    $(red publish)      ($(red u))      Bench data publish.    Default subop is $(yellow "${publish_default_op:?"publish_default_op not set"}")
 
     $(blue Secondary top-level OPs):
 
@@ -198,7 +201,7 @@ start() {
 
         --help )                         usage_start
                                          exit 1;;
-        * ) fatal "while parsing remaining '$(blue wb start)$(red \' args):  $(white $*)";;
+        * ) fatal "while parsing remaining '$(blue wb start)$(red \' args):  $(white "$@")";;
        esac; shift; done
 
     if test -n "$cabal_mode"
@@ -209,11 +212,11 @@ start() {
     backend assert-stopped
     backend setenv-defaults "$backend_data"
 
-    profile_name=$(jq '.name' -r $profile_data/profile.json)
-    analysis_type=$(jq '.analysis.type' -r $profile_data/profile.json)
+    profile_name=$(jq '.name' -r "$profile_data/profile.json")
+    analysis_type=$(jq '.analysis.type' -r "$profile_data/profile.json")
 
     local top_i runs=()
-    for ((top_i=0; top_i<$iterations; top_i++))
+    for ((top_i=0; top_i<iterations; top_i++))
     do newline
        if test -n "$cabal_mode" -a -z "$prebuild_done"
        then workbench-prebuild-executables
@@ -222,11 +225,12 @@ start() {
 
        # manifest generation needs the build plan that is created in the previous step
        progress "manifest" "component versions:"
-       local manifest=$(manifest collect-from-checkout  \
-                            "$node_source"              \
-                            "$node_rev"                 \
-                            "${WB_MANIFEST_PACKAGES[@]}"
-                       )
+       local manifest
+       manifest=$(manifest collect-from-checkout  \
+                      "$node_source"              \
+                      "$node_rev"                 \
+                      "${WB_MANIFEST_PACKAGES[@]}"
+                 )
        manifest render "$manifest"
 
        progress "top-level" "profile $(with_color 'yellow' $profile_name), iteration $(with_color 'white' $((top_i+1))) of $(with_color 'yellow' $iterations), identified as:  $(if test -n "$ident"; then echo $(white $ident); else echo $(red UNIDENTIFIED); fi)"
@@ -239,7 +243,8 @@ start() {
             ${run_allocate_args[@]}
        )
        run "${run_args[@]}" allocate "${allocate_args[@]}"
-       local run=$(run current-tag)
+       local run
+       run=$(run current-tag)
        runs+=($run)
 
        current_run_path=$(run current-path)
@@ -251,15 +256,24 @@ start() {
 
        progress "top-level | analysis" "analysis type $(with_color yellow "$analysis_type") on $(with_color white "$run")"
 
-       local runspec=$(test -n "$ident" && echo "$ident":)$run
+       local runspec
+       if test -n "$ident"; then
+         runspec="$ident":$run
+       else
+         runspec=$run
+       fi
 
-       analyse "${analyse_args[@]}" "$analysis_type" "$runspec" &&
-           progress "run | analysis" "done for $(white "$runspec")" ||
-           if test -n "$analysis_can_fail" -a -z "$no_retry_failed_runs"
-           then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red "$runspec")"
-                iterations=$((iterations + 1))
-           else fail "analysis failed:  $run"
-                false; fi
+       if analyse "${analyse_args[@]}" "$analysis_type" "$runspec"; then
+         progress "run | analysis" "done for $(white "$runspec")"
+       else
+         if test -n "$analysis_can_fail" -a -z "$no_retry_failed_runs"; then
+           progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red "$runspec")"
+           iterations=$((iterations + 1))
+         else
+           fail "analysis failed:  $run"
+           false
+         fi
+       fi
     done
 
     if test -z "$no_analysis" -a "$analysis_type" != null -a "$iterations" -gt 1
@@ -295,7 +309,13 @@ do case "$1" in
        * ) break;; esac; shift; done
 
 main() {
-    local op=${1:?$(usage_main)}; shift || true
+    # if $1 is not set ...
+    if [ ! -v 1 ]; then
+      usage_main
+      exit 1
+    fi
+    local op=$1
+    shift
 
     case "$op" in
         ## Public, primary:

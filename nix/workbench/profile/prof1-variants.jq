@@ -85,10 +85,25 @@ def all_profile_variants:
       { tps:                                (1 * $M / (360 * 20))
       }
     } as $dataset_dish
-  |
+  ##
+  ### Definition vocabulary:  dreps
+  ##
+  | { genesis:
+      { dreps: 10
+      }
+    } as $dreps_small
+  | { genesis:
+      { dreps: 100
+      }
+    } as $dreps_medium
+  | { genesis:
+      { dreps: 1000
+      }
+    } as $dreps_large
   ##
   ### Definition vocabulary:  chain
   ##
+  |
     { chaindb:
       { mainnet_chunks:
         { chaindb_server:               10
@@ -608,7 +623,7 @@ def all_profile_variants:
     { desc: "Miniature dataset, CI-friendly duration, test scale"
     }) as $citest_base
   |
-   ($scenario_fixed_loaded * $doublet * $dataset_miniature * $for_15blk * $no_filtering *
+   ($scenario_fixed_loaded * $doublet * $dataset_miniature * $for_15blk * $no_filtering * $dreps_small *
     { desc: "Miniature dataset, CI-friendly duration, bench scale"
     }) as $cibench_base
   |

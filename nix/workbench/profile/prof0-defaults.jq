@@ -33,6 +33,9 @@ def era_defaults($era):
     , funds_balance:                  10000000000000
     , utxo:                           0
 
+    ## DReps
+    , dreps:                          0
+
     ## Blockchain time & block density
     , active_slots_coeff:             0.05
     , epoch_length:                   600   # Ought to be at least (10 * k / f).
