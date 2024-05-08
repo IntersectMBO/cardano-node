@@ -1,10 +1,12 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Testnet.EpochStateProcessing
   ( maybeExtractGovernanceActionIndex
   , findCondition
+  , watchEpochStateView
   ) where
 
 import           Cardano.Api
@@ -19,11 +21,15 @@ import           Prelude
 
 import           Control.Monad.State.Strict (MonadState (put), StateT)
 import qualified Data.Map as Map
-import           Data.Word (Word32)
+import           Data.Word (Word32, Word64)
 import           GHC.Stack
 import           Lens.Micro ((^.))
 
+import           Testnet.Components.Query (EpochStateView, getEpochState)
+
 import           Hedgehog
+import           Hedgehog.Extras (MonadAssertion)
+import qualified Hedgehog.Extras as H
 
 findCondition
   :: HasCallStack
@@ -71,4 +77,35 @@ maybeExtractGovernanceActionIndex txid (AnyNewEpochState sbe newEpochState) =
     compareWithTxId (TxId ti1) Nothing (GovActionId (L.TxId ti2) (L.GovActionIx gai)) _
       | ti1 == L.extractHash ti2 = Just gai
     compareWithTxId _ x _ _ = x
+
+-- | Watch the epoch state view until the guard function returns @Just@ or the timeout is reached.
+-- | Wait for at least `minWait` epochs and at most `maxWait` epochs.
+-- | The function will return the result of the guard function if it is met, otherwise it will return @Nothing@.
+watchEpochStateView
+  :: forall m a. (MonadIO m, MonadTest m, MonadAssertion m)
+  => EpochStateView -- ^ The info to access the epoch state
+  -> (AnyNewEpochState -> m (Maybe a)) -- ^ The guard function (@Just@ if the condition is met, @Nothing@ otherwise)
+  -> Word64 -- ^ The minimum number of epochs to wait
+  -> Word64 -- ^ The maximum number of epochs to wait
+  -> m (Maybe a)
+watchEpochStateView epochStateView f minWait maxWait = do
+  AnyNewEpochState _ newEpochState <- getEpochState epochStateView
+  let (EpochNo currentEpoch) = L.nesEL newEpochState
+  go (EpochNo $ currentEpoch + minWait) (EpochNo $ currentEpoch + maxWait)
+    where
+      go :: EpochNo -> EpochNo -> m (Maybe a)
+      go (EpochNo startEpoch) (EpochNo timeout) = do
+        epochState@(AnyNewEpochState _ newEpochState') <- getEpochState epochStateView
+        let (EpochNo currentEpoch) = L.nesEL newEpochState'
+        if currentEpoch < startEpoch
+        then do H.threadDelay 100_000
+                go (EpochNo startEpoch) (EpochNo timeout)
+        else do condition <- f epochState
+                case condition of
+                  Just result -> pure (Just result)
+                  Nothing ->
+                    if currentEpoch > timeout
+                    then pure Nothing
+                    else do H.threadDelay 100_000
+                            go (EpochNo startEpoch) (EpochNo timeout)
 
