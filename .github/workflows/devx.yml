@@ -26,6 +26,8 @@ jobs:
     env:
       CABAL_AWS_ACCESS_KEY_ID: ${{ secrets.CABAL_AWS_ACCESS_KEY_ID }}
       CABAL_AWS_SECRET_ACCESS_KEY: ${{ secrets.CABAL_AWS_SECRET_ACCESS_KEY }}      
+      # Modify this value to "invalidate" the cabal cache.
+      CABAL_CACHE_VERSION: "2024-04-24"
   
     runs-on: ${{ matrix.platform == 'x86_64-linux' && 'ubuntu-latest' || 'macos-latest' }}
 
@@ -34,10 +36,6 @@ jobs:
       matrix:
         platform: [ x86_64-linux, x86_64-darwin, aarch64-darwin ]
         compiler-nix-name: [ ghc96, ghc98 ] # , ghc810 ]
-
-    env:
-      # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2024-04-24"
 
     concurrency:
       group: >
