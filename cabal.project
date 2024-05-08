@@ -62,3 +62,13 @@ constraints:
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
+
+allow-newer: ouroboros-consensus-diffusion
+
+source-repository-package
+    type: git
+    location: https://github.com/IntersectMBO/cardano-cli.git
+    tag: 5a68d53581c596f9eacbd87f91411a8bf5f875cf
+    subdir: cardano-cli  
+    --sha256: EKCej0sl1ED3AztmgIpKl3avPihSyM/Qm1eF/3wc7ls=
+
