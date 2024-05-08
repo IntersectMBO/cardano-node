@@ -861,48 +861,59 @@ instance MetaTrace (DebugPeerSelection SockAddr) where
 --------------------------------------------------------------------------------
 
 instance LogFormatting PeerSelectionCounters where
-  forMachine _dtal PeerSelectionCounters {..} =
-    mconcat [ "kind" .= String "PeerSelectionCounters"
+  forMachine dtal PeerSelectionCounters {..} =
+    mconcat $
+      [ "kind" .= String "PeerSelectionCounters"
 
-            , "knownPeers" .= numberOfKnownPeers
-            , "rootPeers" .= numberOfRootPeers
-            , "coldPeersPromotions" .= numberOfColdPeersPromotions
-            , "establishedPeers" .= numberOfEstablishedPeers
-            , "warmPeersDemotions" .= numberOfWarmPeersDemotions
-            , "warmPeersPromotions" .= numberOfWarmPeersPromotions
-            , "activePeers" .= numberOfActivePeers
-            , "activePeersDemotions" .= numberOfActivePeersDemotions
+      , "knownPeers" .= numberOfKnownPeers
+      , "rootPeers" .= numberOfRootPeers
+      , "establishedPeers" .= numberOfEstablishedPeers
+      , "activePeers" .= numberOfActivePeers
+      , "activePeersDemotions" .= numberOfActivePeersDemotions
 
-            , "knownBigLedgerPeers" .= numberOfKnownBigLedgerPeers
-            , "coldBigLedgerPeersPromotions" .= numberOfColdBigLedgerPeersPromotions
-            , "establishedBigLedgerPeers" .= numberOfEstablishedBigLedgerPeers
-            , "warmBigLedgerPeersDemotions" .= numberOfWarmBigLedgerPeersDemotions
-            , "warmBigLedgerPeersPromotions" .= numberOfWarmBigLedgerPeersPromotions
-            , "activeBigLedgerPeers" .= numberOfActiveBigLedgerPeers
-            , "activeBigLedgerPeersDemotions" .= numberOfActiveBigLedgerPeersDemotions
+      , "knownBigLedgerPeers" .= numberOfKnownBigLedgerPeers
+      , "establishedBigLedgerPeers" .= numberOfEstablishedBigLedgerPeers
+      , "activeBigLedgerPeers" .= numberOfActiveBigLedgerPeers
+      , "activeBigLedgerPeersDemotions" .= numberOfActiveBigLedgerPeersDemotions
 
-            , "knownLocalRootPeers" .= numberOfKnownLocalRootPeers
-            , "establishedLocalRootPeers" .= numberOfEstablishedLocalRootPeers
-            , "warmLocalRootPeersPromotions" .= numberOfWarmLocalRootPeersPromotions
-            , "activeLocalRootPeers" .= numberOfActiveLocalRootPeers
-            , "activeLocalRootPeersDemotions" .= numberOfActiveLocalRootPeersDemotions
+      , "knownLocalRootPeers" .= numberOfKnownLocalRootPeers
+      , "establishedLocalRootPeers" .= numberOfEstablishedLocalRootPeers
+      , "activeLocalRootPeers" .= numberOfActiveLocalRootPeers
+      ]
+      <>
+      whenM (dtal > DMinimal)
+      [ "knownNonRootPeers" .= numberOfKnownNonRootPeers
+      , "establishedNonRootPeers" .= numberOfEstablishedNonRootPeers
+      , "activeNonRootPeers" .= numberOfActiveNonRootPeers
+      , "activeNonRootPeersDemotions" .= numberOfActiveNonRootPeersDemotions
 
-            , "knownNonRootPeers" .= numberOfKnownNonRootPeers
-            , "coldNonRootPeersPromotions" .= numberOfColdNonRootPeersPromotions
-            , "establishedNonRootPeers" .= numberOfEstablishedNonRootPeers
-            , "warmNonRootPeersDemotions" .= numberOfWarmNonRootPeersDemotions
-            , "warmNonRootPeersPromotions" .= numberOfWarmNonRootPeersPromotions
-            , "activeNonRootPeers" .= numberOfActiveNonRootPeers
-            , "activeNonRootPeersDemotions" .= numberOfActiveNonRootPeersDemotions
+      , "knownBootstrapPeers" .= numberOfKnownBootstrapPeers
+      , "establishedBootstrapPeers" .= numberOfEstablishedBootstrapPeers
+      , "activeBootstrapPeers" .= numberOfActiveBootstrapPeers
+      ]
+      <>
+      whenM (dtal > DNormal)
+      [ "coldPeersPromotions" .= numberOfColdPeersPromotions
+      , "warmPeersDemotions" .= numberOfWarmPeersDemotions
+      , "warmPeersPromotions" .= numberOfWarmPeersPromotions
 
-            , "knownBootstrapPeers" .= numberOfKnownBootstrapPeers
-            , "coldBootstrapPeersPromotions" .= numberOfColdBootstrapPeersPromotions
-            , "establishedBootstrapPeers" .= numberOfEstablishedBootstrapPeers
-            , "warmBootstrapPeersDemotions" .= numberOfWarmBootstrapPeersDemotions
-            , "warmBootstrapPeersPromotions" .= numberOfWarmBootstrapPeersPromotions
-            , "activeBootstrapPeers" .= numberOfActiveBootstrapPeers
-            , "ActiveBootstrapPeersDemotions" .= numberOfActiveBootstrapPeersDemotions
-            ]
+      , "coldBigLedgerPeersPromotions" .= numberOfColdBigLedgerPeersPromotions
+      , "warmBigLedgerPeersDemotions" .= numberOfWarmBigLedgerPeersDemotions
+      , "warmBigLedgerPeersPromotions" .= numberOfWarmBigLedgerPeersPromotions
+
+      , "warmLocalRootPeersPromotions" .= numberOfWarmLocalRootPeersPromotions
+      , "activeLocalRootPeersDemotions" .= numberOfActiveLocalRootPeersDemotions
+
+      , "coldNonRootPeersPromotions" .= numberOfColdNonRootPeersPromotions
+      , "warmNonRootPeersDemotions" .= numberOfWarmNonRootPeersDemotions
+      , "warmNonRootPeersPromotions" .= numberOfWarmNonRootPeersPromotions
+
+      , "coldBootstrapPeersPromotions" .= numberOfColdBootstrapPeersPromotions
+      , "warmBootstrapPeersDemotions" .= numberOfWarmBootstrapPeersDemotions
+      , "warmBootstrapPeersPromotions" .= numberOfWarmBootstrapPeersPromotions
+
+      , "activeBootstrapPeersDemotions" .= numberOfActiveBootstrapPeersDemotions
+      ]
   forHuman = pack . show
   asMetrics psc =
     case psc of
@@ -978,6 +989,10 @@ instance LogFormatting PeerSelectionCounters where
         , IntM "Net.PeerSelection.ActiveBootstrapPeers" (fromIntegral numberOfActiveBootstrapPeers)
         , IntM "Net.PeerSelection.ActiveBootstrapPeersDemotions" (fromIntegral numberOfActiveBootstrapPeersDemotions)
         ]
+
+whenM :: Monoid m => Bool -> m -> m
+whenM False _ = mempty
+whenM True  m = m
 
 instance MetaTrace PeerSelectionCounters where
     namespaceFor PeerSelectionCounters {} = Namespace [] ["Counters"]
