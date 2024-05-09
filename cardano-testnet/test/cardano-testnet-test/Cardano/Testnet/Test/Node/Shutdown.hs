@@ -37,8 +37,8 @@ import           System.Process (interruptProcessGroupOf)
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
 import           Testnet.Process.Run
-import qualified Testnet.Property.Utils as H
-import           Testnet.Property.Utils
+import qualified Testnet.Property.Util as H
+import           Testnet.Property.Util
 import           Testnet.Runtime
 import           Testnet.Start.Byron
 

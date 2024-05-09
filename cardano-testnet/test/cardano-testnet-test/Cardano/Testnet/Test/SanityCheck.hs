@@ -21,7 +21,7 @@ import           GHC.Stack
 import           System.FilePath ((</>))
 
 import           Testnet.Components.TestWatchdog
-import qualified Testnet.Property.Utils as H
+import qualified Testnet.Property.Util as H
 import           Testnet.Runtime
 
 import           Hedgehog
