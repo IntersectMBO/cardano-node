@@ -12,6 +12,8 @@ aws s3 ls s3://"$CACHE_BUCKET"/devx-shell/"$CACHE_KEY" --endpoint-url "$AWS_ENDP
 if [ $? -eq 0 ]; then
   echo "S3 hit       $1"
   aws s3 cp s3://"$CACHE_BUCKET"/devx-shell/"$CACHE_KEY" - --endpoint-url "$AWS_ENDPOINT" | tar -xz
+  # leave an empty $CACHE_KEY file for the postBuildHook to see and not re-upload.
+  touch "$CACHE_KEY"
 else
   echo "S3 miss      $1"
   exit 1
