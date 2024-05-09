@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 
+# shellcheck disable=SC1091,SC2046
 . "$(dirname "${BASH_SOURCE[0]}")/s3-credentials.bash"
 
 CACHE_KEY="$1.tar.gz"
 
-echo "Compressing and uploading $1 to S3"
-tar -czf $CACHE_KEY --exclude=$3/setup-config $3
-aws s3 cp $CACHE_KEY s3://$CACHE_BUCKET/devx-shell/$CACHE_KEY --endpoint-url $AWS_ENDPOINT
-rm $CACHE_KEY # Optional: Cleanup local file
+echo "S3 upload    $1"
+tar -czf "$CACHE_KEY" --exclude="$3/setup-config" "$3"
+aws s3 cp "$CACHE_KEY" s3://"$CACHE_BUCKET"/devx-shell/"$CACHE_KEY" --endpoint-url "$AWS_ENDPOINT"
+rm "$CACHE_KEY" # Optional: Cleanup local file
