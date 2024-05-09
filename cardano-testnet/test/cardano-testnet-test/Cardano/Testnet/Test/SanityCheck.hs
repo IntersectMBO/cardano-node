@@ -14,9 +14,9 @@ import           Cardano.Api.Shelley
 
 import           Cardano.Testnet
 
-import           Data.Default.Class
 import           Prelude
 
+import           Data.Default.Class
 import           GHC.IO.Exception (IOException)
 import           GHC.Stack
 
@@ -51,9 +51,9 @@ hprop_ledger_events_sanity_check = integrationWorkspace "ledger-events-sanity-ch
         , genesisSlotLength = 0.1
         }
 
-  TestnetRuntime{configurationFile, poolNodes}
+  TestnetRuntime{configurationFile, testnetNodes}
     <- cardanoTestnetDefault fastTestnetOptions shelleyOptions conf
-  nr@NodeRuntime{nodeSprocket} <- H.headM $ poolRuntime <$> poolNodes
+  nr@NodeRuntime{nodeSprocket} <- H.headM $ testnetNodeRuntime <$> testnetNodes
   let socketPath = nodeSocketPath nr
 
   H.note_ $ "Sprocket: " <> show nodeSprocket

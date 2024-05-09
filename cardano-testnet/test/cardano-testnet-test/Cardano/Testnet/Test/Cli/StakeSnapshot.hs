@@ -37,14 +37,15 @@ hprop_stakeSnapshot = integrationRetryWorkspace 2 "stake-snapshot" $ \tempAbsBas
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
 
-  TestnetRuntime
+  runtime@TestnetRuntime
     { testnetMagic
-    , poolNodes
+    , testnetNodes
     , configurationFile
     } <- cardanoTestnetDefault def def conf
 
-  poolNode1 <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  let nSpoNodes = length $ spoNodes runtime
+  poolNode1 <- H.headM testnetNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket $ testnetNodeRuntime poolNode1
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 
   void $ waitUntilEpoch configurationFile
@@ -57,6 +58,6 @@ hprop_stakeSnapshot = integrationRetryWorkspace 2 "stake-snapshot" $ \tempAbsBas
     Aeson.Object kmJson -> do
       pools <- H.nothingFail $ KM.lookup "pools" kmJson
       case pools of
-        Aeson.Object kmPools -> KM.size kmPools === 3
+        Aeson.Object kmPools -> KM.size kmPools === nSpoNodes
         _ -> H.failure
     _ -> H.failure

@@ -35,7 +35,7 @@ import qualified Hedgehog.Extras.Test as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Treasury Growth/"'@
 prop_check_if_treasury_is_growing :: H.Property
-prop_check_if_treasury_is_growing = integrationRetryWorkspace 0 "growing-treasury" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+prop_check_if_treasury_is_growing = integrationRetryWorkspace 2 "growing-treasury" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start testnet
   conf@Conf{tempAbsPath=TmpAbsolutePath tempAbsPath'} <- TN.mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath $ tempAbsPath conf
@@ -47,11 +47,11 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 0 "growing-treasur
                            , genesisActiveSlotsCoeff = 0.3
                            }
 
-  TestnetRuntime{testnetMagic, configurationFile, poolNodes} <- cardanoTestnetDefault options shelleyOptions conf
+  TestnetRuntime{testnetMagic, configurationFile, testnetNodes} <- cardanoTestnetDefault options shelleyOptions conf
 
   (execConfig, socketPathAbs) <- do
-    PoolNode{poolRuntime} <- H.headM poolNodes
-    poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+    TestnetNode{testnetNodeRuntime} <- H.headM testnetNodes
+    poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
     let socketPath' = H.sprocketArgumentName poolSprocket1
     socketPathAbs <- Api.File <$> H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
     execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic

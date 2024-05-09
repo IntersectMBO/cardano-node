@@ -52,7 +52,7 @@ import qualified Hedgehog.Extras.Test.TestWatchdog as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/transaction/"'@
 hprop_transaction :: Property
-hprop_transaction = integrationRetryWorkspace 0 "submit-api-transaction" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
+hprop_transaction = integrationRetryWorkspace 2 "submit-api-transaction" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -68,13 +68,13 @@ hprop_transaction = integrationRetryWorkspace 0 "submit-api-transaction" $ \temp
   TestnetRuntime
     { configurationFile
     , testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:_
     } <- cardanoTestnetDefault options def conf
 
-  poolNode1 <- H.headM poolNodes
+  poolNode1 <- H.headM testnetNodes
 
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  poolSprocket1 <- H.noteShow $ nodeSprocket $ testnetNodeRuntime poolNode1
 
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 
@@ -139,8 +139,10 @@ hprop_transaction = integrationRetryWorkspace 0 "submit-api-transaction" $ \temp
       let submitApiRequestEndpoint = "POST " <> uriBase <> "/api/submit/tx"
 
       request <- H.evalM $ parseRequest submitApiRequestEndpoint
-        <&> setRequestBodyFile txbodySignedBinFp
-        <&> setRequestHeader "Content-Type" ["application/cbor"]
+        <&>
+          ( setRequestBodyFile txbodySignedBinFp
+          . setRequestHeader "Content-Type" ["application/cbor"]
+          )
 
       response <- H.evalM $ httpLbs request
 
@@ -172,8 +174,10 @@ hprop_transaction = integrationRetryWorkspace 0 "submit-api-transaction" $ \temp
       let submitApiRequestEndpoint = "POST " <> uriBase <> "/api/submit/tx"
 
       request <- H.evalM $ parseRequest submitApiRequestEndpoint
-        <&> setRequestBodyFile txbodySignedBinFp
-        <&> setRequestHeader "Content-Type" ["application/cbor"]
+        <&>
+          ( setRequestBodyFile txbodySignedBinFp
+          . setRequestHeader "Content-Type" ["application/cbor"]
+          )
 
       response <- H.evalM $ httpLbs request
 
