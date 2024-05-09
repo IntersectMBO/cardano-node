@@ -145,6 +145,7 @@ library
                       , base16-bytestring
                       , bytestring
                       , cardano-api ^>= 8.44
+                      , cardano-binary
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2

@@ -3,6 +3,11 @@
 ## Next version
 
 - Use p2p network stack by default, warn when using the legacy network stack.
+- Ledger peer snapshot path entry added to topology JSON parser,
+  which a new decoder function `readPeerSnapshotFile` processes
+  at startup and SIGHUP. Data is available to the diffusion layer
+  via TVar.
+
 
 ## 8.2.1 -- August 2023
 
