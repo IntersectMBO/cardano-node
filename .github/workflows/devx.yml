@@ -73,7 +73,17 @@ jobs:
     - name: add patched cabal
       run: |
         mkdir ~/bin
-        curl -L https://ci.zw3rk.com/job/input-output-hk-haskell-nix-example/pullrequest-2/x86_64-linux.cabal-install-static/latest/download/1 | gunzip > ~/bin/cabal
+        case "$(uname -m)-$(uname -o)" in
+          arm64-Darwin) 
+            curl -L https://ci.zw3rk.com/job/input-output-hk-haskell-nix-example/pullrequest-2/aarch64-darwin.cabal-install-static/latest/download/1 | gunzip > ~/bin/cabal
+            ;;          
+          x86_64-Darwin)
+            curl -L https://ci.zw3rk.com/job/input-output-hk-haskell-nix-example/pullrequest-2/x86_64-darwin.cabal-install-static/latest/download/1 | gunzip > ~/bin/cabal
+            ;;          
+          x86_64-GNU/Linux)
+            curl -L https://ci.zw3rk.com/job/input-output-hk-haskell-nix-example/pullrequest-2/x86_64-linux.cabal-install-static/latest/download/1 | gunzip > ~/bin/cabal
+            ;;
+        esac
         chmod +x ~/bin/cabal
 
     - name: Cabal update
