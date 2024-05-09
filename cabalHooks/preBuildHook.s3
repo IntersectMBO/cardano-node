@@ -6,12 +6,12 @@
 CACHE_KEY="$1.tar.gz"
 
 # Check if artifact exists in S3 (with endpoint and credentials)
-aws s3 ls s3://"$CACHE_BUCKET"/"$CACHE_KEY" --endpoint-url "$AWS_ENDPOINT" > /dev/null 2>&1
+aws s3 ls s3://"$CACHE_BUCKET"/devx-shell/"$CACHE_KEY" --endpoint-url "$AWS_ENDPOINT" > /dev/null 2>&1
 
 # shellcheck disable=SC2181
 if [ $? -eq 0 ]; then
   echo "S3 hit       $1"
-  aws s3 cp s3://"$CACHE_BUCKET"/"$CACHE_KEY" - --endpoint-url "$AWS_ENDPOINT" | tar -xz
+  aws s3 cp s3://"$CACHE_BUCKET"/devx-shell/"$CACHE_KEY" - --endpoint-url "$AWS_ENDPOINT" | tar -xz
 else
   echo "S3 miss      $1"
   exit 1
