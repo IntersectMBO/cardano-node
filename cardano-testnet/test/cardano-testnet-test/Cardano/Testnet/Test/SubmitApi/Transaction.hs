@@ -68,13 +68,13 @@ hprop_transaction = integrationRetryWorkspace 0 "submit-api-transaction" $ \temp
   TestnetRuntime
     { configurationFile
     , testnetMagic
-    , poolNodes
+    , testnetNodes
     , wallets=wallet0:_
     } <- cardanoTestnetDefault options def conf
 
-  poolNode1 <- H.headM poolNodes
+  poolNode1 <- H.headM testnetNodes
 
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  poolSprocket1 <- H.noteShow $ nodeSprocket $ testnetNodeRuntime poolNode1
 
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 

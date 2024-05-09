@@ -43,6 +43,7 @@ import           Testnet.Process.Run (execCli, execCli', mkExecConfig)
 import           Testnet.Property.Assert
 import           Testnet.Property.Util (decodeEraUTxO, integrationRetryWorkspace)
 import           Testnet.Runtime
+import           Testnet.Start.Types
 import           Testnet.Types
 
 import           Hedgehog (Property, (===))
@@ -62,17 +63,24 @@ hprop_leadershipSchedule = integrationRetryWorkspace 0 "leadership-schedule" $ \
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
       sbe = shelleyBasedEra @ConwayEra -- TODO: We should only support the latest era and the upcoming era
       asbe = AnyShelleyBasedEra sbe
-      cTestnetOptions = def { cardanoNodeEra = asbe }
+      cTestnetOptions = def
+        { cardanoNodeEra = asbe
+        , cardanoNodes =
+          [ TestnetNodeOptions TestnetNodeRoleSpo Nothing []
+          , TestnetNodeOptions TestnetNodeRoleSpo Nothing []
+          , TestnetNodeOptions TestnetNodeRoleSpo Nothing []
+          ]
+        }
       eraString = eraToString sbe
 
   tr@TestnetRuntime
     { testnetMagic
     , wallets=wallet0:_
     , configurationFile
-    , poolNodes
+    , testnetNodes
     } <- cardanoTestnetDefault cTestnetOptions def conf
 
-  node1sprocket <- H.headM $ poolSprockets tr
+  node1sprocket <- H.headM $ testnetSprockets tr
   execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
   ----------------Need to register an SPO------------------
@@ -215,7 +223,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 0 "leadership-schedule" $ \
   H.createDirectoryIfMissing_ testSpoDir
   let valency = 1
       topology = RealNodeTopology $
-        flip map poolNodes $ \PoolNode{poolRuntime=NodeRuntime{nodeIpv4,nodePort}} ->
+        flip map testnetNodes $ \TestnetNode{testnetNodeRuntime=NodeRuntime{nodeIpv4,nodePort}} ->
           RemoteAddress (showIpv4Address nodeIpv4) nodePort valency
   H.lbsWriteFile topologyFile $ Aeson.encode topology
   let testSpoKesVKey = work </> "kes.vkey"

@@ -46,8 +46,8 @@ Available options:
                            Enable new epoch state logging to
                            logs/ledger-epoch-state.log
   --testnet-magic INT      Specify a testnet magic id.
-  --epoch-length SLOTS     Epoch length, in number of slots (default: 500)
-  --slot-length SECONDS    Slot length (default: 0.1)
+  --epoch-length SLOTS     Epoch length, in number of slots (default: 150000)
+  --slot-length SECONDS    Slot length (default: 0.15)
   --active-slots-coeff DOUBLE
-                           Active slots co-efficient (default: 5.0e-2)
+                           Active slots co-efficient (default: 0.1)
   -h,--help                Show this help text

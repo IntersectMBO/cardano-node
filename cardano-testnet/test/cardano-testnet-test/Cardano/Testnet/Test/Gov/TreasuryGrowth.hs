@@ -47,11 +47,11 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 0 "growing-treasur
                            , genesisActiveSlotsCoeff = 0.3
                            }
 
-  TestnetRuntime{testnetMagic, configurationFile, poolNodes} <- cardanoTestnetDefault options shelleyOptions conf
+  TestnetRuntime{testnetMagic, configurationFile, testnetNodes} <- cardanoTestnetDefault options shelleyOptions conf
 
   (execConfig, socketPathAbs) <- do
-    PoolNode{poolRuntime} <- H.headM poolNodes
-    poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
+    TestnetNode{testnetNodeRuntime} <- H.headM testnetNodes
+    poolSprocket1 <- H.noteShow $ nodeSprocket testnetNodeRuntime
     let socketPath' = H.sprocketArgumentName poolSprocket1
     socketPathAbs <- Api.File <$> H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
     execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
