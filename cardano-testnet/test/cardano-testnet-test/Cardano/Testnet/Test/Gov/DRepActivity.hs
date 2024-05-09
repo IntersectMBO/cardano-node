@@ -11,7 +11,7 @@ module Cardano.Testnet.Test.Gov.DRepActivity
 
 import           Cardano.Api as Api
 import           Cardano.Api.Error (displayError)
-import           Cardano.Api.Ledger (EpochInterval (EpochInterval), drepExpiry)
+import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval), drepExpiry)
 
 import           Cardano.Ledger.Conway.Core (curPParamsGovStateL)
 import           Cardano.Ledger.Conway.PParams (ppDRepActivityL)
@@ -96,7 +96,7 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
   let minEpochsToWaitIfChanging = EpochInterval 0 -- The change already provides a min bound
       minEpochsToWaitIfNotChanging = EpochInterval 2 -- We cannot wait for change since there is no change (we wait a bit)
       maxEpochsToWaitAfterProposal = EpochInterval 2 -- If it takes more than 2 epochs we give up in any case
-      firstTargetDRepActivity = 3
+      firstTargetDRepActivity = EpochInterval 3
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "firstProposal" wallet0 [(1, "yes")] firstTargetDRepActivity
                                     minEpochsToWaitIfChanging (Just firstTargetDRepActivity)
@@ -119,7 +119,7 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
 
   -- This proposal should fail because there is 2 DReps that don't vote (out of 3)
   -- and we have the stake distributed evenly
-  let secondTargetDRepActivity = firstTargetDRepActivity + 1
+  let secondTargetDRepActivity = EpochInterval (unEpochInterval firstTargetDRepActivity + 1)
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "failingProposal" wallet2 [(1, "yes")] secondTargetDRepActivity
                                     minEpochsToWaitIfNotChanging (Just firstTargetDRepActivity)
@@ -132,7 +132,7 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
   sequence_
     [activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                 ("fillerProposalNum" ++ show proposalNum) wallet [(1, "yes")]
-                                (secondTargetDRepActivity + fromIntegral proposalNum)
+                                (EpochInterval (unEpochInterval secondTargetDRepActivity + fromIntegral proposalNum))
                                 minEpochsToWaitIfNotChanging Nothing
                                 maxEpochsToWaitAfterProposal
      | (proposalNum, wallet) <- zip [1..numOfFillerProposals] (cycle [wallet0, wallet1, wallet2])]
@@ -142,7 +142,7 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
 
   -- Last proposal (set activity to something else again and it should pass, because of inactivity)
   -- Because 2 out of 3 DReps were inactive, prop should pass
-  let lastTargetDRepActivity = secondTargetDRepActivity + fromIntegral numOfFillerProposals + 1
+  let lastTargetDRepActivity = EpochInterval (unEpochInterval secondTargetDRepActivity + fromIntegral numOfFillerProposals + 1)
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "lastProposal" wallet0 [(1, "yes")] lastTargetDRepActivity
                                     minEpochsToWaitIfChanging (Just lastTargetDRepActivity)
@@ -159,9 +159,9 @@ activityChangeProposalTest
   -> FilePath
   -> PaymentKeyInfo
   -> t (Int, String)
-  -> Word32
   -> EpochInterval
-  -> Maybe Word32
+  -> EpochInterval
+  -> Maybe EpochInterval
   -> EpochInterval
   -> m (String, Word32)
 activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo work prefix
@@ -189,24 +189,24 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
   (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
-  H.nothingFailM $ watchEpochStateView epochStateView isDRepActivityUpdated minWait maxWait
+  void $ waitForEpochs epochStateView minWait
+  case mExpected of
+    Nothing -> return ()
+    Just expected -> H.nothingFailM $ watchEpochStateView epochStateView (isDRepActivityUpdated expected) maxWait
 
   return thisProposal
 
   where
     isDRepActivityUpdated :: (HasCallStack, MonadTest m)
-              => AnyNewEpochState -> m (Maybe ())
-    isDRepActivityUpdated (AnyNewEpochState sbe newEpochState) =
+              => EpochInterval -> AnyNewEpochState -> m (Maybe ())
+    isDRepActivityUpdated (EpochInterval expected) (AnyNewEpochState sbe newEpochState) =
       caseShelleyToBabbageOrConwayEraOnwards
         (const $ error "activityChangeProposalTest: Only conway era onwards supported")
         (const $ do
           let (EpochInterval epochInterval) = newEpochState ^. nesEpochStateL . epochStateGovStateL . curPParamsGovStateL . ppDRepActivityL
-          return (case mExpected of
-                    Nothing -> Just ()
-                    Just expected -> if epochInterval == expected then Just () else Nothing)
+          return (if epochInterval == expected then Just () else Nothing)
         )
         sbe
-
 
 makeActivityChangeProposal
   :: (HasCallStack, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
@@ -218,7 +218,7 @@ makeActivityChangeProposal
   -> FilePath
   -> String
   -> Maybe (String, Word32)
-  -> Word32
+  -> EpochInterval
   -> PaymentKeyInfo
   -> Word64
   -> m (String, Word32)
@@ -260,7 +260,7 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
                       [ "--prev-governance-action-tx-id", prevGovernanceActionTxId
                       , "--prev-governance-action-index", show prevGovernanceActionIndex
                       ]) prevGovActionInfo ++
-    [ "--drep-activity", show drepActivity
+    [ "--drep-activity", show (unEpochInterval drepActivity)
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
     , "--out-file", proposalFile
