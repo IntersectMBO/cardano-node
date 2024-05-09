@@ -10,7 +10,7 @@ module Testnet.EpochStateProcessing
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Ledger (GovActionId (..))
+import           Cardano.Api.Ledger (EpochInterval (..), GovActionId (..))
 import qualified Cardano.Api.Ledger as L
 
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -21,7 +21,7 @@ import           Prelude
 
 import           Control.Monad.State.Strict (MonadState (put), StateT)
 import qualified Data.Map as Map
-import           Data.Word (Word32, Word64)
+import           Data.Word (Word32)
 import           GHC.Stack
 import           Lens.Micro ((^.))
 
@@ -78,20 +78,20 @@ maybeExtractGovernanceActionIndex txid (AnyNewEpochState sbe newEpochState) =
       | ti1 == L.extractHash ti2 = Just gai
     compareWithTxId _ x _ _ = x
 
--- | Watch the epoch state view until the guard function returns @Just@ or the timeout is reached.
--- | Wait for at least `minWait` epochs and at most `maxWait` epochs.
--- | The function will return the result of the guard function if it is met, otherwise it will return @Nothing@.
+-- | Watch the epoch state view until the guard function returns 'Just' or the timeout epoch is reached.
+-- Wait for at least @minWait@ epochs and at most @maxWait@ epochs.
+-- The function will return the result of the guard function if it is met, otherwise it will return @Nothing@.
 watchEpochStateView
-  :: forall m a. (MonadIO m, MonadTest m, MonadAssertion m)
+  :: forall m a. (HasCallStack, MonadIO m, MonadTest m, MonadAssertion m)
   => EpochStateView -- ^ The info to access the epoch state
   -> (AnyNewEpochState -> m (Maybe a)) -- ^ The guard function (@Just@ if the condition is met, @Nothing@ otherwise)
-  -> Word64 -- ^ The minimum number of epochs to wait
-  -> Word64 -- ^ The maximum number of epochs to wait
+  -> EpochInterval -- ^ The minimum number of epochs to wait
+  -> EpochInterval -- ^ The maximum number of epochs to wait
   -> m (Maybe a)
-watchEpochStateView epochStateView f minWait maxWait = do
+watchEpochStateView epochStateView f (EpochInterval minWait) (EpochInterval maxWait) = withFrozenCallStack $ do
   AnyNewEpochState _ newEpochState <- getEpochState epochStateView
   let (EpochNo currentEpoch) = L.nesEL newEpochState
-  go (EpochNo $ currentEpoch + minWait) (EpochNo $ currentEpoch + maxWait)
+  go (EpochNo $ currentEpoch + fromIntegral minWait) (EpochNo $ currentEpoch + fromIntegral maxWait)
     where
       go :: EpochNo -> EpochNo -> m (Maybe a)
       go (EpochNo startEpoch) (EpochNo timeout) = do

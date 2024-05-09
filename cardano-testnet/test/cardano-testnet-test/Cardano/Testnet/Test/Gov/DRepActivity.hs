@@ -36,16 +36,17 @@ import           Testnet.Components.DRep (createVotingTxBody, delegateToDRep, ge
 import           Testnet.Components.Query (EpochStateView, checkDRepState,
                    findLargestUtxoForPaymentKey, getCurrentEpochNo, getEpochStateView,
                    getMinDRepDeposit)
-import           Testnet.Components.TestWatchdog
-import           Testnet.Defaults
+import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
+import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
 import           Testnet.EpochStateProcessing (watchEpochStateView)
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
-import           Testnet.Types
+import           Testnet.Types (KeyPair (..), PaymentKeyInfo (..), PoolNode (..), SomeKeyPair (..),
+                   TestnetRuntime (TestnetRuntime, configurationFile, poolNodes, testnetMagic, wallets),
+                   nodeSocketPath)
 
-import           Hedgehog
-import qualified Hedgehog as H
+import           Hedgehog (MonadTest, Property, annotateShow)
 import qualified Hedgehog.Extras as H
 
 -- | Execute me with:
@@ -92,9 +93,9 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
   -- This proposal should pass
-  let minEpochsToWaitIfChanging = 0 -- The change already provides a min bound
-      minEpochsToWaitIfNotChanging = 2 -- We cannot wait for change since there is no change (we wait a bit)
-      maxEpochsToWaitAfterProposal = 2 -- If it takes more than 2 epochs we give up in any case
+  let minEpochsToWaitIfChanging = EpochInterval 0 -- The change already provides a min bound
+      minEpochsToWaitIfNotChanging = EpochInterval 2 -- We cannot wait for change since there is no change (we wait a bit)
+      maxEpochsToWaitAfterProposal = EpochInterval 2 -- If it takes more than 2 epochs we give up in any case
       firstTargetDRepActivity = 3
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "firstProposal" wallet0 [(1, "yes")] firstTargetDRepActivity
@@ -159,12 +160,12 @@ activityChangeProposalTest
   -> PaymentKeyInfo
   -> t (Int, String)
   -> Word32
-  -> Word64
+  -> EpochInterval
   -> Maybe Word32
-  -> Word64
+  -> EpochInterval
   -> m (String, Word32)
 activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo work prefix
-                           wallet votes change minWait mExpected maxWait = do
+                           wallet votes change minWait mExpected maxWait@(EpochInterval maxWaitNum) = do
 
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
 
@@ -180,7 +181,7 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
 
   thisProposal@(governanceActionTxId, governanceActionIndex) <-
     makeActivityChangeProposal execConfig epochStateView configurationFile socketPath
-                               ceo baseDir "proposal" mPreviousProposalInfo change wallet (epochBeforeProp + maxWait)
+                               ceo baseDir "proposal" mPreviousProposalInfo change wallet (epochBeforeProp + fromIntegral maxWaitNum)
 
   voteChangeProposal execConfig epochStateView sbe baseDir "vote"
                      governanceActionTxId governanceActionIndex propVotes wallet
@@ -188,16 +189,14 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
   (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
-  mResult <- watchEpochStateView epochStateView isSuccess minWait maxWait
-
-  void $ H.evalMaybe mResult
+  H.nothingFailM $ watchEpochStateView epochStateView isDRepActivityUpdated minWait maxWait
 
   return thisProposal
 
   where
-    isSuccess :: (HasCallStack, MonadTest m)
+    isDRepActivityUpdated :: (HasCallStack, MonadTest m)
               => AnyNewEpochState -> m (Maybe ())
-    isSuccess (AnyNewEpochState sbe newEpochState) =
+    isDRepActivityUpdated (AnyNewEpochState sbe newEpochState) =
       caseShelleyToBabbageOrConwayEraOnwards
         (const $ error "activityChangeProposalTest: Only conway era onwards supported")
         (const $ do
