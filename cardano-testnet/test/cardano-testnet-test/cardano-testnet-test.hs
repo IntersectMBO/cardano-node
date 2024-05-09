@@ -12,7 +12,7 @@ import qualified Cardano.Testnet.Test.Cli.Conway.Plutus
 import qualified Cardano.Testnet.Test.Cli.KesPeriodInfo
 import qualified Cardano.Testnet.Test.Cli.Query
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
-import qualified Cardano.Testnet.Test.FoldBlocks
+import qualified Cardano.Testnet.Test.FoldEpochState
 import qualified Cardano.Testnet.Test.Gov.DRepDeposit as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepRetirement as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitution as Gov
@@ -81,7 +81,7 @@ tests = do
             -- as a result of the kes-period-info output to stdout.
           , H.ignoreOnWindows "kes-period-info" Cardano.Testnet.Test.Cli.KesPeriodInfo.hprop_kes_period_info
           , H.ignoreOnWindows "query-slot-number" Cardano.Testnet.Test.Cli.QuerySlotNumber.hprop_querySlotNumber
-          , H.ignoreOnWindows "foldBlocks receives ledger state" Cardano.Testnet.Test.FoldBlocks.prop_foldBlocks
+          , H.ignoreOnWindows "foldEpochState receives ledger state" Cardano.Testnet.Test.FoldEpochState.prop_foldEpochState
           , H.ignoreOnWindows "CliQueries" Cardano.Testnet.Test.Cli.Query.hprop_cli_queries
           ]
         ]
