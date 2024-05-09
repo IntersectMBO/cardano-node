@@ -32,7 +32,7 @@ import           Testnet.Components.SPO
 import           Testnet.Components.TestWatchdog
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run
-import qualified Testnet.Property.Utils as H
+import qualified Testnet.Property.Util as H
 import           Testnet.Runtime
 
 import           Hedgehog (Property)

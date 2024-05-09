@@ -422,7 +422,7 @@ instance ( LogFormatting (Header blk)
       "Added request to queue to reprocess blocks postponed by LoE."
   forHuman ChainDB.PoppedReprocessLoEBlocksFromQueue =
       "Poppped request from queue to reprocess blocks postponed by LoE."
-  forHuman (ChainDB.ChainSelectionLoEDebug {}) =
+  forHuman ChainDB.ChainSelectionLoEDebug {} =
       "ChainDB LoE debug event"
   forMachine dtal (ChainDB.IgnoreBlockOlderThanK pt) =
       mconcat [ "kind" .= String "IgnoreBlockOlderThanK"

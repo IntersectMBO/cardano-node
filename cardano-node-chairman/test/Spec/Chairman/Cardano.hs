@@ -6,7 +6,7 @@ module Spec.Chairman.Cardano where
 
 import qualified Cardano.Testnet as H
 
-import qualified Testnet.Property.Utils as H
+import qualified Testnet.Property.Util as H
 
 import qualified Hedgehog as H
 

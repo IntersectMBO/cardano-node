@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Testnet.Test.Cli.Queries
+module Cardano.Testnet.Test.Cli.Query
   ( hprop_cli_queries
   ) where
 
@@ -30,7 +30,7 @@ import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import qualified Testnet.Process.Cli as H
 import qualified Testnet.Process.Run as H
-import qualified Testnet.Property.Utils as H
+import qualified Testnet.Property.Util as H
 import           Testnet.Runtime
 
 import           Hedgehog

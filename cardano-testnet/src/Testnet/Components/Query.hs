@@ -53,7 +53,7 @@ import           GHC.Stack
 import           Lens.Micro (to, (^.))
 
 import           Testnet.Property.Assert
-import           Testnet.Property.Utils (runInBackground)
+import           Testnet.Property.Util (runInBackground)
 import           Testnet.Runtime
 
 import qualified Hedgehog as H
@@ -63,7 +63,9 @@ import           Hedgehog.Internal.Property (MonadTest)
 
 -- | Block and wait for the desired epoch.
 waitUntilEpoch
-  :: (MonadIO m, MonadTest m, HasCallStack)
+  :: HasCallStack
+  => MonadIO m
+  => MonadTest m
   => NodeConfigFile In
   -> SocketPath
   -> EpochNo -- ^ Desired epoch
@@ -85,7 +87,8 @@ waitUntilEpoch nodeConfigFile socketPath desiredEpoch = withFrozenCallStack $ do
 
 -- | Wait for the number of epochs
 waitForEpochs
-  :: MonadTest m
+  :: HasCallStack
+  => MonadTest m
   => MonadAssertion m
   => MonadIO m
   => EpochStateView

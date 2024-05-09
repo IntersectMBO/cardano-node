@@ -13,7 +13,7 @@ import           Options.Applicative
 import qualified Options.Applicative as OA
 
 import           Testnet.Process.Cli
-import           Testnet.Property.Utils
+import           Testnet.Property.Util
 import           Testnet.Runtime (readNodeLoggingFormat)
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
