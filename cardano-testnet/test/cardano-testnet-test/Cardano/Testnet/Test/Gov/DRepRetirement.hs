@@ -25,12 +25,11 @@ import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
-import           Testnet.Runtime
+import           Testnet.Types
 
 import           Hedgehog
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 -- | The era in which this test runs
 sbe :: ShelleyBasedEra ConwayEra
@@ -63,19 +62,16 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
 
-  poolNode1 <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  PoolNode{poolRuntime} <- H.headM poolNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  let socketPath = nodeSocketPath poolRuntime
 
-  let socketName' = IO.sprocketName poolSprocket1
-      socketBase = IO.sprocketBase poolSprocket1 -- /tmp
-      socketPath = socketBase </> socketName'
-
-  epochStateView <- getEpochStateView (File configurationFile) (File socketPath)
+  epochStateView <- getEpochStateView configurationFile socketPath
 
   H.note_ $ "Sprocket: " <> show poolSprocket1
   H.note_ $ "Abs path: " <> tempAbsBasePath'
-  H.note_ $ "Socketpath: " <> socketPath
+  H.note_ $ "Socketpath: " <> unFile socketPath
 
   -- Create Conway constitution
   gov <- H.createDirectoryIfMissing $ work </> "governance"
@@ -83,10 +79,10 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
   let stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
 
-  _ <- P.cliStakeAddressKeyGen tempAbsPath'
-         $ P.KeyNames { P.verificationKeyFile = stakeVkeyFp
-                      , P.signingKeyFile = stakeSKeyFp
-                      }
+  P.cliStakeAddressKeyGen
+    $ KeyPair  { verificationKey = File stakeVkeyFp
+               , signingKey = File stakeSKeyFp
+               }
   let sizeBefore = 3
   checkDRepsNumber epochStateView sbe sizeBefore
 
@@ -95,7 +91,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
 
   H.noteM_ $ H.execCli' execConfig
      [ "conway", "governance", "drep", "retirement-certificate"
-     , "--drep-verification-key-file", defaultDRepVkeyFp 1
+     , "--drep-verification-key-file", verificationKeyFp $ defaultDRepKeyPair 1
      , "--deposit-amt", show @Int 1_000_000
      , "--out-file", dreprRetirementCertFile
      ]
@@ -124,8 +120,8 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
   H.noteM_ $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", drepRetirementRegTxbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
-    , "--signing-key-file", defaultDRepSkeyFp 1
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
+    , "--signing-key-file", signingKeyFp $ defaultDRepKeyPair 1
     , "--out-file", drepRetirementRegTxSignedFp
     ]
 

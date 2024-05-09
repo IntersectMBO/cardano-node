@@ -3,8 +3,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
 module Cardano.Testnet.Test.Cli.Babbage.StakeSnapshot
   ( hprop_stakeSnapshot
   ) where
@@ -25,7 +23,7 @@ import           Testnet.Components.TestWatchdog
 import           Testnet.Process.Cli (execCliStdoutToJson)
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
-import           Testnet.Runtime
+import           Testnet.Types
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
@@ -57,7 +55,7 @@ hprop_stakeSnapshot = H.integrationRetryWorkspace 2 "babbage-stake-snapshot" $ \
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 
-  void $ waitUntilEpoch (Api.File configurationFile)
+  void $ waitUntilEpoch configurationFile
                         (Api.File $ IO.sprocketSystemName poolSprocket1) (EpochNo 3)
 
   json <- execCliStdoutToJson execConfig [ "query", "stake-snapshot", "--all-stake-pools" ]

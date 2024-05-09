@@ -9,9 +9,8 @@ import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
                    (CardanoTestnetOptions (cardanoEpochLength, cardanoNodeEra, cardanoNumDReps),
-                   Conf (Conf, tempAbsPath), NodeRuntime (nodeSprocket),
-                   TmpAbsolutePath (unTmpAbsPath), cardanoDefaultTestnetOptions,
-                   cardanoTestnetDefault, makeTmpBaseAbsPath, mkConf)
+                   Conf (Conf, tempAbsPath), TmpAbsolutePath (unTmpAbsPath),
+                   cardanoDefaultTestnetOptions, cardanoTestnetDefault, makeTmpBaseAbsPath, mkConf)
 
 import           Prelude
 
@@ -25,12 +24,10 @@ import           Testnet.Components.Query (checkDRepState, getEpochStateView, ge
 import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
-import           Testnet.Runtime (PaymentKeyInfo (paymentKeyInfoPair), PoolNode (poolRuntime),
-                   TestnetRuntime (TestnetRuntime, configurationFile, poolNodes, testnetMagic, wallets))
+import           Testnet.Types
 
 import           Hedgehog (Property)
 import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 
 -- | Execute me with:
@@ -63,20 +60,17 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
 
-  poolNode1 <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  PoolNode{poolRuntime} <- H.headM poolNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  let socketPath = nodeSocketPath poolRuntime
 
-  let socketName' = IO.sprocketName poolSprocket1
-      socketBase = IO.sprocketBase poolSprocket1 -- /tmp
-      socketPath = socketBase </> socketName'
-
-  epochStateView <- getEpochStateView (File configurationFile) (File socketPath)
+  epochStateView <- getEpochStateView configurationFile socketPath
 
   H.note_ $ "Sprocket: " <> show poolSprocket1
   H.note_ $ "Abs path: " <> tempAbsBasePath'
-  H.note_ $ "Socketpath: " <> socketPath
-  H.note_ $ "Foldblocks config file: " <> configurationFile
+  H.note_ $ "Socketpath: " <> unFile socketPath
+  H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
@@ -92,7 +86,7 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
   drepRegTxBody1 <- createCertificatePublicationTxBody execConfig epochStateView sbe drepDir1 "reg-cert-txbody"
                                                        drepRegCert1 wallet0
   drepSignedRegTx1 <- signTx execConfig cEra drepDir1 "signed-reg-tx"
-                             drepRegTxBody1 [drepKeyPair1, paymentKeyInfoPair wallet0]
+                             drepRegTxBody1 [SomeKeyPair drepKeyPair1, SomeKeyPair $ paymentKeyInfoPair wallet0]
 
   failToSubmitTx execConfig cEra drepSignedRegTx1 "ConwayDRepIncorrectDeposit"
 

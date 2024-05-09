@@ -15,8 +15,9 @@ import           Control.Monad.Trans.State.Strict
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
+import           Testnet.Components.TestWatchdog
 import qualified Testnet.Property.Util as H
-import           Testnet.Runtime
+import           Testnet.Types
 
 import           Hedgehog ((===))
 import qualified Hedgehog as H
@@ -24,7 +25,7 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 import qualified Hedgehog.Extras.Test as H
 
 prop_foldEpochState :: H.Property
-prop_foldEpochState = H.integrationWorkspace "foldEpochState" $ \tempAbsBasePath' -> do
+prop_foldEpochState = H.integrationWorkspace "foldEpochState" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   conf <- TN.mkConf tempAbsBasePath'
 
   let tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
@@ -52,6 +53,6 @@ prop_foldEpochState = H.integrationWorkspace "foldEpochState" $ \tempAbsBasePath
           else pure ConditionNotMet
 
   (_, nums) <- H.leftFailM $ H.evalIO $ runExceptT $
-    Api.foldEpochState (File configurationFile) (Api.File socketPathAbs) Api.QuickValidation (EpochNo maxBound) [] handler
+    Api.foldEpochState configurationFile (Api.File socketPathAbs) Api.QuickValidation (EpochNo maxBound) [] handler
 
   length nums === 10

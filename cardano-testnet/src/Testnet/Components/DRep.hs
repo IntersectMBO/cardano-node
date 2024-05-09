@@ -20,11 +20,7 @@ module Testnet.Components.DRep
   , getLastPParamUpdateActionId
   ) where
 
-import           Cardano.Api (AnyCardanoEra (..), ConwayEra, ConwayEraOnwards, EpochNo (EpochNo),
-                   FileDirection (In), MonadIO, ShelleyBasedEra (..), ToCardanoEra (toCardanoEra),
-                   conwayEraOnwardsToShelleyBasedEra, renderTxIn)
-
-import           Cardano.CLI.Types.Common (File (..))
+import           Cardano.Api hiding (Certificate, TxBody)
 
 import           Prelude
 
@@ -37,8 +33,7 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word32)
 import           GHC.IO.Exception (ExitCode (..))
-import           GHC.Stack (HasCallStack)
-import qualified GHC.Stack as GHC
+import           GHC.Stack
 import           Lens.Micro ((^?))
 import           System.FilePath ((</>))
 
@@ -46,10 +41,8 @@ import           Testnet.Components.Query (EpochStateView, findLargestUtxoForPay
                    getCurrentEpochNo, getMinDRepDeposit, waitUntilEpoch)
 import qualified Testnet.Process.Cli as H
 import qualified Testnet.Process.Run as H
-import           Testnet.Runtime (KeyPair (..),
-                   PaymentKeyInfo (paymentKeyInfoAddr, paymentKeyInfoPair), PaymentKeyPair (..),
-                   SomeKeyPair (..), StakingKeyPair (..))
 import           Testnet.Start.Types (anyEraToString)
+import           Testnet.Types
 
 import           Hedgehog (MonadTest, evalMaybe)
 import qualified Hedgehog.Extras as H
@@ -58,19 +51,23 @@ import qualified Hedgehog.Extras as H
 --
 -- Returns the generated 'PaymentKeyPair' containing paths to the verification and
 -- signing key files.
-generateDRepKeyPair :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+generateDRepKeyPair
+  :: MonadTest m
+  => MonadCatch m
+  => MonadIO m
+  => HasCallStack
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> FilePath -- ^ Base directory path where keys will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder to store the output keys.
-  -> m PaymentKeyPair
+  -> m (KeyPair PaymentKey)
 generateDRepKeyPair execConfig work prefix = do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
-  let dRepKeyPair = PaymentKeyPair { paymentVKey = baseDir </> "verification.vkey"
-                                   , paymentSKey = baseDir </> "signature.skey"
-                                   }
+  let dRepKeyPair = KeyPair { verificationKey = File $ baseDir </> "verification.vkey"
+                            , signingKey = File $ baseDir </> "signature.skey"
+                            }
   void $ H.execCli' execConfig [ "conway", "governance", "drep", "key-gen"
-                               , "--verification-key-file", paymentVKey dRepKeyPair
-                               , "--signing-key-file", paymentSKey dRepKeyPair
+                               , "--verification-key-file", verificationKeyFp dRepKeyPair
+                               , "--signing-key-file", signingKeyFp dRepKeyPair
                                ]
   return dRepKeyPair
 
@@ -84,11 +81,14 @@ data Certificate
 -- Returns the generated @File DRepRegistrationCertificate In@ file path to the
 -- registration certificate.
 generateRegistrationCertificate
-  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  :: MonadTest m
+  => MonadCatch m
+  => MonadIO m
+  => HasCallStack
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> FilePath -- ^ Base directory path where the certificate file will be stored.
   -> String -- ^ Prefix for the output certificate file name. The extension will be @.regcert@.
-  -> PaymentKeyPair -- ^ Payment key pair associated with the DRep. Can be generated using
+  -> KeyPair PaymentKey -- ^ Payment key pair associated with the DRep. Can be generated using
                     -- 'generateDRepKeyPair'.
   -> Integer -- ^ Deposit amount required for DRep registration. The right amount
              -- can be obtained using 'getMinDRepDeposit'.
@@ -96,7 +96,7 @@ generateRegistrationCertificate
 generateRegistrationCertificate execConfig work prefix drepKeyPair depositAmount = do
   let dRepRegistrationCertificate = File (work </> prefix <> ".regcert")
   void $ H.execCli' execConfig [ "conway", "governance", "drep", "registration-certificate"
-                               , "--drep-verification-key-file", paymentVKey drepKeyPair
+                               , "--drep-verification-key-file", verificationKeyFp drepKeyPair
                                , "--key-reg-deposit-amt", show @Integer depositAmount
                                , "--out-file", unFile dRepRegistrationCertificate
                                ]
@@ -110,7 +110,10 @@ data TxBody
 --
 -- Returns the generated @File TxBody In@ file path to the transaction body.
 createCertificatePublicationTxBody
-  :: (H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
+  :: H.MonadAssertion m
+  => MonadTest m
+  => MonadCatch m
+  => MonadIO m
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
@@ -142,7 +145,10 @@ data VoteFile
 --
 -- Returns a list of generated @File VoteFile In@ representing the paths to
 -- the generated voting files.
-generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m)
+generateVoteFiles
+  :: MonadTest m
+  => MonadIO m
+  => MonadCatch m
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> FilePath -- ^ Base directory path where the voting files and directories will be
               -- stored.
@@ -150,7 +156,7 @@ generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m)
             -- the output voting files.
   -> String -- ^ Transaction ID string of the governance action.
   -> Word32 -- ^ Index of the governance action.
-  -> [(PaymentKeyPair, [Char])] -- ^ List of tuples where each tuple contains a 'PaymentKeyPair'
+  -> [(KeyPair PaymentKey, [Char])] -- ^ List of tuples where each tuple contains a 'PaymentKeyPair'
                                 -- representing the DRep key pair and a 'String' representing the
                                 -- vote type (i.e: "yes", "no", or "abstain").
   -> m [File VoteFile In]
@@ -163,7 +169,7 @@ generateVoteFiles execConfig work prefix governanceActionTxId governanceActionIn
       , "--" ++ vote
       , "--governance-action-tx-id", governanceActionTxId
       , "--governance-action-index", show @Word32 governanceActionIndex
-      , "--drep-verification-key-file", paymentVKey drepKeyPair
+      , "--drep-verification-key-file", verificationKeyFp drepKeyPair
       , "--out-file", unFile path
       ]
     return path
@@ -176,7 +182,10 @@ generateVoteFiles execConfig work prefix governanceActionTxId governanceActionIn
 --
 -- Returns the generated @File TxBody In@ file path to the transaction body.
 createVotingTxBody
-  :: (H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
+  :: H.MonadAssertion m
+  => MonadTest m
+  => MonadCatch m
+  => MonadIO m
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
@@ -210,27 +219,33 @@ data SignedTx
 -- This function takes five parameters:
 --
 -- Returns the generated @File SignedTx In@ file path to the signed transaction file.
-signTx :: (MonadTest m, MonadCatch m, MonadIO m, KeyPair k)
+signTx
+  :: MonadTest m
+  => MonadCatch m
+  => MonadIO m
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> AnyCardanoEra -- ^ Specifies the current Cardano era.
   -> FilePath -- ^ Base directory path where the signed transaction file will be stored.
   -> String -- ^ Prefix for the output signed transaction file name. The extension will be @.tx@.
   -> File TxBody In -- ^ Transaction body to be signed, obtained using 'createCertificatePublicationTxBody' or similar.
-  -> [k] -- ^ List of payment key pairs used for signing the transaction.
+  -> [SomeKeyPair] -- ^ List of key pairs used for signing the transaction.
   -> m (File SignedTx In)
 signTx execConfig cEra work prefix txBody signatoryKeyPairs = do
   let signedTx = File (work </> prefix <> ".tx")
   void $ H.execCli' execConfig $
     [ anyEraToString cEra, "transaction", "sign"
     , "--tx-body-file", unFile txBody
-    ] ++ (concat [["--signing-key-file", secretKey kp] | kp <- signatoryKeyPairs]) ++
+    ] ++ (concat [["--signing-key-file", signingKeyFp kp] | SomeKeyPair kp <- signatoryKeyPairs]) ++
     [ "--out-file", unFile signedTx
     ]
   return signedTx
 
 -- | Submits a signed transaction using @cardano-cli@.
 submitTx
-  :: (MonadTest m, MonadCatch m, MonadIO m)
+  :: HasCallStack
+  => MonadTest m
+  => MonadCatch m
+  => MonadIO m
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> AnyCardanoEra -- ^ Specifies the current Cardano era.
   -> File SignedTx In -- ^ Signed transaction to be submitted, obtained using 'signTx'.
@@ -247,23 +262,26 @@ submitTx execConfig cEra signedTx =
 -- If the submission succeeds unexpectedly, it raises a failure message that is
 -- meant to be caught by @Hedgehog@.
 failToSubmitTx
-  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  :: MonadTest m
+  => MonadCatch m
+  => MonadIO m
+  => HasCallStack
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> AnyCardanoEra -- ^ Specifies the current Cardano era.
   -> File SignedTx In -- ^ Signed transaction to be submitted, obtained using 'signTx'.
   -> String -- ^ Substring of the error to check for to ensure submission failed for
             -- the right reason.
   -> m ()
-failToSubmitTx execConfig cEra signedTx reasonForFailure = GHC.withFrozenCallStack $ do
+failToSubmitTx execConfig cEra signedTx reasonForFailure = withFrozenCallStack $ do
   (exitCode, _, stderr) <- H.execFlexAny' execConfig "cardano-cli" "CARDANO_CLI"
                                      [ anyEraToString cEra, "transaction", "submit"
                                      , "--tx-file", unFile signedTx
                                      ]
   case exitCode of -- Did it fail?
-    ExitSuccess -> H.failMessage GHC.callStack "Transaction submission was expected to fail but it succeeded"
+    ExitSuccess -> H.failMessage callStack "Transaction submission was expected to fail but it succeeded"
     _ -> if reasonForFailure `isInfixOf` stderr -- Did it fail for the expected reason?
          then return ()
-         else H.failMessage GHC.callStack $ "Transaction submission failed for the wrong reason (not " ++
+         else H.failMessage callStack $ "Transaction submission failed for the wrong reason (not " ++
                                             show reasonForFailure ++ "): " ++ stderr
 
 -- | Retrieves the transaction ID (governance action ID) from a signed
@@ -271,7 +289,10 @@ failToSubmitTx execConfig cEra signedTx reasonForFailure = GHC.withFrozenCallSta
 --
 -- Returns the transaction ID (governance action ID) as a 'String'.
 retrieveTransactionId
-  :: (MonadTest m, MonadCatch m, MonadIO m)
+  :: HasCallStack
+  => MonadTest m
+  => MonadCatch m
+  => MonadIO m
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> File SignedTx In -- ^ Signed transaction to be submitted, obtained using 'signTx'.
   -> m String
@@ -286,7 +307,12 @@ retrieveTransactionId execConfig signedTxBody = do
 -- generating a fresh key pair in the process.
 --
 -- Returns the key pair for the DRep as a 'PaymentKeyPair'.
-registerDRep :: (MonadCatch m, MonadIO m, MonadTest m, H.MonadAssertion m)
+registerDRep
+  :: HasCallStack
+  => MonadCatch m
+  => MonadIO m
+  => MonadTest m
+  => H.MonadAssertion m
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
@@ -295,7 +321,7 @@ registerDRep :: (MonadCatch m, MonadIO m, MonadTest m, H.MonadAssertion m)
   -> FilePath -- ^ Name for the subfolder that will be created under 'work' folder to store the output keys.
   -> PaymentKeyInfo -- ^ Payment key information associated with the transaction,
                     -- as returned by 'cardanoTestnetDefault'.
-  -> m PaymentKeyPair
+  -> m (KeyPair PaymentKey)
 registerDRep execConfig epochStateView ceo work prefix wallet = do
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
@@ -310,7 +336,7 @@ registerDRep execConfig epochStateView ceo work prefix wallet = do
   drepRegTxBody <- createCertificatePublicationTxBody execConfig epochStateView sbe baseDir "reg-cert-txbody"
                                                        drepRegCert wallet
   drepSignedRegTx <- signTx execConfig cEra baseDir "signed-reg-tx"
-                             drepRegTxBody [drepKeyPair, paymentKeyInfoPair wallet]
+                             drepRegTxBody [SomeKeyPair drepKeyPair, SomeKeyPair $ paymentKeyInfoPair wallet]
   submitTx execConfig cEra drepSignedRegTx
 
   return drepKeyPair
@@ -318,21 +344,25 @@ registerDRep execConfig epochStateView ceo work prefix wallet = do
 -- | Delegate to a Delegate Representative (DRep) by creating and submitting
 -- a vote delegation certificate transaction using @cardano-cli@.
 delegateToDRep
-  :: (MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m)
+  :: HasCallStack
+  => MonadTest m
+  => MonadIO m
+  => H.MonadAssertion m
+  => MonadCatch m
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
-  -> FilePath -- ^ Path to the node configuration file as returned by 'cardanoTestnetDefault'.
-  -> FilePath -- ^ Path to the cardano-node unix socket file.
+  -> NodeConfigFile In -- ^ Path to the node configuration file as returned by 'cardanoTestnetDefault'.
+  -> SocketPath  -- ^ Path to the cardano-node unix socket file.
   -> ShelleyBasedEra ConwayEra -- ^ The Shelley-based era (e.g., 'ConwayEra') in which the transaction will be constructed.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
-  -> StakingKeyPair -- ^ Staking key pair used for delegation.
-  -> PaymentKeyPair -- ^ Delegate Representative (DRep) key pair ('PaymentKeyPair') to which delegate.
+  -> KeyPair StakingKey -- ^ Staking key pair used for delegation.
+  -> KeyPair PaymentKey -- ^ Delegate Representative (DRep) key pair ('PaymentKeyPair') to which delegate.
   -> m ()
-delegateToDRep execConfig epochStateView configurationFile socketPath sbe work prefix
-               payingWallet skeyPair@(StakingKeyPair vKeyFile _sKeyFile)
-               (PaymentKeyPair drepVKey _drepSKey) = do
+delegateToDRep execConfig epochStateView configurationFile' socketPath sbe work prefix
+               payingWallet skeyPair@KeyPair{verificationKey=File vKeyFile}
+               KeyPair{verificationKey=File drepVKey}  = do
 
   let era = toCardanoEra sbe
       cEra = AnyCardanoEra era
@@ -354,7 +384,7 @@ delegateToDRep execConfig epochStateView configurationFile socketPath sbe work p
 
   -- Sign transaction
   repRegSignedRegTx1 <- signTx execConfig cEra baseDir "signed-reg-tx"
-                               repRegTxBody1 [ SomeKeyPair (paymentKeyInfoPair payingWallet)
+                               repRegTxBody1 [ SomeKeyPair $ paymentKeyInfoPair payingWallet
                                              , SomeKeyPair skeyPair]
 
   -- Submit transaction
@@ -362,7 +392,7 @@ delegateToDRep execConfig epochStateView configurationFile socketPath sbe work p
 
   -- Wait two epochs
   (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView
-  void $ waitUntilEpoch (File configurationFile) (File socketPath) (EpochNo (epochAfterProp + 2))
+  void $ waitUntilEpoch configurationFile' socketPath (EpochNo (epochAfterProp + 2))
 
 -- | This function obtains the identifier for the last enacted parameter update proposal
 -- if any.
@@ -370,7 +400,11 @@ delegateToDRep execConfig epochStateView configurationFile socketPath sbe work p
 -- If no previous proposal was enacted, the function returns 'Nothing'.
 -- If there was a previous enacted proposal, the function returns a tuple with its transaction
 -- identifier (as a 'String') and the action index (as a 'Word32').
-getLastPParamUpdateActionId :: (MonadTest m, MonadCatch m, MonadIO m)
+getLastPParamUpdateActionId
+  :: HasCallStack
+  => MonadTest m
+  => MonadCatch m
+  => MonadIO m
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> m (Maybe (String, Word32))
 getLastPParamUpdateActionId execConfig = do

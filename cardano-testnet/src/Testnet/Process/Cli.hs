@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 module Testnet.Process.Cli
   ( cliAddressKeyGen
   , cliNodeKeyGen
@@ -6,29 +8,20 @@ module Testnet.Process.Cli
   , cliStakeAddressKeyGen
   , execCliStdoutToJson
   , pNetworkId
-  , KeyGen
-  , KeyNames (..)
-
-  , File (..)
-
-  , VKey
-  , SKey
 
   , OperatorCounter
 
   , ByronDelegationKey
   , ByronDelegationCert
 
-  , getVKeyPath
-  , getSKeyPath
-
   , cliKeyGen
 
   , cliByronSigningKeyAddress
   ) where
 
-import           Cardano.Api (ByronAddr, ByronKeyLegacy, PaymentKey, StakeKey, bounded)
-import           Cardano.Api.Shelley (KesKey, StakePoolKey, VrfKey)
+import           Cardano.Api (ByronAddr, ByronKeyLegacy, File (..), FileDirection (..), StakeKey,
+                   bounded)
+import           Cardano.Api.Shelley (KesKey, StakePoolKey)
 
 import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.IO.Class (MonadIO)
@@ -41,84 +34,63 @@ import qualified Options.Applicative as Opt
 import           System.FilePath.Posix
 
 import           Testnet.Process.Run
+import           Testnet.Types hiding (testnetMagic)
 
 import           Hedgehog (MonadTest)
 import           Hedgehog.Extras (ExecConfig)
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H (writeFile)
 
-data KeyNames = KeyNames
-  { verificationKeyFile :: FilePath
-  , signingKeyFile :: FilePath
-  }
-
-type KeyGen a = (File (VKey a), File (SKey a))
-
 cliAddressKeyGen :: ()
   => (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
-  => TmpDir
-  -> KeyNames
-  -> m (KeyGen PaymentKey)
+  => KeyPair PaymentKey
+  -> m ()
 cliAddressKeyGen = GHC.withFrozenCallStack $ shelleyKeyGen "address" "key-gen"
 
 cliStakeAddressKeyGen :: ()
   => (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
-  => TmpDir
-  -> KeyNames
-  -> m (KeyGen StakeKey)
+  => KeyPair StakeKey
+  -> m ()
 cliStakeAddressKeyGen = GHC.withFrozenCallStack $ shelleyKeyGen "stake-address" "key-gen"
 
 cliNodeKeyGenVrf :: ()
   => (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
-  => TmpDir
-  -> KeyNames
-  -> m (KeyGen VrfKey)
+  => KeyPair VrfKey
+  -> m ()
 cliNodeKeyGenVrf = GHC.withFrozenCallStack $ shelleyKeyGen "node" "key-gen-VRF"
 
 cliNodeKeyGenKes :: ()
   => (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
-  => TmpDir
-  -> KeyNames
-  -> m (KeyGen KesKey)
+  => KeyPair KesKey
+  -> m ()
 cliNodeKeyGenKes = GHC.withFrozenCallStack $ shelleyKeyGen "node" "key-gen-KES"
 
 shelleyKeyGen :: ()
   => (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
-  => String
-  -> String
-  -> TmpDir
-  -> KeyNames
-  -> m (KeyGen x)
-shelleyKeyGen command subCommand tmpDir keyNames =
-  GHC.withFrozenCallStack $ do
-    let
-      vKeyPath = tmpDir </> verificationKeyFile keyNames
-      sKeyPath = tmpDir </> signingKeyFile keyNames
+  => String -- ^ command
+  -> String -- ^ sub command
+  -> KeyPair k
+  -> m ()
+shelleyKeyGen command subCommand keyPair =
+  GHC.withFrozenCallStack $
     execCli_
         [ command, subCommand
-        , "--verification-key-file", vKeyPath
-        , "--signing-key-file", sKeyPath
+        , "--verification-key-file", verificationKeyFp keyPair
+        , "--signing-key-file", signingKeyFp keyPair
         ]
-    return (File vKeyPath, File sKeyPath)
 
 cliNodeKeyGen
-  :: TmpDir
-  -> FilePath
-  -> FilePath
-  -> FilePath
-  -> H.Integration (File (VKey StakePoolKey), File (SKey StakePoolKey), File OperatorCounter)
-cliNodeKeyGen tmpDir vkey skey counter = do
-  let
-    vkPath = tmpDir </> vkey
-    skPath = tmpDir </> skey
-    counterPath = tmpDir </> counter
+  :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
+  => KeyPair StakePoolKey
+  -> File OperatorCounter Out
+  -> m ()
+cliNodeKeyGen keyPair (File counterPath) =
   execCli_
     [ "node", "key-gen"
-    , "--cold-verification-key-file", vkPath
-    , "--cold-signing-key-file", skPath
+    , "--cold-verification-key-file", verificationKeyFp keyPair
+    , "--cold-signing-key-file", signingKeyFp keyPair
     , "--operational-certificate-issue-counter-file", counterPath
     ]
-  return (File vkPath, File skPath, File counterPath)
 
 -- | Call a command of the CLI that returns JSON to stdout. Then parse it,
 -- and deserialize it to a Haskell value. Fail the test if a step fails.
@@ -134,12 +106,6 @@ execCliStdoutToJson execConfig cmd = GHC.withFrozenCallStack $ do
   result <- execCli' execConfig cmd
   H.leftFail $ Aeson.eitherDecode $ Data.String.fromString result
 
--- | Verification keys
-data VKey a
-
--- | Signing keys
-data SKey a
-
 -- | The 'OperatorCounter'
 data OperatorCounter
 
@@ -151,17 +117,8 @@ data ByronDelegationCert
 
 type TmpDir = FilePath
 
-newtype File a = File {unFile :: FilePath}
-  deriving (Show, Eq)
-
-getVKeyPath ::  (File (VKey a), File (SKey a)) -> FilePath
-getVKeyPath = unFile . fst
-
-getSKeyPath ::  (File (VKey a), File (SKey a)) -> FilePath
-getSKeyPath = unFile . snd
-
 -- Byron
-cliKeyGen :: TmpDir -> FilePath -> H.Integration (File ByronKeyLegacy)
+cliKeyGen :: TmpDir -> FilePath -> H.Integration (File ByronKeyLegacy Out)
 cliKeyGen tmp key = do
   let keyPath = tmp </> key
   execCli_
@@ -173,9 +130,9 @@ cliKeyGen tmp key = do
 cliByronSigningKeyAddress
   :: TmpDir
   -> Int
-  -> File ByronKeyLegacy
+  -> File ByronKeyLegacy In
   -> FilePath
-  -> H.Integration (File ByronAddr)
+  -> H.Integration (File ByronAddr Out)
 cliByronSigningKeyAddress tmp testnetMagic (File key) destPath = do
   let addrPath = tmp </> destPath
   addr <- execCli

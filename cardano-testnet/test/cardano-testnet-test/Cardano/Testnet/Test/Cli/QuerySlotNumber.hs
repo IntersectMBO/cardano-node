@@ -28,7 +28,7 @@ import           Testnet.Components.TestWatchdog
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run
 import qualified Testnet.Property.Util as H
-import           Testnet.Runtime
+import           Testnet.Types
 
 import           Hedgehog (Property)
 import qualified Hedgehog.Extras.Stock as H

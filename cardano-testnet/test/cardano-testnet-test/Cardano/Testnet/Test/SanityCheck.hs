@@ -18,15 +18,13 @@ import           Prelude
 
 import           GHC.IO.Exception (IOException)
 import           GHC.Stack
-import           System.FilePath ((</>))
 
 import           Testnet.Components.TestWatchdog
 import qualified Testnet.Property.Util as H
-import           Testnet.Runtime
+import           Testnet.Types
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 newtype AdditionalCatcher
   = IOE IOException
@@ -51,21 +49,19 @@ hprop_ledger_events_sanity_check = H.integrationWorkspace "ledger-events-sanity-
         , cardanoSlotLength = 0.1
         }
 
-  !testnetRuntime
+  TestnetRuntime{configurationFile, poolNodes}
     <- cardanoTestnetDefault fastTestnetOptions conf
-  NodeRuntime{nodeSprocket} <- H.headM $ poolRuntime <$> poolNodes testnetRuntime
-  let socketName' = IO.sprocketName nodeSprocket
-      socketBase = IO.sprocketBase nodeSprocket -- /tmp
-      socketPath = socketBase </> socketName'
+  nr@NodeRuntime{nodeSprocket} <- H.headM $ poolRuntime <$> poolNodes
+  let socketPath = nodeSocketPath nr
 
   H.note_ $ "Sprocket: " <> show nodeSprocket
   H.note_ $ "Abs path: " <> tempAbsBasePath'
-  H.note_ $ "Socketpath: " <> socketPath
+  H.note_ $ "Socketpath: " <> unFile socketPath
 
   !ret <- runExceptT $ handleIOExceptionsWith IOE
                    $ evalIO $ runExceptT $ foldBlocks
-                       (File $ configurationFile testnetRuntime)
-                       (File socketPath)
+                       configurationFile
+                       socketPath
                        FullValidation
                        [] -- Initial accumulator state
                        foldBlocksAccumulator
