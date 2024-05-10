@@ -21,7 +21,7 @@ import           Cardano.Testnet
 
 import           Prelude
 
-import           Control.Monad (void)
+import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Data (Typeable)
 import           Data.String (fromString)
@@ -32,9 +32,7 @@ import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration (anyEraToString)
-import           Testnet.Components.Query (EpochStateView, assertNewEpochState,
-                   findLargestUtxoForPaymentKey, getCurrentEpochNo, getEpochStateView, getGovState,
-                   getMinDRepDeposit, watchEpochStateView)
+import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
 import           Testnet.Process.Cli.DRep (createCertificatePublicationTxBody, createVotingTxBody,
@@ -209,12 +207,12 @@ desiredPoolNumberProposalTest execConfig epochStateView ceo work prefix wallet
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
   void $ waitForEpochs epochStateView (EpochInterval $ fromIntegral minWait)
-
-  case mExpected of
-    Nothing -> return ()
-    Just expected -> assertNewEpochState epochStateView ceo (fromIntegral expected)
-                       (EpochInterval $ fromIntegral maxWait)
-                       (nesEpochStateL . epochStateGovStateL . cgsCurPParamsL . ppNOptL)
+  forM_ mExpected $
+    assertNewEpochState epochStateView
+                        sbe
+                        (EpochInterval $ fromIntegral maxWait)
+                        (nesEpochStateL . epochStateGovStateL . cgsCurPParamsL . ppNOptL)
+      . fromIntegral
 
   return thisProposal
 
@@ -292,9 +290,11 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
 
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
-  governanceActionIndex <- H.nothingFailM $ watchEpochStateView epochStateView (return . maybeExtractGovernanceActionIndex (fromString governanceActionTxId)) (EpochInterval 1)
+  governanceActionIndex <-
+    H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) ->
+      pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
 
-  return (governanceActionTxId, governanceActionIndex)
+  pure (governanceActionTxId, governanceActionIndex)
 
 -- A pair of a vote string (i.e: "yes", "no", or "abstain") and the number of
 -- a default DRep (from the ones created by 'cardanoTestnetDefault')
