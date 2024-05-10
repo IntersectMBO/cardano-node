@@ -12,7 +12,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Benchmarking.LogTypes
-  ( BenchTracers(..)
+  ( AsyncBenchmarkControl
+  , BenchTracers(..)
   , NodeToNodeSubmissionTrace(..)
   , SendRecvConnect
   , SendRecvTxSubmission2
@@ -20,39 +21,35 @@ module Cardano.Benchmarking.LogTypes
   , TraceBenchTxSubmit(..)
   ) where
 
-import           Prelude
-
-import           Data.Text
-import           Data.Time.Clock (DiffTime, NominalDiffTime)
-
-import           GHC.Generics
-
-
 import           Cardano.Api
-import qualified Codec.CBOR.Term as CBOR
 
-import           Network.Mux (WithMuxBearer (..))
-
+import           Cardano.Benchmarking.OuroborosImports
+import           Cardano.Benchmarking.Types
+import           Cardano.Benchmarking.Version as Version
 import           Cardano.Logging
-
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Common ()
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
-
-
-import           Cardano.Benchmarking.OuroborosImports
+import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
+import           Cardano.TxGenerator.Types (TPSRate)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId)
 import           Ouroboros.Network.Driver (TraceSendRecv (..))
 import           Ouroboros.Network.NodeToNode (NodeToNodeVersion, RemoteConnectionId)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 
-import           Cardano.Benchmarking.Types
-import           Cardano.Benchmarking.Version as Version
-import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
-import           Cardano.TxGenerator.Types (TPSRate)
+import           Prelude
+
+import qualified Codec.CBOR.Term as CBOR
+import qualified Control.Concurrent.Async as Async (Async)
+import           Data.Text
+import           Data.Time.Clock (DiffTime, NominalDiffTime)
+import           GHC.Generics
+import           Network.Mux (WithMuxBearer (..))
+
+type AsyncBenchmarkControl = (Async.Async (), [Async.Async ()], IO SubmissionSummary, IO ())
 
 data BenchTracers =
   BenchTracers

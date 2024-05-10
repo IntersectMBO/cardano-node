@@ -29,8 +29,12 @@ common with-library
     build-depends:      plutus-scripts-bench ^>= 1.0.4
     cpp-options:        -DWITH_LIBRARY
 
+common maybe-unix
+  if !os(windows)
+    build-depends:      unix
+
 library
-  import:               project-config, with-library
+  import:               project-config, with-library, maybe-unix
 
   hs-source-dirs:       src
   ghc-options:          -Wall
@@ -228,6 +232,7 @@ benchmark tx-generator-bench
 
   build-depends:        base
                       , criterion
+                      , stm
                       , tx-generator
 
   default-language:     Haskell2010

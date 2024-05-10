@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-|
 Module      : Cardano.Benchmarking.Script.Selftest
 Description : Run self-tests using statically-defined data.
@@ -9,11 +9,12 @@ It actually does use a protocol file taken in from IO.
 module Cardano.Benchmarking.Script.Selftest
 where
 
-import           Cardano.Api
+import           Cardano.Api hiding (Env)
 
 import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (prettyPrint)
-import           Cardano.Benchmarking.Script.Env as Script
+import           Cardano.Benchmarking.Script.Env as Env (Env (Env, envThreads))
+import qualified Cardano.Benchmarking.Script.Env as Env (Error, runActionMEnv, setBenchTracers)
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer (initNullTracers)
 import qualified Cardano.Ledger.Coin as L
@@ -23,9 +24,12 @@ import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Prelude
 
+import qualified Control.Concurrent.STM as STM (atomically, readTVar)
 import           Control.Monad
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Either (fromRight)
+import qualified Data.List as List (unwords)
+import qualified Data.Map as Map (lookup)
 import           Data.String
 
 import           Paths_tx_generator
@@ -37,17 +41,28 @@ import           Paths_tx_generator
 -- transaction 'Streaming.Stream' that
 -- 'Cardano.Benchmarking.Script.Core.submitInEra'
 -- does 'show' and 'writeFile' on.
-runSelftest :: IOManager -> Maybe FilePath -> IO (Either Script.Error ())
-runSelftest iom outFile = do
+runSelftest :: Env -> IOManager -> Maybe FilePath -> IO (Either Env.Error ())
+runSelftest env iom outFile = do
   protocolFile <-  getDataFileName "data/protocol-parameters.json"
   let
     submitMode = maybe DiscardTX DumpToFile outFile
     fullScript = do
-        setBenchTracers initNullTracers
+        Env.setBenchTracers initNullTracers
         forM_ (testScript protocolFile submitMode) action
-  runActionM fullScript iom >>= \case
-    (Right a  , _ ,  ()) -> return $ Right a
-    (Left err , _  , ()) -> return $ Left err
+  (result, Env { envThreads }, ()) <- Env.runActionMEnv env fullScript iom
+  case "tx-submit-benchmark" `Map.lookup` envThreads of
+    Nothing  -> do
+      error $ List.unwords
+          [ "Cardano.Benchmarking.Script.Selftest.runSelftest:"
+          , "thread state uninitialized" ]
+    Just abcTVar -> do
+      abcMaybe <- STM.atomically $ STM.readTVar abcTVar
+      case abcMaybe of
+        Nothing  -> pure result
+        Just _   -> do
+          error $ List.unwords
+              [ "Cardano.Benchmarking.Script.Selftest.runSelftest:"
+              , "thread state spuriously initialized" ]
 
 -- | 'printJSON' prints out the list of actions using Aeson.
 -- It has no callers within @cardano-node@.

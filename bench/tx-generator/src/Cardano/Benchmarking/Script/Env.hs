@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -26,7 +27,9 @@ ran into circular dependency issues during the above transition.
  -}
 module Cardano.Benchmarking.Script.Env (
         ActionM
-        , Error(..)
+        , Env (Env, envThreads)
+        , Error (..)
+        , mkNewEnv
         , runActionM
         , runActionMEnv
         , liftTxGenError
@@ -57,19 +60,7 @@ module Cardano.Benchmarking.Script.Env (
         , setEnvSummary
 ) where
 
-import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Class
-import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.RWS.Strict (RWST)
-import qualified Control.Monad.Trans.RWS.Strict as RWS
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import qualified Data.Text as Text
-import           Prelude
-
 import           Cardano.Api (File (..), SocketPath)
-
-import           Cardano.Logging
 
 import           Cardano.Benchmarking.GeneratorTx
 import qualified Cardano.Benchmarking.LogTypes as Tracer
@@ -78,11 +69,24 @@ import           Cardano.Benchmarking.OuroborosImports (NetworkId, PaymentKey, S
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Wallet
 import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Logging
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
-import           Ouroboros.Network.NodeToClient (IOManager)
-
 import           Cardano.TxGenerator.PlutusContext (PlutusBudgetSummary)
 import           Cardano.TxGenerator.Types (TxGenError (..))
+import           Ouroboros.Network.NodeToClient (IOManager)
+
+import           Prelude
+
+import           Control.Concurrent.STM (STM)
+import qualified Control.Concurrent.STM as STM (TVar, atomically, newTVar, readTVar, writeTVar)
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Class
+import           Control.Monad.Trans.Except
+import           Control.Monad.Trans.RWS.Strict (RWST)
+import qualified Control.Monad.Trans.RWS.Strict as RWS
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
 
 
 -- | The 'Env' type represents the state maintained while executing
@@ -98,7 +102,7 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
                , envNetworkId :: Maybe NetworkId
                , envSocketPath :: Maybe FilePath
                , envKeys :: Map String (SigningKey PaymentKey)
-               , envThreads :: Map String AsyncBenchmarkControl
+               , envThreads :: Map String (STM.TVar (Maybe AsyncBenchmarkControl))
                , envWallets :: Map String WalletRef
                , envSummary :: Maybe PlutusBudgetSummary
                }
@@ -119,13 +123,20 @@ emptyEnv = Env { protoParams = Nothing
                , envSummary = Nothing
                }
 
+mkNewEnv :: STM Env
+mkNewEnv = do
+  ctl <- STM.newTVar Nothing
+  pure emptyEnv { envThreads = "tx-submit-benchmark" `Map.singleton` ctl }
+
 -- | This abbreviates an `ExceptT` and `RWST` with particular types
 -- used as parameters.
 type ActionM a = ExceptT Error (RWST IOManager () Env IO) a
 
 -- | This runs an `ActionM` starting with an empty `Env`.
 runActionM :: ActionM ret -> IOManager -> IO (Either Error ret, Env, ())
-runActionM = runActionMEnv emptyEnv
+runActionM actions ioManager = do
+  env <- STM.atomically mkNewEnv
+  runActionMEnv env actions ioManager
 
 -- | This runs an `ActionM` starting with the `Env` being passed.
 runActionMEnv :: Env -> ActionM ret -> IOManager -> IO (Either Error ret, Env, ())
@@ -196,7 +207,13 @@ setEnvSocketPath val = modifyEnv (\e -> e { envSocketPath = Just val })
 
 -- | Write accessor for `envThreads`.
 setEnvThreads :: String -> AsyncBenchmarkControl -> ActionM ()
-setEnvThreads key val = modifyEnv (\e -> e { envThreads = Map.insert key val (envThreads e) })
+setEnvThreads key val = do
+  threadMap <- lift $ RWS.gets envThreads
+  case Map.lookup key threadMap of
+    Nothing -> do
+      abcTVar <- liftIO do STM.atomically do STM.newTVar $ Just val
+      modifyEnv (\env -> env { envThreads = Map.insert key abcTVar threadMap })
+    Just abcTVar -> liftIO do STM.atomically $ abcTVar `STM.writeTVar` Just val
 
 -- | Write accessor for `envWallets`.
 setEnvWallets :: String -> WalletRef -> ActionM ()
@@ -250,8 +267,10 @@ getEnvSocketPath :: ActionM SocketPath
 getEnvSocketPath = File <$> getEnvVal envSocketPath "SocketPath"
 
 -- | Read accessor for `envThreads`.
-getEnvThreads :: String -> ActionM AsyncBenchmarkControl
-getEnvThreads = getEnvMap envThreads
+getEnvThreads :: String -> ActionM (Maybe AsyncBenchmarkControl)
+getEnvThreads key = do
+  abcTVar <- getEnvMap envThreads key
+  liftIO do STM.atomically $ STM.readTVar abcTVar
 
 -- | Read accessor for `envWallets`.
 getEnvWallets :: String -> ActionM WalletRef

@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
@@ -35,30 +36,29 @@ import           Cardano.TxGenerator.Types (NumberOfTxs, TPSRate, TxGenError (..
 
 import           Prelude (String)
 
-import qualified Control.Concurrent.STM as STM
+import qualified Control.Concurrent.STM.TMVar as STM (newEmptyTMVar)
+import qualified Control.Monad.STM as STM (atomically)
 import qualified Data.List as List (unwords)
 import qualified Data.List.NonEmpty as NE
 import           Data.Text (pack)
 import qualified Data.Time.Clock as Clock
 import           Data.Tuple.Extra (secondM)
-import           GHC.Conc (labelThread)
+import           GHC.Conc as Conc (labelThread)
 
+-- For some reason, stylish-haskell wants to delete this.
 #if MIN_VERSION_base(4,18,0)
--- fromMaybe is imported via Cardano.Prelude
--- However, this configuration actually uses it.
--- import           Data.Maybe (fromMaybe)
-import           GHC.Conc.Sync (threadLabel)
+--- fromMaybe is imported via Cardano.Prelude
+--- However, this configuration actually uses it.
+--- import           Data.Maybe (fromMaybe)
+import           GHC.Conc.Sync as Conc (threadLabel)
 #endif
-
 import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Family (..), SocketType (Stream),
                    addrFamily, addrFlags, addrSocketType, defaultHints, getAddrInfo)
 
 
-type AsyncBenchmarkControl = (Async (), [Async ()], IO SubmissionSummary, IO ())
-
 waitBenchmark :: Trace IO (TraceBenchTxSubmit TxId) -> AsyncBenchmarkControl -> ExceptT TxGenError IO ()
 waitBenchmark traceSubmit (feeder, workers, mkSummary, _) = liftIO $ do
-  mapM_ waitCatch (feeder : workers)
+  mapM_ waitCatch $ feeder : workers
   traceWith traceSubmit . TraceBenchTxSubSummary =<< mkSummary
 
 lookupNodeAddress :: NodeIPv4Address -> IO AddrInfo
@@ -91,7 +91,7 @@ handleTxSubmissionClientError
   (SomeException err) = do
     tid   <- myThreadId
 #if MIN_VERSION_base(4,18,0)
-    label <- threadLabel tid
+    label <- Conc.threadLabel tid
     let labelStr = fromMaybe "(unlabelled)" label
 #else
     let labelStr = "(base version too low to examine thread labels)"
@@ -152,35 +152,36 @@ walletBenchmark
   startTime <- Clock.getCurrentTime
   tpsThrottle <- newTpsThrottle 32 count tpsRate
 
-  reportRefs <- STM.atomically $ replicateM (fromIntegral numTargets) STM.newEmptyTMVar
-
   txStreamRef <- newMVar $ StreamActive txSource
-  allAsyncs <- forM (zip reportRefs $ NE.toList remoteAddresses) $
-    \(reportRef, remoteInfo@(remoteName, remoteAddrInfo)) -> do
-      let errorHandler = handleTxSubmissionClientError traceSubmit remoteInfo reportRef errorPolicy
-          client = txSubmissionClient
+
+  reportRefs <- atomically do replicateM (fromIntegral numTargets) STM.newEmptyTMVar
+  let asyncList = zip reportRefs $ NE.toList remoteAddresses
+
+  allAsyncs <- forM asyncList \(reportRef, remoteInfo@(remoteName, remoteAddrInfo)) -> do
+    let errorHandler = handleTxSubmissionClientError traceSubmit remoteInfo reportRef errorPolicy
+        client = txSubmissionClient
                      traceN2N
                      traceSubmit
                      (txStreamSource txStreamRef tpsThrottle)
                      (submitSubmissionThreadStats reportRef)
-          remoteAddrString = show $ addrAddress remoteAddrInfo
-      asyncThread <- async $ handle errorHandler (connectClient remoteAddrInfo client)
-      let tid = asyncThreadId asyncThread
-      labelThread tid $ "txSubmissionClient " ++ show tid ++
+        remoteAddrString = show $ addrAddress remoteAddrInfo
+    asyncThread <- async do handle errorHandler $ connectClient remoteAddrInfo client
+    let tid = asyncThreadId asyncThread
+    Conc.labelThread tid $ "txSubmissionClient " ++ show tid ++
                             " servicing " ++ remoteName ++ " (" ++ remoteAddrString ++ ")"
-      pure asyncThread
+    pure asyncThread
 
   tpsThrottleThread <- async $ do
     startSending tpsThrottle
     traceWith traceSubmit $ TraceBenchTxSubDebug "tpsLimitedFeeder : transmitting done"
-    atomically $ sendStop tpsThrottle
+    STM.atomically $ sendStop tpsThrottle
     traceWith traceSubmit $ TraceBenchTxSubDebug "tpsLimitedFeeder : shutdown done"
   let tid = asyncThreadId tpsThrottleThread
   labelThread tid $ "tpsThrottleThread " ++ show tid
 
   let tpsFeederShutdown = do
         cancel tpsThrottleThread
-        liftIO $ atomically $ sendStop tpsThrottle
+        liftIO $ STM.atomically $ sendStop tpsThrottle
 
   return (tpsThrottleThread, allAsyncs, mkSubmissionSummary threadName startTime reportRefs, tpsFeederShutdown)
  where

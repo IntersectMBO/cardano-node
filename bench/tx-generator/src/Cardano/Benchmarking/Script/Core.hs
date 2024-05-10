@@ -18,7 +18,6 @@
 module Cardano.Benchmarking.Script.Core
 where
 
-import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Cardano.Api
 import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
                    ShelleyLedgerEra, convertToLedgerProtocolParameters, protocolParamMaxTxExUnits,
@@ -59,6 +58,7 @@ import           Prelude
 
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
+import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
 import qualified Data.Text as Text (unpack)
@@ -144,11 +144,17 @@ getConnectClient = do
                        (protocolToCodecConfig protocol)
                        networkMagic
 waitBenchmark :: String -> ActionM ()
-waitBenchmark n = getEnvThreads n >>= waitBenchmarkCore
+waitBenchmark n = do
+  abcMaybe <- getEnvThreads n
+  case abcMaybe of
+    Just abc -> waitBenchmarkCore abc
+    Nothing  -> do
+      throwE . Env.TxGenError . TxGenError $
+        ("waitBenchmark: missing AsyncBenchmarkControl" :: String)
 
 cancelBenchmark :: String -> ActionM ()
 cancelBenchmark n = do
-  ctl@(_, _ , _ , shutdownAction) <- getEnvThreads n
+  Just ctl@(_, _ , _ , shutdownAction) <- getEnvThreads n
   liftIO shutdownAction
   waitBenchmarkCore ctl
 

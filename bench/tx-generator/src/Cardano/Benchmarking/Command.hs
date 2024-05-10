@@ -1,8 +1,11 @@
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
+{-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-all-missed-specialisations -Wno-orphans #-}
 
 module Cardano.Benchmarking.Command
@@ -12,9 +15,14 @@ module Cardano.Benchmarking.Command
 )
 where
 
+#if !defined(mingw32_HOST_OS)
+#define UNIX
+#endif
+
 import           Cardano.Benchmarking.Compiler (compileOptions)
 import           Cardano.Benchmarking.Script (parseScriptFileAeson, runScript)
 import           Cardano.Benchmarking.Script.Aeson (parseJSONFile, prettyPrint)
+import           Cardano.Benchmarking.Script.Env as Env (Env (Env, envThreads), mkNewEnv)
 import           Cardano.Benchmarking.Script.Selftest (runSelftest)
 import           Cardano.Benchmarking.Version as Version
 import           Cardano.TxGenerator.PlutusContext (readScriptData)
@@ -32,6 +40,28 @@ import           Data.Text.IO as T
 import           Options.Applicative as Opt
 import           System.Exit
 
+#ifdef UNIX
+import           Control.Concurrent as Conc (myThreadId)
+import           Control.Concurrent.Async as Async (cancelWith)
+import           Control.Concurrent.STM as STM (readTVar)
+import           Control.Monad.STM as STM (atomically)
+
+import           Data.Foldable as Fold (forM_)
+import           Data.List as List (unwords)
+import           Data.Map as Map (lookup)
+import           Data.Time.Format as Time (defaultTimeLocale, formatTime)
+import           Data.Time.Clock.System as Time (getSystemTime, systemToUTCTime)
+import           System.Posix.Signals as Sig (Handler (CatchInfoOnce), SignalInfo (..), SignalSpecificInfo (..), installHandler, sigINT, sigTERM)
+#if MIN_VERSION_base(4,18,0)
+import           Data.Maybe as Maybe (fromMaybe)
+import           GHC.Conc.Sync as Conc (threadLabel)
+#endif
+#endif
+
+#ifdef UNIX
+deriving instance Show SignalInfo
+deriving instance Show SignalSpecificInfo
+#endif
 
 data Command
   = Json FilePath
@@ -42,13 +72,14 @@ data Command
 
 runCommand :: IO ()
 runCommand = withIOManager $ \iocp -> do
+  env <- installSignalHandler
   cmd <- customExecParser
            (prefs showHelpOnEmpty)
            (info commandParser mempty)
   case cmd of
     Json file -> do
       script <- parseScriptFileAeson file
-      runScript script iocp >>= handleError
+      runScript env script iocp >>= handleError . fst
     JsonHL file nodeConfigOverwrite cardanoTracerOverwrite -> do
       opts <- parseJSONFile fromJSON file
       finalOpts <- mangleTracerConfig cardanoTracerOverwrite <$> mangleNodeConfig nodeConfigOverwrite opts
@@ -60,20 +91,61 @@ runCommand = withIOManager $ \iocp -> do
       quickTestPlutusDataOrDie finalOpts
 
       case compileOptions finalOpts of
-        Right script -> runScript script iocp >>= handleError
-        err -> handleError err
+        Right script -> runScript env script iocp >>= handleError . fst
+        err -> die $ "tx-generator:Cardano.Command.runCommand JsonHL: " ++ show err
     Compile file -> do
       o <- parseJSONFile fromJSON file
       case compileOptions o of
         Right script -> BSL.putStr $ prettyPrint script
-        err -> handleError err
-    Selftest outFile -> runSelftest iocp outFile >>= handleError
+        Left err -> die $ "tx-generator:Cardano.Command.runCommand Compile: " ++ show err
+    Selftest outFile -> runSelftest env iocp outFile >>= handleError
     VersionCmd -> runVersionCommand
   where
   handleError :: Show a => Either a b -> IO ()
   handleError = \case
     Right _  -> exitSuccess
-    Left err -> die $ "tx-generator:Cardano.Command: " ++ show err
+    Left err -> die $ "tx-generator:Cardano.Command.runCommand handleError: " ++ show err
+  installSignalHandler :: IO Env
+  installSignalHandler = do
+    env@Env { .. } <- STM.atomically mkNewEnv
+    Just abcTVar <- pure $ "tx-submit-benchmark" `Map.lookup` envThreads
+    abc <- STM.atomically $ STM.readTVar abcTVar
+    _ <- pure abc
+#ifdef UNIX
+    let signalHandler = Sig.CatchInfoOnce signalHandler'
+        signalHandler' sigInfo = do
+          tid <- Conc.myThreadId
+          Just (throttler, workers, _, _) <- STM.atomically $ STM.readTVar abcTVar
+          utcTime <- Time.systemToUTCTime <$> Time.getSystemTime
+          -- It's meant to match Cardano.Tracers.Handlers.Logs.Utils
+          -- The hope was to avoid the package dependency.
+          let formatTimeStamp = formatTime' "%Y-%m-%dT%H-%M-%S"
+              formatTime' = Time.formatTime Time.defaultTimeLocale
+              timeStamp = formatTimeStamp utcTime
+#if MIN_VERSION_base(4,18,0)
+          maybeLabel <- Conc.threadLabel tid
+          let labelStr' :: String
+              labelStr' = fromMaybe "(thread label unset)" maybeLabel
+#else
+              labelStr' = "(base version insufficient to read thread label)"
+#endif
+              labelStr  :: String
+              labelStr  = List.unwords [ timeStamp
+                                       , labelStr'
+                                       , show tid
+                                       , "received signal"
+                                       , show sigInfo ]
+              errorToThrow :: IOError
+              errorToThrow = userError labelStr
+
+          Prelude.putStrLn labelStr
+          Async.cancelWith throttler errorToThrow
+          Fold.forM_ workers \work -> do
+            Async.cancelWith work errorToThrow
+    Fold.forM_ [Sig.sigINT, Sig.sigTERM] $ \sig ->
+           Sig.installHandler sig signalHandler Nothing
+#endif
+    pure env
 
   mangleNodeConfig :: Maybe FilePath -> NixServiceOptions -> IO NixServiceOptions
   mangleNodeConfig fp opts = case (getNodeConfigFile opts, fp) of
