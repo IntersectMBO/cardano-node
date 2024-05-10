@@ -273,25 +273,32 @@ cardanoTestnet
 
     _ <- createSPOGenesisAndFiles nPools nDReps era shelleyGenesis alonzoGenesis conwayGenesis (TmpAbsolutePath tmpAbsPath)
 
+    -- TODO: This should come from the configuration!
+    let poolKeyDir :: Int -> FilePath
+        poolKeyDir i = "pools-keys" </> mkNodeName i
+        mkNodeName :: Int -> String
+        mkNodeName i = "pool" <> show i
+
     poolKeys <- H.noteShow $ flip fmap [1..numPoolNodes] $ \n ->
       -- TODO: use Testnet.Defaults.defaultSpoKeys here
       PoolNodeKeys
         { poolNodeKeysCold =
           KeyPair
-            { verificationKey = File $ tmpAbsPath </> "pools-keys" </> "cold" <> show n <> ".vkey"
-            , signingKey = File $ tmpAbsPath </> "pools-keys" </> "cold" <> show n <> ".skey"
+            { verificationKey = File $ tmpAbsPath </> poolKeyDir n </> "cold.vkey"
+            , signingKey = File $ tmpAbsPath </> poolKeyDir n  </> "cold.skey"
             }
         , poolNodeKeysVrf =
           KeyPair
-            { verificationKey = File $ tmpAbsPath </> "pools-keys" </> "vrf" <> show n <> ".vkey"
-            , signingKey = File $ tmpAbsPath </> "pools-keys" </> "vrf" <> show n <> ".skey"
+            { verificationKey = File $ tmpAbsPath </> poolKeyDir n  </> "vrf.vkey"
+            , signingKey = File $ tmpAbsPath </> poolKeyDir n  </> "vrf.skey"
             }
         , poolNodeKeysStaking =
           KeyPair
-            { verificationKey = File $ tmpAbsPath </> "pools-keys" </> "staking-reward" <> show n <> ".vkey"
-            , signingKey = File $ tmpAbsPath </> "pools-keys" </> "staking-reward" <> show n <> ".skey"
+            { verificationKey = File $ tmpAbsPath </> poolKeyDir n  </> "staking-reward.vkey"
+            , signingKey = File $ tmpAbsPath </> poolKeyDir n  </> "staking-reward.skey"
             }
         }
+
     let makeUTxOVKeyFp :: Int -> FilePath
         makeUTxOVKeyFp n = tmpAbsPath </> "utxo-keys" </> "utxo" <> show n </> "utxo.vkey"
 
@@ -332,11 +339,6 @@ cardanoTestnet
           }
         }
 
-    -- TODO: This should come from the configuration!
-    let poolKeyDir :: Int -> FilePath
-        poolKeyDir i = "pools-keys" </> mkNodeName i
-        mkNodeName :: Int -> String
-        mkNodeName i = "pool" <> show i
 
     -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
     config <- createConfigJson (TmpAbsolutePath tmpAbsPath) era
