@@ -11,7 +11,6 @@ module Cardano.Testnet.Test.Cli.Conway.Plutus
   ) where
 
 import           Cardano.Api
-import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
 
@@ -142,7 +141,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     , "--tx-file", sendAdaToScriptAddressTx
     ]
 
-  _ <- waitForEpochs epochStateView (L.EpochInterval 1)
+  H.noteShowM_ $ waitForBlocks epochStateView 1
 
   -- 2. Successfully spend conway spending script
   txinCollateral <- findLargestUtxoForPaymentKey epochStateView sbe wallet1

@@ -1,25 +1,30 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Components.Query
   ( EpochStateView
-  , checkDRepsNumber
-  , checkDRepState
+  , getEpochStateView
   , getEpochState
+  , getSlotNumber
+  , getBlockNumber
+  , watchEpochStateUpdate
   , getMinDRepDeposit
   , getMinGovActionDeposit
   , getGovState
   , getCurrentEpochNo
   , waitUntilEpoch
   , waitForEpochs
-  , getEpochStateView
+  , waitForBlocks
   , findAllUtxos
   , findUtxosWithAddress
   , findLargestUtxoWithAddress
   , findLargestUtxoForPaymentKey
+  , checkDRepsNumber
+  , checkDRepState
   ) where
 
 import           Cardano.Api as Api
@@ -34,11 +39,15 @@ import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.UTxO as L
 
+import           Control.Concurrent.STM.TChan
+import           Control.Concurrent.STM.TMVar
 import           Control.Exception.Safe (MonadCatch)
+import           Control.Monad
+import           Control.Monad.STM
+import           Control.Monad.Trans.Maybe (MaybeT (..))
 import           Control.Monad.Trans.Resource
 import           Control.Monad.Trans.State.Strict (put)
 import           Data.Bifunctor (bimap)
-import           Data.IORef
 import           Data.List (sortOn)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
@@ -48,6 +57,7 @@ import           Data.Ord (Down (..))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Type.Equality
+import           Data.Word (Word64)
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
 import           Lens.Micro (to, (^.))
@@ -98,25 +108,117 @@ waitForEpochs epochStateView@EpochStateView{nodeConfigPath, socketPath} interval
   currentEpoch <- getCurrentEpochNo epochStateView
   waitUntilEpoch nodeConfigPath socketPath $ addEpochInterval currentEpoch interval
 
+
+-- | Wait for the requested number of blocks
+waitForBlocks
+  :: HasCallStack
+  => MonadIO m
+  => MonadTest m
+  => MonadAssertion m
+  => EpochStateView
+  -> Word64 -- ^ Number of blocks to wait
+  -> m BlockNo -- ^ The block number reached
+waitForBlocks epochStateView numberOfBlocks = withFrozenCallStack $ do
+  BlockNo startingBlockNumber <- getBlockNumber epochStateView
+  fmap BlockNo $
+    watchEpochStateUpdate epochStateView $ \(_, _, BlockNo blockNumber) ->
+      pure $
+        if blockNumber >= startingBlockNumber + numberOfBlocks
+        then Just blockNumber
+        else Nothing
+
 -- | A read-only mutable pointer to an epoch state, updated automatically
 data EpochStateView = EpochStateView
   { nodeConfigPath :: !(NodeConfigFile In)
+  -- ^ node configuration file path
   , socketPath :: !SocketPath
-  , epochStateView :: !(IORef (Maybe AnyNewEpochState))
+  -- ^ node socket path, to which foldEpochState is connected to
+  , wakeLock :: !(TChan ())
+  -- ^ multi-wakeup lock for notifying about epoch state updates. All listeners need to 'dupTChan' and then
+  -- 'readTChan' to be notified.
+  , epochStateView :: !(TMVar (AnyNewEpochState, SlotNo, BlockNo))
+  -- ^ Updated automatically current NewEpochState. Use 'getEpochState' to access the value.
   }
+
+-- | Notify epoch state view listeners about the update of the epoch state
+notifyEpochStateViewListeners
+  :: MonadIO m
+  => EpochStateView
+  -> m ()
+notifyEpochStateViewListeners EpochStateView{wakeLock} =
+  void . liftIO . atomically $ do
+    -- Drain the channel first, to not keep anything not used in memory. We only need to store one element in
+    -- the channel. This is a safeguard against elements piling up in the channel If there are no listeners.
+    _ <- runMaybeT . forever . MaybeT $ tryReadTChan wakeLock
+    -- notify all listeners on duplicated channels
+    writeTChan wakeLock ()
+
+-- | Watch epoch state view for an update. On every update, the callback function gets executed.
+watchEpochStateUpdate
+  :: HasCallStack
+  => MonadTest m
+  => MonadIO m
+  => EpochStateView
+  -> ((AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe a))
+  -- ^ callback function invoked repeatedly. Stops the processing when 'Just a' gets returned
+  -> m a -- ^ the result from the callback function
+watchEpochStateUpdate EpochStateView{wakeLock, epochStateView} f = withFrozenCallStack $
+  -- dupTChan for multi-wakeup
+  go =<< (liftIO . atomically $ dupTChan wakeLock)
+    where
+      go wakeupChannel = do
+        newEpochState <- liftIO . atomically $ do
+          _ <- readTChan wakeupChannel -- block and wait for update
+          readTMVar epochStateView
+        f newEpochState >>= \case
+          Nothing -> go wakeupChannel
+          Just a -> pure a
 
 -- | Get epoch state from the view. If the state isn't available, retry waiting up to 15 seconds. Fails when
 -- the state is not available after 15 seconds.
-getEpochState :: MonadTest m
-              => MonadAssertion m
-              => MonadIO m
-              => EpochStateView
-              -> m AnyNewEpochState
-getEpochState EpochStateView{epochStateView} =
+getEpochState
+  :: HasCallStack
+  => MonadTest m
+  => MonadAssertion m
+  => MonadIO m
+  => EpochStateView
+  -> m AnyNewEpochState
+getEpochState epochStateView =
+  withFrozenCallStack $ getEpochStateDetails epochStateView $ \(nes, _, _) -> nes
+
+getBlockNumber
+  :: HasCallStack
+  => MonadIO m
+  => MonadTest m
+  => MonadAssertion m
+  => EpochStateView
+  -> m BlockNo -- ^ The number of last produced block
+getBlockNumber epochStateView =
+  withFrozenCallStack $ getEpochStateDetails epochStateView $ \(_, _, blockNumber) -> blockNumber
+
+getSlotNumber
+  :: HasCallStack
+  => MonadIO m
+  => MonadTest m
+  => MonadAssertion m
+  => EpochStateView
+  -> m SlotNo -- ^ The current slot number
+getSlotNumber epochStateView =
+  withFrozenCallStack $ getEpochStateDetails epochStateView $ \(_, slotNumber, _) -> slotNumber
+
+-- | Utility function for accessing epoch state in `TVar`
+getEpochStateDetails
+  :: HasCallStack
+  => MonadAssertion m
+  => MonadTest m
+  => MonadIO m
+  => EpochStateView
+  -> ((AnyNewEpochState, SlotNo, BlockNo) -> a)
+  -> m a
+getEpochStateDetails EpochStateView{epochStateView} f =
   withFrozenCallStack $
     H.byDurationM 0.5 15 "EpochStateView has not been initialized within 15 seconds" $
-      H.evalIO (readIORef epochStateView) >>= maybe H.failure pure
-
+      H.evalIO (atomically $ tryReadTMVar epochStateView) >>= maybe H.failure (pure . f)
 
 -- | Create a background thread listening for new epoch states. New epoch states are available to access
 -- through 'EpochStateView', using query functions.
@@ -129,12 +231,17 @@ getEpochStateView
   -> SocketPath -- ^ node socket path
   -> m EpochStateView
 getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
-  epochStateView <- H.evalIO $ newIORef Nothing
+  epochStateView <- H.evalIO newEmptyTMVarIO
+  -- we're not using 'newBroadcastTChan' here, because we don't know if we will have any clients here, so we
+  -- have to manually read and write a value to the channel, triggering multi-wakeup on listeners on dup-chans
+  wakeLock <- H.evalIO newTChanIO
+  let esv = EpochStateView nodeConfigFile socketPath wakeLock epochStateView
   runInBackground . runExceptT . foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) Nothing
-    $ \epochState _slotNb _blockNb -> do
-        liftIO $ writeIORef epochStateView (Just epochState)
+    $ \epochState slotNumber blockNumber -> do
+        liftIO . atomically $ writeTMVar epochStateView (epochState, slotNumber, blockNumber)
+        notifyEpochStateViewListeners esv
         pure ConditionNotMet
-  pure $ EpochStateView nodeConfigFile socketPath epochStateView
+  pure esv
 
 -- | Retrieve all UTxOs map from the epoch state view.
 findAllUtxos
@@ -204,7 +311,7 @@ findLargestUtxoWithAddress epochStateView sbe address = withFrozenCallStack $ do
     $ sortOn (\(_, TxOut _ txOutValue _ _) -> Down $ txOutValueToLovelace txOutValue) utxos
 
 -- | Retrieve a largest UTxO for a payment key info - a convenience wrapper for
--- 'findLargestUtxoForPaymentKey'.
+-- 'findLargestUtxoWithAddress'.
 findLargestUtxoForPaymentKey
   :: MonadTest m
   => MonadAssertion m
@@ -262,7 +369,7 @@ checkDRepState epochStateView@EpochStateView{nodeConfigPath, socketPath} sbe f =
   currentEpoch <- getCurrentEpochNo epochStateView
   let terminationEpoch = succ . succ $ currentEpoch
   result <- H.evalIO . runExceptT $ foldEpochState nodeConfigPath socketPath QuickValidation terminationEpoch Nothing
-      $ \(AnyNewEpochState actualEra newEpochState) _slotNb _blockNb -> do
+      $ \(AnyNewEpochState actualEra newEpochState) _slotNumber _blockNumber -> do
         Refl <- either error pure $ assertErasEqual sbe actualEra
         let dreps = shelleyBasedEraConstraints sbe newEpochState
                       ^. L.nesEsL

@@ -77,7 +77,7 @@ library
                       , safe-exceptions
                       , scientific
                       , si-timers
-                      , stm
+                      , stm > 2.5.1
                       , tasty ^>= 1.5
                       , tasty-expected-failure
                       , tasty-hedgehog

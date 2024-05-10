@@ -164,8 +164,8 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
   txbodyFp <- H.note $ work </> "tx.body"
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
-  -- wait for an epoch before using wallet0 again
-  void $ waitForEpochs epochStateView (EpochInterval 1)
+  -- wait for one block before using wallet0 again
+  H.noteShowM_ $ waitForBlocks epochStateView 1
 
   txin3 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 

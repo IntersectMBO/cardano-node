@@ -34,7 +34,6 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
-import           Testnet.EpochStateProcessing (watchEpochStateView)
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.Transaction
@@ -175,7 +174,7 @@ activityChangeProposalTest
                    -- become expected value.
   -> m (String, Word32) -- ^ The transaction id and the index of the governance action.
 activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo work prefix
-                           wallet votes change minWait mExpected maxWait@(EpochInterval maxWaitNum) = do
+                           wallet votes change minWait mExpected (EpochInterval maxWaitNum) = do
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
 
   mPreviousProposalInfo <- getLastPParamUpdateActionId execConfig
@@ -199,21 +198,23 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
   void $ waitForEpochs epochStateView minWait
-  case mExpected of
-    Nothing -> return ()
-    Just expected -> H.nothingFailM $ watchEpochStateView epochStateView (isDRepActivityUpdated expected) maxWait
+  forM_ mExpected $ \expected ->
+    watchEpochStateUpdate epochStateView (isDRepActivityUpdated expected)
 
   return thisProposal
 
   where
-    isDRepActivityUpdated :: (HasCallStack, MonadTest m)
-              => EpochInterval -> AnyNewEpochState -> m (Maybe ())
-    isDRepActivityUpdated (EpochInterval expected) (AnyNewEpochState sbe newEpochState) =
+    isDRepActivityUpdated
+      :: (HasCallStack, MonadTest m)
+      => EpochInterval
+      -> (AnyNewEpochState, SlotNo, BlockNo)
+      -> m (Maybe ())
+    isDRepActivityUpdated (EpochInterval expected) (AnyNewEpochState sbe newEpochState, _, _) =
       caseShelleyToBabbageOrConwayEraOnwards
         (const $ error "activityChangeProposalTest: Only conway era onwards supported")
         (const $ do
           let (EpochInterval epochInterval) = newEpochState ^. nesEpochStateL . epochStateGovStateL . curPParamsGovStateL . ppDRepActivityL
-          return (if epochInterval == expected then Just () else Nothing)
+          pure $ if epochInterval == expected then Just () else Nothing
         )
         sbe
 
