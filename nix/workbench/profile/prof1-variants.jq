@@ -91,13 +91,17 @@ def all_profile_variants:
   | { genesis:
       { dreps: 10
       }
+    } as $dreps_tiny
+  | { genesis:
+      { dreps: 1000
+      }
     } as $dreps_small
   | { genesis:
-      { dreps: 100
+      { dreps: 2000
       }
     } as $dreps_medium
   | { genesis:
-      { dreps: 1000
+      { dreps: 10000
       }
     } as $dreps_large
   ##
@@ -623,7 +627,7 @@ def all_profile_variants:
     { desc: "Miniature dataset, CI-friendly duration, test scale"
     }) as $citest_base
   |
-   ($scenario_fixed_loaded * $doublet * $dataset_miniature * $for_15blk * $no_filtering * $dreps_small *
+   ($scenario_fixed_loaded * $doublet * $dataset_miniature * $for_15blk * $no_filtering *
     { desc: "Miniature dataset, CI-friendly duration, bench scale"
     }) as $cibench_base
   |
@@ -810,6 +814,14 @@ def all_profile_variants:
     ($nomad_perfssd_solo_base * $nomad_perfssd_unicircle * $costmodel_v8_preview * $p2p
     ) as $utxoscale_solo_template
   |
+  # P&T Nomad cluster: 52 nodes, P2P by default - value-only workload
+    ($nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview
+    ) as $value_nomadperf_template
+  |
+  # P&T Nomad cluster: 52 nodes, P2P by default - Plutus workload
+    ($nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview
+    ) as $plutus_nomadperf_template
+  |
 
   ### First, auto-named profiles:
   ###
@@ -956,6 +968,9 @@ def all_profile_variants:
   , $cibench_base * $with_rtview *
     { name: "ci-bench-rtview"
     }
+  , $cibench_base * $dreps_tiny *
+    { name: "ci-bench-drep"
+    }
   , $cibench_base * $p2p *
     { name: "ci-bench-lmdb"
     , node:    { utxo_lmdb: true }
@@ -1036,16 +1051,16 @@ def all_profile_variants:
     }
 
 ## P&T Nomad cluster: 52 nodes, 3 regions, value-only (incl. old tracing variant) and Plutus, P2P enabled by default
-  , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
+  , $value_nomadperf_template *
     { name: "value-nomadperf"
     }
   , $nomad_perfssd_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
     { name: "value-nomadperfssd"
     }
-  , $nomad_perf_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview * $old_tracing *
+  , $value_nomadperf_template * $old_tracing *
     { name: "value-oldtracing-nomadperf"
     }
-  , $nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
+  , $plutus_nomadperf_template *
     { name: "plutus-nomadperf"
     }
   , $nomad_perf_latency_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
@@ -1053,6 +1068,26 @@ def all_profile_variants:
     }
   , $nomad_perfssd_latency_base * $nomad_perfssd_dense * $p2p * $costmodel_v8_preview *
     { name: "latency-nomadperfssd"
+    }
+
+## P&T Nomad cluster: 52 nodes, value-only and Plutus workloads - DRep injection variants
+  , $value_nomadperf_template * $dreps_small *
+    { name: "value-drep1k-nomadperf"
+    }
+  , $value_nomadperf_template * $dreps_medium *
+    { name: "value-drep2k-nomadperf"
+    }
+  , $value_nomadperf_template * $dreps_large *
+    { name: "value-drep10k-nomadperf"
+    }
+  , $plutus_nomadperf_template * $dreps_small *
+    { name: "plutus-drep1k-nomadperf"
+    }
+  , $plutus_nomadperf_template * $dreps_medium *
+    { name: "plutus-drep2k-nomadperf"
+    }
+  , $plutus_nomadperf_template * $dreps_large *
+    { name: "plutus-drep10k-nomadperf"
     }
 
 ## P&T Nomad cluster: 52 nodes, 3 regions, value-only (with old tracing variant) and Plutus, no P2P flavour
