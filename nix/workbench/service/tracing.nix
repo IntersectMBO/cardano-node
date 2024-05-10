@@ -62,6 +62,7 @@ let
       "Net.Mux.Local".severity = "Notice";
       "Net.Mux.Remote".severity = "Notice";
       "Net.PeerSelection.Actions".severity = "Debug";
+      "Net.PeerSelection.Counters".detail = "DMinimal";
       "Net.PeerSelection.Counters".severity = "Debug";
       "Net.PeerSelection.Initiator".severity = "Notice";
       "Net.PeerSelection.Responder".severity = "Notice";
