@@ -41,12 +41,12 @@ import           System.FilePath.Posix ((</>))
 
 import           Testnet.Components.DRep (VoteFile)
 import           Testnet.Filepath
-import           Testnet.Process.Cli hiding (File, unFile)
+import           Testnet.Process.Cli
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run (execCli, execCli', execCli_)
 import           Testnet.Property.Util
-import           Testnet.Runtime (PoolNodeKeys (poolNodeKeysColdVkey))
 import           Testnet.Start.Types
+import           Testnet.Types
 
 import           Hedgehog
 import           Hedgehog.Extras (ExecConfig)
@@ -283,8 +283,8 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile s
   let poolOwnerstakeVkeyFp = spoReqDir </> "pool-owner-stake.vkey"
       poolOwnerstakeSKeyFp = spoReqDir </> "pool-owner-stake.skey"
 
-  _ <- cliStakeAddressKeyGen tempAbsPath'
-    $ KeyNames poolOwnerstakeVkeyFp poolOwnerstakeSKeyFp
+  cliStakeAddressKeyGen
+    $ KeyPair (File poolOwnerstakeVkeyFp) (File poolOwnerstakeSKeyFp)
 
   poolownerstakeaddr <- filter (/= '\n')
                           <$> execCli
@@ -296,8 +296,8 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile s
   -- 2. Generate stake pool owner payment key pair
   let poolOwnerPaymentVkeyFp = spoReqDir </> "pool-owner-payment.vkey"
       poolOwnerPaymentSkeyFp = spoReqDir </> "pool-owner-payment.skey"
-  _ <- cliAddressKeyGen tempAbsPath'
-         $ KeyNames poolOwnerPaymentVkeyFp poolOwnerPaymentSkeyFp
+  cliAddressKeyGen
+     $ KeyPair (File poolOwnerPaymentVkeyFp) (File poolOwnerPaymentSkeyFp)
 
   poolowneraddresswstakecred <- execCli [ "address", "build"
                                         , "--payment-verification-key-file", poolOwnerPaymentVkeyFp
@@ -319,8 +319,8 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile s
   -- 4. Generate VRF keys
   let vrfVkeyFp = spoReqDir </> "pool-vrf.vkey"
       vrfSkeyFp = spoReqDir </> "pool-vrf.skey"
-  _ <- cliNodeKeyGenVrf tempAbsPath'
-         $ KeyNames vrfVkeyFp vrfSkeyFp
+  cliNodeKeyGenVrf
+     $ KeyPair (File vrfVkeyFp) (File vrfSkeyFp)
 
   -- 5. Create registration certificate
   let poolRegCertFp = spoReqDir </> "registration.cert"
@@ -433,7 +433,7 @@ generateVoteFiles ceo execConfig work prefix governanceActionTxId governanceActi
       , "--" ++ vote
       , "--governance-action-tx-id", governanceActionTxId
       , "--governance-action-index", show @Word32 governanceActionIndex
-      , "--cold-verification-key-file", poolNodeKeysColdVkey spoKeys
+      , "--cold-verification-key-file", verificationKeyFp $ poolNodeKeysCold spoKeys
       , "--out-file", unFile path
       ]
     return path

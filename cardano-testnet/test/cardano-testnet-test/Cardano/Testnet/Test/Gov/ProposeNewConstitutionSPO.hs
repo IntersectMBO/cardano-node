@@ -9,7 +9,6 @@ module Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO
   ) where
 
 import           Cardano.Api
-import qualified Cardano.Api as Api
 import           Cardano.Api.Ledger
 
 import qualified Cardano.Ledger.Conway.Governance as L
@@ -31,16 +30,15 @@ import           Testnet.Components.DRep (createVotingTxBody, failToSubmitTx, re
 import           Testnet.Components.Query
 import           Testnet.Components.SPO (generateVoteFiles)
 import           Testnet.Components.TestWatchdog
-import           Testnet.Defaults (defaultSPOColdKeyPair, defaultSPOKeys)
+import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
-import           Testnet.Runtime
+import           Testnet.Types
 
 import           Hedgehog
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 -- | Test that SPO cannot vote on a new constitution
 -- Execute me with:
@@ -49,8 +47,7 @@ hprop_ledger_events_propose_new_constitution_spo :: Property
 hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propose-new-constitution-spo" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     <- mkConf tempAbsBasePath'
-  let tempAbsPath' = unTmpAbsPath tempAbsPath
-      tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
+  let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   let ceo = ConwayEraOnwardsConway
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
@@ -70,20 +67,17 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
 
-  poolNode1 <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  PoolNode{poolRuntime} <- H.headM poolNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  let socketPath = nodeSocketPath poolRuntime
 
-  let socketName' = IO.sprocketName poolSprocket1
-      socketBase = IO.sprocketBase poolSprocket1 -- /tmp
-      socketPath = socketBase </> socketName'
-
-  epochStateView <- getEpochStateView (File configurationFile) (File socketPath)
+  epochStateView <- getEpochStateView configurationFile socketPath
 
   H.note_ $ "Sprocket: " <> show poolSprocket1
   H.note_ $ "Abs path: " <> tempAbsBasePath'
-  H.note_ $ "Socketpath: " <> socketPath
-  H.note_ $ "Foldblocks config file: " <> configurationFile
+  H.note_ $ "Socketpath: " <> unFile socketPath
+  H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
   -- Create Conway constitution
   gov <- H.createDirectoryIfMissing $ work </> "governance"
@@ -106,10 +100,10 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   let stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
 
-  _ <- P.cliStakeAddressKeyGen tempAbsPath'
-         $ P.KeyNames { P.verificationKeyFile = stakeVkeyFp
-                      , P.signingKeyFile = stakeSKeyFp
-                      }
+  P.cliStakeAddressKeyGen
+     $ KeyPair { verificationKey = File stakeVkeyFp
+               , signingKey= File stakeSKeyFp
+               }
 
   minDRepDeposit <- getMinDRepDeposit epochStateView ceo
 
@@ -138,7 +132,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
     , "--out-file", txBodyFp
     ]
 
-  txBodySigned <- signTx execConfig cEra work "proposal-signed-tx" (File txBodyFp) [paymentKeyInfoPair wallet0]
+  txBodySigned <- signTx execConfig cEra work "proposal-signed-tx" (File txBodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet0]
 
   submitTx execConfig cEra txBodySigned
 
@@ -149,7 +143,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   -- Proposal should be there already, so don't wait a lot:
   let terminationEpoch = succ . succ $ currentEpoch
 
-  mGovActionId <- getConstitutionProposal (Api.File configurationFile) (Api.File socketPath) terminationEpoch
+  mGovActionId <- getConstitutionProposal configurationFile socketPath terminationEpoch
   govActionId <- H.evalMaybe mGovActionId
 
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
@@ -157,14 +151,14 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   let L.GovActionIx governanceActionIndex = L.gaidGovActionIx govActionId
 
   votes <- generateVoteFiles ceo execConfig work "vote-files" txIdString governanceActionIndex
-                             [(defaultSPOKeys n, "yes") | n <- [1..3]]
+                             [(defaultSpoKeys n, "yes") | n <- [1..3]]
 
   -- Submit votes
   votesTxBody <- createVotingTxBody execConfig epochStateView sbe work "vote-tx-body" votes wallet0
 
   votesSignedTx <- signTx execConfig cEra work "vote-signed-tx"
                      votesTxBody (SomeKeyPair (paymentKeyInfoPair wallet0)
-                                  :[SomeKeyPair $ defaultSPOColdKeyPair n | n <- [1..3]])
+                                  :[SomeKeyPair $ defaultSpoColdKeyPair n | n <- [1..3]])
 
   -- Call should fail, because SPOs are unallowed to vote on the constitution
   failToSubmitTx execConfig cEra votesSignedTx "DisallowedVoters"

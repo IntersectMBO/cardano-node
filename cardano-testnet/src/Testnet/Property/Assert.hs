@@ -177,9 +177,12 @@ getRelevantSlots poolNodeStdoutFile slotLowerBound = do
 
 assertErasEqual
   :: HasCallStack
+  => TestEquality eon
+  => Show (eon expectedEra)
+  => Show (eon receivedEra)
   => MonadError String m
-  => ShelleyBasedEra expectedEra
-  -> ShelleyBasedEra receivedEra
+  => eon expectedEra
+  -> eon receivedEra
   -> m (expectedEra :~: receivedEra)
 assertErasEqual expectedEra receivedEra = withFrozenCallStack $
   case testEquality expectedEra receivedEra of

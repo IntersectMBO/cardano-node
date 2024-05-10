@@ -44,6 +44,7 @@ import           Testnet.Process.Run
 import           Testnet.Property.Assert
 import qualified Testnet.Property.Util as H
 import           Testnet.Runtime
+import           Testnet.Types
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
@@ -80,7 +81,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
 
   ----------------Need to register an SPO------------------
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
-      utxoSKeyFile = paymentSKey $ paymentKeyInfoPair wallet0
+      utxoSKeyFile = signingKeyFp $ paymentKeyInfoPair wallet0
   void $ H.execCli' execConfig
     [ "conway", "query", "utxo"
     , "--address", utxoAddr
@@ -92,11 +93,10 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
   let node1SocketPath = Api.File $ IO.sprocketSystemName node1sprocket
-      nodeConfigFile = Api.File configurationFile
       termEpoch = EpochNo 15
   (stakePoolIdNewSpo, stakePoolColdSigningKey, stakePoolColdVKey, vrfSkey, _)
     <- registerSingleSpo 1 tempAbsPath
-         (Api.File configurationFile)
+         configurationFile
          node1SocketPath
          (EpochNo 10)
          cTestnetOptions
@@ -117,10 +117,10 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
       testDelegatorRegCertFp = testStakeDelegator </> "test-delegator.regcert"
       testDelegatorDelegCert = testStakeDelegator </> "test-delegator.delegcert"
 
-  _ <- cliStakeAddressKeyGen work
-    $ KeyNames testDelegatorVkeyFp testDelegatorSKeyFp
-  _ <- cliAddressKeyGen work
-    $ KeyNames testDelegatorPaymentVKeyFp testDelegatorPaymentSKeyFp
+  cliStakeAddressKeyGen
+    $ KeyPair (File testDelegatorVkeyFp) (File testDelegatorSKeyFp)
+  cliAddressKeyGen
+    $ KeyPair (File testDelegatorPaymentVKeyFp) (File testDelegatorPaymentSKeyFp)
 
   -- NB: We must include the stake credential
   testDelegatorPaymentAddr <- execCli
@@ -206,7 +206,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   let testDelegatorStakeAddressInfoOutFp = work </> "test-delegator-stake-address-info.json"
   void $ checkStakeKeyRegistered
            tempAbsPath
-           nodeConfigFile
+           configurationFile
            node1SocketPath
            termEpoch
            execConfig
@@ -226,8 +226,8 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
   let testSpoKesVKey = work </> "kes.vkey"
       testSpoKesSKey = work </> "kes.skey"
 
-  _ <- cliNodeKeyGenKes work
-         $ KeyNames testSpoKesVKey testSpoKesSKey
+  cliNodeKeyGenKes
+    $ KeyPair (File testSpoKesVKey) (File testSpoKesSKey)
   let testSpoOperationalCertFp = testSpoDir </> "node-operational.cert"
 
   void $ execCli' execConfig
@@ -248,11 +248,11 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
       ]
 
   jsonBS <- createConfigJson tempAbsPath (cardanoNodeEra cTestnetOptions)
-  H.lbsWriteFile configurationFile jsonBS
+  H.lbsWriteFile (unFile configurationFile) jsonBS
   [newNodePort] <- requestAvailablePortNumbers 1
   eRuntime <- runExceptT $ startNode (TmpAbsolutePath work) "test-spo" "127.0.0.1" newNodePort testnetMagic
         [ "run"
-        , "--config", configurationFile
+        , "--config", unFile configurationFile
         , "--topology", topologyFile
         , "--database-path", testSpoDir </> "db"
         , "--shelley-kes-key", testSpoKesSKey
@@ -264,7 +264,7 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
                        Right runtime -> return $ nodeStdout runtime
 
   -- Wait for 2 epochs to pass
-  void $ waitUntilEpoch (Api.File configurationFile)
+  void $ waitUntilEpoch configurationFile
                         node1SocketPath (EpochNo 3)
 
   currentLeaderShipScheduleFile <- H.noteTempFile work "current-schedule.log"

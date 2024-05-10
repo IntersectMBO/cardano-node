@@ -31,12 +31,11 @@ import           Testnet.Components.TestWatchdog
 import qualified Testnet.Process.Cli as H
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
-import           Testnet.Runtime
+import           Testnet.Types
 
 import           Hedgehog
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Golden as H
 
 -- | Test CLI queries
@@ -67,23 +66,19 @@ hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> 
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
 
-  poolNode1 <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  PoolNode{poolRuntime} <- H.headM poolNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  let socketPath = nodeSocketPath poolRuntime
 
-  let socketName' = IO.sprocketName poolSprocket1
-      socketBase = IO.sprocketBase poolSprocket1 -- /tmp
-      socketPath = socketBase </> socketName'
-
-  epochStateView <- getEpochStateView (File configurationFile) (File socketPath)
+  epochStateView <- getEpochStateView configurationFile socketPath
 
   H.note_ $ "Sprocket: " <> show poolSprocket1
   H.note_ $ "Abs path: " <> tempAbsBasePath'
-  H.note_ $ "Socketpath: " <> socketPath
-  H.note_ $ "Foldblocks config file: " <> configurationFile
+  H.note_ $ "Socketpath: " <> unFile socketPath
+  H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
   checkDRepsNumber epochStateView sbe 3
-
 
   -- protocol-parameters
   do

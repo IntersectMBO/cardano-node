@@ -108,6 +108,7 @@ library
                         Testnet.Start.Byron
                         Testnet.Start.Types
                         Testnet.SubmitApi
+                        Testnet.Types
 
   other-modules:        Parsers.Cardano
                         Parsers.Help
@@ -184,9 +185,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.KesPeriodInfo
                         Cardano.Testnet.Test.Cli.Query
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
-                        Cardano.Testnet.Test.FoldBlocks
-                        Cardano.Testnet.Test.Misc
-
+                        Cardano.Testnet.Test.FoldEpochState
                         Cardano.Testnet.Test.Gov.DRepActivity
                         Cardano.Testnet.Test.Gov.DRepDeposit
                         Cardano.Testnet.Test.Gov.DRepRetirement
@@ -195,9 +194,9 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO
                         Cardano.Testnet.Test.Gov.TreasuryGrowth
                         Cardano.Testnet.Test.Gov.TreasuryWithdrawal
-                        Cardano.Testnet.Test.SanityCheck
-
+                        Cardano.Testnet.Test.Misc
                         Cardano.Testnet.Test.Node.Shutdown
+                        Cardano.Testnet.Test.SanityCheck
                         Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
 
   type:                 exitcode-stdio-1.0

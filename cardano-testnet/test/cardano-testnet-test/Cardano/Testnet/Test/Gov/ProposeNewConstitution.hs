@@ -42,11 +42,10 @@ import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
-import           Testnet.Runtime
+import           Testnet.Types
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/ProposeAndRatifyNewConstitution/"'@
@@ -86,20 +85,17 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
 
-  poolNode1 <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  PoolNode{poolRuntime} <- H.headM poolNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  let socketPath = nodeSocketPath poolRuntime
 
-  let socketName' = IO.sprocketName poolSprocket1
-      socketBase = IO.sprocketBase poolSprocket1 -- /tmp
-      socketPath = socketBase </> socketName'
-
-  epochStateView <- getEpochStateView (File configurationFile) (File socketPath)
+  epochStateView <- getEpochStateView configurationFile socketPath
 
   H.note_ $ "Sprocket: " <> show poolSprocket1
   H.note_ $ "Abs path: " <> tempAbsBasePath'
-  H.note_ $ "Socketpath: " <> socketPath
-  H.note_ $ "Foldblocks config file: " <> configurationFile
+  H.note_ $ "Socketpath: " <> unFile socketPath
+  H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
   -- Create Conway constitution
   gov <- H.createDirectoryIfMissing $ work </> "governance"
@@ -122,12 +118,12 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   let stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
 
-  _ <- P.cliStakeAddressKeyGen tempAbsPath'
-         $ P.KeyNames { P.verificationKeyFile = stakeVkeyFp
-                      , P.signingKeyFile = stakeSKeyFp
-                      }
-  -- Create constitution proposal
+  P.cliStakeAddressKeyGen
+    $ KeyPair { verificationKey = File stakeVkeyFp
+              , signingKey = File stakeSKeyFp
+              }
 
+  -- Create constitution proposal
   guardRailScriptFp <- H.note $ work </> "guard-rail-script.plutusV3"
   H.writeFile guardRailScriptFp $ Text.unpack plutusV3NonSpendingScript
   -- TODO: Update help text for policyid. The script hash is not
@@ -167,13 +163,13 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
     ]
 
   signedProposalTx <- signTx execConfig cEra gov "signed-proposal"
-                           (File txbodyFp) [paymentKeyInfoPair wallet1]
+                           (File txbodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet1]
 
   submitTx execConfig cEra signedProposalTx
 
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
-  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex sbe (fromString governanceActionTxId))
+  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex (fromString governanceActionTxId))
                                         configurationFile
                                         socketPath
                                         (EpochNo 10)
@@ -195,8 +191,9 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe work "vote-tx-body"
                                      voteFiles wallet0
 
-  voteTxFp <- signTx execConfig cEra gov "signed-vote-tx" voteTxBodyFp
-                     (paymentKeyInfoPair wallet0:[defaultDRepKeyPair n | (_, n) <- allVotes])
+  let signingKeys = SomeKeyPair <$> (paymentKeyInfoPair wallet0:(defaultDRepKeyPair . snd <$> allVotes))
+  voteTxFp <- signTx execConfig cEra gov "signed-vote-tx" voteTxBodyFp signingKeys
+
   submitTx execConfig cEra voteTxFp
 
   _ <- waitForEpochs epochStateView (EpochInterval 1)
@@ -215,8 +212,8 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   -- We check that constitution was succcessfully ratified
   void . H.leftFailM . evalIO . runExceptT $
     foldEpochState
-      (File configurationFile)
-      (File socketPath)
+      configurationFile
+      socketPath
       FullValidation
       (EpochNo 10)
       ()

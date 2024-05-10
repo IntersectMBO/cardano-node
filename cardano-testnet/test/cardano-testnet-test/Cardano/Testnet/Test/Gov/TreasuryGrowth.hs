@@ -23,7 +23,7 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.TestWatchdog
 import qualified Testnet.Property.Util as H
-import           Testnet.Runtime
+import           Testnet.Types
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
@@ -46,12 +46,12 @@ prop_check_if_treasury_is_growing = H.integrationRetryWorkspace 0 "growing-treas
   runtime@TestnetRuntime{configurationFile} <- cardanoTestnetDefault options conf
 
   -- Get socketPath
-  socketPathAbs <- do
+  socketPathAbs <- Api.File <$> do
     socketPath' <- H.sprocketArgumentName <$> H.headM (poolSprockets runtime)
     H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
 
   (_condition, treasuryValues) <- H.leftFailM . H.evalIO . runExceptT $
-    Api.foldEpochState (File configurationFile) (Api.File socketPathAbs) Api.QuickValidation (EpochNo 10) M.empty handler
+    Api.foldEpochState configurationFile socketPathAbs Api.QuickValidation (EpochNo 10) M.empty handler
   H.note_ $ "treasury for last 5 epochs: " <> show treasuryValues
 
   let treasuriesSortedByEpoch =

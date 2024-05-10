@@ -40,8 +40,8 @@ import           Testnet.Components.TestWatchdog
 import qualified Testnet.Process.Run as H
 import           Testnet.Process.Run
 import qualified Testnet.Property.Util as H
-import           Testnet.Runtime
 import           Testnet.SubmitApi
+import           Testnet.Types
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
@@ -80,7 +80,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 
   void $ procSubmitApi
-    [ "--config", configurationFile
+    [ "--config", unFile configurationFile
     , "--testnet-magic", show @Int testnetMagic
     , "--socket-path", "FILEPATH"
     ]
@@ -114,7 +114,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
   void $ execCli' execConfig
     [ "babbage", "transaction", "sign"
     , "--tx-body-file", txbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
     , "--out-file", txbodySignedFp
     ]
 

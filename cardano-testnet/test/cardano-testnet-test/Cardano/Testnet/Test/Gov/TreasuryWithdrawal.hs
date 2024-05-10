@@ -42,12 +42,11 @@ import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
-import           Testnet.Runtime
 import           Testnet.Start.Types (eraToString)
+import           Testnet.Types
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 hprop_ledger_events_treasury_withdrawal:: Property
 hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasury-withdrawal" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
@@ -77,20 +76,17 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
 
-  poolNode1 <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  PoolNode{poolRuntime} <- H.headM poolNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  let socketPath = nodeSocketPath poolRuntime
 
-  let socketName' = IO.sprocketName poolSprocket1
-      socketBase = IO.sprocketBase poolSprocket1 -- /tmp
-      socketPath = socketBase </> socketName'
-
-  epochStateView <- getEpochStateView (File configurationFile) (File socketPath)
+  epochStateView <- getEpochStateView configurationFile socketPath
 
   H.note_ $ "Sprocket: " <> show poolSprocket1
   H.note_ $ "Abs path: " <> tempAbsBasePath'
-  H.note_ $ "Socketpath: " <> socketPath
-  H.note_ $ "Foldblocks config file: " <> configurationFile
+  H.note_ $ "Socketpath: " <> unFile socketPath
+  H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
   proposalAnchorFile <- H.note $ work </> gov </> "sample-proposal-anchor"
@@ -110,10 +106,10 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
       stakeSKeyFp = gov </> "stake.skey"
       stakeCertFp = gov </> "stake.regcert"
 
-  _ <- P.cliStakeAddressKeyGen tempAbsPath'
-         $ P.KeyNames { P.verificationKeyFile = stakeVkeyFp
-                      , P.signingKeyFile = stakeSKeyFp
-                      }
+  P.cliStakeAddressKeyGen
+     $ KeyPair { verificationKey = File stakeVkeyFp
+               , signingKey= File stakeSKeyFp
+               }
 
   void $ H.execCli' execConfig
     [ eraName, "stake-address", "registration-certificate"
@@ -138,7 +134,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
   void $ H.execCli' execConfig
     [ eraName, "transaction", "sign"
     , "--tx-body-file", stakeCertTxBodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet1
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
     , "--signing-key-file", stakeSKeyFp
     , "--out-file", stakeCertTxSignedFp
     ]
@@ -185,7 +181,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
   void $ H.execCli' execConfig
     [ eraName, "transaction", "sign"
     , "--tx-body-file", txbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
     , "--out-file", txbodySignedFp
     ]
 
@@ -203,7 +199,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
   currentEpoch <- getCurrentEpochNo epochStateView
   let terminationEpoch = succ . succ $ currentEpoch
   L.GovActionIx governanceActionIndex <- fmap L.gaidGovActionIx . H.nothingFailM $
-    getTreasuryWithdrawalProposal (File configurationFile) (File socketPath) terminationEpoch
+    getTreasuryWithdrawalProposal configurationFile socketPath terminationEpoch
 
   let voteFp :: Int -> FilePath
       voteFp n = work </> gov </> "vote-" <> show n
@@ -215,7 +211,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
       , "--yes"
       , "--governance-action-tx-id", txidString
       , "--governance-action-index", show governanceActionIndex
-      , "--drep-verification-key-file", defaultDRepVkeyFp n
+      , "--drep-verification-key-file", verificationKeyFp $ defaultDRepKeyPair n
       , "--out-file", voteFp n
       ]
 
@@ -239,10 +235,10 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
   void $ H.execCli' execConfig
     [ eraName, "transaction", "sign"
     , "--tx-body-file", voteTxBodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet1
-    , "--signing-key-file", defaultDRepSkeyFp 1
-    , "--signing-key-file", defaultDRepSkeyFp 2
-    , "--signing-key-file", defaultDRepSkeyFp 3
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
+    , "--signing-key-file", signingKeyFp $ defaultDRepKeyPair 1
+    , "--signing-key-file", signingKeyFp $ defaultDRepKeyPair 2
+    , "--signing-key-file", signingKeyFp $ defaultDRepKeyPair 3
     , "--out-file", voteTxFp
     ]
 
@@ -254,7 +250,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
 
   withdrawals <- H.nothingFailM $
     getCurrentEpochNo epochStateView >>=
-      getAnyWithdrawals (File configurationFile) (File socketPath) . (`L.addEpochInterval` EpochInterval 5)
+      getAnyWithdrawals configurationFile socketPath . (`L.addEpochInterval` EpochInterval 5)
 
   H.noteShow_ withdrawals
   (L.unCoin . snd <$> M.toList withdrawals) === [withdrawalAmount]

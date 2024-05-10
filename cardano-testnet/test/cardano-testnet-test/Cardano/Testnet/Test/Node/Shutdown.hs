@@ -39,8 +39,8 @@ import           Testnet.Defaults
 import           Testnet.Process.Run
 import qualified Testnet.Property.Util as H
 import           Testnet.Property.Util
-import           Testnet.Runtime
 import           Testnet.Start.Byron
+import           Testnet.Types
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H

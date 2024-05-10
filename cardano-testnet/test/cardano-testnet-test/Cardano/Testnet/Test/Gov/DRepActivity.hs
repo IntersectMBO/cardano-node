@@ -43,11 +43,10 @@ import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
-import           Testnet.Runtime
+import           Testnet.Types
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRep Activity/"'@
@@ -78,20 +77,17 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
 
-  poolNode1 <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  PoolNode{poolRuntime} <- H.headM poolNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  let socketPath = nodeSocketPath poolRuntime
 
-  let socketName' = IO.sprocketName poolSprocket1
-      socketBase = IO.sprocketBase poolSprocket1 -- /tmp
-      socketPath = socketBase </> socketName'
-
-  epochStateView <- getEpochStateView (File configurationFile) (File socketPath)
+  epochStateView <- getEpochStateView configurationFile socketPath
 
   H.note_ $ "Sprocket: " <> show poolSprocket1
   H.note_ $ "Abs path: " <> tempAbsBasePath'
-  H.note_ $ "Socketpath: " <> socketPath
-  H.note_ $ "Foldblocks config file: " <> configurationFile
+  H.note_ $ "Socketpath: " <> unFile socketPath
+  H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
@@ -155,8 +151,8 @@ activityChangeProposalTest
   :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
   => H.ExecConfig
   -> EpochStateView
-  -> FilePath
-  -> FilePath
+  -> NodeConfigFile In
+  -> SocketPath
   -> ConwayEraOnwards ConwayEra
   -> FilePath
   -> FilePath
@@ -183,7 +179,7 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
   H.note_ $ "Epoch before \"" <> prefix <> "\" prop: " <> show epochBeforeProp
 
   thisProposal@(governanceActionTxId, governanceActionIndex) <-
-    makeActivityChangeProposal execConfig epochStateView (File configurationFile) (File socketPath)
+    makeActivityChangeProposal execConfig epochStateView configurationFile socketPath
                                ceo baseDir "proposal" mPreviousProposalInfo change wallet (epochBeforeProp + maxWait)
 
   voteChangeProposal execConfig epochStateView sbe baseDir "vote"
@@ -202,8 +198,8 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
     waitAndCheck epochAfterProp = do
       !eProposalResult
         <- evalIO . runExceptT $ foldEpochState
-                                    (File configurationFile)
-                                    (File socketPath)
+                                    configurationFile
+                                    socketPath
                                     FullValidation
                                     (EpochNo (epochAfterProp + maxWait))
                                     ()
@@ -258,10 +254,10 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
   let stakeVkeyFp = baseDir </> "stake.vkey"
       stakeSKeyFp = baseDir </> "stake.skey"
 
-  _ <- P.cliStakeAddressKeyGen baseDir
-         $ P.KeyNames { P.verificationKeyFile = stakeVkeyFp
-                      , P.signingKeyFile = stakeSKeyFp
-                      }
+  P.cliStakeAddressKeyGen
+    $ KeyPair { verificationKey = File stakeVkeyFp
+              , signingKey = File stakeSKeyFp
+              }
 
   proposalAnchorFile <- H.note $ baseDir </> "sample-proposal-anchor"
   H.writeFile proposalAnchorFile "dummy anchor data"
@@ -302,15 +298,15 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
     ]
 
   signedProposalTx <- signTx execConfig cEra baseDir "signed-proposal"
-                             (File proposalBody) [paymentKeyInfoPair wallet]
+                             (File proposalBody) [SomeKeyPair $ paymentKeyInfoPair wallet]
 
   submitTx execConfig cEra signedProposalTx
 
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
-  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex sbe (fromString governanceActionTxId))
-                                        (unFile configurationFile)
-                                        (unFile socketPath)
+  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex (fromString governanceActionTxId))
+                                        configurationFile
+                                        socketPath
                                         (EpochNo timeout)
 
   governanceActionIndex <- case propSubmittedResult of
@@ -323,7 +319,12 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
 
   return (governanceActionTxId, governanceActionIndex)
 
-voteChangeProposal :: (HasCallStack, MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m)
+voteChangeProposal
+  :: HasCallStack
+  => MonadTest m
+  => MonadIO m
+  => MonadCatch m
+  => H.MonadAssertion m
   => H.ExecConfig
   -> EpochStateView
   -> ShelleyBasedEra ConwayEra
@@ -347,6 +348,7 @@ voteChangeProposal execConfig epochStateView sbe work prefix governanceActionTxI
   voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe baseDir "vote-tx-body"
                                      voteFiles wallet
 
-  voteTxFp <- signTx execConfig cEra baseDir "signed-vote-tx" voteTxBodyFp
-                     (paymentKeyInfoPair wallet:[defaultDRepKeyPair n | (_, n) <- votes])
+  let signingKeys = SomeKeyPair <$> (paymentKeyInfoPair wallet:(defaultDRepKeyPair . snd <$> votes))
+  voteTxFp <- signTx execConfig cEra baseDir "signed-vote-tx" voteTxBodyFp signingKeys
+
   submitTx execConfig cEra voteTxFp

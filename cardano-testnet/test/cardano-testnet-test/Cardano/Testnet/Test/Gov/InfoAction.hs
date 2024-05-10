@@ -37,11 +37,10 @@ import           Testnet.Defaults
 import qualified Testnet.Process.Cli as P
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
-import           Testnet.Runtime
+import           Testnet.Types
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
-import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/InfoAction/'@
@@ -55,8 +54,9 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
 
-  let sbe = ShelleyBasedEraConway
+  let ceo = ConwayEraOnwardsConway
       era = toCardanoEra sbe
+      sbe = conwayEraOnwardsToShelleyBasedEra ceo
       fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 100
         , cardanoNodeEra = AnyCardanoEra era
@@ -70,20 +70,17 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
     }
     <- cardanoTestnetDefault fastTestnetOptions conf
 
-  poolNode1 <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  PoolNode{poolRuntime} <- H.headM poolNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
   execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  let socketPath = nodeSocketPath poolRuntime
 
-  let socketName' = IO.sprocketName poolSprocket1
-      socketBase = IO.sprocketBase poolSprocket1 -- /tmp
-      socketPath = socketBase </> socketName'
-
-  epochStateView <- getEpochStateView (File configurationFile) (File socketPath)
+  epochStateView <- getEpochStateView configurationFile socketPath
 
   H.note_ $ "Sprocket: " <> show poolSprocket1
   H.note_ $ "Abs path: " <> tempAbsBasePath'
-  H.note_ $ "Socketpath: " <> socketPath
-  H.note_ $ "Foldblocks config file: " <> configurationFile
+  H.note_ $ "Socketpath: " <> unFile socketPath
+  H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
   gov <- H.createDirectoryIfMissing $ work </> "governance"
   proposalAnchorFile <- H.note $ work </> gov </> "sample-proposal-anchor"
@@ -99,10 +96,10 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
   let stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
 
-  _ <- P.cliStakeAddressKeyGen tempAbsPath'
-         $ P.KeyNames { P.verificationKeyFile = stakeVkeyFp
-                      , P.signingKeyFile = stakeSKeyFp
-                      }
+  P.cliStakeAddressKeyGen
+     $ KeyPair { verificationKey = File stakeVkeyFp
+               , signingKey= File stakeSKeyFp
+               }
 
   -- Create info action proposal
 
@@ -133,7 +130,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
   void $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", txbodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet1
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
     , "--out-file", txbodySignedFp
     ]
 
@@ -147,7 +144,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
     , "--tx-file", txbodySignedFp
     ]
 
-  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex sbe (fromString txidString))
+  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex (fromString txidString))
                                         configurationFile
                                         socketPath
                                         (EpochNo 10)
@@ -170,7 +167,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
       , "--yes"
       , "--governance-action-tx-id", txidString
       , "--governance-action-index", show @Word32 governanceActionIndex
-      , "--drep-verification-key-file", defaultDRepVkeyFp n
+      , "--drep-verification-key-file", verificationKeyFp $ defaultDRepKeyPair n
       , "--out-file", voteFp n
       ]
 
@@ -197,10 +194,10 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
   void $ H.execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", voteTxBodyFp
-    , "--signing-key-file", paymentSKey $ paymentKeyInfoPair wallet0
-    , "--signing-key-file", defaultDRepSkeyFp 1
-    , "--signing-key-file", defaultDRepSkeyFp 2
-    , "--signing-key-file", defaultDRepSkeyFp 3
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
+    , "--signing-key-file", signingKeyFp $ defaultDRepKeyPair 1
+    , "--signing-key-file", signingKeyFp $ defaultDRepKeyPair 2
+    , "--signing-key-file", signingKeyFp $ defaultDRepKeyPair 3
     , "--out-file", voteTxFp
     ]
 
@@ -212,8 +209,8 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
   -- We check that info action was succcessfully ratified
   !meInfoRatified
     <- H.timeout 120_000_000 $ runExceptT $ foldBlocks
-                      (File configurationFile)
-                      (File socketPath)
+                      configurationFile
+                      socketPath
                       FullValidation
                       (InfoActionState False False)  -- Initial accumulator state
                       (foldBlocksCheckInfoAction (tempAbsPath' </> "events.log") governanceActionIndex )
