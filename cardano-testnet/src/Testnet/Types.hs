@@ -105,6 +105,14 @@ data TestnetRuntime = TestnetRuntime
 poolSprockets :: TestnetRuntime -> [Sprocket]
 poolSprockets = fmap (nodeSprocket . poolRuntime) . poolNodes
 
+data PoolNode = PoolNode
+  { poolRuntime :: NodeRuntime
+  , poolKeys :: PoolNodeKeys
+  }
+
+poolNodeStdout :: PoolNode -> FilePath
+poolNodeStdout = nodeStdout . poolRuntime
+
 data NodeRuntime = NodeRuntime
   { nodeName :: !String
   , nodeIpv4 :: !Text
@@ -118,14 +126,6 @@ data NodeRuntime = NodeRuntime
 
 nodeSocketPath :: NodeRuntime -> SocketPath
 nodeSocketPath = File . H.sprocketSystemName . nodeSprocket
-
-data PoolNode = PoolNode
-  { poolRuntime :: NodeRuntime
-  , poolKeys :: PoolNodeKeys
-  }
-
-poolNodeStdout :: PoolNode -> FilePath
-poolNodeStdout = nodeStdout . poolRuntime
 
 data ColdPoolKey
 data StakingKey
