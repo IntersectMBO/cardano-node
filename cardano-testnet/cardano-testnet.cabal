@@ -186,6 +186,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Cli.Query
                         Cardano.Testnet.Test.Cli.QuerySlotNumber
                         Cardano.Testnet.Test.FoldEpochState
+                        Cardano.Testnet.Test.Gov.CommitteeAddNew
                         Cardano.Testnet.Test.Gov.DRepActivity
                         Cardano.Testnet.Test.Gov.DRepDeposit
                         Cardano.Testnet.Test.Gov.DRepRetirement

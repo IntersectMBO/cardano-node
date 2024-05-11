@@ -427,7 +427,7 @@ generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m)
 generateVoteFiles ceo execConfig work prefix governanceActionTxId governanceActionIndex allVotes = do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
   forM (zip [(1 :: Integer)..] allVotes) $ \(idx, (spoKeys, vote)) -> do
-    let path = File (baseDir </> "vote-" <> show idx)
+    let path = File (baseDir </> "vote-spo-" <> show idx)
     void $ H.execCli' execConfig
       [ eraToString $ toCardanoEra ceo , "governance", "vote", "create"
       , "--" ++ vote
