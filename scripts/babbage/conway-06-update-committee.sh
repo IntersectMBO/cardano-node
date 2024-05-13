@@ -38,7 +38,6 @@ UTXO_DIR=example/utxo-keys
 POOL_DIR=example/pools
 TRANSACTIONS_DIR=example/transactions
 CC_DIR=example/cc
-CC_MULTISIG=example/cc/multisig
 
 mkdir -p "$TRANSACTIONS_DIR"
 mkdir -p "$CC_DIR"

@@ -39,65 +39,6 @@ CC_DIR=example/cc
 
 mkdir -p "$TRANSACTIONS_DIR"
 
-# "QUERY GOVERNANCE STATE"
-
-echo "DOWNLOAD A PROPOSAL FILE, THIS IS WHERE WE EXPLAIN WHY THIS PROPOSAL IS RELEVANT"
-
-wget https://tinyurl.com/3wrwb2as -O "${TRANSACTIONS_DIR}/proposal.txt"
-
-# "DOWNLOAD OUR SAMPLE CONSTITUTION FILE"
-
-wget https://tinyurl.com/mr3ferf9 -O "${TRANSACTIONS_DIR}/constitution.txt"
-
-echo "CALCULATE THE HASH OURSELVES"
-
-hash=$(b2sum -l 256 ${TRANSACTIONS_DIR}/constitution.txt | cut -d' ' -f1)
-echo "$hash"
-
-# "QUERY THE CURRENT CONTSTITUTION HASH"
-
-cardano-cli conway query constitution \
-  --testnet-magic $NETWORK_MAGIC
-
-# "CREATE A PROPOSAL TO UPDATE THE CONSTITUTION"
-govActDeposit=$(cardano-cli conway query gov-state | jq .currentPParams.govActionDeposit)
-constitutionHash="$(cardano-cli conway governance hash anchor-data --file-text ${TRANSACTIONS_DIR}/constitution.txt)"
-proposalHash="$(cardano-cli conway governance hash anchor-data --file-text ${TRANSACTIONS_DIR}/proposal.txt)"
-
-
-cardano-cli conway governance action create-constitution \
-  --testnet \
-  --governance-action-deposit "$govActDeposit" \
-  --deposit-return-stake-verification-key-file "${UTXO_DIR}/stake1.vkey" \
-  --anchor-url "https://tinyurl.com/3wrwb2as" \
-  --anchor-data-hash "$proposalHash" \
-  --constitution-url "https://tinyurl.com/2pahcy6z"  \
-  --constitution-hash "$constitutionHash" \
-  --out-file "${TRANSACTIONS_DIR}/constitution.action"
-
-# "BUILD, SIGN AND SUBMIT THE CONSTITUTION"
-
-cardano-cli conway transaction build \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
-  --proposal-file "${TRANSACTIONS_DIR}/constitution.action" \
-  --witness-override 2 \
-  --out-file "${TRANSACTIONS_DIR}/constitution-tx.raw"
-
-cardano-cli conway transaction sign \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-body-file "${TRANSACTIONS_DIR}/constitution-tx.raw" \
-  --signing-key-file "${UTXO_DIR}/payment1.skey" \
-  --signing-key-file "${UTXO_DIR}/stake1.skey" \
-  --out-file "${TRANSACTIONS_DIR}/constitution-tx.signed"
-
-cardano-cli conway transaction submit \
-  --testnet-magic $NETWORK_MAGIC \
-  --tx-file "${TRANSACTIONS_DIR}/constitution-tx.signed"
-
-sleep 5
-
 ID="$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r '.proposals[0].actionId.txId')"
 IX="$(cardano-cli conway query gov-state --testnet-magic 42 | jq -r '.proposals[0].actionId.govActionIx')"
 
@@ -146,30 +87,23 @@ sleep 5
 # CC VOTES
 ### ----------––––––––
 
-for i in {1..1}; do
+for i in {1..3}; do
   cardano-cli conway governance vote create \
     --yes \
     --governance-action-tx-id "${ID}" \
     --governance-action-index "${IX}" \
-    --cc-hot-verification-key-file "${CC_DIR}/hot1-cc.vkey" \
+    --cc-hot-verification-key-file "${CC_DIR}/hot${i}-cc.vkey" \
     --out-file "${TRANSACTIONS_DIR}/cc${i}.vote"
 done
-
-# for i in {2..2}; do
-#   cardano-cli conway governance vote create \
-#     --no \
-#     --governance-action-tx-id "${ID}" \
-#     --governance-action-index "${IX}" \
-#     --cc-hot-verification-key-file "${CC_DIR}/hot1-cc.vkey" \
-#     --out-file "${TRANSACTIONS_DIR}/cc${i}.vote"
-# done
 
 cardano-cli conway transaction build \
   --testnet-magic $NETWORK_MAGIC \
   --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
   --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
   --vote-file "${TRANSACTIONS_DIR}/cc1.vote" \
-  --witness-override 2 \
+  --vote-file "${TRANSACTIONS_DIR}/cc2.vote" \
+  --vote-file "${TRANSACTIONS_DIR}/cc3.vote" \
+  --witness-override 4 \
   --out-file "${TRANSACTIONS_DIR}/constitution-cc-votes-tx.raw"
 
 cardano-cli conway transaction sign \
@@ -177,6 +111,8 @@ cardano-cli conway transaction sign \
   --tx-body-file "${TRANSACTIONS_DIR}/constitution-cc-votes-tx.raw" \
   --signing-key-file "${UTXO_DIR}/payment1.skey" \
   --signing-key-file "${CC_DIR}/hot1-cc.skey" \
+  --signing-key-file "${CC_DIR}/hot2-cc.skey" \
+  --signing-key-file "${CC_DIR}/hot3-cc.skey" \
   --out-file "${TRANSACTIONS_DIR}/constitution-cc-votes-tx.signed"
 
 cardano-cli conway transaction submit \
@@ -185,26 +121,5 @@ cardano-cli conway transaction submit \
 
 sleep 10
 
-cardano-cli conway query gov-state | jq .proposals
-
-# cardano-cli conway transaction build \
-#   --testnet-magic $NETWORK_MAGIC \
-#   --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
-#   --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
-#   --vote-file "${TRANSACTIONS_DIR}/cc2.vote" \
-#   --witness-override 2 \
-#   --out-file "${TRANSACTIONS_DIR}/constitution-cc-votes-tx.raw"
-
-# cardano-cli conway transaction sign \
-#   --testnet-magic $NETWORK_MAGIC \
-#   --tx-body-file "${TRANSACTIONS_DIR}/constitution-cc-votes-tx.raw" \
-#   --signing-key-file "${UTXO_DIR}/payment1.skey" \
-#   --signing-key-file "${CC_DIR}/hot1-cc.skey" \
-#   --out-file "${TRANSACTIONS_DIR}/constitution-cc-votes-tx.signed"
-
-# cardano-cli conway transaction submit \
-#   --testnet-magic $NETWORK_MAGIC \
-#   --tx-file "${TRANSACTIONS_DIR}/constitution-cc-votes-tx.signed"
-
-# sleep 10
+cardano-cli conway query constitution
 

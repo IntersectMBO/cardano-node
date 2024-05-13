@@ -104,4 +104,23 @@ cardano-cli conway transaction submit \
   --testnet-magic $NETWORK_MAGIC \
   --tx-file "${TRANSACTIONS_DIR}/cc2-auth-cert-tx.signed"
 
-# sleep 5
+sleep 15
+
+cardano-cli conway transaction build \
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-in "$(cardano-cli query utxo --address "$(cat "${UTXO_DIR}/payment1.addr")" --testnet-magic $NETWORK_MAGIC --out-file /dev/stdout | jq -r 'keys[0]')" \
+  --change-address "$(cat ${UTXO_DIR}/payment1.addr)" \
+  --certificate-file "${CC_DIR}/cc3-authorization.cert" \
+  --witness-override 2 \
+  --out-file "${TRANSACTIONS_DIR}/cc3-auth-cert-tx.raw"
+
+cardano-cli conway transaction sign \
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-body-file "${TRANSACTIONS_DIR}/cc3-auth-cert-tx.raw" \
+  --signing-key-file "${UTXO_DIR}/payment1.skey" \
+  --signing-key-file "${CC_DIR}/cold3-cc.skey" \
+  --out-file "${TRANSACTIONS_DIR}/cc3-auth-cert-tx.signed"
+
+cardano-cli conway transaction submit \
+  --testnet-magic $NETWORK_MAGIC \
+  --tx-file "${TRANSACTIONS_DIR}/cc3-auth-cert-tx.signed"
