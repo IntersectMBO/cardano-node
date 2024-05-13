@@ -44,6 +44,8 @@ import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempoo
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping
+import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
@@ -190,6 +192,40 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
         , "the considered header and the best block number known prior to this"
         , "header"
         ]
+    TraceOfferJump point ->
+      mconcat
+        [ "ChainSync Jumping -- we are offering a jump to the server, to point: "
+        , showT point
+        ]
+    TraceJumpResult (AcceptedJump instruction) ->
+      mconcat
+        [ "ChainSync Jumping -- the client accepted the jump to "
+        , showT (jumpInstructionToPoint instruction)
+        ]
+    TraceJumpResult (RejectedJump instruction) ->
+      mconcat
+        [ "ChainSync Jumping -- the client rejected the jump to "
+        , showT (jumpInstructionToPoint instruction)
+        ]
+    TraceJumpingWaitingForNextInstruction ->
+      "ChainSync Jumping -- the client is blocked, waiting for its next instruction."
+    TraceJumpingInstructionIs RunNormally ->
+      "ChainSyncJumping -- the client is asked to run normally"
+    TraceJumpingInstructionIs Restart ->
+      mconcat
+        [ "ChainSyncJumping -- the client is asked to restart. This is necessary"
+        , "when disengaging a peer of which we know no point that we could set"
+        , "the intersection of the ChainSync server to."
+        ]
+    TraceJumpingInstructionIs (JumpInstruction instruction) ->
+      mconcat
+        [ "ChainSync Jumping -- the client is asked to jump to "
+        , showT (jumpInstructionToPoint instruction)
+        ]
+    where
+      jumpInstructionToPoint = AF.headPoint . jTheirFragment . \case
+              JumpTo ji          -> ji
+              JumpToGoodPoint ji -> ji
 
   forMachine dtal = \case
     TraceDownloadedHeader h ->
@@ -238,6 +274,45 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
         , "headerHash" .= showT (headerHash header)
         , "blockNo" .= aBlockNo
         ]
+    TraceOfferJump point ->
+      mconcat
+        [ "kind" .= String "TraceOfferJump"
+        , "point" .= showT point
+        ]
+    TraceJumpResult jumpResult ->
+      mconcat
+        [ "kind" .= String "TraceJumpResult"
+        , "result" .= case jumpResult of
+            AcceptedJump _ -> String "AcceptedJump"
+            RejectedJump _ -> String "RejectedJump"
+        ]
+    TraceJumpingWaitingForNextInstruction ->
+      mconcat [ "kind" .= String "TraceJumpingWaitingForNextInstruction" ]
+    TraceJumpingInstructionIs instruction ->
+      mconcat
+        [ "kind" .= String "TraceJumpingInstructionIs"
+        , "instr" .= instructionToObject instruction
+        ]
+    where
+      instructionToObject :: Instruction blk -> Aeson.Object
+      instructionToObject = \case
+        RunNormally ->
+          mconcat ["kind" .= String "RunNormally"]
+        Restart ->
+          mconcat ["kind" .= String "Restart"]
+        JumpInstruction info ->
+          mconcat [ "kind" .= String "JumpInstruction"
+                  , "payload" .= jumpInstructionToObject info
+                  ]
+      jumpInstructionToObject :: JumpInstruction blk -> Aeson.Object
+      jumpInstructionToObject = \case
+        JumpTo info ->
+          mconcat [ "kind" .= String "JumpTo"
+                  , "point" .= showT (jumpInfoToPoint info) ]
+        JumpToGoodPoint info ->
+          mconcat [ "kind" .= String "JumpToGoodPoint"
+                  , "point" .= showT (jumpInfoToPoint info) ]
+      jumpInfoToPoint = AF.headPoint . jTheirFragment
 
 tipToObject :: forall blk. ConvertRawHash blk => Tip blk -> Aeson.Object
 tipToObject = \case
@@ -272,6 +347,14 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
       Namespace [] ["AccessingForecastHorizon"]
     TraceGaveLoPToken {} ->
       Namespace [] ["GaveLoPToken"]
+    TraceOfferJump {} ->
+      Namespace ["ChainSync Jumping"] ["OfferJump"]
+    TraceJumpResult {} ->
+      Namespace ["ChainSync Jumping"] ["JumpResult"]
+    TraceJumpingWaitingForNextInstruction {} ->
+      Namespace ["ChainSync Jumping"] ["WaitingForNextInstruction"]
+    TraceJumpingInstructionIs {} ->
+      Namespace ["ChainSync Jumping"] ["InstructionIs"]
 
   severityFor ns _ =
     case ns of
@@ -292,6 +375,14 @@ instance MetaTrace (TraceChainSyncClientEvent blk) where
       Namespace _ ["AccessingForecastHorizon"] ->
         Just Debug
       Namespace _ ["GaveLoPToken"] ->
+        Just Debug
+      Namespace _ ["OfferJump"] ->
+        Just Debug
+      Namespace _ ["JumpResult"] ->
+        Just Debug
+      Namespace _ ["WaitingForNextInstruction"] ->
+        Just Debug
+      Namespace _ ["InstructionIs"] ->
         Just Debug
       _ ->
         Nothing
