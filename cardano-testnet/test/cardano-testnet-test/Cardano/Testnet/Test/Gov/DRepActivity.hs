@@ -190,9 +190,8 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
   void $ waitForEpochs epochStateView minWait
-  case mExpected of
-    Nothing -> return ()
-    Just expected -> H.nothingFailM $ watchEpochStateView epochStateView (isDRepActivityUpdated expected) maxWait
+  forM_ mExpected $ \expected ->
+    H.nothingFailM $ watchEpochStateView epochStateView (isDRepActivityUpdated expected) maxWait
 
   return thisProposal
 
