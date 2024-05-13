@@ -89,13 +89,13 @@ watchEpochStateView
   -> m (Maybe a)
 watchEpochStateView epochStateView f (EpochInterval maxWait) = withFrozenCallStack $ do
   AnyNewEpochState _ newEpochState <- getEpochState epochStateView
-  let (EpochNo currentEpoch) = L.nesEL newEpochState
+  let EpochNo currentEpoch = L.nesEL newEpochState
   go (EpochNo $ currentEpoch + fromIntegral maxWait)
     where
       go :: EpochNo -> m (Maybe a)
       go (EpochNo timeout) = do
         epochState@(AnyNewEpochState _ newEpochState') <- getEpochState epochStateView
-        let (EpochNo currentEpoch) = L.nesEL newEpochState'
+        let EpochNo currentEpoch = L.nesEL newEpochState'
         condition <- f epochState
         case condition of
           Just result -> pure (Just result)
