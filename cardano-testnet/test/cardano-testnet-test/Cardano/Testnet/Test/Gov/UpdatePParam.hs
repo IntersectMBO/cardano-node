@@ -12,28 +12,24 @@ module Cardano.Testnet.Test.Gov.UpdatePParam
 import           Cardano.Api as Api
 import           Cardano.Api.Ledger (EpochInterval (..))
 import qualified Cardano.Api.Ledger as L
+import           Cardano.Api.Shelley (createAnchor)
 
-import qualified Cardano.Crypto.Hash as L
 import qualified Cardano.Ledger.Conway.Governance as L
-import qualified Cardano.Ledger.Conway.Governance as Ledger
 import qualified Cardano.Ledger.Conway.PParams as L
-import qualified Cardano.Ledger.Core as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
 import           Cardano.Testnet
 
 import           Prelude
 
 import           Control.Monad
-import           Control.Monad.State.Strict (StateT)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Bifunctor (first)
+import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
-import           Data.Maybe.Strict
 import           Data.String
 import qualified Data.Text as Text
 import           Data.Word
-import           GHC.Exts (IsList (..))
 import           Lens.Micro
 import           System.FilePath ((</>))
 
@@ -52,7 +48,7 @@ import           Hedgehog
 import qualified Hedgehog.Extras as H
 
 -- | Execute me with:
--- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Propose And Ratify New Constitution/"'@
+-- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Update PParams/"'@
 hprop_update_pparam :: Property
 hprop_update_pparam = H.integrationWorkspace "propose-new-constitution" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   -- Start a local test net
@@ -61,10 +57,14 @@ hprop_update_pparam = H.integrationWorkspace "propose-new-constitution" $ \tempA
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
 
   work <- H.createDirectoryIfMissing $ tempAbsPath' </> "work"
-
-  -- Generate model for votes
-  let allVotes :: [(String, Int)]
+  let ceo = ConwayEraOnwardsConway
+      sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      era = toCardanoEra sbe
+      cEra = AnyCardanoEra era
+      -- Generate model for votes
+      allVotes :: [(String, Int)]
       allVotes = zip (concatMap (uncurry replicate) [(4, "yes"), (3, "no"), (2, "abstain")]) [1..]
+
   annotateShow allVotes
 
   let numVotes :: Int
@@ -73,12 +73,22 @@ hprop_update_pparam = H.integrationWorkspace "propose-new-constitution" $ \tempA
 
   guardRailScript <- H.note $ work </> "guard-rail-script.plutusV3"
   H.writeFile guardRailScript $ Text.unpack plutusV3NonSpendingScript
+  execConfigOffline <- H.mkExecConfigOffline tempBaseAbsPath
+
+  gov <- H.createDirectoryIfMissing $ work </> "governance"
+
+  proposalAnchorFile <- H.note $ gov </> "sample-proposal-anchor"
+  H.writeFile proposalAnchorFile "dummy anchor data"
+  proposalAnchorDataBS <- evalIO $ BS.readFile proposalAnchorFile
+  proposalAnchorDataHash <- H.execCli' execConfigOffline
+    [ "conway", "governance"
+    , "hash", "anchor-data", "--file-text", proposalAnchorFile
+    ]
 
   -- TODO: Update help text for policyid. The script hash is not
   -- only useful for minting scripts
-  -- TODO: Left off here. Use offline execConfig function
   constitutionScriptHash <- filter (/= '\n') <$>
-    H.execCli' execConfig
+    H.execCli' execConfigOffline
       [ anyEraToString cEra, "transaction"
       , "policyid"
       , "--script-file", guardRailScript
@@ -86,16 +96,15 @@ hprop_update_pparam = H.integrationWorkspace "propose-new-constitution" $ \tempA
 
   H.note_ $ "Constitution script hash: " <> constitutionScriptHash
 
-  let ceo = ConwayEraOnwardsConway
-      sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      era = toCardanoEra sbe
-      cEra = AnyCardanoEra era
-      fastTestnetOptions = cardanoDefaultTestnetOptions
+  url <- evalMaybe $ L.textToUrl 28 "https://tinyurl.com/3wrwb2as"
+  let fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 100
         , cardanoNodeEra = cEra
         , cardanoNumDReps = numVotes
         }
-      constitution = undefined
+      anchor = createAnchor url proposalAnchorDataBS
+      ScriptHash cScriptHash = fromString constitutionScriptHash
+      constitution = L.Constitution anchor $ L.SJust cScriptHash
 
   alonzoGenesis <- evalEither $ first prettyError defaultAlonzoGenesis
   (startTime, shelleyGenesis') <- getDefaultShelleyGenesis fastTestnetOptions
@@ -123,15 +132,7 @@ hprop_update_pparam = H.integrationWorkspace "propose-new-constitution" $ \tempA
   H.note_ $ "Abs path: " <> tempAbsBasePath'
   H.note_ $ "Socketpath: " <> unFile socketPath
   H.note_ $ "Foldblocks config file: " <> unFile configurationFile
-  gov <- H.createDirectoryIfMissing $ work </> "governance"
 
-  proposalAnchorFile <- H.note $ gov </> "sample-proposal-anchor"
-  H.writeFile proposalAnchorFile "dummy anchor data"
-
-  proposalAnchorDataHash <- H.execCli' execConfig
-    [ "conway", "governance"
-    , "hash", "anchor-data", "--file-text", proposalAnchorFile
-    ]
 
   let stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
@@ -228,6 +229,7 @@ hprop_update_pparam = H.integrationWorkspace "propose-new-constitution" $ \tempA
   pparamsVoteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe work "pparams-vote-tx-body"
                            pparamsVoteFiles wallet0
 
+  let signingKeys = SomeKeyPair <$> (paymentKeyInfoPair wallet0:(defaultDRepKeyPair . snd <$> allVotes))
 
   pparamsVoteTxFp <- signTx execConfig cEra work "signed-vote-tx" pparamsVoteTxBodyFp signingKeys
   submitTx execConfig cEra pparamsVoteTxFp
@@ -252,34 +254,3 @@ checkPParamsUpdated committeeTermLength (AnyNewEpochState sbe nes) =
   in if curCommTermLength == committeeTermLength
      then Just () -- PParams was successfully updated and we terminate the fold.
      else Nothing -- PParams was not updated yet, we continue the fold.
-
-checkConstitutionWasRatified
-  :: String -- submitted constitution hash
-  -> String -- submitted guard rail script hash
-  -> AnyNewEpochState
-  -> StateT s IO LedgerStateCondition -- ^ Accumulator at block i and fold status
-checkConstitutionWasRatified submittedConstitutionHash submittedGuardRailScriptHash anyNewEpochState =
-  if filterRatificationState submittedConstitutionHash submittedGuardRailScriptHash anyNewEpochState
-  then return ConditionMet
-  else return ConditionNotMet
-
-filterRatificationState
-  :: String -- ^ Submitted constitution anchor hash
-  -> String -- ^ Submitted guard rail script hash
-  -> AnyNewEpochState
-  -> Bool
-filterRatificationState c guardRailScriptHash (AnyNewEpochState sbe newEpochState) = do
-  caseShelleyToBabbageOrConwayEraOnwards
-    (const $ error "filterRatificationState: Only conway era supported")
-
-    (const $ do
-      -- This is the next ratify state! Not the current constitution!!!
-      let constitution = newEpochState ^. L.newEpochStateGovStateL . L.cgsConstitutionL
-          constitutionAnchorHash = Ledger.anchorDataHash $ Ledger.constitutionAnchor constitution
-          L.ScriptHash constitutionScriptHash = fromMaybe (error "filterRatificationState: consitution does not have a guardrail script")
-                                                $ strictMaybeToMaybe $ constitution ^. Ledger.constitutionScriptL
-      Text.pack c == renderSafeHashAsHex constitutionAnchorHash && L.hashToTextAsHex constitutionScriptHash == Text.pack guardRailScriptHash
-
-    )
-    sbe
-

@@ -23,6 +23,7 @@ import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitution as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryGrowth as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
+import qualified Cardano.Testnet.Test.Gov.UpdatePParam as Gov
 import qualified Cardano.Testnet.Test.Node.Shutdown
 import qualified Cardano.Testnet.Test.SanityCheck as LedgerEvents
 import qualified Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
@@ -56,6 +57,7 @@ tests = do
                 -- TODO: Disabled because proposals for parameter changes are not working
                 -- , ignoreOnWindows "DRep Activity" Gov.hprop_check_drep_activity
                 -- , ignoreOnWindows "Predefined Abstain DRep" Gov.hprop_check_predefined_abstain_drep
+                , ignoreOnMacAndWindows "Update PParams" Gov.hprop_update_pparam
                 , ignoreOnWindows "DRep Deposits" Gov.hprop_ledger_events_drep_deposits
                 , ignoreOnWindows "DRep Retirement" Gov.hprop_drep_retirement
                 , ignoreOnMacAndWindows "Propose And Ratify New Constitution" Gov.hprop_ledger_events_propose_new_constitution
