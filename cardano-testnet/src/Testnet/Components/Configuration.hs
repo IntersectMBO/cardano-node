@@ -6,21 +6,29 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Testnet.Components.Configuration
-  ( anyEraToString
-  , createConfigJson
+  ( createConfigJson
   , createSPOGenesisAndFiles
-  , eraToString
   , mkTopologyConfig
   , numSeededUTxOKeys
+
+  , getByronGenesisHash
+  , getShelleyGenesisHash
+
   , NumPools
   , numPools
   , NumDReps
   , numDReps
+
+  , anyEraToString
+  , eraToString
   ) where
 
 import           Cardano.Api.Ledger (StandardCrypto)
 import           Cardano.Api.Shelley hiding (Value, cardanoEra)
 
+import           Cardano.Chain.Genesis (GenesisHash (unGenesisHash), readGenesisData)
+import qualified Cardano.Crypto.Hash.Blake2b as Crypto
+import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 import qualified Cardano.Node.Configuration.Topology as NonP2P
@@ -30,15 +38,19 @@ import           Ouroboros.Network.PeerSelection.LedgerPeers
 import           Ouroboros.Network.PeerSelection.PeerTrustable
 import           Ouroboros.Network.PeerSelection.State.LocalRootPeers
 
+import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
-import           Control.Monad.Catch (MonadCatch)
-import           Data.Aeson (Value (..))
+import           Data.Aeson
+import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encode.Pretty as A
-import           Data.Aeson.KeyMap (KeyMap)
+import           Data.Aeson.Key hiding (fromString)
+import           Data.Aeson.KeyMap hiding (map)
 import qualified Data.Aeson.Lens as L
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
 import           Data.String
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
@@ -49,7 +61,6 @@ import           System.FilePath.Posix (takeDirectory, (</>))
 import           Testnet.Defaults
 import           Testnet.Filepath
 import           Testnet.Process.Run (execCli_)
-import           Testnet.Property.Util
 import           Testnet.Start.Types (CardanoTestnetOptions (..), anyEraToString, eraToString)
 
 import           Hedgehog
@@ -80,6 +91,29 @@ createConfigJson (TmpAbsolutePath tempAbsPath) era = GHC.withFrozenCallStack $ d
    where
     getHash :: (MonadTest m, MonadIO m) => CardanoEra a -> Text.Text -> m (KeyMap Value)
     getHash e = getShelleyGenesisHash (tempAbsPath </> defaultGenesisFilepath e)
+
+
+-- Generate hashes for genesis.json files
+
+getByronGenesisHash
+  :: (H.MonadTest m, MonadIO m)
+  => FilePath
+  -> m (KeyMap Aeson.Value)
+getByronGenesisHash path = do
+  e <- runExceptT $ readGenesisData path
+  (_, genesisHash) <- H.leftFail e
+  let genesisHash' = unGenesisHash genesisHash
+  pure . singleton "ByronGenesisHash" $ toJSON genesisHash'
+
+getShelleyGenesisHash
+  :: (H.MonadTest m, MonadIO m)
+  => FilePath
+  -> Text
+  -> m (KeyMap Aeson.Value)
+getShelleyGenesisHash path key = do
+  content <- H.evalIO  $ BS.readFile path
+  let genesisHash = Crypto.hashWith id content :: Crypto.Hash Crypto.Blake2b_256 BS.ByteString
+  pure . singleton (fromText key) $ toJSON genesisHash
 
 numSeededUTxOKeys :: Int
 numSeededUTxOKeys = 3

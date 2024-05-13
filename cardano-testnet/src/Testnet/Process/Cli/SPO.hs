@@ -5,14 +5,12 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
-
-module Testnet.Components.SPO
+module Testnet.Process.Cli.SPO
   ( checkStakeKeyRegistered
   , createScriptStakeRegistrationCertificate
   , createStakeDelegationCertificate
   , createStakeKeyRegistrationCertificate
   , createStakeKeyDeregistrationCertificate
-  , decodeEraUTxO
   , registerSingleSpo
   , generateVoteFiles
   ) where
@@ -39,12 +37,10 @@ import qualified GHC.Stack as GHC
 import           Lens.Micro
 import           System.FilePath.Posix ((</>))
 
-import           Testnet.Components.DRep (VoteFile)
 import           Testnet.Filepath
-import           Testnet.Process.Cli
-import qualified Testnet.Process.Run as H
+import           Testnet.Process.Cli.Keys
+import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (execCli, execCli', execCli_)
-import           Testnet.Property.Util
 import           Testnet.Start.Types
 import           Testnet.Types
 
@@ -65,9 +61,9 @@ checkStakePoolRegistered tempAbsP execConfig poolColdVkeyFp outputFp =
         oFpAbs = tempAbsPath' </> outputFp
 
     stakePoolId' <- filter ( /= '\n') <$>
-                      execCli [ "stake-pool", "id"
-                              , "--cold-verification-key-file", poolColdVkeyFp
-                              ]
+      execCli [ "stake-pool", "id"
+                , "--cold-verification-key-file", poolColdVkeyFp
+                ]
 
     -- Check to see if stake pool was registered
     void $ execCli' execConfig
@@ -299,11 +295,12 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile s
   cliAddressKeyGen
      $ KeyPair (File poolOwnerPaymentVkeyFp) (File poolOwnerPaymentSkeyFp)
 
-  poolowneraddresswstakecred <- execCli [ "address", "build"
-                                        , "--payment-verification-key-file", poolOwnerPaymentVkeyFp
-                                        , "--stake-verification-key-file",  poolOwnerstakeVkeyFp
-                                        , "--testnet-magic", show @Int testnetMag
-                                        ]
+  poolowneraddresswstakecred <-
+    execCli [ "address", "build"
+              , "--payment-verification-key-file", poolOwnerPaymentVkeyFp
+              , "--stake-verification-key-file",  poolOwnerstakeVkeyFp
+              , "--testnet-magic", show @Int testnetMag
+              ]
 
   -- 3. Generate pool cold keys
   let poolColdVkeyFp = spoReqDir </> "pool-cold.vkey"
@@ -410,6 +407,7 @@ registerSingleSpo identifier tap@(TmpAbsolutePath tempAbsPath') nodeConfigFile s
 --
 -- Returns a list of generated @File VoteFile In@ representing the paths to
 -- the generated voting files.
+-- TODO: unify with DRep.generateVoteFiles
 generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m)
   => ConwayEraOnwards era -- ^ The conway era onwards witness for the era in which the
                           -- transaction will be constructed.
@@ -428,7 +426,7 @@ generateVoteFiles ceo execConfig work prefix governanceActionTxId governanceActi
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
   forM (zip [(1 :: Integer)..] allVotes) $ \(idx, (spoKeys, vote)) -> do
     let path = File (baseDir </> "vote-spo-" <> show idx)
-    void $ H.execCli' execConfig
+    void $ execCli' execConfig
       [ eraToString $ toCardanoEra ceo , "governance", "vote", "create"
       , "--" ++ vote
       , "--governance-action-tx-id", governanceActionTxId

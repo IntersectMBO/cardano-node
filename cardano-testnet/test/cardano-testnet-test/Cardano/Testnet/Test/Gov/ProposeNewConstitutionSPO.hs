@@ -25,15 +25,15 @@ import           GHC.Stack (HasCallStack)
 import           Lens.Micro
 import           System.FilePath ((</>))
 
-import           Testnet.Components.DRep (createVotingTxBody, failToSubmitTx, retrieveTransactionId,
-                   signTx, submitTx)
 import           Testnet.Components.Query
-import           Testnet.Components.SPO (generateVoteFiles)
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
-import qualified Testnet.Process.Cli as P
-import qualified Testnet.Process.Run as H
-import qualified Testnet.Property.Util as H
+import           Testnet.Process.Cli.DRep
+import           Testnet.Process.Cli.Keys
+import qualified Testnet.Process.Cli.SPO as SPO
+import           Testnet.Process.Cli.Transaction
+import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
 
 import           Hedgehog
@@ -44,7 +44,7 @@ import qualified Hedgehog.Extras as H
 -- Execute me with:
 -- @cabal test cardano-testnet-test --test-options '-p "/ProposeNewConstitutionSPO/"'@
 hprop_ledger_events_propose_new_constitution_spo :: Property
-hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propose-new-constitution-spo" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose-new-constitution-spo" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
@@ -69,7 +69,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
-  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath poolRuntime
 
   epochStateView <- getEpochStateView configurationFile socketPath
@@ -87,12 +87,12 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
 
   H.writeFile proposalAnchorFile "dummy anchor data"
   H.writeFile constitutionFile "dummy constitution data"
-  constitutionHash <- H.execCli' execConfig
+  constitutionHash <- execCli' execConfig
     [ "conway", "governance"
     , "hash", "anchor-data", "--file-text", constitutionFile
     ]
 
-  proposalAnchorDataHash <- H.execCli' execConfig
+  proposalAnchorDataHash <- execCli' execConfig
     [ "conway", "governance"
     , "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
@@ -100,7 +100,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   let stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
 
-  P.cliStakeAddressKeyGen
+  cliStakeAddressKeyGen
      $ KeyPair { verificationKey = File stakeVkeyFp
                , signingKey= File stakeSKeyFp
                }
@@ -108,7 +108,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
   minDRepDeposit <- getMinDRepDeposit epochStateView ceo
 
   -- Create constitution proposal
-  H.noteM_ $ H.execCli' execConfig
+  H.noteM_ $ execCli' execConfig
     [ "conway", "governance", "action", "create-constitution"
     , "--testnet"
     , "--governance-action-deposit", show minDRepDeposit
@@ -124,7 +124,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
 
   txIn1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
-  H.noteM_ $ H.execCli' execConfig
+  H.noteM_ $ execCli' execConfig
     [ "conway", "transaction", "build"
     , "--tx-in", Text.unpack $ renderTxIn txIn1
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
@@ -150,7 +150,7 @@ hprop_ledger_events_propose_new_constitution_spo = H.integrationWorkspace "propo
 
   let L.GovActionIx governanceActionIndex = L.gaidGovActionIx govActionId
 
-  votes <- generateVoteFiles ceo execConfig work "vote-files" txIdString governanceActionIndex
+  votes <- SPO.generateVoteFiles ceo execConfig work "vote-files" txIdString governanceActionIndex
                              [(defaultSpoKeys n, "yes") | n <- [1..3]]
 
   -- Submit votes

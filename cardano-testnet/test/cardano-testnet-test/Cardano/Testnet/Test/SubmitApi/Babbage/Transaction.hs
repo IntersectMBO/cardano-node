@@ -35,11 +35,9 @@ import           System.FilePath ((</>))
 import qualified System.Info as SYS
 import           Text.Regex (mkRegex, subRegex)
 
-import           Testnet.Components.SPO
 import           Testnet.Components.TestWatchdog
-import qualified Testnet.Process.Run as H
-import           Testnet.Process.Run
-import qualified Testnet.Property.Util as H
+import           Testnet.Process.Run (execCli', mkExecConfig, procSubmitApi)
+import           Testnet.Property.Util (decodeEraUTxO, integrationRetryWorkspace)
 import           Testnet.SubmitApi
 import           Testnet.Types
 
@@ -50,7 +48,7 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Golden as H
 
 hprop_transaction :: Property
-hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transaction" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_transaction = integrationRetryWorkspace 0 "submit-api-babbage-transaction" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -77,7 +75,7 @@ hprop_transaction = H.integrationRetryWorkspace 0 "submit-api-babbage-transactio
 
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
 
-  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
 
   void $ procSubmitApi
     [ "--config", unFile configurationFile

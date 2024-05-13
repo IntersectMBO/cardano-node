@@ -34,9 +34,9 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
-import qualified Testnet.Process.Cli as P
-import qualified Testnet.Process.Run as H
-import qualified Testnet.Property.Util as H
+import           Testnet.Process.Cli.Keys
+import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Types
 
 import           Hedgehog
@@ -45,7 +45,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/InfoAction/'@
 hprop_ledger_events_info_action :: Property
-hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
 
   -- Start a local test net
   conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
@@ -72,7 +72,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
-  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath poolRuntime
 
   epochStateView <- getEpochStateView configurationFile socketPath
@@ -88,7 +88,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
 
   H.writeFile proposalAnchorFile "dummy anchor data"
 
-  proposalAnchorDataHash <- H.execCli' execConfig
+  proposalAnchorDataHash <- execCli' execConfig
     [ "conway", "governance"
     , "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
@@ -96,14 +96,14 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
   let stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
 
-  P.cliStakeAddressKeyGen
+  cliStakeAddressKeyGen
      $ KeyPair { verificationKey = File stakeVkeyFp
                , signingKey= File stakeSKeyFp
                }
 
   -- Create info action proposal
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "conway", "governance", "action", "create-info"
     , "--testnet"
     , "--governance-action-deposit", show @Int 1_000_000 -- TODO: Get this from the node
@@ -118,7 +118,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
 
   txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
 
-  H.noteM_ $ H.execCli' execConfig
+  H.noteM_ $ execCli' execConfig
     [ "conway", "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
     , "--tx-in", Text.unpack $ renderTxIn txin2
@@ -127,19 +127,19 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
     , "--out-file", txbodyFp
     ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", txbodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
     , "--out-file", txbodySignedFp
     ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "conway", "transaction", "submit"
     , "--tx-file", txbodySignedFp
     ]
 
-  txidString <- mconcat . lines <$> H.execCli' execConfig
+  txidString <- mconcat . lines <$> execCli' execConfig
     [ "transaction", "txid"
     , "--tx-file", txbodySignedFp
     ]
@@ -162,7 +162,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
 
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
   H.forConcurrently_ [1..3] $ \n -> do
-    H.execCli' execConfig
+    execCli' execConfig
       [ "conway", "governance", "vote", "create"
       , "--yes"
       , "--governance-action-tx-id", txidString
@@ -178,7 +178,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
   voteTxBodyFp <- H.note $ work </> gov </> "vote.txbody"
 
   -- Submit votes
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "conway", "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin3
@@ -191,7 +191,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
     ]
 
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", voteTxBodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
@@ -201,7 +201,7 @@ hprop_ledger_events_info_action = H.integrationRetryWorkspace 0 "info-hash" $ \t
     , "--out-file", voteTxFp
     ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "conway", "transaction", "submit"
     , "--tx-file", voteTxFp
     ]

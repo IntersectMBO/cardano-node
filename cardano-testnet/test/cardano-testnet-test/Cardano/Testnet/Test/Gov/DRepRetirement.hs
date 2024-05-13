@@ -22,9 +22,9 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
-import qualified Testnet.Process.Cli as P
-import qualified Testnet.Process.Run as H
-import qualified Testnet.Property.Util as H
+import           Testnet.Process.Cli.Keys
+import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Types
 
 import           Hedgehog
@@ -38,7 +38,7 @@ sbe = ShelleyBasedEraConway
 -- Execute this test with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRepRetirement/"'@
 hprop_drep_retirement :: Property
-hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_drep_retirement = integrationRetryWorkspace 2 "drep-retirement" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -64,7 +64,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
-  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath poolRuntime
 
   epochStateView <- getEpochStateView configurationFile socketPath
@@ -79,7 +79,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
   let stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
 
-  P.cliStakeAddressKeyGen
+  cliStakeAddressKeyGen
     $ KeyPair  { verificationKey = File stakeVkeyFp
                , signingKey = File stakeSKeyFp
                }
@@ -89,14 +89,14 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
   -- Deregister first DRep
   let dreprRetirementCertFile = gov </> "drep-keys" <> "drep1.retirementcert"
 
-  H.noteM_ $ H.execCli' execConfig
+  H.noteM_ $ execCli' execConfig
      [ "conway", "governance", "drep", "retirement-certificate"
      , "--drep-verification-key-file", verificationKeyFp $ defaultDRepKeyPair 1
      , "--deposit-amt", show @Int 1_000_000
      , "--out-file", dreprRetirementCertFile
      ]
 
-  H.noteM_ $ H.execCli' execConfig
+  H.noteM_ $ execCli' execConfig
     [ "conway", "query", "utxo"
     , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--cardano-mode"
@@ -108,7 +108,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
   drepRetirementRegTxbodyFp <- H.note $ work </> "drep.retirement.txbody"
   drepRetirementRegTxSignedFp <- H.note $ work </> "drep.retirement.tx"
 
-  H.noteM_ $ H.execCli' execConfig
+  H.noteM_ $ execCli' execConfig
     [ "conway", "transaction", "build"
     , "--tx-in", Text.unpack $ renderTxIn txin2
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
@@ -117,7 +117,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
     , "--out-file", drepRetirementRegTxbodyFp
     ]
 
-  H.noteM_ $ H.execCli' execConfig
+  H.noteM_ $ execCli' execConfig
     [ "conway", "transaction", "sign"
     , "--tx-body-file", drepRetirementRegTxbodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
@@ -125,7 +125,7 @@ hprop_drep_retirement = H.integrationRetryWorkspace 2 "drep-retirement" $ \tempA
     , "--out-file", drepRetirementRegTxSignedFp
     ]
 
-  H.noteM_ $ H.execCli' execConfig
+  H.noteM_ $ execCli' execConfig
     [ "conway", "transaction", "submit"
     , "--tx-file", drepRetirementRegTxSignedFp
     ]

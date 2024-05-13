@@ -56,9 +56,8 @@ import           Text.Printf (printf)
 import           Testnet.Components.Configuration
 import qualified Testnet.Defaults as Defaults
 import           Testnet.Filepath
-import qualified Testnet.Process.Run as H
-import           Testnet.Process.Run
-import qualified Testnet.Property.Assert as H
+import           Testnet.Process.Run (execCli', execCli_, mkExecConfig)
+import           Testnet.Property.Assert (assertChainExtended, assertExpectedSposInLedgerState)
 import           Testnet.Runtime as TR
 import qualified Testnet.Start.Byron as Byron
 import           Testnet.Start.Types
@@ -392,7 +391,7 @@ cardanoTestnet
     now <- H.noteShowIO DTC.getCurrentTime
     deadline <- H.noteShow $ DTC.addUTCTime 45 now
     forM_ (map (nodeStdout . poolRuntime) poolNodes) $ \nodeStdoutFile -> do
-      H.assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile
+      assertChainExtended deadline (cardanoNodeLoggingFormat testnetOptions) nodeStdoutFile
 
     H.noteShowIO_ DTC.getCurrentTime
 
@@ -412,7 +411,7 @@ cardanoTestnet
     let tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tmpAbsPath
 
     node1sprocket <- H.headM $ poolSprockets runtime
-    execConfig <- H.mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
+    execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
     forM_ wallets $ \wallet -> do
       H.cat . signingKeyFp $ paymentKeyInfoPair wallet
@@ -428,7 +427,7 @@ cardanoTestnet
 
     stakePoolsFp <- H.note $ tmpAbsPath </> "current-stake-pools.json"
 
-    H.assertExpectedSposInLedgerState stakePoolsFp testnetOptions execConfig
+    assertExpectedSposInLedgerState stakePoolsFp testnetOptions execConfig
 
     when (cardanoEnableNewEpochStateLogging testnetOptions) $
       TR.startLedgerNewEpochStateLogging runtime tempBaseAbsPath

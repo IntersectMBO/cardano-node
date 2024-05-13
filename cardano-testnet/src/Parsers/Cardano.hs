@@ -1,6 +1,9 @@
+{-# LANGUAGE NumericUnderscores #-}
 module Parsers.Cardano
   ( cmdCardano
   ) where
+
+import           Cardano.Api (bounded)
 
 import           Cardano.CLI.Environment
 import           Cardano.CLI.EraBased.Options.Common hiding (pNetworkId)
@@ -9,11 +12,10 @@ import           Cardano.CLI.Legacy.Options
 import           Prelude
 
 import qualified Data.List as L
+import           Data.Word (Word64)
 import           Options.Applicative
 import qualified Options.Applicative as OA
 
-import           Testnet.Process.Cli (pNetworkId)
-import           Testnet.Property.Util
 import           Testnet.Start.Cardano
 import           Testnet.Start.Types
 import           Testnet.Types (readNodeLoggingFormat)
@@ -112,3 +114,22 @@ parseNodeConfigFile = NodeConfigurationYaml <$>
 
 cmdCardano :: EnvCli -> Mod CommandFields CardanoTestnetOptions
 cmdCardano envCli = command' "cardano" "Start a testnet in any era" (optsTestnet envCli)
+
+pNetworkId :: Parser Int
+pNetworkId =
+  OA.option (bounded "TESTNET_MAGIC") $ mconcat
+    [ OA.long "testnet-magic"
+    , OA.metavar "INT"
+    , OA.help "Specify a testnet magic id."
+    ]
+
+pMaxLovelaceSupply :: Parser Word64
+pMaxLovelaceSupply =
+  option auto
+      (   long "max-lovelace-supply"
+      <>  help "Max lovelace supply that your testnet starts with."
+      <>  metavar "WORD64"
+      <>  showDefault
+      <>  value 10_020_000_000
+      )
+

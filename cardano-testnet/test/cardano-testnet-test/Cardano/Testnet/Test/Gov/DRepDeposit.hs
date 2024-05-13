@@ -8,9 +8,6 @@ import           Cardano.Api
 import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
-                   (CardanoTestnetOptions (cardanoEpochLength, cardanoNodeEra, cardanoNumDReps),
-                   Conf (Conf, tempAbsPath), TmpAbsolutePath (unTmpAbsPath),
-                   cardanoDefaultTestnetOptions, cardanoTestnetDefault, makeTmpBaseAbsPath, mkConf)
 
 import           Prelude
 
@@ -18,12 +15,12 @@ import           Control.Monad (void)
 import qualified Data.Map as Map
 import           System.FilePath ((</>))
 
-import           Testnet.Components.DRep (createCertificatePublicationTxBody, failToSubmitTx,
-                   generateDRepKeyPair, generateRegistrationCertificate, registerDRep, signTx)
-import           Testnet.Components.Query (checkDRepState, getEpochStateView, getMinDRepDeposit)
+import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
-import qualified Testnet.Process.Run as H
-import qualified Testnet.Property.Util as H
+import           Testnet.Process.Cli.DRep
+import           Testnet.Process.Cli.Transaction
+import           Testnet.Process.Run (mkExecConfig)
+import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
 
 import           Hedgehog (Property)
@@ -33,7 +30,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRep Deposits/"'@
 hprop_ledger_events_drep_deposits :: Property
-hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
 
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
@@ -62,7 +59,7 @@ hprop_ledger_events_drep_deposits = H.integrationWorkspace "drep-deposits" $ \te
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
-  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath poolRuntime
 
   epochStateView <- getEpochStateView configurationFile socketPath

@@ -14,6 +14,7 @@ module Cardano.Testnet.Test.Cli.QuerySlotNumber
 
 import           Cardano.Api
 
+import           Cardano.Ledger.Shelley.Genesis (fromNominalDiffTimeMicro)
 import           Cardano.Slotting.Slot
 import           Cardano.Testnet
 
@@ -25,9 +26,8 @@ import qualified Data.Time.Format as DT
 import qualified System.Info as SYS
 
 import           Testnet.Components.TestWatchdog
-import qualified Testnet.Process.Run as H
-import           Testnet.Process.Run
-import qualified Testnet.Property.Util as H
+import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Types
 
 import           Hedgehog (Property)
@@ -37,7 +37,7 @@ import qualified Hedgehog.Internal.Property as H
 
 -- | Tests @query slot-number@ cardano-cli command that it returns correct slot numbers for provided utc time
 hprop_querySlotNumber :: Property
-hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_querySlotNumber = integrationRetryWorkspace 2 "query-slot-number" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf <- mkConf tempAbsBasePath'
 
@@ -64,7 +64,7 @@ hprop_querySlotNumber = H.integrationRetryWorkspace 2 "query-slot-number" $ \tem
 
   poolNode1 <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
-  execConfig <- H.mkExecConfig tempBaseAbsPath' poolSprocket1 testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath' poolSprocket1 testnetMagic
 
   id do
     H.note_ "Try to retrieve slot 5s before genesis"

@@ -36,13 +36,12 @@ import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
-import           Testnet.Components.SPO
 import           Testnet.Components.TestWatchdog
-import           Testnet.Process.Cli
-import qualified Testnet.Process.Run as H
-import           Testnet.Process.Run
+import           Testnet.Process.Cli.Keys
+import           Testnet.Process.Cli.SPO
+import           Testnet.Process.Run (execCli, execCli', mkExecConfig)
 import           Testnet.Property.Assert
-import qualified Testnet.Property.Util as H
+import           Testnet.Property.Util (decodeEraUTxO, integrationRetryWorkspace)
 import           Testnet.Runtime
 import           Testnet.Types
 
@@ -55,7 +54,7 @@ import qualified Hedgehog.Extras.Test.File as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/leadership-schedule/"'@
 hprop_leadershipSchedule :: Property
-hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
@@ -75,14 +74,14 @@ hprop_leadershipSchedule = H.integrationRetryWorkspace 2 "babbage-leadership-sch
     } <- cardanoTestnetDefault cTestnetOptions conf
 
   node1sprocket <- H.headM $ poolSprockets tr
-  execConfig <- H.mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
   let sbe = shelleyBasedEra @BabbageEra
 
   ----------------Need to register an SPO------------------
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
       utxoSKeyFile = signingKeyFp $ paymentKeyInfoPair wallet0
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "conway", "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
