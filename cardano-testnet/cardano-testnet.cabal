@@ -199,6 +199,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Gov.GovActionTimeout
                         Cardano.Testnet.Test.Gov.TreasuryGrowth
                         Cardano.Testnet.Test.Gov.TreasuryWithdrawal
+                        Cardano.Testnet.Test.Gov.UpdatePParam
                         Cardano.Testnet.Test.Misc
                         Cardano.Testnet.Test.Gov.DRepActivity
                         Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
@@ -216,6 +217,7 @@ test-suite cardano-testnet-test
                       , cardano-api:{cardano-api, internal}
                       , cardano-cli
                       , cardano-crypto-class
+                      , cardano-ledger-core
                       , cardano-ledger-conway
                       , cardano-ledger-core
                       , cardano-ledger-shelley
