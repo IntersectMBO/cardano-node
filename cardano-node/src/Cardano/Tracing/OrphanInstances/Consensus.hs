@@ -219,6 +219,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     VolDb.BlockAlreadyHere{}    -> Debug
     VolDb.Truncate{}            -> Error
     VolDb.InvalidFileNames{}    -> Warning
+    VolDb.DBClosed{}            -> Info
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -729,6 +730,7 @@ instance ( ConvertRawHash blk
         VolDb.BlockAlreadyHere bh   -> "Block " <> showT bh <> " was already in the Volatile DB."
         VolDb.Truncate e pth offs   -> "Truncating the file at " <> showT pth <> " at offset " <> showT offs <> ": " <> showT e
         VolDb.InvalidFileNames fs   -> "Invalid Volatile DB files: " <> showT fs
+        VolDb.DBClosed -> "Closed Volatile DB."
      where showProgressT :: Int -> Int -> Text
            showProgressT chunkNo outOf =
              pack (showFFloat (Just 2) (100 * fromIntegral chunkNo / fromIntegral outOf :: Float) mempty)
@@ -1244,6 +1246,7 @@ instance ( ConvertRawHash blk
       mconcat [ "kind" .= String "TraceVolatileDBEvent.InvalidFileNames"
                , "files" .= String (Text.pack . show $ map show fsPaths)
                ]
+    VolDb.DBClosed -> mconcat [ "kind" .= String "TraceVolatileDbEvent.DBClosed" ]
 
 instance ConvertRawHash blk => ToObject (ImmDB.TraceChunkValidation blk ChunkNo) where
   toObject verb ev = case ev of
@@ -1363,36 +1366,51 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
                , "res" .= case res of
                    ChainSync.Client.AcceptedJump info -> Aeson.object
                      [ "kind" .= String "AcceptedJump"
-                      -- , "tip" .= toObject verb (AF.headPoint frag)
-                      ]
-                     where
-                       -- frag = ChainSync.Client.jTheirFragment info
+                      , "payload" .= toObject verb info ]
                    ChainSync.Client.RejectedJump info -> Aeson.object
                      [ "kind" .= String "RejectedJump"
-                      -- , "tip" .= toObject verb (AF.headPoint frag)
-                      ]
-                     where
-                       -- frag = ChainSync.Client.jTheirFragment info
+                      , "payload" .= toObject verb info ]
                ]
     TraceJumpingWaitingForNextInstruction ->
       mconcat [ "kind" .= String "ChainSyncClientEvent.TraceJumpingWaitingForNextInstruction"
                ]
     TraceJumpingInstructionIs instr ->
       mconcat [ "kind" .= String "ChainSyncClientEvent.TraceJumpingInstructionIs"
-               , "instr" .= case instr of
-                   ChainSync.Client.RunNormally -> Aeson.object
-                     [ "kind" .= String "RunNormally"
-                      ]
-                   ChainSync.Client.Restart -> Aeson.object
-                     [ "kind" .= String "Restart"
-                      ]
-                   ChainSync.Client.JumpInstruction info -> Aeson.object
-                     [ "kind" .= String "JumpInstruction"
-                      -- , "tip" .= toObject verb (AF.headPoint frag)
-                      ]
-                     where
-                       -- frag = ChainSync.Client.jTheirFragment info
+               , "instr" .= toObject verb instr
                ]
+
+instance ( LedgerSupportsProtocol blk,
+           ConvertRawHash blk
+         ) => ToObject (ChainSync.Client.Instruction blk) where
+  toObject verb = \case
+    ChainSync.Client.RunNormally ->
+      mconcat ["kind" .= String "RunNormally"]
+    ChainSync.Client.Restart ->
+      mconcat ["kind" .= String "Restart"]
+    ChainSync.Client.JumpInstruction info ->
+      mconcat [ "kind" .= String "JumpInstruction"
+              , "payload" .= toObject verb info
+              ]
+
+instance ( LedgerSupportsProtocol blk,
+           ConvertRawHash blk
+         ) => ToObject (ChainSync.Client.JumpInstruction blk) where
+  toObject verb = \case
+    ChainSync.Client.JumpTo info ->
+      mconcat [ "kind" .= String "JumpTo"
+                , "info" .= toObject verb info ]
+    ChainSync.Client.JumpToGoodPoint info ->
+      mconcat [ "kind" .= String "JumpToGoodPoint"
+                , "info" .= toObject verb info ]
+
+instance ( LedgerSupportsProtocol blk,
+           ConvertRawHash blk
+         ) => ToObject (ChainSync.Client.JumpInfo blk) where
+  toObject verb info =
+    mconcat [ "kind" .= String "JumpInfo"
+              , "mostRecentIntersection" .= toObject verb (ChainSync.Client.jMostRecentIntersection info)
+              , "ourFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jOurFragment info))
+              , "theirFragment" .= toJSON ((tipToObject . tipFromHeader) `map` AF.toOldestFirst (ChainSync.Client.jTheirFragment info)) ]
 
 instance ConvertRawHash blk
       => ToObject (TraceChainSyncServerEvent blk) where
