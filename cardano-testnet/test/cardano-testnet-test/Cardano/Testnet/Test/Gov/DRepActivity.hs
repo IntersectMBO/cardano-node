@@ -22,6 +22,7 @@ import           Prelude
 
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
+import           Data.Data (Typeable)
 import qualified Data.Map as Map
 import           Data.String
 import qualified Data.Text as Text
@@ -93,9 +94,15 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
   gov <- H.createDirectoryIfMissing $ work </> "governance"
 
   -- This proposal should pass
-  let minEpochsToWaitIfChanging = EpochInterval 0 -- The change already provides a min bound
-      minEpochsToWaitIfNotChanging = EpochInterval 2 -- We cannot wait for change since there is no change (we wait a bit)
-      maxEpochsToWaitAfterProposal = EpochInterval 2 -- If it takes more than 2 epochs we give up in any case
+  let minEpochsToWaitIfChanging = EpochInterval 0 -- We don't need a min wait since we are changing
+                                                  -- the parameter, to a new value, if the parameter
+                                                  -- becomes the new value we will know the proposal
+                                                  -- passed.
+      minEpochsToWaitIfNotChanging = EpochInterval 2 -- We are not making a change to a parameter
+                                                     -- so we are testing the absence of a change and
+                                                     -- that means we have to wait some time to
+                                                     -- make sure it doesn't change.
+      maxEpochsToWaitAfterProposal = EpochInterval 2 -- If it takes more than 2 epochs we give up in any case.
       firstTargetDRepActivity = EpochInterval 3
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "firstProposal" wallet0 [(1, "yes")] firstTargetDRepActivity
@@ -148,25 +155,32 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
                                     minEpochsToWaitIfChanging (Just lastTargetDRepActivity)
                                     maxEpochsToWaitAfterProposal
 
+-- | This function creates a proposal to change the DRep activity interval
+-- and issues the specified votes using default DReps. Optionally, it also
+-- waits checks the expected effect of the proposal.
 activityChangeProposalTest
-  :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
-  => H.ExecConfig
-  -> EpochStateView
-  -> NodeConfigFile In
-  -> SocketPath
-  -> ConwayEraOnwards ConwayEra
-  -> FilePath
-  -> FilePath
-  -> PaymentKeyInfo
-  -> t (Int, String)
-  -> EpochInterval
-  -> EpochInterval
-  -> Maybe EpochInterval
-  -> EpochInterval
-  -> m (String, Word32)
+  :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t, Typeable era)
+  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
+  -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
+                    -- using the 'getEpochStateView' function.
+  -> NodeConfigFile In -- ^ Path to the node configuration file as returned by 'cardanoTestnetDefault'.
+  -> SocketPath  -- ^ Path to the cardano-node unix socket file.
+  -> ConwayEraOnwards era -- ^ The ConwayEraOnwards witness for current era.
+  -> FilePath -- ^ Base directory path where generated files will be stored.
+  -> String -- ^ Name for the subfolder that will be created under 'work' folder.
+  -> PaymentKeyInfo -- ^ Wallet that will pay for the transactions.
+  -> t (Int, String) -- ^ Votes to be casted for the proposal. Each tuple contains the number
+                     -- of votes of each type and the type of vote (i.e: "yes", "no", "abstain").
+  -> EpochInterval -- ^ The target DRep activity interval to be set by the proposal.
+  -> EpochInterval -- ^ The minimum number of epochs to wait before checking the proposal result.
+  -> Maybe EpochInterval -- ^ The expected DRep activity interval after the proposal is applied,
+                         -- or 'Nothing' if there are no expectations about whether the result of
+                         -- the proposal.
+  -> EpochInterval -- ^ The maximum number of epochs to wait for the DRep activity interval to
+                   -- become expected value.
+  -> m (String, Word32) -- ^ The transaction id and the index of the governance action.
 activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo work prefix
                            wallet votes change minWait mExpected maxWait@(EpochInterval maxWaitNum) = do
-
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
 
   mPreviousProposalInfo <- getLastPParamUpdateActionId execConfig
@@ -190,8 +204,9 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
   void $ waitForEpochs epochStateView minWait
-  forM_ mExpected $ \expected ->
-    H.nothingFailM $ watchEpochStateView epochStateView (isDRepActivityUpdated expected) maxWait
+  case mExpected of
+    Nothing -> return ()
+    Just expected -> H.nothingFailM $ watchEpochStateView epochStateView (isDRepActivityUpdated expected) maxWait
 
   return thisProposal
 
@@ -207,20 +222,23 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
         )
         sbe
 
+-- | Create a proposal to change the DRep activity interval.
+-- Return the transaction id and the index of the governance action.
 makeActivityChangeProposal
-  :: (HasCallStack, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
-  => H.ExecConfig
-  -> EpochStateView
-  -> NodeConfigFile 'In
-  -> SocketPath
-  -> ConwayEraOnwards ConwayEra
-  -> FilePath
-  -> String
-  -> Maybe (String, Word32)
-  -> EpochInterval
-  -> PaymentKeyInfo
-  -> Word64
-  -> m (String, Word32)
+  :: (HasCallStack, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m, Typeable era)
+  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
+  -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
+                    -- using the 'getEpochStateView' function.
+  -> NodeConfigFile In -- ^ Path to the node configuration file as returned by 'cardanoTestnetDefault'.
+  -> SocketPath  -- ^ Path to the cardano-node unix socket file.
+  -> ConwayEraOnwards era -- ^ The 'ConwayEraOnwards' witness for current era.
+  -> FilePath -- ^ Base directory path where generated files will be stored.
+  -> String -- ^ Name for the subfolder that will be created under 'work' folder.
+  -> Maybe (String, Word32) -- ^ The transaction id and the index of the previosu governance action if any.
+  -> EpochInterval -- ^ The target DRep activity interval to be set by the proposal.
+  -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
+  -> Word64 -- ^ The latest epoch until which to wait for the proposal to be registered by the chain.
+  -> m (String, Word32) -- ^ The transaction id and the index of the governance action.
 makeActivityChangeProposal execConfig epochStateView configurationFile socketPath
                            ceo work prefix prevGovActionInfo drepActivity wallet timeout = do
 
@@ -298,21 +316,21 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
 
   return (governanceActionTxId, governanceActionIndex)
 
+-- | Cast votes for a governance action.
 voteChangeProposal
-  :: HasCallStack
-  => MonadTest m
-  => MonadIO m
-  => MonadCatch m
-  => H.MonadAssertion m
-  => H.ExecConfig
-  -> EpochStateView
-  -> ShelleyBasedEra ConwayEra
-  -> FilePath
-  -> FilePath
-  -> String
-  -> Word32
-  -> [([Char], Int)]
-  -> PaymentKeyInfo
+  :: (HasCallStack, MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m, Typeable era)
+  => H.ExecConfig -- ^ Specifies the CLI execution configuration.v
+  -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
+                    -- using the 'getEpochStateView' function.
+  -> ShelleyBasedEra era -- ^ The 'ShelleyBasedEra' witness for current era.
+  -> FilePath -- ^ Base directory path where generated files will be stored.
+  -> String -- ^ Name for the subfolder that will be created under 'work' folder.
+  -> String -- ^ The transaction id of the governance action to vote.
+  -> Word32 -- ^ The index of the governance action to vote.
+  -> [([Char], Int)] -- ^ Votes to be casted for the proposal. Each tuple contains the index
+                     -- of the default DRep that will make the vote and the type of the vote
+                     -- (i.e: "yes", "no", "abstain").
+  -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
   -> m ()
 voteChangeProposal execConfig epochStateView sbe work prefix governanceActionTxId governanceActionIndex votes wallet = do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
