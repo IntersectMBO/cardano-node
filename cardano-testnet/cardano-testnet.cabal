@@ -91,15 +91,16 @@ library
   exposed-modules:      Cardano.Testnet
                         Parsers.Run
                         Testnet.Components.Configuration
-                        Testnet.Components.DRep
                         Testnet.Components.Query
-                        Testnet.Components.SPO
                         Testnet.Components.TestWatchdog
                         Testnet.Defaults
                         Testnet.EpochStateProcessing
                         Testnet.Filepath
                         Testnet.Ping
-                        Testnet.Process.Cli
+                        Testnet.Process.Cli.DRep
+                        Testnet.Process.Cli.Keys
+                        Testnet.Process.Cli.SPO
+                        Testnet.Process.Cli.Transaction
                         Testnet.Process.Run
                         Testnet.Property.Assert
                         Testnet.Property.Run

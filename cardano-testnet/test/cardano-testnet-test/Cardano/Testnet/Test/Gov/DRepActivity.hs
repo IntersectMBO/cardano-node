@@ -31,21 +31,16 @@ import           GHC.Stack (HasCallStack, callStack)
 import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
 
-import           Testnet.Components.DRep (createVotingTxBody, delegateToDRep, generateVoteFiles,
-                   getLastPParamUpdateActionId, registerDRep, retrieveTransactionId, signTx,
-                   submitTx)
-import           Testnet.Components.Query (EpochStateView, checkDRepState,
-                   findLargestUtxoForPaymentKey, getCurrentEpochNo, getEpochStateView,
-                   getMinDRepDeposit)
+import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
 import           Testnet.EpochStateProcessing (watchEpochStateView)
-import qualified Testnet.Process.Cli as P
-import qualified Testnet.Process.Run as H
-import qualified Testnet.Property.Util as H
-import           Testnet.Types (KeyPair (..), PaymentKeyInfo (..), PoolNode (..), SomeKeyPair (..),
-                   TestnetRuntime (TestnetRuntime, configurationFile, poolNodes, testnetMagic, wallets),
-                   nodeSocketPath)
+import           Testnet.Process.Cli.DRep
+import           Testnet.Process.Cli.Keys
+import           Testnet.Process.Cli.Transaction
+import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Property.Util (integrationWorkspace)
+import           Testnet.Types
 
 import           Hedgehog (MonadTest, Property, annotateShow)
 import qualified Hedgehog.Extras as H
@@ -53,7 +48,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRep Activity/"'@
 hprop_check_drep_activity :: Property
-hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -81,7 +76,7 @@ hprop_check_drep_activity = H.integrationWorkspace "test-activity" $ \tempAbsBas
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
-  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath poolRuntime
 
   epochStateView <- getEpochStateView configurationFile socketPath
@@ -251,7 +246,7 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
   let stakeVkeyFp = baseDir </> "stake.vkey"
       stakeSKeyFp = baseDir </> "stake.skey"
 
-  P.cliStakeAddressKeyGen
+  cliStakeAddressKeyGen
     $ KeyPair { verificationKey = File stakeVkeyFp
               , signingKey = File stakeSKeyFp
               }
@@ -259,7 +254,7 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
   proposalAnchorFile <- H.note $ baseDir </> "sample-proposal-anchor"
   H.writeFile proposalAnchorFile "dummy anchor data"
 
-  proposalAnchorDataHash <- H.execCli' execConfig
+  proposalAnchorDataHash <- execCli' execConfig
     [ "conway", "governance"
     , "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
@@ -268,7 +263,7 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
 
   proposalFile <- H.note $ baseDir </> "sample-proposal-anchor"
 
-  void $ H.execCli' execConfig $
+  void $ execCli' execConfig $
     [ "conway", "governance", "action", "create-protocol-parameters-update"
     , "--testnet"
     , "--governance-action-deposit", show @Integer minDRepDeposit
@@ -286,7 +281,7 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
   proposalBody <- H.note $ baseDir </> "tx.body"
   txIn <- findLargestUtxoForPaymentKey epochStateView sbe wallet
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "conway", "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
     , "--tx-in", Text.unpack $ renderTxIn txIn

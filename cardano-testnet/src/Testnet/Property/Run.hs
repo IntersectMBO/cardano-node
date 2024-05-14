@@ -23,7 +23,7 @@ import qualified System.Exit as IO
 import qualified System.Info as SYS
 import qualified System.IO as IO
 
-import qualified Testnet.Property.Util as H
+import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Start.Types
 
 import           Hedgehog (Property)
@@ -61,7 +61,7 @@ runTestnet tn = do
 
 
 testnetProperty :: (Conf -> H.Integration ()) -> H.Property
-testnetProperty tn = H.integrationWorkspace "testnet" $ \workspaceDir -> do
+testnetProperty tn = integrationWorkspace "testnet" $ \workspaceDir -> do
   conf <- mkConf workspaceDir
 
   -- Fork a thread to keep alive indefinitely any resources allocated by testnet.

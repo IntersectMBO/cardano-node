@@ -28,9 +28,8 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Configuration (eraToString)
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
-import qualified Testnet.Process.Cli as H
-import qualified Testnet.Process.Run as H
-import qualified Testnet.Property.Util as H
+import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
+import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
 
 import           Hedgehog
@@ -44,7 +43,7 @@ import qualified Hedgehog.Extras.Test.Golden as H
 -- If you want to recreate golden files, run the comment with
 -- RECREATE_GOLDEN_FILES=1 as its prefix
 hprop_cli_queries :: Property
-hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
@@ -68,7 +67,7 @@ hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> 
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
-  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath poolRuntime
 
   epochStateView <- getEpochStateView configurationFile socketPath
@@ -83,13 +82,13 @@ hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> 
   -- protocol-parameters
   do
     -- to stdout
-    protocolParametersOut <- H.execCli' execConfig [ eraName, "query", "protocol-parameters" ]
+    protocolParametersOut <- execCli' execConfig [ eraName, "query", "protocol-parameters" ]
     H.diffVsGoldenFile
       protocolParametersOut
       "test/cardano-testnet-test/files/golden/queries/protocolParametersOut.txt"
     -- protocol-parameters to a file
     let protocolParametersOutFile = work </> "protocol-parameters-out.json"
-    H.noteM_ $ H.execCli' execConfig [ eraName, "query", "protocol-parameters"
+    H.noteM_ $ execCli' execConfig [ eraName, "query", "protocol-parameters"
                                      , "--out-file", protocolParametersOutFile]
     H.diffFileVsGoldenFile
       protocolParametersOutFile
@@ -98,32 +97,32 @@ hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> 
   -- tip
   do
     -- to stdout
-    _ :: QueryTipLocalStateOutput <- H.noteShowM $ H.execCliStdoutToJson execConfig [ eraName, "query", "tip" ]
+    _ :: QueryTipLocalStateOutput <- H.noteShowM $ execCliStdoutToJson execConfig [ eraName, "query", "tip" ]
     -- to a file
     let tipOutFile = work </> "tip-out.json"
-    H.noteM_ $ H.execCli' execConfig [ eraName, "query", "tip"
-                                     , "--out-file", tipOutFile]
+    H.noteM_ $ execCli' execConfig [ eraName, "query", "tip"
+                                   , "--out-file", tipOutFile]
     _ :: QueryTipLocalStateOutput <- H.readJsonFileOk tipOutFile
     pure ()
 
   -- stake-pools
   do
     -- to stdout
-    stakePoolsOut <- H.execCli' execConfig [ eraName, "query", "stake-pools" ]
+    stakePoolsOut <- execCli' execConfig [ eraName, "query", "stake-pools" ]
     H.assertWith stakePoolsOut $ \pools ->
       length (lines pools) == 3 -- Because, by default, 3 stake pools are created
     -- Light test of the query's answer, the ids should exist:
     forM_ (lines stakePoolsOut) $ \stakePoolId -> do
-      H.execCli' execConfig [ eraName, "query", "pool-state"
-                            , "--stake-pool-id", stakePoolId ]
+      execCli' execConfig [ eraName, "query", "pool-state"
+                          , "--stake-pool-id", stakePoolId ]
     -- to a file
     let stakePoolsOutFile = work </> "stake-pools-out.json"
-    H.noteM_ $ H.execCli' execConfig [ eraName, "query", "stake-pools" , "--out-file", stakePoolsOutFile]
+    H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-pools" , "--out-file", stakePoolsOutFile]
 
   -- stake-distribution
   do
     -- to stdout
-    stakeDistrOut <- H.execCli' execConfig [ eraName, "query", "stake-distribution" ]
+    stakeDistrOut <- execCli' execConfig [ eraName, "query", "stake-distribution" ]
     -- stake addresses with stake
     let stakeAddresses :: [(Text, Text)] =
           map
@@ -139,23 +138,23 @@ hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> 
       length sa == 3
     -- Light test of the query's answer, the ids should exist:
     forM_ stakeAddresses $ \(stakePoolId, _) -> do
-      H.execCli' execConfig [ eraName, "query", "pool-state"
-                            , "--stake-pool-id", T.unpack stakePoolId ]
+      execCli' execConfig [ eraName, "query", "pool-state"
+                          , "--stake-pool-id", T.unpack stakePoolId ]
     -- to a file
     let stakePoolsOutFile = work </> "stake-distribution-out.json"
-    H.noteM_ $ H.execCli' execConfig [ eraName, "query", "stake-distribution"
-                                     , "--out-file", stakePoolsOutFile]
+    H.noteM_ $ execCli' execConfig [ eraName, "query", "stake-distribution"
+                                   , "--out-file", stakePoolsOutFile]
 
   -- gov-state
   do
     -- to stdout
-    H.execCli' execConfig [ eraName, "query", "gov-state" ]
+    execCli' execConfig [ eraName, "query", "gov-state" ]
       >>=
         (`H.diffVsGoldenFile`
             "test/cardano-testnet-test/files/golden/queries/govStateOut.json")
     -- to a file
     let govStateOutFile = work </> "gov-state-out.json"
-    H.noteM_ $ H.execCli' execConfig [ eraName, "query", "gov-state", "--out-file", govStateOutFile]
+    H.noteM_ $ execCli' execConfig [ eraName, "query", "gov-state", "--out-file", govStateOutFile]
     H.diffFileVsGoldenFile
       govStateOutFile
       "test/cardano-testnet-test/files/golden/queries/govStateOut.json"
@@ -165,12 +164,12 @@ hprop_cli_queries = H.integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> 
     -- to stdout
     -- TODO: deserialize to a Haskell value when
     -- https://github.com/IntersectMBO/cardano-cli/issues/606 is tackled
-    dreps :: Aeson.Value <- H.noteShowM $ H.execCliStdoutToJson execConfig [ eraName, "query", "drep-state", "--all-dreps"]
+    dreps :: Aeson.Value <- H.noteShowM $ execCliStdoutToJson execConfig [ eraName, "query", "drep-state", "--all-dreps"]
     assertArrayOfSize dreps 3
     -- to a file
     let drepStateOutFile = work </> "drep-state-out.json"
-    H.noteM_ $ H.execCli' execConfig [ eraName, "query", "drep-state", "--all-dreps"
-                                     , "--out-file", drepStateOutFile]
+    H.noteM_ $ execCli' execConfig [ eraName, "query", "drep-state", "--all-dreps"
+                                   , "--out-file", drepStateOutFile]
     _ :: Aeson.Value <- H.readJsonFileOk drepStateOutFile
     pure ()
 

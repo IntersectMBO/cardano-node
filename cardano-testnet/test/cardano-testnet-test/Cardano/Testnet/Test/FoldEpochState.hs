@@ -16,7 +16,7 @@ import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
 import           Testnet.Components.TestWatchdog
-import qualified Testnet.Property.Util as H
+import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
 
 import           Hedgehog ((===))
@@ -25,7 +25,7 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 import qualified Hedgehog.Extras.Test as H
 
 prop_foldEpochState :: H.Property
-prop_foldEpochState = H.integrationWorkspace "foldEpochState" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+prop_foldEpochState = integrationWorkspace "foldEpochState" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   conf <- TN.mkConf tempAbsBasePath'
 
   let tempAbsPath' = unTmpAbsPath $ tempAbsPath conf
