@@ -26,12 +26,10 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.VRF.Class as Crypto
 import           Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
-import qualified Cardano.Ledger.Allegra.Scripts as Allegra
 import qualified Cardano.Ledger.Alonzo.Plutus.Evaluate as Alonzo
 import           Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..), AlonzoUtxoPredFailure,
                    AlonzoUtxosPredFailure, AlonzoUtxowPredFailure (..))
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Api as Ledger
 import           Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage
@@ -76,7 +74,7 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
-import           Data.Aeson (Value (..), object)
+import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.List.NonEmpty as NonEmpty
@@ -140,11 +138,12 @@ instance
 
 instance
   ( Ledger.Era ledgerera
-  , ToJSON (Ledger.PParamsUpdate ledgerera)
+  , Show (Ledger.PParamsHKD Identity ledgerera)
   ) => ToObject (ShelleyLedgerUpdate ledgerera) where
-  toObject verb (ShelleyUpdatedProtocolUpdates updates) =
-    mconcat [ "kind" .= String "ShelleyUpdatedProtocolUpdates"
-             , "updates" .= map (toObject verb) updates
+  toObject _verb (ShelleyUpdatedPParams updates epochNo) =
+    mconcat [ "kind" .= String "ShelleyUpdatedPParams"
+             , "updates" .= show updates
+             , "epochNo" .= show epochNo
              ]
 instance
   ( ToObject (PredicateFailure (Ledger.EraRule "DELEG" era))
@@ -222,29 +221,6 @@ instance ToObject (Set (Credential 'Staking StandardCrypto)) where
   toObject _verb creds =
     mconcat [ "kind" .= String "StakeCreds"
              , "stakeCreds" .= map toJSON (Set.toList creds)
-             ]
-
-instance
-  ( Ledger.Era ledgerera
-  , ToJSON (Ledger.PParamsUpdate ledgerera)
-  ) => ToObject (ProtocolUpdate ledgerera) where
-  toObject verb ProtocolUpdate{protocolUpdateProposal, protocolUpdateState} =
-    mconcat [ "proposal" .= toObject verb protocolUpdateProposal
-             , "state"    .= toObject verb protocolUpdateState
-             ]
-
-instance ToJSON (Ledger.PParamsUpdate era)
-         => ToObject (UpdateProposal era) where
-  toObject _verb UpdateProposal{proposalParams, proposalVersion, proposalEpoch} =
-    mconcat [ "params"  .= proposalParams
-             , "version" .= proposalVersion
-             , "epoch"   .= proposalEpoch
-             ]
-
-instance Core.Crypto crypto => ToObject (UpdateState crypto) where
-  toObject _verb UpdateState{proposalVotes, proposalReachedQuorum} =
-    mconcat [ "proposal"      .= proposalVotes
-             , "reachedQuorum" .= proposalReachedQuorum
              ]
 
 instance Core.Crypto crypto => ToObject (ChainTransitionError crypto) where
@@ -577,16 +553,6 @@ instance
              , "network" .= network
              , "addrs"   .= addrs
              ]
-
-
-instance ToJSON Allegra.ValidityInterval where
-  toJSON vi =
-    Aeson.object $
-        [ "invalidBefore"    .= x | x <- mbfield (Allegra.invalidBefore    vi) ]
-     ++ [ "invalidHereafter" .= x | x <- mbfield (Allegra.invalidHereafter vi) ]
-    where
-      mbfield SNothing  = []
-      mbfield (SJust x) = [x]
 
 instance
   ( ToObject (Ledger.EraRuleFailure "PPUP" ledgerera)
@@ -1156,32 +1122,6 @@ instance
              ]
   toObject verb (Alonzo.UpdateFailure pFailure) =
     toObject verb pFailure
-
-deriving newtype instance ToJSON Alonzo.IsValid
-
-instance ToJSON Alonzo.TagMismatchDescription where
-  toJSON tmd = case tmd of
-    Alonzo.PassedUnexpectedly ->
-      object
-        [ "kind" .= String "TagMismatchDescription"
-        , "error" .= String "PassedUnexpectedly"
-        ]
-    Alonzo.FailedUnexpectedly forReasons ->
-      object
-        [ "kind" .= String "TagMismatchDescription"
-        , "error" .= String "FailedUnexpectedly"
-        , "reconstruction" .= forReasons
-        ]
-
-instance ToJSON Alonzo.FailureDescription where
-  toJSON f = case f of
-    Alonzo.PlutusFailure t _bs ->
-      object
-        [ "kind" .= String "FailureDescription"
-        , "error" .= String "PlutusFailure"
-        , "description" .= t
-        -- , "reconstructionDetail" .= bs
-        ]
 
 instance
   ( Ledger.Era ledgerera

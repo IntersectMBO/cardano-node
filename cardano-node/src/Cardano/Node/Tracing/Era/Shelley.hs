@@ -225,35 +225,10 @@ instance
   ( Consensus.ShelleyBasedEra era
   , ToJSON (Ledger.PParamsUpdate era)
   ) => LogFormatting (ShelleyLedgerUpdate era) where
-  forMachine dtal (ShelleyUpdatedProtocolUpdates updates) =
+  forMachine _dtal (ShelleyUpdatedPParams updates epochNo) =
     mconcat [ "kind" .= String "ShelleyUpdatedProtocolUpdates"
-             , "updates" .= map (forMachine dtal) updates
-             ]
-
-instance
-  ( Ledger.Era era
-  , ToJSON (Ledger.PParamsUpdate era)
-  ) => LogFormatting (ProtocolUpdate era) where
-  forMachine dtal ProtocolUpdate{protocolUpdateProposal, protocolUpdateState} =
-    mconcat [ "proposal" .= forMachine dtal protocolUpdateProposal
-             , "state"    .= forMachine dtal protocolUpdateState
-             ]
-
-instance
-  ( ToJSON (Ledger.PParamsUpdate era)
-  ) => LogFormatting (UpdateProposal era) where
-  forMachine _dtal UpdateProposal{proposalParams, proposalVersion, proposalEpoch} =
-    mconcat [ "params"  .= proposalParams
-             , "version" .= proposalVersion
-             , "epoch"   .= proposalEpoch
-             ]
-
-instance
-  ( Ledger.Crypto crypto
-  ) => LogFormatting (UpdateState crypto) where
-  forMachine _dtal UpdateState{proposalVotes, proposalReachedQuorum} =
-    mconcat [ "proposal"      .= proposalVotes
-             , "reachedQuorum" .= proposalReachedQuorum
+             , "updates" .= show updates
+             , "epochNo" .= show epochNo
              ]
 
 instance
