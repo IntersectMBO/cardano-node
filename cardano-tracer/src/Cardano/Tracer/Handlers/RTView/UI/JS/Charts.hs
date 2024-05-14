@@ -17,7 +17,7 @@ module Cardano.Tracer.Handlers.RTView.UI.JS.Charts
 
 import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.UI.Types
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
+import           Cardano.Tracer.Handlers.Utils
 
 import           Data.List (intercalate)
 import           Data.String.QQ

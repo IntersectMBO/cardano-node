@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module Cardano.Tracer.Handlers.RTView.Notifications.Types
+module Cardano.Tracer.Handlers.Notifications.Types
   ( EmailSSL (..)
   , EmailSettings (..)
   , EventsSettings (..)
@@ -12,7 +12,7 @@ module Cardano.Tracer.Handlers.RTView.Notifications.Types
   ) where
 
 import           Cardano.Logging (SeverityS (..))
-import           Cardano.Tracer.Handlers.RTView.Notifications.Timer
+import           Cardano.Tracer.Handlers.Notifications.Timer
 import           Cardano.Tracer.Types
 
 import           Control.Concurrent.STM.TBQueue (TBQueue)

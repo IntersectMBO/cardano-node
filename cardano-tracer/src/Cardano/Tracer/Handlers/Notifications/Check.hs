@@ -1,14 +1,11 @@
-module Cardano.Tracer.Handlers.RTView.Notifications.Check
+module Cardano.Tracer.Handlers.Notifications.Check
   ( checkCommonErrors
   ) where
 
---import           Data.Text (Text)
---import qualified Data.Text as T
-
 import           Cardano.Logging (SeverityS (..))
-import           Cardano.Tracer.Handlers.RTView.Notifications.Types
-import           Cardano.Tracer.Handlers.RTView.Notifications.Utils
-import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
+import           Cardano.Tracer.Handlers.Notifications.Types
+import           Cardano.Tracer.Handlers.Notifications.Utils
+import           Cardano.Tracer.Handlers.State.TraceObjects
 import           Cardano.Tracer.Types
 
 checkCommonErrors

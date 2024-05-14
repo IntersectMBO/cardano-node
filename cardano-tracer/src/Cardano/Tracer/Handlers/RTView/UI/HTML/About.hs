@@ -6,11 +6,9 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.About
   ) where
 
 import           Cardano.Git.Rev (gitRev)
-import           Cardano.Tracer.Handlers.RTView.System
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
-
 import           Data.List.Extra (lower)
 import qualified Data.Text as T
 import           Data.Version (showVersion)
@@ -21,6 +19,7 @@ import           System.Info (os)
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 import           Paths_cardano_tracer (version)
+import           Cardano.Tracer.Utils (getProcessId)
 
 mkAboutInfo :: UI Element
 mkAboutInfo = do
@@ -31,11 +30,11 @@ mkAboutInfo = do
 
   copyPath <- UI.button #. "button is-info"
                         #+ [image "rt-view-copy-icon-on-button" copySVG]
-  on UI.click copyPath . const $
+  on_ UI.click copyPath do
     copyTextToClipboard pathToConfig
 
   closeIt <- UI.button #. "delete"
-  pid <- getProcessId
+  pid <- liftIO getProcessId
   info <-
     UI.div #. "modal" #+
       [ UI.div #. "modal-background" #+ []
@@ -104,7 +103,7 @@ mkAboutInfo = do
               ]
           ]
       ]
-  on UI.click closeIt . const $ element info #. "modal"
+  on_ UI.click closeIt do element info #. "modal"
   return info
  where
   commit = T.unpack . T.take 7 $ $(gitRev)

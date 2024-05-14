@@ -10,10 +10,10 @@ module Cardano.Tracer.Handlers.RTView.UI.Theme
   ) where
 
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.RTView.System
 import           Cardano.Tracer.Handlers.RTView.UI.Charts
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
+import           Cardano.Tracer.Handlers.System
 
 import           Control.Exception.Extra (ignore, try_)
 import           Control.Monad (void)

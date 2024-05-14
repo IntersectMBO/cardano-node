@@ -27,7 +27,8 @@ mkNoNodesInfo :: Network -> UI Element
 mkNoNodesInfo networkConfig = do
   window <- askWindow
   closeIt <- UI.button #. "delete" # set (UI.attr "aria-label") "delete"
-  on UI.click closeIt . const $ findAndHide window "no-nodes-info"
+  on_ UI.click closeIt do
+    findAndHide window "no-nodes-info"
 
   UI.div ## "no-nodes" #. "container is-max-widescreen" #+
     [ UI.p #. "has-text-centered" #+

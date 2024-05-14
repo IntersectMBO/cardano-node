@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.Tracer.Handlers.RTView.Notifications.Send
+module Cardano.Tracer.Handlers.Notifications.Send
   ( makeAndSendNotification
   ) where
 
 import           Cardano.Logging (showT)
-import           Cardano.Tracer.Handlers.RTView.Notifications.Email
-import           Cardano.Tracer.Handlers.RTView.Notifications.Types
+import           Cardano.Tracer.Handlers.Notifications.Email
+import           Cardano.Tracer.Handlers.Notifications.Types
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 

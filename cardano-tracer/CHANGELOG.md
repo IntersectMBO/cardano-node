@@ -1,5 +1,16 @@
 # ChangeLog
 
+## 0.2.4 (July 12, 2024)
+
+* Put RTView behind a feature flag that is disabled by default. To enable RTView,
+  use the cabal flag `-f +rtview`. No change to the service configuration.
+* EKG monitoring moved from `threepenny-gui` to direct HTML rendering.
+* Drop dependency on package `threepenny-gui` (unless RTView is enabled).
+* Restructured modules `Cardano.Tracer.Handlers.RTView.Notifications.*`
+  to `Cardano.Tracer.Handlers.Notifications.*`.
+* All modules related to notification, SSL, and others moved from the RTView
+  namespace.
+
 ## 0.2.3 (April 19, 2024)
 
 * The field `rpMaxAgeHours` of `RotationParams` is changed to

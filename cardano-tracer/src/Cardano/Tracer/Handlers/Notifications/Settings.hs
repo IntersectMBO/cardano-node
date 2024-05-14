@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Cardano.Tracer.Handlers.RTView.Notifications.Settings
+module Cardano.Tracer.Handlers.Notifications.Settings
   ( incompleteEmailSettings
   , readSavedEmailSettings
   , readSavedEventsSettings
@@ -12,8 +12,8 @@ module Cardano.Tracer.Handlers.RTView.Notifications.Settings
   ) where
 
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.RTView.Notifications.Types
-import           Cardano.Tracer.Handlers.RTView.System
+import           Cardano.Tracer.Handlers.Notifications.Types
+import           Cardano.Tracer.Handlers.System
 
 import           Control.Exception.Extra (ignore, try_)
 import           Data.Aeson (decodeStrict', encode, encodeFile)
@@ -21,9 +21,9 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 
-import           Crypto.Cipher.AES ()
-import           Crypto.Cipher.Types ()
-import           Crypto.Error ()
+-- import           Crypto.Cipher.AES ()
+-- import           Crypto.Cipher.Types ()
+-- import           Crypto.Error ()
 
 readSavedEmailSettings :: Maybe FilePath -> IO EmailSettings
 readSavedEmailSettings rtvSD = do
@@ -93,8 +93,8 @@ readSavedEventsSettings rtvSD = do
   defaultState = (False, 1800)
 
 saveEmailSettingsOnDisk :: TracerEnv -> EmailSettings -> IO ()
-saveEmailSettingsOnDisk TracerEnv{teRTViewStateDir} settings = ignore $ do
-  (pathToEmailSettings, _) <- getPathsToNotificationsSettings teRTViewStateDir
+saveEmailSettingsOnDisk TracerEnv{teStateDir} settings = ignore do
+  (pathToEmailSettings, _) <- getPathsToNotificationsSettings teStateDir
   LBS.writeFile pathToEmailSettings $ encode settings
   -- Encrypt JSON-content to avoid saving user's private data in "plain mode".
   -- case encryptJSON . LBS.toStrict . encode $ settings of
@@ -102,6 +102,6 @@ saveEmailSettingsOnDisk TracerEnv{teRTViewStateDir} settings = ignore $ do
   --   Left _ -> return ()
 
 saveEventsSettingsOnDisk :: TracerEnv -> EventsSettings -> IO ()
-saveEventsSettingsOnDisk TracerEnv{teRTViewStateDir} settings = ignore $ do
-  (_, pathToEventsSettings) <- getPathsToNotificationsSettings teRTViewStateDir
+saveEventsSettingsOnDisk TracerEnv{teStateDir} settings = ignore do
+  (_, pathToEventsSettings) <- getPathsToNotificationsSettings teStateDir
   encodeFile pathToEventsSettings settings

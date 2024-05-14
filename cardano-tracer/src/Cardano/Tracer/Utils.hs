@@ -1,5 +1,4 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -22,6 +21,7 @@ module Cardano.Tracer.Utils
   , initConnectedNodesNames
   , initDataPointRequestors
   , initProtocolsBrake
+  , logTrace
   , lift2M
   , lift3M
   , forMM
@@ -37,12 +37,13 @@ module Cardano.Tracer.Utils
   , clearRegistry
   , modifyRegistry_
   , readRegistry
+  , getProcessId
   ) where
 
 import           Cardano.Node.Startup (NodeInfo (..))
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
+import           Cardano.Tracer.Handlers.Utils
 import           Cardano.Tracer.Types
 import           Ouroboros.Network.Socket (ConnectionId (..))
 
@@ -54,17 +55,18 @@ import           Control.Applicative (liftA2, liftA3)
 #endif
 import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
 import           Control.Concurrent.Extra (Lock)
-import           Control.Concurrent.MVar (newMVar, putMVar, readMVar, tryReadMVar, modifyMVar_)
+import           Control.Concurrent.MVar (newMVar, swapMVar, readMVar, tryReadMVar, modifyMVar_)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (modifyTVar', newTVarIO, readTVarIO)
 import           Control.Exception (SomeAsyncException (..), SomeException, finally, fromException,
                    try, tryJust)
 import           Control.Monad (forM_)
 import           Control.Monad.Extra (whenJustM)
-import           "contra-tracer" Control.Tracer (showTracing, stdoutTracer, traceWith)
+import           "contra-tracer" Control.Tracer (stdoutTracer, traceWith)
+import           Data.Word (Word32)
 import qualified Data.Bimap as BM
 import           Data.Foldable (traverse_)
-import           Data.Functor ((<&>))
+import           Data.Functor ((<&>), void)
 import           Data.List.Extra (dropPrefix, dropSuffix, replace)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as S
@@ -74,6 +76,13 @@ import           System.IO (hClose, hFlush, stdout)
 import           System.Mem.Weak (deRefWeak)
 import qualified System.Signal as S
 import           System.Time.Extra (sleep)
+
+#if defined(mingw32_HOST_OS)
+import           System.Win32.Process (getCurrentProcessId)
+#else
+import           System.Posix.Process (getProcessID)
+import           System.Posix.Types (CPid (..))
+#endif
 
 -- | Run monadic action in a loop. If there's an exception,
 --   it will re-run the action again, after pause that grows.
@@ -116,7 +125,10 @@ showProblemIfAny verb action =
     Right _ -> return ()
 
 logTrace :: String -> IO ()
-logTrace = traceWith $ showTracing stdoutTracer
+logTrace = traceWith stdoutTracer
+
+-- logTrace :: String -> IO ()
+-- logTrace = traceWith $ showTracing stdoutTracer
 
 connIdToNodeId :: Show addr => ConnectionId addr -> NodeId
 connIdToNodeId ConnectionId{remoteAddress} = NodeId preparedAddress
@@ -259,10 +271,20 @@ elemsRegistry (Registry registry) = do
 clearRegistry :: HandleRegistry -> IO ()
 clearRegistry registry@(Registry mvar) = do
   elemsRegistry registry >>= traverse_ (hClose . fst)
-  putMVar mvar Map.empty
+  void do
+    swapMVar mvar Map.empty
 
 modifyRegistry_ :: Registry a b -> (Map.Map a b -> IO (Map.Map a b)) -> IO ()
 modifyRegistry_ (Registry registry) = modifyMVar_ registry
 
 readRegistry :: Registry a b -> IO (Map.Map a b)
 readRegistry (Registry registry) = readMVar registry
+
+getProcessId :: IO Word32
+getProcessId =
+#if defined(mingw32_HOST_OS)
+  getCurrentProcessId
+#else
+  do CPid pid <- getProcessID
+     return $ fromIntegral pid
+#endif

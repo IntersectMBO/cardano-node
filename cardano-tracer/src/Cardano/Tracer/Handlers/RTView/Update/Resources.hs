@@ -10,7 +10,7 @@ module Cardano.Tracer.Handlers.RTView.Update.Resources
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.State.Last
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
+import           Cardano.Tracer.Handlers.Utils
 import           Cardano.Tracer.Types
 
 import           Control.Concurrent.STM.TVar (readTVarIO)

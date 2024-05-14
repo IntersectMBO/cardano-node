@@ -22,7 +22,7 @@ module Cardano.Tracer.Handlers.RTView.State.Historical
   , readValueD
   ) where
 
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
+import           Cardano.Tracer.Handlers.Utils
 import           Cardano.Tracer.Types (NodeId)
 
 import           Control.Concurrent.STM (atomically)

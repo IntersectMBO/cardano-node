@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-module Cardano.Tracer.Handlers.RTView.SSL.Certs
+module Cardano.Tracer.Handlers.SSL.Certs
   ( placeDefaultSSLFiles
   ) where
 
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.RTView.System
+import           Cardano.Tracer.Handlers.System
 
 import           Control.Exception.Extra (ignore)
 import           Control.Monad.Extra (unlessM)

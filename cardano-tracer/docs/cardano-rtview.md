@@ -1,6 +1,12 @@
 # Cardano RTView
 
-RTView is a part of `cardano-tracer` [service](https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md). It is a real-time monitoring tool for Cardano nodes (RTView is an abbreviation for "Real Time View"). It provides an interactive web page where you can see different kinds of information about connected nodes.
+> Attention: RTView is hidden behind a build flag. Enable with this cabal flag: `-f +rtview`.
+
+RTView is an optional part of `cardano-tracer` [service](https://github.com/intersectmbo/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md). It is a real-time monitoring tool for Cardano nodes (RTView is an abbreviation for "Real Time View"). It provides an interactive web page where you can see different kinds of information about connected nodes.
+
+RTView is not feature complete and is thus disabled by default. Being
+an experimental/optional component of `cardano-tracer` we will still
+guarantee it remains buildable and usable in its current state.
 
 # Contents
 

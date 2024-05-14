@@ -2,21 +2,21 @@
 
 module Cardano.Tracer.Handlers.RTView.Run
   ( runRTView
-  , module Cardano.Tracer.Handlers.RTView.Notifications.Utils
-  , module Cardano.Tracer.Handlers.RTView.State.TraceObjects
+  , module Cardano.Tracer.Handlers.Notifications.Utils
+  , module Cardano.Tracer.Handlers.State.TraceObjects
   ) where
 
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.RTView.Notifications.Utils
-import           Cardano.Tracer.Handlers.RTView.SSL.Certs
+import           Cardano.Tracer.Handlers.Notifications.Utils
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
 import           Cardano.Tracer.Handlers.RTView.State.Last
-import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Main
 import           Cardano.Tracer.Handlers.RTView.Update.EraSettings
 import           Cardano.Tracer.Handlers.RTView.Update.Historical
+import           Cardano.Tracer.Handlers.SSL.Certs
+import           Cardano.Tracer.Handlers.State.TraceObjects
 import           Cardano.Tracer.MetaTrace
 
 import           Control.Concurrent.Async.Extra (sequenceConcurrently)
@@ -36,9 +36,9 @@ import qualified Graphics.UI.Threepenny as UI
 --   The web-page is built using 'threepenny-gui' library. Please note
 --   Gitub-version of this library is used, not Hackage-version!
 
-runRTView :: TracerEnv -> IO ()
-runRTView tracerEnv@TracerEnv{teTracer} =
-  whenJust hasRTView $ \(Endpoint host port) -> do
+runRTView :: TracerEnv -> TracerEnvRTView -> IO ()
+runRTView tracerEnv@TracerEnv{teTracer} tracerEnvRTView =
+  whenJust hasRTView \(Endpoint host port) -> do
     traceWith teTracer TracerStartedRTView
     -- Pause to prevent collision between "Listening"-notifications from servers.
     sleep 0.3
@@ -59,13 +59,14 @@ runRTView tracerEnv@TracerEnv{teTracer} =
       [ UI.startGUI (config host port certFile keyFile) $
           mkMainPage
             tracerEnv
+            tracerEnvRTView
             displayedElements
             eraSettings
             reloadFlag
             logging
             network
-      , runHistoricalUpdater  tracerEnv lastResources
-      , runHistoricalBackup   tracerEnv
+      , runHistoricalUpdater  tracerEnv tracerEnvRTView lastResources
+      , runHistoricalBackup   tracerEnv tracerEnvRTView
       , runEraSettingsUpdater tracerEnv eraSettings
       ]
  where
