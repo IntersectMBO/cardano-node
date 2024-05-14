@@ -25,6 +25,7 @@ import           Cardano.Api
 
 import qualified Cardano.Benchmarking.PlutusScripts.CustomCall as CustomCall
 import qualified Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1Loop as ECDSA
+import qualified Cardano.Benchmarking.PlutusScripts.HashOntoG2AndAdd as HashG2Add
 import qualified Cardano.Benchmarking.PlutusScripts.Loop as Loop
 import qualified Cardano.Benchmarking.PlutusScripts.LoopV3 as LoopV3
 import qualified Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1Loop as Schnorr
@@ -35,6 +36,7 @@ getAllScripts :: [PlutusBenchScript]
 getAllScripts =
   [ CustomCall.script
   , ECDSA.script
+  , HashG2Add.script
   , Loop.script
   , LoopV3.script
   , Schnorr.script

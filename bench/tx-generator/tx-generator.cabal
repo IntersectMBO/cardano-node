@@ -195,7 +195,9 @@ test-suite tx-generator-apitest
 
   build-depends:        base
                       , aeson
+                      , aeson-pretty
                       , bytestring
+                      , directory
                       , filepath
                       , optparse-applicative-fork
                       , cardano-api

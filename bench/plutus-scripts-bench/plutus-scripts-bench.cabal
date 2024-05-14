@@ -1,6 +1,6 @@
 cabal-version:          3.0
 name:                   plutus-scripts-bench
-version:                1.0.2.1
+version:                1.0.3.0
 synopsis:               Plutus scripts used for benchmarking
 description:            Plutus scripts used for benchmarking.
 category:               Cardano,
@@ -40,12 +40,18 @@ common common-definitions
     ImportQualifiedPost
     OverloadedStrings
 
-  -- See Plutus Tx readme for why we need the following flags:
-  -- -fobject-code -fno-ignore-interface-pragmas and -fno-omit-interface-pragmas
   ghc-options:
     -Wall -Wcompat -Wincomplete-record-updates
     -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
-    -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+    -Widentities -Wnoncanonical-monad-instances
+
+  -- See Plutus Tx readme for why we need the following flags:
+  ghc-options:
+    -fno-specialise -fno-spec-constr -fno-strictness
+    -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+    -fno-unbox-strict-fields -fno-unbox-small-strict-fields
+    -fobject-code
+    -- TODO: what about? -fno-full-laziness
 
   if flag(defer-plugin-errors)
     ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors
@@ -66,6 +72,7 @@ library
   other-modules:
     Cardano.Benchmarking.PlutusScripts.CustomCall
     Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1Loop
+    Cardano.Benchmarking.PlutusScripts.HashOntoG2AndAdd
     Cardano.Benchmarking.PlutusScripts.Loop
     Cardano.Benchmarking.PlutusScripts.LoopV3
     Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1Loop
@@ -85,7 +92,7 @@ library
   build-depends:
     , filepath
     , bytestring
-    , serialise
+    -- , serialise
     , template-haskell
     , text
 
