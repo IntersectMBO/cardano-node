@@ -26,6 +26,7 @@ import           Prelude
 
 import           Control.Monad (void)
 import           Control.Monad.Catch (MonadCatch)
+import           Data.Data (Typeable)
 import           Data.String (fromString)
 import qualified Data.Text as Text
 import           Data.Word (Word32)
@@ -33,9 +34,11 @@ import           GHC.Stack (HasCallStack, callStack)
 import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
 
-import           Testnet.Components.Query (EpochStateView, findLargestUtxoForPaymentKey,
-                   getCurrentEpochNo, getEpochStateView, getGovState, getMinDRepDeposit,
-                   waitAndCheckNewEpochState)
+import           Testnet.Components.Configuration (anyEraToString)
+import           Testnet.Components.Query (EpochStateView, assertNewEpochState,
+                   findLargestUtxoForPaymentKey, getCurrentEpochNo, getEpochStateView, getGovState,
+                   getMinDRepDeposit)
+import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
 import           Testnet.Process.Cli.DRep (createCertificatePublicationTxBody, createVotingTxBody,
                    generateVoteFiles)
@@ -49,9 +52,6 @@ import           Testnet.Types (KeyPair (..),
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
-import Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
-import Testnet.Components.Configuration (anyEraToString)
-import Data.Data (Typeable)
 
 -- | This test creates a default testnet with three DReps delegated to by three
 -- separate stake holders (one per DRep). We then do a proposal for an arbitrary
@@ -216,10 +216,13 @@ desiredPoolNumberProposalTest execConfig epochStateView configurationFile socket
   (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
-  waitAndCheckNewEpochState epochStateView configurationFile socketPath ceo
-                            (EpochInterval (fromIntegral minWait)) (fromIntegral <$> mExpected)
-                            (EpochInterval (fromIntegral maxWait))
-                            (nesEpochStateL . epochStateGovStateL . cgsCurPParamsL . ppNOptL)
+  void $ waitForEpochs epochStateView (EpochInterval $ fromIntegral minWait)
+
+  case mExpected of
+    Nothing -> return ()
+    Just expected -> assertNewEpochState epochStateView ceo (fromIntegral expected)
+                       (EpochInterval $ fromIntegral maxWait)
+                       (nesEpochStateL . epochStateGovStateL . cgsCurPParamsL . ppNOptL)
 
   return thisProposal
 

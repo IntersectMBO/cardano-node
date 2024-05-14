@@ -32,7 +32,9 @@ import           Data.Word (Word32, Word64)
 import           GHC.Stack
 import           System.FilePath ((</>))
 
-import           Testnet.Components.Query
+import           Testnet.Components.Query (EpochStateView, assertNewEpochState, checkDRepState,
+                   findLargestUtxoForPaymentKey, getCurrentEpochNo, getEpochStateView,
+                   getMinDRepDeposit)
 import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
 import           Testnet.Process.Cli.DRep
@@ -200,8 +202,12 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
   (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
-  waitAndCheckNewEpochState epochStateView configurationFile socketPath ceo minWait mExpected maxWait
-                            (nesEpochStateL . epochStateGovStateL . curPParamsGovStateL . ppDRepActivityL)
+  void $ waitForEpochs epochStateView minWait
+
+  case mExpected of
+    Nothing -> return ()
+    Just expected -> assertNewEpochState epochStateView ceo expected maxWait
+                       (nesEpochStateL . epochStateGovStateL . curPParamsGovStateL . ppDRepActivityL)
 
   return thisProposal
 
