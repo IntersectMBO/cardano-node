@@ -39,6 +39,7 @@ import           Graphics.UI.Threepenny.Core
 
 mkMainPage
   :: TracerEnv
+  -> TracerEnvRTView
   -> DisplayedElements
   -> ErasSettings
   -> PageReloadedFlag
@@ -46,7 +47,7 @@ mkMainPage
   -> Network
   -> UI.Window
   -> UI ()
-mkMainPage tracerEnv displayedElements nodesEraSettings reloadFlag
+mkMainPage tracerEnv tracerEnvRTView displayedElements nodesEraSettings reloadFlag
            loggingConfig networkConfig window = do
   void $ return window # set UI.title pageTitle
   void $ UI.getHead window #+
@@ -68,13 +69,13 @@ mkMainPage tracerEnv displayedElements nodesEraSettings reloadFlag
   datasetIndices <- initDatasetsIndices
   peers <- liftIO initPeers
 
-  webPageIsOpened tracerEnv
+  webPageIsOpened tracerEnvRTView
 
-  pageBody <- mkPageBody tracerEnv networkConfig datasetIndices
+  pageBody <- mkPageBody tracerEnv tracerEnvRTView networkConfig datasetIndices
 
   -- Prepare and run the timer, which will hide the page preloader.
   preloaderTimer <- UI.timer # set UI.interval 10
-  on UI.tick preloaderTimer . const $ do
+  on_ UI.tick preloaderTimer do
     liftIO $ sleep 0.8
     findAndSet (set UI.class_ "pageloader") window "preloader"
     UI.stop preloaderTimer
@@ -86,7 +87,7 @@ mkMainPage tracerEnv displayedElements nodesEraSettings reloadFlag
   restoreEventsSettings tracerEnv
 
   uiNoNodesProgressTimer <- UI.timer # set UI.interval 1000
-  on UI.tick uiNoNodesProgressTimer . const $ do
+  on_ UI.tick uiNoNodesProgressTimer do
     let elId = "no-nodes-progress"
     valueS <- findAndGetValue window elId
     let valueI = readInt (pack valueS) 0
@@ -96,7 +97,7 @@ mkMainPage tracerEnv displayedElements nodesEraSettings reloadFlag
         UI.stop uiNoNodesProgressTimer
         findAndSet hiddenOnly window elId
 
-  whenM (liftIO $ readTVarIO reloadFlag) $ do
+  whenM (liftIO $ readTVarIO reloadFlag) do
     liftIO $ cleanupDisplayedValues displayedElements
 
     updateUIAfterReload
@@ -112,20 +113,20 @@ mkMainPage tracerEnv displayedElements nodesEraSettings reloadFlag
   llvCounters <- liftIO initLogsLiveViewCounters
 
   uiLogsLiveViewTimer <- UI.timer # set UI.interval 1000
-  on UI.tick uiLogsLiveViewTimer . const $
-    updateLogsLiveViewItems tracerEnv llvCounters
+  on_ UI.tick uiLogsLiveViewTimer do
+    updateLogsLiveViewItems tracerEnv tracerEnvRTView llvCounters
 
   -- Uptime is a real-time clock, so update it every second.
   uiUptimeTimer <- UI.timer # set UI.interval 1000
-  on UI.tick uiUptimeTimer . const $
+  on_ UI.tick uiUptimeTimer do
     updateNodesUptime tracerEnv displayedElements
 
   uiEKGTimer <- UI.timer # set UI.interval 1000
-  on UI.tick uiEKGTimer . const $
+  on_ UI.tick uiEKGTimer do
     updateEKGMetrics tracerEnv
 
   uiNodesTimer <- UI.timer # set UI.interval 1000
-  on UI.tick uiNodesTimer . const $ do
+  on_ UI.tick uiNodesTimer do
     updateNodesUI
       tracerEnv
       displayedElements
@@ -136,7 +137,7 @@ mkMainPage tracerEnv displayedElements nodesEraSettings reloadFlag
       uiNoNodesProgressTimer
 
   uiPeersTimer <- UI.timer # set UI.interval 4000
-  on UI.tick uiPeersTimer . const $ do
+  on_ UI.tick uiPeersTimer do
     askNSetNodeState tracerEnv displayedElements
     updateNodesPeers tracerEnv peers
     updateKESInfo tracerEnv nodesEraSettings displayedElements
@@ -148,8 +149,8 @@ mkMainPage tracerEnv displayedElements nodesEraSettings reloadFlag
   UI.start uiEKGTimer
   UI.start uiNoNodesProgressTimer
 
-  on UI.disconnect window . const $ do
-    webPageIsClosed tracerEnv
+  on_ UI.disconnect window do
+    webPageIsClosed tracerEnvRTView
     UI.stop uiLogsLiveViewTimer
     UI.stop uiNodesTimer
     UI.stop uiUptimeTimer

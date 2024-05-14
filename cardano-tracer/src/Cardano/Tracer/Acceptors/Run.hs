@@ -29,23 +29,23 @@ import qualified Trace.Forward.Protocol.TraceObject.Type as TOF
 --   There are two "network modes" for acceptors:
 --   1. Server mode, when the tracer accepts connections from any number of nodes.
 --   2. Client mode, when the tracer initiates connections to specified number of nodes.
-runAcceptors :: TracerEnv -> IO ()
-runAcceptors tracerEnv@TracerEnv{teTracer} = do
+runAcceptors :: TracerEnv -> TracerEnvRTView -> IO ()
+runAcceptors tracerEnv@TracerEnv{teTracer} tracerEnvRTView = do
   traceWith teTracer $ TracerStartedAcceptors network
   case network of
     AcceptAt (LocalSocket p) ->
       -- Run one server that accepts connections from the nodes.
       runInLoop
-        (runAcceptorsServer tracerEnv p $ acceptorsConfigs p)
+        (runAcceptorsServer tracerEnv tracerEnvRTView p $ acceptorsConfigs p)
         verbosity p initialPauseInSec
     ConnectTo localSocks ->
       -- Run N clients that initiate connections to the nodes.
       forConcurrently_ (NE.nub localSocks) $ \(LocalSocket p) ->
         runInLoop
-          (runAcceptorsClient tracerEnv p $ acceptorsConfigs p)
+          (runAcceptorsClient tracerEnv tracerEnvRTView p $ acceptorsConfigs p)
           verbosity p initialPauseInSec
  where
-  TracerConfig{network, ekgRequestFreq, loRequestNum, verbosity} = teConfig tracerEnv
+  TracerConfig{network, ekgRequestFreq, verbosity} = teConfig tracerEnv
 
   acceptorsConfigs p =
     ( EKGF.AcceptorConfiguration
@@ -58,7 +58,7 @@ runAcceptors tracerEnv@TracerEnv{teTracer} = do
     , TOF.AcceptorConfiguration
         { TOF.acceptorTracer    = mkVerbosity verbosity
         , TOF.forwarderEndpoint = p
-        , TOF.whatToRequest     = TOF.NumberOfTraceObjects $ fromMaybe 100 loRequestNum
+        , TOF.whatToRequest     = TOF.NumberOfTraceObjects $ fromMaybe 100 (loRequestNum (teConfig tracerEnv))
         , TOF.shouldWeStop      = teProtocolsBrake tracerEnv
         }
     , DPF.AcceptorConfiguration

@@ -41,7 +41,7 @@ askDataPoint
   -> NodeId
   -> DataPointName
   -> IO (Maybe a)
-askDataPoint dpRequestors currentDPLock nodeId dpName = withLock currentDPLock $ do
+askDataPoint dpRequestors currentDPLock nodeId dpName = withLock currentDPLock do
   requestors <- readTVarIO dpRequestors
   case M.lookup nodeId requestors of
     Nothing -> return Nothing

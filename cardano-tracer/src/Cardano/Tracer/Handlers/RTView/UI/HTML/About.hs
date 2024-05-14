@@ -10,7 +10,6 @@ import           Cardano.Tracer.Handlers.RTView.System
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
-
 import           Data.List.Extra (lower)
 import qualified Data.Text as T
 import           Data.Version (showVersion)
@@ -31,7 +30,7 @@ mkAboutInfo = do
 
   copyPath <- UI.button #. "button is-info"
                         #+ [image "rt-view-copy-icon-on-button" copySVG]
-  on UI.click copyPath . const $
+  on_ UI.click copyPath do
     copyTextToClipboard pathToConfig
 
   closeIt <- UI.button #. "delete"
@@ -104,7 +103,7 @@ mkAboutInfo = do
               ]
           ]
       ]
-  on UI.click closeIt . const $ element info #. "modal"
+  on_ UI.click closeIt do element info #. "modal"
   return info
  where
   commit = T.unpack . T.take 7 $ $(gitRev)

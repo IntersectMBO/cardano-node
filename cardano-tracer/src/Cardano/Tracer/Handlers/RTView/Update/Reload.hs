@@ -26,8 +26,8 @@ updateUIAfterReload
   -> DatasetsIndices
   -> UI.Timer
   -> UI ()
-updateUIAfterReload tracerEnv displayedElements loggingConfig colors
-                    datasetIndices noNodesProgressTimer = do
+updateUIAfterReload tracerEnv displayedElements loggingConfig
+                    colors datasetIndices noNodesProgressTimer = do
   -- Ok, web-page was reload (i.e. it's the first update after DOM-rendering),
   -- so displayed state should be restored immediately.
   connected <- liftIO $ readTVarIO (teConnectedNodes tracerEnv)

@@ -24,6 +24,7 @@ module Cardano.Tracer.Handlers.RTView.UI.Charts
   , restoreAllHistoryOnChart
   , restoreLastHistoryOnAllCharts
   , restoreLastHistoryOnCharts
+  , PointsAdder
   ) where
 
 import           Cardano.Tracer.Environment
@@ -45,6 +46,7 @@ import           Control.Exception.Extra (ignore, try_)
 import           Control.Monad (forM, forM_, unless, when)
 import           Control.Monad.Extra (whenJustM)
 import           Data.Aeson (decodeFileStrict', encodeFile)
+import           Data.Kind
 import           Data.List (find, isInfixOf)
 import           Data.List.Extra (chunksOf)
 import qualified Data.Map.Strict as M
@@ -130,6 +132,15 @@ addNodeDatasetsToCharts tracerEnv colors datasetIndices nodeId@(NodeId anId) = d
 
   defaultColor = Color "#cccc00"
 
+type PointsAdder :: Type -> Type
+type PointsAdder a =
+     TracerEnv
+  -> History
+  -> DatasetsIndices
+  -> DataName
+  -> ChartId
+  -> UI a
+
 -- Each chart updates independently from others. Because of this, the user
 -- can specify "auto-update period" for each chart. Some of data (by its nature)
 -- shoudn't be updated too frequently.
@@ -138,24 +149,11 @@ addNodeDatasetsToCharts tracerEnv colors datasetIndices nodeId@(NodeId anId) = d
 -- using one single FFI-call, for better performance.
 --
 -- 'addAllPointsToChart' doesn not do average calculation, it pushes all the points as they are.
-addPointsToChart, addAllPointsToChart
-  :: TracerEnv
-  -> History
-  -> DatasetsIndices
-  -> DataName
-  -> ChartId
-  -> UI ()
+addPointsToChart, addAllPointsToChart :: PointsAdder ()
 addPointsToChart    = doAddPointsToChart replacePointsByAvgPoints
 addAllPointsToChart = doAddPointsToChart id
 
-doAddPointsToChart
-  :: ([HistoricalPoint] -> [HistoricalPoint])
-  -> TracerEnv
-  -> History
-  -> DatasetsIndices
-  -> DataName
-  -> ChartId
-  -> UI ()
+doAddPointsToChart :: ([HistoricalPoint] -> [HistoricalPoint]) -> PointsAdder ()
 doAddPointsToChart replaceByAvg tracerEnv hist datasetIndices dataName chartId = do
   connected <- liftIO $ S.toList <$> readTVarIO (teConnectedNodes tracerEnv)
   dataForPush <-
@@ -254,9 +252,9 @@ restoreAllHistoryOnChart
   -> UI ()
 restoreAllHistoryOnChart tracerEnv dataName chartId dsIxs = do
   pointsFromBackup <- liftIO $ getAllHistoryFromBackup tracerEnv dataName
-  forM_ pointsFromBackup $ \(nodeId, points) -> do
+  forM_ pointsFromBackup \(nodeId, points) -> do
     nodeName <- liftIO $ askNodeName tracerEnv nodeId
-    whenJustM (getDatasetIx dsIxs nodeName) $ \ix -> do
+    whenJustM (getDatasetIx dsIxs nodeName) \ix -> do
       Chart.clearPointsChartJS chartId [ix]
       Chart.addAllPointsChartJS chartId [(ix, replacePointsByAvgPoints points)]
 
@@ -265,7 +263,8 @@ restoreLastHistoryOnAllCharts
   -> DatasetsIndices
   -> UI ()
 restoreLastHistoryOnAllCharts tracerEnv =
-  restoreLastHistoryOnCharts' tracerEnv (getLastHistoryFromBackupsAll tracerEnv)
+  restoreLastHistoryOnCharts' tracerEnv
+    (getLastHistoryFromBackupsAll tracerEnv)
 
 restoreLastHistoryOnCharts
   :: TracerEnv
@@ -273,7 +272,8 @@ restoreLastHistoryOnCharts
   -> S.Set NodeId
   -> UI ()
 restoreLastHistoryOnCharts tracerEnv dsIxs nodeIds =
-  restoreLastHistoryOnCharts' tracerEnv (getLastHistoryFromBackups tracerEnv nodeIds) dsIxs
+  restoreLastHistoryOnCharts' tracerEnv
+    (getLastHistoryFromBackups tracerEnv nodeIds) dsIxs
 
 restoreLastHistoryOnCharts'
   :: TracerEnv

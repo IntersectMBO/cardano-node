@@ -63,8 +63,8 @@ updateNodesUI
   -> UI.Timer
   -> UI ()
 updateNodesUI tracerEnv@TracerEnv{teConnectedNodes, teAcceptedMetrics}
-              displayedElements nodesEraSettings loggingConfig colors
-              datasetIndices noNodesProgressTimer = do
+              displayedElements nodesEraSettings loggingConfig
+              colors datasetIndices noNodesProgressTimer = do
   (connected, displayedEls) <- liftIO . atomically $ (,)
     <$> readTVar teConnectedNodes
     <*> readTVar displayedElements
@@ -184,7 +184,7 @@ addLiveViewNodesForConnected
   -> Set NodeId
   -> UI ()
 addLiveViewNodesForConnected tracerEnv newlyConnected =
-  whenM logsLiveViewIsOpened $
+  whenM logsLiveViewIsOpened do
     doAddLiveViewNodesForConnected tracerEnv newlyConnected
 
 doAddLiveViewNodesForConnected
@@ -193,8 +193,8 @@ doAddLiveViewNodesForConnected
   -> UI ()
 doAddLiveViewNodesForConnected tracerEnv connected = do
   window <- askWindow
-  whenJustM (UI.getElementById window "logs-live-view-nodes-checkboxes") $ \el ->
-    forM_ connected $ \nodeId@(NodeId anId) -> do
+  whenJustM (UI.getElementById window "logs-live-view-nodes-checkboxes") \el ->
+    forM_ connected \nodeId@(NodeId anId) -> do
       nodeName  <- liftIO $ askNodeName tracerEnv nodeId
       nodeColor <- liftIO $ getSavedColorForNode tracerEnv nodeName
 

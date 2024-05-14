@@ -36,9 +36,9 @@ import qualified Graphics.UI.Threepenny as UI
 --   The web-page is built using 'threepenny-gui' library. Please note
 --   Gitub-version of this library is used, not Hackage-version!
 
-runRTView :: TracerEnv -> IO ()
-runRTView tracerEnv@TracerEnv{teTracer} =
-  whenJust hasRTView $ \(Endpoint host port) -> do
+runRTView :: TracerEnv -> TracerEnvRTView -> IO ()
+runRTView tracerEnv@TracerEnv{teTracer} tracerEnvRTView =
+  whenJust hasRTView \(Endpoint host port) -> do
     traceWith teTracer TracerStartedRTView
     -- Pause to prevent collision between "Listening"-notifications from servers.
     sleep 0.3
@@ -59,13 +59,14 @@ runRTView tracerEnv@TracerEnv{teTracer} =
       [ UI.startGUI (config host port certFile keyFile) $
           mkMainPage
             tracerEnv
+            tracerEnvRTView
             displayedElements
             eraSettings
             reloadFlag
             logging
             network
-      , runHistoricalUpdater  tracerEnv lastResources
-      , runHistoricalBackup   tracerEnv
+      , runHistoricalUpdater  tracerEnv tracerEnvRTView lastResources
+      , runHistoricalBackup   tracerEnv tracerEnvRTView
       , runEraSettingsUpdater tracerEnv eraSettings
       ]
  where

@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -48,6 +49,7 @@ module Cardano.Tracer.Handlers.RTView.UI.Utils
   , hiddenState
   , webPageIsOpened
   , webPageIsClosed
+  , on_
   ) where
 
 import           Cardano.Tracer.Environment
@@ -302,9 +304,13 @@ exportErrorsToJSONFile nodesErrors nodeId nodeName =
     downloadJSONFile fileName errorsAsJSON
 -}
 
-webPageIsOpened, webPageIsClosed :: TracerEnv -> UI ()
-webPageIsOpened TracerEnv{teRTViewPageOpened} = setFlag teRTViewPageOpened True
-webPageIsClosed TracerEnv{teRTViewPageOpened} = setFlag teRTViewPageOpened False
+webPageIsOpened, webPageIsClosed :: TracerEnvRTView -> UI ()
+webPageIsOpened TracerEnvRTView{teRTViewPageOpened} = setFlag teRTViewPageOpened True
+webPageIsClosed TracerEnvRTView{teRTViewPageOpened} = setFlag teRTViewPageOpened False
 
 setFlag :: TVar Bool -> Bool -> UI ()
 setFlag flag state = liftIO . atomically . modifyTVar' flag $ const state
+
+-- | A version of @on@ that ignores the result of the event.
+on_ :: (element -> Event a) -> element -> UI void -> UI ()
+on_ event el action = on event el \_ -> action

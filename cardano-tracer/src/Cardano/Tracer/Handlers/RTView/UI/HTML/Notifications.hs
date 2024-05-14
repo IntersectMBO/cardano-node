@@ -89,36 +89,36 @@ mkNotificationsEvents tracerEnv eventsQueues = do
           ]
       ]
 
-  on UI.click closeIt . const $ do
+  on UI.click closeIt \_ -> do
     void $ element notifications #. "modal"
     saveEventsSettings tracerEnv
 
-  on UI.checkedChange switchWarnings $ \state -> do
+  on UI.checkedChange switchWarnings \state -> do
     setNotifyIconState
     saveEventsSettings tracerEnv
     liftIO $ updateNotificationsEvents eventsQueues EventWarnings state
-  on UI.checkedChange switchErrors $ \state -> do
+  on UI.checkedChange switchErrors \state -> do
     setNotifyIconState
     saveEventsSettings tracerEnv
     liftIO $ updateNotificationsEvents eventsQueues EventErrors state
-  on UI.checkedChange switchCriticals $ \state -> do
+  on UI.checkedChange switchCriticals \state -> do
     setNotifyIconState
     saveEventsSettings tracerEnv
     liftIO $ updateNotificationsEvents eventsQueues EventCriticals state
-  on UI.checkedChange switchAlerts $ \state -> do
+  on UI.checkedChange switchAlerts \state -> do
     setNotifyIconState
     saveEventsSettings tracerEnv
     liftIO $ updateNotificationsEvents eventsQueues EventAlerts state
-  on UI.checkedChange switchEmergencies $ \state -> do
+  on UI.checkedChange switchEmergencies \state -> do
     setNotifyIconState
     saveEventsSettings tracerEnv
     liftIO $ updateNotificationsEvents eventsQueues EventEmergencies state
-  on UI.checkedChange switchNodeDiscon $ \state -> do
+  on UI.checkedChange switchNodeDiscon \state -> do
     setNotifyIconState
     saveEventsSettings tracerEnv
     liftIO $ updateNotificationsEvents eventsQueues EventNodeDisconnected state
 
-  on UI.checkedChange switchAll $ \state -> do
+  on UI.checkedChange switchAll \state -> do
     void $ element switchWarnings    # set UI.checked state
     void $ element switchErrors      # set UI.checked state
     void $ element switchCriticals   # set UI.checked state
@@ -147,8 +147,8 @@ mkNotificationsEvents tracerEnv eventsQueues = do
   return notifications
  where
   handleSelectChange selector eventGroup =
-    on UI.selectionChange selector . const $
-      whenJustM (readMaybe <$> get value selector) $ \(period :: PeriodInSec) ->
+    on_ UI.selectionChange selector do
+      whenJustM (readMaybe <$> get value selector) \(period :: PeriodInSec) ->
         liftIO $ updateNotificationsPeriods eventsQueues eventGroup period
 
 mkDivider :: String -> UI Element
@@ -316,12 +316,12 @@ mkNotificationsSettings tracerEnv = do
           ]
       ]
 
-  on UI.click closeIt . const $ do
+  on_ UI.click closeIt do
     void $ element notifications #. "modal"
     void $ element sendTestEmailStatus # set text ""
     saveEmailSettings tracerEnv
 
-  on UI.click sendTestEmail . const $ do
+  on_ UI.click sendTestEmail do
     void $ element sendTestEmailStatus # set text ""
     void $ element sendTestEmail #. "button is-primary is-loading"
                                  # set UI.enabled False
@@ -335,7 +335,7 @@ mkNotificationsSettings tracerEnv = do
     void $ element sendTestEmail #. "button is-primary"
                                  # set UI.enabled True
 
-  on UI.click showHidePassword . const $ do
+  on_ UI.click showHidePassword do
     state <- get dataState showHidePassword
     let haveToHide = state == shownState
     if haveToHide
@@ -348,11 +348,11 @@ mkNotificationsSettings tracerEnv = do
         void $ element showHidePassword # set dataState shownState
         void $ element inputPassword # set UI.type_ "text"
 
-  on UI.valueChange inputHost      $ const setStatusTestEmailButton
-  on UI.valueChange inputUser      $ const setStatusTestEmailButton
-  on UI.valueChange inputPassword  $ const setStatusTestEmailButton
-  on UI.valueChange inputEmailFrom $ const setStatusTestEmailButton
-  on UI.valueChange inputEmailTo   $ const setStatusTestEmailButton
+  on_ UI.valueChange inputHost      do setStatusTestEmailButton
+  on_ UI.valueChange inputUser      do setStatusTestEmailButton
+  on_ UI.valueChange inputPassword  do setStatusTestEmailButton
+  on_ UI.valueChange inputEmailFrom do setStatusTestEmailButton
+  on_ UI.valueChange inputEmailTo   do setStatusTestEmailButton
 
   return notifications
 
