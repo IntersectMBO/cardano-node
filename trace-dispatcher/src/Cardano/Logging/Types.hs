@@ -188,6 +188,15 @@ data Metric
   -- | A counter metric.
   -- Text is used to name the metric
     | CounterM Text (Maybe Int)
+  -- | A prometheus metric with key label pairs.
+  -- Text is used to name the metric
+  -- [(Text, Text)] is used to represent the key label pairs
+  -- The value of the metric will always be "1"
+  -- e.g. if you have a prometheus metric with the name "prometheus_metric"
+  -- and the key label pairs [("key1", "value1"), ("key2", "value2")]
+  -- the metric will be represented as "prometheus_metric{key1=\"value1\",key2=\"value2\"} 1"
+
+    | PrometheusM Text [(Text, Text)]
   deriving (Show, Eq)
 
 
@@ -195,6 +204,8 @@ getMetricName :: Metric -> Text
 getMetricName (IntM name _) = name
 getMetricName (DoubleM name _) = name
 getMetricName (CounterM name _) = name
+getMetricName (PrometheusM name _) = name
+
 
 -- | A helper function for creating an empty |Object|.
 emptyObject :: HM.HashMap Text a

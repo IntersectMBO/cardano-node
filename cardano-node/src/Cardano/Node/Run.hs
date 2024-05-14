@@ -8,8 +8,10 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TupleSections #-}
+
+{-# LANGUAGE TypeApplications #-}
+
 
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -74,6 +76,8 @@ import           Paths_cardano_node (version)
 
 import qualified Cardano.Crypto.Init as Crypto
 
+import           Cardano.Node.Tracing.Tracers.NodeVersion (getNodeVersion)
+
 import           Cardano.Node.Configuration.Logging (LoggingLayer (..), createLoggingLayer,
                    nodeBasicInfo, shutdownLoggingLayer)
 import           Cardano.Node.Configuration.NodeAddress
@@ -102,12 +106,12 @@ import qualified Ouroboros.Network.Diffusion.P2P as P2P
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), ConnectionId,
                    PeerSelectionTargets (..), RemoteAddress)
+import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
+
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.Protocol.ChainSync.Codec
 import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
-import           Ouroboros.Network.PeerSelection.Bootstrap
-                     (UseBootstrapPeers (..))
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                    gatherConfiguredSockets, getSocketOrSocketInfoAddr)
@@ -124,11 +128,14 @@ import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Tracing.Tracers
-import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
-import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
-import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
-import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable)
 import           Ouroboros.Network.PeerSelection.Bootstrap (UseBootstrapPeers)
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (UseLedgerPeers)
+
+import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
+import           Ouroboros.Network.PeerSelection.PeerTrustable (PeerTrustable)
+
+import           Ouroboros.Network.PeerSelection.State.LocalRootPeers (HotValency, WarmValency)
+
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -240,8 +247,8 @@ handleNodeWithTracers cmdPc nc0 p networkMagic blockType runP = do
           blockForging <- snd (Api.protocolInfo runP)
           traceWith (startupTracer tracers)
                     (BlockForgingUpdate (if null blockForging
-                                          then EnabledBlockForging
-                                          else DisabledBlockForging))
+                                          then DisabledBlockForging
+                                          else EnabledBlockForging))
 
           handleSimpleNode blockType runP p2pMode tracers nc
             (\nk -> do
@@ -280,12 +287,9 @@ handleNodeWithTracers cmdPc nc0 p networkMagic blockType runP = do
           getStartupInfo nc p fp
             >>= mapM_ (traceWith $ startupTracer tracers)
 
-          blockForging <- snd (Api.protocolInfo runP)
+          traceWith (nodeVersionTracer tracers) getNodeVersion
           traceWith (startupTracer tracers)
-                    (BlockForgingUpdate (if null blockForging
-                                          then EnabledBlockForging
-                                          else DisabledBlockForging))
-
+                    (BlockForgingUpdate NotEffective)
 
           -- We ignore peer logging thread if it dies, but it will be killed
           -- when 'handleSimpleNode' terminates.

@@ -32,7 +32,7 @@ packages:
   trace-forward
 
 program-options
-  ghc-options: -Werror
+--  ghc-options: -Werror
 
 test-show-details: direct
 

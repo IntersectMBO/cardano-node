@@ -113,6 +113,7 @@ library
                         Cardano.Node.Tracing.Tracers.KESInfo
                         Cardano.Node.Tracing.Tracers.NodeToClient
                         Cardano.Node.Tracing.Tracers.NodeToNode
+                        Cardano.Node.Tracing.Tracers.NodeVersion
                         Cardano.Node.Tracing.Tracers.NonP2P
                         Cardano.Node.Tracing.Tracers.P2P
                         Cardano.Node.Tracing.Tracers.Peer
