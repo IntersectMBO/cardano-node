@@ -109,11 +109,11 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
 
   -- Now we register two new DReps
   drep2 <- registerDRep execConfig epochStateView ceo work "drep2" wallet1
-  delegateToDRep execConfig epochStateView configurationFile socketPath sbe work "drep2-delegation"
+  delegateToDRep execConfig epochStateView sbe work "drep2-delegation"
                  wallet2 (defaultDelegatorStakeKeyPair 2) drep2
 
   drep3 <- registerDRep execConfig epochStateView ceo work "drep3" wallet0
-  delegateToDRep execConfig epochStateView configurationFile socketPath sbe work "drep3-delegation"
+  delegateToDRep execConfig epochStateView sbe work "drep3-delegation"
                  wallet1 (defaultDelegatorStakeKeyPair 3) drep3
 
   expirationDates <- checkDRepState epochStateView sbe $ \m ->

@@ -120,9 +120,9 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
                                        wallet0 Nothing [(1, "yes")] newNumberOfDesiredPools 3 (Just initialDesiredNumberOfPools) 10
 
   -- Take the last two stake delegators and delegate them to "Abstain".
-  delegateToAlwaysAbstain execConfig epochStateView configurationFile socketPath sbe gov "delegateToAbstain1"
+  delegateToAlwaysAbstain execConfig epochStateView sbe gov "delegateToAbstain1"
                           wallet1 (defaultDelegatorStakeKeyPair 2)
-  delegateToAlwaysAbstain execConfig epochStateView configurationFile socketPath sbe gov "delegateToAbstain2"
+  delegateToAlwaysAbstain execConfig epochStateView sbe gov "delegateToAbstain2"
                           wallet2 (defaultDelegatorStakeKeyPair 3)
 
   -- Do some other proposal and vote yes with first DRep only
@@ -136,15 +136,13 @@ delegateToAlwaysAbstain
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
-  -> NodeConfigFile 'In -- ^ Path to the node configuration file as returned by 'cardanoTestnetDefault'.
-  -> File Socket 'InOut -- ^ Path to the cardano-node unix socket file.
   -> ShelleyBasedEra era -- ^ The Shelley-based era (e.g., 'ConwayEra') in which the transaction will be constructed.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
   -> KeyPair StakingKey -- ^ Staking key pair used for delegation.
   -> m ()
-delegateToAlwaysAbstain execConfig epochStateView configurationFile socketPath sbe work prefix
+delegateToAlwaysAbstain execConfig epochStateView sbe work prefix
                         payingWallet skeyPair@(KeyPair vKeyFile _sKeyFile) = do
 
   let era = toCardanoEra sbe
@@ -174,8 +172,7 @@ delegateToAlwaysAbstain execConfig epochStateView configurationFile socketPath s
   submitTx execConfig cEra repRegSignedRegTx1
 
   -- Wait two epochs
-  (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView
-  void $ waitUntilEpoch configurationFile socketPath (EpochNo (epochAfterProp + 2))
+  void $ waitForEpochs epochStateView (EpochInterval 2)
 
 desiredPoolNumberProposalTest
   :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
