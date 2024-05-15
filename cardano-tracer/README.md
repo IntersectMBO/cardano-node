@@ -12,7 +12,7 @@ For more details please [read its documentation](https://github.com/intersectmbo
 
 ## Developers
 
-Benchmarking team is responsible for this service. The primary developer is [@denisshevchenko](https://github.com/denisshevchenko).
+Performance and Tracing team is responsible for this service. The primary developer is [Baldur Blöndal](https://github.com/Icelandjack).
 
 ## Feedback
 

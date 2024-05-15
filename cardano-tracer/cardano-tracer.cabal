@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-tracer
-version:                0.2.2
+version:                0.2.3
 synopsis:               A service for logging and monitoring over Cardano nodes
 description:            A service for logging and monitoring over Cardano nodes.
 category:               Cardano,
@@ -22,9 +22,12 @@ common project-config
 
   default-extensions:   BlockArguments
                       , CPP
+                      , DerivingStrategies
+                      , GeneralizedNewtypeDeriving
                       , ImportQualifiedPost
                       , InstanceSigs
                       , ScopedTypeVariables
+                      , TypeApplications
 
   ghc-options:          -Wall
                         -Wcompat
@@ -134,7 +137,7 @@ library
   build-depends:        aeson
                       , async
                       , async-extras
-                      , bimap >= 0.4.0
+                      , bimap
                       , blaze-html
                       , bytestring
                       , cardano-git-rev ^>=0.2.2
@@ -174,7 +177,6 @@ library
 
   if os(linux)
     build-depends:      libsystemd-journal >= 1.4.4
-
   if os(windows)
     build-depends:      Win32
   else
@@ -230,6 +232,9 @@ library demo-forwarder-lib
                       , time
                       , trace-dispatcher
                       , trace-forward
+                      , vector
+                      , vector-algorithms
+                      , QuickCheck
 
 executable demo-forwarder
   import:               project-config
@@ -269,6 +274,9 @@ library demo-acceptor-lib
                       , text
                       , tasty-quickcheck
                       , trace-forward
+                      , vector
+                      , vector-algorithms
+                      , QuickCheck
 
 executable demo-acceptor
   import:               project-config
@@ -329,6 +337,9 @@ test-suite cardano-tracer-test
                       , trace-dispatcher
                       , trace-forward
                       , unix-compat
+                      , vector
+                      , vector-algorithms
+                      , QuickCheck
 
   ghc-options:          -threaded
                         -rtsopts
@@ -386,6 +397,8 @@ test-suite cardano-tracer-test-ext
                       , trace-dispatcher
                       , trace-forward
                       , unix-compat
+                      , vector
+                      , vector-algorithms
 
   ghc-options:          -threaded
                         -rtsopts
@@ -402,6 +415,7 @@ benchmark cardano-tracer-bench
   build-depends:        cardano-tracer
                       , criterion
                       , directory
+                      , deepseq
                       , extra
                       , filepath
                       , stm

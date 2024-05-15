@@ -53,6 +53,8 @@ launchAcceptorsSimple mode localSock dpName = do
 
   tr <- mkTracerTracer $ SeverityF $ Just Warning
 
+  registry <- newRegistry
+
   let tracerEnv =
         TracerEnv
           { teConfig                = mkConfig
@@ -72,6 +74,7 @@ launchAcceptorsSimple mode localSock dpName = do
           , teRTViewStateDir        = Nothing
           , teTracer                = tr
           , teReforwardTraceObjects = \_-> pure ()
+          , teRegistry              = registry
           }
             -- NOTE: no reforwarding in this acceptor.
   void . sequenceConcurrently $

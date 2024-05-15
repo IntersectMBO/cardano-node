@@ -47,7 +47,7 @@ acceptTraceObjectsResp
   -> (responderCtx -> [lo] -> IO ()) -- ^ The handler for accepted 'TraceObject's.
   -> (responderCtx -> IO ())         -- ^ The handler for exceptions from 'runPeer'.
   -> RunMiniProtocol 'ResponderMode initiatorCtx responderCtx LBS.ByteString IO Void ()
-acceptTraceObjectsResp config loHandler peerErrorHandler =
+acceptTraceObjectsResp config loHandler peerErrorHandler = do
   ResponderProtocolOnly $ runPeerWithHandler config loHandler peerErrorHandler
 
 runPeerWithHandler
