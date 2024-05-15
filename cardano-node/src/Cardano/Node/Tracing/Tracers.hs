@@ -352,6 +352,7 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith consensusStartupErrorTr . ConsensusStartupException
       , Consensus.gsmTracer = Tracer $
           traceWith consensusGsmTr
+      , Consensus.gddTracer = Tracer $ \_ -> pure () -- TODO
       }
 
 mkNodeToClientTracers :: forall blk.
