@@ -24,6 +24,7 @@ module Testnet.Components.Query
   , findLargestUtxoWithAddress
   , findLargestUtxoForPaymentKey
   , assertNewEpochState
+  , watchEpochStateView
   ) where
 
 import           Cardano.Api as Api

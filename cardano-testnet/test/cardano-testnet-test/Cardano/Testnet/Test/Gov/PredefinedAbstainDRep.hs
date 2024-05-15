@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -12,8 +11,6 @@ module Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
 
 import           Cardano.Api as Api
 import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyLedgerEra)
-import           Cardano.Api.Error (displayError)
-import           Cardano.Api.IO.Base (Socket)
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval))
 
 import           Cardano.Ledger.Conway.Core (ppNOptL)
@@ -30,14 +27,14 @@ import           Data.Data (Typeable)
 import           Data.String (fromString)
 import qualified Data.Text as Text
 import           Data.Word (Word32)
-import           GHC.Stack (HasCallStack, callStack)
+import           GHC.Stack (HasCallStack)
 import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration (anyEraToString)
 import           Testnet.Components.Query (EpochStateView, assertNewEpochState,
                    findLargestUtxoForPaymentKey, getCurrentEpochNo, getEpochStateView, getGovState,
-                   getMinDRepDeposit)
+                   getMinDRepDeposit, watchEpochStateView)
 import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
 import           Testnet.Process.Cli.DRep (createCertificatePublicationTxBody, createVotingTxBody,
@@ -116,7 +113,7 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
 
   -- Do some proposal and vote yes with the first DRep only
   -- and assert that proposal does NOT pass.
-  void $ desiredPoolNumberProposalTest execConfig epochStateView configurationFile socketPath ceo gov "firstProposal"
+  void $ desiredPoolNumberProposalTest execConfig epochStateView ceo gov "firstProposal"
                                        wallet0 Nothing [(1, "yes")] newNumberOfDesiredPools 3 (Just initialDesiredNumberOfPools) 10
 
   -- Take the last two stake delegators and delegate them to "Abstain".
@@ -128,7 +125,7 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
   -- Do some other proposal and vote yes with first DRep only
   -- and assert the new proposal passes now.
   let newNumberOfDesiredPools2 = newNumberOfDesiredPools + 1
-  void $ desiredPoolNumberProposalTest execConfig epochStateView configurationFile socketPath ceo gov "secondProposal"
+  void $ desiredPoolNumberProposalTest execConfig epochStateView ceo gov "secondProposal"
                                        wallet0 Nothing [(1, "yes")] newNumberOfDesiredPools2 0 (Just newNumberOfDesiredPools2) 10
 
 delegateToAlwaysAbstain
@@ -172,14 +169,12 @@ delegateToAlwaysAbstain execConfig epochStateView sbe work prefix
   submitTx execConfig cEra repRegSignedRegTx1
 
   -- Wait two epochs
-  void $ waitForEpochs epochStateView (EpochInterval 2)
+  void $ waitForEpochs epochStateView (EpochInterval 1)
 
 desiredPoolNumberProposalTest
   :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
-  -> NodeConfigFile 'In -- ^ Path to the node configuration file as returned by 'cardanoTestnetDefault'.
-  -> File Socket 'InOut -- ^ Path to the cardano-node unix socket file.
   -> ConwayEraOnwards ConwayEra -- ^ The ConwaysEraOnwards witness for the Conway era
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
@@ -193,8 +188,8 @@ desiredPoolNumberProposalTest
   -> Maybe Integer -- ^ What the expected result is of the change (if anything)
   -> Integer -- ^ Maximum number of epochs to wait while waiting for the result
   -> m (String, Word32)
-desiredPoolNumberProposalTest execConfig epochStateView configurationFile socketPath ceo work prefix
-                              wallet previousProposalInfo votes change minWait mExpected maxWait = do
+desiredPoolNumberProposalTest execConfig epochStateView ceo work prefix wallet
+                              previousProposalInfo votes change minWait mExpected maxWait = do
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
 
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
@@ -204,8 +199,8 @@ desiredPoolNumberProposalTest execConfig epochStateView configurationFile socket
   annotateShow propVotes
 
   thisProposal@(governanceActionTxId, governanceActionIndex) <-
-    makeDesiredPoolNumberChangeProposal execConfig epochStateView configurationFile socketPath
-                                            ceo baseDir "proposal" previousProposalInfo (fromIntegral change) wallet
+    makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo baseDir "proposal"
+                                        previousProposalInfo (fromIntegral change) wallet
 
   voteChangeProposal execConfig epochStateView sbe baseDir "vote"
                      governanceActionTxId governanceActionIndex propVotes wallet
@@ -227,9 +222,6 @@ makeDesiredPoolNumberChangeProposal
   :: (HasCallStack, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
-  -> NodeConfigFile 'In -- ^ Absolute path to the "configuration.yaml" file for the testnet
-                        -- as returned by the 'cardanoTestnetDefault' function.
-  -> SocketPath -- ^ Path to the cardano-node unix socket file.
   -> ConwayEraOnwards ConwayEra -- ^ The conway era onwards witness for the era in which the transaction will be constructed.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
@@ -238,8 +230,8 @@ makeDesiredPoolNumberChangeProposal
   -> Word32 -- ^ What to change the @desiredPoolNumber@ to
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
   -> m (String, Word32)
-makeDesiredPoolNumberChangeProposal execConfig epochStateView configurationFile socketPath
-                                    ceo work prefix prevGovActionInfo desiredPoolNumber wallet = do
+makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
+                                    prevGovActionInfo desiredPoolNumber wallet = do
 
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
@@ -300,20 +292,7 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView configurationFile 
 
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
-  (EpochNo curEpoch) <- getCurrentEpochNo epochStateView
-
-  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex (fromString governanceActionTxId))
-                                        configurationFile
-                                        socketPath
-                                        (EpochNo $ curEpoch + 10)
-
-  governanceActionIndex <- case propSubmittedResult of
-                             Left e ->
-                               H.failMessage callStack
-                                 $ "findCondition failed with: " <> displayError e
-                             Right Nothing ->
-                               H.failMessage callStack "Couldn't find proposal."
-                             Right (Just a) -> return a
+  governanceActionIndex <- H.nothingFailM $ watchEpochStateView epochStateView (return . maybeExtractGovernanceActionIndex (fromString governanceActionTxId)) (EpochInterval 1)
 
   return (governanceActionTxId, governanceActionIndex)
 

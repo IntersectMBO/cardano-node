@@ -287,8 +287,8 @@ delegateToDRep execConfig epochStateView sbe work prefix
   -- Submit transaction
   submitTx execConfig cEra repRegSignedRegTx1
 
-  -- Wait two epochs
-  void $ waitForEpochs epochStateView (EpochInterval 2)
+  -- Wait one epoch
+  void $ waitForEpochs epochStateView (EpochInterval 1)
 
 -- | This function obtains the identifier for the last enacted parameter update proposal
 -- if any.

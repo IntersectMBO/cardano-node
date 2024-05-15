@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -12,7 +11,6 @@ module Cardano.Testnet.Test.Gov.DRepActivity
 
 import           Cardano.Api as Api
 import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyLedgerEra)
-import           Cardano.Api.Error (displayError)
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval), drepExpiry)
 
 import           Cardano.Ledger.Conway.Core (EraGov, curPParamsGovStateL)
@@ -28,13 +26,13 @@ import           Data.Data (Typeable)
 import qualified Data.Map as Map
 import           Data.String
 import qualified Data.Text as Text
-import           Data.Word (Word32, Word64)
-import           GHC.Stack
+import           Data.Word (Word32)
+import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query (EpochStateView, assertNewEpochState, checkDRepState,
                    findLargestUtxoForPaymentKey, getCurrentEpochNo, getEpochStateView,
-                   getMinDRepDeposit)
+                   getMinDRepDeposit, watchEpochStateView)
 import           Testnet.Components.TestWatchdog (kickWatchdog, runWithDefaultWatchdog)
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
 import           Testnet.Process.Cli.DRep
@@ -103,7 +101,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
                                                      -- make sure it doesn't change.
       maxEpochsToWaitAfterProposal = EpochInterval 2 -- If it takes more than 2 epochs we give up in any case.
       firstTargetDRepActivity = EpochInterval 3
-  void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
+  void $ activityChangeProposalTest execConfig epochStateView ceo gov
                                     "firstProposal" wallet0 [(1, "yes")] firstTargetDRepActivity
                                     minEpochsToWaitIfChanging (Just firstTargetDRepActivity)
                                     maxEpochsToWaitAfterProposal
@@ -126,7 +124,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
   -- This proposal should fail because there is 2 DReps that don't vote (out of 3)
   -- and we have the stake distributed evenly
   let secondTargetDRepActivity = EpochInterval (unEpochInterval firstTargetDRepActivity + 1)
-  void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
+  void $ activityChangeProposalTest execConfig epochStateView ceo gov
                                     "failingProposal" wallet2 [(1, "yes")] secondTargetDRepActivity
                                     minEpochsToWaitIfNotChanging (Just firstTargetDRepActivity)
                                     maxEpochsToWaitAfterProposal
@@ -138,7 +136,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
   -- This is accounted for by the dormant epoch count
   let numOfFillerProposals = 4 :: Int
   sequence_
-    [activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
+    [activityChangeProposalTest execConfig epochStateView ceo gov
                                 ("fillerProposalNum" ++ show proposalNum) wallet [(1, "yes")]
                                 (EpochInterval (unEpochInterval secondTargetDRepActivity + fromIntegral proposalNum))
                                 minEpochsToWaitIfNotChanging Nothing
@@ -151,7 +149,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
   -- Last proposal (set activity to something else again and it should pass, because of inactivity)
   -- Because 2 out of 3 DReps were inactive, prop should pass
   let lastTargetDRepActivity = EpochInterval (unEpochInterval secondTargetDRepActivity + fromIntegral numOfFillerProposals + 1)
-  void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
+  void $ activityChangeProposalTest execConfig epochStateView ceo gov
                                     "lastProposal" wallet0 [(1, "yes")] lastTargetDRepActivity
                                     minEpochsToWaitIfChanging (Just lastTargetDRepActivity)
                                     maxEpochsToWaitAfterProposal
@@ -165,8 +163,6 @@ activityChangeProposalTest
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
-  -> NodeConfigFile In -- ^ Path to the node configuration file as returned by 'cardanoTestnetDefault'.
-  -> SocketPath  -- ^ Path to the cardano-node unix socket file.
   -> ConwayEraOnwards era -- ^ The ConwayEraOnwards witness for current era.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
@@ -181,8 +177,8 @@ activityChangeProposalTest
   -> EpochInterval -- ^ The maximum number of epochs to wait for the DRep activity interval to
                    -- become expected value.
   -> m (String, Word32) -- ^ The transaction id and the index of the governance action.
-activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo work prefix
-                           wallet votes change minWait mExpected maxWait@(EpochInterval maxWaitNum) = do
+activityChangeProposalTest execConfig epochStateView ceo work prefix
+                           wallet votes change minWait mExpected maxWait = do
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
 
   mPreviousProposalInfo <- getLastPParamUpdateActionId execConfig
@@ -196,8 +192,8 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
   H.note_ $ "Epoch before \"" <> prefix <> "\" prop: " <> show epochBeforeProp
 
   thisProposal@(governanceActionTxId, governanceActionIndex) <-
-    makeActivityChangeProposal execConfig epochStateView configurationFile socketPath
-                               ceo baseDir "proposal" mPreviousProposalInfo change wallet (epochBeforeProp + fromIntegral maxWaitNum)
+    makeActivityChangeProposal execConfig epochStateView ceo baseDir "proposal"
+                               mPreviousProposalInfo change wallet maxWait
 
   voteChangeProposal execConfig epochStateView sbe baseDir "vote"
                      governanceActionTxId governanceActionIndex propVotes wallet
@@ -219,18 +215,16 @@ makeActivityChangeProposal
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
-  -> NodeConfigFile In -- ^ Path to the node configuration file as returned by 'cardanoTestnetDefault'.
-  -> SocketPath  -- ^ Path to the cardano-node unix socket file.
   -> ConwayEraOnwards era -- ^ The 'ConwayEraOnwards' witness for current era.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> Maybe (String, Word32) -- ^ The transaction id and the index of the previosu governance action if any.
   -> EpochInterval -- ^ The target DRep activity interval to be set by the proposal.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
-  -> Word64 -- ^ The latest epoch until which to wait for the proposal to be registered by the chain.
+  -> EpochInterval -- ^ Number of epochs to wait for the proposal to be registered by the chain.
   -> m (String, Word32) -- ^ The transaction id and the index of the governance action.
-makeActivityChangeProposal execConfig epochStateView configurationFile socketPath
-                           ceo work prefix prevGovActionInfo drepActivity wallet timeout = do
+makeActivityChangeProposal execConfig epochStateView ceo work prefix
+                           prevGovActionInfo drepActivity wallet timeout = do
 
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
       era = toCardanoEra sbe
@@ -291,18 +285,7 @@ makeActivityChangeProposal execConfig epochStateView configurationFile socketPat
 
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
-  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex (fromString governanceActionTxId))
-                                        configurationFile
-                                        socketPath
-                                        (EpochNo timeout)
-
-  governanceActionIndex <- case propSubmittedResult of
-                             Left e ->
-                               H.failMessage callStack
-                                 $ "makeActivityChangeProposal failed waiting for gov action with: " <> displayError e
-                             Right Nothing ->
-                               H.failMessage callStack "Couldn't find proposal."
-                             Right (Just a) -> return a
+  governanceActionIndex <- H.nothingFailM $ watchEpochStateView epochStateView (return . maybeExtractGovernanceActionIndex (fromString governanceActionTxId)) timeout
 
   return (governanceActionTxId, governanceActionIndex)
 
