@@ -6,9 +6,11 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# LANGUAGE TypeApplications #-}
 
@@ -45,7 +47,7 @@ import           "contra-tracer" Control.Tracer
 import           Data.Either (partitionEithers)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, fromMaybe, mapMaybe)
+import           Data.Maybe (catMaybes, fromMaybe, mapMaybe, isJust)
 import           Data.Monoid (Last (..))
 import           Data.Proxy (Proxy (..))
 import           Data.Text (Text, breakOn, pack)
@@ -59,6 +61,7 @@ import           Network.HostName (getHostName)
 import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
+import           System.IO.Unsafe (unsafePerformIO)
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
 import           System.Posix.Files
@@ -93,9 +96,11 @@ import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
+import qualified Ouroboros.Consensus.MiniProtocol.ChainSync.Client as ChainSync.Client
 import           Ouroboros.Consensus.Node (DiskPolicyArgs (..), NetworkP2PMode (..),
                    RunNodeArgs (..), StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
+import qualified Ouroboros.Consensus.Node.Genesis as Genesis
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -476,6 +481,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , rnEnableP2P      = p2pMode
               , rnPeerSharing    = ncPeerSharing nc
               , rnGetUseBootstrapPeers = readTVar useBootstrapVar
+              , rnGenesisConfig = adhocGenesisConfig
               }
 #ifdef UNIX
         -- initial `SIGHUP` handler, which only rereads the topology file but
@@ -559,6 +565,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 , rnEnableP2P      = p2pMode
                 , rnPeerSharing    = ncPeerSharing nc
                 , rnGetUseBootstrapPeers = pure DontUseBootstrapPeers
+                , rnGenesisConfig = adhocGenesisConfig
                 }
 #ifdef UNIX
         -- initial `SIGHUP` handler; it only warns that neither updating of
@@ -935,3 +942,34 @@ producerAddresses RealNodeTopology { ntLocalRootPeersGroups
         (groups ntLocalRootPeersGroups)
   , foldMap (Map.fromList . rootConfigToRelayAccessPoint . publicRoots) ntPublicRootPeers
   )
+
+{-------------------------------------------------------------------------------
+  Temporary ad-hoc Genesis configuration
+-------------------------------------------------------------------------------}
+
+adhocGenesisConfig :: Genesis.GenesisSwitch Genesis.GenesisConfig
+adhocGenesisConfig = unsafePerformIO $ do
+  enableGenesis <- isJust <$> lookupEnv "ENABLE_GENESIS"
+  enableLoP <- isJust <$> lookupEnv "ENABLE_LoP"
+  enableCSJ <- isJust <$> lookupEnv "ENABLE_CSJ"
+  let defaultCSJJumpSize = 3 * 2160 * 20 -- mainnet forecast window
+  csjJumpSize <- maybe defaultCSJJumpSize (Api.SlotNo . read) <$> lookupEnv "CSJ_JUMP_SIZE"
+  pure $
+    if enableGenesis then
+      Genesis.GenesisEnabled Genesis.GenesisConfig {
+        Genesis.gcsChainSyncLoPBucketConfig =
+          if enableLoP then
+            ChainSync.Client.ChainSyncLoPBucketEnabled ChainSync.Client.ChainSyncLoPBucketEnabledConfig {
+              ChainSync.Client.csbcCapacity = 100_000 -- number of tokens
+            , ChainSync.Client.csbcRate     = 1_000   -- tokens of second leaking
+            }
+          else ChainSync.Client.ChainSyncLoPBucketDisabled
+      , Genesis.gcsCSJConfig =
+          if enableCSJ then
+            ChainSync.Client.CSJEnabled ChainSync.Client.CSJEnabledConfig {
+              ChainSync.Client.csjcJumpSize = csjJumpSize
+            }
+          else ChainSync.Client.CSJDisabled
+      }
+    else Genesis.GenesisDisabled
+{-# NOINLINE adhocGenesisConfig #-}
