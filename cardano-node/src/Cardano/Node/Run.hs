@@ -6,9 +6,11 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# LANGUAGE TypeApplications #-}
 
@@ -45,7 +47,7 @@ import           "contra-tracer" Control.Tracer
 import           Data.Either (partitionEithers)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, fromMaybe, mapMaybe)
+import           Data.Maybe (catMaybes, fromMaybe, mapMaybe, isJust)
 import           Data.Monoid (Last (..))
 import           Data.Proxy (Proxy (..))
 import           Data.Text (Text, breakOn, pack)
@@ -93,9 +95,11 @@ import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
+import qualified Ouroboros.Consensus.MiniProtocol.ChainSync.Client as ChainSync.Client
 import           Ouroboros.Consensus.Node (DiskPolicyArgs (..), NetworkP2PMode (..),
                    RunNodeArgs (..), StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
+import qualified Ouroboros.Consensus.Node.Genesis as Genesis
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -476,6 +480,9 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , rnEnableP2P      = p2pMode
               , rnPeerSharing    = ncPeerSharing nc
               , rnGetUseBootstrapPeers = readTVar useBootstrapVar
+              , rnGenesisConfig = if ncEnableGenesis nc
+                  then Genesis.enableGenesisConfigDefault
+                  else Genesis.disableGenesisConfig
               }
 #ifdef UNIX
         -- initial `SIGHUP` handler, which only rereads the topology file but
@@ -508,8 +515,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                   rnNodeKernelHook nodeArgs registry nodeKernel
             }
             StdRunNodeArgs
-              { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
-              , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
+              { srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride      = ncValidateDB nc
               , srnDiskPolicyArgs               = diskPolicyArgs
               , srnDatabasePath                 = dbPath
@@ -559,6 +565,9 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                 , rnEnableP2P      = p2pMode
                 , rnPeerSharing    = ncPeerSharing nc
                 , rnGetUseBootstrapPeers = pure DontUseBootstrapPeers
+                , rnGenesisConfig = if ncEnableGenesis nc
+                    then Genesis.enableGenesisConfigDefault
+                    else Genesis.disableGenesisConfig
                 }
 #ifdef UNIX
         -- initial `SIGHUP` handler; it only warns that neither updating of
@@ -581,8 +590,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                   rnNodeKernelHook nodeArgs registry nodeKernel
             }
             StdRunNodeArgs
-              { srnBfcMaxConcurrencyBulkSync   = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
-              , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
+              { srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride     = ncValidateDB nc
               , srnDiskPolicyArgs              = diskPolicyArgs
               , srnDatabasePath                = dbPath

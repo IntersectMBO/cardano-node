@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -29,9 +30,10 @@ import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderH
                    renderPointForVerbosity, renderRealPoint, renderRealPointAsPhrase,
                    renderTipBlockNo, renderTipHash, renderWithOrigin)
 import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol, CannotForge,
-                   ConvertRawHash (..), ForgeStateUpdateError, Header, RealPoint, blockNo,
-                   blockPoint, blockPrevHash, getHeader, headerPoint, pointHash, realPointHash,
-                   realPointSlot)
+                   ConvertRawHash (..), ForgeStateUpdateError, GenesisWindow (..), GetHeader,
+                   Header, RealPoint, blockNo, blockPoint, blockPrevHash, getHeader, headerPoint,
+                   pointHash, realPointHash, realPointSlot)
+import           Ouroboros.Consensus.Genesis.Governor
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended
@@ -44,7 +46,7 @@ import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempoo
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent (..))
-import qualified Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as ChainSync.Client
+import qualified Ouroboros.Consensus.MiniProtocol.ChainSync.Client.Jumping as ChainSync.Client.Jumping
 import qualified Ouroboros.Consensus.MiniProtocol.ChainSync.Client.State as ChainSync.Client
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (BlockingType (..),
                    TraceChainSyncServerEvent (..))
@@ -220,6 +222,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     VolDb.Truncate{}            -> Error
     VolDb.InvalidFileNames{}    -> Warning
     VolDb.DBClosed{}            -> Info
+  getSeverityAnnotation (ChainDB.TraceChainSelStarvationEvent _ev) = Debug
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -489,6 +492,11 @@ instance ( ConvertRawHash blk
          , InspectLedger blk)
       => HasTextFormatter (ChainDB.TraceEvent blk) where
     formatText tev _obj = case tev of
+      ChainDB.TraceChainSelStarvationEvent ev -> case ev of
+        ChainDB.ChainSelStarvationStarted time ->
+          "ChainSel starvation started at " <> showT time
+        ChainDB.ChainSelStarvationEnded time pt ->
+          "ChainSel starvation ended at " <> showT time <> " because of " <> renderRealPointAsPhrase pt
       ChainDB.TraceAddBlockEvent ev -> case ev of
         ChainDB.IgnoreBlockOlderThanK pt ->
           "Ignoring block older than K: " <> renderRealPointAsPhrase pt
@@ -735,6 +743,14 @@ instance ( ConvertRawHash blk
      where showProgressT :: Int -> Int -> Text
            showProgressT chunkNo outOf =
              pack (showFFloat (Just 2) (100 * fromIntegral chunkNo / fromIntegral outOf :: Float) mempty)
+
+instance HasPrivacyAnnotation (ChainSync.Client.Jumping.TraceEvent peer) where
+instance HasSeverityAnnotation (ChainSync.Client.Jumping.TraceEvent peer) where
+  getSeverityAnnotation _ = Debug
+instance ToObject peer
+      => Transformable Text IO (ChainSync.Client.Jumping.TraceEvent peer) where
+  trTransformer = trStructuredText
+instance HasTextFormatter (ChainSync.Client.Jumping.TraceEvent peer) where
 
 --
 -- | instances of @ToObject@
@@ -1146,6 +1162,16 @@ instance ( ConvertRawHash blk
                    , "currentBlock" .= renderRealPoint curr
                    , "targetBlock" .= renderRealPoint goal
                    ]
+  toObject _verb (ChainDB.TraceChainSelStarvationEvent ev) = case ev of
+    ChainDB.ChainSelStarvationStarted time ->
+      mconcat [ "kind" .= String "TraceChainSelStarvationEvent.ChainSelStarvationStarted"
+              , "time" .= String (showT time)
+              ]
+    ChainDB.ChainSelStarvationEnded time pt ->
+      mconcat [ "kind" .= String "TraceChainSelStarvationEvent.ChainSelStarvationEndedAt"
+              , "time" .= String (showT time)
+              , "point" .= String (Text.pack $ show $ renderRealPoint pt)
+              ]
 
   toObject _verb (ChainDB.TraceIteratorEvent ev) = case ev of
     ChainDB.UnknownRangeRequested unkRange ->
@@ -1371,10 +1397,10 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
     TraceJumpResult res ->
       mconcat [ "kind" .= String "ChainSyncClientEvent.TraceJumpResult"
                , "res" .= case res of
-                   ChainSync.Client.AcceptedJump info -> Aeson.object
+                   ChainSync.Client.Jumping.AcceptedJump info -> Aeson.object
                      [ "kind" .= String "AcceptedJump"
                       , "payload" .= toObject verb info ]
-                   ChainSync.Client.RejectedJump info -> Aeson.object
+                   ChainSync.Client.Jumping.RejectedJump info -> Aeson.object
                      [ "kind" .= String "RejectedJump"
                       , "payload" .= toObject verb info ]
                ]
@@ -1388,25 +1414,25 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
 
 instance ( LedgerSupportsProtocol blk,
            ConvertRawHash blk
-         ) => ToObject (ChainSync.Client.Instruction blk) where
+         ) => ToObject (ChainSync.Client.Jumping.Instruction blk) where
   toObject verb = \case
-    ChainSync.Client.RunNormally ->
+    ChainSync.Client.Jumping.RunNormally ->
       mconcat ["kind" .= String "RunNormally"]
-    ChainSync.Client.Restart ->
+    ChainSync.Client.Jumping.Restart ->
       mconcat ["kind" .= String "Restart"]
-    ChainSync.Client.JumpInstruction info ->
+    ChainSync.Client.Jumping.JumpInstruction info ->
       mconcat [ "kind" .= String "JumpInstruction"
               , "payload" .= toObject verb info
               ]
 
 instance ( LedgerSupportsProtocol blk,
            ConvertRawHash blk
-         ) => ToObject (ChainSync.Client.JumpInstruction blk) where
+         ) => ToObject (ChainSync.Client.Jumping.JumpInstruction blk) where
   toObject verb = \case
-    ChainSync.Client.JumpTo info ->
+    ChainSync.Client.Jumping.JumpTo info ->
       mconcat [ "kind" .= String "JumpTo"
                 , "info" .= toObject verb info ]
-    ChainSync.Client.JumpToGoodPoint info ->
+    ChainSync.Client.Jumping.JumpToGoodPoint info ->
       mconcat [ "kind" .= String "JumpToGoodPoint"
                 , "info" .= toObject verb info ]
 
@@ -1661,6 +1687,70 @@ instance ToObject selection => ToObject (TraceGsmEvent selection) where
       [ "kind" .= String "GsmEventSyncingToPreSyncing"
       ]
 
+instance HasPrivacyAnnotation (TraceGDDEvent peer blk) where
+instance HasSeverityAnnotation (TraceGDDEvent peer blk) where
+  getSeverityAnnotation _ = Debug
+instance (Show peer, GetHeader blk) => Transformable Text IO (TraceGDDEvent peer blk) where
+  trTransformer = trStructured
+
+instance (Show peer, GetHeader blk) => ToObject (TraceGDDEvent peer blk) where
+  toObject verb TraceGDDEvent {..} = mconcat
+    [ "kind" .= String "TraceGDDEvent"
+    , "bounds" .= toJSON (
+        map
+        ( \(peer, density) -> Object $ mconcat
+          [ "kind" .= String "PeerDensityBound"
+          , "peer" .= (String $ showT peer)
+          , "densityBounds" .= toObject verb density
+          ]
+        )
+        bounds
+      )
+    , "curChain" .= toObject verb curChain
+    , "candidates" .= toJSON (
+        map
+        ( \(peer, frag) -> Object $ mconcat
+          [ "kind" .= String "PeerCandidateFragment"
+          , "peer" .= (String $ showT peer)
+          , "candidateFragment" .= toObject verb frag
+          ]
+        )
+        candidates
+      )
+    , "candidateSuffixes" .= toJSON (
+        map
+        ( \(peer, frag) -> Object $ mconcat
+          [ "kind" .= String "PeerCandidateSuffix"
+          , "peer" .= (String $ showT peer)
+          , "candidateSuffix" .= toObject verb frag
+          ]
+        )
+        candidateSuffixes
+      )
+    , "losingPeers".= (toJSON $ map (String . showT) losingPeers)
+    , "loeHead" .= (String $ showT loeHead)
+    , "sgen" .= (String $ showT $ unGenesisWindow sgen)
+    ]
+
+instance (GetHeader blk) => ToObject (DensityBounds blk) where
+  toObject verb DensityBounds {..} = mconcat
+    [ "kind" .= String "DensityBounds"
+    , "clippedFragment" .= toObject verb clippedFragment
+    , "offersMoreThanK" .= toJSON offersMoreThanK
+    , "lowerBound" .= toJSON lowerBound
+    , "upperBound" .= toJSON upperBound
+    , "hasBlockAfter" .= toJSON hasBlockAfter
+    , "latestSlot" .= String (showT latestSlot)
+    , "idling" .= toJSON idling
+    ]
+
+instance (GetHeader blk) => ToObject (AF.AnchoredFragment (Header blk)) where
+  toObject _ frag = mconcat
+    [ "kind" .= String "AnchoredFragment"
+    , "anchorPoint" .= (String $ showT $ AF.anchorPoint frag)
+    , "headPoint" .= (String $ showT $ AF.headPoint frag)
+    ]
+
 instance ConvertRawHash blk => ToObject (Tip blk) where
   toObject _verb TipGenesis =
     mconcat [ "kind" .= String "TipGenesis" ]
@@ -1670,3 +1760,11 @@ instance ConvertRawHash blk => ToObject (Tip blk) where
             , "tipHash" .= renderHeaderHash (Proxy @blk) hash
             , "tipBlockNo" .= toJSON bNo
             ]
+
+instance ToObject peer => ToObject (ChainSync.Client.Jumping.TraceEvent peer) where
+  toObject verb (ChainSync.Client.Jumping.RotatedDynamo oldPeer newPeer) =
+    mconcat
+      [ "kind" .= String "RotatedDynamo"
+      , "oldPeer" .= toObject verb oldPeer
+      , "newPeer" .= toObject verb newPeer
+      ]

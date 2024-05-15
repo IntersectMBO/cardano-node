@@ -26,6 +26,7 @@ module Cardano.Tracing.Config
   , TraceBlockFetchServer
   , TraceChainDB
   , TraceChainSyncClient
+  , TraceChainSyncJumping
   , TraceChainSyncBlockServer
   , TraceChainSyncHeaderServer
   , TraceChainSyncProtocol
@@ -122,6 +123,7 @@ instance Semigroup PartialTraceOptions where
 
 type TraceAcceptPolicy = ("TraceAcceptPolicy" :: Symbol)
 type TraceBlockchainTime = ("TraceBlockchainTime" :: Symbol)
+type TraceChainSyncJumping = ("TraceChainSyncJumping" :: Symbol)
 type TraceBlockFetchClient = ("TraceBlockFetchClient" :: Symbol)
 type TraceBlockFetchDecisions = ("TraceBlockFetchDecisions" :: Symbol)
 type TraceBlockFetchProtocol = ("TraceBlockFetchProtocol" :: Symbol)
@@ -143,6 +145,8 @@ type TraceDnsSubscription = ("TraceDnsSubscription" :: Symbol)
 type TraceErrorPolicy = ("TraceErrorPolicy" :: Symbol)
 type TraceForge = ("TraceForge" :: Symbol)
 type TraceForgeStateInfo = ("TraceForgeStateInfo" :: Symbol)
+type TraceGdd = ("TraceGdd" :: Symbol)
+type TraceGsm = ("TraceGsm" :: Symbol)
 type TraceHandshake = ("TraceHandshake" :: Symbol)
 type TraceIpSubscription = ("TraceIpSubscription" :: Symbol)
 type TraceKeepAliveClient = ("TraceKeepAliveClient" :: Symbol)
@@ -173,7 +177,6 @@ type TraceTxInbound = ("TraceTxInbound" :: Symbol)
 type TraceTxOutbound = ("TraceTxOutbound" :: Symbol)
 type TraceTxSubmissionProtocol = ("TraceTxSubmissionProtocol" :: Symbol)
 type TraceTxSubmission2Protocol = ("TraceTxSubmission2Protocol" :: Symbol)
-type TraceGsm = ("TraceGsm" :: Symbol)
 
 newtype OnOff (name :: Symbol) = OnOff { isOn :: Bool } deriving (Eq, Show)
 
@@ -196,6 +199,7 @@ data TraceSelection
   , traceBlockFetchProtocolSerialised :: OnOff TraceBlockFetchProtocolSerialised
   , traceBlockFetchServer :: OnOff TraceBlockFetchServer
   , traceBlockchainTime :: OnOff TraceBlockchainTime
+  , traceChainSyncJumping :: OnOff TraceChainSyncJumping
   , traceChainDB :: OnOff TraceChainDB
   , traceChainSyncBlockServer :: OnOff TraceChainSyncBlockServer
   , traceChainSyncClient :: OnOff TraceChainSyncClient
@@ -212,6 +216,8 @@ data TraceSelection
   , traceErrorPolicy :: OnOff TraceErrorPolicy
   , traceForge :: OnOff TraceForge
   , traceForgeStateInfo :: OnOff TraceForgeStateInfo
+  , traceGdd :: OnOff TraceGdd
+  , traceGsm :: OnOff TraceGsm
   , traceHandshake :: OnOff TraceHandshake
   , traceInboundGovernor :: OnOff TraceInboundGovernor
   , traceInboundGovernorCounters :: OnOff TraceInboundGovernorCounters
@@ -242,7 +248,6 @@ data TraceSelection
   , traceTxOutbound :: OnOff TraceTxOutbound
   , traceTxSubmissionProtocol :: OnOff TraceTxSubmissionProtocol
   , traceTxSubmission2Protocol :: OnOff TraceTxSubmission2Protocol
-  , traceGsm :: OnOff TraceGsm
   } deriving (Eq, Show)
 
 
@@ -254,6 +259,7 @@ data PartialTraceSelection
       -- Per-trace toggles, alpha-sorted.
       , pTraceAcceptPolicy :: Last (OnOff TraceAcceptPolicy)
       , pTraceBlockchainTime :: Last (OnOff TraceBlockchainTime)
+      , pTraceChainSyncJumping :: Last (OnOff TraceChainSyncJumping)
       , pTraceBlockFetchClient :: Last (OnOff TraceBlockFetchClient)
       , pTraceBlockFetchDecisions :: Last (OnOff TraceBlockFetchDecisions)
       , pTraceBlockFetchProtocol :: Last (OnOff TraceBlockFetchProtocol)
@@ -275,6 +281,8 @@ data PartialTraceSelection
       , pTraceErrorPolicy :: Last (OnOff TraceErrorPolicy)
       , pTraceForge :: Last (OnOff TraceForge)
       , pTraceForgeStateInfo :: Last (OnOff TraceForgeStateInfo)
+      , pTraceGdd :: Last (OnOff TraceGdd)
+      , pTraceGsm :: Last (OnOff TraceGsm)
       , pTraceHandshake :: Last (OnOff TraceHandshake)
       , pTraceInboundGovernor :: Last (OnOff TraceInboundGovernor)
       , pTraceInboundGovernorCounters :: Last (OnOff TraceInboundGovernorCounters)
@@ -305,7 +313,6 @@ data PartialTraceSelection
       , pTraceTxOutbound :: Last (OnOff TraceTxOutbound)
       , pTraceTxSubmissionProtocol :: Last (OnOff TraceTxSubmissionProtocol)
       , pTraceTxSubmission2Protocol :: Last (OnOff TraceTxSubmission2Protocol)
-      , pTraceGsm :: Last (OnOff TraceGsm)
       } deriving (Eq, Generic, Show)
 
 
@@ -318,6 +325,7 @@ instance FromJSON PartialTraceSelection where
       <$> Last <$> v .:? "TracingVerbosity"
       <*> parseTracer (Proxy @TraceAcceptPolicy) v
       <*> parseTracer (Proxy @TraceBlockchainTime) v
+      <*> parseTracer (Proxy @TraceChainSyncJumping) v
       <*> parseTracer (Proxy @TraceBlockFetchClient) v
       <*> parseTracer (Proxy @TraceBlockFetchDecisions) v
       <*> parseTracer (Proxy @TraceBlockFetchProtocol) v
@@ -339,6 +347,8 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TraceErrorPolicy) v
       <*> parseTracer (Proxy @TraceForge) v
       <*> parseTracer (Proxy @TraceForgeStateInfo) v
+      <*> parseTracer (Proxy @TraceGdd) v
+      <*> parseTracer (Proxy @TraceGsm) v
       <*> parseTracer (Proxy @TraceHandshake) v
       <*> parseTracer (Proxy @TraceInboundGovernor) v
       <*> parseTracer (Proxy @TraceInboundGovernorCounters) v
@@ -369,7 +379,6 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TraceTxOutbound) v
       <*> parseTracer (Proxy @TraceTxSubmissionProtocol) v
       <*> parseTracer (Proxy @TraceTxSubmission2Protocol) v
-      <*> parseTracer (Proxy @TraceGsm) v
 
 
 defaultPartialTraceConfiguration :: PartialTraceSelection
@@ -379,6 +388,7 @@ defaultPartialTraceConfiguration =
     -- Per-trace toggles, alpha-sorted.
     , pTraceAcceptPolicy = pure $ OnOff False
     , pTraceBlockchainTime = pure $ OnOff False
+    , pTraceChainSyncJumping = pure $ OnOff False
     , pTraceBlockFetchClient = pure $ OnOff False
     , pTraceBlockFetchDecisions = pure $ OnOff True
     , pTraceBlockFetchProtocol = pure $ OnOff False
@@ -400,6 +410,8 @@ defaultPartialTraceConfiguration =
     , pTraceErrorPolicy = pure $ OnOff True
     , pTraceForge = pure $ OnOff True
     , pTraceForgeStateInfo = pure $ OnOff True
+    , pTraceGdd = pure $ OnOff True
+    , pTraceGsm = pure $ OnOff True
     , pTraceHandshake = pure $ OnOff False
     , pTraceInboundGovernor = pure $ OnOff True
     , pTraceInboundGovernorCounters = pure $ OnOff True
@@ -430,7 +442,6 @@ defaultPartialTraceConfiguration =
     , pTraceTxOutbound = pure $ OnOff False
     , pTraceTxSubmissionProtocol = pure $ OnOff False
     , pTraceTxSubmission2Protocol = pure $ OnOff False
-    , pTraceGsm = pure $ OnOff True
     }
 
 
@@ -442,6 +453,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceVerbosity <- first Text.pack $ lastToEither "Default value not specified for TracingVerbosity" pTraceVerbosity
    traceAcceptPolicy <- proxyLastToEither (Proxy @TraceAcceptPolicy) pTraceAcceptPolicy
    traceBlockchainTime <- proxyLastToEither (Proxy @TraceBlockchainTime) pTraceBlockchainTime
+   traceChainSyncJumping <- proxyLastToEither (Proxy @TraceChainSyncJumping) pTraceChainSyncJumping
    traceBlockFetchClient <- proxyLastToEither (Proxy @TraceBlockFetchClient) pTraceBlockFetchClient
    traceBlockFetchDecisions <- proxyLastToEither (Proxy @TraceBlockFetchDecisions) pTraceBlockFetchDecisions
    traceBlockFetchProtocol <- proxyLastToEither (Proxy @TraceBlockFetchProtocol) pTraceBlockFetchProtocol
@@ -463,6 +475,8 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceErrorPolicy <- proxyLastToEither (Proxy @TraceErrorPolicy) pTraceErrorPolicy
    traceForge <- proxyLastToEither (Proxy @TraceForge) pTraceForge
    traceForgeStateInfo <- proxyLastToEither (Proxy @TraceForgeStateInfo) pTraceForgeStateInfo
+   traceGdd <- proxyLastToEither (Proxy @TraceGdd) pTraceGdd
+   traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
    traceHandshake <- proxyLastToEither (Proxy @TraceHandshake) pTraceHandshake
    traceInboundGovernor <- proxyLastToEither (Proxy @TraceInboundGovernor) pTraceInboundGovernor
    traceInboundGovernorCounters <- proxyLastToEither (Proxy @TraceInboundGovernorCounters) pTraceInboundGovernorCounters
@@ -493,7 +507,6 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceTxOutbound <- proxyLastToEither (Proxy @TraceTxOutbound) pTraceTxOutbound
    traceTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceTxSubmissionProtocol) pTraceTxSubmissionProtocol
    traceTxSubmission2Protocol <- proxyLastToEither (Proxy @TraceTxSubmission2Protocol) pTraceTxSubmission2Protocol
-   traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
    Right $ TraceDispatcher $ TraceSelection
              { traceVerbosity = traceVerbosity
              , traceAcceptPolicy = traceAcceptPolicy
@@ -503,6 +516,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceBlockFetchProtocolSerialised = traceBlockFetchProtocolSerialised
              , traceBlockFetchServer = traceBlockFetchServer
              , traceBlockchainTime = traceBlockchainTime
+             , traceChainSyncJumping = traceChainSyncJumping
              , traceChainDB = traceChainDB
              , traceChainSyncBlockServer = traceChainSyncBlockServer
              , traceChainSyncClient = traceChainSyncClient
@@ -519,6 +533,8 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceErrorPolicy = traceErrorPolicy
              , traceForge = traceForge
              , traceForgeStateInfo = traceForgeStateInfo
+             , traceGdd = traceGdd
+             , traceGsm = traceGsm
              , traceHandshake = traceHandshake
              , traceInboundGovernor = traceInboundGovernor
              , traceInboundGovernorCounters = traceInboundGovernorCounters
@@ -549,7 +565,6 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceTxOutbound = traceTxOutbound
              , traceTxSubmissionProtocol = traceTxSubmissionProtocol
              , traceTxSubmission2Protocol = traceTxSubmission2Protocol
-             , traceGsm = traceGsm
              }
 
 partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelection))) = do
@@ -558,6 +573,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceVerbosity <- first Text.pack $ lastToEither "Default value not specified for TracingVerbosity" pTraceVerbosity
   traceAcceptPolicy <- proxyLastToEither (Proxy @TraceAcceptPolicy) pTraceAcceptPolicy
   traceBlockchainTime <- proxyLastToEither (Proxy @TraceBlockchainTime) pTraceBlockchainTime
+  traceChainSyncJumping <- proxyLastToEither (Proxy @TraceChainSyncJumping) pTraceChainSyncJumping
   traceBlockFetchClient <- proxyLastToEither (Proxy @TraceBlockFetchClient) pTraceBlockFetchClient
   traceBlockFetchDecisions <- proxyLastToEither (Proxy @TraceBlockFetchDecisions) pTraceBlockFetchDecisions
   traceBlockFetchProtocol <- proxyLastToEither (Proxy @TraceBlockFetchProtocol) pTraceBlockFetchProtocol
@@ -579,6 +595,8 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceErrorPolicy <- proxyLastToEither (Proxy @TraceErrorPolicy) pTraceErrorPolicy
   traceForge <- proxyLastToEither (Proxy @TraceForge) pTraceForge
   traceForgeStateInfo <- proxyLastToEither (Proxy @TraceForgeStateInfo) pTraceForgeStateInfo
+  traceGdd <- proxyLastToEither (Proxy @TraceGdd) pTraceGdd
+  traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
   traceHandshake <- proxyLastToEither (Proxy @TraceHandshake) pTraceHandshake
   traceInboundGovernor <- proxyLastToEither (Proxy @TraceInboundGovernor) pTraceInboundGovernor
   traceIpSubscription <- proxyLastToEither (Proxy @TraceIpSubscription) pTraceIpSubscription
@@ -609,7 +627,6 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceTxOutbound <- proxyLastToEither (Proxy @TraceTxOutbound) pTraceTxOutbound
   traceTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceTxSubmissionProtocol) pTraceTxSubmissionProtocol
   traceTxSubmission2Protocol <- proxyLastToEither (Proxy @TraceTxSubmission2Protocol) pTraceTxSubmission2Protocol
-  traceGsm <- proxyLastToEither (Proxy @TraceGsm) pTraceGsm
   Right $ TracingOnLegacy $ TraceSelection
             { traceVerbosity = traceVerbosity
             , traceAcceptPolicy = traceAcceptPolicy
@@ -619,6 +636,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceBlockFetchProtocolSerialised = traceBlockFetchProtocolSerialised
             , traceBlockFetchServer = traceBlockFetchServer
             , traceBlockchainTime = traceBlockchainTime
+            , traceChainSyncJumping = traceChainSyncJumping
             , traceChainDB = traceChainDB
             , traceChainSyncBlockServer = traceChainSyncBlockServer
             , traceChainSyncClient = traceChainSyncClient
@@ -635,6 +653,8 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceErrorPolicy = traceErrorPolicy
             , traceForge = traceForge
             , traceForgeStateInfo = traceForgeStateInfo
+            , traceGdd = traceGdd
+            , traceGsm = traceGsm
             , traceHandshake = traceHandshake
             , traceInboundGovernor = traceInboundGovernor
             , traceInboundGovernorCounters = traceInboundGovernorCounters
@@ -665,7 +685,6 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceTxOutbound = traceTxOutbound
             , traceTxSubmissionProtocol = traceTxSubmissionProtocol
             , traceTxSubmission2Protocol = traceTxSubmission2Protocol
-            , traceGsm = traceGsm
             }
 
 proxyLastToEither :: KnownSymbol name => Proxy name -> Last (OnOff name) -> Either Text (OnOff name)
