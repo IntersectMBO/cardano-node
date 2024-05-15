@@ -1,11 +1,11 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE NumericUnderscores #-}
-{-# LANGUAGE FlexibleContexts #-}
 
 module Testnet.Components.Query
   ( EpochStateView
@@ -32,7 +32,6 @@ import           Cardano.Api.Ledger (Credential, DRepState, EpochInterval (..), 
 import           Cardano.Api.Shelley (ShelleyLedgerEra, fromShelleyTxIn, fromShelleyTxOut)
 
 import qualified Cardano.Ledger.Api as L
-import           Cardano.Ledger.BaseTypes (addEpochInterval)
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.PParams as L
@@ -40,6 +39,7 @@ import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.UTxO as L
 
 import           Control.Exception.Safe (MonadCatch)
+import           Control.Monad (void)
 import           Control.Monad.Trans.Resource
 import           Control.Monad.Trans.State.Strict (put)
 import           Data.Bifunctor (bimap)
@@ -99,9 +99,9 @@ waitForEpochs
   => EpochStateView
   -> EpochInterval  -- ^ Number of epochs to wait
   -> m EpochNo -- ^ The epoch number reached
-waitForEpochs epochStateView@EpochStateView{nodeConfigPath, socketPath} interval = withFrozenCallStack $ do
-  currentEpoch <- getCurrentEpochNo epochStateView
-  waitUntilEpoch nodeConfigPath socketPath $ addEpochInterval currentEpoch interval
+waitForEpochs epochStateView interval = withFrozenCallStack $ do
+  void $ watchEpochStateView epochStateView (const $ pure Nothing) interval
+  getCurrentEpochNo epochStateView
 
 -- | A read-only mutable pointer to an epoch state, updated automatically
 data EpochStateView = EpochStateView
