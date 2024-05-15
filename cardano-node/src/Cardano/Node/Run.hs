@@ -90,12 +90,13 @@ import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Node (DiskPolicyArgs (..), NetworkP2PMode (..),
-                   RunNodeArgs (..), StdRunNodeArgs (..), stdChainSyncTimeout)
+                   RunNodeArgs (..), StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.Diffusion as Diffusion
+import qualified Ouroboros.Network.Diffusion.Configuration as Configuration
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
 import qualified Ouroboros.Network.Diffusion.P2P as P2P
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
@@ -592,7 +593,7 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
   customizeChainSyncTimeout = case ncChainSyncIdleTimeout nc of
     NoTimeoutOverride -> Nothing
     TimeoutOverride t -> Just $ do
-      cst <- stdChainSyncTimeout
+      cst <- Configuration.defaultChainSyncTimeout
       pure $ case t of
         0 ->
           cst { idleTimeout = Nothing }

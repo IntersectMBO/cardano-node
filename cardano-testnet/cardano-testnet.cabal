@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-testnet
-version:                8.8.0
+version:                8.11.0
 synopsis:               The cardano full node
 description:            The cardano full node.
 copyright:              2021-2023 Input Output Global Inc (IOG), 2023-2024 Intersect.
@@ -35,8 +35,8 @@ library
                       , aeson-pretty
                       , ansi-terminal
                       , bytestring
-                      , cardano-api ^>= 8.44
-                      , cardano-cli ^>= 8.22
+                      , cardano-api ^>= 8.46
+                      , cardano-cli ^>= 8.23
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2
@@ -68,7 +68,7 @@ library
                       , network
                       , network-mux
                       , optparse-applicative-fork
-                      , ouroboros-network ^>= 0.14
+                      , ouroboros-network ^>= 0.16
                       , ouroboros-network-api
                       , prettyprinter
                       , process

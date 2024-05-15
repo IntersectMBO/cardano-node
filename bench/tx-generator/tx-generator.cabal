@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   tx-generator
-version:                2.11
+version:                2.12
 synopsis:               A transaction workload generator for Cardano clusters
 description:            A transaction workload generator for Cardano clusters.
 category:               Cardano,
@@ -100,9 +100,9 @@ library
                       , attoparsec-aeson
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.44
+                      , cardano-api ^>= 8.46
                       , cardano-binary
-                      , cardano-cli ^>= 8.22
+                      , cardano-cli ^>= 8.23
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-data

@@ -48,15 +48,12 @@ import           Cardano.Tracing.Config
 
 import           Prelude
 
-import           Control.Monad
 import           Control.Monad.Identity (Identity)
 import           Data.Aeson (ToJSON (..), Value, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KeyMapAeson
 import qualified Data.Default.Class as DefaultClass
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Proxy
 import           Data.Ratio
@@ -72,31 +69,24 @@ import           Numeric.Natural
 import           System.FilePath ((</>))
 
 import           Test.Cardano.Ledger.Core.Rational
+import           Test.Cardano.Ledger.Plutus (testingCostModelV3)
 import           Testnet.Start.Types
 import           Testnet.Types
 
 {- HLINT ignore "Use underscore" -}
 
 instance Api.Error AlonzoGenesisError where
-  prettyError (AlonzoGenErrCostModels e) =
-    "Error in Alonzo genesis cost models: " <> pshow e
   prettyError (AlonzoGenErrTooMuchPrecision r) =
     "Too much precision for bounded rational in Alonzo genesis: " <> pshow r
 
-data AlonzoGenesisError
+newtype AlonzoGenesisError
   = AlonzoGenErrTooMuchPrecision Rational
-  | AlonzoGenErrCostModels (Map Ledger.Language Ledger.CostModelError)
   deriving Show
 
 defaultAlonzoGenesis :: Either AlonzoGenesisError AlonzoGenesis
 defaultAlonzoGenesis = do
   let genesis = Api.alonzoGenesisDefaults
-      costModelsErrors = Ledger.costModelsErrors $ Ledger.agCostModels genesis
       prices = Ledger.agPrices genesis
-
-  -- fail on cost models errors
-  unless (Map.null costModelsErrors)
-    . Left $ AlonzoGenErrCostModels costModelsErrors
 
   -- double check that prices have correct values - they're set using unsafeBoundedRational in cardano-api
   _priceExecSteps <- checkBoundedRational $ Ledger.prSteps prices
@@ -124,6 +114,7 @@ defaultConwayGenesis =
                     , ucppDRepDeposit = Coin 1_000_000
                     , ucppDRepActivity = EpochInterval 100
                     , ucppMinFeeRefScriptCostPerByte = 0 %! 1 -- FIXME GARBAGE VALUE
+                    , ucppPlutusV3CostModel = testingCostModelV3
                     }
       drepVotingThresholds = DRepVotingThresholds
         { dvtMotionNoConfidence = 0 %! 1
@@ -473,7 +464,8 @@ eraToProtocolVersion (AnyCardanoEra era) =
     AlonzoEra -> mkProtVer (6, 0)
     -- Babbage had an intra-era hardfork
     BabbageEra -> mkProtVer (8, 0)
-    ConwayEra -> mkProtVer (9, 0)
+    -- By default start after bootstrap (which is PV9)
+    ConwayEra -> mkProtVer (10, 0)
 
 -- TODO: Expose from cardano-api
 mkProtVer :: (Natural, Natural) -> ProtVer

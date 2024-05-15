@@ -189,7 +189,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
     [ eraName, "transaction", "submit"
     , "--tx-file", txbodySignedFp
     ]
-  -- }}}
+-- }}}
 
   txidString <- mconcat . lines <$> execCli' execConfig
     [ "transaction", "txid"
@@ -309,4 +309,3 @@ getTreasuryWithdrawalProposal nodeConfigFile socketPath maxEpoch = withFrozenCal
               _ ->
                 pure ConditionNotMet
           ) actualEra
-
