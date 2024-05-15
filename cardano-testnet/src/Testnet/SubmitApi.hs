@@ -12,14 +12,13 @@ module Testnet.SubmitApi
 import           Cardano.Api
 
 import           Cardano.Testnet
-import qualified Cardano.Testnet as H
 
 import           Prelude
 
 import qualified System.IO as IO
 import qualified System.Process as IO
 
-import qualified Testnet.Process.Run as H
+import           Testnet.Process.Run (procSubmitApi)
 
 import qualified Hedgehog as H
 import           Hedgehog.Extras (Integration)
@@ -49,7 +48,7 @@ withSubmitApi
       , maybePort
       } args f = do
   let logDir = makeLogDir $ TmpAbsolutePath tempAbsPath
-      tempBaseAbsPath = H.makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath
+      tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath
 
   nodeStdoutFile <- H.noteTempFile logDir "submit-api.stdout.log"
   nodeStderrFile <- H.noteTempFile logDir "submit-api.stderr.log"
@@ -59,7 +58,7 @@ withSubmitApi
 
   [submitApiPort] <- H.evalIO $ maybe (IO.allocateRandomPorts 1) (pure . (:[])) maybePort
 
-  cp <- H.procSubmitApi $
+  cp <- procSubmitApi $
     [ "--config", unFile configPath
     , "--cardano-mode"
     , "--epoch-slots", show epochSlots

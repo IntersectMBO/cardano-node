@@ -39,9 +39,9 @@ import           System.FilePath ((</>))
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
-import qualified Testnet.Process.Cli as P
-import qualified Testnet.Process.Run as H
-import qualified Testnet.Property.Util as H
+import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
+import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (eraToString)
 import           Testnet.Types
 
@@ -49,7 +49,7 @@ import           Hedgehog
 import qualified Hedgehog.Extras as H
 
 hprop_ledger_events_treasury_withdrawal:: Property
-hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasury-withdrawal" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury-withdrawal" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
@@ -78,7 +78,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
-  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath poolRuntime
 
   epochStateView <- getEpochStateView configurationFile socketPath
@@ -94,7 +94,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
 
   H.writeFile proposalAnchorFile "dummy anchor data"
 
-  proposalAnchorDataHash <- H.execCli' execConfig
+  proposalAnchorDataHash <- execCli' execConfig
     [ eraName, "governance"
     , "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
@@ -106,12 +106,12 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
       stakeSKeyFp = gov </> "stake.skey"
       stakeCertFp = gov </> "stake.regcert"
 
-  P.cliStakeAddressKeyGen
+  cliStakeAddressKeyGen
      $ KeyPair { verificationKey = File stakeVkeyFp
                , signingKey= File stakeSKeyFp
                }
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ eraName, "stake-address", "registration-certificate"
     , "--stake-verification-key-file", stakeVkeyFp
     , "--key-reg-deposit-amt", show @Int 0 -- TODO: why this needs to be 0????
@@ -121,7 +121,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
   stakeCertTxBodyFp <- H.note $ work </> "stake.registration.txbody"
   stakeCertTxSignedFp <- H.note $ work </> "stake.registration.tx"
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ eraName, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
     , "--tx-in", Text.unpack $ renderTxIn txin2
@@ -131,7 +131,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
     , "--out-file", stakeCertTxBodyFp
     ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ eraName, "transaction", "sign"
     , "--tx-body-file", stakeCertTxBodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
@@ -139,7 +139,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
     , "--out-file", stakeCertTxSignedFp
     ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ eraName, "transaction", "submit"
     , "--tx-file", stakeCertTxSignedFp
     ]
@@ -148,7 +148,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
   -- {{{ Create treasury withdrawal
   let withdrawalAmount = 3_300_777 :: Integer
   govActionDeposit <- getMinDRepDeposit epochStateView ceo
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ eraName, "governance", "action", "create-treasury-withdrawal"
     , "--testnet"
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
@@ -169,7 +169,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
 
   txin3 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ eraName, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin3
@@ -178,20 +178,20 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
     , "--out-file", txbodyFp
     ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ eraName, "transaction", "sign"
     , "--tx-body-file", txbodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
     , "--out-file", txbodySignedFp
     ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ eraName, "transaction", "submit"
     , "--tx-file", txbodySignedFp
     ]
   -- }}}
 
-  txidString <- mconcat . lines <$> H.execCli' execConfig
+  txidString <- mconcat . lines <$> execCli' execConfig
     [ "transaction", "txid"
     , "--tx-file", txbodySignedFp
     ]
@@ -206,7 +206,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
 
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
   H.forConcurrently_ [1..3] $ \n -> do
-    H.execCli' execConfig
+    execCli' execConfig
       [ eraName, "governance", "vote", "create"
       , "--yes"
       , "--governance-action-tx-id", txidString
@@ -220,7 +220,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
   voteTxFp <- H.note $ work </> gov </> "vote.tx"
   voteTxBodyFp <- H.note $ work </> gov </> "vote.txbody"
   -- {{{ Submit votes
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ eraName, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
     , "--tx-in", Text.unpack $ renderTxIn txin4
@@ -232,7 +232,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
     , "--out-file", voteTxBodyFp
     ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ eraName, "transaction", "sign"
     , "--tx-body-file", voteTxBodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
@@ -242,7 +242,7 @@ hprop_ledger_events_treasury_withdrawal = H.integrationRetryWorkspace 1  "treasu
     , "--out-file", voteTxFp
     ]
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ eraName, "transaction", "submit"
     , "--tx-file", voteTxFp
     ]

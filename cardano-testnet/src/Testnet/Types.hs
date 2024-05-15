@@ -38,7 +38,6 @@ module Testnet.Types
   , ShelleyGenesis(..)
   , shelleyGenesis
   , getStartTime
-  , fromNominalDiffTimeMicro
   ) where
 
 import           Cardano.Api

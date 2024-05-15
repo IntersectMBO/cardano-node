@@ -23,12 +23,11 @@ import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
-import           Testnet.Components.SPO
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
-import qualified Testnet.Process.Run as H
-import           Testnet.Process.Run
-import qualified Testnet.Property.Util as H
+import           Testnet.Process.Cli.SPO
+import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Property.Util (decodeEraUTxO, integrationWorkspace)
 import           Testnet.Types
 
 import           Hedgehog (Property)
@@ -44,7 +43,7 @@ import qualified Hedgehog.Extras as H
 -- Voting NO
 -- Proposing NO
 hprop_plutus_v3 :: Property
-hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -68,14 +67,14 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
 
   poolNode1 <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
-  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   H.noteShow_ wallet0
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
       utxoAddr2 = Text.unpack $ paymentKeyInfoAddr wallet1
       utxoSKeyFile = signingKeyFp $ paymentKeyInfoPair wallet0
       utxoSKeyFile2 = signingKeyFp $ paymentKeyInfoPair wallet1
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ anyEraToString anyEra, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
@@ -97,13 +96,13 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
   let sendAdaToScriptAddressTxBody = work </> "send-ada-to-script-address-tx-body"
 
   plutusSpendingScriptAddr <-
-    H.execCli' execConfig
+    execCli' execConfig
       [ "address", "build"
       , "--payment-script-file", plutusSpendingScript
       ]
 
   mintingPolicyId <- filter (/= '\n') <$>
-    H.execCli' execConfig
+    execCli' execConfig
       [ anyEraToString anyEra, "transaction"
       , "policyid"
       , "--script-file", plutusMintingScript
@@ -112,7 +111,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
   H.note_ $ "plutusSpendingScriptAddr: " <> plutusSpendingScriptAddr
 
   scriptdatumhash <- filter (/= '\n') <$>
-    H.execCli' execConfig
+    execCli' execConfig
       [ "transaction", "hash-script-data"
       , "--script-data-value", "0"
       ]
@@ -154,7 +153,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
 
   H.threadDelay 10_000_000
   -- 2. Successfully spend conway spending script
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ anyEraToString anyEra, "query", "utxo"
     , "--address", utxoAddr2
     , "--cardano-mode"
@@ -167,7 +166,7 @@ hprop_plutus_v3 = H.integrationWorkspace "all-plutus-script-purposes" $ \tempAbs
   H.note_ $ "keys2: " <> show (length keys2)
   txinCollateral <- H.noteShowM $ H.headM keys2
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ anyEraToString anyEra, "query", "utxo"
     , "--address", plutusSpendingScriptAddr
     , "--cardano-mode"

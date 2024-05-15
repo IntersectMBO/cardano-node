@@ -8,6 +8,7 @@ module Testnet.Process.Run
   , execCliAny
   , execCreateScriptContext
   , execCreateScriptContext'
+  , execCliStdoutToJson
   , initiateProcess
   , procCli
   , procNode
@@ -32,6 +33,7 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Function
 import qualified Data.List as List
 import           Data.Monoid (Last (..))
+import           Data.String (fromString)
 import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
@@ -45,11 +47,11 @@ import qualified System.Process as IO
 import           System.Process
 
 import           Hedgehog (MonadTest)
+import qualified Hedgehog.Extras as H
 import           Hedgehog.Extras.Internal.Plan (Component (..), Plan (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.OS as OS
 import           Hedgehog.Extras.Test.Process (ExecConfig)
-import qualified Hedgehog.Extras.Test.Process as H
 import qualified Hedgehog.Internal.Property as H
 
 -- | Path to the bash executable.  This is used on Windows so that the caller can supply a Windows
@@ -113,6 +115,20 @@ execCreateScriptContext'
   -> m String
 execCreateScriptContext' execConfig =
   GHC.withFrozenCallStack $ H.execFlex' execConfig "create-script-context" "CREATE_SCRIPT_CONTEXT"
+
+-- | Call a command of the CLI that returns JSON to stdout. Then parse it,
+-- and deserialize it to a Haskell value. Fail the test if a step fails.
+-- If your CLI command doesn't support
+-- returning JSON to stdout, and needs going through a file instead, probably
+-- you should add a similar function to this one.
+execCliStdoutToJson :: ()
+  => (HasCallStack, Aeson.FromJSON a, MonadTest m, MonadCatch m, MonadIO m)
+  => ExecConfig -- ^ The configuration with which to call the CLI
+  -> [String] -- ^ The CLI command to execute
+  -> m a
+execCliStdoutToJson execConfig cmd = GHC.withFrozenCallStack $ do
+  result <- execCli' execConfig cmd
+  H.leftFail . Aeson.eitherDecode $ fromString result
 
 -- | Create a 'CreateProcess' describing how to start the cardano-cli process
 -- and an argument list.

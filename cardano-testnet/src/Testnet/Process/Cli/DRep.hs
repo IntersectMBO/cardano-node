@@ -4,17 +4,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Testnet.Components.DRep
-  ( VoteFile
-  , generateDRepKeyPair
+module Testnet.Process.Cli.DRep
+  ( generateDRepKeyPair
   , generateRegistrationCertificate
   , createCertificatePublicationTxBody
   , generateVoteFiles
   , createVotingTxBody
-  , signTx
-  , submitTx
-  , failToSubmitTx
-  , retrieveTransactionId
   , registerDRep
   , delegateToDRep
   , getLastPParamUpdateActionId
@@ -28,20 +23,16 @@ import           Control.Monad (forM, void)
 import           Control.Monad.Catch (MonadCatch)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as AL
-import           Data.List (isInfixOf)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word32)
-import           GHC.IO.Exception (ExitCode (..))
 import           GHC.Stack
 import           Lens.Micro ((^?))
 import           System.FilePath ((</>))
 
-import           Testnet.Components.Query (EpochStateView, findLargestUtxoForPaymentKey,
-                   getCurrentEpochNo, getMinDRepDeposit, waitUntilEpoch)
-import qualified Testnet.Process.Cli as H
-import qualified Testnet.Process.Run as H
-import           Testnet.Start.Types (anyEraToString)
+import           Testnet.Components.Query
+import           Testnet.Process.Cli.Transaction
+import           Testnet.Process.Run (execCli', execCliStdoutToJson)
 import           Testnet.Types
 
 import           Hedgehog (MonadTest, evalMaybe)
@@ -65,7 +56,7 @@ generateDRepKeyPair execConfig work prefix = do
   let dRepKeyPair = KeyPair { verificationKey = File $ baseDir </> "verification.vkey"
                             , signingKey = File $ baseDir </> "signature.skey"
                             }
-  void $ H.execCli' execConfig [ "conway", "governance", "drep", "key-gen"
+  void $ execCli' execConfig [ "conway", "governance", "drep", "key-gen"
                                , "--verification-key-file", verificationKeyFp dRepKeyPair
                                , "--signing-key-file", signingKeyFp dRepKeyPair
                                ]
@@ -95,7 +86,7 @@ generateRegistrationCertificate
   -> m (File Certificate In)
 generateRegistrationCertificate execConfig work prefix drepKeyPair depositAmount = do
   let dRepRegistrationCertificate = File (work </> prefix <> ".regcert")
-  void $ H.execCli' execConfig [ "conway", "governance", "drep", "registration-certificate"
+  void $ execCli' execConfig [ "conway", "governance", "drep", "registration-certificate"
                                , "--drep-verification-key-file", verificationKeyFp drepKeyPair
                                , "--key-reg-deposit-amt", show @Integer depositAmount
                                , "--out-file", unFile dRepRegistrationCertificate
@@ -104,7 +95,6 @@ generateRegistrationCertificate execConfig work prefix drepKeyPair depositAmount
 
 -- DRep registration transaction composition (without signing)
 
-data TxBody
 
 -- | Composes a certificate publication transaction body (without signing) using @cardano-cli@.
 --
@@ -127,7 +117,7 @@ createCertificatePublicationTxBody
 createCertificatePublicationTxBody execConfig epochStateView sbe work prefix cert wallet = do
   let dRepRegistrationTxBody = File (work </> prefix <> ".txbody")
   walletLargestUTXO <- findLargestUtxoForPaymentKey epochStateView sbe wallet
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "conway", "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
     , "--tx-in", Text.unpack $ renderTxIn walletLargestUTXO
@@ -138,13 +128,13 @@ createCertificatePublicationTxBody execConfig epochStateView sbe work prefix cer
   return dRepRegistrationTxBody
 
 -- Vote file generation
-data VoteFile
 
 -- | Generates decentralized representative (DRep) voting files (without signing)
 -- using @cardano-cli@.
 --
 -- Returns a list of generated @File VoteFile In@ representing the paths to
 -- the generated voting files.
+-- TODO: unify with SPO.generateVoteFiles
 generateVoteFiles
   :: MonadTest m
   => MonadIO m
@@ -164,7 +154,7 @@ generateVoteFiles execConfig work prefix governanceActionTxId governanceActionIn
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
   forM (zip [(1 :: Integer)..] allVotes) $ \(idx, (drepKeyPair, vote)) -> do
     let path = File (baseDir </> "vote-drep-" <> show idx)
-    void $ H.execCli' execConfig
+    void $ execCli' execConfig
       [ "conway", "governance", "vote", "create"
       , "--" ++ vote
       , "--governance-action-tx-id", governanceActionTxId
@@ -200,7 +190,7 @@ createVotingTxBody
 createVotingTxBody execConfig epochStateView sbe work prefix votes wallet = do
   let votingTxBody = File (work </> prefix <> ".txbody")
   walletLargestUTXO <- findLargestUtxoForPaymentKey epochStateView sbe wallet
-  void $ H.execCli' execConfig $
+  void $ execCli' execConfig $
     [ "conway", "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
     , "--tx-in", Text.unpack $ renderTxIn walletLargestUTXO
@@ -209,99 +199,6 @@ createVotingTxBody execConfig epochStateView sbe work prefix votes wallet = do
     , "--out-file", unFile votingTxBody
     ]
   return votingTxBody
-
--- Transaction signing
-
-data SignedTx
-
--- | Calls @cardano-cli@ to signs a transaction body using the specified key pairs.
---
--- This function takes five parameters:
---
--- Returns the generated @File SignedTx In@ file path to the signed transaction file.
-signTx
-  :: MonadTest m
-  => MonadCatch m
-  => MonadIO m
-  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
-  -> AnyCardanoEra -- ^ Specifies the current Cardano era.
-  -> FilePath -- ^ Base directory path where the signed transaction file will be stored.
-  -> String -- ^ Prefix for the output signed transaction file name. The extension will be @.tx@.
-  -> File TxBody In -- ^ Transaction body to be signed, obtained using 'createCertificatePublicationTxBody' or similar.
-  -> [SomeKeyPair] -- ^ List of key pairs used for signing the transaction.
-  -> m (File SignedTx In)
-signTx execConfig cEra work prefix txBody signatoryKeyPairs = do
-  let signedTx = File (work </> prefix <> ".tx")
-  void $ H.execCli' execConfig $
-    [ anyEraToString cEra, "transaction", "sign"
-    , "--tx-body-file", unFile txBody
-    ] ++ (concat [["--signing-key-file", signingKeyFp kp] | SomeKeyPair kp <- signatoryKeyPairs]) ++
-    [ "--out-file", unFile signedTx
-    ]
-  return signedTx
-
--- | Submits a signed transaction using @cardano-cli@.
-submitTx
-  :: HasCallStack
-  => MonadTest m
-  => MonadCatch m
-  => MonadIO m
-  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
-  -> AnyCardanoEra -- ^ Specifies the current Cardano era.
-  -> File SignedTx In -- ^ Signed transaction to be submitted, obtained using 'signTx'.
-  -> m ()
-submitTx execConfig cEra signedTx =
-  void $ H.execCli' execConfig
-    [ anyEraToString cEra, "transaction", "submit"
-    , "--tx-file", unFile signedTx
-    ]
-
--- | Attempts to submit a transaction that is expected to fail using @cardano-cli@.
---
--- If the submission fails (the expected behavior), the function succeeds.
--- If the submission succeeds unexpectedly, it raises a failure message that is
--- meant to be caught by @Hedgehog@.
-failToSubmitTx
-  :: MonadTest m
-  => MonadCatch m
-  => MonadIO m
-  => HasCallStack
-  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
-  -> AnyCardanoEra -- ^ Specifies the current Cardano era.
-  -> File SignedTx In -- ^ Signed transaction to be submitted, obtained using 'signTx'.
-  -> String -- ^ Substring of the error to check for to ensure submission failed for
-            -- the right reason.
-  -> m ()
-failToSubmitTx execConfig cEra signedTx reasonForFailure = withFrozenCallStack $ do
-  (exitCode, _, stderr) <- H.execFlexAny' execConfig "cardano-cli" "CARDANO_CLI"
-                                     [ anyEraToString cEra, "transaction", "submit"
-                                     , "--tx-file", unFile signedTx
-                                     ]
-  case exitCode of -- Did it fail?
-    ExitSuccess -> H.failMessage callStack "Transaction submission was expected to fail but it succeeded"
-    _ -> if reasonForFailure `isInfixOf` stderr -- Did it fail for the expected reason?
-         then return ()
-         else H.failMessage callStack $ "Transaction submission failed for the wrong reason (not " ++
-                                            show reasonForFailure ++ "): " ++ stderr
-
--- | Retrieves the transaction ID (governance action ID) from a signed
--- transaction file using @cardano-cli@.
---
--- Returns the transaction ID (governance action ID) as a 'String'.
-retrieveTransactionId
-  :: HasCallStack
-  => MonadTest m
-  => MonadCatch m
-  => MonadIO m
-  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
-  -> File SignedTx In -- ^ Signed transaction to be submitted, obtained using 'signTx'.
-  -> m String
-retrieveTransactionId execConfig signedTxBody = do
-  txidOutput <- H.execCli' execConfig
-    [ "transaction", "txid"
-    , "--tx-file", unFile signedTxBody
-    ]
-  return $ mconcat $ lines txidOutput
 
 -- | Register a Delegate Representative (DRep) using @cardano-cli@,
 -- generating a fresh key pair in the process.
@@ -371,7 +268,7 @@ delegateToDRep execConfig epochStateView configurationFile' socketPath sbe work 
 
   -- Create vote delegation certificate
   let voteDelegationCertificatePath = baseDir </> "delegation-certificate.delegcert"
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "conway", "stake-address", "vote-delegation-certificate"
     , "--drep-verification-key-file", drepVKey
     , "--stake-verification-key-file", vKeyFile
@@ -408,7 +305,7 @@ getLastPParamUpdateActionId
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> m (Maybe (String, Word32))
 getLastPParamUpdateActionId execConfig = do
-  govStateJSON :: Aeson.Value <- H.execCliStdoutToJson execConfig
+  govStateJSON :: Aeson.Value <- execCliStdoutToJson execConfig
     [ "conway", "query", "gov-state"
     , "--volatile-tip"
     ]

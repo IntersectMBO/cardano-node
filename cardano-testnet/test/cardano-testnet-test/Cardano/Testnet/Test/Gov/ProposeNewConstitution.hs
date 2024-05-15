@@ -34,14 +34,14 @@ import           Lens.Micro
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
-import           Testnet.Components.DRep (createVotingTxBody, generateVoteFiles,
-                   retrieveTransactionId, signTx, submitTx)
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
-import qualified Testnet.Process.Cli as P
-import qualified Testnet.Process.Run as H
-import qualified Testnet.Property.Util as H
+import           Testnet.Process.Cli.DRep
+import           Testnet.Process.Cli.Keys
+import           Testnet.Process.Cli.Transaction
+import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
 
 import           Hedgehog
@@ -50,7 +50,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/ProposeAndRatifyNewConstitution/"'@
 hprop_ledger_events_propose_new_constitution :: Property
-hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-new-constitution" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new-constitution" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -87,7 +87,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   PoolNode{poolRuntime} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
-  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath poolRuntime
 
   epochStateView <- getEpochStateView configurationFile socketPath
@@ -105,12 +105,12 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   H.writeFile proposalAnchorFile "dummy anchor data"
   H.writeFile consitutionFile "dummy constitution data"
-  constitutionHash <- H.execCli' execConfig
+  constitutionHash <- execCli' execConfig
     [ "conway", "governance"
     , "hash", "anchor-data", "--file-text", consitutionFile
     ]
 
-  proposalAnchorDataHash <- H.execCli' execConfig
+  proposalAnchorDataHash <- execCli' execConfig
     [ "conway", "governance"
     , "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
@@ -118,7 +118,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   let stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
 
-  P.cliStakeAddressKeyGen
+  cliStakeAddressKeyGen
     $ KeyPair { verificationKey = File stakeVkeyFp
               , signingKey = File stakeSKeyFp
               }
@@ -129,14 +129,14 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
   -- TODO: Update help text for policyid. The script hash is not
   -- only useful for minting scripts
   constitutionScriptHash <- filter (/= '\n') <$>
-    H.execCli' execConfig
+    execCli' execConfig
       [ anyEraToString cEra, "transaction"
       , "policyid"
       , "--script-file", guardRailScriptFp
       ]
 
   minDRepDeposit <- getMinDRepDeposit epochStateView ceo
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "conway", "governance", "action", "create-constitution"
     , "--testnet"
     , "--governance-action-deposit", show minDRepDeposit
@@ -153,7 +153,7 @@ hprop_ledger_events_propose_new_constitution = H.integrationWorkspace "propose-n
 
   txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ "conway", "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
     , "--tx-in", Text.unpack $ renderTxIn txin2

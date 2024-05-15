@@ -34,21 +34,22 @@ import           Lens.Micro
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
-import qualified Testnet.Components.DRep as DRep
 import           Testnet.Components.Query
-import qualified Testnet.Components.SPO as SPO
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
-import qualified Testnet.Process.Cli as P
-import qualified Testnet.Process.Run as H
-import qualified Testnet.Property.Util as H
+import qualified Testnet.Process.Cli.DRep as DRep
+import           Testnet.Process.Cli.Keys
+import qualified Testnet.Process.Cli.SPO as SPO
+import           Testnet.Process.Cli.Transaction
+import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
 
 import           Hedgehog
 import qualified Hedgehog.Extras as H
 
 hprop_constitutional_committee_add_new :: Property
-hprop_constitutional_committee_add_new = H.integrationWorkspace "constitutional-committee-add-new" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-committee-add-new" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
@@ -86,7 +87,7 @@ hprop_constitutional_committee_add_new = H.integrationWorkspace "constitutional-
 
   PoolNode{poolRuntime, poolKeys} <- H.headM poolNodes
   poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
-  execConfig <- H.mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   let socketPath = nodeSocketPath poolRuntime
 
   epochStateView <- getEpochStateView configurationFile socketPath
@@ -104,7 +105,7 @@ hprop_constitutional_committee_add_new = H.integrationWorkspace "constitutional-
   H.writeFile proposalAnchorFp "dummy anchor data"
   H.writeFile proposalDataFp "dummy proposal data"
 
-  proposalAnchorDataHash <- H.execCli' execConfig
+  proposalAnchorDataHash <- execCli' execConfig
     [ eraName, "governance" , "hash", "anchor-data"
     , "--file-text", proposalAnchorFp
     ]
@@ -114,7 +115,7 @@ hprop_constitutional_committee_add_new = H.integrationWorkspace "constitutional-
       stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
 
-  P.cliStakeAddressKeyGen
+  cliStakeAddressKeyGen
     $ KeyPair { verificationKey = File stakeVkeyFp
               , signingKey = File stakeSKeyFp
               }
@@ -124,13 +125,13 @@ hprop_constitutional_committee_add_new = H.integrationWorkspace "constitutional-
   ccColdKeys <- H.noteShowM $
     H.forConcurrently [1..3] $ \(i :: Int) -> do
       let coldVKey = ccColdVKeyFp i
-      _ <- H.execCli' execConfig
+      _ <- execCli' execConfig
         [ eraName, "governance", "committee", "key-gen-cold"
         , "--cold-verification-key-file", ccColdVKeyFp i
         , "--cold-signing-key-file", ccColdSKeyFp i
         ]
       fmap (coldVKey, i,) $
-        parseKeyHashCred =<< H.execCli' execConfig
+        parseKeyHashCred =<< execCli' execConfig
           [ eraName, "governance", "committee", "key-hash"
           , "--verification-key-file", ccColdVKeyFp i
           ]
@@ -140,7 +141,7 @@ hprop_constitutional_committee_add_new = H.integrationWorkspace "constitutional-
   let ccExpiryEpoch = epochNo + 200
       deadlineEpoch = EpochNo $ epochNo + 10
 
-  _ <- H.execCli' execConfig $
+  _ <- execCli' execConfig $
     [ eraName, "governance", "action" , "update-committee"
     , "--testnet"
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
@@ -156,7 +157,7 @@ hprop_constitutional_committee_add_new = H.integrationWorkspace "constitutional-
 
   txbodyFp <- H.note $ work </> "tx.body"
   txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ eraToString era, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin1
@@ -170,10 +171,10 @@ hprop_constitutional_committee_add_new = H.integrationWorkspace "constitutional-
   committeeMembers `H.assertWith` null
 
   signedProposalTx <-
-    DRep.signTx execConfig cEra work "signed-proposal" (File txbodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet0]
-  DRep.submitTx execConfig cEra signedProposalTx
+    signTx execConfig cEra work "signed-proposal" (File txbodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet0]
+  submitTx execConfig cEra signedProposalTx
 
-  governanceActionTxId <- H.noteM $ DRep.retrieveTransactionId execConfig signedProposalTx
+  governanceActionTxId <- H.noteM $ retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIx <-
     H.nothingFailM .
@@ -207,10 +208,10 @@ hprop_constitutional_committee_add_new = H.integrationWorkspace "constitutional-
         }
       drepSKeys = map (defaultDRepKeyPair . snd) drepVotes
       signingKeys = SomeKeyPair <$> paymentKeyInfoPair wallet0:poolNodePaymentKeyPair:drepSKeys
-  voteTxFp <- DRep.signTx
+  voteTxFp <- signTx
     execConfig cEra gov "signed-vote-tx" voteTxBodyFp signingKeys
 
-  DRep.submitTx execConfig cEra voteTxFp
+  submitTx execConfig cEra voteTxFp
 
   _ <- waitForEpochs epochStateView (L.EpochInterval 1)
 

@@ -31,12 +31,11 @@ import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
-import           Testnet.Components.SPO
 import           Testnet.Components.TestWatchdog
-import           Testnet.Process.Cli
-import qualified Testnet.Process.Run as H
-import           Testnet.Process.Run
-import qualified Testnet.Property.Util as H
+import           Testnet.Process.Cli.Keys
+import           Testnet.Process.Cli.SPO
+import           Testnet.Process.Run (execCli, execCli', mkExecConfig)
+import           Testnet.Property.Util (decodeEraUTxO, integrationRetryWorkspace)
 import           Testnet.Runtime
 import           Testnet.Types
 
@@ -49,7 +48,7 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 
 hprop_kes_period_info :: Property
-hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     -- TODO: Move yaml filepath specification into individual node options
@@ -72,12 +71,12 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
     , poolNodes
     } <- cardanoTestnetDefault cTestnetOptions conf
   node1sprocket <- H.headM $ poolSprockets runTime
-  execConfig <- H.mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
+  execConfig <- mkExecConfig tempBaseAbsPath node1sprocket testnetMagic
 
   -- We get our UTxOs from here
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
       utxoSKeyFile = signingKeyFp $ paymentKeyInfoPair wallet0
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ anyEraToString anyEra, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
@@ -152,7 +151,7 @@ hprop_kes_period_info = H.integrationRetryWorkspace 2 "kes-period-info" $ \tempA
   -- TODO: Refactor getting valid UTxOs into a function
   H.note_  "Get updated UTxO"
 
-  void $ H.execCli' execConfig
+  void $ execCli' execConfig
     [ anyEraToString anyEra, "query", "utxo"
     , "--address", utxoAddr
     , "--cardano-mode"
