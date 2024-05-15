@@ -641,7 +641,7 @@
             "ppSecurityGroup": 0.5
         },
         "protocolVersion": {
-            "major": 9,
+            "major": 10,
             "minor": 0
         },
         "stakeAddressDeposit": 0,
@@ -1301,7 +1301,7 @@
                     "ppSecurityGroup": 0.5
                 },
                 "protocolVersion": {
-                    "major": 9,
+                    "major": 10,
                     "minor": 0
                 },
                 "stakeAddressDeposit": 0,
@@ -1950,7 +1950,7 @@
                     "ppSecurityGroup": 0.5
                 },
                 "protocolVersion": {
-                    "major": 9,
+                    "major": 10,
                     "minor": 0
                 },
                 "stakeAddressDeposit": 0,
@@ -2596,7 +2596,7 @@
             "ppSecurityGroup": 0.5
         },
         "protocolVersion": {
-            "major": 9,
+            "major": 10,
             "minor": 0
         },
         "stakeAddressDeposit": 0,

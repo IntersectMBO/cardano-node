@@ -7,7 +7,6 @@ module Testnet.Property.Util
   ( integration
   , integrationRetryWorkspace
   , integrationWorkspace
-  , isBootstrapPhase
   , isLinux
   , runInBackground
 
@@ -15,7 +14,6 @@ module Testnet.Property.Util
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.ProtocolParameters (ProtocolParameters(..))
 
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad
@@ -25,8 +23,6 @@ import           GHC.Stack
 import qualified System.Environment as IO
 import           System.Info (os)
 import qualified System.IO.Unsafe as IO
-
-import           Testnet.Process.Cli.Keys
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
@@ -79,19 +75,3 @@ runInBackground act = void . H.evalM $ allocate (H.async act) cleanUp
 
 decodeEraUTxO :: (IsShelleyBasedEra era, MonadTest m) => ShelleyBasedEra era -> Aeson.Value -> m (UTxO era)
 decodeEraUTxO _ = H.jsonErrorFail . Aeson.fromJSON
-
-isBootstrapPhase
-  :: ( HasCallStack
-     , MonadIO m
-     , MonadTest m
-     , MonadCatch m
-     )
-  => String
-  -> H.ExecConfig
-  -> m Bool
-isBootstrapPhase eraName execConfig = do
-  ppJSON <-
-    execCliStdoutToJson execConfig [ eraName, "query", "protocol-parameters" ]
-  protocolParametersOut :: ProtocolParameters <- H.jsonErrorFail $ Aeson.fromJSON ppJSON
-  let (major, _minor) = protocolParamProtocolVersion protocolParametersOut
-  pure $ major == 9

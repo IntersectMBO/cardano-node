@@ -29,7 +29,6 @@ import           Prelude
 import           Control.Monad
 import           Control.Monad.State.Class
 import           Data.Bifunctor (Bifunctor (..))
-import           Data.List (isInfixOf)
 import           Data.Map (Map)
 import qualified Data.Map.Strict as M
 import qualified Data.Text as Text
@@ -41,8 +40,8 @@ import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
-import           Testnet.Process.Run (execCli', execCliAny, mkExecConfig)
-import           Testnet.Property.Util (integrationRetryWorkspace, isBootstrapPhase)
+import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Start.Types (eraToString)
 import           Testnet.Types
 
@@ -186,83 +185,75 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
     , "--out-file", txbodySignedFp
     ]
 
-  bootstrapPhase <- isBootstrapPhase eraName execConfig
-  if bootstrapPhase then do
-    (_code, _out, err) <- execCliAny execConfig
-      [ eraName, "transaction", "submit"
-      , "--tx-file", txbodySignedFp
+  void $ execCli' execConfig
+    [ eraName, "transaction", "submit"
+    , "--tx-file", txbodySignedFp
+    ]
+-- }}}
+
+  txidString <- mconcat . lines <$> execCli' execConfig
+    [ "transaction", "txid"
+    , "--tx-file", txbodySignedFp
+    ]
+
+  currentEpoch <- getCurrentEpochNo epochStateView
+  let terminationEpoch = succ . succ $ currentEpoch
+  L.GovActionIx governanceActionIndex <- fmap L.gaidGovActionIx . H.nothingFailM $
+    getTreasuryWithdrawalProposal configurationFile socketPath terminationEpoch
+
+  let voteFp :: Int -> FilePath
+      voteFp n = work </> gov </> "vote-" <> show n
+
+  -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
+  H.forConcurrently_ [1..3] $ \n -> do
+    execCli' execConfig
+      [ eraName, "governance", "vote", "create"
+      , "--yes"
+      , "--governance-action-tx-id", txidString
+      , "--governance-action-index", show governanceActionIndex
+      , "--drep-verification-key-file", verificationKeyFp $ defaultDRepKeyPair n
+      , "--out-file", voteFp n
       ]
-    assert ("DisallowedProposalDuringBootstrap" `isInfixOf` err)
-  else do
-    void $ execCli' execConfig
-      [ eraName, "transaction", "submit"
-      , "--tx-file", txbodySignedFp
-      ]
+
+  txin4 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
+
+  voteTxFp <- H.note $ work </> gov </> "vote.tx"
+  voteTxBodyFp <- H.note $ work </> gov </> "vote.txbody"
+  -- {{{ Submit votes
+  void $ execCli' execConfig
+    [ eraName, "transaction", "build"
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
+    , "--tx-in", Text.unpack $ renderTxIn txin4
+    , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 3_000_000
+    , "--vote-file", voteFp 1
+    , "--vote-file", voteFp 2
+    , "--vote-file", voteFp 3
+    , "--witness-override", show @Int 4
+    , "--out-file", voteTxBodyFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "sign"
+    , "--tx-body-file", voteTxBodyFp
+    , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
+    , "--signing-key-file", signingKeyFp $ defaultDRepKeyPair 1
+    , "--signing-key-file", signingKeyFp $ defaultDRepKeyPair 2
+    , "--signing-key-file", signingKeyFp $ defaultDRepKeyPair 3
+    , "--out-file", voteTxFp
+    ]
+
+  void $ execCli' execConfig
+    [ eraName, "transaction", "submit"
+    , "--tx-file", voteTxFp
+    ]
   -- }}}
 
-    txidString <- mconcat . lines <$> execCli' execConfig
-      [ "transaction", "txid"
-      , "--tx-file", txbodySignedFp
-      ]
+  withdrawals <- H.nothingFailM $
+    getCurrentEpochNo epochStateView >>=
+      getAnyWithdrawals configurationFile socketPath . (`L.addEpochInterval` EpochInterval 5)
 
-    currentEpoch <- getCurrentEpochNo epochStateView
-    let terminationEpoch = succ . succ $ currentEpoch
-    L.GovActionIx governanceActionIndex <- fmap L.gaidGovActionIx . H.nothingFailM $
-      getTreasuryWithdrawalProposal configurationFile socketPath terminationEpoch
-
-    let voteFp :: Int -> FilePath
-        voteFp n = work </> gov </> "vote-" <> show n
-
-    -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
-    H.forConcurrently_ [1..3] $ \n -> do
-      execCli' execConfig
-        [ eraName, "governance", "vote", "create"
-        , "--yes"
-        , "--governance-action-tx-id", txidString
-        , "--governance-action-index", show governanceActionIndex
-        , "--drep-verification-key-file", verificationKeyFp $ defaultDRepKeyPair n
-        , "--out-file", voteFp n
-        ]
-
-    txin4 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
-
-    voteTxFp <- H.note $ work </> gov </> "vote.tx"
-    voteTxBodyFp <- H.note $ work </> gov </> "vote.txbody"
-    -- {{{ Submit votes
-    void $ execCli' execConfig
-      [ eraName, "transaction", "build"
-      , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
-      , "--tx-in", Text.unpack $ renderTxIn txin4
-      , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 3_000_000
-      , "--vote-file", voteFp 1
-      , "--vote-file", voteFp 2
-      , "--vote-file", voteFp 3
-      , "--witness-override", show @Int 4
-      , "--out-file", voteTxBodyFp
-      ]
-
-    void $ execCli' execConfig
-      [ eraName, "transaction", "sign"
-      , "--tx-body-file", voteTxBodyFp
-      , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet1
-      , "--signing-key-file", signingKeyFp $ defaultDRepKeyPair 1
-      , "--signing-key-file", signingKeyFp $ defaultDRepKeyPair 2
-      , "--signing-key-file", signingKeyFp $ defaultDRepKeyPair 3
-      , "--out-file", voteTxFp
-      ]
-
-    void $ execCli' execConfig
-      [ eraName, "transaction", "submit"
-      , "--tx-file", voteTxFp
-      ]
-    -- }}}
-
-    withdrawals <- H.nothingFailM $
-      getCurrentEpochNo epochStateView >>=
-        getAnyWithdrawals configurationFile socketPath . (`L.addEpochInterval` EpochInterval 5)
-
-    H.noteShow_ withdrawals
-    (L.unCoin . snd <$> M.toList withdrawals) === [withdrawalAmount]
+  H.noteShow_ withdrawals
+  (L.unCoin . snd <$> M.toList withdrawals) === [withdrawalAmount]
 
 
 getAnyWithdrawals

@@ -23,7 +23,6 @@ import           Prelude
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Data (Typeable)
-import           Data.List (isInfixOf)
 import qualified Data.Map as Map
 import           Data.String
 import qualified Data.Text as Text
@@ -40,11 +39,11 @@ import           Testnet.EpochStateProcessing (watchEpochStateView)
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.Transaction
-import           Testnet.Process.Run (execCli', execCliAny, mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace, isBootstrapPhase)
+import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
 
-import           Hedgehog (MonadTest, Property, annotateShow, assert)
+import           Hedgehog (MonadTest, Property, annotateShow)
 import qualified Hedgehog.Extras as H
 
 -- | Execute me with:
@@ -67,7 +66,6 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
         , cardanoNodeEra = cEra
         , cardanoNumDReps = 1
         }
-      eraName = eraToString era
 
   TestnetRuntime
     { testnetMagic
@@ -103,11 +101,10 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
       maxEpochsToWaitAfterProposal = EpochInterval 2 -- If it takes more than 2 epochs we give up in any case.
       firstTargetDRepActivity = EpochInterval 3
 
-  bootstrapPhase <- isBootstrapPhase eraName execConfig
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "firstProposal" wallet0 [(1, "yes")] firstTargetDRepActivity
                                     minEpochsToWaitIfChanging (Just firstTargetDRepActivity)
-                                    maxEpochsToWaitAfterProposal bootstrapPhase
+                                    maxEpochsToWaitAfterProposal
 
   -- Now we register two new DReps
   drep2 <- registerDRep execConfig epochStateView ceo work "drep2" wallet1
@@ -130,7 +127,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "failingProposal" wallet2 [(1, "yes")] secondTargetDRepActivity
                                     minEpochsToWaitIfNotChanging (Just firstTargetDRepActivity)
-                                    maxEpochsToWaitAfterProposal bootstrapPhase
+                                    maxEpochsToWaitAfterProposal
 
   -- We now send a bunch of proposals to make sure that the 2 new DReps expire.
   -- because DReps won't expire if there is not enough activity (opportunites to participate).
@@ -141,7 +138,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
                                 ("fillerProposalNum" ++ show proposalNum) wallet [(1, "yes")]
                                 (EpochInterval (unEpochInterval secondTargetDRepActivity + fromIntegral proposalNum))
                                 minEpochsToWaitIfNotChanging Nothing
-                                maxEpochsToWaitAfterProposal bootstrapPhase
+                                maxEpochsToWaitAfterProposal
      | (proposalNum, wallet) <- zip [1..numOfFillerProposals] (cycle [wallet0, wallet1, wallet2])]
 
   (EpochNo epochAfterTimeout) <- getCurrentEpochNo epochStateView
@@ -153,7 +150,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "lastProposal" wallet0 [(1, "yes")] lastTargetDRepActivity
                                     minEpochsToWaitIfChanging (Just lastTargetDRepActivity)
-                                    maxEpochsToWaitAfterProposal bootstrapPhase
+                                    maxEpochsToWaitAfterProposal
 
 -- | This function creates a proposal to change the DRep activity interval
 -- and issues the specified votes using default DReps. Optionally, it also
@@ -178,11 +175,9 @@ activityChangeProposalTest
                          -- the proposal.
   -> EpochInterval -- ^ The maximum number of epochs to wait for the DRep activity interval to
                    -- become expected value.
-  -> Bool          -- ^ Flag to indicate if we are in bootstrap phase
   -> m (String, Word32) -- ^ The transaction id and the index of the governance action.
 activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo work prefix
-                           wallet votes change minWait mExpected maxWait@(EpochInterval maxWaitNum)
-                           bootstrapPhase = do
+                           wallet votes change minWait mExpected maxWait@(EpochInterval maxWaitNum) = do
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
 
   mPreviousProposalInfo <- getLastPParamUpdateActionId execConfig
@@ -200,16 +195,14 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
                                ceo baseDir "proposal" mPreviousProposalInfo change wallet (epochBeforeProp + fromIntegral maxWaitNum)
 
   voteChangeProposal execConfig epochStateView sbe baseDir "vote"
-                     governanceActionTxId governanceActionIndex propVotes wallet bootstrapPhase
+                     governanceActionTxId governanceActionIndex propVotes wallet
 
-  unless bootstrapPhase $ do
-    (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView
-    H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
+  (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView
+  H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
-    void $ waitForEpochs epochStateView minWait
-    case mExpected of
-      Nothing -> return ()
-      Just expected -> H.nothingFailM $ watchEpochStateView epochStateView (isDRepActivityUpdated expected) maxWait
+  void $ waitForEpochs epochStateView minWait
+  forM_ mExpected $ \expected ->
+    H.nothingFailM $ watchEpochStateView epochStateView (isDRepActivityUpdated expected) maxWait
 
   return thisProposal
 
@@ -334,14 +327,12 @@ voteChangeProposal
                      -- of the default DRep that will make the vote and the type of the vote
                      -- (i.e: "yes", "no", "abstain").
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
-  -> Bool           -- ^ Flag to indicate if we are in bootstrap phase
   -> m ()
-voteChangeProposal execConfig epochStateView sbe work prefix governanceActionTxId governanceActionIndex votes wallet bootstrapPhase = do
+voteChangeProposal execConfig epochStateView sbe work prefix governanceActionTxId governanceActionIndex votes wallet = do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
   let era = toCardanoEra sbe
       cEra = AnyCardanoEra era
-      eraName = eraToString era
 
   voteFiles <- generateVoteFiles execConfig baseDir "vote-files"
                                  governanceActionTxId governanceActionIndex
@@ -353,11 +344,4 @@ voteChangeProposal execConfig epochStateView sbe work prefix governanceActionTxI
   let signingKeys = SomeKeyPair <$> (paymentKeyInfoPair wallet:(defaultDRepKeyPair . snd <$> votes))
   voteTxFp <- signTx execConfig cEra baseDir "signed-vote-tx" voteTxBodyFp signingKeys
 
-  if bootstrapPhase then do
-    (_code, _out, err) <- execCliAny execConfig
-      [ eraName, "transaction", "submit"
-      , "--tx-file", unFile voteTxFp
-      ]
-    assert ("DisallowedVotesDuringBootstrap" `isInfixOf` err)
-  else do
-    submitTx execConfig cEra voteTxFp
+  submitTx execConfig cEra voteTxFp

@@ -464,7 +464,8 @@ eraToProtocolVersion (AnyCardanoEra era) =
     AlonzoEra -> mkProtVer (6, 0)
     -- Babbage had an intra-era hardfork
     BabbageEra -> mkProtVer (8, 0)
-    ConwayEra -> mkProtVer (9, 0)
+    -- By default start after bootstrap (which is PV9)
+    ConwayEra -> mkProtVer (10, 0)
 
 -- TODO: Expose from cardano-api
 mkProtVer :: (Natural, Natural) -> ProtVer

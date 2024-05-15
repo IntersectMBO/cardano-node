@@ -23,7 +23,6 @@ import           Prelude
 
 import           Control.Monad
 import qualified Data.Char as C
-import           Data.List (isInfixOf)
 import qualified Data.Map as Map
 import           Data.Maybe.Strict
 import           Data.Set (Set)
@@ -43,7 +42,7 @@ import           Testnet.Process.Cli.Keys
 import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (execCli', execCliAny, mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace, isBootstrapPhase)
+import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
 
 import           Hedgehog
@@ -173,81 +172,73 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
 
   signedProposalTx <-
     signTx execConfig cEra work "signed-proposal" (File txbodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet0]
-  bootstrapPhase <- isBootstrapPhase eraName execConfig
-  if bootstrapPhase then do
-    (_code, _out, err) <- execCliAny execConfig
-      [ eraName, "transaction", "submit"
-      , "--tx-file", unFile signedProposalTx
-      ]
-    assert ("DisallowedProposalDuringBootstrap" `isInfixOf` err)
-  else do
 
-    submitTx execConfig cEra signedProposalTx
+  submitTx execConfig cEra signedProposalTx
 
-    governanceActionTxId <- H.noteM $ retrieveTransactionId execConfig signedProposalTx
+  governanceActionTxId <- H.noteM $ retrieveTransactionId execConfig signedProposalTx
 
-    governanceActionIx <-
-      H.nothingFailM .
-      H.leftFailM $
-        findCondition
-          (maybeExtractGovernanceActionIndex (fromString governanceActionTxId))
-          configurationFile
-          socketPath
-          deadlineEpoch
+  governanceActionIx <-
+    H.nothingFailM .
+    H.leftFailM $
+      findCondition
+        (maybeExtractGovernanceActionIndex (fromString governanceActionTxId))
+        configurationFile
+        socketPath
+        deadlineEpoch
 
-    dRepVoteFiles <-
-      DRep.generateVoteFiles
-        execConfig work "vote-files" governanceActionTxId governanceActionIx
-          [(defaultDRepKeyPair idx, vote) | (vote, idx) <- drepVotes]
+  dRepVoteFiles <-
+    DRep.generateVoteFiles
+      execConfig work "vote-files" governanceActionTxId governanceActionIx
+        [(defaultDRepKeyPair idx, vote) | (vote, idx) <- drepVotes]
 
-    spoVoteFiles <-
-      SPO.generateVoteFiles
-        ceo execConfig work "vote-files" governanceActionTxId governanceActionIx
-          [(poolKeys, vote) | (vote, _idx) <- spoVotes]
+  spoVoteFiles <-
+    SPO.generateVoteFiles
+      ceo execConfig work "vote-files" governanceActionTxId governanceActionIx
+        [(poolKeys, vote) | (vote, _idx) <- spoVotes]
 
-    let voteFiles = dRepVoteFiles <> spoVoteFiles
+  let voteFiles = dRepVoteFiles <> spoVoteFiles
 
-    voteTxBodyFp <-
-      DRep.createVotingTxBody
-        execConfig epochStateView sbe work "vote-tx-body" voteFiles wallet0
+  voteTxBodyFp <-
+    DRep.createVotingTxBody
+      execConfig epochStateView sbe work "vote-tx-body" voteFiles wallet0
 
-    -- FIXME: remove dependence of signTx on PaymentKeyPair
-    let poolNodePaymentKeyPair = KeyPair
-          { signingKey = File . signingKeyFp $ poolNodeKeysCold poolKeys
-          , verificationKey = error "unused"
-          }
-        drepSKeys = map (defaultDRepKeyPair . snd) drepVotes
-        signingKeys = SomeKeyPair <$> paymentKeyInfoPair wallet0:poolNodePaymentKeyPair:drepSKeys
-    voteTxFp <- signTx
-      execConfig cEra gov "signed-vote-tx" voteTxBodyFp signingKeys
+  -- FIXME: remove dependence of signTx on PaymentKeyPair
+  let poolNodePaymentKeyPair = KeyPair
+        { signingKey = File . signingKeyFp $ poolNodeKeysCold poolKeys
+        , verificationKey = error "unused"
+        }
+      drepSKeys = map (defaultDRepKeyPair . snd) drepVotes
+      signingKeys = SomeKeyPair <$> paymentKeyInfoPair wallet0:poolNodePaymentKeyPair:drepSKeys
+  voteTxFp <- signTx
+    execConfig cEra gov "signed-vote-tx" voteTxBodyFp signingKeys
 
-    submitTx execConfig cEra voteTxFp
+  submitTx execConfig cEra voteTxFp
 
-    _ <- waitForEpochs epochStateView (L.EpochInterval 1)
+  _ <- waitForEpochs epochStateView (L.EpochInterval 1)
 
-    govState <- getGovState epochStateView ceo
-    govActionState <- H.headM $ govState ^. L.cgsProposalsL . L.pPropsL . to toList
-    let gaDRepVotes = govActionState ^. L.gasDRepVotesL . to toList
-        gaSpoVotes = govActionState ^. L.gasStakePoolVotesL . to toList
+  govState <- getGovState epochStateView ceo
+  govActionState <- H.headM $ govState ^. L.cgsProposalsL . L.pPropsL . to toList
+  let gaDRepVotes = govActionState ^. L.gasDRepVotesL . to toList
+      gaSpoVotes = govActionState ^. L.gasStakePoolVotesL . to toList
 
-    length (filter ((== L.VoteYes) . snd) gaDRepVotes) === 5
-    length (filter ((== L.VoteNo) . snd) gaDRepVotes) === 3
-    length (filter ((== L.Abstain) . snd) gaDRepVotes) === 2
-    length drepVotes === length gaDRepVotes
-    length (filter ((== L.VoteYes) . snd) gaSpoVotes) === 1
-    length spoVotes === length gaSpoVotes
+  length (filter ((== L.VoteYes) . snd) gaDRepVotes) === 5
+  length (filter ((== L.VoteNo) . snd) gaDRepVotes) === 3
+  length (filter ((== L.Abstain) . snd) gaDRepVotes) === 2
+  length drepVotes === length gaDRepVotes
+  length (filter ((== L.VoteYes) . snd) gaSpoVotes) === 1
+  length spoVotes === length gaSpoVotes
 
-    H.nothingFailM . H.leftFailM $
-      findCondition committeeIsPresent configurationFile socketPath deadlineEpoch
+  H.nothingFailM . H.leftFailM $
+    findCondition committeeIsPresent configurationFile socketPath deadlineEpoch
 
-    -- show proposed committe meembers
-    H.noteShow_ ccCredentials
+  -- show proposed committe meembers
+  H.noteShow_ ccCredentials
 
-    newCommitteeMembers :: Set (L.Credential L.ColdCommitteeRole L.StandardCrypto)
-      <- fromList <$> getCommitteeMembers epochStateView ceo
+  newCommitteeMembers :: Set (L.Credential L.ColdCommitteeRole L.StandardCrypto)
+    <- fromList <$> getCommitteeMembers epochStateView ceo
 
-    -- check that the committee is actually what we expect
-    newCommitteeMembers === fromList ccCredentials
+  -- check that the committee is actually what we expect
+  newCommitteeMembers === fromList ccCredentials
 
 parseKeyHashCred :: MonadFail m => String -> m (L.Credential kr L.StandardCrypto)
 parseKeyHashCred hash = L.parseCredential $ "keyHash-" <> Text.pack (trim hash)

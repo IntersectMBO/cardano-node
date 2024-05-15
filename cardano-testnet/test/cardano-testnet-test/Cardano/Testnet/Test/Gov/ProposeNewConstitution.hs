@@ -24,7 +24,6 @@ import           Prelude
 
 import           Control.Monad
 import           Control.Monad.State.Strict (StateT)
-import           Data.List (isInfixOf)
 import           Data.Maybe
 import           Data.Maybe.Strict
 import           Data.String
@@ -41,8 +40,8 @@ import           Testnet.Defaults
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.Transaction
-import           Testnet.Process.Run (execCli', execCliAny, mkExecConfig)
-import           Testnet.Property.Util (integrationWorkspace, isBootstrapPhase)
+import           Testnet.Process.Run (execCli', mkExecConfig)
+import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
 
 import           Hedgehog
@@ -166,67 +165,59 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
   signedProposalTx <- signTx execConfig cEra gov "signed-proposal"
                            (File txbodyFp) [SomeKeyPair $ paymentKeyInfoPair wallet1]
 
-  bootstrapPhase <- isBootstrapPhase (anyEraToString cEra) execConfig
-  if bootstrapPhase then do
-    (_code, _out, err) <- execCliAny execConfig
-      [ anyEraToString cEra, "transaction", "submit"
-      , "--tx-file", unFile signedProposalTx
-      ]
-    assert ("DisallowedProposalDuringBootstrap" `isInfixOf` err)
-  else do
-    submitTx execConfig cEra signedProposalTx
+  submitTx execConfig cEra signedProposalTx
 
-    governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
+  governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
-    !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex (fromString governanceActionTxId))
-                                          configurationFile
-                                          socketPath
-                                          (EpochNo 10)
+  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex (fromString governanceActionTxId))
+                                        configurationFile
+                                        socketPath
+                                        (EpochNo 10)
 
-    governanceActionIndex <- case propSubmittedResult of
-                              Left e ->
-                                H.failMessage callStack
-                                  $ "findCondition failed with: " <> displayError e
-                              Right Nothing ->
-                                H.failMessage callStack "Couldn't find proposal."
-                              Right (Just a) -> return a
+  governanceActionIndex <- case propSubmittedResult of
+                            Left e ->
+                              H.failMessage callStack
+                                $ "findCondition failed with: " <> displayError e
+                            Right Nothing ->
+                              H.failMessage callStack "Couldn't find proposal."
+                            Right (Just a) -> return a
 
-    -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
-    voteFiles <- generateVoteFiles execConfig work "vote-files"
-                                  governanceActionTxId governanceActionIndex
-                                  [(defaultDRepKeyPair idx, vote) | (vote, idx) <- allVotes]
+  -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
+  voteFiles <- generateVoteFiles execConfig work "vote-files"
+                                governanceActionTxId governanceActionIndex
+                                [(defaultDRepKeyPair idx, vote) | (vote, idx) <- allVotes]
 
-    -- Submit votes
-    voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe work "vote-tx-body"
-                                      voteFiles wallet0
+  -- Submit votes
+  voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe work "vote-tx-body"
+                                    voteFiles wallet0
 
-    let signingKeys = SomeKeyPair <$> (paymentKeyInfoPair wallet0:(defaultDRepKeyPair . snd <$> allVotes))
-    voteTxFp <- signTx execConfig cEra gov "signed-vote-tx" voteTxBodyFp signingKeys
+  let signingKeys = SomeKeyPair <$> (paymentKeyInfoPair wallet0:(defaultDRepKeyPair . snd <$> allVotes))
+  voteTxFp <- signTx execConfig cEra gov "signed-vote-tx" voteTxBodyFp signingKeys
 
-    submitTx execConfig cEra voteTxFp
+  submitTx execConfig cEra voteTxFp
 
-    _ <- waitForEpochs epochStateView (EpochInterval 1)
+  _ <- waitForEpochs epochStateView (EpochInterval 1)
 
-    -- Count votes before checking for ratification. It may happen that the proposal gets removed after
-    -- ratification because of a long waiting time, so we won't be able to access votes.
-    govState <- getGovState epochStateView ceo
-    govActionState <- H.headM $ govState ^. L.cgsProposalsL . L.pPropsL . to toList
-    let votes = govActionState ^. L.gasDRepVotesL . to toList
+  -- Count votes before checking for ratification. It may happen that the proposal gets removed after
+  -- ratification because of a long waiting time, so we won't be able to access votes.
+  govState <- getGovState epochStateView ceo
+  govActionState <- H.headM $ govState ^. L.cgsProposalsL . L.pPropsL . to toList
+  let votes = govActionState ^. L.gasDRepVotesL . to toList
 
-    length (filter ((== L.VoteYes) . snd) votes) === 4
-    length (filter ((== L.VoteNo) . snd) votes) === 3
-    length (filter ((== L.Abstain) . snd) votes) === 2
-    length votes === numVotes
+  length (filter ((== L.VoteYes) . snd) votes) === 4
+  length (filter ((== L.VoteNo) . snd) votes) === 3
+  length (filter ((== L.Abstain) . snd) votes) === 2
+  length votes === numVotes
 
-    -- We check that constitution was succcessfully ratified
-    void . H.leftFailM . evalIO . runExceptT $
-      foldEpochState
-        configurationFile
-        socketPath
-        FullValidation
-        (EpochNo 10)
-        ()
-        (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
+  -- We check that constitution was succcessfully ratified
+  void . H.leftFailM . evalIO . runExceptT $
+    foldEpochState
+      configurationFile
+      socketPath
+      FullValidation
+      (EpochNo 10)
+      ()
+      (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
 
 foldBlocksCheckConstitutionWasRatified
   :: String -- submitted constitution hash

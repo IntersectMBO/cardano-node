@@ -607,7 +607,7 @@
     "poolPledgeInfluence": 0,
     "poolRetireMaxEpoch": 18,
     "protocolVersion": {
-        "major": 9,
+        "major": 10,
         "minor": 0
     },
     "stakeAddressDeposit": 0,
