@@ -175,21 +175,21 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
                                         (EpochNo 10)
 
   governanceActionIndex <- case propSubmittedResult of
-                            Left e ->
-                              H.failMessage callStack
+                             Left e ->
+                               H.failMessage callStack
                                 $ "findCondition failed with: " <> displayError e
-                            Right Nothing ->
-                              H.failMessage callStack "Couldn't find proposal."
-                            Right (Just a) -> return a
+                             Right Nothing ->
+                               H.failMessage callStack "Couldn't find proposal."
+                             Right (Just a) -> return a
 
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
   voteFiles <- generateVoteFiles execConfig work "vote-files"
-                                governanceActionTxId governanceActionIndex
-                                [(defaultDRepKeyPair idx, vote) | (vote, idx) <- allVotes]
+                                 governanceActionTxId governanceActionIndex
+                                 [(defaultDRepKeyPair idx, vote) | (vote, idx) <- allVotes]
 
   -- Submit votes
   voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe work "vote-tx-body"
-                                    voteFiles wallet0
+                                     voteFiles wallet0
 
   let signingKeys = SomeKeyPair <$> (paymentKeyInfoPair wallet0:(defaultDRepKeyPair . snd <$> allVotes))
   voteTxFp <- signTx execConfig cEra gov "signed-vote-tx" voteTxBodyFp signingKeys

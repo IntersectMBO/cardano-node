@@ -27,11 +27,10 @@ import qualified Data.Map as Map
 import           Data.String
 import qualified Data.Text as Text
 import           Data.Word (Word32, Word64)
-import           GHC.Stack (HasCallStack, callStack)
+import           GHC.Stack
 import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
 
-import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
@@ -100,7 +99,6 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
                                                      -- make sure it doesn't change.
       maxEpochsToWaitAfterProposal = EpochInterval 2 -- If it takes more than 2 epochs we give up in any case.
       firstTargetDRepActivity = EpochInterval 3
-
   void $ activityChangeProposalTest execConfig epochStateView configurationFile socketPath ceo gov
                                     "firstProposal" wallet0 [(1, "yes")] firstTargetDRepActivity
                                     minEpochsToWaitIfChanging (Just firstTargetDRepActivity)
@@ -328,7 +326,7 @@ voteChangeProposal
                      -- (i.e: "yes", "no", "abstain").
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
   -> m ()
-voteChangeProposal execConfig epochStateView sbe work prefix governanceActionTxId governanceActionIndex votes wallet = do
+voteChangeProposal execConfig epochStateView sbe work prefix governanceActionTxId governanceActionIndex votes wallet = withFrozenCallStack $ do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
   let era = toCardanoEra sbe
