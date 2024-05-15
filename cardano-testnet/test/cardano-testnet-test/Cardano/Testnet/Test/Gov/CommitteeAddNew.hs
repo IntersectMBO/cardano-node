@@ -37,6 +37,7 @@ import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
+import           Testnet.EpochStateProcessing (waitForGovActionVotes)
 import qualified Testnet.Process.Cli.DRep as DRep
 import           Testnet.Process.Cli.Keys
 import qualified Testnet.Process.Cli.SPO as SPO
@@ -205,7 +206,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
 
   submitTx execConfig cEra voteTxFp
 
-  _ <- waitForEpochs epochStateView (L.EpochInterval 1)
+  waitForGovActionVotes epochStateView ceo (L.EpochInterval 1)
 
   govState <- getGovState epochStateView ceo
   govActionState <- H.headM $ govState ^. L.cgsProposalsL . L.pPropsL . to toList

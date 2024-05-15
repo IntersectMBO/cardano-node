@@ -34,6 +34,7 @@ import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
+import           Testnet.EpochStateProcessing (waitForGovActionVotes)
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.Transaction
@@ -182,7 +183,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   submitTx execConfig cEra voteTxFp
 
-  _ <- waitForEpochs epochStateView (EpochInterval 1)
+  waitForGovActionVotes epochStateView ceo (EpochInterval 1)
 
   -- Count votes before checking for ratification. It may happen that the proposal gets removed after
   -- ratification because of a long waiting time, so we won't be able to access votes.
