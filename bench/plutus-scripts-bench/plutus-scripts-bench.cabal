@@ -50,8 +50,7 @@ common common-definitions
     -fno-specialise -fno-spec-constr -fno-strictness
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     -fno-unbox-strict-fields -fno-unbox-small-strict-fields
-    -fobject-code
-    -- TODO: what about? -fno-full-laziness
+    -fobject-code -fno-full-laziness
 
   if flag(defer-plugin-errors)
     ghc-options: -fplugin-opt PlutusTx.Plugin:defer-errors

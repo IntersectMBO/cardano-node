@@ -7,7 +7,7 @@ import qualified Data.ByteString.Lazy as LBS (hPut)
 import           Data.List (sort)
 import           Options.Applicative
 import           System.Exit (die)
-import           System.IO (IOMode (..), openFile, stdout)
+import           System.IO (IOMode (..), openFile, stdout, hClose)
 
 data Options =
      List
@@ -48,3 +48,4 @@ main = customExecParser pref (info opts fullDesc) >>= \case
           Just file -> openFile file WriteMode
           Nothing   -> pure stdout
     LBS.hPut h $ encodePlutusScript s
+    hClose h
