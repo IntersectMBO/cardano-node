@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -14,14 +15,15 @@ module Cardano.Node.Tracing.Tracers.NodeVersion
 
 import           Data.Aeson (toJSON, (.=))
 import           Data.Text (Text, pack)
-
 import           Data.Version (Version (..), showVersion)
+#if MIN_VERSION_base(4,15,0)
+import           System.Info (arch, compilerName, fullCompilerVersion, os)
+#else
 import           System.Info (arch, compilerName, compilerVersion, os)
-
+#endif
 
 import           Cardano.Git.Rev (gitRev)
 import           Cardano.Logging
-
 
 import           Paths_cardano_node (version)
 
@@ -41,6 +43,13 @@ data NodeVersionTrace = NodeVersionTrace
 
 -- | Get the node version information
 
+getComplierVersion :: Version
+#if MIN_VERSION_base(4,15,0)
+getComplierVersion =  System.Info.fullCompilerVersion
+#else
+getComplierVersion =  System.Info.compilerVersion
+#endif
+
 getNodeVersion :: NodeVersionTrace
 getNodeVersion =
   let applicationName = "cardano-node"
@@ -48,8 +57,7 @@ getNodeVersion =
       osName = pack os
       architecture = pack arch
       compilerName = pack System.Info.compilerName
-      compilerVersion = System.Info.compilerVersion
-
+      compilerVersion = getComplierVersion
       gitRevision = $(gitRev)
   in NodeVersionTrace {..}
 
@@ -70,7 +78,10 @@ instance MetaTrace NodeVersionTrace where
     ,("cardano_version_patch", "Cardano node version information")
     ,("haskell_compiler_major", "Cardano compiler version information")
     ,("haskell_compiler_minor", "Cardano compiler version information")
-    --,("haskell_compiler_patch", "Cardano compiler version information")
+
+#if MIN_VERSION_base(4,15,0)
+    ,("haskell_compiler_patch", "Cardano compiler version information")
+#endif
     ,("cardano_build_info", "Cardano node build info")
     ]
   metricsDocFor _ = []
@@ -102,7 +113,9 @@ instance LogFormatting NodeVersionTrace where
     , IntM "cardano_version_patch" (fromIntegral (getPatch applicationVersion))
     , IntM "haskell_compiler_major" (fromIntegral (getMajor compilerVersion))
     , IntM "haskell_compiler_minor" (fromIntegral (getMinor compilerVersion))
-    --, IntM "haskell_compiler_patch" (fromIntegral (getPatch compilerVersion))
+#if MIN_VERSION_base(4,15,0)
+    , IntM "haskell_compiler_patch" (fromIntegral (getPatch compilerVersion))
+#endif
     , PrometheusM "cardano_build_info" (getCardanoBuildInfo nvt)
     ]
 
@@ -117,7 +130,9 @@ getCardanoBuildInfo NodeVersionTrace {..} =
   , ("compiler_version", pack (showVersion compilerVersion))
   , ("compiler_version_major", pack (show (getMajor compilerVersion)))
   , ("compiler_version_minor", pack (show (getMinor compilerVersion)))
-  -- , ("compiler_version_patch", pack (show (getPatch compilerVersion)))
+#if MIN_VERSION_base(4,15,0)
+  , ("compiler_version_patch", pack (show (getPatch compilerVersion)))
+#endif
   , ("architecture", architecture)
   , ("os_name", osName)
   ]

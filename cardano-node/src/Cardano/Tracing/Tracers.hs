@@ -139,7 +139,6 @@ import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
 import qualified System.Remote.Monitoring as EKG
 
-import           Debug.Trace (trace)
 
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 -- needs different instances on ghc8 and on ghc9
@@ -378,16 +377,16 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
               _ -> pure ()
         Nothing -> pure ()
    traceVersionMetric :: Maybe EKGDirect -> NodeVersionTrace -> IO ()
-   traceVersionMetric mbEKGDirect ev = trace "traceVersionMetric" $ do
+   traceVersionMetric mbEKGDirect ev = do
       case mbEKGDirect of
         Just ekgDirect' ->
           case ev of
-              NodeVersionTrace {} -> trace "traceVersionMetric sending" $
+              NodeVersionTrace {} ->
                   sendEKGDirectPrometheusLabel
                     ekgDirect'
                     "cardano.node.metrics.cardano_build_info"
                     (getCardanoBuildInfo ev)
-        Nothing -> trace "no ekg direct" $ pure ()
+        Nothing -> pure ()
 
    diffusionTracers = Diffusion.Tracers
      { Diffusion.dtMuxTracer                     = muxTracer
