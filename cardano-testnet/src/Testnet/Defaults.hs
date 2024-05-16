@@ -61,6 +61,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KeyMapAeson
 import qualified Data.Default.Class as DefaultClass
+import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Proxy
 import           Data.Ratio
@@ -70,6 +71,7 @@ import qualified Data.Text as Text
 import           Data.Time (UTCTime)
 import           Data.Typeable
 import qualified Data.Vector as Vector
+import           GHC.Int
 import           GHC.Stack
 import           Lens.Micro
 import           Numeric.Natural
@@ -156,10 +158,10 @@ defaultAlonzoGenesis = do
 
 
 -- | Proposing script (protocol parameter update) fails to execute unless this is set to 0
-cekStartupCost_exBudgetCPU :: Integer
+cekStartupCost_exBudgetCPU :: Int64
 cekStartupCost_exBudgetCPU = 1
 
-cekLamCost_exBudgetMemory :: Integer
+cekLamCost_exBudgetMemory :: Int64
 cekLamCost_exBudgetMemory = 1
 
 defaultV3CostModel :: Api.CostModel

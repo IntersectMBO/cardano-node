@@ -34,12 +34,12 @@ import           Lens.Micro
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
-import           Testnet.Components.DRep (createVotingTxBody, generateVoteFiles,
-                   retrieveTransactionId, signTx, submitTx)
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
-import qualified Testnet.Process.Cli as P
+import           Testnet.Process.Cli.DRep
+import           Testnet.Process.Cli.Keys
+import           Testnet.Process.Cli.Transaction
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
 import           Testnet.Types
@@ -50,7 +50,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Update PParams/"'@
 hprop_update_pparam :: Property
-hprop_update_pparam = H.integrationWorkspace "propose-new-constitution" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -63,8 +63,8 @@ hprop_update_pparam = H.integrationWorkspace "propose-new-constitution" $ \tempA
       cEra = AnyCardanoEra era
       -- Generate model for votes
       allVotes :: [(String, Int)]
-      allVotes = zip (concatMap (uncurry replicate) [(4, "yes"), (3, "no"), (2, "abstain")]) [1..]
-
+      allVotes = [("yes", 1), ("yes", 2), ("yes", 3)]
+  -- TODO: Left off here. Investigate if you need SPOs to vote.
   annotateShow allVotes
 
   let numVotes :: Int
@@ -137,7 +137,7 @@ hprop_update_pparam = H.integrationWorkspace "propose-new-constitution" $ \tempA
   let stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
 
-  P.cliStakeAddressKeyGen
+  cliStakeAddressKeyGen
     $ KeyPair { verificationKey = File stakeVkeyFp
               , signingKey = File stakeSKeyFp
               }
