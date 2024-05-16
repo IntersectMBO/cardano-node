@@ -73,7 +73,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
       cEra = AnyCardanoEra era
       eraName = eraToString era
       fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 100
+        { cardanoEpochLength = 200
         , cardanoNodeEra = cEra
         , cardanoNumDReps = nDrepVotes
         }

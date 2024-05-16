@@ -59,7 +59,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
       era = toCardanoEra sbe
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 100
+        { cardanoEpochLength = 200
         , cardanoNodeEra = AnyCardanoEra era
         }
 

@@ -80,7 +80,7 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 100
+        { cardanoEpochLength = 200
         , cardanoNodeEra = cEra
         , cardanoNumDReps = 3
         }
