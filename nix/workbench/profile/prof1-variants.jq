@@ -498,11 +498,6 @@ def all_profile_variants:
       | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
       | .genesis.pparamsOverlays      = ["v8-preview", "doublebudget"]
     ) as $costmodel_v8_preview_doubleb
-  |
-    ({}
-      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
-      | .genesis.pparamsOverlays      = ["mimic-ops"]
-    ) as $mimic_ops_params
   ##
   ### Definition vocabulary:  node + tracer config variants
   ##
