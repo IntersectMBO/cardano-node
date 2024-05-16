@@ -1,0 +1,40 @@
+name: Shellcheck
+# This pipeline runs shellcheck on all files with extension .sh,
+# except the ones listed in .github/workflows/shellcheck-exceptions.txt.
+#
+# This pipeline uses Nix, so that the shellcheck version used is the same
+# ones as used by developers in Nix shells. This ensures the CI's behavior
+# is consistent with the one of developers.
+
+on:
+  pull_request:
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix with good defaults
+        uses: input-output-hk/install-nix-action@v20
+        with:
+          extra_nix_config: |
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
+            substituters = https://cache.nixos.org/ https://cache.iog.io/
+          nix_path: nixpkgs=channel:nixos-unstable
+      - uses: cachix/install-nix-action@v18
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+      # Make the Nix environment available to next steps
+      - uses: rrbutani/use-nix-shell-action@v1
+      - name: shellcheck
+        run: |
+          for file in $(git ls-files "*.sh")
+          do
+            if grep -q "$file" ".github/workflows/shellcheck-exceptions.txt"
+            then
+              echo "⚠️ $file is ignored from shellcheck's verifications. Please consider fixing it."
+            else
+              echo "shellcheck $file"
+              shellcheck "$file"
+            fi
+          done
