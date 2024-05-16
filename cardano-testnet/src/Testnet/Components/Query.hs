@@ -424,5 +424,5 @@ watchEpochStateView epochStateView f (EpochInterval maxWait) = withFrozenCallSta
             if currentEpoch > timeout
               then pure Nothing
               else do
-                H.threadDelay 100_000
+                H.threadDelay 10_000
                 go (EpochNo timeout)
