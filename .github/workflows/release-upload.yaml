@@ -78,7 +78,7 @@ jobs:
               cp result/cardano-node-*-*.zip .
               ;;              
           esac
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ github.sha }}-${{ matrix.arch }}       
           path: cardano-node-*-*.*
@@ -89,15 +89,9 @@ jobs:
     name: "Upload Assets"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: ${{ github.sha }}-linux
-      - uses: actions/download-artifact@v3
-        with:
-          name: ${{ github.sha }}-macos
-      - uses: actions/download-artifact@v3
-        with:
-          name: ${{ github.sha }}-win64
+          merge-multiple: true
       - name: Release
         uses: input-output-hk/action-gh-release@v1
         with:
