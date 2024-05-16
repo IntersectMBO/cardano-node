@@ -937,29 +937,29 @@ producerAddresses RealNodeTopology { ntLocalRootPeersGroups
   Temporary ad-hoc Genesis configuration
 -------------------------------------------------------------------------------}
 
-adhocGenesisConfig :: Genesis.GenesisSwitch Genesis.GenesisConfig
+adhocGenesisConfig :: Genesis.GenesisConfig
 adhocGenesisConfig = unsafePerformIO $ do
-  enableGenesis <- isJust <$> lookupEnv "ENABLE_GENESIS"
-  enableLoP <- isJust <$> lookupEnv "ENABLE_LoP"
-  enableCSJ <- isJust <$> lookupEnv "ENABLE_CSJ"
+  enableGenesis   <- isJust <$> lookupEnv "ENABLE_GENESIS"
+  enableLoP       <- (enableGenesis ||) . isJust <$> lookupEnv "ENABLE_LoP"
+  enableCSJ       <- (enableGenesis ||) . isJust <$> lookupEnv "ENABLE_CSJ"
+  enableLoEAndGDD <- (enableGenesis ||) . isJust <$> lookupEnv "ENABLE_LoEGDD"
   let defaultCSJJumpSize = 3 * 2160 * 20 -- mainnet forecast window
   csjJumpSize <- maybe defaultCSJJumpSize (Api.SlotNo . read) <$> lookupEnv "CSJ_JUMP_SIZE"
-  pure $
-    if enableGenesis then
-      Genesis.GenesisEnabled Genesis.GenesisConfig {
-        Genesis.gcsChainSyncLoPBucketConfig =
-          if enableLoP then
-            ChainSync.Client.ChainSyncLoPBucketEnabled ChainSync.Client.ChainSyncLoPBucketEnabledConfig {
-              ChainSync.Client.csbcCapacity = 100_000 -- number of tokens
-            , ChainSync.Client.csbcRate     = 500 -- tokens per second leaking (1/2ms)
-            }
-          else ChainSync.Client.ChainSyncLoPBucketDisabled
-      , Genesis.gcsCSJConfig =
-          if enableCSJ then
-            ChainSync.Client.CSJEnabled ChainSync.Client.CSJEnabledConfig {
-              ChainSync.Client.csjcJumpSize = csjJumpSize
-            }
-          else ChainSync.Client.CSJDisabled
-      }
-    else Genesis.GenesisDisabled
+  pure Genesis.GenesisConfig {
+      Genesis.gcChainSyncLoPBucketConfig =
+        if enableLoP then
+          ChainSync.Client.ChainSyncLoPBucketEnabled ChainSync.Client.ChainSyncLoPBucketEnabledConfig {
+            ChainSync.Client.csbcCapacity = 100_000 -- number of tokens
+          , ChainSync.Client.csbcRate     = 500 -- tokens per second leaking (1/2ms)
+          }
+        else ChainSync.Client.ChainSyncLoPBucketDisabled
+    , Genesis.gcCSJConfig =
+        if enableCSJ then
+          ChainSync.Client.CSJEnabled ChainSync.Client.CSJEnabledConfig {
+            ChainSync.Client.csjcJumpSize = csjJumpSize
+          }
+        else ChainSync.Client.CSJDisabled
+    , Genesis.gcLoEAndGDDConfig =
+        if enableLoEAndGDD then Genesis.LoEAndGDDEnabled () else Genesis.LoEAndGDDDisabled
+    }
 {-# NOINLINE adhocGenesisConfig #-}
