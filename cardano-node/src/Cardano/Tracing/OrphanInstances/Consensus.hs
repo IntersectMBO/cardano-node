@@ -167,7 +167,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.OpenedDB {} -> Info
     ChainDB.ClosedDB {} -> Info
     ChainDB.OpenedImmutableDB {} -> Info
-    ChainDB.OpenedVolatileDB -> Info
+    ChainDB.OpenedVolatileDB {} -> Info
     ChainDB.OpenedLgrDB -> Info
     ChainDB.StartedOpeningDB -> Info
     ChainDB.StartedOpeningImmutableDB -> Info
@@ -217,6 +217,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     VolDb.BlockAlreadyHere{}    -> Debug
     VolDb.Truncate{}            -> Error
     VolDb.InvalidFileNames{}    -> Warning
+    VolDb.DBClosed{}            -> Info
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -610,7 +611,8 @@ instance ( ConvertRawHash blk
         ChainDB.OpenedImmutableDB immTip chunk ->
           "Opened imm db with immutable tip at " <> renderPointAsPhrase immTip <>
           " and chunk " <> showT chunk
-        ChainDB.OpenedVolatileDB ->  "Opened vol db"
+        ChainDB.OpenedVolatileDB maxSlotN ->
+          "Opened vol db with max slot number " <> showT maxSlotN
         ChainDB.OpenedLgrDB ->  "Opened lgr db"
       ChainDB.TraceFollowerEvent ev -> case ev of
         ChainDB.NewFollower ->  "New follower was created"
@@ -723,6 +725,7 @@ instance ( ConvertRawHash blk
         VolDb.BlockAlreadyHere bh   -> "Block " <> showT bh <> " was already in the Volatile DB."
         VolDb.Truncate e pth offs   -> "Truncating the file at " <> showT pth <> " at offset " <> showT offs <> ": " <> showT e
         VolDb.InvalidFileNames fs   -> "Invalid Volatile DB files: " <> showT fs
+        VolDb.DBClosed              -> "Closed Volatile DB."
      where showProgressT :: Int -> Int -> Text
            showProgressT chunkNo outOf =
              pack (showFFloat (Just 2) (100 * fromIntegral chunkNo / fromIntegral outOf :: Float) mempty)
@@ -1000,10 +1003,17 @@ instance ( ConvertRawHash blk
     ChainDB.PoppedReprocessLoEBlocksFromQueue ->
        mconcat [ "kind" .= String "PoppedReprocessLoEBlocksFromQueue" ]
     ChainDB.ChainSelectionLoEDebug curChain loeFrag ->
-        mconcat [ "kind" .= String "ChainSelectionLoEDebug"
-                , "curChain" .= headAndAnchor curChain
-                , "loeFrag" .= headAndAnchor loeFrag
-                ]
+      case loeFrag of
+        ChainDB.LoEEnabled loeF ->
+          mconcat [ "kind" .= String "ChainSelectionLoEDebug"
+                  , "curChain" .= headAndAnchor curChain
+                  , "loeFrag" .= headAndAnchor loeF
+                  ]
+        ChainDB.LoEDisabled ->
+          mconcat [ "kind" .= String "ChainSelectionLoEDebug"
+                  , "curChain" .= headAndAnchor curChain
+                  , "loeFrag" .= String "LoE is disabled"
+                  ]
       where
         headAndAnchor frag = Aeson.object
           [ "anchor" .= renderPointForVerbosity verb (AF.anchorPoint frag)
@@ -1087,8 +1097,9 @@ instance ( ConvertRawHash blk
       mconcat [ "kind" .= String "TraceOpenEvent.OpenedImmutableDB"
                , "immtip" .= toObject verb immTip
                , "epoch" .= String ((pack . show) epoch) ]
-    ChainDB.OpenedVolatileDB ->
-      mconcat [ "kind" .= String "TraceOpenEvent.OpenedVolatileDB" ]
+    ChainDB.OpenedVolatileDB maxSlotN ->
+      mconcat [ "kind" .= String "TraceOpenEvent.OpenedVolatileDB"
+               , "maxSlotNo" .= String (showT maxSlotN) ]
     ChainDB.OpenedLgrDB ->
       mconcat [ "kind" .= String "TraceOpenEvent.OpenedLgrDB" ]
 
@@ -1236,6 +1247,7 @@ instance ( ConvertRawHash blk
       mconcat [ "kind" .= String "TraceVolatileDBEvent.InvalidFileNames"
                , "files" .= String (Text.pack . show $ map show fsPaths)
                ]
+    VolDb.DBClosed -> mconcat [ "kind" .= String "TraceVolatileDbEvent.DBClosed"]
 
 instance ConvertRawHash blk => ToObject (ImmDB.TraceChunkValidation blk ChunkNo) where
   toObject verb ev = case ev of

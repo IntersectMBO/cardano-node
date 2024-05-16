@@ -177,7 +177,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
   governanceActionIndex <- case propSubmittedResult of
                              Left e ->
                                H.failMessage callStack
-                                 $ "findCondition failed with: " <> displayError e
+                                $ "findCondition failed with: " <> displayError e
                              Right Nothing ->
                                H.failMessage callStack "Couldn't find proposal."
                              Right (Just a) -> return a
@@ -249,4 +249,3 @@ filterRatificationState c guardRailScriptHash (AnyNewEpochState sbe newEpochStat
 
     )
     sbe
-

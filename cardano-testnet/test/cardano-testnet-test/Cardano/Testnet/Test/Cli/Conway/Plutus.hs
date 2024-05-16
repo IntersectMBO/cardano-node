@@ -11,23 +11,24 @@ module Cardano.Testnet.Test.Cli.Conway.Plutus
   ) where
 
 import           Cardano.Api
+import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
 
 import           Prelude
 
 import           Control.Monad (void)
-import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
+import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
 import           Testnet.Process.Cli.SPO
 import           Testnet.Process.Run (execCli', mkExecConfig)
-import           Testnet.Property.Util (decodeEraUTxO, integrationWorkspace)
+import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
 
 import           Hedgehog (Property)
@@ -55,37 +56,27 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     era = toCardanoEra sbe
     anyEra = AnyCardanoEra era
     options = cardanoDefaultTestnetOptions
-                        { cardanoNodes = cardanoDefaultTestnetNodeOptions
-                        , cardanoSlotLength = 0.1
-                        , cardanoNodeEra = anyEra -- TODO: We should only support the latest era and the upcoming era
-                        }
+                { cardanoNodeEra = anyEra -- TODO: We should only support the latest era and the upcoming era
+                }
+
   TestnetRuntime
-    { testnetMagic
+    { configurationFile
+    , testnetMagic
     , poolNodes
     , wallets=wallet0:wallet1:_
     } <- cardanoTestnetDefault options conf
 
-  poolNode1 <- H.headM poolNodes
-  poolSprocket1 <- H.noteShow $ nodeSprocket $ poolRuntime poolNode1
+  PoolNode{poolRuntime} <- H.headM poolNodes
+  poolSprocket1 <- H.noteShow $ nodeSprocket poolRuntime
   execConfig <- mkExecConfig tempBaseAbsPath poolSprocket1 testnetMagic
   H.noteShow_ wallet0
   let utxoAddr = Text.unpack $ paymentKeyInfoAddr wallet0
-      utxoAddr2 = Text.unpack $ paymentKeyInfoAddr wallet1
       utxoSKeyFile = signingKeyFp $ paymentKeyInfoPair wallet0
       utxoSKeyFile2 = signingKeyFp $ paymentKeyInfoPair wallet1
+      socketPath = nodeSocketPath poolRuntime
 
-  void $ execCli' execConfig
-    [ anyEraToString anyEra, "query", "utxo"
-    , "--address", utxoAddr
-    , "--cardano-mode"
-    , "--out-file", work </> "utxo-1.json"
-    ]
-  utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
-  UTxO utxo1 <- H.noteShowM $ decodeEraUTxO sbe utxo1Json
-
-  let keys1 = Map.keys utxo1
-  H.note_ $ "keys1: " <> show (length keys1)
-  txin1 <- H.noteShowM $ H.headM keys1
+  epochStateView <- getEpochStateView configurationFile socketPath
+  txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
   plutusMintingScript <- H.note $ work </> "always-succeeds-non-spending-script.plutusV3"
   H.writeFile plutusMintingScript $ Text.unpack plutusV3NonSpendingScript
@@ -151,34 +142,13 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     , "--tx-file", sendAdaToScriptAddressTx
     ]
 
-  H.threadDelay 10_000_000
+  _ <- waitForEpochs epochStateView (L.EpochInterval 1)
+
   -- 2. Successfully spend conway spending script
-  void $ execCli' execConfig
-    [ anyEraToString anyEra, "query", "utxo"
-    , "--address", utxoAddr2
-    , "--cardano-mode"
-    , "--out-file", work </> "utxo-2.json"
-    ]
-  utxo2Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-2.json"
-  UTxO utxo2 <- H.noteShowM $ decodeEraUTxO sbe utxo2Json
+  txinCollateral <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
+  plutusScriptTxIn <- fmap fst . H.nothingFailM $
+    findLargestUtxoWithAddress epochStateView sbe $ Text.pack plutusSpendingScriptAddr
 
-  let keys2 = Map.keys utxo2
-  H.note_ $ "keys2: " <> show (length keys2)
-  txinCollateral <- H.noteShowM $ H.headM keys2
-
-  void $ execCli' execConfig
-    [ anyEraToString anyEra, "query", "utxo"
-    , "--address", plutusSpendingScriptAddr
-    , "--cardano-mode"
-    , "--out-file", work </> "plutus-script-utxo.json"
-    ]
-  utxoPlutusJson <- H.leftFailM . H.readJsonFile $ work </> "plutus-script-utxo.json"
-  UTxO utxoPlutus <- H.noteShowM $ decodeEraUTxO sbe utxoPlutusJson
-
-  let keys3 = Map.keys utxoPlutus
-  H.note_ $ "keys3: " <> show (length keys3)
-
-  plutusScriptTxIn <- H.noteShowM $ H.headM keys3
   let spendScriptUTxOTxBody = work </> "spend-script-utxo-tx-body"
       spendScriptUTxOTx = work </> "spend-script-utxo-tx"
       mintValue = mconcat ["5 ", mintingPolicyId, ".", assetName]

@@ -14,25 +14,21 @@ module Cardano.Tracer.Handlers.Logs.Journal
   ) where
 
 #ifdef LINUX
+import qualified Cardano.Logging as L
+#endif
+import           Cardano.Logging (TraceObject (..))
+import           Cardano.Tracer.Types (NodeName)
+
+#ifdef LINUX
 import           Data.Char (isDigit)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
+
 import           Systemd.Journal (Priority (..), message, mkJournalField, priority,
                    sendJournalFields, syslogIdentifier)
 
-import           Cardano.Logging (TraceObject (..))
-import qualified Cardano.Logging as L
-
-import           Cardano.Tracer.Types
-#else
-import           Cardano.Logging (TraceObject)
-
-import           Cardano.Tracer.Types
-#endif
-
-#ifdef LINUX
 -- | Store 'TraceObject's in Linux systemd's journal service.
 writeTraceObjectsToJournal :: NodeName -> [TraceObject] -> IO ()
 writeTraceObjectsToJournal nodeName = mapM_ (sendJournalFields . mkJournalFields)

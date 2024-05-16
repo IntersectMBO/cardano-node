@@ -18,6 +18,8 @@ import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.List as L
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid
+import           Data.Vector (Vector)
+import qualified Data.Vector as Vector
 import qualified System.Directory as Sys
 import           System.Environment (lookupEnv, setEnv, unsetEnv)
 import qualified System.IO as Sys
@@ -45,9 +47,10 @@ main = do
 
     -- 1. Prepare directory hierarchy
     tracerRoot <- Sys.canonicalizePath $ unI (tsWorkDir ts')
+
     putStrLn . mconcat $ [ "tsWorkDir ts: ", tracerRoot ]
     -- Weird:  using path canonicalisation leads to process shutdown failures
-    whenM (fileExist                         tracerRoot) $
+    whenM (fileExist                         tracerRoot) do
       Sys.removeDirectoryRecursive           tracerRoot
     Sys.createDirectoryIfMissing True       (tracerRoot <> "/logs")
     Sys.setCurrentDirectory                  tracerRoot
@@ -57,10 +60,11 @@ main = do
     putStrLn $ "Test setup:  " <> show ts
 
     -- 2. Actual tests
-    msgCounterRef   <- newIORef 0
-    tracerRef       <- newIORef Nothing
+    msgCountersRef <- newIORef []
+    msgsRef        <- newIORef Vector.empty
+    tracerRef      <- newIORef Nothing
     let tracerGetter = getExternalTracerState ts tracerRef
-    defaultMain (allTests ts msgCounterRef (tracerGetter <&> snd))
+    defaultMain (allTests ts msgCountersRef msgsRef (tracerGetter <&> snd))
         `catch` (\ (e :: SomeException) -> do
             unsetEnv "TASTY_NUM_THREADS"
             trState <- readIORef tracerRef
@@ -72,14 +76,15 @@ main = do
 
 allTests ::
      TestSetup Identity
-  -> IORef Int
+  -> IORef [Int]
+  -> IORef (Vector Message)
   -> IO (Trace IO Message)
   -> TestTree
-allTests ts msgCounter externalTracerGetter =
+allTests ts msgCountersRef msgsRef externalTracerGetter =
     testGroup "Tests"
     [ localOption (QuickCheckTests 10) $ testGroup "trace-forwarder"
         [ testProperty "multi-threaded forwarder stress test" $
-            runScriptForwarding ts msgCounter externalTracerGetter
+            runScriptForwarding ts msgCountersRef msgsRef externalTracerGetter
         ]
     ]
 
@@ -125,7 +130,7 @@ getExternalTracerState TestSetup{..} ref = do
        Just code ->
          error $ "cardano-tracer failed to start with code " <> show code
      -- TODO: check if this is the correct way to use withIOManager
-     (forwardSink, _dpStore) <- withIOManager $ \iomgr -> do
+     (forwardSink, _dpStore) <- withIOManager \iomgr -> do
        -- For simplicity, we are always 'Initiator',
        -- so 'cardano-tracer' is always a 'Responder'.
        let tracerSocketMode = Just (unI tsSockExternal, Initiator)

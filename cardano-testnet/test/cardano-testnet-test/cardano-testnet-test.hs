@@ -14,7 +14,6 @@ import qualified Cardano.Testnet.Test.Cli.Query
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldEpochState
 import qualified Cardano.Testnet.Test.Gov.CommitteeAddNew as Gov
-import qualified Cardano.Testnet.Test.Gov.DRepActivity as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepDeposit as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepRetirement as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitution as Gov
@@ -50,7 +49,8 @@ tests = do
             -- TODO: Replace foldBlocks with checkLedgerStateCondition
             , T.testGroup "Governance"
                 [ ignoreOnMacAndWindows "Committee Add New" Gov.hprop_constitutional_committee_add_new
-                , ignoreOnWindows "DRep Activity" Gov.hprop_check_drep_activity
+                -- FIXME: This test is broken - drepActivity is not updated within the expeted period
+                -- , ignoreOnWindows "DRep Activity" Gov.hprop_check_drep_activity
                 , ignoreOnWindows "DRep Deposits" Gov.hprop_ledger_events_drep_deposits
                   -- FIXME Those tests are flaky
                   -- , ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action

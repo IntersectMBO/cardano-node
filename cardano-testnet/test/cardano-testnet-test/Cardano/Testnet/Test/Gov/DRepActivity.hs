@@ -27,7 +27,7 @@ import qualified Data.Map as Map
 import           Data.String
 import qualified Data.Text as Text
 import           Data.Word (Word32, Word64)
-import           GHC.Stack (HasCallStack, callStack)
+import           GHC.Stack
 import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
 
@@ -199,9 +199,8 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
   void $ waitForEpochs epochStateView minWait
-  case mExpected of
-    Nothing -> return ()
-    Just expected -> H.nothingFailM $ watchEpochStateView epochStateView (isDRepActivityUpdated expected) maxWait
+  forM_ mExpected $ \expected ->
+    H.nothingFailM $ watchEpochStateView epochStateView (isDRepActivityUpdated expected) maxWait
 
   return thisProposal
 
@@ -327,7 +326,7 @@ voteChangeProposal
                      -- (i.e: "yes", "no", "abstain").
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
   -> m ()
-voteChangeProposal execConfig epochStateView sbe work prefix governanceActionTxId governanceActionIndex votes wallet = do
+voteChangeProposal execConfig epochStateView sbe work prefix governanceActionTxId governanceActionIndex votes wallet = withFrozenCallStack $ do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
   let era = toCardanoEra sbe

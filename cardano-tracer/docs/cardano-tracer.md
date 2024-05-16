@@ -329,7 +329,7 @@ The field `rpLogLimitBytes` specifies the maximum size of the log file, in bytes
 
 The field `rpKeepFilesNum` specifies the number of the log files that will be kept. In this example, `rpKeepFilesNum` is `3`, which means that 3 _last_ log files will always be kept.
 
-The field `rpMaxAgeHours` specifies the lifetime of the log file, in hours. In this example, `rpMaxAgeHours` is `1`, which means that each log file will be kept for 1 hour only. After that, the log file is treated as outdated and will be deleted. Please note that N _last_ log files (specified by `rpKeepFilesNum`) will be kept even if they are outdated.
+The fields `rpMaxAgeMinutes`, `rpMaxAgeHours` specify the lifetime of the log file, in minutes, or hours. In this example, `rpMaxAgeHours` is `1`, which means that each log file will be kept for 1 hour only. After that, the log file is treated as outdated and will be deleted. Please note that N _last_ log files (specified by `rpKeepFilesNum`) will be kept even if they are outdated. If both fields are specified, `rpMaxAgeMinutes` takes precedence.
 
 ## Prometheus
 

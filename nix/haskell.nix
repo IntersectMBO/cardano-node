@@ -120,6 +120,7 @@ let
             packages.cardano-ledger-conway.components.library.doHaddock = false;
             packages.cardano-ledger-shelley.components.library.doHaddock = false;
             packages.cardano-protocol-tpraos.components.library.doHaddock = false;
+            packages.ouroboros-consensus-cardano.components.library.doHaddock = false;
           })
           ({ lib, pkgs, ...}: lib.mkIf (pkgs.stdenv.hostPlatform.isWindows) {
             # Remvoe this once mingwx is mapped to null in haskell.nix (haskell.nix#2032), and we bumped _past_ that.

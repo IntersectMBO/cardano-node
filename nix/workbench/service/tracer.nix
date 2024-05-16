@@ -25,6 +25,8 @@ let
           networkMagic = profile.genesis.network_magic;
           dsmPassthrough = {
             # rtsOpts = ["-xc"];
+          } // optionalAttrs (profile.tracer.withresources or false) {
+            rtsOpts = [ "-scardano-tracer.gcstats" ];
           };
           configFile     = "config.json";
           logRoot        = ".";

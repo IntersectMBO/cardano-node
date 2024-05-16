@@ -539,6 +539,11 @@ mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint t
       ["Net", "PeerSelection"]
     configureTracers configReflection trConfig [peerSelectionCountersTr]
 
+    !churnCountersTr  <-  mkCardanoTracer
+      trBase trForward mbTrEKG
+      ["Net", "Churn"]
+    configureTracers configReflection trConfig [churnCountersTr]
+
     !peerSelectionActionsTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "PeerSelection", "Actions"]
@@ -602,6 +607,8 @@ mkDiffusionTracersExtra configReflection trBase trForward mbTrEKG _trDataPoint t
                  traceWith debugPeerSelectionResponderTr
              , P2P.dtTracePeerSelectionCounters = Tracer $
                  traceWith peerSelectionCountersTr
+             , P2P.dtTraceChurnCounters = Tracer $
+                 traceWith churnCountersTr
              , P2P.dtPeerSelectionActionsTracer = Tracer $
                  traceWith peerSelectionActionsTr
              , P2P.dtConnectionManagerTracer = Tracer $
