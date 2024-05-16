@@ -412,6 +412,10 @@ def all_profile_variants:
      | .generator.tps                 = 0.4
     ) as $double_tps_saturation_plutus
   |
+    ({}
+     | .generator.tps                 = 0.45
+    ) as $double_plus_tps_saturation_plutus
+  |
    ($current_tps_saturation_plutus *
     { extra_desc: "with Plutus workload"
     , generator:
@@ -480,6 +484,30 @@ def all_profile_variants:
     }
     | .generator.tx_fee        = 1020000
     ) as $plutus_loop_secp_schnorr
+  |
+   ({ generator:
+      { plutus:
+          { type:                       "LimitTxPerBlock_8"
+          , script:                     "HashOntoG2AndAdd"
+          , redeemer:
+            { "constructor": 0
+            , "fields": [
+                { "int": 1000000 }
+              ## ByteString content is arbitrary
+              , { "list": [
+                    { "bytes": "714805c6" }
+                  , { "bytes": "c413111e" }
+                  , { "bytes": "2d7eb870" }
+                  , { "bytes": "4ecbd6a1" }
+                  ]
+                }
+              ]
+            }
+          }
+      }
+    }
+    | .generator.tx_fee        = 539076
+    ) as $plutus_loop_blst    
   ##
   ### Definition vocabulary:  genesis variants
   ##
@@ -498,6 +526,11 @@ def all_profile_variants:
       | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
       | .genesis.pparamsOverlays      = ["v8-preview", "doublebudget"]
     ) as $costmodel_v8_preview_doubleb
+  |
+    ({}
+      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
+      | .genesis.pparamsOverlays      = ["v8-preview", "v9-preview"]
+    ) as $costmodel_v9_preview 
   ##
   ### Definition vocabulary:  node + tracer config variants
   ##
@@ -956,6 +989,9 @@ def all_profile_variants:
     }
   , $cibench_base * $plutus_base * $costmodel_v8_preview * $plutus_loop_secp_schnorr *
     { name: "ci-bench-plutus-secp-schnorr"
+    }
+  , $cibench_base * $plutus_base * $double_plus_tps_saturation_plutus * $costmodel_v9_preview * $plutus_loop_blst *
+    { name: "ci-bench-plutusv3-blst"
     }
   , $cibench_base * $without_tracer *
     { name: "ci-bench-notracer"

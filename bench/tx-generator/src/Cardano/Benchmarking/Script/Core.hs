@@ -350,11 +350,18 @@ evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
           case sourceTransactionPreview txGenerator fundPreview inToOut (mangle $ repeat toUTxO) of
             Left err -> traceDebug $ "Error creating Tx preview: " ++ show err
             Right tx -> do
-              let txSize = txSizeInBytes tx
+              let
+                txSize = txSizeInBytes tx
+                txFeeEstimate = case toLedgerPParams shelleyBasedEra protocolParameters of
+                  Left{}              -> Nothing
+                  Right ledgerPParams -> Just $
+                    evaluateTransactionFee shelleyBasedEra ledgerPParams (getTxBody tx) (fromIntegral $ inputs + 1) 0 0    -- 1 key witness per tx input + 1 collateral
               traceDebug $ "Projected Tx size in bytes: " ++ show txSize
+              traceDebug $ "Projected Tx fee in Coin: " ++ show txFeeEstimate
+              -- TODO: possibly emit a warning when (Just txFeeEstimate) is lower than specified by config in TxGenTxParams.txFee
               summary_ <- getEnvSummary
               forM_ summary_ $ \summary -> do
-                let summary' = summary {projectedTxSize = Just txSize}
+                let summary' = summary { projectedTxSize = Just txSize, projectedTxFee = txFeeEstimate }
                 setEnvSummary summary'
                 traceBenchTxSubmit TraceBenchPlutusBudgetSummary summary'
               dumpBudgetSummaryIfExisting

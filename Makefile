@@ -78,6 +78,7 @@ PROFILES_BASE             := default default-p2p plutus plutus-secp-ecdsa plutus
 PROFILES_FAST             := fast fast-p2p fast-plutus fast-notracer fast-oldtracing faststartup-24M
 PROFILES_CI_TEST          := ci-test ci-test-p2p ci-test-plutus ci-test-notracer ci-test-rtview ci-test-dense10
 PROFILES_CI_BENCH         := ci-bench ci-bench-p2p ci-bench-plutus ci-bench-plutus-secp-ecdsa ci-bench-plutus-secp-schnorr ci-bench-notracer ci-bench-rtview ci-bench-lmdb ci-bench-drep
+PROFILES_CI_BENCH         += ci-bench-plutusv3-blst
 PROFILES_TRACE_BENCH      := trace-bench trace-bench-notracer trace-bench-oldtracing trace-bench-rtview
 PROFILES_TRACE_FULL       := trace-full trace-full-rtview
 PROFILES_EPOCHTRANS       := epoch-transition

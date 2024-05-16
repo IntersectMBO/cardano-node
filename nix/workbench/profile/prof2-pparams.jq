@@ -4,6 +4,7 @@
 import "epoch-timeline"    as timeline;
 import "delta-blockbudget" as blockbudget;
 import "delta-v8-preview"  as v8preview;
+import "delta-v9-preview"  as v9preview;
 
 def filterMapPParams(flt; map):
     timeline::epochs
@@ -26,6 +27,7 @@ def overlays:
   { "doublebudget": blockbudget::delta_doublebudget
   , "stepshalf":    blockbudget::delta_stepshalf
   , "v8-preview":   v8preview::delta
+  , "v9-preview":   v9preview::delta
   };
 
 def pParamsWithOverlays(epoch; overlay_names):

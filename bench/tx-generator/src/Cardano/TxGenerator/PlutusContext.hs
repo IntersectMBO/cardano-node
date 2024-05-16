@@ -7,6 +7,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# OPTIONS_GHC -fno-warn-overlapping-patterns #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
 {-
 Module      : Cardano.TxGenerator.PlutusContext
@@ -24,19 +25,19 @@ module  Cardano.TxGenerator.PlutusContext
         )
         where
 
-import           GHC.Generics (Generic)
-import           GHC.Natural (Natural)
+import           Cardano.Api
+import           Cardano.Api.Shelley (ProtocolParameters (..))
+
+import           Cardano.Ledger.Coin (Coin)
+import           Cardano.TxGenerator.Setup.Plutus (preExecutePlutusScript)
+import           Cardano.TxGenerator.Types
 
 import           Control.Monad.Trans.Except.Extra
 import           Data.Aeson as Aeson
 import           Data.List (maximumBy, minimumBy)
 import           Data.Ord (comparing)
-
-import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters (..))
-
-import           Cardano.TxGenerator.Setup.Plutus (preExecutePlutusScript)
-import           Cardano.TxGenerator.Types
+import           GHC.Generics (Generic)
+import           GHC.Natural (Natural)
 
 
 -- | This collects information describing the budget. It's only
@@ -62,9 +63,13 @@ data PlutusBudgetSummary =
   , projectedTxPerBlock     :: !Int
   , projectedLoopsPerBlock  :: !Int
   , projectedTxSize         :: !(Maybe Int)
+  , projectedTxFee          :: !(Maybe Coin)
   , strategyMessage         :: !(Maybe String)
   }
-  deriving (Generic, Show, ToJSON)
+  deriving (Generic, Show)
+
+instance ToJSON PlutusBudgetSummary where
+  toJSON = genericToJSON defaultOptions { omitNothingFields = True }
 
 -- | Nothing references this type's name or uses its constructors
 -- outside this module.
@@ -223,6 +228,7 @@ plutusBudgetSummary
   = PlutusBudgetSummary{..}
   where
     projectedTxSize         = Nothing           -- we defer this value until after splitting phase
+    projectedTxFee          = Nothing           -- we defer this value until after splitting phase
     strategyMessage         = Nothing
     scriptArgDatum          = autoBudgetDatum
     scriptArgRedeemer       = getScriptData autoBudgetRedeemer

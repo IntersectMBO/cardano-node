@@ -88,6 +88,10 @@ let
       "TxSubmission.TxInbound".severity = "Debug";
       "TxSubmission.TxOutbound".severity = "Notice";
       "Version.NodeVersion".severity = "Info";
+
+      ## enable this to investigate tx validation errors, e.g. fee to small for Plutus script txns
+      ## comes with too much overhead to be the default for benchmarks
+      # "Mempool.RejectedTx".detail = "DDetailed";
       };
   };
 
