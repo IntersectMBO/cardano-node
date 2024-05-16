@@ -54,8 +54,8 @@ tests = do
                 -- TODO: Disabled because proposals for parameter changes are not working
                 -- , ignoreOnWindows "DRep Activity" Gov.hprop_check_drep_activity
                 -- , ignoreOnWindows "Predefined Abstain DRep" Gov.hprop_check_predefined_abstain_drep
-                , ignoreOnWindows "Predefined No Confidence DRep" Gov.hprop_check_predefined_no_confidence_drep
-                , ignoreOnMacAndWindows "Committee Motion Of No Confidence"  Gov.hprop_gov_no_confidence
+                -- , ignoreOnWindows "Predefined No Confidence DRep" Gov.hprop_check_predefined_no_confidence_drep
+                , ignoreOnMacAndWindows "Committee Motion Of No Confidence" Gov.hprop_gov_no_confidence
                 , ignoreOnWindows "DRep Deposits" Gov.hprop_ledger_events_drep_deposits
                   -- FIXME Those tests are flaky
                   -- , ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
