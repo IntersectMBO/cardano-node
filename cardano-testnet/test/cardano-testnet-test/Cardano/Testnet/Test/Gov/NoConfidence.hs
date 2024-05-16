@@ -156,7 +156,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
 
   minActDeposit <- getMinGovActionDeposit epochStateView ceo
 
-  void $ H.execCli' execConfig $
+  void $ H.execCli' execConfig
     [ eraToString era, "governance", "action", "create-no-confidence"
     , "--testnet"
     , "--governance-action-deposit", show @Integer minActDeposit
