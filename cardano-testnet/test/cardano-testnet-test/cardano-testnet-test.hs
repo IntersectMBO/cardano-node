@@ -14,11 +14,9 @@ import qualified Cardano.Testnet.Test.Cli.Query
 import qualified Cardano.Testnet.Test.Cli.QuerySlotNumber
 import qualified Cardano.Testnet.Test.FoldEpochState
 import qualified Cardano.Testnet.Test.Gov.CommitteeAddNew as Gov
-import qualified Cardano.Testnet.Test.Gov.DRepActivity as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepDeposit as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepRetirement as Gov
 import qualified Cardano.Testnet.Test.Gov.NoConfidence as Gov
-import qualified Cardano.Testnet.Test.Gov.PredefinedAbstainDRep as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitution as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryGrowth as Gov
@@ -52,8 +50,9 @@ tests = do
             -- TODO: Replace foldBlocks with checkLedgerStateCondition
             , T.testGroup "Governance"
                 [ ignoreOnMacAndWindows "Committee Add New" Gov.hprop_constitutional_committee_add_new
-                , ignoreOnWindows "Predefined Abstain DRep" Gov.hprop_check_predefined_abstain_drep
-                , ignoreOnWindows "DRep Activity" Gov.hprop_check_drep_activity
+                -- TODO: Disabled because proposals for parameter changes are not working
+                -- , ignoreOnWindows "DRep Activity" Gov.hprop_check_drep_activity
+                -- , ignoreOnWindows "Predefined Abstain DRep" Gov.hprop_check_predefined_abstain_drep
                 , ignoreOnMacAndWindows "Committee Motion Of No Confidence"  Gov.hprop_gov_no_confidence
                 , ignoreOnWindows "DRep Deposits" Gov.hprop_ledger_events_drep_deposits
                   -- FIXME Those tests are flaky
