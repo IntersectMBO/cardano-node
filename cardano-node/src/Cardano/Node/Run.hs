@@ -951,7 +951,7 @@ adhocGenesisConfig = unsafePerformIO $ do
           if enableLoP then
             ChainSync.Client.ChainSyncLoPBucketEnabled ChainSync.Client.ChainSyncLoPBucketEnabledConfig {
               ChainSync.Client.csbcCapacity = 100_000 -- number of tokens
-            , ChainSync.Client.csbcRate     = 1_000   -- tokens of second leaking
+            , ChainSync.Client.csbcRate     = 500 -- tokens per second leaking (1/2ms)
             }
           else ChainSync.Client.ChainSyncLoPBucketDisabled
       , Genesis.gcsCSJConfig =
