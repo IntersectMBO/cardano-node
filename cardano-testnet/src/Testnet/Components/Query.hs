@@ -121,8 +121,12 @@ getEpochState :: MonadTest m
 getEpochState EpochStateView{epochStateView} =
   withFrozenCallStack $
     H.byDurationM 0.5 15 "EpochStateView has not been initialized within 15 seconds" $
-      H.evalIO (readIORef epochStateView) >>= maybe H.failure pure
+      H.evalIO (atomicReadIORef epochStateView) >>= maybe H.failure pure
 
+-- | Reads the IORef and updates it with the initial read value
+atomicReadIORef :: IORef a -> IO a
+atomicReadIORef ref =
+  atomicModifyIORef' ref (\refCurrentValue -> (refCurrentValue, refCurrentValue))
 
 -- | Create a background thread listening for new epoch states. New epoch states are available to access
 -- through 'EpochStateView', using query functions.
