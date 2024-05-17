@@ -63,7 +63,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
       cEra = AnyCardanoEra era
 
       fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 100
+        { cardanoEpochLength = 200
         , cardanoNodeEra = cEra
         , cardanoActiveSlotsCoeff = 0.3
         }

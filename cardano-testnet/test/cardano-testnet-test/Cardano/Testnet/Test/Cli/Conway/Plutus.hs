@@ -11,7 +11,6 @@ module Cardano.Testnet.Test.Cli.Conway.Plutus
   ) where
 
 import           Cardano.Api
-import qualified Cardano.Api.Ledger as L
 
 import           Cardano.Testnet
 
@@ -142,11 +141,9 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     , "--tx-file", sendAdaToScriptAddressTx
     ]
 
-  _ <- waitForEpochs epochStateView (L.EpochInterval 1)
-
   -- 2. Successfully spend conway spending script
   txinCollateral <- findLargestUtxoForPaymentKey epochStateView sbe wallet1
-  plutusScriptTxIn <- fmap fst . H.nothingFailM $
+  plutusScriptTxIn <- fmap fst . waitForJustM $
     findLargestUtxoWithAddress epochStateView sbe $ Text.pack plutusSpendingScriptAddr
 
   let spendScriptUTxOTxBody = work </> "spend-script-utxo-tx-body"
@@ -186,5 +183,12 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     , "--tx-file", spendScriptUTxOTx
     ]
   H.success
+
+waitForJustM :: (H.MonadTest m, MonadIO m) => m (Maybe a) -> m a
+waitForJustM src = do m <- src
+                      case m of
+                        Just a -> pure a
+                        Nothing -> do H.threadDelay 100_000
+                                      waitForJustM src
 
 

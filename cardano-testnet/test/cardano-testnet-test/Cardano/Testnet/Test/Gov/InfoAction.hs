@@ -13,6 +13,7 @@ module Cardano.Testnet.Test.Gov.InfoAction
 
 import           Cardano.Api as Api
 import           Cardano.Api.Error (displayError)
+import           Cardano.Api.Ledger (EpochInterval (EpochInterval))
 import           Cardano.Api.Shelley
 
 import           Cardano.Ledger.Conway.Governance (RatifyState (..))
@@ -58,7 +59,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
       era = toCardanoEra sbe
       sbe = conwayEraOnwardsToShelleyBasedEra ceo
       fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 100
+        { cardanoEpochLength = 200
         , cardanoNodeEra = AnyCardanoEra era
         }
 
@@ -144,18 +145,7 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
     , "--tx-file", txbodySignedFp
     ]
 
-  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex (fromString txidString))
-                                        configurationFile
-                                        socketPath
-                                        (EpochNo 10)
-
-  governanceActionIndex <- case propSubmittedResult of
-                             Left e ->
-                               H.failMessage callStack
-                                 $ "findCondition failed with: " <> displayError e
-                             Right Nothing ->
-                               H.failMessage callStack "Couldn't find proposal."
-                             Right (Just a) -> return a
+  governanceActionIndex <- H.nothingFailM $ watchEpochStateView epochStateView (return . maybeExtractGovernanceActionIndex (fromString txidString)) (EpochInterval 1)
 
   let voteFp :: Int -> FilePath
       voteFp n = work </> gov </> "vote-" <> show n
