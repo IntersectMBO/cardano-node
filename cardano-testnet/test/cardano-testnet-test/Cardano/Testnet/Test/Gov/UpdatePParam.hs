@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -14,6 +15,7 @@ import           Cardano.Api.Ledger (EpochInterval (..))
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley
 
+import qualified Cardano.Ledger.Api.State.Query as L
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.PParams as L
 import qualified Cardano.Ledger.Shelley.LedgerState as L
@@ -26,11 +28,14 @@ import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
+import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
+import qualified Data.Set as Set
 import           Data.String
 import qualified Data.Text as Text
 import           Data.Word
+import           GHC.Stack
 import           Lens.Micro
 import           System.FilePath ((</>))
 
@@ -120,12 +125,25 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
     , "--signing-key-file", work </> defaultCommitteeHotSkeyFp 1
     ]
 
+  hotKeyHash1 <- H.execCli' execConfigOffline
+    [ anyEraToString cEra, "governance", "committee"
+    , "key-hash"
+    , "--verification-key-file", work </> defaultCommitteeHotVkeyFp 1
+    ]
+
+  CommitteeHotKeyHash comHotKeyHash1 <-
+    evalEither
+      $ deserialiseFromRawBytesHex (AsHash AsCommitteeHotKey)
+      $ BSC.pack $ filter (/= '\n') hotKeyHash1
+
+  let comHotKeyCred1 = L.KeyHashObj comHotKeyHash1
+
   void $ H.execCli' execConfigOffline
      [ anyEraToString cEra, "governance", "committee"
      , "create-hot-key-authorization-certificate"
      , "--cold-verification-key-file", work </> defaultCommitteeVkeyFp 1
      , "--hot-key-file", work </> defaultCommitteeHotVkeyFp 1
-      , "--out-file", work </> defaultCommitteeHotAuthCertFp 1
+     , "--out-file", work </> defaultCommitteeHotAuthCertFp 1
      ]
 
   committeeVkey1Fp <- H.noteShow $ work </> defaultCommitteeVkeyFp 1
@@ -271,13 +289,16 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
   -- Need to vote on proposal. Drep threshold must be met
   governanceActionTxIdPParamUpdate <- retrieveTransactionId execConfig signedPParamsProposalTx
 
-  !pparamsPropSubmittedResult
-   <- H.leftFailM $ watchEpochStateView
-        epochStateView
-        (maybeExtractGovernanceActionIndex (fromString governanceActionTxIdPParamUpdate))
-        (EpochInterval 5)
+  !governanceActionIndexPParams
+    <- H.nothingFailM $ watchEpochStateView
+         epochStateView
+         (return . maybeExtractGovernanceActionIndex (fromString governanceActionTxIdPParamUpdate))
+         (EpochInterval 5)
 
-  governanceActionIndexPParams <- H.nothingFail pparamsPropSubmittedResult
+  -- Confirm that committee hot keys have been authorized
+  H.nothingFailM $ watchEpochStateView epochStateView
+    (checkCommitteeHotKeyAuthorizationStatus [comHotKeyCred1])
+    (EpochInterval 5)
 
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
   pparamsDRepVoteFiles <- generateVoteFiles execConfig work "pparams-update-vote-files"
@@ -305,12 +326,9 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
   pparamsVoteTxFp <- signTx execConfig cEra work "signed-vote-tx" pparamsVoteTxBodyFp signingKeys
   submitTx execConfig cEra pparamsVoteTxFp
 
-  mPParamsUpdate
-    <- H.leftFailM $ watchEpochStateView epochStateView
-         (checkPParamsUpdated (EpochInterval newCommitteeTermLength))
+  H.nothingFailM $ watchEpochStateView epochStateView
+         (return . checkPParamsUpdated (EpochInterval newCommitteeTermLength))
          (EpochInterval 10)
-
-  H.nothingFail mPParamsUpdate
 
 checkPParamsUpdated
   :: EpochInterval -- ^ The epoch interval to check for in the updated protocol parameters
@@ -325,3 +343,27 @@ checkPParamsUpdated committeeTermLength (AnyNewEpochState sbe nes) =
   in if curCommTermLength == committeeTermLength
      then Just () -- PParams was successfully updated and we terminate the fold.
      else Nothing -- PParams was not updated yet, we continue the fold.
+
+checkCommitteeHotKeyAuthorizationStatus
+  :: MonadTest m
+  => [L.Credential L.HotCommitteeRole L.StandardCrypto]
+  -> AnyNewEpochState
+  -> m (Maybe ())
+checkCommitteeHotKeyAuthorizationStatus hotCreds (AnyNewEpochState sbe nes) =
+  caseShelleyToBabbageOrConwayEraOnwards
+    (const $ error "Committee hot key authorization only exists in Conway era onwards")
+    (const $
+       let commMemStat = L.queryCommitteeMembersState mempty (Set.fromList hotCreds) (Set.singleton L.Active) nes
+           activeMembers = [ hotKeyCred
+                           | L.MemberAuthorized hotKeyCred <- map L.cmsHotCredAuthStatus $ Map.elems $ L.csCommittee commMemStat
+                           ]
+           unregisteredHotKeys = hotCreds List.\\ activeMembers
+       in if null activeMembers
+          then return Nothing
+          else if null unregisteredHotKeys
+               then return $ Just ()
+               else H.failMessage callStack
+                      $ "Some hot keys were not authorized: " <> show unregisteredHotKeys
+
+    )
+    sbe
