@@ -33,6 +33,7 @@ import           Control.Exception (SomeException (..), try)
 import           Control.Monad
 import           Data.Aeson (FromJSON, eitherDecodeFileStrict')
 import           Data.Aeson.Encode.Pretty
+import           Data.Bool
 import qualified Data.ByteString as BS (pack)
 import qualified Data.ByteString.Lazy.Char8 as BSL (ByteString, pack, putStrLn, writeFile)
 import           Data.Either (rights)
@@ -274,11 +275,15 @@ checkPlutusLoop _ _
 readFileJson :: FromJSON a => FilePath -> ExceptT TxGenError IO a
 readFileJson f = handleIOExceptT (TxGenError . show) (eitherDecodeFileStrict' f) >>= firstExceptT TxGenError . hoistEither
 
+-- resolve protocol parameters file from --param PARAM
+-- 1. try to resolve to file
+-- 2. try to resolve from data/ directory
 readProtocolParametersOrDie :: FilePath -> IO ProtocolParameters
-readProtocolParametersOrDie filePath
-  = do
-    parametersFile <- getDataFileName filePath
-    either die pure =<< eitherDecodeFileStrict' parametersFile
+readProtocolParametersOrDie filePath =
+  resolver >>= eitherDecodeFileStrict' >>= either die pure
+  where
+    resolver =
+      doesFileExist filePath >>= bool (getDataFileName $ "data" </> filePath) (pure filePath)
 
 resolveRedeemer :: Either ScriptData TxGenPlutusParams -> IO (Either TxGenError HashableScriptData)
 resolveRedeemer (Left hsd) = do

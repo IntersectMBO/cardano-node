@@ -19,8 +19,8 @@ import qualified PlutusLedgerApi.V3 as PlutusV3
 
 import           Prelude as Haskell (String, (.), (<$>))
 
--- import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Short as SBS
+import           GHC.ByteOrder (ByteOrder(LittleEndian))
 
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
@@ -35,7 +35,6 @@ scriptName
 script :: PlutusBenchScript
 script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV3 scriptSerialized))
 
-
 {-# INLINABLE mkValidator #-}
 mkValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkValidator _datum red _txContext =
@@ -46,14 +45,14 @@ mkValidator _datum red _txContext =
       then traceError "redeemer is < 1000000"
       else loop n l
   where
-    hashAndAddG2 :: [BuiltinByteString] -> BuiltinBLS12_381_G2_Element
-    hashAndAddG2 l =
+    hashAndAddG2 :: [BuiltinByteString] -> Integer -> BuiltinBLS12_381_G2_Element
+    hashAndAddG2 l i =
       go l (Tx.bls12_381_G2_uncompress Tx.bls12_381_G2_compressed_zero)
       where go [] !acc     = acc
-            go (q:qs) !acc = go qs $ Tx.bls12_381_G2_add (Tx.bls12_381_G2_hashToGroup q emptyByteString) acc
+            go (q:qs) !acc = go qs $ Tx.bls12_381_G2_add (Tx.bls12_381_G2_hashToGroup q (integerToByteString LittleEndian 0 i)) acc
     loop i l
       | i == 1000000 = ()
-      | otherwise    = let !_ = hashAndAddG2 l in loop (pred i) l
+      | otherwise    = let !_ = hashAndAddG2 l i in loop (pred i) l
 
 hashAndAddG2ShortBs :: SBS.ShortByteString
 hashAndAddG2ShortBs = PlutusV3.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])
