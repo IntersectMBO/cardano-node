@@ -50,8 +50,9 @@ tests = do
             -- TODO: Replace foldBlocks with checkLedgerStateCondition
             , T.testGroup "Governance"
                 [ ignoreOnMacAndWindows "Committee Add New" Gov.hprop_constitutional_committee_add_new
-                -- FIXME: This test is broken - drepActivity is not updated within the expeted period
+                -- TODO: Disabled because proposals for parameter changes are not working
                 -- , ignoreOnWindows "DRep Activity" Gov.hprop_check_drep_activity
+                -- , ignoreOnWindows "Predefined Abstain DRep" Gov.hprop_check_predefined_abstain_drep
                 , ignoreOnMacAndWindows "Committee Motion Of No Confidence"  Gov.hprop_gov_no_confidence
                 , ignoreOnWindows "DRep Deposits" Gov.hprop_ledger_events_drep_deposits
                   -- FIXME Those tests are flaky

@@ -1077,7 +1077,7 @@ teeForge' tr =
           LogValue "slotIsImmutable" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceBlockFromFuture slot _slotNo ->
           LogValue "blockFromFuture" $ PureI $ fromIntegral $ unSlotNo slot
-        Consensus.TraceBlockContext slot _tipBlkNo _tipPoint ->
+        Consensus.TraceBlockContext slot _tipBlkNo _tipPoint _durNSec ->
           LogValue "blockContext" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceNoLedgerState slot _ ->
           LogValue "couldNotForgeSlotLast" $ PureI $ fromIntegral $ unSlotNo slot

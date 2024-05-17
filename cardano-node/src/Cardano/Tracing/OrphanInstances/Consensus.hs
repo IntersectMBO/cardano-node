@@ -386,11 +386,12 @@ instance ( tx ~ GenTx blk
       "Couldn't forge block because current tip is in the future: "
         <> "current tip slot: " <> showT (unSlotNo tipSlot)
         <> ", current slot: " <> showT (unSlotNo currentSlot)
-    TraceBlockContext currentSlot tipBlockNo tipPoint -> const $
+    TraceBlockContext currentSlot tipBlockNo tipPoint durNSec -> const $
       "New block will fit onto: "
         <> "tip: " <> renderPointAsPhrase tipPoint
         <> ", tip block no: " <> showT (unBlockNo tipBlockNo)
         <> ", current slot: " <> showT (unSlotNo currentSlot)
+        <> ", duration (nsec): " <> showT durNSec
     TraceNoLedgerState slotNo pt -> const $
       "Could not obtain ledger state for point "
         <> renderPointAsPhrase pt
@@ -1454,12 +1455,13 @@ instance ( RunNode blk
       , "current slot" .= toJSON (unSlotNo currentSlot)
       , "tip" .= toJSON (unSlotNo tip)
       ]
-  toObject verb (TraceBlockContext currentSlot tipBlkNo tipPoint) =
+  toObject verb (TraceBlockContext currentSlot tipBlkNo tipPoint durNSec) =
     mconcat
       [ "kind" .= String "TraceBlockContext"
       , "current slot" .= toJSON (unSlotNo currentSlot)
       , "tip" .= renderPointForVerbosity verb tipPoint
       , "tipBlockNo" .= toJSON (unBlockNo tipBlkNo)
+      , "durNSec" .= toJSON durNSec
       ]
   toObject _verb (TraceNoLedgerState slotNo _pt) =
     mconcat

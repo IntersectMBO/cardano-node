@@ -1205,12 +1205,13 @@ instance ( tx ~ GenTx blk
       , "current slot" .= toJSON (unSlotNo currentSlot)
       , "tip" .= toJSON (unSlotNo tip)
       ]
-  forMachine dtal (TraceBlockContext currentSlot tipBlkNo tipPoint) =
+  forMachine dtal (TraceBlockContext currentSlot tipBlkNo tipPoint durNSec) =
     mconcat
       [ "kind" .= String "TraceBlockContext"
       , "current slot" .= toJSON (unSlotNo currentSlot)
       , "tip" .= renderPointForDetails dtal tipPoint
       , "tipBlockNo" .= toJSON (unBlockNo tipBlkNo)
+      , "durNSec" .= toJSON durNSec
       ]
   forMachine _dtal (TraceNoLedgerState slotNo _pt) =
     mconcat
@@ -1333,11 +1334,12 @@ instance ( tx ~ GenTx blk
       "Couldn't forge block because current tip is in the future: "
         <> "current tip slot: " <> showT (unSlotNo tipSlot)
         <> ", current slot: " <> showT (unSlotNo currentSlot)
-  forHuman (TraceBlockContext currentSlot tipBlockNo tipPoint) =
+  forHuman (TraceBlockContext currentSlot tipBlockNo tipPoint durNSec) =
       "New block will fit onto: "
         <> "tip: " <> renderPointAsPhrase tipPoint
         <> ", tip block no: " <> showT (unBlockNo tipBlockNo)
         <> ", current slot: " <> showT (unSlotNo currentSlot)
+        <> ", duration (nsec): " <> showT durNSec
   forHuman (TraceNoLedgerState slotNo pt) =
       "Could not obtain ledger state for point "
         <> renderPointAsPhrase pt
@@ -1422,7 +1424,7 @@ instance ( tx ~ GenTx blk
     [IntM "Forge.SlotIsImmutable" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceBlockFromFuture slot _slotNo) =
     [IntM "Forge.BlockFromFuture" (fromIntegral $ unSlotNo slot)]
-  asMetrics (TraceBlockContext slot _tipBlkNo _tipPoint) =
+  asMetrics (TraceBlockContext slot _tipBlkNo _tipPoint _durNSec) =
     [IntM "Forge.BlockContext" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceNoLedgerState slot _) =
     [IntM "Forge.CouldNotForgeSlotLast" (fromIntegral $ unSlotNo slot)]

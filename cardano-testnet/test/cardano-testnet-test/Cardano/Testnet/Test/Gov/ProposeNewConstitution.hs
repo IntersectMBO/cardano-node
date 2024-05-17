@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -10,7 +9,6 @@ module Cardano.Testnet.Test.Gov.ProposeNewConstitution
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Error (displayError)
 import           Cardano.Api.Ledger (EpochInterval (..))
 
 import qualified Cardano.Crypto.Hash as L
@@ -29,7 +27,6 @@ import           Data.Maybe.Strict
 import           Data.String
 import qualified Data.Text as Text
 import           GHC.Exts (IsList (..))
-import           GHC.Stack (callStack)
 import           Lens.Micro
 import           System.FilePath ((</>))
 
@@ -37,6 +34,7 @@ import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
+import           Testnet.EpochStateProcessing (waitForGovActionVotes)
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.Transaction
@@ -72,7 +70,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 100
+        { cardanoEpochLength = 200
         , cardanoNodeEra = cEra
         , cardanoNumDReps = numVotes
         }
@@ -169,18 +167,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
-  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex (fromString governanceActionTxId))
-                                        configurationFile
-                                        socketPath
-                                        (EpochNo 10)
-
-  governanceActionIndex <- case propSubmittedResult of
-                             Left e ->
-                               H.failMessage callStack
-                                $ "findCondition failed with: " <> displayError e
-                             Right Nothing ->
-                               H.failMessage callStack "Couldn't find proposal."
-                             Right (Just a) -> return a
+  governanceActionIndex <- H.nothingFailM $ watchEpochStateView epochStateView (return . maybeExtractGovernanceActionIndex (fromString governanceActionTxId)) (EpochInterval 1)
 
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
   voteFiles <- generateVoteFiles execConfig work "vote-files"
@@ -196,7 +183,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   submitTx execConfig cEra voteTxFp
 
-  _ <- waitForEpochs epochStateView (EpochInterval 1)
+  waitForGovActionVotes epochStateView ceo (EpochInterval 1)
 
   -- Count votes before checking for ratification. It may happen that the proposal gets removed after
   -- ratification because of a long waiting time, so we won't be able to access votes.
