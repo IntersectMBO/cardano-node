@@ -381,8 +381,8 @@ def all_profile_variants:
     ) as $for_15blk
   |
     ({}
-     | .node.shutdown_on_block_synced   = 30
-    ) as $for_30blk
+     | .node.shutdown_on_block_synced   = 36
+    ) as $for_36blk
   |
     ({}
      | .node.shutdown_on_slot_synced    = 900
@@ -413,7 +413,7 @@ def all_profile_variants:
     ) as $double_tps_saturation_plutus
   |
     ({}
-     | .generator.tps                 = 0.45
+     | .generator.tps                 = 0.48
     ) as $double_plus_tps_saturation_plutus
   |
    ($current_tps_saturation_plutus *
@@ -992,6 +992,10 @@ def all_profile_variants:
     }
   , $cibench_base * $plutus_base * $double_plus_tps_saturation_plutus * $costmodel_v9_preview * $plutus_loop_blst *
     { name: "ci-bench-plutusv3-blst"
+    , genesis:
+      { max_block_size: 88000 }
+    , analysis:
+      { filters:        ["size-moderate-2"] }
     }
   , $cibench_base * $without_tracer *
     { name: "ci-bench-notracer"
