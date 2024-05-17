@@ -14,6 +14,10 @@ module Testnet.Defaults
   , defaultByronProtocolParamsJsonValue
   , defaultYamlConfig
   , defaultConwayGenesis
+  , defaultCommitteeHotAuthCertFp
+  , defaultCommitteeHotKeyPair
+  , defaultCommitteeHotVkeyFp
+  , defaultCommitteeHotSkeyFp
   , defaultCommitteeKeyPair
   , defaultCommitteeVkeyFp
   , defaultCommitteeSkeyFp
@@ -596,12 +600,32 @@ defaultDRepSkeyFp
   -> FilePath
 defaultDRepSkeyFp n = "drep-keys" </> ("drep" <> show n) </> "drep.skey"
 
-defaultCommitteeKeyPair :: Int -> KeyPair PaymentKey
-defaultCommitteeKeyPair n =
+defaultCommitteeKeyPair :: FilePath -> Int -> KeyPair CCColdKey
+defaultCommitteeKeyPair work n =
   KeyPair
-    { verificationKey = File $ defaultCommitteeVkeyFp n
-    , signingKey = File $ defaultCommitteeSkeyFp n
+    { verificationKey = File $ work </> defaultCommitteeVkeyFp n
+    , signingKey = File $ work </> defaultCommitteeSkeyFp n
     }
+
+defaultCommitteeHotKeyPair :: FilePath -> Int -> KeyPair CCHotKey
+defaultCommitteeHotKeyPair work n =
+  KeyPair
+    { verificationKey = File $ work </> defaultCommitteeHotVkeyFp n
+    , signingKey = File $ work </> defaultCommitteeHotSkeyFp n
+    }
+
+defaultCommitteeHotAuthCertFp :: Int -> FilePath
+defaultCommitteeHotAuthCertFp n = "committee-keys" </> "committee" <> show n <>"hot.auth"
+
+defaultCommitteeHotVkeyFp
+  :: Int -- ^ The Committee's index (starts at 1)
+  -> FilePath
+defaultCommitteeHotVkeyFp n = "committee-keys" </> "committee" <> show n <> "hot.vkey"
+
+defaultCommitteeHotSkeyFp
+  :: Int -- ^ The Committee's index (starts at 1)
+  -> FilePath
+defaultCommitteeHotSkeyFp n = "committee-keys" </> "committee" <> show n <> "hot.skey"
 
 -- | The relative path to SPO cold verification key in directories created by cardano-testnet
 defaultSPOColdVKeyFp :: Int -> FilePath

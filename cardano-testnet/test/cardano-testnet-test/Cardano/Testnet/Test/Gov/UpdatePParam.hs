@@ -12,7 +12,7 @@ module Cardano.Testnet.Test.Gov.UpdatePParam
 import           Cardano.Api as Api
 import           Cardano.Api.Ledger (EpochInterval (..))
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley (createAnchor)
+import           Cardano.Api.Shelley
 
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.PParams as L
@@ -25,6 +25,7 @@ import           Control.Monad
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Bifunctor (first)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.String
@@ -62,13 +63,16 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       -- Generate model for votes
-      allVotes :: [(String, Int)]
-      allVotes = [("yes", 1), ("yes", 2), ("yes", 3)]
-  -- TODO: Left off here. Investigate if you need SPOs to vote.
-  annotateShow allVotes
+      drepVotes :: [(String, Int)]
+      drepVotes = [("yes", 1), ("yes", 2), ("yes", 3)]
+      ccVotes :: [(String, Int)]
+      ccVotes = [("yes", 1)]
+
+  -- SPOs dont votes on cc term limits
+  annotateShow drepVotes
 
   let numVotes :: Int
-      numVotes = length allVotes
+      numVotes = length drepVotes
   annotateShow numVotes
 
   guardRailScript <- H.note $ work </> "guard-rail-script.plutusV3"
@@ -81,7 +85,7 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
   H.writeFile proposalAnchorFile "dummy anchor data"
   proposalAnchorDataBS <- evalIO $ BS.readFile proposalAnchorFile
   proposalAnchorDataHash <- H.execCli' execConfigOffline
-    [ "conway", "governance"
+    [ anyEraToString cEra, "governance"
     , "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
 
@@ -96,6 +100,56 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
 
   H.note_ $ "Constitution script hash: " <> constitutionScriptHash
 
+
+  -- Step 1. Define generate and define a committee in the genesis file
+
+  -- Create committee cold key + hot key
+  H.createDirectoryIfMissing_ $ tempAbsPath' </> work </> "committee-keys"
+  H.forConcurrently_ [1] $ \n -> do
+    H.execCli' execConfigOffline
+      [ anyEraToString cEra, "governance", "committee"
+      , "key-gen-cold"
+      , "--cold-verification-key-file", work </> defaultCommitteeVkeyFp n
+      , "--cold-signing-key-file", work </> defaultCommitteeSkeyFp n
+      ]
+
+  void $ H.execCli' execConfigOffline
+    [ anyEraToString cEra, "governance", "committee"
+    , "key-gen-hot"
+    , "--verification-key-file", work </> defaultCommitteeHotVkeyFp 1
+    , "--signing-key-file", work </> defaultCommitteeHotSkeyFp 1
+    ]
+
+  void $ H.execCli' execConfigOffline
+     [ anyEraToString cEra, "governance", "committee"
+     , "create-hot-key-authorization-certificate"
+     , "--cold-verification-key-file", work </> defaultCommitteeVkeyFp 1
+     , "--hot-key-file", work </> defaultCommitteeHotVkeyFp 1
+      , "--out-file", work </> defaultCommitteeHotAuthCertFp 1
+     ]
+
+  committeeVkey1Fp <- H.noteShow $ work </> defaultCommitteeVkeyFp 1
+  committeeAuthCert1Fp <- H.noteShow $ work </> defaultCommitteeHotAuthCertFp 1
+
+  -- Read committee cold keys from disk to put into conway genesis
+
+  comKeyHash1Str <- filter (/= '\n') <$> H.execCli' execConfigOffline
+      [ anyEraToString cEra, "governance", "committee"
+      , "key-hash"
+      , "--verification-key-file", committeeVkey1Fp
+      ]
+
+  CommitteeColdKeyHash comKeyHash1 <-
+    evalEither
+      $ deserialiseFromRawBytesHex (AsHash AsCommitteeColdKey)
+      $ BSC.pack comKeyHash1Str
+
+  let comKeyCred1 = L.KeyHashObj comKeyHash1
+      committeeThreshold = unsafeBoundedRational 0
+      committee = L.Committee (Map.fromList [(comKeyCred1, EpochNo 100)]) committeeThreshold
+
+
+
   url <- evalMaybe $ L.textToUrl 28 "https://tinyurl.com/3wrwb2as"
   let fastTestnetOptions = cardanoDefaultTestnetOptions
         { cardanoEpochLength = 100
@@ -109,7 +163,9 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
   alonzoGenesis <- evalEither $ first prettyError defaultAlonzoGenesis
   (startTime, shelleyGenesis') <- getDefaultShelleyGenesis fastTestnetOptions
   let conwayGenesisWithCommittee =
-        defaultConwayGenesis { L.cgConstitution = constitution }
+        defaultConwayGenesis { L.cgConstitution = constitution
+                             , L.cgCommittee = committee
+                             }
 
   TestnetRuntime
     { testnetMagic
@@ -143,7 +199,7 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
               }
 
   -- Attempt a protocol parameters update (witnessed with guard rail script)
-  let newCommitteeTermLength = 1000
+  let newCommitteeTermLength = 20
   pparamsUpdateFp <- H.note $ work </> "protocol-parameters-upate.action"
   void $ H.execCli' execConfig
     [ anyEraToString cEra, "governance", "action", "create-protocol-parameters-update"
@@ -183,7 +239,7 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
 
   void $ H.execCli' execConfig
     [ anyEraToString cEra, "transaction", "build-estimate"
-    , "--shelley-key-witnesses", show @Int 1
+    , "--shelley-key-witnesses", show @Int 2
     , "--total-utxo-value", show @Integer adaAtInput
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--protocol-params-file", protocolParametersFile
@@ -194,17 +250,21 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
     , "--proposal-script-file", guardRailScript
     , "--proposal-redeemer-value", "0"
     , "--proposal-execution-units", "(2000000,20000000)"
+    , "--certificate-file", committeeAuthCert1Fp
     , "--out-file", updateProposalTxBody
     ]
 
   updateProposalTx <- H.note $ work </> "update-proposal.tx"
 
   signedPParamsProposalTx <- signTx execConfig cEra work updateProposalTx
-                               (File updateProposalTxBody) [SomeKeyPair $ paymentKeyInfoPair wallet0]
+                               (File updateProposalTxBody)
+                               [ SomeKeyPair (paymentKeyInfoPair wallet0)
+                               , SomeKeyPair (defaultCommitteeKeyPair work 1)
+                               ]
 
 
   void $ H.execCli' execConfig
-    [ "conway", "transaction", "submit"
+    [ anyEraToString cEra, "transaction", "submit"
     , "--tx-file", unFile signedPParamsProposalTx
     ]
 
@@ -221,15 +281,27 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
   governanceActionIndexPParams <- H.nothingFail pparamsPropSubmittedResult
 
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
-  pparamsVoteFiles <- generateVoteFiles execConfig work "pparams-update-vote-files"
-                        governanceActionTxIdPParamUpdate governanceActionIndexPParams
-                        [(defaultDRepKeyPair idx, vote) | (vote, idx) <- allVotes]
+  pparamsDRepVoteFiles <- generateVoteFiles execConfig work "pparams-update-vote-files"
+                            governanceActionTxIdPParamUpdate governanceActionIndexPParams
+                            [(defaultDRepKeyPair idx, vote) | (vote, idx) <- drepVotes]
+
+  pparamsCCVoteFiles <- generateVoteFilesCC execConfig work "pparams-update-cc-vote-files"
+                          governanceActionTxIdPParamUpdate governanceActionIndexPParams
+                          [(defaultCommitteeHotKeyPair work idx, vote) | (vote, idx) <- ccVotes]
 
   -- Submit votes
   pparamsVoteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe work "pparams-vote-tx-body"
-                           pparamsVoteFiles wallet0
+                           (pparamsDRepVoteFiles ++ pparamsCCVoteFiles) wallet0
 
-  let signingKeys = SomeKeyPair <$> (paymentKeyInfoPair wallet0:(defaultDRepKeyPair . snd <$> allVotes))
+  let drepSigningKeys :: [SomeKeyPair]
+      drepSigningKeys = map SomeKeyPair $ defaultDRepKeyPair . snd <$> drepVotes
+
+      ccSigningKeys :: [SomeKeyPair]
+      ccSigningKeys = map SomeKeyPair $ defaultCommitteeHotKeyPair work . snd <$> ccVotes
+
+      utxoSigningKey = SomeKeyPair $ paymentKeyInfoPair wallet0
+
+      signingKeys = [utxoSigningKey] ++ drepSigningKeys ++ ccSigningKeys
 
   pparamsVoteTxFp <- signTx execConfig cEra work "signed-vote-tx" pparamsVoteTxBodyFp signingKeys
   submitTx execConfig cEra pparamsVoteTxFp
