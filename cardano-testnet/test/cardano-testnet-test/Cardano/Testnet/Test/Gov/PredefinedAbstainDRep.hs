@@ -6,7 +6,12 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
-  ( hprop_check_predefined_abstain_drep
+  ( AutomaticDRepType(..)
+  , hprop_check_predefined_abstain_drep
+  , delegateToAutomaticDRep
+  , desiredPoolNumberProposalTest
+  , getDesiredPoolNumberValue
+  , voteChangeProposal
   ) where
 
 import           Cardano.Api as Api
@@ -23,6 +28,7 @@ import           Prelude
 
 import           Control.Monad (void)
 import           Control.Monad.Catch (MonadCatch)
+import           Control.Monad.Trans.Control (MonadBaseControl)
 import           Data.Data (Typeable)
 import           Data.String (fromString)
 import qualified Data.Text as Text
@@ -36,10 +42,12 @@ import           Testnet.Components.Query (EpochStateView, assertNewEpochState,
                    findLargestUtxoForPaymentKey, getCurrentEpochNo, getEpochStateView, getGovState,
                    getMinDRepDeposit, watchEpochStateView)
 import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
-import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
-import           Testnet.Process.Cli.DRep (createCertificatePublicationTxBody, createVotingTxBody,
-                   generateVoteFiles)
+import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair,
+                   defaultSpoColdKeyPair, defaultSpoKeys)
+import qualified Testnet.Process.Cli.DRep as DRep
+import           Testnet.Process.Cli.DRep (createCertificatePublicationTxBody, createVotingTxBody)
 import qualified Testnet.Process.Cli.Keys as P
+import qualified Testnet.Process.Cli.SPO as SPO
 import           Testnet.Process.Cli.Transaction (retrieveTransactionId, signTx, submitTx)
 import qualified Testnet.Process.Run as H
 import qualified Testnet.Property.Util as H
@@ -116,11 +124,11 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
   void $ desiredPoolNumberProposalTest execConfig epochStateView ceo gov "firstProposal"
                                        wallet0 Nothing [(1, "yes")] newNumberOfDesiredPools 3 (Just initialDesiredNumberOfPools) 10
 
-  -- Take the last two stake delegators and delegate them to "Abstain".
-  delegateToAlwaysAbstain execConfig epochStateView sbe gov "delegateToAbstain1"
-                          wallet1 (defaultDelegatorStakeKeyPair 2)
-  delegateToAlwaysAbstain execConfig epochStateView sbe gov "delegateToAbstain2"
-                          wallet2 (defaultDelegatorStakeKeyPair 3)
+  -- Take the last two stake delegators and delegate them to "AlwaysAbstainDRep".
+  delegateToAutomaticDRep execConfig epochStateView sbe gov "delegateToAbstain1"
+                          AlwaysAbstainDRep wallet1 (defaultDelegatorStakeKeyPair 2)
+  delegateToAutomaticDRep execConfig epochStateView sbe gov "delegateToAbstain2"
+                          AlwaysAbstainDRep wallet2 (defaultDelegatorStakeKeyPair 3)
 
   -- Do some other proposal and vote yes with first DRep only
   -- and assert the new proposal passes now.
@@ -128,7 +136,11 @@ hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \
   void $ desiredPoolNumberProposalTest execConfig epochStateView ceo gov "secondProposal"
                                        wallet0 Nothing [(1, "yes")] newNumberOfDesiredPools2 0 (Just newNumberOfDesiredPools2) 10
 
-delegateToAlwaysAbstain
+-- | Which automatic DRep to delegate to
+data AutomaticDRepType = AlwaysAbstainDRep
+                       | NoConfidenceDRep
+
+delegateToAutomaticDRep
   :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Typeable era)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
@@ -136,12 +148,11 @@ delegateToAlwaysAbstain
   -> ShelleyBasedEra era -- ^ The Shelley-based era (e.g., 'ConwayEra') in which the transaction will be constructed.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
+  -> AutomaticDRepType -- ^ Which type of automatic DRep to delegate to.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
   -> KeyPair StakingKey -- ^ Staking key pair used for delegation.
   -> m ()
-delegateToAlwaysAbstain execConfig epochStateView sbe work prefix
-                        payingWallet skeyPair@(KeyPair vKeyFile _sKeyFile) = do
-
+delegateToAutomaticDRep execConfig epochStateView sbe work prefix flag payingWallet skeyPair@(KeyPair vKeyFile _sKeyFile) = do
   let era = toCardanoEra sbe
       cEra = AnyCardanoEra era
 
@@ -151,7 +162,9 @@ delegateToAlwaysAbstain execConfig epochStateView sbe work prefix
   let voteDelegationCertificatePath = baseDir </> "delegation-certificate.delegcert"
   void $ H.execCli' execConfig
     [ anyEraToString cEra, "stake-address", "vote-delegation-certificate"
-    , "--always-abstain"
+    , case flag of
+        AlwaysAbstainDRep -> "--always-abstain"
+        NoConfidenceDRep -> "--always-no-confidence"
     , "--stake-verification-key-file", unFile vKeyFile
     , "--out-file", voteDelegationCertificatePath
     ]
@@ -172,7 +185,7 @@ delegateToAlwaysAbstain execConfig epochStateView sbe work prefix
   void $ waitForEpochs epochStateView (EpochInterval 1)
 
 desiredPoolNumberProposalTest
-  :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, Foldable t)
+  :: (HasCallStack, MonadTest m, MonadIO m, H.MonadAssertion m, MonadCatch m, MonadBaseControl IO m, Foldable t)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
   -> ConwayEraOnwards ConwayEra -- ^ The ConwaysEraOnwards witness for the Conway era
@@ -190,8 +203,6 @@ desiredPoolNumberProposalTest
   -> m (String, Word32)
 desiredPoolNumberProposalTest execConfig epochStateView ceo work prefix wallet
                               previousProposalInfo votes change minWait mExpected maxWait = do
-  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
-
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
   let propVotes :: [DefaultDRepVote]
@@ -202,8 +213,8 @@ desiredPoolNumberProposalTest execConfig epochStateView ceo work prefix wallet
     makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo baseDir "proposal"
                                         previousProposalInfo (fromIntegral change) wallet
 
-  voteChangeProposal execConfig epochStateView sbe baseDir "vote"
-                     governanceActionTxId governanceActionIndex propVotes wallet
+  voteChangeProposal execConfig epochStateView ceo baseDir "vote"
+                     governanceActionTxId governanceActionIndex propVotes [] wallet
 
   (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
@@ -300,36 +311,51 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
 -- a default DRep (from the ones created by 'cardanoTestnetDefault')
 type DefaultDRepVote = (String, Int)
 
+-- A pair of a vote string (i.e: "yes", "no", or "abstain") and the number of
+-- a default SPO (from the ones created by 'cardanoTestnetDefault')
+type DefaultSPOVote = (String, Int)
+
 -- | Create and issue votes for (or against) a government proposal with default
--- Delegate Representative (DReps created by 'cardanoTestnetDefault') using @cardano-cli@.
-voteChangeProposal :: (MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m)
+-- Delegate Representative (DReps created by 'cardanoTestnetDefault') and
+-- default Stake Pool Operatorsusing using @cardano-cli@.
+voteChangeProposal :: (Typeable era, MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m, MonadBaseControl IO m)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
-                    -- using the 'getEpochStateView' function.
-  -> ShelleyBasedEra ConwayEra -- ^ The Shelley-based witness for ConwayEra (i.e: ShelleyBasedEraConway).
+  -> ConwayEraOnwards era -- ^ The @ConwayEraOnwards@ witness for the current era.
   -> FilePath -- ^ Base directory path where the subdirectory with the intermediate files will be created.
   -> String -- ^ Name for the subdirectory that will be created for storing the intermediate files.
   -> String -- ^ Transaction id of the governance action to vote.
   -> Word32 -- ^ Index of the governance action to vote in the transaction.
   -> [DefaultDRepVote] -- ^ List of votes to issue as pairs of the vote and the number of DRep that votes it.
+  -> [DefaultSPOVote] -- ^ List of votes to issue as pairs of the vote and the number of DRep that votes it.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transactions
   -> m ()
-voteChangeProposal execConfig epochStateView sbe work prefix
-                   governanceActionTxId governanceActionIndex votes wallet = do
+voteChangeProposal execConfig epochStateView ceo work prefix
+                   governanceActionTxId governanceActionIndex drepVotes spoVotes wallet = do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
-  let era = toCardanoEra sbe
+  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      era = toCardanoEra sbe
       cEra = AnyCardanoEra era
 
-  voteFiles <- generateVoteFiles execConfig baseDir "vote-files"
-                                 governanceActionTxId governanceActionIndex
-                                 [(defaultDRepKeyPair idx, vote) | (vote, idx) <- votes]
+  drepVoteFiles <- DRep.generateVoteFiles execConfig baseDir "drep-vote-files"
+                                          governanceActionTxId governanceActionIndex
+                                          [(defaultDRepKeyPair idx, vote) | (vote, idx) <- drepVotes]
+
+  spoVoteFiles <- SPO.generateVoteFiles ceo execConfig baseDir "spo-vote-files"
+                                        governanceActionTxId governanceActionIndex
+                                        [(defaultSpoKeys idx, vote) | (vote, idx) <- spoVotes]
+
+  let voteFiles = drepVoteFiles ++ spoVoteFiles
 
   voteTxBodyFp <- createVotingTxBody execConfig epochStateView sbe baseDir "vote-tx-body"
                                      voteFiles wallet
 
   voteTxFp <- signTx execConfig cEra baseDir "signed-vote-tx" voteTxBodyFp
-                     (SomeKeyPair (paymentKeyInfoPair wallet):[SomeKeyPair $ defaultDRepKeyPair n | (_, n) <- votes])
+                     (SomeKeyPair (paymentKeyInfoPair wallet):
+                      [SomeKeyPair $ defaultDRepKeyPair n | (_, n) <- drepVotes] ++
+                      [SomeKeyPair $ defaultSpoColdKeyPair n | (_, n) <- drepVotes]
+                     )
   submitTx execConfig cEra voteTxFp
 
 -- | Obtains the @desiredPoolNumberValue@ from the protocol parameters.

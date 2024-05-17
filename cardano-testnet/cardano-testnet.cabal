@@ -67,6 +67,7 @@ library
                       , mtl
                       , network
                       , network-mux
+                      , monad-control
                       , optparse-applicative-fork
                       , ouroboros-network ^>= 0.16
                       , ouroboros-network-api
@@ -200,6 +201,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Misc
                         Cardano.Testnet.Test.Gov.DRepActivity
                         Cardano.Testnet.Test.Gov.PredefinedAbstainDRep
+                        Cardano.Testnet.Test.Gov.PredefinedNoConfidenceDRep
                         Cardano.Testnet.Test.Node.Shutdown
                         Cardano.Testnet.Test.SanityCheck
                         Cardano.Testnet.Test.SubmitApi.Babbage.Transaction
@@ -230,6 +232,7 @@ test-suite cardano-testnet-test
                       , http-conduit
                       , lens-aeson
                       , microlens
+                      , monad-control
                       , mtl
                       , process
                       , regex-compat
