@@ -272,11 +272,10 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
   governanceActionTxIdPParamUpdate <- retrieveTransactionId execConfig signedPParamsProposalTx
 
   !pparamsPropSubmittedResult
-   <- H.leftFailM $ findCondition
+   <- H.leftFailM $ watchEpochStateView
+        epochStateView
         (maybeExtractGovernanceActionIndex (fromString governanceActionTxIdPParamUpdate))
-        configurationFile
-        socketPath
-        (EpochNo 5)
+        (EpochInterval 5)
 
   governanceActionIndexPParams <- H.nothingFail pparamsPropSubmittedResult
 
@@ -307,9 +306,9 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
   submitTx execConfig cEra pparamsVoteTxFp
 
   mPParamsUpdate
-    <- H.leftFailM $ findCondition
+    <- H.leftFailM $ watchEpochStateView epochStateView
          (checkPParamsUpdated (EpochInterval newCommitteeTermLength))
-         configurationFile socketPath (EpochNo 10)
+         (EpochInterval 10)
 
   H.nothingFail mPParamsUpdate
 
