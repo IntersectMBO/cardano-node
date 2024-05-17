@@ -47,7 +47,7 @@ import qualified Hedgehog.Extras as H
 hprop_ledger_events_info_action :: Property
 hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
 
-  -- Start a local test net
+
   conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath

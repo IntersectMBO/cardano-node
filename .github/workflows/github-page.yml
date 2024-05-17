@@ -50,7 +50,7 @@ jobs:
         tar -czf haddocks.tgz -C haddocks .
 
     - name: Upload haddocks artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       if: ${{ always() }}
       continue-on-error: true
       with:
