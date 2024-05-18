@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -10,7 +9,6 @@ module Cardano.Testnet.Test.Gov.NoConfidence
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Error
 import           Cardano.Api.Ledger
 import           Cardano.Api.Shelley
 
@@ -29,7 +27,6 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe.Strict
 import           Data.String
 import qualified Data.Text as Text
-import           GHC.Stack
 import           Lens.Micro
 import           System.FilePath ((</>))
 
@@ -132,9 +129,10 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   H.note_ $ "Abs path: " <> tempAbsBasePath'
   H.note_ $ "Socketpath: " <> socketPath
 
-  mCommitteePresent
-    <- H.leftFailM $ findCondition (committeeIsPresent True) configurationFile (File socketPath) (EpochNo 3)
-  H.nothingFail mCommitteePresent
+  epochStateView <- getEpochStateView configurationFile (File socketPath)
+
+  H.nothingFailM $ watchEpochStateView epochStateView (return . committeeIsPresent True) (EpochInterval 3)
+
 
   -- Step 2. Propose motion of no confidence. DRep and SPO voting thresholds must be met.
 
@@ -156,10 +154,9 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   cliStakeAddressKeyGen
     $ KeyPair (File stakeVkeyFp) (File stakeSKeyFp)
 
-  epochStateView <- getEpochStateView configurationFile (File socketPath)
   minActDeposit <- getMinGovActionDeposit epochStateView ceo
 
-  void $ H.execCli' execConfig $
+  void $ H.execCli' execConfig
     [ eraToString era, "governance", "action", "create-no-confidence"
     , "--testnet"
     , "--governance-action-deposit", show @Integer minActDeposit
@@ -193,18 +190,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
 
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
-  !propSubmittedResult <- findCondition (maybeExtractGovernanceActionIndex (fromString governanceActionTxId))
-                                        configurationFile
-                                        (File socketPath)
-                                        (EpochNo 10)
-
-  governanceActionIndex <- case propSubmittedResult of
-                             Left e ->
-                               H.failMessage callStack
-                                 $ "findCondition failed with: " <> displayError e
-                             Right Nothing ->
-                               H.failMessage callStack "Couldn't find proposal."
-                             Right (Just a) -> return a
+  governanceActionIndex <- H.nothingFailM $ watchEpochStateView epochStateView (return . maybeExtractGovernanceActionIndex (fromString governanceActionTxId)) (EpochInterval 10)
 
   let spoVotes :: [(String, Int)]
       spoVotes =  [("yes", 1), ("yes", 2), ("yes", 3)]
@@ -236,9 +222,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   -- Step 4. We confirm the no confidence motion has been ratified by checking
   -- for an empty constitutional committee.
 
-  mCommitteeEmpty
-    <- H.leftFailM $ findCondition (committeeIsPresent False) configurationFile (File socketPath) (EpochNo 5)
-  H.nothingFail mCommitteeEmpty
+  H.nothingFailM $ watchEpochStateView epochStateView (return . committeeIsPresent False) (EpochInterval 10)
 
 -- | Checks if the committee is empty or not.
 committeeIsPresent :: Bool -> AnyNewEpochState -> Maybe ()

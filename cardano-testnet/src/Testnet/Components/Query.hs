@@ -1,7 +1,10 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Components.Query
@@ -20,14 +23,16 @@ module Testnet.Components.Query
   , findUtxosWithAddress
   , findLargestUtxoWithAddress
   , findLargestUtxoForPaymentKey
+  , assertNewEpochState
+  , watchEpochStateView
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Ledger (Credential, DRepState, KeyRole (DRepRole), StandardCrypto)
+import           Cardano.Api.Ledger (Credential, DRepState, EpochInterval (..), KeyRole (DRepRole),
+                   StandardCrypto)
 import           Cardano.Api.Shelley (ShelleyLedgerEra, fromShelleyTxIn, fromShelleyTxOut)
 
 import qualified Cardano.Ledger.Api as L
-import           Cardano.Ledger.BaseTypes (EpochInterval, addEpochInterval)
 import qualified Cardano.Ledger.Coin as L
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Conway.PParams as L
@@ -35,6 +40,7 @@ import qualified Cardano.Ledger.Shelley.LedgerState as L
 import qualified Cardano.Ledger.UTxO as L
 
 import           Control.Exception.Safe (MonadCatch)
+import           Control.Monad (void)
 import           Control.Monad.Trans.Resource
 import           Control.Monad.Trans.State.Strict (put)
 import           Data.Bifunctor (bimap)
@@ -50,7 +56,7 @@ import qualified Data.Text as T
 import           Data.Type.Equality
 import           GHC.Exts (IsList (..))
 import           GHC.Stack
-import           Lens.Micro (to, (^.))
+import           Lens.Micro (Lens', to, (^.))
 
 import           Testnet.Property.Assert
 import           Testnet.Property.Util (runInBackground)
@@ -94,9 +100,9 @@ waitForEpochs
   => EpochStateView
   -> EpochInterval  -- ^ Number of epochs to wait
   -> m EpochNo -- ^ The epoch number reached
-waitForEpochs epochStateView@EpochStateView{nodeConfigPath, socketPath} interval = withFrozenCallStack $ do
-  currentEpoch <- getCurrentEpochNo epochStateView
-  waitUntilEpoch nodeConfigPath socketPath $ addEpochInterval currentEpoch interval
+waitForEpochs epochStateView interval = withFrozenCallStack $ do
+  void $ watchEpochStateView epochStateView (const $ pure Nothing) interval
+  getCurrentEpochNo epochStateView
 
 -- | A read-only mutable pointer to an epoch state, updated automatically
 data EpochStateView = EpochStateView
@@ -353,3 +359,70 @@ getCurrentEpochNo
 getCurrentEpochNo epochStateView = withFrozenCallStack $ do
   AnyNewEpochState _ newEpochState <- getEpochState epochStateView
   pure $ newEpochState ^. L.nesELL
+
+-- | Assert that the value pointed by the @lens@ in the epoch state is the same as the @expected@ value
+-- or it becomes the same within the @maxWait@ epochs. If the value is not reached within the time frame,
+-- the test fails.
+assertNewEpochState
+  :: forall m era value.
+     (Show value, MonadAssertion m, MonadTest m, MonadIO m, Eq value, HasCallStack)
+  => EpochStateView -- ^ Current epoch state view. It can be obtained using the 'getEpochStateView' function.
+  -> ConwayEraOnwards era -- ^ The ConwayEraOnwards witness for current era.
+  -> value -- ^ The expected value to check in the epoch state.
+  -> EpochInterval -- ^ The maximum wait time in epochs.
+  -> Lens' (L.NewEpochState (ShelleyLedgerEra era)) value -- ^ The lens to access the specific value in the epoch state.
+  -> m ()
+assertNewEpochState epochStateView ceo expected maxWait lens = withFrozenCallStack $ do
+  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+  mStateView <- watchEpochStateView epochStateView (checkEpochState sbe) maxWait
+  case mStateView of
+    Just () -> pure ()
+    Nothing -> do epochState <- getEpochState epochStateView
+                  val <- getFromEpochState sbe epochState
+                  if val == expected
+                  then pure ()
+                  else H.failMessage callStack $ unlines
+                         [ "assertNewEpochState: expected value not reached within the time frame."
+                         , "Expected value: " <> show expected
+                         , "Actual value: " <> show val
+                         ]
+  where
+    checkEpochState :: HasCallStack
+          => ShelleyBasedEra era -> AnyNewEpochState -> m (Maybe ())
+    checkEpochState sbe newEpochState = do
+      val <- getFromEpochState sbe newEpochState
+      return $ if val == expected then Just () else Nothing
+
+    getFromEpochState :: HasCallStack
+              => ShelleyBasedEra era -> AnyNewEpochState -> m value
+    getFromEpochState sbe (AnyNewEpochState actualEra newEpochState) = do
+      Refl <- either error pure $ assertErasEqual sbe actualEra
+      return $ newEpochState ^. lens
+
+-- | Watch the epoch state view until the guard function returns 'Just' or the timeout epoch is reached.
+-- Wait for at most @maxWait@ epochs.
+-- The function will return the result of the guard function if it is met, otherwise it will return @Nothing@.
+watchEpochStateView
+  :: forall m a. (HasCallStack, MonadIO m, MonadTest m, MonadAssertion m)
+  => EpochStateView -- ^ The info to access the epoch state
+  -> (AnyNewEpochState -> m (Maybe a)) -- ^ The guard function (@Just@ if the condition is met, @Nothing@ otherwise)
+  -> EpochInterval -- ^ The maximum number of epochs to wait
+  -> m (Maybe a)
+watchEpochStateView epochStateView f (EpochInterval maxWait) = withFrozenCallStack $ do
+  AnyNewEpochState _ newEpochState <- getEpochState epochStateView
+  let EpochNo currentEpoch = L.nesEL newEpochState
+  go (EpochNo $ currentEpoch + fromIntegral maxWait)
+    where
+      go :: EpochNo -> m (Maybe a)
+      go (EpochNo timeout) = do
+        epochState@(AnyNewEpochState _ newEpochState') <- getEpochState epochStateView
+        let EpochNo currentEpoch = L.nesEL newEpochState'
+        condition <- f epochState
+        case condition of
+          Just result -> pure (Just result)
+          Nothing -> do
+            if currentEpoch > timeout
+              then pure Nothing
+              else do
+                H.threadDelay 10_000
+                go (EpochNo timeout)

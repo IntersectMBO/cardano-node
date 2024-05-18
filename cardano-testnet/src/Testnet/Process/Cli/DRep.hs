@@ -16,6 +16,7 @@ module Testnet.Process.Cli.DRep
   ) where
 
 import           Cardano.Api hiding (Certificate, TxBody)
+import           Cardano.Api.Ledger (EpochInterval (EpochInterval))
 
 import           Prelude
 
@@ -248,8 +249,7 @@ delegateToDRep
   => MonadCatch m
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
-  -> NodeConfigFile In -- ^ Path to the node configuration file as returned by 'cardanoTestnetDefault'.
-  -> SocketPath  -- ^ Path to the cardano-node unix socket file.
+                    -- using the 'getEpochStateView' function.
   -> ShelleyBasedEra ConwayEra -- ^ The Shelley-based era (e.g., 'ConwayEra') in which the transaction will be constructed.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
@@ -257,7 +257,7 @@ delegateToDRep
   -> KeyPair StakingKey -- ^ Staking key pair used for delegation.
   -> KeyPair PaymentKey -- ^ Delegate Representative (DRep) key pair ('PaymentKeyPair') to which delegate.
   -> m ()
-delegateToDRep execConfig epochStateView configurationFile' socketPath sbe work prefix
+delegateToDRep execConfig epochStateView sbe work prefix
                payingWallet skeyPair@KeyPair{verificationKey=File vKeyFile}
                KeyPair{verificationKey=File drepVKey}  = do
 
@@ -287,9 +287,8 @@ delegateToDRep execConfig epochStateView configurationFile' socketPath sbe work 
   -- Submit transaction
   submitTx execConfig cEra repRegSignedRegTx1
 
-  -- Wait two epochs
-  (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView
-  void $ waitUntilEpoch configurationFile' socketPath (EpochNo (epochAfterProp + 2))
+  -- Wait one epoch
+  void $ waitForEpochs epochStateView (EpochInterval 1)
 
 -- | This function obtains the identifier for the last enacted parameter update proposal
 -- if any.
