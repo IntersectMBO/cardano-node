@@ -1,9 +1,14 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Testnet.Runtime
   ( startNode
@@ -13,12 +18,18 @@ module Testnet.Runtime
 import           Cardano.Api
 import qualified Cardano.Api as Api
 
+import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Shelley.LedgerState as L
+
 import           Prelude
 
 import           Control.Exception.Safe
 import           Control.Monad
 import           Control.Monad.State.Strict (StateT)
 import           Control.Monad.Trans.Resource
+import           Data.Aeson
+import           Data.Aeson.Encode.Pretty (encodePretty)
+import qualified Data.ByteString.Lazy.Char8 as BSC
 import qualified Data.List as List
 import           Data.Text (Text, unpack)
 import           GHC.Stack
@@ -208,9 +219,9 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
       H.note_ $ "Started logging epoch states to: " <> logFile
   where
     handler :: FilePath -> AnyNewEpochState -> StateT () IO LedgerStateCondition
-    handler outputFp anyNewEpochState = handleException . liftIO $ do
+    handler outputFp (AnyNewEpochState sbe nes) = handleException . liftIO $ do
       appendFile outputFp $ "#### BLOCK ####" <> "\n"
-      appendFile outputFp $ show anyNewEpochState <> "\n"
+      appendFile outputFp $ BSC.unpack (shelleyBasedEraConstraints sbe $ encodePretty nes) <> "\n"
       pure ConditionNotMet
       where
         -- | Handle all sync exceptions and log them into the log file. We don't want to fail the test just
@@ -220,4 +231,15 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
             <> displayException e <> "\n"
           pure ConditionMet
 
+
+instance (L.EraTxOut ledgerera, L.EraGov ledgerera) => ToJSON (L.NewEpochState ledgerera) where
+  toJSON (L.NewEpochState nesEL nesBprev nesBCur nesEs nesRu nesPd _stashedAvvm)=
+    object
+      [ "currentEpoch" .= nesEL
+      , "priorBlocks" .= nesBprev
+      , "currentEpochBlocks" .= nesBCur
+      , "currentEpochState" .= nesEs
+      , "rewardUpdate" .= nesRu
+      , "currentStakeDistribution" .= nesPd
+      ]
 
