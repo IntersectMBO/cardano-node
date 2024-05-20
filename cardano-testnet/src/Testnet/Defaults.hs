@@ -192,7 +192,7 @@ defaultConwayGenesis =
                     , ucppDRepVotingThresholds = drepVotingThresholds
                     , ucppCommitteeMinSize = 0
                     , ucppCommitteeMaxTermLength = EpochInterval 200
-                    , ucppGovActionLifetime = EpochInterval 1 -- One Epoch
+                    , ucppGovActionLifetime = EpochInterval 2 -- One Epoch
                     , ucppGovActionDeposit = Coin 2_000_000
                     , ucppDRepDeposit = Coin 1_000_000
                     , ucppDRepActivity = EpochInterval 100
@@ -208,7 +208,7 @@ defaultConwayGenesis =
         , dvtPPNetworkGroup = 1 %! 2
         , dvtPPEconomicGroup = 1 %! 2
         , dvtPPTechnicalGroup = 1 %! 2
-        , dvtPPGovGroup = 1 %! 2
+        , dvtPPGovGroup = 1 %! 3
         , dvtTreasuryWithdrawal = 1 %! 2
         }
       poolVotingThresholds = PoolVotingThresholds
