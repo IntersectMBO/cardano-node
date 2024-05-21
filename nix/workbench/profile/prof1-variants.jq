@@ -104,6 +104,10 @@ def all_profile_variants:
       { dreps: 10000
       }
     } as $dreps_large
+  | { genesis:
+      { dreps: 100000
+      }
+    } as $dreps_enormous
   ##
   ### Definition vocabulary:  chain
   ##
@@ -518,19 +522,25 @@ def all_profile_variants:
     ) as $costmodel_v8_preview
   |
     ({}
-      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
       | .genesis.pparamsOverlays      = ["v8-preview", "stepshalf"]
     ) as $costmodel_v8_preview_stepshalf
   |
     ({}
-      | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
       | .genesis.pparamsOverlays      = ["v8-preview", "doublebudget"]
     ) as $costmodel_v8_preview_doubleb
   |
     ({}
       | .genesis.pparamsEpoch         = timeline::lastKnownEpoch
       | .genesis.pparamsOverlays      = ["v8-preview", "v9-preview"]
-    ) as $costmodel_v9_preview 
+    ) as $costmodel_v9_preview
+  |
+    ({}
+      | .genesis.pparamsOverlays      = ["v8-preview", "v9-preview", "stepshalf"]
+    ) as $costmodel_v9_preview_stepshalf
+  |
+    ({}
+      | .genesis.pparamsOverlays      = ["v8-preview", "v9-preview", "doublebudget"]
+    ) as $costmodel_v9_preview_doubleb
   ##
   ### Definition vocabulary:  node + tracer config variants
   ##
@@ -715,7 +725,7 @@ def all_profile_variants:
       , desc: "AWS c5-2xlarge cluster dataset, 7 epochs"
     }) as $nomad_perfssd_base
   |
-   ($scenario_nomad_perf * $compose_fiftytwo * $dataset_oct2021 * $for_9ep * $plutus_base * $plutus_loop_counter *
+   ($scenario_nomad_perf * $compose_fiftytwo * $dataset_oct2021 * $for_9ep * $plutus_base *
     { node:
         { shutdown_on_slot_synced:        72000
         }
@@ -731,7 +741,19 @@ def all_profile_variants:
         , max_block_size:                 88000
         }
       , desc: "AWS c5-2xlarge cluster dataset, 9 epochs"
-    }) as $nomad_perf_plutus_base
+    }) as $nomad_perf_plutus_common_base
+  |
+   ($nomad_perf_plutus_common_base * $plutus_loop_counter
+   ) as $nomad_perf_plutus_base
+  |
+   ($nomad_perf_plutus_common_base * $plutus_loop_blst *
+    { analysis:
+        { filters:                        ["epoch3+", "size-moderate-2"]
+        }
+      , generator:
+        { tps:                            2.0
+        }
+    }) as $nomad_perf_plutusv3blst_base
   |
    ($scenario_latency * $compose_fiftytwo * $dataset_empty * $no_filtering *
     { desc: "AWS perf class cluster, stop when all latency services stop"
@@ -849,6 +871,10 @@ def all_profile_variants:
   # P&T Nomad cluster: 52 nodes, P2P by default - Plutus workload
     ($nomad_perf_plutus_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview
     ) as $plutus_nomadperf_template
+  |
+  # P&T Nomad cluster: 52 nodes, P2P by default - PlutusV3 BLST workload
+    ($nomad_perf_plutusv3blst_base * $nomad_perf_dense * $p2p * $costmodel_v9_preview
+    ) as $plutusv3blst_nomadperf_template
   |
 
   ### First, auto-named profiles:
@@ -1105,6 +1131,17 @@ def all_profile_variants:
     { name: "latency-nomadperfssd"
     }
 
+## P&T Nomad cluster: 52 nodes, PlutusV3 BLST workloads
+  , $plutusv3blst_nomadperf_template *
+    { name: "plutusv3-blst-nomadperf"
+    }
+  , $plutusv3blst_nomadperf_template * $costmodel_v9_preview_stepshalf *
+    { name: "plutusv3-blst-half-nomadperf"
+    }
+  , $plutusv3blst_nomadperf_template * $costmodel_v9_preview_doubleb *
+    { name: "plutusv3-blst-double-nomadperf"
+    }
+
 ## P&T Nomad cluster: 52 nodes, value-only and Plutus workloads - DRep injection variants
   , $value_nomadperf_template * $dreps_small *
     { name: "value-drep1k-nomadperf"
@@ -1115,6 +1152,9 @@ def all_profile_variants:
   , $value_nomadperf_template * $dreps_large *
     { name: "value-drep10k-nomadperf"
     }
+  , $value_nomadperf_template * $dreps_enormous *
+    { name: "value-drep100k-nomadperf"
+    }
   , $plutus_nomadperf_template * $dreps_small *
     { name: "plutus-drep1k-nomadperf"
     }
@@ -1123,6 +1163,9 @@ def all_profile_variants:
     }
   , $plutus_nomadperf_template * $dreps_large *
     { name: "plutus-drep10k-nomadperf"
+    }
+  , $plutus_nomadperf_template * $dreps_enormous *
+    { name: "plutus-drep100k-nomadperf"
     }
 
 ## P&T Nomad cluster: 52 nodes, 3 regions, value-only (with old tracing variant) and Plutus, no P2P flavour
