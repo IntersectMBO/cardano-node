@@ -288,8 +288,12 @@ handleNodeWithTracers cmdPc nc0 p networkMagic blockType runP = do
             >>= mapM_ (traceWith $ startupTracer tracers)
 
           traceWith (nodeVersionTracer tracers) getNodeVersion
+
+          blockForging <- snd (Api.protocolInfo runP)
           traceWith (startupTracer tracers)
-                    (BlockForgingUpdate NotEffective)
+                    (BlockForgingUpdate (if null blockForging
+                                          then DisabledBlockForging
+                                          else EnabledBlockForging))
 
           -- We ignore peer logging thread if it dies, but it will be killed
           -- when 'handleSimpleNode' terminates.

@@ -706,7 +706,7 @@ sendEKGDirectPrometheusLabel ekgDirect name labels = do
     presentPrometheusM =
       label . map pair
       where
-        label pairs = "{" <> Text.intercalate "," pairs <> "} 1"
+        label pairs = "{" <> Text.intercalate "," pairs <> "}"
         pair (k, v) = k <> "=\"" <> v <> "\""
 
 --------------------------------------------------------------------------------
