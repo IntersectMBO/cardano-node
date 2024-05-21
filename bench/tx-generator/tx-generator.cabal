@@ -14,11 +14,7 @@ license-files:          LICENSE
                         NOTICE
 build-type:             Simple
 extra-source-files:     README.md
-data-files:             data/protocol-parameters.json
-                        data/protocol-parameters-v8.json
-                        data/loop.redeemer.json
-                        data/ecdsa-secp256k1-loop.redeemer.json
-                        data/schnorr-secp256k1-loop.redeemer.json
+data-files:             data/*.json
                         scripts-fallback/*.plutus
 
 common project-config
