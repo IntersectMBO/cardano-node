@@ -369,7 +369,7 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
       case mbEKGDirect of
         Just ekgDirect' ->
           case ev of
-              BlockForgingUpdate b -> sendEKGDirectInt ekgDirect' "forging_enabled"
+              BlockForgingUpdate b -> sendEKGDirectInt ekgDirect' "cardano.node.metrics.forging_enabled"
                                         (case b of
                                             EnabledBlockForging -> 1 :: Int
                                             DisabledBlockForging -> 0 :: Int
