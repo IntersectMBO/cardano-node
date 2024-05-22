@@ -1,6 +1,8 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
 {-# OPTIONS_GHC -Wno-all-missed-specialisations -Wno-orphans #-}
 
 module Cardano.Benchmarking.Command
@@ -10,22 +12,25 @@ module Cardano.Benchmarking.Command
 )
 where
 
-import           Prelude
-import           System.Exit
-
-import           Data.Aeson (fromJSON)
-import           Data.ByteString.Lazy as BSL
-import           Data.Text.IO as T
-import           Options.Applicative as Opt
-
-import           Ouroboros.Network.NodeToClient (withIOManager)
-
 import           Cardano.Benchmarking.Compiler (compileOptions)
 import           Cardano.Benchmarking.Script (parseScriptFileAeson, runScript)
 import           Cardano.Benchmarking.Script.Aeson (parseJSONFile, prettyPrint)
 import           Cardano.Benchmarking.Script.Selftest (runSelftest)
 import           Cardano.Benchmarking.Version as Version
+import           Cardano.TxGenerator.PlutusContext (readScriptData)
 import           Cardano.TxGenerator.Setup.NixService
+import           Cardano.TxGenerator.Types (TxGenPlutusParams (..))
+import           Ouroboros.Network.NodeToClient (withIOManager)
+
+import           Prelude
+
+import           Data.Aeson (fromJSON)
+import           Data.ByteString.Lazy as BSL
+import           Data.Foldable (for_)
+import           Data.Maybe (catMaybes)
+import           Data.Text.IO as T
+import           Options.Applicative as Opt
+import           System.Exit
 
 
 data Command
@@ -52,6 +57,8 @@ runCommand = withIOManager $ \iocp -> do
           "--> initial options:\n" ++ show opts ++
         "\n--> final options:\n" ++ show finalOpts
 
+      quickTestPlutusDataOrDie finalOpts
+
       case compileOptions finalOpts of
         Right script -> runScript script iocp >>= handleError
         err -> handleError err
@@ -77,6 +84,22 @@ runCommand = withIOManager $ \iocp -> do
   mangleTracerConfig ::  Maybe FilePath -> NixServiceOptions -> NixServiceOptions
   mangleTracerConfig traceSocket opts
     = opts { _nix_cardanoTracerSocket = traceSocket <> _nix_cardanoTracerSocket opts}
+
+-- if there's a parsing error wrt. ScriptData, we want to fail early, before the splitting phase
+quickTestPlutusDataOrDie :: NixServiceOptions -> IO ()
+quickTestPlutusDataOrDie NixServiceOptions{_nix_plutus} = do
+  for_ files test
+  Prelude.putStrLn $
+    "--> success: quickTestPlutusDataOrDie " ++ show files
+  where
+    test file =
+      readScriptData file >>= \case
+        Left err -> die $ "quickTestPlutusDataOrDie (" ++ file ++ "): " ++ show err
+        Right{}  -> pure ()
+
+    files = case _nix_plutus of
+      Just PlutusOn{plutusDatum, plutusRedeemer}  -> catMaybes [plutusDatum, plutusRedeemer]
+      _ -> []
 
 commandParser :: Parser Command
 commandParser
