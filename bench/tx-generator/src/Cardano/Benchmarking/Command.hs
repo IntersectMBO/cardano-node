@@ -73,7 +73,7 @@ runCommand = withIOManager $ \iocp -> do
   handleError :: Show a => Either a b -> IO ()
   handleError = \case
     Right _  -> exitSuccess
-    Left err -> die $ show err
+    Left err -> die $ "tx-generator:Cardano.Command: " ++ show err
 
   mangleNodeConfig :: Maybe FilePath -> NixServiceOptions -> IO NixServiceOptions
   mangleNodeConfig fp opts = case (getNodeConfigFile opts, fp) of

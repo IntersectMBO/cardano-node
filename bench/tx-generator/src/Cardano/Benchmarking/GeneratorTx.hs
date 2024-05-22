@@ -1,5 +1,7 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -16,21 +18,6 @@ module Cardano.Benchmarking.GeneratorTx
   , waitBenchmark
   ) where
 
-import           Cardano.Prelude
-import           Prelude (String)
-
-import qualified Control.Concurrent.STM as STM
-import qualified Data.Time.Clock as Clock
-
-import qualified Data.List.NonEmpty as NE
-import           Data.Text (pack)
-import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Family (..), SocketType (Stream),
-                   addrFamily, addrFlags, addrSocketType, defaultHints, getAddrInfo)
-
-import           Cardano.Logging
-
-import           Cardano.Node.Configuration.NodeAddress
-
 import           Cardano.Api hiding (txFee)
 
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode
@@ -40,7 +27,31 @@ import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.TpsThrottle
 import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Wallet (TxStream)
+import           Cardano.Logging
+import           Cardano.Node.Configuration.NodeAddress
+import           Cardano.Prelude
+import           Cardano.TxGenerator.Setup.NixService
 import           Cardano.TxGenerator.Types (NumberOfTxs, TPSRate, TxGenError (..))
+
+import           Prelude (String)
+
+import qualified Control.Concurrent.STM as STM
+import qualified Data.List as List (unwords)
+import qualified Data.List.NonEmpty as NE
+import           Data.Text (pack)
+import qualified Data.Time.Clock as Clock
+import           Data.Tuple.Extra (secondM)
+import           GHC.Conc (labelThread)
+
+#if MIN_VERSION_base(4,18,0)
+-- fromMaybe is imported via Cardano.Prelude
+-- However, this configuration actually uses it.
+-- import           Data.Maybe (fromMaybe)
+import           GHC.Conc.Sync (threadLabel)
+#endif
+
+import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Family (..), SocketType (Stream),
+                   addrFamily, addrFlags, addrSocketType, defaultHints, getAddrInfo)
 
 
 type AsyncBenchmarkControl = (Async (), [Async ()], IO SubmissionSummary, IO ())
@@ -50,8 +61,7 @@ waitBenchmark traceSubmit (feeder, workers, mkSummary, _) = liftIO $ do
   mapM_ waitCatch (feeder : workers)
   traceWith traceSubmit . TraceBenchTxSubSummary =<< mkSummary
 
-lookupNodeAddress ::
-  NodeAddress' NodeHostIPv4Address -> IO AddrInfo
+lookupNodeAddress :: NodeIPv4Address -> IO AddrInfo
 lookupNodeAddress node = do
   (remoteAddr:_) <- getAddrInfo (Just hints) (Just targetNodeHost) (Just targetNodePort)
   return remoteAddr
@@ -68,34 +78,44 @@ lookupNodeAddress node = do
 
 handleTxSubmissionClientError ::
      Trace IO (TraceBenchTxSubmit TxId)
-  -> Network.Socket.AddrInfo
+  -> (String, Network.Socket.AddrInfo)
   -> ReportRef
   -> SubmissionErrorPolicy
   -> SomeException
   -> IO ()
 handleTxSubmissionClientError
   traceSubmit
-  remoteAddr
+  (remoteName, remoteAddr)
   reportRef
   errorPolicy
   (SomeException err) = do
+    tid   <- myThreadId
+#if MIN_VERSION_base(4,18,0)
+    label <- threadLabel tid
+    let labelStr = fromMaybe "(unlabelled)" label
+#else
+    let labelStr = "(base version too low to examine thread labels)"
+#endif
+    let errDesc = List.unwords
+                    [ "Thread"
+                    , show tid
+                    , labelStr
+                    , "Exception while talking to peer "
+                    , remoteName
+                    , "(" ++ show (addrAddress remoteAddr) ++ "):"
+                    , show err ]
     submitThreadReport reportRef (Left errDesc)
     case errorPolicy of
       FailOnError -> throwIO err
       LogErrors   -> traceWith traceSubmit $
         TraceBenchTxSubError (pack errDesc)
-   where
-    errDesc = mconcat
-      [ "Exception while talking to peer "
-      , " (", show (addrAddress remoteAddr), "): "
-      , show err]
 
 walletBenchmark :: forall era. IsShelleyBasedEra era
   => Trace IO (TraceBenchTxSubmit TxId)
   -> Trace IO NodeToNodeSubmissionTrace
   -> ConnectClient
   -> String
-  -> NonEmpty NodeIPv4Address
+  -> NonEmpty NodeDescription
   -> TPSRate
   -> SubmissionErrorPolicy
   -> AsType era
@@ -122,8 +142,10 @@ walletBenchmark
   = liftIO $ do
   traceDebug "******* Tx generator, phase 2: pay to recipients *******"
 
-  remoteAddresses <- forM targets lookupNodeAddress
   let numTargets :: Natural = fromIntegral $ NE.length targets
+      lookupTarget :: NodeDescription -> IO (String, AddrInfo)
+      lookupTarget NodeDescription {..} = secondM lookupNodeAddress (ndName, ndAddr)
+  remoteAddresses <- forM targets lookupTarget
 
   traceDebug $ "******* Tx generator, launching Tx peers:  " ++ show (NE.length remoteAddresses) ++ " of them"
 
@@ -134,20 +156,27 @@ walletBenchmark
 
   txStreamRef <- newMVar $ StreamActive txSource
   allAsyncs <- forM (zip reportRefs $ NE.toList remoteAddresses) $
-    \(reportRef, remoteAddr) -> do
-      let errorHandler = handleTxSubmissionClientError traceSubmit remoteAddr reportRef errorPolicy
+    \(reportRef, remoteInfo@(remoteName, remoteAddrInfo)) -> do
+      let errorHandler = handleTxSubmissionClientError traceSubmit remoteInfo reportRef errorPolicy
           client = txSubmissionClient
                      traceN2N
                      traceSubmit
                      (txStreamSource txStreamRef tpsThrottle)
                      (submitSubmissionThreadStats reportRef)
-      async $ handle errorHandler (connectClient remoteAddr client)
+          remoteAddrString = show $ addrAddress remoteAddrInfo
+      asyncThread <- async $ handle errorHandler (connectClient remoteAddrInfo client)
+      let tid = asyncThreadId asyncThread
+      labelThread tid $ "txSubmissionClient " ++ show tid ++
+                            " servicing " ++ remoteName ++ " (" ++ remoteAddrString ++ ")"
+      pure asyncThread
 
   tpsThrottleThread <- async $ do
     startSending tpsThrottle
     traceWith traceSubmit $ TraceBenchTxSubDebug "tpsLimitedFeeder : transmitting done"
     atomically $ sendStop tpsThrottle
     traceWith traceSubmit $ TraceBenchTxSubDebug "tpsLimitedFeeder : shutdown done"
+  let tid = asyncThreadId tpsThrottleThread
+  labelThread tid $ "tpsThrottleThread " ++ show tid
 
   let tpsFeederShutdown = do
         cancel tpsThrottleThread

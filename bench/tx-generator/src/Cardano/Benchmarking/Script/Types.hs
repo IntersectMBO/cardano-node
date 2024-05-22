@@ -44,6 +44,7 @@ import           Cardano.Api.Shelley
 
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
+import           Cardano.TxGenerator.Setup.NixService (NodeDescription)
 import           Cardano.TxGenerator.Types
 
 import           Prelude
@@ -177,7 +178,7 @@ data ProtocolParametersSource where
   deriving (Show, Eq)
 deriving instance Generic ProtocolParametersSource
 
-type TargetNodes = NonEmpty NodeIPv4Address
+type TargetNodes = NonEmpty NodeDescription
 
 data SubmitMode where
   LocalSocket :: SubmitMode
