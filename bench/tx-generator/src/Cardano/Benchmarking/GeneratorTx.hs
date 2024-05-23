@@ -156,7 +156,6 @@ walletBenchmark
 
   reportRefs <- atomically do replicateM (fromIntegral numTargets) STM.newEmptyTMVar
   let asyncList = zip reportRefs $ NE.toList remoteAddresses
-
   abcWorkers <- forM asyncList \(reportRef, remoteInfo@(remoteName, remoteAddrInfo)) -> do
     let errorHandler = handleTxSubmissionClientError traceSubmit remoteInfo reportRef errorPolicy
         client = txSubmissionClient
