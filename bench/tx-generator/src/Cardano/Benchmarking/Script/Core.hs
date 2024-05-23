@@ -28,8 +28,8 @@ import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark,
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
                    benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
-import           Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..), btConnect_, btN2N_,
-                   btSubmission2_, btTxSubmit_)
+import           Cardano.Benchmarking.LogTypes as Core (AsyncBenchmarkControl (..),
+                   TraceBenchTxSubmit (..), btConnect_, btN2N_, btSubmission2_, btTxSubmit_)
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
                    makeLocalConnectInfo, protocolToCodecConfig)
 import           Cardano.Benchmarking.Script.Aeson (prettyPrintOrdered, readProtocolParametersFile)
@@ -143,20 +143,20 @@ getConnectClient = do
                        mempty -- (btSubmission2_ tracers)
                        (protocolToCodecConfig protocol)
                        networkMagic
-waitBenchmark :: String -> ActionM ()
-waitBenchmark n = do
-  abcMaybe <- getEnvThreads n
+waitBenchmark :: ActionM ()
+waitBenchmark = do
+  abcMaybe <- getEnvThreads
   case abcMaybe of
     Just abc -> waitBenchmarkCore abc
     Nothing  -> do
       throwE . Env.TxGenError . TxGenError $
         ("waitBenchmark: missing AsyncBenchmarkControl" :: String)
 
-cancelBenchmark :: String -> ActionM ()
-cancelBenchmark n = do
-  Just ctl@(_, _ , _ , shutdownAction) <- getEnvThreads n
-  liftIO shutdownAction
-  waitBenchmarkCore ctl
+cancelBenchmark :: ActionM ()
+cancelBenchmark = do
+  Just abc@AsyncBenchmarkControl { .. } <- getEnvThreads
+  liftIO abcShutdown
+  waitBenchmarkCore abc
 
 getLocalConnectInfo :: ActionM LocalNodeConnectInfo
 getLocalConnectInfo = makeLocalConnectInfo <$> getEnvNetworkId <*> getEnvSocketPath
@@ -284,7 +284,7 @@ benchmarkTxStream txStream targetNodes threadName tps txCount era = do
   ret <- liftIO $ runExceptT $ coreCall era
   case ret of
     Left err -> liftTxGenError err
-    Right ctl -> setEnvThreads threadName ctl
+    Right ctl -> setEnvThreads ctl
 
 evalGenerator :: IsShelleyBasedEra era => Generator -> TxGenTxParams -> AsType era -> ActionM (TxStream IO era)
 evalGenerator generator txParams@TxGenTxParams{txParamFee = fee} era = do
