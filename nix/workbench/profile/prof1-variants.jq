@@ -510,7 +510,7 @@ def all_profile_variants:
           }
       }
     }
-    | .generator.tx_fee        = 539076
+    | .generator.tx_fee        = 935000
     ) as $plutus_loop_blst    
   ##
   ### Definition vocabulary:  genesis variants
