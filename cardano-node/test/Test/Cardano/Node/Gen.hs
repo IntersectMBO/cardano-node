@@ -26,6 +26,7 @@ import           Cardano.Node.Configuration.NodeAddress (NodeAddress' (..), Node
 import           Cardano.Node.Configuration.TopologyP2P (LocalRootPeersGroup (..),
                    LocalRootPeersGroups (..), NetworkTopology (..), NodeSetup (..),
                    PeerAdvertise (..), PublicRootPeers (..), RootConfig (..))
+import           Cardano.Node.Types                 
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Ouroboros.Network.PeerSelection.Bootstrap
 import           Ouroboros.Network.PeerSelection.LedgerPeers.Type (AfterSlot (..),
@@ -56,6 +57,7 @@ genNetworkTopology =
                        <*> Gen.list (Range.linear 0 10) genPublicRootPeers
                        <*> genUseLedgerPeers
                        <*> genUseBootstrapPeers
+                       <*> genPeerSnapshotPath
     ]
 
 -- | Generate valid encodings of p2p topology files
@@ -205,6 +207,13 @@ genUseBootstrapPeers :: Gen UseBootstrapPeers
 genUseBootstrapPeers = do
   domains <- Gen.list (Range.linear 0 6) genRelayAddress
   Gen.element [ DontUseBootstrapPeers , UseBootstrapPeers domains ]
+
+genPeerSnapshotPath :: Gen (Maybe PeerSnapshotFile)
+genPeerSnapshotPath =
+  Gen.element
+    [ Nothing
+    , Just . PeerSnapshotFile $ "dummy"
+    ]  
 
 genPeerTrustable :: Gen PeerTrustable
 genPeerTrustable = Gen.element [ IsNotTrustable, IsTrustable ]
