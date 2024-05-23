@@ -64,7 +64,7 @@ package plutus-scripts-bench
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: e1a9eccc44c039ba57e09ea4631bcb5353a52e19
+  tag: a0cfa958b7e9e071e49a2cf492204dab8be9f16c
   --sha256: 0hvlb77r37gvhr63kfsypfpm3cf9sarq3b09c812xv4a6vx8msjw
   subdir:
     ouroboros-consensus
@@ -73,6 +73,14 @@ source-repository-package
     ouroboros-consensus-protocol
     sop-extras
     strict-sop-core
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/anti-diffs
+  tag: aae3f1978a820384dbdb64d7beed1800ead8f7db
+  --sha256: sha256-t0Ykc4AkGnPNkLB13Kltl3sMw6U09ZsbXFlsK9PNtKU=
+  subdir:
+    diff-containers
 
 source-repository-package
   type: git
