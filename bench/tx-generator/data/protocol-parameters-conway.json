@@ -582,7 +582,7 @@
       "verifySchnorrSecp256k1Signature-memory-arguments": 10
     }
   },
-  "decentralization": null,
+  "decentralization": 0,
   "executionUnitPrices": {
     "priceMemory": 0.0577,
     "priceSteps": 7.21e-05
@@ -602,7 +602,7 @@
   "maxTxSize": 16384,
   "maxValueSize": 5000,
   "minPoolCost": 340000000,
-  "minUTxOValue": null,
+  "minUTxOValue": 4310,
   "monetaryExpansion": 0.003,
   "poolPledgeInfluence": 0.3,
   "poolRetireMaxEpoch": 18,

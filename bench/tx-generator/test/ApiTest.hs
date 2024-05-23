@@ -16,8 +16,10 @@ import           Cardano.Api
 import qualified Cardano.Api.Ledger as Api
 import           Cardano.Api.Shelley (ProtocolParameters (..), fromPlutusData)
 
+#ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts
 import           Cardano.Benchmarking.PlutusScripts.CustomCallTypes
+#endif
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Types (AdjustFilePaths (..), GenesisFile (..))
