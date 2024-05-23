@@ -10,7 +10,9 @@
 module Cardano.TxGenerator.Setup.NixService
        ( NixServiceOptions (..)
        , NodeDescription (..)
+       , defaultKeepaliveTimeout
        , getKeepaliveTimeout
+       , getKeepaliveTimeout'
        , getNodeAlias
        , getNodeConfigFile
        , setNodeConfigFile
@@ -93,8 +95,15 @@ instance ToJSON NodeDescription where
 
 -- Long GC pauses on target nodes can trigger spurious MVar deadlock
 -- detection. Increasing this timeout can help mitigate those errors.
+-- 10s turned out to be a problem, so it's 30s now.
+defaultKeepaliveTimeout :: Clock.DiffTime
+defaultKeepaliveTimeout = 30
+
 getKeepaliveTimeout :: NixServiceOptions -> Clock.DiffTime
-getKeepaliveTimeout = maybe 30 Clock.secondsToDiffTime . _nix_keepalive
+getKeepaliveTimeout = maybe defaultKeepaliveTimeout Clock.secondsToDiffTime . _nix_keepalive
+
+getKeepaliveTimeout' :: Maybe NixServiceOptions -> Clock.DiffTime
+getKeepaliveTimeout' = maybe defaultKeepaliveTimeout getKeepaliveTimeout
 
 getNodeAlias :: NixServiceOptions -> NodeIPv4Address -> Maybe String
 getNodeAlias NixServiceOptions {..} ip = ndName <$>

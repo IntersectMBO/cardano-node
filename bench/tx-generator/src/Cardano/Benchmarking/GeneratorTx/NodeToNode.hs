@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
@@ -46,7 +47,7 @@ import           Ouroboros.Network.KeepAlive
 import           Ouroboros.Network.Magic
 import           Ouroboros.Network.Mux (MiniProtocolCb (..), MuxMode (..),
                    OuroborosApplication (..), OuroborosBundle, RunMiniProtocol (..))
-import           Ouroboros.Network.NodeToClient (IOManager, chainSyncPeerNull)
+import           Ouroboros.Network.NodeToClient (chainSyncPeerNull)
 import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
@@ -64,14 +65,15 @@ import           Ouroboros.Network.Protocol.PeerSharing.Client (PeerSharingClien
 
 import           Ouroboros.Network.Snocket (socketSnocket)
 
-import           Cardano.Benchmarking.LogTypes (SendRecvConnect, SendRecvTxSubmission2)
+import           Cardano.Benchmarking.LogTypes (EnvConsts (..), SendRecvConnect, SendRecvTxSubmission2)
+import           Cardano.TxGenerator.Setup.NixService (getKeepaliveTimeout')
 
 type CardanoBlock    = Consensus.CardanoBlock  StandardCrypto
 type ConnectClient = AddrInfo -> TxSubmissionClient (GenTxId CardanoBlock) (GenTx CardanoBlock) IO () -> IO ()
 
 benchmarkConnectTxSubmit
   :: forall blk. (blk ~ CardanoBlock, RunNode blk )
-  => IOManager
+  => EnvConsts
   -> Tracer IO SendRecvConnect
   -> Tracer IO SendRecvTxSubmission2
   -> CodecConfig CardanoBlock
@@ -82,9 +84,9 @@ benchmarkConnectTxSubmit
   -- ^ the particular txSubmission peer
   -> IO ()
 
-benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig networkMagic remoteAddr myTxSubClient =
+benchmarkConnectTxSubmit EnvConsts { .. } handshakeTracer submissionTracer codecConfig networkMagic remoteAddr myTxSubClient =
   NtN.connectTo
-    (socketSnocket ioManager)
+    (socketSnocket envIOManager)
     NetworkConnectTracers {
         nctMuxTracer       = mempty,
         nctHandshakeTracer = handshakeTracer
@@ -178,7 +180,7 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
           mempty
           keepAliveRng
           (continueForever (Proxy :: Proxy IO)) them peerGSVMap
-          (KeepAliveInterval 10)
+          (KeepAliveInterval $ getKeepaliveTimeout' envNixSvcOpts)
 
 -- the null block fetch client
 blockFetchClientNull

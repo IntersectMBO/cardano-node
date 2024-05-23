@@ -31,7 +31,7 @@ import           Cardano.Benchmarking.Wallet (TxStream)
 import           Cardano.Logging
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Prelude
-import           Cardano.TxGenerator.Setup.NixService
+import           Cardano.TxGenerator.Setup.NixService as Nix (NodeDescription (..))
 import           Cardano.TxGenerator.Types (NumberOfTxs, TPSRate, TxGenError (..))
 
 import           Prelude (String)
