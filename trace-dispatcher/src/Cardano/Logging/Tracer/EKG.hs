@@ -13,7 +13,8 @@ import           Control.Concurrent.MVar
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
 import qualified Data.Map.Strict as Map
-import           Data.Text (Text, pack)
+import           Data.Text (Text, intercalate, pack)
+
 import qualified System.Metrics as Metrics
 import qualified System.Metrics.Counter as Counter
 import qualified System.Metrics.Gauge as Gauge
@@ -61,6 +62,11 @@ ekgTracer storeOrServer = liftIO $ do
       (DoubleM name theDouble) = do
         label <- modifyMVar rgsLabels (setFunc Metrics.createLabel getLabel name)
         Label.set label ((pack . show) theDouble)
+    setIt _rgsGauges rgsLabels _rgsCounters _namespace
+      (PrometheusM name keyLabels) = do
+        label <- modifyMVar rgsLabels (setFunc Metrics.createLabel getLabel name)
+        Label.set label (presentPrometheusM keyLabels)
+
     setIt _rgsGauges _rgsLabels rgsCounters _namespace
       (CounterM name mbInt) = do
         counter <- modifyMVar rgsCounters (setFunc Metrics.createCounter getCounter name)
@@ -84,3 +90,11 @@ ekgTracer storeOrServer = liftIO $ do
                         Right server -> creator2 name server
             let rgsMap' = Map.insert name gauge rgsMap
             pure (rgsMap', gauge)
+
+presentPrometheusM :: [(Text, Text)] -> Text
+presentPrometheusM =
+  label . map pair
+  where
+    label pairs = "{" <> intercalate "," pairs <> "} 1"
+    pair (k, v) = k <> "=\"" <> v <> "\""
+

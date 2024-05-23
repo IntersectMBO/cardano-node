@@ -1,5 +1,9 @@
 # Revision history for trace-dispatcher
 
+## 2.5.7
+
+* With a prometheus metric with key label pairs. The value will always be "1"
+
 ## 2.5.2 -- Dec 2023
 
 * ForHuman Color, Increased Consistency Checks, and Non-empty Inner Workspace Validation
