@@ -99,8 +99,8 @@ data Action where
   AddFund            :: !AnyCardanoEra -> !String -> !TxIn -> !L.Coin -> !String -> Action
   -- | 'WaitBenchmark' signifies a 'Control.Concurrent.Async.waitCatch'
   -- on the 'Cardano.Benchmarking.GeneratorTx.AsyncBenchmarkControl'
-  -- associated with the ID and also folds tracers into the completion.
-  WaitBenchmark      :: !String -> Action
+  -- for the environment and also folds tracers into the completion.
+  WaitBenchmark      :: Action
   -- | 'Submit' mostly wraps
   -- 'Cardano.Benchamrking.Script.Core.benchmarkTxStream'
   -- which in turn wraps
@@ -112,7 +112,7 @@ data Action where
   -- | 'CancelBenchmark' wraps a callback from the
   -- 'Cardano.Benchmarking.GeneratorTx.AsyncBenchmarkControl' type,
   -- which is a shutdown action.
-  CancelBenchmark    :: !String -> Action
+  CancelBenchmark    :: Action
   -- | 'Reserved' just emits an error and is a placeholder that helps
   -- with testing and quick fixes.
   Reserved           :: [String] -> Action
@@ -182,7 +182,7 @@ type TargetNodes = NonEmpty NodeDescription
 
 data SubmitMode where
   LocalSocket :: SubmitMode
-  Benchmark   :: !TargetNodes -> !String -> !TPSRate -> !NumberOfTxs -> SubmitMode
+  Benchmark   :: !TargetNodes -> !TPSRate -> !NumberOfTxs -> SubmitMode
   DumpToFile  :: !FilePath -> SubmitMode
   DiscardTX   :: SubmitMode
   NodeToNode  :: NonEmpty NodeIPv4Address -> SubmitMode --deprecated

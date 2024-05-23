@@ -20,6 +20,7 @@ where
 #endif
 
 import           Cardano.Benchmarking.Compiler (compileOptions)
+import           Cardano.Benchmarking.LogTypes (AsyncBenchmarkControl (..))
 import           Cardano.Benchmarking.Script (parseScriptFileAeson, runScript)
 import           Cardano.Benchmarking.Script.Aeson (parseJSONFile, prettyPrint)
 import           Cardano.Benchmarking.Script.Env as Env (Env (Env, envThreads), mkNewEnv)
@@ -48,7 +49,6 @@ import           Control.Monad.STM as STM (atomically)
 
 import           Data.Foldable as Fold (forM_)
 import           Data.List as List (unwords)
-import           Data.Map as Map (lookup)
 import           Data.Time.Format as Time (defaultTimeLocale, formatTime)
 import           Data.Time.Clock.System as Time (getSystemTime, systemToUTCTime)
 import           System.Posix.Signals as Sig (Handler (CatchInfoOnce), SignalInfo (..), SignalSpecificInfo (..), installHandler, sigINT, sigTERM)
@@ -108,14 +108,12 @@ runCommand = withIOManager $ \iocp -> do
   installSignalHandler :: IO Env
   installSignalHandler = do
     env@Env { .. } <- STM.atomically mkNewEnv
-    Just abcTVar <- pure $ "tx-submit-benchmark" `Map.lookup` envThreads
-    abc <- STM.atomically $ STM.readTVar abcTVar
+    abc <- STM.atomically $ STM.readTVar envThreads
     _ <- pure abc
 #ifdef UNIX
     let signalHandler = Sig.CatchInfoOnce signalHandler'
         signalHandler' sigInfo = do
           tid <- Conc.myThreadId
-          Just (throttler, workers, _, _) <- STM.atomically $ STM.readTVar abcTVar
           utcTime <- Time.systemToUTCTime <$> Time.getSystemTime
           -- It's meant to match Cardano.Tracers.Handlers.Logs.Utils
           -- The hope was to avoid the package dependency.
@@ -139,9 +137,18 @@ runCommand = withIOManager $ \iocp -> do
               errorToThrow = userError labelStr
 
           Prelude.putStrLn labelStr
-          Async.cancelWith throttler errorToThrow
-          Fold.forM_ workers \work -> do
-            Async.cancelWith work errorToThrow
+          mABC <- STM.atomically $ STM.readTVar envThreads
+          case mABC of
+            Nothing -> do
+              -- Catching a signal at this point makes it a higher than
+              -- average risk of the tracer not being initialized, so
+              -- this pursues some alternatives.
+              let errMsg = "Signal received before AsyncBenchmarkControl creation."
+              Prelude.putStrLn errMsg
+            Just AsyncBenchmarkControl { .. } -> do
+              abcFeeder `Async.cancelWith` errorToThrow
+              Fold.forM_ abcWorkers \work -> do
+                work `Async.cancelWith` errorToThrow
     Fold.forM_ [Sig.sigINT, Sig.sigTERM] $ \sig ->
            Sig.installHandler sig signalHandler Nothing
 #endif

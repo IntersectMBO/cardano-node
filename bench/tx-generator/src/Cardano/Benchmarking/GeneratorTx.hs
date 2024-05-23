@@ -57,9 +57,9 @@ import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Family (..), 
 
 
 waitBenchmark :: Trace IO (TraceBenchTxSubmit TxId) -> AsyncBenchmarkControl -> ExceptT TxGenError IO ()
-waitBenchmark traceSubmit (feeder, workers, mkSummary, _) = liftIO $ do
-  mapM_ waitCatch $ feeder : workers
-  traceWith traceSubmit . TraceBenchTxSubSummary =<< mkSummary
+waitBenchmark traceSubmit AsyncBenchmarkControl { .. } = liftIO $ do
+  mapM_ waitCatch $ abcFeeder : abcWorkers
+  traceWith traceSubmit . TraceBenchTxSubSummary =<< abcSummary
 
 lookupNodeAddress :: NodeIPv4Address -> IO AddrInfo
 lookupNodeAddress node = do
@@ -114,7 +114,6 @@ walletBenchmark :: forall era. IsShelleyBasedEra era
   => Trace IO (TraceBenchTxSubmit TxId)
   -> Trace IO NodeToNodeSubmissionTrace
   -> ConnectClient
-  -> String
   -> NonEmpty NodeDescription
   -> TPSRate
   -> SubmissionErrorPolicy
@@ -132,7 +131,6 @@ walletBenchmark
   traceSubmit
   traceN2N
   connectClient
-  threadName
   targets
   tpsRate
   errorPolicy
@@ -156,8 +154,7 @@ walletBenchmark
 
   reportRefs <- atomically do replicateM (fromIntegral numTargets) STM.newEmptyTMVar
   let asyncList = zip reportRefs $ NE.toList remoteAddresses
-
-  allAsyncs <- forM asyncList \(reportRef, remoteInfo@(remoteName, remoteAddrInfo)) -> do
+  abcWorkers <- forM asyncList \(reportRef, remoteInfo@(remoteName, remoteAddrInfo)) -> do
     let errorHandler = handleTxSubmissionClientError traceSubmit remoteInfo reportRef errorPolicy
         client = txSubmissionClient
                      traceN2N
@@ -171,19 +168,19 @@ walletBenchmark
                             " servicing " ++ remoteName ++ " (" ++ remoteAddrString ++ ")"
     pure asyncThread
 
-  tpsThrottleThread <- async $ do
+  abcFeeder <- async $ do
     startSending tpsThrottle
     traceWith traceSubmit $ TraceBenchTxSubDebug "tpsLimitedFeeder : transmitting done"
     STM.atomically $ sendStop tpsThrottle
     traceWith traceSubmit $ TraceBenchTxSubDebug "tpsLimitedFeeder : shutdown done"
-  let tid = asyncThreadId tpsThrottleThread
+  let tid = asyncThreadId abcFeeder
   labelThread tid $ "tpsThrottleThread " ++ show tid
 
-  let tpsFeederShutdown = do
-        cancel tpsThrottleThread
-        liftIO $ STM.atomically $ sendStop tpsThrottle
+  let abcShutdown = do
+        cancel abcFeeder
+        liftIO . STM.atomically $ sendStop tpsThrottle
 
-  return (tpsThrottleThread, allAsyncs, mkSubmissionSummary threadName startTime reportRefs, tpsFeederShutdown)
+  pure AsyncBenchmarkControl { abcSummary = mkSubmissionSummary startTime reportRefs, .. }
  where
   traceDebug :: String -> IO ()
   traceDebug =   traceWith traceSubmit . TraceBenchTxSubDebug
