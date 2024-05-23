@@ -57,6 +57,7 @@ library
                       , containers
                       , contra-tracer
                       , data-default-class
+                      , Diff
                       , directory
                       , exceptions
                       , filepath

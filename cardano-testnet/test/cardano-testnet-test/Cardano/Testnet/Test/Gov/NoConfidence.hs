@@ -223,9 +223,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
 
   -- Step 4. We confirm the no confidence motion has been ratified by checking
   -- for an empty constitutional committee.
-
-  H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 10) $ \(anyNewEpochState, _, _) ->
-    pure $ committeeIsPresent False anyNewEpochState
+  H.nothingFailM $ watchEpochStateView epochStateView (return . committeeIsPresent False) (EpochInterval 10)
 
 -- | Checks if the committee is empty or not.
 committeeIsPresent :: Bool -> AnyNewEpochState -> Maybe ()
