@@ -14,11 +14,10 @@ import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (parseScriptFileAeson)
 import           Cardano.Benchmarking.Script.Core (setProtocolParameters)
-import qualified Cardano.Benchmarking.Script.Env as Env (ActionM, Env (Env, envThreads),
-                   Error (TxGenError), getEnvThreads, runActionMEnv, traceError)
+import qualified Cardano.Benchmarking.Script.Env as Env (ActionM, Env (..), Error (TxGenError),
+                   getEnvThreads, runActionMEnv, traceError)
 import           Cardano.Benchmarking.Script.Types
 import qualified Cardano.TxGenerator.Types as Types (TxGenError (..))
-import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Prelude
 
@@ -33,19 +32,19 @@ import           System.Mem (performGC)
 
 type Script = [Action]
 
-runScript :: Env.Env -> Script -> IOManager -> IO (Either Env.Error (), AsyncBenchmarkControl)
-runScript env script iom = do
+runScript :: Env.Env -> Script -> EnvConsts -> IO (Either Env.Error (), AsyncBenchmarkControl)
+runScript env script constants@EnvConsts { .. } = do
   result <- go
   performGC
   threadDelay $ 150 * 1_000
   return result
   where
     go :: IO (Either Env.Error (), AsyncBenchmarkControl)
-    go = Env.runActionMEnv env execScript iom >>= \case
+    go = Env.runActionMEnv env execScript constants >>= \case
       (Right abc, env', ()) -> do
         cleanup env' shutDownLogging
         pure (Right (), abc)
-      (Left err,  env'@Env.Env { .. }, ()) -> do
+      (Left err,  env', ()) -> do
         cleanup env' (Env.traceError (show err) >> shutDownLogging)
         abcMaybe <- STM.atomically $ STM.readTVar envThreads
         case abcMaybe of
@@ -55,7 +54,7 @@ runScript env script iom = do
                                 , "AsyncBenchmarkControl uninitialized" ]
       where
         cleanup :: Env.Env -> Env.ActionM () -> IO ()
-        cleanup env' acts = void $ Env.runActionMEnv env' acts iom
+        cleanup env' acts = void $ Env.runActionMEnv env' acts constants
         execScript :: Env.ActionM AsyncBenchmarkControl
         execScript = do
           setProtocolParameters QueryLocalNode
