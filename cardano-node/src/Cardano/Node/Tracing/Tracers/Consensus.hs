@@ -847,17 +847,19 @@ instance
   , ToJSON (GenTxId blk)
   , LedgerSupportsMempool blk
   ) => LogFormatting (TraceEventMempool blk) where
-  forMachine dtal (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
+  forMachine dtal (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter duration) =
     mconcat
       [ "kind" .= String "TraceMempoolAddedTx"
       , "tx" .= forMachine dtal (txForgetValidated tx)
       , "mempoolSize" .= forMachine dtal mpSzAfter
+      , "duration" .= duration
       ]
-  forMachine dtal (TraceMempoolRejectedTx tx txApplyErr mpSz) =
+  forMachine dtal (TraceMempoolRejectedTx tx txApplyErr mpSz duration) =
     mconcat $
       [ "kind" .= String "TraceMempoolRejectedTx"
       , "tx" .= forMachine dtal tx
       , "mempoolSize" .= forMachine dtal mpSz
+      , "duration" .= duration
       ] <>
       [ "err" .= forMachine dtal txApplyErr
       | dtal >= DDetailed
@@ -886,13 +888,15 @@ instance
       , "mempoolSize" .= forMachine dtal mpSz
       ]
 
-  asMetrics (TraceMempoolAddedTx _tx _mpSzBefore mpSz) =
+  asMetrics (TraceMempoolAddedTx _tx _mpSzBefore mpSz duration) =
     [ IntM "Mempool.TxsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "Mempool.MempoolBytes" (fromIntegral $ msNumBytes mpSz)
+    , DoubleM "Mempool.TxInsertionTime" (realToFrac duration)
     ]
-  asMetrics (TraceMempoolRejectedTx _tx _txApplyErr mpSz) =
+  asMetrics (TraceMempoolRejectedTx _tx _txApplyErr mpSz duration) =
     [ IntM "Mempool.TxsInMempool" (fromIntegral $ msNumTxs mpSz)
     , IntM "Mempool.MempoolBytes" (fromIntegral $ msNumBytes mpSz)
+    , DoubleM "Mempool.TxRejectionTime" (realToFrac duration)
     ]
   asMetrics (TraceMempoolRemoveTxs _txs mpSz) =
     [ IntM "Mempool.TxsInMempool" (fromIntegral $ msNumTxs mpSz)

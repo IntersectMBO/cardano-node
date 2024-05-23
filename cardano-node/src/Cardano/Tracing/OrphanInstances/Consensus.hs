@@ -1314,17 +1314,20 @@ instance ConvertRawHash blk
 instance ( ToObject (ApplyTxErr blk), ToObject (GenTx blk),
            ToJSON (GenTxId blk), LedgerSupportsMempool blk
          ) => ToObject (TraceEventMempool blk) where
-  toObject verb (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
+  toObject verb (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter duration) =
     mconcat
       [ "kind" .= String "TraceMempoolAddedTx"
       , "tx" .= toObject verb (txForgetValidated tx)
       , "mempoolSize" .= toObject verb mpSzAfter
+      , "delta" .= duration
+      , "txSize" .=  ((msNumBytes mpSzAfter) - (msNumBytes _mpSzBefore))
       ]
-  toObject verb (TraceMempoolRejectedTx tx txApplyErr mpSz) =
+  toObject verb (TraceMempoolRejectedTx tx txApplyErr mpSz duration) =
     mconcat $
       [ "kind" .= String "TraceMempoolRejectedTx"
       , "tx" .= toObject verb tx
       , "mempoolSize" .= toObject verb mpSz
+      , "delta" .= duration
       ] <>
       [ "err" .= toObject verb txApplyErr
       | verb == MaximalVerbosity

@@ -1201,11 +1201,11 @@ notifyTxsProcessed fStats tr = Tracer $ \case
 mempoolMetricsTraceTransformer :: Trace IO a -> Tracer IO (TraceEventMempool blk)
 mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
   let tr' = appendName "metrics" tr
-      (_n, tot) = case mempoolEvent of
-                    TraceMempoolAddedTx     _tx0 _ tot0 -> (1, tot0)
-                    TraceMempoolRejectedTx  _tx0 _ tot0 -> (1, tot0)
-                    TraceMempoolRemoveTxs   txs0   tot0 -> (length txs0, tot0)
-                    TraceMempoolManuallyRemovedTxs txs0 txs1 tot0 -> ( length txs0 + length txs1, tot0)
+      (_n, tot, add_m, rej_m) = case mempoolEvent of
+                    TraceMempoolAddedTx     _tx0 _ tot0 duration -> (1, tot0, Just duration, Nothing)
+                    TraceMempoolRejectedTx  _tx0 _ tot0 duration -> (1, tot0, Nothing, Just duration)
+                    TraceMempoolRemoveTxs   txs0   tot0 -> (length txs0, tot0, Nothing, Nothing)
+                    TraceMempoolManuallyRemovedTxs txs0 txs1 tot0 -> ( length txs0 + length txs1, tot0, Nothing, Nothing)
       logValue1 :: LOContent a
       logValue1 = LogValue "txsInMempool" $ PureI $ fromIntegral (msNumTxs tot)
       logValue2 :: LOContent a
@@ -1213,6 +1213,18 @@ mempoolMetricsTraceTransformer tr = Tracer $ \mempoolEvent -> do
   meta <- mkLOMeta Critical Confidential
   traceNamedObject tr' (meta, logValue1)
   traceNamedObject tr' (meta, logValue2)
+  case add_m of
+       Just duration ->
+         let logValue3 = LogValue "txInsertionTime" $ PureD $ realToFrac duration in
+           traceNamedObject tr' (meta, logValue3)
+       Nothing -> return ()
+  case rej_m of
+       Just duration ->
+         let logValue3 = LogValue "txRejectionTime" $ PureD $ realToFrac duration in
+           traceNamedObject tr' (meta, logValue3)
+       Nothing -> return ()
+       
+         
 
 mempoolTracer
   :: ( ToJSON (GenTxId blk)

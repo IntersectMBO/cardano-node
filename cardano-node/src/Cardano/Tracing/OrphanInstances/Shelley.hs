@@ -98,7 +98,8 @@ import qualified Data.Text.Encoding as Text
 instance
   ( Consensus.ShelleyBasedEra ledgerera
   ) => ToObject (GenTx (ShelleyBlock protocol ledgerera)) where
-  toObject _ tx = mconcat [ "txid" .= Text.take 8 (renderTxId (txId tx)) ]
+  -- toObject _ tx = mconcat [ "txid" .= Text.take 8 (renderTxId (txId tx)) ]
+  toObject _ tx = mconcat [ "txid" .= (renderTxId (txId tx)) ]
 
 instance ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock protocol era))) where
   toJSON = String . Text.take 8 . renderTxId
