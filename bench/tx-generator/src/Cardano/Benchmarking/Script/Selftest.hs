@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 {-|
 Module      : Cardano.Benchmarking.Script.Selftest
 Description : Run self-tests using statically-defined data.
@@ -11,16 +11,16 @@ where
 
 import           Cardano.Api hiding (Env)
 
+import           Cardano.Benchmarking.LogTypes (EnvConsts (..))
 import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (prettyPrint)
-import           Cardano.Benchmarking.Script.Env as Env (Env (Env, envThreads))
+import           Cardano.Benchmarking.Script.Env as Env (Env (..))
 import qualified Cardano.Benchmarking.Script.Env as Env (Error, runActionMEnv, setBenchTracers)
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer (initNullTracers)
 import qualified Cardano.Ledger.Coin as L
 import           Cardano.TxGenerator.Setup.SigningKey
 import           Cardano.TxGenerator.Types
-import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Prelude
 
@@ -40,15 +40,15 @@ import           Paths_tx_generator
 -- transaction 'Streaming.Stream' that
 -- 'Cardano.Benchmarking.Script.Core.submitInEra'
 -- does 'show' and 'writeFile' on.
-runSelftest :: Env -> IOManager -> Maybe FilePath -> IO (Either Env.Error ())
-runSelftest env iom outFile = do
+runSelftest :: Env -> EnvConsts -> Maybe FilePath -> IO (Either Env.Error ())
+runSelftest env envConsts@EnvConsts { .. } outFile = do
   protocolFile <-  getDataFileName "data/protocol-parameters.json"
   let
     submitMode = maybe DiscardTX DumpToFile outFile
     fullScript = do
         Env.setBenchTracers initNullTracers
         forM_ (testScript protocolFile submitMode) action
-  (result, Env { envThreads }, ()) <- Env.runActionMEnv env fullScript iom
+  (result, Env {  }, ()) <- Env.runActionMEnv env fullScript envConsts
   abcMaybe <- STM.atomically $ STM.readTVar envThreads
   case abcMaybe of
     Just _ -> error $

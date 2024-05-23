@@ -58,6 +58,7 @@ import           Prelude
 
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
+import           Control.Monad.Trans.RWS.Strict (ask)
 import           "contra-tracer" Control.Tracer (Tracer (..))
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
 import           Data.Ratio ((%))
@@ -136,9 +137,9 @@ getConnectClient = do
   (Testnet networkMagic) <- getEnvNetworkId
   protocol <- getEnvProtocol
   void $ return $ btSubmission2_ tracers
-  ioManager <- askIOManager
+  envConsts <- lift ask
   return $ benchmarkConnectTxSubmit
-                       ioManager
+                       envConsts
                        (Tracer $ traceWith (btConnect_ tracers))
                        mempty -- (btSubmission2_ tracers)
                        (protocolToCodecConfig protocol)
