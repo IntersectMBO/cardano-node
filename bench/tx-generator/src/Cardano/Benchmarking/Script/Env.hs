@@ -91,6 +91,7 @@ import qualified Control.Monad.Trans.RWS.Strict as RWS
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
+import qualified System.IO as IO (hPutStrLn, stderr)
 
 
 -- | The 'Env' type represents the state maintained while executing
@@ -100,7 +101,6 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
                  -- wrapped by 'ProtocolParameterMode' which itself is
                  -- a sort of custom 'Maybe'.
                  protoParams :: Maybe ProtocolParameterMode
-               , benchTracers :: Maybe Tracer.BenchTracers
                , envGenesis :: Maybe (ShelleyGenesis StandardCrypto)
                , envProtocol :: Maybe SomeConsensusProtocol
                , envNetworkId :: Maybe NetworkId
@@ -114,7 +114,6 @@ data Env = Env { -- | 'Cardano.Api.ProtocolParameters' is ultimately
 -- all of the `Map.Map` structures being `Map.empty`.
 emptyEnv :: Env
 emptyEnv = Env { protoParams = Nothing
-               , benchTracers = Nothing
                , envGenesis = Nothing
                , envKeys = Map.empty
                , envProtocol = Nothing
@@ -127,6 +126,7 @@ emptyEnv = Env { protoParams = Nothing
 newEnvConsts :: IOManager -> Maybe Nix.NixServiceOptions -> STM Tracer.EnvConsts
 newEnvConsts envIOManager envNixSvcOpts = do
   envThreads <- STM.newTVar Nothing
+  benchTracers <- STM.newTVar Nothing
   pure Tracer.EnvConsts { .. }
 
 -- | This abbreviates an `ExceptT` and `RWST` with particular types
@@ -185,7 +185,9 @@ setProtoParamMode val = modifyEnv (\e -> e { protoParams = Just val })
 
 -- | Write accessor for `benchTracers`.
 setBenchTracers :: Tracer.BenchTracers -> ActionM ()
-setBenchTracers val = modifyEnv (\e -> e { benchTracers = Just val })
+setBenchTracers val = do
+  btTVar <- lift $ RWS.asks Tracer.benchTracers
+  liftIO $ STM.atomically do STM.writeTVar btTVar $ Just val
 
 -- | Write accessor for `envGenesis`.
 setEnvGenesis :: ShelleyGenesis StandardCrypto -> ActionM ()
@@ -241,8 +243,27 @@ getProtoParamMode :: ActionM ProtocolParameterMode
 getProtoParamMode = getEnvVal protoParams "ProtocolParameterMode"
 
 -- | Read accessor for `benchTracers`.
+-- It would be burdensome on callers to have to have to case analyze
+-- this result. EnvConsts :: (Type -> Type) -> Type would make sense,
+-- using the pattern of data HKT f = HKT { f1 :: f t1, f2 :: f t2, ..}
+-- Then EnvConsts Maybe can be converted to EnvConsts Identity once
+-- initialization is complete so the main phase doesn't need to do this.
 getBenchTracers :: ActionM Tracer.BenchTracers
-getBenchTracers = getEnvVal benchTracers "BenchTracers"
+getBenchTracers = do
+  btTVar <- lift $ RWS.asks Tracer.benchTracers
+  mTracer <- liftIO $ STM.atomically do STM.readTVar btTVar
+  case mTracer of
+    Just tracer -> pure tracer
+    Nothing -> do
+      -- If this occurs, it may be worthwhile to output it in more ways
+      -- because the tracer isn't actually initialized.
+      let errMsg = "Env.getBenchTracers: attempted to set tracer before\
+                   \  STM.TVar init"
+      traceError errMsg
+      liftIO $ do
+        putStrLn errMsg
+        IO.hPutStrLn IO.stderr errMsg
+      pure $ error errMsg
 
 -- | Read accessor for `envGenesis`.
 getEnvGenesis :: ActionM (ShelleyGenesis StandardCrypto)
