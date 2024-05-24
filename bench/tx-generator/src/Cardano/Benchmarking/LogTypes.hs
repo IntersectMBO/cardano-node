@@ -75,6 +75,8 @@ data EnvConsts =
   , envNixSvcOpts :: Maybe NixServiceOptions
   -- ^ There are situations `NixServiceOptions` won't be available and
   --   defaults will have to be used.
+  , benchTracers  :: STM.TVar (Maybe BenchTracers)
+  -- ^ This also needs to be accessible to the signal handlers.
   }
 
 data BenchTracers =
