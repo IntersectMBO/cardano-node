@@ -86,6 +86,7 @@ let
       "TxSubmission.Remote".severity = "Notice";
       "TxSubmission.TxInbound".severity = "Debug";
       "TxSubmission.TxOutbound".severity = "Notice";
+      "Version.NodeVersion".severity = "Info";
       };
   };
 

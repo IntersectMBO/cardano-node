@@ -16,6 +16,8 @@ import           Cardano.Node.Tracing.StateRep (NodeState)
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
                    (ConsensusStartupException (..))
 import           Cardano.Node.Tracing.Tracers.Peer (PeerT)
+import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
+
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
@@ -48,6 +50,7 @@ data Tracers peer localPeer blk p2p = Tracers
   , startupTracer         :: !(Tracer IO (StartupTrace blk))
   , shutdownTracer        :: !(Tracer IO ShutdownTrace)
   , nodeInfoTracer        :: !(Tracer IO NodeInfo)
+  , nodeVersionTracer     :: !(Tracer IO NodeVersionTrace)
   , nodeStartupInfoTracer :: !(Tracer IO NodeStartupInfo)
   , nodeStateTracer       :: !(Tracer IO NodeState)
   , resourcesTracer       :: !(Tracer IO ResourceStats)

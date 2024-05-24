@@ -27,6 +27,8 @@ import           Cardano.Node.Tracing.Tracers.Diffusion ()
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
+import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
+
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer
@@ -130,6 +132,9 @@ getAllNamespaces =
                         (allNamespaces :: [Namespace (StartupTrace blk)])
         shutdownNS = map (nsGetTuple . nsReplacePrefix ["Shutdown"])
                         (allNamespaces :: [Namespace ShutdownTrace])
+        nodeVersionNS = map (nsGetTuple . nsReplacePrefix ["Version"])
+                        (allNamespaces :: [Namespace NodeVersionTrace])
+
         chainDBNS = map (nsGetTuple . nsReplacePrefix ["ChainDB"])
                         (allNamespaces :: [Namespace (ChainDB.TraceEvent blk)])
         replayBlockNS = map (nsGetTuple . nsReplacePrefix ["ChainDB", "ReplayBlock"])
@@ -366,6 +371,7 @@ getAllNamespaces =
             <> resourcesNS
             <> startupNS
             <> shutdownNS
+            <> nodeVersionNS
             <> chainDBNS
             <> replayBlockNS
 -- Consensus

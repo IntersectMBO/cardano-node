@@ -35,6 +35,8 @@ import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (ForgeThreadSta
 import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
+import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
+
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer
@@ -191,6 +193,12 @@ docTracersFirstPhase condConfigFileName = do
     configureTracers configReflection trConfig [nodeStartupInfoDp]
     nodeStartupInfoDpDoc <- documentTracer
                       (nodeStartupInfoDp :: Trace IO NodeStartupInfo)
+
+    nodeVersionTr <- mkCardanoTracer
+                      trBase trForward mbTrEKG
+                      ["Version"]
+    configureTracers configReflection trConfig  [nodeVersionTr]
+    nodeVersionDoc <- documentTracer (nodeVersionTr :: Trace IO NodeVersionTrace)
 
     -- State tracer
     stateTr   <- mkCardanoTracer
@@ -677,6 +685,7 @@ docTracersFirstPhase condConfigFileName = do
             <> resourcesTrDoc
             <> startupTrDoc
             <> shutdownTrDoc
+            <> nodeVersionDoc
             <> peersTrDoc
             <> chainDBTrDoc
             <> replayBlockTrDoc

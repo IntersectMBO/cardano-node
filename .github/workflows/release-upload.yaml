@@ -78,7 +78,7 @@ jobs:
               cp result/cardano-node-*-*.zip .
               ;;              
           esac
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ github.sha }}-${{ matrix.arch }}       
           path: cardano-node-*-*.*
@@ -89,15 +89,18 @@ jobs:
     name: "Upload Assets"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: ${{ github.sha }}-linux
-      - uses: actions/download-artifact@v3
-        with:
-          name: ${{ github.sha }}-macos
-      - uses: actions/download-artifact@v3
-        with:
-          name: ${{ github.sha }}-win64
+          merge-multiple: true
+      - name: Checksums
+        run: |
+          # find returns something like this:
+          # "cardano-node-8.11.0-linux.tar.gz cardano-node-8.11.0-macos.tar.gz ..."
+          # We use the first member of this list to compute the prefix "cardano-node-8.11.0"
+          first_archive=$(find . -maxdepth 1 -name "cardano-node-*" -printf '%P\n' | head -n 1)
+          # Then we trim the architecture-specific suffix (last "-" and after)
+          sha256sums_filename=$(echo "${first_archive%-*}-sha256sums.txt")
+          sha256sum cardano-node-* >> "$sha256sums_filename"
       - name: Release
         uses: input-output-hk/action-gh-release@v1
         with:
@@ -106,3 +109,4 @@ jobs:
             cardano-node-*-win64.zip
             cardano-node-*-macos.tar.gz
             cardano-node-*-linux.tar.gz
+            cardano-node-*-sha256sums.txt
