@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2024-03-25T10:39:21Z
-  , cardano-haskell-packages 2024-04-05T13:36:27Z
+  , cardano-haskell-packages 2024-05-24T09:29:56Z
 
 packages:
   cardano-git-rev
@@ -64,8 +64,8 @@ package plutus-scripts-bench
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: a0cfa958b7e9e071e49a2cf492204dab8be9f16c
-  --sha256: 0hvlb77r37gvhr63kfsypfpm3cf9sarq3b09c812xv4a6vx8msjw
+  tag: 858fbd77bca6c423a44feef41e31adaf0400e267
+  --sha256: 0bxxvw96nsg22pmxxlf1fzr7g09xi6b60frvjngrwidlsv31nf2q
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -76,16 +76,8 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/anti-diffs
-  tag: aae3f1978a820384dbdb64d7beed1800ead8f7db
-  --sha256: sha256-t0Ykc4AkGnPNkLB13Kltl3sMw6U09ZsbXFlsK9PNtKU=
-  subdir:
-    diff-containers
-
-source-repository-package
-  type: git
   location: https://github.com/IntersectMBO/cardano-api
-  tag: a0c348722c2d6fe77d807caf8ec705c6be77122b
-  --sha256: 0m8xf9hih1y8mkq69pl58h6m1vxmxrrgy8jbwyr3hfxw522m0swi
+  tag: 239a713e8fdfca85ae4516e94d6cb8971ec6ca0f
+  --sha256: 1i4sc446w9mggpxf78zkglk34mjafwhyrmp3fvb7mkkk9347ziwd
   subdir:
     cardano-api
