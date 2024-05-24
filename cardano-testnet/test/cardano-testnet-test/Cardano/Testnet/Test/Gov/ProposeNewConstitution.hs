@@ -168,8 +168,9 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIndex <-
-    H.nothingFailM . watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) ->
-    pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+    H.nothingFailM . fmap snd . watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) -> do
+      let r = maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+      pure (if isJust r then ConditionMet else ConditionNotMet, r)
 
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
   voteFiles <- generateVoteFiles execConfig work "vote-files"

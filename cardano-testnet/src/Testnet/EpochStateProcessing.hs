@@ -20,7 +20,6 @@ import           Prelude
 
 import           Control.Monad
 import qualified Data.Map as Map
-import           Data.Maybe
 import           Data.Word (Word32)
 import           GHC.Exts (IsList (toList), toList)
 import           GHC.Stack
@@ -60,14 +59,14 @@ waitForGovActionVotes
   -> EpochInterval -- ^ The maximum wait time in epochs.
   -> m ()
 waitForGovActionVotes epochStateView maxWait = withFrozenCallStack $ do
-  mResult <- watchEpochStateUpdate epochStateView maxWait checkForVotes
-  when (isNothing mResult) $
+  (cond, ()) <- watchEpochStateUpdate epochStateView maxWait checkForVotes
+  when (cond == ConditionNotMet) $
     H.failMessage callStack "waitForGovActionVotes: No votes appeared before timeout."
   where
     checkForVotes
       :: HasCallStack
       => (AnyNewEpochState, SlotNo, BlockNo)
-      -> m (Maybe ())
+      -> m (LedgerStateCondition, ())
     checkForVotes (AnyNewEpochState actualEra newEpochState, _, _) = withFrozenCallStack $ do
       caseShelleyToBabbageOrConwayEraOnwards
         (const $ H.note_ "Only Conway era onwards is supported" >> failure)
@@ -75,14 +74,14 @@ waitForGovActionVotes epochStateView maxWait = withFrozenCallStack $ do
           let govState = conwayEraOnwardsConstraints ceo $ newEpochState ^. newEpochStateGovStateL
               proposals = govState ^. L.cgsProposalsL . L.pPropsL . to toList
           if null proposals
-            then pure Nothing
+            then pure (ConditionNotMet, ())
             else do
               let lastProposal = last proposals
                   gaDRepVotes = lastProposal ^. L.gasDRepVotesL . to toList
                   gaSpoVotes = lastProposal ^. L.gasStakePoolVotesL . to toList
               if null gaDRepVotes && null gaSpoVotes
-              then pure Nothing
-              else pure $ Just ()
+              then pure (ConditionNotMet, ())
+              else pure (ConditionMet, ())
         )
         actualEra
 

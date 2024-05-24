@@ -26,6 +26,7 @@ import           Control.Monad
 import           Data.Bifunctor (first)
 import           Data.Foldable
 import qualified Data.Map.Strict as Map
+import           Data.Maybe
 import           Data.String
 import qualified Data.Text as Text
 import           Data.Word
@@ -146,8 +147,9 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
     ]
 
   governanceActionIndex <-
-    H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) ->
-      pure $ maybeExtractGovernanceActionIndex (fromString txidString) anyNewEpochState
+    H.nothingFailM . fmap snd $ watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) -> do
+      let r =  maybeExtractGovernanceActionIndex (fromString txidString) anyNewEpochState
+      pure (if isJust r then ConditionMet else ConditionNotMet, r)
 
   let voteFp :: Int -> FilePath
       voteFp n = work </> gov </> "vote-" <> show n
