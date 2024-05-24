@@ -21,7 +21,6 @@ import qualified Cardano.Ledger.Shelley.LedgerState as L
 
 import           Prelude
 
-import           Control.Concurrent
 import           Control.Exception.Safe
 import           Control.Monad
 import           Control.Monad.State.Strict
@@ -48,8 +47,9 @@ import qualified System.Process as IO
 import           Testnet.Filepath
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run
-import           Testnet.Property.Util (runInBackground)
-import           Testnet.Types hiding (testnetMagic)
+import           Testnet.Property.Util
+import           Testnet.Types (NodeRuntime (NodeRuntime), TestnetRuntime (configurationFile),
+                   poolSprockets)
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
@@ -217,56 +217,46 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
     False -> do
       H.evalIO $ appendFile logFile ""
       socketPath <- H.noteM $ H.sprocketSystemName <$> H.headM (poolSprockets testnetRuntime)
-      _ <- runInBackground . runExceptT $
-        foldEpochState
-          (configurationFile testnetRuntime)
-          (Api.File socketPath)
-          Api.QuickValidation
-          (EpochNo maxBound)
-          ()
-          (\epochState _ _ ->
-              liftIO $ evalStateT (handler logFile epochState) 0
-          )
-      H.note_ $ "Started logging epoch states to: " <> logFile
 
-      -- In order to create a diff of the epoch state logging file contents
-      -- we must do so when the resources are deallocated (see runInBackground)
-      -- and therefore when the log file is no longer in use.
-      void . H.evalM $ allocate (pure ()) $ \_ -> do
-          isFileReadableLoop logFile >>= \case
-            False -> error "isFileReadableLoop: Impossible"
-            True -> do
-              logFileContents <- IO.readFile logFile
-              let epochStateValues = epochStateBeforeAfterValues logFileContents
-                  epochStateDiffs' = epochStateDiffs epochStateValues
-              Text.writeFile (logDir </> "ledger-epoch-state-diffs.log") epochStateDiffs'
+      runInBackground
+        (do logFileContents <- IO.readFile logFile
+            let epochStateValues = epochStateBeforeAfterValues logFileContents
+                epochStateDiffs' = epochStateDiffs epochStateValues
+            Text.writeFile (logDir </> "ledger-epoch-state-diffs.log") epochStateDiffs'
+        )
+        (do void $ runExceptT $
+              foldEpochState
+                (configurationFile testnetRuntime)
+                (Api.File socketPath)
+                Api.QuickValidation
+                (EpochNo maxBound)
+                ()
+                (\epochState _ _ ->
+                    liftIO $ evalStateT (handler logFile epochState) 0
+                )
+        )
+
+
+      H.note_ $ "Started logging epoch states to: " <> logFile
 
   where
     handler :: FilePath -> AnyNewEpochState -> StateT Int IO LedgerStateCondition
-    handler outputFp (AnyNewEpochState sbe nes) = do
+    handler outputFpHandle (AnyNewEpochState sbe nes) = do
       handleException . liftIO $ do
-        appendFile outputFp $ "#### BLOCK ####" <> "\n"
-        appendFile outputFp $ BSC.unpack (shelleyBasedEraConstraints sbe $ encodePretty nes) <> "\n"
+        appendFile outputFpHandle $ "#### BLOCK ####" <> "\n"
+        appendFile outputFpHandle $ BSC.unpack (shelleyBasedEraConstraints sbe $ encodePretty nes) <> "\n"
         pure ConditionNotMet
       where
         -- | Handle all sync exceptions and log them into the log file. We don't want to fail the test just
         -- because logging has failed.
         handleException = handle $ \(e :: SomeException) -> do
-          liftIO $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
+          liftIO $ appendFile outputFpHandle $ "Ledger new epoch logging failed - caught exception:\n"
             <> displayException e <> "\n"
           pure ConditionMet
+-- TODO: Not sure why this isn't terminating. Read up on resourcet and how it works.
+-- See concurrency section: https://www.fpcomplete.com/blog/understanding-resourcet/
+-- Probably need to use resourceForkWith but best to not use concurrency at all!
 
--- TODO: I hate this. Is there a better way to do this without
--- reaching for concurrency primitives?
-isFileReadableLoop :: FilePath -> IO Bool
-isFileReadableLoop fp = do
-  threadDelay 100000
-  isFileReadable fp >>= \case
-    True -> return True
-    False -> isFileReadableLoop fp
-
-isFileReadable :: FilePath -> IO Bool
-isFileReadable fp = IO.withFile fp IO.ReadMode $ \h -> IO.hIsReadable h
 
 -- | Produce tuples that represent the change of the 'NewEpochState' after
 -- a transition.

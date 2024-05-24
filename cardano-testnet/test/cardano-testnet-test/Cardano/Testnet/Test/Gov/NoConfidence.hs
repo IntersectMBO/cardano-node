@@ -131,7 +131,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
 
   epochStateView <- getEpochStateView configurationFile (File socketPath)
 
-  H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 3) $ \(anyNewEpochState, _, _) ->
+  H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 3) $ \anyNewEpochState->
     pure $ committeeIsPresent True anyNewEpochState
 
   -- Step 2. Propose motion of no confidence. DRep and SPO voting thresholds must be met.
@@ -223,11 +223,11 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
 
   -- Step 4. We confirm the no confidence motion has been ratified by checking
   -- for an empty constitutional committee.
-  H.nothingFailM $ watchEpochStateView epochStateView (return . committeeIsPresent False) (EpochInterval 10)
+  H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 10) (return . committeeIsPresent False)
 
 -- | Checks if the committee is empty or not.
-committeeIsPresent :: Bool -> AnyNewEpochState -> Maybe ()
-committeeIsPresent committeeExists (AnyNewEpochState sbe newEpochState) =
+committeeIsPresent :: Bool -> (AnyNewEpochState, SlotNo, BlockNo) -> Maybe ()
+committeeIsPresent committeeExists (AnyNewEpochState sbe newEpochState, _, _) =
   caseShelleyToBabbageOrConwayEraOnwards
     (const $ error "Constitutional committee does not exist pre-Conway era")
     (const $ let mCommittee = newEpochState
