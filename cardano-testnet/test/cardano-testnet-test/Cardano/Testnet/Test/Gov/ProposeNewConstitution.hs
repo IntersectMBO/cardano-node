@@ -167,7 +167,9 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
-  governanceActionIndex <- H.nothingFailM $ watchEpochStateView epochStateView (return . maybeExtractGovernanceActionIndex (fromString governanceActionTxId)) (EpochInterval 1)
+  governanceActionIndex <-
+    H.nothingFailM . watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) ->
+    pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
 
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
   voteFiles <- generateVoteFiles execConfig work "vote-files"
@@ -183,7 +185,7 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   submitTx execConfig cEra voteTxFp
 
-  waitForGovActionVotes epochStateView ceo (EpochInterval 1)
+  waitForGovActionVotes epochStateView (EpochInterval 1)
 
   -- Count votes before checking for ratification. It may happen that the proposal gets removed after
   -- ratification because of a long waiting time, so we won't be able to access votes.

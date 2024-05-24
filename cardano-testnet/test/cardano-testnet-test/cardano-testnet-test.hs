@@ -50,17 +50,17 @@ tests = do
             -- TODO: Replace foldBlocks with checkLedgerStateCondition
             , T.testGroup "Governance"
                 [ ignoreOnMacAndWindows "Committee Add New" Gov.hprop_constitutional_committee_add_new
+                , ignoreOnMacAndWindows "Committee Motion Of No Confidence"  Gov.hprop_gov_no_confidence
                 -- TODO: Disabled because proposals for parameter changes are not working
                 -- , ignoreOnWindows "DRep Activity" Gov.hprop_check_drep_activity
                 -- , ignoreOnWindows "Predefined Abstain DRep" Gov.hprop_check_predefined_abstain_drep
-                , ignoreOnMacAndWindows "Committee Motion Of No Confidence"  Gov.hprop_gov_no_confidence
                 , ignoreOnWindows "DRep Deposits" Gov.hprop_ledger_events_drep_deposits
-                  -- FIXME Those tests are flaky
-                  -- , ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
                 , ignoreOnWindows "DRep Retirement" Gov.hprop_drep_retirement
                 , ignoreOnMacAndWindows "Propose And Ratify New Constitution" Gov.hprop_ledger_events_propose_new_constitution
                 , ignoreOnWindows "Propose New Constitution SPO" Gov.hprop_ledger_events_propose_new_constitution_spo
                 , ignoreOnWindows "Treasury Withdrawal" Gov.hprop_ledger_events_treasury_withdrawal
+                -- FIXME Those tests are flaky
+                -- , ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
                 ]
             , T.testGroup "Plutus"
                 [ ignoreOnWindows "PlutusV3" Cardano.Testnet.Test.Cli.Conway.Plutus.hprop_plutus_v3]

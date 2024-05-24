@@ -176,7 +176,9 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
 
   governanceActionTxId <- H.noteM $ retrieveTransactionId execConfig signedProposalTx
 
-  governanceActionIx <- H.nothingFailM $ watchEpochStateView epochStateView (return . maybeExtractGovernanceActionIndex (fromString governanceActionTxId)) (L.EpochInterval 1)
+  governanceActionIx <-
+    H.nothingFailM . watchEpochStateUpdate epochStateView (L.EpochInterval 1) $ \(anyNewEpochState, _, _) ->
+      pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
 
   dRepVoteFiles <-
     DRep.generateVoteFiles
@@ -206,7 +208,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
 
   submitTx execConfig cEra voteTxFp
 
-  waitForGovActionVotes epochStateView ceo (L.EpochInterval 1)
+  waitForGovActionVotes epochStateView (L.EpochInterval 1)
 
   govState <- getGovState epochStateView ceo
   govActionState <- H.headM $ govState ^. L.cgsProposalsL . L.pPropsL . to toList
@@ -220,7 +222,7 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   length (filter ((== L.VoteYes) . snd) gaSpoVotes) === 1
   length spoVotes === length gaSpoVotes
 
-  H.nothingFailM $ watchEpochStateView epochStateView (return . committeeIsPresent) (L.EpochInterval 1)
+  H.nothingFailM $ watchEpochStateUpdate epochStateView (L.EpochInterval 1) (return . committeeIsPresent)
 
   -- show proposed committe meembers
   H.noteShow_ ccCredentials
@@ -250,8 +252,8 @@ getCommitteeMembers epochStateView ceo = withFrozenCallStack $ do
   govState <- getGovState epochStateView ceo
   fmap (Map.keys . L.committeeMembers) . H.nothingFail $ strictMaybeToMaybe $ govState ^. L.cgsCommitteeL
 
-committeeIsPresent :: AnyNewEpochState -> Maybe ()
-committeeIsPresent (AnyNewEpochState sbe newEpochState) =
+committeeIsPresent :: (AnyNewEpochState, SlotNo, BlockNo) -> Maybe ()
+committeeIsPresent (AnyNewEpochState sbe newEpochState, _, _) =
   caseShelleyToBabbageOrConwayEraOnwards
     (const $ error "Constitutional committee does not exist pre-Conway era")
     (\_ -> do

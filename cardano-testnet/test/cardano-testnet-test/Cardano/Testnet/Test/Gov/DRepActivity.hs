@@ -30,9 +30,7 @@ import           Data.Word (Word32)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           System.FilePath ((</>))
 
-import           Testnet.Components.Query (EpochStateView, assertNewEpochState, checkDRepState,
-                   findLargestUtxoForPaymentKey, getCurrentEpochNo, getEpochStateView,
-                   getMinDRepDeposit, watchEpochStateView)
+import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog (kickWatchdog, runWithDefaultWatchdog)
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
 import           Testnet.Process.Cli.DRep
@@ -201,15 +199,18 @@ activityChangeProposalTest execConfig epochStateView ceo work prefix
   (EpochNo epochAfterProp) <- getCurrentEpochNo epochStateView
   H.note_ $ "Epoch after \"" <> prefix <> "\" prop: " <> show epochAfterProp
 
+  -- Wait for the number of epochs for an enactment of the change
   void $ waitForEpochs epochStateView minWait
 
-  case mExpected of
-    Nothing -> return ()
-    Just expected -> assertNewEpochState epochStateView ceo expected maxWait
-                       (nesEpochStateL . epochStateGovStateL . curPParamsGovStateL . ppDRepActivityL)
+  forM_ mExpected $
+    -- enactment check
+    assertNewEpochState epochStateView sbe maxWait
+      (nesEpochStateL . epochStateGovStateL . curPParamsGovStateL . ppDRepActivityL)
 
-  return thisProposal
+  pure thisProposal
 
+-- | Create a proposal to change the DRep activity interval.
+-- Return the transaction id and the index of the governance action.
 makeActivityChangeProposal
   :: (HasCallStack, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m, Typeable era)
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
@@ -285,7 +286,9 @@ makeActivityChangeProposal execConfig epochStateView ceo work prefix
 
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
-  governanceActionIndex <- H.nothingFailM $ watchEpochStateView epochStateView (return . maybeExtractGovernanceActionIndex (fromString governanceActionTxId)) timeout
+  governanceActionIndex <-
+    H.nothingFailM $ watchEpochStateUpdate epochStateView timeout $ \(anyNewEpochState, _, _) ->
+      return $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
 
   return (governanceActionTxId, governanceActionIndex)
 
