@@ -348,7 +348,7 @@ parserCommandLine
             <> metavar "PARAM"
             <> help "Path to protocol parameter file"
             <> completer (bashCompleter "file")
-            <> value "data/protocol-parameters-v8.json"
+            <> value "protocol-parameters-v8.json"
         )
     parseRunPath = strOption
         ( long "run"

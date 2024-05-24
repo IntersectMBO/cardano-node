@@ -36,15 +36,21 @@ import qualified PlutusLedgerApi.V3 as PlutusV3
 import qualified PlutusTx.AssocMap as AssocMap (empty)
 
 import           Cardano.TxGenerator.Types (TxGenError (..))
-
 #ifdef WITH_LIBRARY
 import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
-#else
+#endif
 import           Control.Exception (SomeException (..), try)
 import           Paths_tx_generator
-#endif
 
 type ProtocolVersion = (Int, Int)
+
+
+resolveFromLibrary :: String -> Maybe ScriptInAnyLang
+#ifdef WITH_LIBRARY
+resolveFromLibrary = findPlutusScript
+#else
+resolveFromLibrary = const Nothing
+#endif
 
 -- | 'readPlutusScript' accepts a string for the name of a script that
 -- may be known in the 'Left' case and a filepath to read as a script
@@ -53,19 +59,12 @@ type ProtocolVersion = (Int, Int)
 -- defined (via TH) scripts for the script name lookups instead of a
 -- set of library files.
 readPlutusScript :: Either String FilePath -> IO (Either TxGenError ScriptInAnyLang)
-#ifdef WITH_LIBRARY
 readPlutusScript (Left s)
-  = pure
-  $ maybe (Left . TxGenError $ "readPlutusScript: " ++ s ++ " not found.")
-          Right
-          (findPlutusScript s)
-#else
-readPlutusScript (Left s)
-  = try (getDataFileName $ "scripts-fallback/" ++ s ++ ".plutus") >>= either
-      (\(SomeException e) -> pure $ Left $ TxGenError $ show e)
-      (readPlutusScript . Right)
-#endif
-
+  = case resolveFromLibrary s of
+      Just s' -> pure $ Right s'
+      Nothing -> try (getDataFileName $ "scripts-fallback/" ++ s ++ ".plutus") >>= either
+        (\(SomeException e) -> pure $ Left $ TxGenError $ show e)
+        (readPlutusScript . Right)
 readPlutusScript (Right fp)
   = runExceptT $ do
     script <- firstExceptT ApiError $
