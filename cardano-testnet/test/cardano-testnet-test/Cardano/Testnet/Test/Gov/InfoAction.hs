@@ -145,7 +145,9 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
     , "--tx-file", txbodySignedFp
     ]
 
-  governanceActionIndex <- H.nothingFailM $ watchEpochStateView epochStateView (return . maybeExtractGovernanceActionIndex (fromString txidString)) (EpochInterval 1)
+  governanceActionIndex <-
+    H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) ->
+      pure $ maybeExtractGovernanceActionIndex (fromString txidString) anyNewEpochState
 
   let voteFp :: Int -> FilePath
       voteFp n = work </> gov </> "vote-" <> show n

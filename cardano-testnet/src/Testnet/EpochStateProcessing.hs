@@ -1,6 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -10,9 +8,8 @@ module Testnet.EpochStateProcessing
   ) where
 
 import           Cardano.Api
-import           Cardano.Api.Ledger (EpochInterval, GovActionId (..))
+import           Cardano.Api.Ledger (EpochInterval (..), GovActionId (..))
 import qualified Cardano.Api.Ledger as L
-import           Cardano.Api.Shelley (ShelleyLedgerEra)
 
 import qualified Cardano.Ledger.Conway.Governance as L
 import qualified Cardano.Ledger.Shelley.API as L
@@ -21,17 +18,17 @@ import qualified Cardano.Ledger.Shelley.LedgerState as L
 
 import           Prelude
 
-import           Data.Data ((:~:) (..))
+import           Control.Monad
 import qualified Data.Map as Map
+import           Data.Maybe
 import           Data.Word (Word32)
 import           GHC.Exts (IsList (toList), toList)
 import           GHC.Stack
 import           Lens.Micro (to, (^.))
 
-import           Testnet.Components.Query (EpochStateView, watchEpochStateView)
-import           Testnet.Property.Assert (assertErasEqual)
+import           Testnet.Components.Query (EpochStateView, watchEpochStateUpdate)
 
-import           Hedgehog (MonadTest)
+import           Hedgehog
 import           Hedgehog.Extras (MonadAssertion)
 import qualified Hedgehog.Extras as H
 
@@ -55,31 +52,37 @@ maybeExtractGovernanceActionIndex txid (AnyNewEpochState sbe newEpochState) =
 
 -- | Wait for the last gov action proposal in the list to have DRep or SPO votes.
 waitForGovActionVotes
-  :: forall m era.
-     (MonadAssertion m, MonadTest m, MonadIO m, HasCallStack)
+  :: forall m. HasCallStack
+  => MonadAssertion m
+  => MonadTest m
+  => MonadIO m
   => EpochStateView -- ^ Current epoch state view. It can be obtained using the 'getEpochStateView' function.
-  -> ConwayEraOnwards era -- ^ The ConwayEraOnwards witness for current era.
   -> EpochInterval -- ^ The maximum wait time in epochs.
   -> m ()
-waitForGovActionVotes epochStateView ceo maxWait = withFrozenCallStack $ do
-  mResult <- watchEpochStateView epochStateView getFromEpochState maxWait
-  case mResult of
-    Just () -> pure ()
-    Nothing -> H.failMessage callStack "waitForGovActionVotes: No votes appeared before timeout."
+waitForGovActionVotes epochStateView maxWait = withFrozenCallStack $ do
+  mResult <- watchEpochStateUpdate epochStateView maxWait checkForVotes
+  when (isNothing mResult) $
+    H.failMessage callStack "waitForGovActionVotes: No votes appeared before timeout."
   where
-    getFromEpochState :: HasCallStack
-      => AnyNewEpochState -> m (Maybe ())
-    getFromEpochState (AnyNewEpochState actualEra newEpochState) = do
-      let sbe = conwayEraOnwardsToShelleyBasedEra ceo
-      Refl <- H.leftFail $ assertErasEqual sbe actualEra
-      let govState :: L.ConwayGovState (ShelleyLedgerEra era) = conwayEraOnwardsConstraints ceo $ newEpochState ^. newEpochStateGovStateL
-          proposals = govState ^. L.cgsProposalsL . L.pPropsL . to toList
-      if null proposals
-        then pure Nothing
-        else do
-          let lastProposal = last proposals
-              gaDRepVotes = lastProposal ^. L.gasDRepVotesL . to toList
-              gaSpoVotes = lastProposal ^. L.gasStakePoolVotesL . to toList
-          if null gaDRepVotes && null gaSpoVotes
-          then pure Nothing
-          else pure $ Just ()
+    checkForVotes
+      :: HasCallStack
+      => (AnyNewEpochState, SlotNo, BlockNo)
+      -> m (Maybe ())
+    checkForVotes (AnyNewEpochState actualEra newEpochState, _, _) = withFrozenCallStack $ do
+      caseShelleyToBabbageOrConwayEraOnwards
+        (const $ H.note_ "Only Conway era onwards is supported" >> failure)
+        (\ceo -> do
+          let govState = conwayEraOnwardsConstraints ceo $ newEpochState ^. newEpochStateGovStateL
+              proposals = govState ^. L.cgsProposalsL . L.pPropsL . to toList
+          if null proposals
+            then pure Nothing
+            else do
+              let lastProposal = last proposals
+                  gaDRepVotes = lastProposal ^. L.gasDRepVotesL . to toList
+                  gaSpoVotes = lastProposal ^. L.gasStakePoolVotesL . to toList
+              if null gaDRepVotes && null gaSpoVotes
+              then pure Nothing
+              else pure $ Just ()
+        )
+        actualEra
+
