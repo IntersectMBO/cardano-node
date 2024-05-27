@@ -1,10 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE GADTs #-}
 
 import qualified Cardano.Crypto.Init as Crypto
 import           Cardano.Git.Rev (gitRev)
-import           Cardano.Node.Configuration.POM (PartialNodeConfiguration)
+import           Cardano.Node.Configuration.POM (PartialNodeConfiguration(..))
 import           Cardano.Node.Handlers.TopLevel
 import           Cardano.Node.Parsers (nodeCLIParser, parserHelpHeader, parserHelpOptions,
                    renderHelpDoc)
@@ -12,6 +13,7 @@ import           Cardano.Node.Run (runNode)
 import           Cardano.Node.Tracing.Documentation (TraceDocumentationCmd (..),
                    parseTraceDocumentationCmd, runTraceDocumentationCmd)
 
+import           Data.Monoid (Last (getLast))
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Data.Version (showVersion)
@@ -19,6 +21,7 @@ import           Options.Applicative
 import qualified Options.Applicative as Opt
 import           Options.Applicative.Help ((<$$>))
 import           System.Info (arch, compilerName, compilerVersion, os)
+import           System.IO (hPutStrLn, stderr)
 
 import           Paths_cardano_node (version)
 
@@ -30,13 +33,27 @@ main = do
     cmd <- Opt.customExecParser p opts
 
     case cmd of
-      RunCmd args -> runNode args
+      RunCmd args -> do
+        warnIfSet args pncMaybeMempoolCapacityOverride "mempool-capacity-override" "MempoolCapacityBytesOverride"
+        warnIfSet args pncNumOfDiskSnapshots "num-of-disk-snapshots" "NumOfDiskSnapshots"
+        warnIfSet args pncSnapshotInterval "snapshot-interval" "SnapshotInterval"
+        runNode args
       TraceDocumentation tdc -> runTraceDocumentationCmd tdc
       VersionCmd  -> runVersionCommand
 
     where
       p = Opt.prefs Opt.showHelpOnEmpty
 
+      warnIfSet :: PartialNodeConfiguration -> (PartialNodeConfiguration -> Last a) -> String -> String -> IO ()
+      warnIfSet args f name key = 
+          maybe 
+            (pure ()) 
+            (\_ -> hPutStrLn stderr $ "WARNING: Option --" ++ name ++ " was set via CLI flags.\ 
+            \ This CLI flag will be removed in upcoming node releases.\
+            \ Please, set this configuration option in the configuration file instead with key " ++ key ++ ".") 
+        $ getLast
+        $ f args
+        
       opts :: Opt.ParserInfo Command
       opts =
         Opt.info (fmap RunCmd nodeCLIParser
