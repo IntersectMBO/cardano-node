@@ -106,11 +106,9 @@ main
         putStrLn "* Can I pre-execute a plutus script?"
         let plutus = _nix_plutus nixService
         case plutusType <$> plutus of
-          Just LimitSaturationLoop  -> checkPlutusLoop protoParamPath plutus
           Just BenchCustomCall      -> checkPlutusBuiltin protoParamPath
-          _                         -> putStrLn $ "plutusType "
-                                                   ++ show plutus
-                                                   ++ " unrecognised"
+          Just{}                    -> checkPlutusLoop protoParamPath plutus
+          Nothing                   -> putStrLn "--> no Plutus configuration found - skipping"
         exitSuccess
 
 -- The type annotations within patterns or expressions that would be

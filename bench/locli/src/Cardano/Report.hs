@@ -146,7 +146,7 @@ liftTmplRun Summary{sumWorkload=generatorProfile
     case plutusLoopScript generatorProfile of
       Nothing                               -> WValue
       Just script
-        | script `elem` ["Loop", "LoopV3"]  -> WPlutusLoopCountdown
+        | "Loop" `T.isPrefixOf` script      -> WPlutusLoopCountdown
         | script == "EcdsaSecp256k1Loop"    -> WPlutusLoopSECP
         | script == "SchnorrSecp256k1Loop"  -> WPlutusLoopSECP
         | script == "HashOntoG2AndAdd"      -> WPlutusLoopBLST
