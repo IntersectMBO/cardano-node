@@ -473,7 +473,7 @@ def all_profile_variants:
           }
       }
     }
-    | .generator.tx_fee        = 1025000
+    | .generator.tx_fee        = 1008000
     ) as $plutus_loop_secp_ecdsa
   |
    ({ generator:
@@ -496,7 +496,7 @@ def all_profile_variants:
           }
       }
     }
-    | .generator.tx_fee        = 1020000
+    | .generator.tx_fee        = 1004000
     ) as $plutus_loop_secp_schnorr
   |
    ({ generator:
@@ -1023,16 +1023,18 @@ def all_profile_variants:
   , $cibench_base * $plutus_base * $costmodel_v8_preview * $plutus_loop2024_counter *
     { name: "ci-bench-plutus24"
     }
-  , $cibench_base * $plutus_base * $costmodel_v8_preview * $plutus_loop_secp_ecdsa *
+  , $cibench_base * $plutus_base * $double_plus_tps_saturation_plutus * $costmodel_v8_preview * $plutus_loop_secp_ecdsa *
     { name: "ci-bench-plutus-secp-ecdsa"
+    , analysis:
+      { filters:        ["size-moderate"] }
     }
-  , $cibench_base * $plutus_base * $costmodel_v8_preview * $plutus_loop_secp_schnorr *
+  , $cibench_base * $plutus_base * $double_plus_tps_saturation_plutus * $costmodel_v8_preview * $plutus_loop_secp_schnorr *
     { name: "ci-bench-plutus-secp-schnorr"
+    , analysis:
+      { filters:        ["size-moderate"] }
     }
   , $cibench_base * $plutus_base * $double_plus_tps_saturation_plutus * $costmodel_v9_preview * $plutus_loop_blst *
     { name: "ci-bench-plutusv3-blst"
-    , genesis:
-      { max_block_size: 88000 }
     , analysis:
       { filters:        ["size-moderate-2"] }
     }
