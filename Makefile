@@ -78,7 +78,7 @@ PROFILES_BASE             := default default-p2p plutus plutus-secp-ecdsa plutus
 PROFILES_FAST             := fast fast-p2p fast-plutus fast-notracer fast-oldtracing faststartup-24M
 PROFILES_CI_TEST          := ci-test ci-test-p2p ci-test-plutus ci-test-notracer ci-test-rtview ci-test-dense10
 PROFILES_CI_BENCH         := ci-bench ci-bench-p2p ci-bench-plutus ci-bench-plutus-secp-ecdsa ci-bench-plutus-secp-schnorr ci-bench-notracer ci-bench-rtview ci-bench-lmdb ci-bench-drep
-PROFILES_CI_BENCH         += ci-bench-plutusv3-blst
+PROFILES_CI_BENCH         += ci-bench-plutusv3-blst ci-bench-plutus24
 PROFILES_TRACE_BENCH      := trace-bench trace-bench-notracer trace-bench-oldtracing trace-bench-rtview
 PROFILES_TRACE_FULL       := trace-full trace-full-rtview
 PROFILES_EPOCHTRANS       := epoch-transition
@@ -98,7 +98,7 @@ PROFILES_VENDOR           := dish dish-plutus dish-10M dish-10M-plutus
 # Cloud version of "default", "ci-test" and "ci-bench" plus value (52+explorer)
 # Not all local profiles are compatible or tested (yet) with a cloud runs
 PROFILES_NOMAD_PERF       := default-nomadperf ci-test-nomadperf ci-bench-nomadperf value-nomadperf oldtracing-nomadperf ci-test-oldtracing-nomadperf ci-bench-oldtracing-nomadperf value-oldtracing-nomadperf
-PROFILES_NOMAD_PERF       += plutus-nomadperf fast-nomadperf latency-nomadperf
+PROFILES_NOMAD_PERF       += plutus-nomadperf plutus24-nomadperf fast-nomadperf latency-nomadperf
 PROFILES_NOMAD_PERF       += plutusv3-blst-nomadperf plutusv3-blst-half-nomadperf plutusv3-blst-double-nomadperf
 PROFILES_NOMAD_PERF_DREP  := value-drep1k-nomadperf value-drep2k-nomadperf value-drep10k-nomadperf value-drep100k-nomadperf
 PROFILES_NOMAD_PERF_DREP  += plutus-drep1k-nomadperf plutus-drep2k-nomadperf plutus-drep10k-nomadperf plutus-drep100k-nomadperf

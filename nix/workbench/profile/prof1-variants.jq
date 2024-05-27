@@ -443,6 +443,16 @@ def all_profile_variants:
     | .generator.tx_fee        = 1360000
     ) as $plutus_loop_counter
   |
+   ($plutus_loop_counter *
+    { generator:
+      { plutus:
+          { script:                     "Loop2024"
+          }
+      }
+    }
+    | .generator.tx_fee        = 1412000
+    ) as $plutus_loop2024_counter
+  |
    ({ generator:
       { plutus:
           { type:                      "LimitTxPerBlock_8"
@@ -1010,6 +1020,9 @@ def all_profile_variants:
   , $cibench_base * $plutus_base * $costmodel_v8_preview * $plutus_loop_counter *
     { name: "ci-bench-plutus"
     }
+  , $cibench_base * $plutus_base * $costmodel_v8_preview * $plutus_loop2024_counter *
+    { name: "ci-bench-plutus24"
+    }
   , $cibench_base * $plutus_base * $costmodel_v8_preview * $plutus_loop_secp_ecdsa *
     { name: "ci-bench-plutus-secp-ecdsa"
     }
@@ -1123,6 +1136,9 @@ def all_profile_variants:
     }
   , $plutus_nomadperf_template *
     { name: "plutus-nomadperf"
+    }
+  , $plutus_nomadperf_template * $plutus_loop2024_counter *
+    { name: "plutus24-nomadperf"
     }
   , $nomad_perf_latency_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview *
     { name: "latency-nomadperf"
