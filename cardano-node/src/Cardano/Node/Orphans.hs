@@ -10,7 +10,7 @@ module Cardano.Node.Orphans () where
 
 import           Cardano.Api ()
 
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (Flag(..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (Flag(..))
 import           Ouroboros.Consensus.Node
 import qualified Data.Text as Text
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))

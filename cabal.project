@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2024-11-20T00:00:00Z
+  , hackage.haskell.org 2024-12-10T16:20:07Z
   , cardano-haskell-packages 2024-11-27T20:49:28Z
 
 packages:
@@ -106,8 +106,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network.git
-  tag: 7e8909f97d6ecc9fff320b3ac2b785aec74751c6
-  --sha256: sha256-Evv2EwaXbr2tXlxnHVr/AAV+QB7B8EWJbQR6t4IvOQ4=
+  tag: 4920b7a8e1a639e6b6a85611bef6d541e21d012a
+  --sha256: sha256-mrGXtC/mStln5KqoXlruKYl2vHYZhgw3biRlZm82h7A=
   subdir:
     cardano-client
     cardano-ping
@@ -122,30 +122,35 @@ source-repository-package
     ouroboros-network-testing
     quickcheck-monoids
 
+-- UTxO-HD for 10.2
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus.git
-  tag: 8b0a1e2893cae744026565deff1e6a4596dd4161
-  --sha256: sha256-mIdoQXTSVZvnxPayyk4yoZkXYsbXHnms5fBgq7bXfU8=
+  tag: 80bac6f41f0c973ee49f886da16c3e6b38cec92d
+  --sha256: sha256-n10Edr1XhF7nqkMPDO6yI+FVbdM7ZXxCEEZ9vxhYyBU=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
-    ouroboros-consensus-protocol
     ouroboros-consensus-diffusion
+    ouroboros-consensus-protocol
+    sop-extras
+    strict-sop-core
 
+-- UTxO-HD for 10.2
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: 43a2524194769ac0c44fc7d8ae6be98256a1a11d
-  --sha256: sha256-vomTIsTCIqe4NvhhP1x/JYem6e7wocaAg/UV9OHb6tc=
+  tag: ab8f37d026f5ae43028a927cbf00e6a76686b4c5
+  --sha256: sha256-0dzHqK1o1Lyup3qpLHfBpESW6Ff5urZfbjqJG2qEqiM=
   subdir:
     cardano-api
 
+-- UTxO-HD for 10.2
 source-repository-package
   type: git
-  location: https://github.com/IntersectMBO/cardano-cli.git
-  tag: c6b442a7eace5bcd576037199648b0c9355203a5
-  --sha256: sha256-D66uuQ9ulgvUHU42Vr4qbWWTAxI70ox9Kknkm9IRIM8=
+  location: https://github.com/IntersectMBO/cardano-cli
+  tag: bf638ff00b5adf537e49d870e1cbcc514aee2da9
+  --sha256: sha256-vTZEe64FvQmFRwnGlSh/z7e5hGyjDbGGmxP98vKNCqQ=
   subdir:
     cardano-cli
 

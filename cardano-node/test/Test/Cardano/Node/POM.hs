@@ -7,6 +7,7 @@ module Test.Cardano.Node.POM
   ) where
 
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
+import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
@@ -15,17 +16,19 @@ import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartia
                    partialTraceSelectionToEither)
 import           Ouroboros.Consensus.Node (NodeDatabasePaths (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
-                   SnapshotInterval (..), pattern DoDiskSnapshotChecksum)
+import           Ouroboros.Consensus.Storage.LedgerDB.Snapshots (NumOfDiskSnapshots (..),
+                   SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.Args
 import           Ouroboros.Network.Block (SlotNo (..))
+import           Ouroboros.Network.ConsensusMode
 import           Ouroboros.Network.Diffusion.Configuration (MinBigLedgerPeersForTrustedState (..), defaultConsensusMode)
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
+import           Ouroboros.Network.PeerSelection.LedgerPeers.Type
 import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
 
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
-import           Data.Time.Clock (secondsToDiffTime)
 
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
@@ -120,9 +123,6 @@ testPartialYamlConfig =
     , pncStartAsNonProducingNode = Last $ Just False
     , pncConsensusMode = mempty
     , pncDiffusionMode = Last Nothing
-    , pncNumOfDiskSnapshots = Last Nothing
-    , pncSnapshotInterval = mempty
-    , pncDoDiskSnapshotChecksum = Last . Just $ DoDiskSnapshotChecksum
     , pncExperimentalProtocolsEnabled = Last Nothing
     , pncMaxConcurrencyBulkSync = Last Nothing
     , pncMaxConcurrencyDeadline = Last Nothing
@@ -150,6 +150,7 @@ testPartialYamlConfig =
     , pncMinBigLedgerPeersForTrustedState = pure (MinBigLedgerPeersForTrustedState 3) -- TODO: Review
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
+    , pncLedgerDbConfig = mempty
     }
 
 -- | Example partial configuration theoretically created
@@ -165,9 +166,6 @@ testPartialCliConfig =
     , pncDatabaseFile = mempty
     , pncConsensusMode = mempty
     , pncDiffusionMode = mempty
-    , pncNumOfDiskSnapshots = Last Nothing
-    , pncSnapshotInterval = Last . Just . RequestedSnapshotInterval $ secondsToDiffTime 100
-    , pncDoDiskSnapshotChecksum = Last . Just $ DoDiskSnapshotChecksum
     , pncExperimentalProtocolsEnabled = Last $ Just True
     , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
     , pncValidateDB = Last $ Just True
@@ -193,6 +191,7 @@ testPartialCliConfig =
     , pncMinBigLedgerPeersForTrustedState = pure (MinBigLedgerPeersForTrustedState 3) -- TODO: Review
     , pncEnableP2P = Last (Just DisabledP2PMode)
     , pncPeerSharing = Last (Just PeerSharingDisabled)
+    , pncLedgerDbConfig = mempty
     }
 
 -- | Expected final NodeConfiguration
@@ -212,9 +211,6 @@ eExpectedConfig = do
     , ncProtocolConfig = testNodeProtocolConfiguration
     , ncConsensusMode = defaultConsensusMode
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
-    , ncNumOfDiskSnapshots = DefaultNumOfDiskSnapshots
-    , ncSnapshotInterval = RequestedSnapshotInterval $ secondsToDiffTime 100
-    , ncDoDiskSnapshotChecksum = DoDiskSnapshotChecksum
     , ncExperimentalProtocolsEnabled = True
     , ncMaxConcurrencyBulkSync = Nothing
     , ncMaxConcurrencyDeadline = Nothing
@@ -242,6 +238,7 @@ eExpectedConfig = do
     , ncMinBigLedgerPeersForTrustedState = MinBigLedgerPeersForTrustedState 3 -- TODO: Review
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     , ncPeerSharing = PeerSharingDisabled
+    , ncLedgerDbConfig = LedgerDbConfiguration DefaultNumOfDiskSnapshots DefaultSnapshotInterval DefaultQueryBatchSize V2InMemory
     }
 
 -- -----------------------------------------------------------------------------

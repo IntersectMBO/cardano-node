@@ -161,6 +161,7 @@ type TraceLocalTxMonitorProtocol = ("TraceLocalTxMonitorProtocol" :: Symbol)
 type TraceLocalTxSubmissionProtocol = ("TraceLocalTxSubmissionProtocol" :: Symbol)
 type TraceLocalTxSubmissionServer = ("TraceLocalTxSubmissionServer" :: Symbol)
 type TraceMempool = ("TraceMempool" :: Symbol)
+type TraceBackingStore = ("TraceBackingStore" :: Symbol)
 type TraceMux = ("TraceMux" :: Symbol)
 type TraceLocalMux = ("TraceLocalMux" :: Symbol)
 type TracePeerSelection = ("TracePeerSelection" :: Symbol)
@@ -237,6 +238,7 @@ data TraceSelection
   , traceLocalTxSubmissionProtocol :: OnOff TraceLocalTxSubmissionProtocol
   , traceLocalTxSubmissionServer :: OnOff TraceLocalTxSubmissionServer
   , traceMempool :: OnOff TraceMempool
+  , traceBackingStore :: OnOff TraceBackingStore
   , traceMux :: OnOff TraceMux
   , tracePeerSelection :: OnOff TracePeerSelection
   , tracePeerSelectionCounters :: OnOff TracePeerSelectionCounters
@@ -303,6 +305,7 @@ data PartialTraceSelection
       , pTraceLocalTxSubmissionProtocol :: Last (OnOff TraceLocalTxSubmissionProtocol)
       , pTraceLocalTxSubmissionServer :: Last (OnOff TraceLocalTxSubmissionServer)
       , pTraceMempool :: Last (OnOff TraceMempool)
+      , pTraceBackingStore :: Last (OnOff TraceBackingStore)
       , pTraceMux :: Last (OnOff TraceMux)
       , pTracePeerSelection :: Last (OnOff TracePeerSelection)
       , pTracePeerSelectionCounters :: Last (OnOff TracePeerSelectionCounters)
@@ -370,6 +373,7 @@ instance FromJSON PartialTraceSelection where
       <*> parseTracer (Proxy @TraceLocalTxSubmissionProtocol) v
       <*> parseTracer (Proxy @TraceLocalTxSubmissionServer) v
       <*> parseTracer (Proxy @TraceMempool) v
+      <*> parseTracer (Proxy @TraceBackingStore) v
       <*> parseTracer (Proxy @TraceMux) v
       <*> parseTracer (Proxy @TracePeerSelection) v
       <*> parseTracer (Proxy @TracePeerSelectionCounters) v
@@ -434,6 +438,7 @@ defaultPartialTraceConfiguration =
     , pTraceLocalTxSubmissionProtocol = pure $ OnOff False
     , pTraceLocalTxSubmissionServer = pure $ OnOff False
     , pTraceMempool = pure $ OnOff True
+    , pTraceBackingStore = pure $ OnOff False
     , pTraceMux = pure $ OnOff True
     , pTracePeerSelection = pure $ OnOff True
     , pTracePeerSelectionCounters = pure $ OnOff True
@@ -500,6 +505,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceLocalTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceLocalTxSubmissionProtocol) pTraceLocalTxSubmissionProtocol
    traceLocalTxSubmissionServer <- proxyLastToEither (Proxy @TraceLocalTxSubmissionServer) pTraceLocalTxSubmissionServer
    traceMempool <- proxyLastToEither (Proxy @TraceMempool) pTraceMempool
+   traceBackingStore <- proxyLastToEither (Proxy @TraceBackingStore) pTraceBackingStore
    traceMux <- proxyLastToEither (Proxy @TraceMux) pTraceMux
    tracePeerSelection <- proxyLastToEither (Proxy @TracePeerSelection) pTracePeerSelection
    tracePeerSelectionCounters <- proxyLastToEither (Proxy @TracePeerSelectionCounters) pTracePeerSelectionCounters
@@ -559,6 +565,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
              , traceLocalTxSubmissionProtocol = traceLocalTxSubmissionProtocol
              , traceLocalTxSubmissionServer = traceLocalTxSubmissionServer
              , traceMempool = traceMempool
+             , traceBackingStore = traceBackingStore
              , traceMux = traceMux
              , tracePeerSelection = tracePeerSelection
              , tracePeerSelectionCounters = tracePeerSelectionCounters
@@ -622,6 +629,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceLocalTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceLocalTxSubmissionProtocol) pTraceLocalTxSubmissionProtocol
   traceLocalTxSubmissionServer <- proxyLastToEither (Proxy @TraceLocalTxSubmissionServer) pTraceLocalTxSubmissionServer
   traceMempool <- proxyLastToEither (Proxy @TraceMempool) pTraceMempool
+  traceBackingStore <- proxyLastToEither (Proxy @TraceBackingStore) pTraceBackingStore
   traceMux <- proxyLastToEither (Proxy @TraceMux) pTraceMux
   tracePeerSelection <- proxyLastToEither (Proxy @TracePeerSelection) pTracePeerSelection
   tracePeerSelectionCounters <- proxyLastToEither (Proxy @TracePeerSelectionCounters) pTracePeerSelectionCounters
@@ -681,6 +689,7 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
             , traceLocalTxSubmissionProtocol = traceLocalTxSubmissionProtocol
             , traceLocalTxSubmissionServer = traceLocalTxSubmissionServer
             , traceMempool = traceMempool
+            , traceBackingStore = traceBackingStore
             , traceMux = traceMux
             , tracePeerSelection = tracePeerSelection
             , tracePeerSelectionCounters = tracePeerSelectionCounters
