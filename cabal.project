@@ -64,3 +64,32 @@ allow-newer: katip:Win32
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 2149c2f2c81089074eb575497e3785b6180f6062
+  --sha256: sha256-lR9eVgUtcKs4cxajRnnKIhg91vYW2vbs/Hs/XhaVC5w=
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-diffusion
+    ouroboros-consensus-protocol
+    sop-extras
+    strict-sop-core
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api
+  tag: 651092c0c06866b7eab4e2261b3f28fbe8a74542
+  --sha256: sha256-5SEGngIqEjXXBsjiZXWkrwMgYVXajuBCIeCDC4h7r+k=
+  subdir:
+    cardano-api
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli
+  tag: bd4c66e7921a85d5626b2761e4cd7b41af770b31
+  --sha256: sha256-5evW3riN5k8ctsA3hUOvnxoVnvw0A+0J4y1c4/bGSK8=
+  subdir:
+    cardano-cli
