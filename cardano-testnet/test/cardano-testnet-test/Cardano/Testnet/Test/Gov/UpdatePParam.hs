@@ -290,15 +290,15 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
   governanceActionTxIdPParamUpdate <- retrieveTransactionId execConfig signedPParamsProposalTx
 
   !governanceActionIndexPParams
-    <- H.nothingFailM $ watchEpochStateView
+    <- H.nothingFailM $ watchEpochStateUpdate
          epochStateView
-         (return . maybeExtractGovernanceActionIndex (fromString governanceActionTxIdPParamUpdate))
          (EpochInterval 5)
+         (\(eState, _, _) -> return $ maybeExtractGovernanceActionIndex (fromString governanceActionTxIdPParamUpdate) eState)
 
   -- Confirm that committee hot keys have been authorized
-  H.nothingFailM $ watchEpochStateView epochStateView
-    (checkCommitteeHotKeyAuthorizationStatus [comHotKeyCred1])
+  H.nothingFailM $ watchEpochStateUpdate epochStateView
     (EpochInterval 5)
+    (\(eState, _, _) -> checkCommitteeHotKeyAuthorizationStatus [comHotKeyCred1] eState)
 
   -- Proposal was successfully submitted, now we vote on the proposal and confirm it was ratified
   pparamsDRepVoteFiles <- generateVoteFiles execConfig work "pparams-update-vote-files"
@@ -326,9 +326,9 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
   pparamsVoteTxFp <- signTx execConfig cEra work "signed-vote-tx" pparamsVoteTxBodyFp signingKeys
   submitTx execConfig cEra pparamsVoteTxFp
 
-  H.nothingFailM $ watchEpochStateView epochStateView
-         (return . checkPParamsUpdated (EpochInterval newCommitteeTermLength))
+  H.nothingFailM $ watchEpochStateUpdate epochStateView
          (EpochInterval 10)
+         (\(eState, _, _) -> return $ checkPParamsUpdated (EpochInterval newCommitteeTermLength) eState)
 
 checkPParamsUpdated
   :: EpochInterval -- ^ The epoch interval to check for in the updated protocol parameters
