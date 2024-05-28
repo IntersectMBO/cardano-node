@@ -24,6 +24,7 @@ import           Control.Monad
 import           Data.Bifunctor
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Map.Strict as Map
+import           Data.Maybe
 import           Data.Maybe.Strict
 import           Data.String
 import qualified Data.Text as Text
@@ -131,8 +132,9 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
 
   epochStateView <- getEpochStateView configurationFile (File socketPath)
 
-  H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 3) $ \(anyNewEpochState, _, _) ->
+  (cond, ()) <- watchEpochStateUpdate epochStateView (EpochInterval 3) $ \(anyNewEpochState, _, _) ->
     pure $ committeeIsPresent True anyNewEpochState
+  cond === ConditionMet
 
   -- Step 2. Propose motion of no confidence. DRep and SPO voting thresholds must be met.
 
@@ -191,8 +193,9 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIndex <-
-    H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 10) $ \(anyNewEpochState, _, _) ->
-      pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+    H.nothingFailM . fmap snd $ watchEpochStateUpdate epochStateView (EpochInterval 10) $ \(anyNewEpochState, _, _) -> do
+      let r = maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+      pure (if isJust r then ConditionMet else ConditionNotMet, r)
 
   let spoVotes :: [(String, Int)]
       spoVotes =  [("yes", 1), ("yes", 2), ("yes", 3)]
@@ -224,11 +227,12 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   -- Step 4. We confirm the no confidence motion has been ratified by checking
   -- for an empty constitutional committee.
 
-  H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 10) $ \(anyNewEpochState, _, _) ->
+  (cond2, ()) <- watchEpochStateUpdate epochStateView (EpochInterval 10) $ \(anyNewEpochState, _, _) ->
     pure $ committeeIsPresent False anyNewEpochState
+  cond2 === ConditionMet
 
 -- | Checks if the committee is empty or not.
-committeeIsPresent :: Bool -> AnyNewEpochState -> Maybe ()
+committeeIsPresent :: Bool -> AnyNewEpochState -> (LedgerStateCondition, ())
 committeeIsPresent committeeExists (AnyNewEpochState sbe newEpochState) =
   caseShelleyToBabbageOrConwayEraOnwards
     (const $ error "Constitutional committee does not exist pre-Conway era")
@@ -240,11 +244,11 @@ committeeIsPresent committeeExists (AnyNewEpochState sbe newEpochState) =
                                  . L.cgsCommitteeL
             in if committeeExists
                then if isSJust mCommittee
-                    then Just () -- The committee is non empty and we terminate.
-                    else Nothing
+                    then (ConditionMet, ()) -- The committee is non empty and we terminate.
+                    else (ConditionNotMet, ())
                else if mCommittee == SNothing
-                    then Just ()  -- The committee is empty and we terminate.
-                    else Nothing
+                    then (ConditionMet, ())  -- The committee is empty and we terminate.
+                    else (ConditionNotMet, ())
     )
     sbe
 

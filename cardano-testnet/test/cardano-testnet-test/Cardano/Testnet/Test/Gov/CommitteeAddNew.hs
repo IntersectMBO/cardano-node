@@ -24,6 +24,7 @@ import           Prelude
 import           Control.Monad
 import qualified Data.Char as C
 import qualified Data.Map as Map
+import           Data.Maybe
 import           Data.Maybe.Strict
 import           Data.Set (Set)
 import           Data.String
@@ -177,8 +178,9 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   governanceActionTxId <- H.noteM $ retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIx <-
-    H.nothingFailM . watchEpochStateUpdate epochStateView (L.EpochInterval 1) $ \(anyNewEpochState, _, _) ->
-      pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+    H.nothingFailM . fmap snd . watchEpochStateUpdate epochStateView (L.EpochInterval 1) $ \(anyNewEpochState, _, _) -> do
+      let r = maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+      pure (if isJust r then ConditionMet else ConditionNotMet, r)
 
   dRepVoteFiles <-
     DRep.generateVoteFiles
@@ -222,7 +224,8 @@ hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-co
   length (filter ((== L.VoteYes) . snd) gaSpoVotes) === 1
   length spoVotes === length gaSpoVotes
 
-  H.nothingFailM $ watchEpochStateUpdate epochStateView (L.EpochInterval 1) (return . committeeIsPresent)
+  (cond, ()) <- watchEpochStateUpdate epochStateView (L.EpochInterval 1) (return . committeeIsPresent)
+  cond === ConditionMet
 
   -- show proposed committe meembers
   H.noteShow_ ccCredentials
@@ -252,7 +255,7 @@ getCommitteeMembers epochStateView ceo = withFrozenCallStack $ do
   govState <- getGovState epochStateView ceo
   fmap (Map.keys . L.committeeMembers) . H.nothingFail $ strictMaybeToMaybe $ govState ^. L.cgsCommitteeL
 
-committeeIsPresent :: (AnyNewEpochState, SlotNo, BlockNo) -> Maybe ()
+committeeIsPresent :: (AnyNewEpochState, SlotNo, BlockNo) -> (LedgerStateCondition, ())
 committeeIsPresent (AnyNewEpochState sbe newEpochState, _, _) =
   caseShelleyToBabbageOrConwayEraOnwards
     (const $ error "Constitutional committee does not exist pre-Conway era")
@@ -263,7 +266,9 @@ committeeIsPresent (AnyNewEpochState sbe newEpochState, _, _) =
                        . L.lsUTxOStateL
                        . L.utxosGovStateL
                        . L.cgsCommitteeL
-      members <- L.committeeMembers <$> strictMaybeToMaybe mCommittee
-      when (Map.null members) Nothing
+          isCommitteePresent = Map.null . L.committeeMembers <$> strictMaybeToMaybe mCommittee
+      if isCommitteePresent == Just True
+         then (ConditionMet, ())
+         else (ConditionNotMet, ())
     )
     sbe

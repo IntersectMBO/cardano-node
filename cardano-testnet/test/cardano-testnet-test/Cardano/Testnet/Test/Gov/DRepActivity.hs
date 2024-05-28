@@ -24,6 +24,7 @@ import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Data (Typeable)
 import qualified Data.Map as Map
+import           Data.Maybe
 import           Data.String
 import qualified Data.Text as Text
 import           Data.Word (Word32)
@@ -287,10 +288,11 @@ makeActivityChangeProposal execConfig epochStateView ceo work prefix
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIndex <-
-    H.nothingFailM $ watchEpochStateUpdate epochStateView timeout $ \(anyNewEpochState, _, _) ->
-      return $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+    H.nothingFailM . fmap snd $ watchEpochStateUpdate epochStateView timeout $ \(anyNewEpochState, _, _) -> do
+      let r = maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+      pure (if isJust r then ConditionMet else ConditionNotMet, r)
 
-  return (governanceActionTxId, governanceActionIndex)
+  pure (governanceActionTxId, governanceActionIndex)
 
 -- | Cast votes for a governance action.
 voteChangeProposal

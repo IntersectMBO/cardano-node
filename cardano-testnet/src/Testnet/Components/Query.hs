@@ -112,7 +112,7 @@ waitForEpochs
   -> EpochInterval  -- ^ Number of epochs to wait
   -> m EpochNo -- ^ The epoch number reached
 waitForEpochs epochStateView interval = withFrozenCallStack $ do
-  void $ watchEpochStateUpdate epochStateView interval $ \_ -> pure Nothing
+  void $ watchEpochStateUpdate epochStateView interval $ \_ -> pure (ConditionNotMet, ())
   getCurrentEpochNo epochStateView
 
 -- | Wait for the requested number of blocks
@@ -129,12 +129,12 @@ waitForBlocks epochStateView numberOfBlocks = withFrozenCallStack $ do
   BlockNo startingBlockNumber <- getBlockNumber epochStateView
   H.note_ $ "Current block number: " <> show startingBlockNumber <> ". "
     <> "Waiting for " <> show numberOfBlocks <> " blocks"
-  H.noteShowM . H.nothingFailM . fmap (fmap BlockNo) $
+  H.noteShowM . fmap (BlockNo . snd) $
     watchEpochStateUpdate epochStateView (EpochInterval maxBound) $ \(_, _, BlockNo blockNumber) ->
       pure $
         if blockNumber >= startingBlockNumber + numberOfBlocks
-        then Just blockNumber
-        else Nothing
+        then (ConditionMet, blockNumber)
+        else (ConditionNotMet, blockNumber)
 
 data TestnetWaitPeriod
   = WaitForEpochs EpochInterval
@@ -268,21 +268,23 @@ watchEpochStateUpdate
   :: forall m a. (HasCallStack, MonadIO m, MonadTest m, MonadAssertion m)
   => EpochStateView -- ^ The info to access the epoch state
   -> EpochInterval -- ^ The maximum number of epochs to wait
-  -> ((AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe a)) -- ^ The guard function (@Just@ if the condition is met, @Nothing@ otherwise)
-  -> m (Maybe a)
+  -> ((AnyNewEpochState, SlotNo, BlockNo) -> m (LedgerStateCondition, a))
+  -- ^ The callback executed on every new epoch state, stops the execution when 'ConditionMet' is returned as
+  -- a first argument of a tuple
+  -> m (LedgerStateCondition, a)
 watchEpochStateUpdate epochStateView (EpochInterval maxWait) f  = withFrozenCallStack $ do
   AnyNewEpochState _ newEpochState <- getEpochState epochStateView
   let EpochNo currentEpoch = L.nesEL newEpochState
   go $ currentEpoch + fromIntegral maxWait
     where
-      go :: Word64 -> m (Maybe a)
+      go :: Word64 -> m (LedgerStateCondition, a)
       go timeout = do
         newEpochStateDetails@(AnyNewEpochState _ newEpochState', _, _) <- getEpochStateDetails epochStateView pure
         let EpochNo currentEpoch = L.nesEL newEpochState'
         f newEpochStateDetails >>= \case
-          Just result -> pure (Just result)
-          Nothing
-            | currentEpoch > timeout -> pure Nothing
+          r@(ConditionMet, _) -> pure r
+          r@(ConditionNotMet, _)
+            | currentEpoch > timeout -> pure r
             | otherwise ->  do
               H.threadDelay 300_000
               go timeout
@@ -523,25 +525,21 @@ assertNewEpochState
   -> value -- ^ The expected value to check in the epoch state.
   -> m ()
 assertNewEpochState epochStateView sbe maxWait lens expected = withFrozenCallStack $ do
-  mStateView <- watchEpochStateUpdate epochStateView maxWait (const checkEpochState)
-  when (isNothing mStateView) $ do
-    val <- getFromEpochStateForEra
-    -- there's a tiny tiny chance that the value has changed since 'watchEpochStateUpdate'
-    -- so check it again
-    if val == expected
-    then pure ()
-    else H.failMessage callStack $ unlines
-           [ "assertNewEpochState: expected value not reached within the time frame."
-           , "Expected value: " <> show expected
-           , "Actual value: " <> show val
-           ]
+  (cond, val) <- watchEpochStateUpdate epochStateView maxWait (const checkEpochState)
+  when (cond == ConditionNotMet) $ do
+    H.failMessage callStack $ unlines
+       [ "assertNewEpochState: expected value not reached within the time frame."
+       , "Expected value: " <> show expected
+       , "Actual value: " <> show val
+       ]
   where
     checkEpochState
       :: HasCallStack
-      => m (Maybe ())
+      => m (LedgerStateCondition, value)
     checkEpochState = withFrozenCallStack $ do
       val <- getFromEpochStateForEra
-      pure $ if val == expected then Just () else Nothing
+      let cond = if val == expected then ConditionMet else ConditionNotMet
+      pure (cond, val)
 
     getFromEpochStateForEra
       :: HasCallStack

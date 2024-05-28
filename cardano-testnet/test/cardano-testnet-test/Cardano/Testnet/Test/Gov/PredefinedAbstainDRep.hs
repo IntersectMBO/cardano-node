@@ -24,6 +24,7 @@ import           Prelude
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Data (Typeable)
+import           Data.Maybe
 import           Data.String (fromString)
 import qualified Data.Text as Text
 import           Data.Word (Word32)
@@ -291,8 +292,9 @@ makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
   governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
 
   governanceActionIndex <-
-    H.nothingFailM $ watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) ->
-      pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+    H.nothingFailM . fmap snd $ watchEpochStateUpdate epochStateView (EpochInterval 1) $ \(anyNewEpochState, _, _) -> do
+      let r = maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+      pure (if isJust r then ConditionMet else ConditionNotMet, r)
 
   pure (governanceActionTxId, governanceActionIndex)
 
