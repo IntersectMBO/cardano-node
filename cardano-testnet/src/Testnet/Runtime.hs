@@ -1,9 +1,12 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Testnet.Runtime
   ( startNode
@@ -13,14 +16,25 @@ module Testnet.Runtime
 import           Cardano.Api
 import qualified Cardano.Api as Api
 
+import qualified Cardano.Ledger.Api as L
+import qualified Cardano.Ledger.Shelley.LedgerState as L
+
 import           Prelude
 
 import           Control.Exception.Safe
 import           Control.Monad
-import           Control.Monad.State.Strict (StateT)
+import           Control.Monad.State.Strict
 import           Control.Monad.Trans.Resource
+import           Data.Aeson
+import           Data.Aeson.Encode.Pretty (encodePretty)
+import           Data.Algorithm.Diff
+import           Data.Algorithm.DiffOutput
+import qualified Data.ByteString.Lazy.Char8 as BSC
+import           Data.Function
 import qualified Data.List as List
 import           Data.Text (Text, unpack)
+import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           Network.Socket (PortNumber)
@@ -33,8 +47,9 @@ import qualified System.Process as IO
 import           Testnet.Filepath
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run
-import           Testnet.Property.Util (runInBackground)
-import           Testnet.Types hiding (testnetMagic)
+import           Testnet.Property.Util
+import           Testnet.Types (NodeRuntime (NodeRuntime), TestnetRuntime (configurationFile),
+                   poolSprockets)
 
 import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
@@ -169,7 +184,12 @@ createSubdirectoryIfMissingNew parent subdirectory = GHC.withFrozenCallStack $ d
   pure subdirectory
 
 -- | Start ledger's new epoch state logging for the first node in the background.
--- Logs will be placed in <tmp workspace directory>/logs/ledger-new-epoch-state.log
+-- Pretty JSON logs will be placed in:
+-- 1. <tmp workspace directory>/logs/ledger-new-epoch-state.log
+-- 2. <tmp workspace directory>/logs/ledger-new-epoch-state-diffs.log
+-- NB: The diffs represent the the changes in the 'NewEpochState' between each
+-- block or turn of the epoch. We have excluded the 'stashedAVVMAddresses'
+-- field of 'NewEpochState' in the JSON rendering.
 -- The logging thread will be cancelled when `MonadResource` releases all resources.
 -- Idempotent.
 startLedgerNewEpochStateLogging
@@ -197,27 +217,112 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
     False -> do
       H.evalIO $ appendFile logFile ""
       socketPath <- H.noteM $ H.sprocketSystemName <$> H.headM (poolSprockets testnetRuntime)
-      _ <- runInBackground . runExceptT $
-        foldEpochState
-          (configurationFile testnetRuntime)
-          (Api.File socketPath)
-          Api.QuickValidation
-          (EpochNo maxBound)
-          ()
-          (\epochState _ _ -> handler logFile epochState)
+
+      runInBackground
+        (do logFileContents <- IO.readFile logFile
+            let epochStateValues = epochStateBeforeAfterValues logFileContents
+                epochStateDiffs' = epochStateDiffs epochStateValues
+            Text.writeFile (logDir </> "ledger-epoch-state-diffs.log") epochStateDiffs'
+        )
+        (do void $ runExceptT $
+              foldEpochState
+                (configurationFile testnetRuntime)
+                (Api.File socketPath)
+                Api.QuickValidation
+                (EpochNo maxBound)
+                ()
+                (\epochState _ _ ->
+                    liftIO $ evalStateT (handler logFile epochState) 0
+                )
+        )
+
+
       H.note_ $ "Started logging epoch states to: " <> logFile
+
   where
-    handler :: FilePath -> AnyNewEpochState -> StateT () IO LedgerStateCondition
-    handler outputFp anyNewEpochState = handleException . liftIO $ do
-      appendFile outputFp $ "#### BLOCK ####" <> "\n"
-      appendFile outputFp $ show anyNewEpochState <> "\n"
-      pure ConditionNotMet
+    handler :: FilePath -> AnyNewEpochState -> StateT Int IO LedgerStateCondition
+    handler outputFpHandle (AnyNewEpochState sbe nes) = do
+      handleException . liftIO $ do
+        appendFile outputFpHandle $ "#### BLOCK ####" <> "\n"
+        appendFile outputFpHandle $ BSC.unpack (shelleyBasedEraConstraints sbe $ encodePretty nes) <> "\n"
+        pure ConditionNotMet
       where
         -- | Handle all sync exceptions and log them into the log file. We don't want to fail the test just
         -- because logging has failed.
         handleException = handle $ \(e :: SomeException) -> do
-          liftIO $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
+          liftIO $ appendFile outputFpHandle $ "Ledger new epoch logging failed - caught exception:\n"
             <> displayException e <> "\n"
           pure ConditionMet
+-- TODO: Not sure why this isn't terminating. Read up on resourcet and how it works.
+-- See concurrency section: https://www.fpcomplete.com/blog/understanding-resourcet/
+-- Probably need to use resourceForkWith but best to not use concurrency at all!
 
+
+-- | Produce tuples that represent the change of the 'NewEpochState' after
+-- a transition.
+epochStateBeforeAfterValues
+  :: String
+  -> [(Text, Text)]
+epochStateBeforeAfterValues logFileContents =
+  let allEpochStates = filter (/= "") . Text.splitOn "#### BLOCK ####" $ Text.pack logFileContents
+  in getAllTransitions allEpochStates
+
+getAllTransitions ::  [Text] -> [(Text, Text)]
+getAllTransitions [] = []
+getAllTransitions trans =
+  let (singleTransition, rest) = splitAt 2 trans
+      tupleSingleTransition = toTuple singleTransition
+  in case singleTransition of
+       [a] -> [(a,"")]
+       _ -> tupleSingleTransition ++ getAllTransitions (snd (head tupleSingleTransition) : rest)
+ where
+   toTuple [a,b] = [(a,b)]
+   toTuple [] = []
+   toTuple _ = error "toTuple: a single transition was not generated"
+
+epochStateDiffs
+  :: [(Text,Text)]
+  -> Text
+epochStateDiffs [] = "No epoch state values to compare"
+epochStateDiffs states =
+  -- We first get the block number changes
+  labelAllEpochStateTransitions
+    [ Text.pack $ epochStateTransitionDiff (Text.unpack i) (Text.unpack n)
+    | (i, n) <- states
+    ] & Text.intercalate "\n"
+ where
+  labelSingleEpochStateTransition :: Int -> Text
+  labelSingleEpochStateTransition transitionNumber =
+    "Epoch state transition: " <> Text.pack (show transitionNumber)
+
+  labelAllEpochStateTransitions [] = []
+  labelAllEpochStateTransitions trans =
+    go trans (1 :: Int) []
+   where
+     go [] _ acc = acc
+     go (x:xs) 1 _ = go xs 2 [labelSingleEpochStateTransition 1, x]
+     go (x:xs) n acc = go xs (n + 1) (acc ++ [labelSingleEpochStateTransition n, x])
+
+epochStateTransitionDiff
+  :: String -- ^ Initial epoch state
+  -> String -- ^ Following epoch state
+  -> String
+epochStateTransitionDiff initialState next =
+  let removeBlockNumberChangeInitial = lines initialState
+      removeBlockNumberChangeNext = lines next
+      diffResult = getGroupedDiff removeBlockNumberChangeInitial removeBlockNumberChangeNext
+  in if null diffResult
+     then "No changes in epoch state"
+     else ppDiff diffResult
+
+instance (L.EraTxOut ledgerera, L.EraGov ledgerera) => ToJSON (L.NewEpochState ledgerera) where
+  toJSON (L.NewEpochState nesEL nesBprev nesBCur nesEs nesRu nesPd _stashedAvvm)=
+    object
+      [ "currentEpoch" .= nesEL
+      , "priorBlocks" .= nesBprev
+      , "currentEpochBlocks" .= nesBCur
+      , "currentEpochState" .= nesEs
+      , "rewardUpdate" .= nesRu
+      , "currentStakeDistribution" .= nesPd
+      ]
 
