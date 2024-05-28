@@ -16,7 +16,7 @@ module Cardano.Testnet.Test.Cli.Query
 import           Cardano.Api as Api
 import           Cardano.Api.Experimental (Some (..))
 import           Cardano.Api.Internal.Genesis as Api
-import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval), extractHash,
+import           Cardano.Api.Ledger (Coin (Coin), EpochInterval (EpochInterval),
                    unboundRational)
 import qualified Cardano.Api.Ledger as L
 import           Cardano.Api.Shelley (StakeCredential (StakeCredentialByKey))
@@ -26,9 +26,6 @@ import           Cardano.CLI.Type.Key (VerificationKeyOrFile (VerificationKeyFil
 import           Cardano.CLI.Type.Output (QueryTipLocalStateOutput)
 import           Cardano.Crypto.Hash (hashToStringAsHex)
 import qualified Cardano.Ledger.BaseTypes as L
-import           Cardano.Ledger.Core (valueTxOutL)
-import           Cardano.Ledger.Shelley.LedgerState (esLStateL, lsUTxOStateL, nesEpochStateL, utxoL)
-import qualified Cardano.Ledger.State as L
 import           Cardano.Testnet
 
 import           Prelude
@@ -55,7 +52,6 @@ import qualified Data.Vector as Vector
 import           GHC.Exts (IsList (..))
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import qualified GHC.Stack as GHC
-import           Lens.Micro ((^.))
 import           System.Directory (makeAbsolute)
 import           System.FilePath ((</>))
 
@@ -352,6 +348,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
                     [(ReferenceScriptAddress plutusV3Script, transferAmount)]
         signedTx <- signTx execConfig cEra refScriptSizeWork "signed-tx" txBody [Some $ paymentKeyInfoPair wallet1]
         submitTx execConfig cEra signedTx
+
         -- Wait until transaction is on chain and obtain transaction identifier
         txId <- retrieveTransactionId execConfig signedTx
         txIx <- H.evalMaybeM $ watchEpochStateUpdate epochStateView (EpochInterval 2) (getTxIx sbe txId transferAmount)
@@ -440,8 +437,9 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
       H.noteM_ $ execCli' execConfig [ eraName, "query", "treasury" ]
 
     TestQueryProposalsCmd -> do
-      -- TODO @cardano-cli team
-      pure ()
+      -- query proposals
+      -- Tested further in Cardano.Testnet.Test.Gov.ProposeNewConstitution.hprop_ledger_events_propose_new_constitution
+      H.noteM_ $ execCli' execConfig [ eraName, "query", "proposals", "--all-proposals" ]
 
     TestQueryLedgerPeerSnapshotCmd -> do
       -- TODO @cardano-cli team
@@ -501,15 +499,15 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     makeStakeAddress (fromNetworkMagic $ NetworkMagic $ fromIntegral testnetMagic) (StakeCredentialByKey $ verificationKeyHash delegatorVKey)
 
   getTxIx :: forall m era. HasCallStack => MonadTest m => ShelleyBasedEra era -> String -> Coin -> (AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe Int)
-  getTxIx sbe txId amount (AnyNewEpochState sbe' newEpochState, _, _) = do
+  getTxIx sbe txId amount (AnyNewEpochState sbe' _ tbs, _, _) = do
     Refl <- H.leftFail $ assertErasEqual sbe sbe'
-    shelleyBasedEraConstraints sbe' (do
-      return $ Map.foldlWithKey (\acc (L.TxIn (L.TxId thisTxId) (L.TxIx thisTxIx)) txOut ->
+    shelleyBasedEraConstraints sbe' $ do
+      return $ Map.foldlWithKey (\acc (TxIn (TxId thisTxId) (TxIx thisTxIx)) (TxOut _ txOutValue _ _) ->
         case acc of
-          Nothing | hashToStringAsHex (extractHash thisTxId) == txId &&
-                    valueToLovelace (fromLedgerValue sbe (txOut ^. valueTxOutL)) == Just amount -> Just $ fromIntegral thisTxIx
+          Nothing | hashToStringAsHex thisTxId == txId &&
+                    txOutValueToLovelace txOutValue == amount -> Just $ fromIntegral thisTxIx
                   | otherwise -> Nothing
-          x -> x) Nothing $ L.unUTxO $ newEpochState ^. nesEpochStateL . esLStateL . lsUTxOStateL . utxoL)
+          x -> x) Nothing $ getLedgerTablesUTxOValues sbe' tbs
 
 -- | @redactJsonStringFieldInFile [(k0, v0), (k1, v1), ..] sourceFilePath targetFilePath@ reads the JSON at @sourceFilePath@, and then
 -- replaces the value associated to @k0@ by @v0@, replaces the value associated to @k1@ by @v1@, etc.

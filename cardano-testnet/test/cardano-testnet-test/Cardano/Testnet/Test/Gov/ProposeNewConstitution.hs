@@ -23,11 +23,15 @@ import           Prelude
 
 import           Control.Monad
 import           Control.Monad.State.Strict (StateT)
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Lens as Aeson
 import           Data.Default.Class
 import           Data.Maybe
 import           Data.Maybe.Strict
 import           Data.String
 import qualified Data.Text as Text
+import           Data.Text.Encoding (decodeUtf8)
+import qualified Data.Vector as Vector
 import           GHC.Exts (IsList (..))
 import           Lens.Micro
 import           System.Directory (makeAbsolute)
@@ -173,7 +177,9 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
       ]
 
   let relativeUrlProposal = ["ipfs", proposalAnchorDataIpfsHash]
+      proposalAnchorUrl = "ipfs://" ++ proposalAnchorDataIpfsHash
       relativeUrlConstitution = ["ipfs", constitutionAnchorDataIpfsHash]
+      constitutionAnchorUrl = "ipfs://" ++ constitutionAnchorDataIpfsHash
 
   txbodyFp <- H.note $ work </> "tx.body"
   minDRepDeposit <- getMinDRepDeposit epochStateView ceo
@@ -242,6 +248,11 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
 
   waitForGovActionVotes epochStateView (EpochInterval 1)
 
+  txid <- execCli' execConfig [ eraName, "transaction", "txid", "--tx-file", unFile signedProposalTx ]
+
+  let txNoNewline = Text.unpack (Text.strip (Text.pack txid))
+  H.noteShow_ txNoNewline
+
   -- Count votes before checking for ratification. It may happen that the proposal gets removed after
   -- ratification because of a long waiting time, so we won't be able to access votes.
   govState <- getGovState epochStateView ceo
@@ -263,6 +274,73 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
       ()
       (\epochState _ _ -> foldBlocksCheckConstitutionWasRatified constitutionHash constitutionScriptHash epochState)
 
+  proposalsJSON :: Aeson.Value <- execCliStdoutToJson execConfig
+                                    [ eraName, "query", "proposals", "--governance-action-tx-id", txNoNewline
+                                    , "--governance-action-index", "0"
+                                    ]
+
+  -- Display JSON returned in case of failure
+  H.note_ $ Text.unpack . decodeUtf8 $ prettyPrintJSON proposalsJSON
+
+  -- Check that the proposals array has only one element and fetch it
+  proposalsArray <- H.evalMaybe $ proposalsJSON ^? Aeson._Array
+  length proposalsArray === 1
+  let proposal = proposalsArray Vector.! 0
+
+  -- Check TxId returned is the same as the one we used
+  proposalsTxId <- H.evalMaybe $ proposal ^? Aeson.key "actionId" . Aeson.key "txId" . Aeson._String
+  proposalsTxId === Text.pack txNoNewline
+
+  -- Check that committeeVotes is an empty object
+  proposalsCommitteeVotes <- H.evalMaybe $ proposal ^? Aeson.key "committeeVotes" . Aeson._Object
+  proposalsCommitteeVotes === mempty
+
+  -- Check that dRepVotes has the expected number of votes
+  proposalsDRepVotes <- H.evalMaybe $ proposal ^? Aeson.key "dRepVotes" . Aeson._Object
+  length proposalsDRepVotes === numVotes
+
+  -- Fetch proposalProcedure and anchor
+  proposalsProcedure <- H.evalMaybe $ proposal ^? Aeson.key "proposalProcedure"
+  proposalsAnchor <- H.evalMaybe $ proposalsProcedure ^? Aeson.key "anchor"
+
+  -- Check the dataHash of the anchor is the expected one
+  proposalsAnchorDataHash <- H.evalMaybe $ proposalsAnchor ^? Aeson.key "dataHash" . Aeson._String
+  proposalsAnchorDataHash === Text.pack proposalAnchorDataHash
+
+  -- Check the url of the anchor is the expected one
+  proposalsAnchorUrl <- H.evalMaybe $ proposalsAnchor ^? Aeson.key "url" . Aeson._String
+  proposalsAnchorUrl === Text.pack proposalAnchorUrl
+
+  -- Check the deposit amount is the expected one
+  proposalsDeposit <- H.evalMaybe $ proposalsProcedure ^? Aeson.key "deposit" . Aeson._Integer
+  proposalsDeposit === 1_000_000
+
+  -- Ensure there is only one non-null content in the proposalProcedure and fetch it
+  proposalsContents <- H.evalMaybe $ proposalsProcedure ^? Aeson.key "govAction" . Aeson.key "contents" . Aeson._Array
+  let nonEmptyContents = Vector.filter (/= Aeson.Null) proposalsContents
+  length nonEmptyContents === 1
+  let firstContent = nonEmptyContents Vector.! 0
+
+  -- Check the constitution hash and url are the expected ones
+  proposalsConstitutionAnchor <- H.evalMaybe $ firstContent ^? Aeson.key "anchor"
+  proposalsConstitutionAnchorDataHash <- H.evalMaybe $ proposalsConstitutionAnchor ^? Aeson.key "dataHash" . Aeson._String
+  proposalsConstitutionAnchorDataHash === Text.pack constitutionHash
+
+  proposalsConstitutionAnchorUrl <- H.evalMaybe $ proposalsConstitutionAnchor ^? Aeson.key "url" . Aeson._String
+  proposalsConstitutionAnchorUrl === Text.pack constitutionAnchorUrl
+
+  -- Check the constitution script hash is the expected one
+  proposalsScriptHash <- H.evalMaybe $ firstContent ^? Aeson.key "script" . Aeson._String
+  proposalsScriptHash === Text.pack constitutionScriptHash
+
+  -- Check the tag of the govAction is "NewConstitution"
+  proposalsTag <- H.evalMaybe $ proposalsProcedure ^? Aeson.key "govAction" . Aeson.key "tag" . Aeson._String
+  proposalsTag === "NewConstitution"
+
+  -- Check the stake pool votes are empty
+  proposalsStakePoolVotes <- H.evalMaybe $ proposal ^? Aeson.key "stakePoolVotes" . Aeson._Object
+  proposalsStakePoolVotes === mempty
+
 foldBlocksCheckConstitutionWasRatified
   :: String -- submitted constitution hash
   -> String -- submitted guard rail script hash
@@ -279,7 +357,7 @@ filterRatificationState
   -> String -- ^ Submitted guard rail script hash
   -> AnyNewEpochState
   -> Bool
-filterRatificationState c guardRailScriptHash (AnyNewEpochState sbe newEpochState) = do
+filterRatificationState c guardRailScriptHash (AnyNewEpochState sbe newEpochState _) = do
   caseShelleyToBabbageOrConwayEraOnwards
     (const $ error "filterRatificationState: Only conway era supported")
 

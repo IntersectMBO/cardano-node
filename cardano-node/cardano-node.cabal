@@ -70,6 +70,7 @@ library
   exposed-modules:      Cardano.Node.Configuration.Logging
                         Cardano.Node.Configuration.NodeAddress
                         Cardano.Node.Configuration.POM
+                        Cardano.Node.Configuration.LedgerDB
                         Cardano.Node.Configuration.Socket
                         Cardano.Node.Configuration.Topology
                         Cardano.Node.Configuration.TopologyP2P
@@ -146,7 +147,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 10.13.1
+                      , cardano-api ^>= 10.14
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>=0.2.2
@@ -189,9 +190,9 @@ library
                       , network-mux >= 0.5
                       , nothunks
                       , optparse-applicative-fork >= 0.18.1
-                      , ouroboros-consensus ^>= 0.24
-                      , ouroboros-consensus-cardano ^>= 0.23
-                      , ouroboros-consensus-diffusion ^>= 0.21
+                      , ouroboros-consensus ^>= 0.26
+                      , ouroboros-consensus-cardano ^>= 0.25
+                      , ouroboros-consensus-diffusion ^>= 0.22
                       , ouroboros-consensus-protocol
                       , ouroboros-network-api ^>= 0.13
                       , ouroboros-network ^>= 0.20
@@ -210,6 +211,9 @@ library
                       , stm <2.5.2 || >=2.5.3
                       , strict-sop-core
                       , strict-stm
+                      , sop-core
+                      , sop-extras
+                      , text >= 2.0
                       , time
                       , trace-dispatcher ^>= 2.9
                       , trace-forward ^>= 2.2.11
@@ -273,7 +277,6 @@ test-suite cardano-node-test
                       , ouroboros-network-api
                       , strict-sop-core
                       , text
-                      , time
                       , transformers
                       , vector
                       , yaml

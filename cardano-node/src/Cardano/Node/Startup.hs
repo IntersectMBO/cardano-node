@@ -131,6 +131,7 @@ data StartupTrace blk =
   | BIByron BasicInfoByron
   | BINetwork BasicInfoNetwork
   | LedgerPeerSnapshotLoaded (WithOrigin SlotNo)
+  | MovedTopLevelOption String
 
 data EnabledBlockForging = EnabledBlockForging
                          | DisabledBlockForging

@@ -58,7 +58,7 @@ import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..),
                    OneEraForgeStateUpdateError (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
-import           Ouroboros.Consensus.Ledger.Abstract (IsLedger)
+import           Ouroboros.Consensus.Ledger.Abstract (EmptyMK)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import           Ouroboros.Consensus.Node (NodeKernel (..))
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
@@ -78,6 +78,7 @@ import           Data.ByteString (ByteString)
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Map.Strict as Map
 import           Data.SOP
+import           Data.SOP.Functors
 import           Data.Word (Word64)
 import           Lens.Micro ((^.))
 
@@ -229,10 +230,10 @@ instance All GetKESInfo xs => GetKESInfo (HardForkBlock xs) where
 -- * General ledger
 --
 class LedgerQueries blk where
-  ledgerUtxoSize     :: LedgerState blk -> Int
-  ledgerDelegMapSize :: LedgerState blk -> Int
-  ledgerDRepCount    :: LedgerState blk -> Int
-  ledgerDRepMapSize  :: LedgerState blk -> Int
+  ledgerUtxoSize     :: LedgerState blk EmptyMK -> Int
+  ledgerDelegMapSize :: LedgerState blk EmptyMK -> Int
+  ledgerDRepCount    :: LedgerState blk EmptyMK -> Int
+  ledgerDRepMapSize  :: LedgerState blk EmptyMK -> Int
 
 instance LedgerQueries Byron.ByronBlock where
   ledgerUtxoSize = Map.size . Byron.unUTxO . Byron.cvsUtxo . Byron.byronLedgerState
@@ -277,10 +278,10 @@ instance Shelley.EraCertState era => LedgerQueries (Shelley.ShelleyBlock protoco
 
 instance (LedgerQueries x, NoHardForks x)
       => LedgerQueries (HardForkBlock '[x]) where
-  ledgerUtxoSize     = ledgerUtxoSize     . project
-  ledgerDelegMapSize = ledgerDelegMapSize . project
-  ledgerDRepCount    = ledgerDRepCount    . project
-  ledgerDRepMapSize  = ledgerDRepMapSize  . project
+  ledgerUtxoSize     = ledgerUtxoSize     . unFlip . project . Flip
+  ledgerDelegMapSize = ledgerDelegMapSize . unFlip . project . Flip
+  ledgerDRepCount    = ledgerDRepCount    . unFlip . project . Flip
+  ledgerDRepMapSize  = ledgerDRepMapSize  . unFlip . project . Flip
 
 instance LedgerQueries (Cardano.CardanoBlock c) where
   ledgerUtxoSize = \case
@@ -341,8 +342,7 @@ mapNodeKernelDataIO f (NodeKernelData ref) =
   readIORef ref >>= traverse f
 
 nkQueryLedger ::
-     IsLedger (LedgerState blk)
-  => (ExtLedgerState blk -> a)
+     (ExtLedgerState blk EmptyMK -> a)
   -> NodeKernel IO RemoteAddress LocalConnectionId blk
   -> IO a
 nkQueryLedger f NodeKernel{getChainDB} =
