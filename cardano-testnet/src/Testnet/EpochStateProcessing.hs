@@ -37,7 +37,7 @@ maybeExtractGovernanceActionIndex
   => TxId -- ^ transaction id searched for
   -> AnyNewEpochState
   -> Maybe Word16
-maybeExtractGovernanceActionIndex txid (AnyNewEpochState sbe newEpochState) =
+maybeExtractGovernanceActionIndex txid (AnyNewEpochState sbe newEpochState _) =
   caseShelleyToBabbageOrConwayEraOnwards
     (const $ error "Governance actions only available in Conway era onwards")
     (\ceo -> conwayEraOnwardsConstraints ceo $ do
@@ -68,7 +68,7 @@ waitForGovActionVotes epochStateView maxWait = withFrozenCallStack $ do
       :: HasCallStack
       => (AnyNewEpochState, SlotNo, BlockNo)
       -> m (Maybe ())
-    checkForVotes (AnyNewEpochState actualEra newEpochState, _, _) = withFrozenCallStack $ do
+    checkForVotes (AnyNewEpochState actualEra newEpochState _, _, _) = withFrozenCallStack $ do
       caseShelleyToBabbageOrConwayEraOnwards
         (const $ H.note_ "Only Conway era onwards is supported" >> failure)
         (\ceo -> do
@@ -85,4 +85,3 @@ waitForGovActionVotes epochStateView maxWait = withFrozenCallStack $ do
               else pure $ Just ()
         )
         actualEra
-
