@@ -65,7 +65,7 @@ maybeExtractGovernanceActionIndex
   => TxId -- ^ transaction id searched for
   -> AnyNewEpochState
   -> Maybe Word32
-maybeExtractGovernanceActionIndex txid (AnyNewEpochState sbe newEpochState) =
+maybeExtractGovernanceActionIndex txid (AnyNewEpochState sbe newEpochState _) =
   caseShelleyToBabbageOrConwayEraOnwards
     (const $ error "Governance actions only available in Conway era onwards")
     (\ceo -> conwayEraOnwardsConstraints ceo $ do
@@ -88,13 +88,13 @@ watchEpochStateView
   -> EpochInterval -- ^ The maximum number of epochs to wait
   -> m (Maybe a)
 watchEpochStateView epochStateView f (EpochInterval maxWait) = withFrozenCallStack $ do
-  AnyNewEpochState _ newEpochState <- getEpochState epochStateView
+  AnyNewEpochState _ newEpochState _ <- getEpochState epochStateView
   let EpochNo currentEpoch = L.nesEL newEpochState
   go (EpochNo $ currentEpoch + fromIntegral maxWait)
     where
       go :: EpochNo -> m (Maybe a)
       go (EpochNo timeout) = do
-        epochState@(AnyNewEpochState _ newEpochState') <- getEpochState epochStateView
+        epochState@(AnyNewEpochState _ newEpochState' _) <- getEpochState epochStateView
         let EpochNo currentEpoch = L.nesEL newEpochState'
         condition <- f epochState
         case condition of
@@ -105,4 +105,3 @@ watchEpochStateView epochStateView f (EpochInterval maxWait) = withFrozenCallSta
               else do
                 H.threadDelay 100_000
                 go (EpochNo timeout)
-

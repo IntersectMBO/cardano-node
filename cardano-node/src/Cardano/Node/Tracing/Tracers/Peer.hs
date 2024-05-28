@@ -40,6 +40,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           GHC.Conc (labelThread, myThreadId)
 import           Text.Printf (printf)
 
 {- HLINT ignore "Use =<<" -}
@@ -51,7 +52,7 @@ startPeerTracer
   -> Int
   -> IO ()
 startPeerTracer tr nodeKern delayMilliseconds = do
-    as <- async peersThread
+    as <- async $ myThreadId >>= flip labelThread "PeersCapturing" >> peersThread
     link as
   where
     peersThread :: IO ()

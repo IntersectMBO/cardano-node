@@ -130,7 +130,7 @@ checkStakeKeyRegistered tempAbsP nodeConfigFile sPath terminationEpoch execConfi
                     ]
  where
   handler :: StakeAddress -> AnyNewEpochState -> SlotNo -> BlockNo -> StateT DelegationsAndRewards IO LedgerStateCondition
-  handler (StakeAddress network sCred) (AnyNewEpochState sbe newEpochState) _ _ =
+  handler (StakeAddress network sCred) (AnyNewEpochState sbe newEpochState _) _ _ =
     let umap = shelleyBasedEraConstraints sbe $ newEpochState ^. L.nesEsL . L.epochStateUMapL
         dag = L.filterStakePoolDelegsAndRewards umap $ Set.singleton sCred
         allStakeCredentials = umap ^. L.umElemsL -- This does not include pointer addresses

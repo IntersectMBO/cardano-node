@@ -17,19 +17,19 @@ import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import           Cardano.Logging
 import           Cardano.Node.Queries (LedgerQueries (..), NodeKernelData (..))
 import           Cardano.Slotting.Slot (fromWithOrigin)
-import           Ouroboros.Consensus.Block (SlotNo (..))
+import           Ouroboros.Consensus.Block (SlotNo (..), blockNo, BlockNo (..))
 import           Ouroboros.Consensus.HardFork.Combinator
-import           Ouroboros.Consensus.Ledger.Abstract (IsLedger)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
+import           Ouroboros.Consensus.Ledger.SupportsProtocol
 import           Ouroboros.Consensus.Node (NodeKernel (..))
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (BlockNo (..), blockNo, unBlockNo)
+import qualified Ouroboros.Consensus.Storage.LedgerDB.API as LedgerDB
 
 import           Control.Concurrent.STM (atomically)
 import           Data.IORef (readIORef)
 import           Data.Word (Word64)
+import qualified Ouroboros.Network.AnchoredFragment as AF
 
 
 type ForgeTracerType blk = Either (TraceForgeEvent blk)
@@ -46,12 +46,9 @@ data TraceStartLeadershipCheckPlus =
     }
 
 forgeTracerTransform ::
-  (  IsLedger (LedgerState blk)
+  (  LedgerSupportsProtocol blk
   ,  LedgerQueries blk
-#if __GLASGOW_HASKELL__ >= 906
-  , AF.HasHeader blk
-#endif
-  ,  AF.HasHeader (Header blk))
+  )
   => NodeKernelData blk
   -> Trace IO (ForgeTracerType blk)
   -> IO (Trace IO (ForgeTracerType blk))
@@ -67,9 +64,10 @@ forgeTracerTransform (NodeKernelData ref) (Trace tr) =
                                ledger <- fmap ledgerState . atomically $
                                            ChainDB.getCurrentLedger getChainDB
                                chain  <- atomically $ ChainDB.getCurrentChain getChainDB
+                               utxoSize <- fmap (maybe 0 LedgerDB.ledgerTableSize) (ChainDB.getStatistics getChainDB)
                                pure TraceStartLeadershipCheckPlus {
                                    tsSlotNo
-                                 , tsUtxoSize     = ledgerUtxoSize       ledger
+                                 , tsUtxoSize     = utxoSize
                                  , tsDelegMapSize = ledgerDelegMapSize   ledger
                                  , tsDRepCount    = ledgerDRepCount      ledger
                                  , tsDRepMapSize  = ledgerDRepMapSize    ledger

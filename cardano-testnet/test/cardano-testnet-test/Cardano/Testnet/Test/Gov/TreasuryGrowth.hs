@@ -67,7 +67,7 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 0 "growing-treasur
        H.failure
   where
     handler :: AnyNewEpochState -> SlotNo -> BlockNo -> StateT (Map EpochNo Integer) IO LedgerStateCondition
-    handler (AnyNewEpochState _ newEpochState) _slotNo _blockNo = do
+    handler (AnyNewEpochState _ newEpochState _) _slotNo _blockNo = do
       let (Coin coin) = newEpochState ^. L.nesEsL . L.esAccountStateL . L.asTreasuryL
           epochNo = newEpochState ^. L.nesELL
       -- handler is executed multiple times per epoch, so we keep only the latest treasury value
@@ -89,4 +89,3 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 0 "growing-treasur
       [] -> False
       [_] -> True
       (x:y:xs) -> x <= y && checkNonDecreasing (y:xs)
-

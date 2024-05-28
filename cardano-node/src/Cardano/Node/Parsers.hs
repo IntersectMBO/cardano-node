@@ -12,6 +12,7 @@ module Cardano.Node.Parsers
   ) where
 
 import           Cardano.Logging.Types
+import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.NodeAddress (File (..),
                    NodeHostIPv4Address (NodeHostIPv4Address),
                    NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath)
@@ -22,8 +23,10 @@ import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
 import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
+import           Ouroboros.Consensus.Storage.LedgerDB.Impl.Snapshots (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
+import           Ouroboros.Consensus.Storage.LedgerDB.V1.Args (FlushFrequency (..),
+                   QueryBatchSize (..))
 
 import           Data.Foldable
 import           Data.Maybe (fromMaybe)
@@ -70,14 +73,24 @@ nodeRunParser = do
 
   -- NodeConfiguration filepath
   nodeConfigFp <- lastOption parseConfigFile
-  numOfDiskSnapshots <- lastOption parseNumOfDiskSnapshots
-  snapshotInterval   <- lastOption parseSnapshotInterval
 
   validate <- lastOption parseValidateDB
   shutdownIPC <- lastOption parseShutdownIPC
   shutdownOnLimit <- lastOption parseShutdownOn
 
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
+
+  -- LedgerDB configuration
+  numOfDiskSnapshots <- lastOption parseNumOfDiskSnapshots
+  snapshotInterval   <- lastOption parseSnapshotInterval
+  ledgerDBBackend    <- lastOption parseLedgerDBBackend
+  pncFlushFrequency  <- lastOption parseFlushFrequency
+  pncQueryBatchSize  <- lastOption parseQueryBatchSize
+
+  -- Storing to SSD configuration
+  ssdDatabaseDir    <- lastOption parseSsdDatabaseDir
+  ssdSnapshotState  <- lastOption parseSsdSnapshotState
+  ssdSnapshotTables <- lastOption parseSsdSnapshotTables
 
   pure $ PartialNodeConfiguration
            { pncSocketConfig =
@@ -90,8 +103,6 @@ nodeRunParser = do
            , pncTopologyFile = TopologyFile <$> topFp
            , pncDatabaseFile = DbFile <$> dbFp
            , pncDiffusionMode = mempty
-           , pncNumOfDiskSnapshots = numOfDiskSnapshots
-           , pncSnapshotInterval = snapshotInterval
            , pncExperimentalProtocolsEnabled = mempty
            , pncProtocolFiles = Last $ Just ProtocolFilepaths
              { byronCertFile
@@ -113,6 +124,11 @@ nodeRunParser = do
            , pncTraceConfig = mempty
            , pncTraceForwardSocket = traceForwardSocket
            , pncMaybeMempoolCapacityOverride = maybeMempoolCapacityOverride
+           , pncNumOfDiskSnapshots = numOfDiskSnapshots
+           , pncSnapshotInterval = snapshotInterval
+           , pncLedgerDBBackend = ledgerDBBackend
+           , pncFlushFrequency
+           , pncQueryBatchSize
            , pncProtocolIdleTimeout = mempty
            , pncTimeWaitTimeout = mempty
            , pncChainSyncIdleTimeout = mempty
@@ -126,6 +142,9 @@ nodeRunParser = do
            , pncTargetNumberOfActiveBigLedgerPeers = mempty
            , pncEnableP2P = mempty
            , pncPeerSharing = mempty
+           , pncSsdDatabaseDir = ssdDatabaseDir
+           , pncSsdSnapshotState = ssdSnapshotState
+           , pncSsdSnapshotTables = ssdSnapshotTables
            }
 
 parseSocketPath :: Text -> Parser SocketPath
@@ -221,8 +240,71 @@ parseMempoolCapacityOverride = parseOverride <|> parseNoOverride
     parseNoOverride =
       flag' NoMempoolCapacityBytesOverride
         (  long "no-mempool-capacity-override"
-        <> help "The port number"
+        <> help "Don't override the mempool capacity"
         )
+
+parseLedgerDBBackend :: Parser LedgerDbSelectorFlag
+parseLedgerDBBackend = parseV1InMemory <|> parseV2InMemory <|> parseLMDB <*> optional parseMapSize
+  where
+    parseV1InMemory :: Parser LedgerDbSelectorFlag
+    parseV1InMemory =
+      flag' V1InMemory (  long "v1-in-memory-ledger-db-backend"
+                     <> help "Use the V1 InMemory ledger DB backend. \
+                             \ Incompatible with `--lmdb-ledger-db-backend`. \
+                             \ The node uses the in-memory backend by default \
+                             \ if no ``--*-db-backend`` flags are set."
+                     )
+
+    parseV2InMemory :: Parser LedgerDbSelectorFlag
+    parseV2InMemory =
+      flag' V2InMemory (  long "v2-in-memory-ledger-db-backend"
+                     <> help "Use the V2 InMemory ledger DB backend. \
+                             \ Incompatible with `--lmdb-ledger-db-backend`. \
+                             \ The node uses the in-memory backend by default \
+                             \ if no ``--*-db-backend`` flags are set."
+                     )
+
+    parseLMDB :: Parser (Maybe Gigabytes -> LedgerDbSelectorFlag)
+    parseLMDB =
+      flag' V1LMDB (  long "v1-lmdb-ledger-db-backend"
+                 <> help "Use the LMDB ledger DB backend. By default, the \
+                         \ mapsize (maximum database size) of the backend \
+                         \ is set to 16 Gigabytes. Warning: if the database \
+                         \ size exceeds the given mapsize, the node will \
+                         \ abort. Therefore, the mapsize should be set to a \
+                         \ value high enough to guarantee that the maximum \
+                         \ database size will not be reached during the \
+                         \ expected node uptime. \
+                         \ Incompatible with `--in-memory-ledger-db-backend`."
+                )
+
+    parseMapSize :: Parser Gigabytes
+    parseMapSize =
+      option auto (
+           long "lmdb-mapsize"
+        <> metavar "NR_GIGABYTES"
+        <> help "The maximum database size defined in number of Gigabytes."
+      )
+
+parseFlushFrequency :: Parser FlushFrequency
+parseFlushFrequency = RequestedFlushFrequency <$>
+  option auto (
+      long "flush-frequency"
+    <> metavar "WORD"
+    <> help "Flush parts of the ledger state to disk after WORD blocks have \
+            \moved into the immutable part of the chain. This should be at \
+            \least 0."
+    )
+
+parseQueryBatchSize :: Parser QueryBatchSize
+parseQueryBatchSize = RequestedQueryBatchSize <$>
+  option auto (
+       long "query-batch-size"
+    <> metavar "WORD"
+    <> help "When reading large amounts of ledger state data from disk for a \
+            \ledger state query, perform reads in batches of WORD size. This \
+            \should be at least 1."
+    )
 
 parseDbPath :: Parser FilePath
 parseDbPath =
@@ -348,6 +430,29 @@ parseSnapshotInterval = fmap (RequestedSnapshotInterval . secondsToDiffTime) par
         <> metavar "SNAPSHOTINTERVAL"
         <> help "Snapshot Interval (in seconds)"
     )
+
+parseSsdDatabaseDir :: Parser FilePath
+parseSsdDatabaseDir =
+  strOption
+    ( long "ssd-database-dir"
+      <> metavar "FILEPATH"
+      <> help "Directory where the LMDB is stored."
+      <> completer (bashCompleter "file")
+    )
+
+parseSsdSnapshotState :: Parser Bool
+parseSsdSnapshotState =
+  switch (
+       long "ssd-snapshot-state"
+    <> help "Store serialization of the ledger state in the SSD dir."
+  )
+
+parseSsdSnapshotTables :: Parser Bool
+parseSsdSnapshotTables =
+  switch (
+       long "ssd-snapshot-tables"
+    <> help "Store the copied LMDB tables in the SSD dir."
+  )
 
 -- | Produce just the brief help header for a given CLI option parser,
 --   without the options.

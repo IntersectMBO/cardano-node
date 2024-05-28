@@ -207,7 +207,7 @@ activityChangeProposalTest execConfig epochStateView configurationFile socketPat
   where
     isDRepActivityUpdated :: (HasCallStack, MonadTest m)
               => EpochInterval -> AnyNewEpochState -> m (Maybe ())
-    isDRepActivityUpdated (EpochInterval expected) (AnyNewEpochState sbe newEpochState) =
+    isDRepActivityUpdated (EpochInterval expected) (AnyNewEpochState sbe newEpochState _) =
       caseShelleyToBabbageOrConwayEraOnwards
         (const $ error "activityChangeProposalTest: Only conway era onwards supported")
         (const $ do

@@ -38,7 +38,7 @@ jobs:
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2024-04-24"
+      CABAL_CACHE_VERSION: "2024-04-28"
 
     concurrency:
       group: >
@@ -74,6 +74,19 @@ jobs:
       uses: input-output-hk/actions/base@latest
       with:
         use-sodium-vrf: true # default is true
+
+    - name: Linux install lmdb
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt install liblmdb-dev
+
+    - name: Mac install lmdb
+      if: matrix.os == 'macos-latest'
+      run: brew install lmdb
+
+    - name: Windows install lmdb
+      if: matrix.os == 'windows-latest'
+      shell: 'C:/msys64/usr/bin/bash.exe -e {0}'
+      run: /usr/bin/pacman --noconfirm -S mingw-w64-x86_64-lmdb
 
     - uses: actions/checkout@v4
 

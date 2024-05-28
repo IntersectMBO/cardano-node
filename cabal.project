@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2024-03-26T06:28:59Z
-  , cardano-haskell-packages 2024-05-14T16:00:00Z
+  , hackage.haskell.org 2024-05-28T12:37:56Z
+  , cardano-haskell-packages 2024-05-29T10:15:00Z
 
 packages:
   cardano-node
@@ -59,3 +59,24 @@ package plutus-scripts-bench
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
 -- `smtp-mail` should depend on `crypton-connection` rather than `connection`!
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus
+  tag: 492183e01719246464afe417318404d783a34585
+  --sha256: 0y0idvbpp6h1fzzlaq6ak68p6njr0kd8v2cdc4ah9wp49w64shyr
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-diffusion
+    ouroboros-consensus-protocol
+    sop-extras
+    strict-sop-core
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api
+  tag: d46cad14f364c9223154cd030630198532f4a807
+  --sha256: 0ni3zkasix98y94n97i10qjawk22zh4crr913nvbzfmx2j0sggpk
+  subdir:
+    cardano-api
