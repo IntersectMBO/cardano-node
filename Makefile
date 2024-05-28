@@ -100,6 +100,7 @@ PROFILES_VENDOR           := dish dish-plutus dish-10M dish-10M-plutus
 PROFILES_NOMAD_PERF       := default-nomadperf ci-test-nomadperf ci-bench-nomadperf value-nomadperf oldtracing-nomadperf ci-test-oldtracing-nomadperf ci-bench-oldtracing-nomadperf value-oldtracing-nomadperf
 PROFILES_NOMAD_PERF       += plutus-nomadperf plutus24-nomadperf fast-nomadperf latency-nomadperf
 PROFILES_NOMAD_PERF       += plutusv3-blst-nomadperf plutusv3-blst-half-nomadperf plutusv3-blst-double-nomadperf
+PROFILES_NOMAD_PERF       += plutus-secp-ecdsa-nomadperf plutus-secp-schnorr-nomadperf
 PROFILES_NOMAD_PERF_DREP  := value-drep1k-nomadperf value-drep2k-nomadperf value-drep10k-nomadperf value-drep100k-nomadperf
 PROFILES_NOMAD_PERF_DREP  += plutus-drep1k-nomadperf plutus-drep2k-nomadperf plutus-drep10k-nomadperf plutus-drep100k-nomadperf
 PROFILES_NOMAD_PERF_NOP2P := default-nomadperf-nop2p oldtracing-nomadperf-nop2p ci-test-nomadperf-nop2p ci-bench-nomadperf-nop2p

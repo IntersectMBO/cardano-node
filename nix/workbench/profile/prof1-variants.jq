@@ -765,6 +765,15 @@ def all_profile_variants:
         }
     }) as $nomad_perf_plutusv3blst_base
   |
+   ($nomad_perf_plutus_common_base *
+    { analysis:
+        { filters:                        ["epoch3+", "size-moderate"]
+        }
+      , generator:
+        { tps:                            2.0
+        }
+    }) as $nomad_perf_plutussecp_base
+  |
    ($scenario_latency * $compose_fiftytwo * $dataset_empty * $no_filtering *
     { desc: "AWS perf class cluster, stop when all latency services stop"
     }) as $nomad_perf_latency_base
@@ -885,6 +894,10 @@ def all_profile_variants:
   # P&T Nomad cluster: 52 nodes, P2P by default - PlutusV3 BLST workload
     ($nomad_perf_plutusv3blst_base * $nomad_perf_dense * $p2p * $costmodel_v9_preview
     ) as $plutusv3blst_nomadperf_template
+  |
+  # P&T Nomad cluster: 52 nodes, P2P by default - Plutus SECP workload
+    ($nomad_perf_plutussecp_base * $nomad_perf_dense * $p2p * $costmodel_v8_preview
+    ) as $plutussecp_nomadperf_template
   |
 
   ### First, auto-named profiles:
@@ -1149,7 +1162,7 @@ def all_profile_variants:
     { name: "latency-nomadperfssd"
     }
 
-## P&T Nomad cluster: 52 nodes, PlutusV3 BLST workloads
+## P&T Nomad cluster: 52 nodes, PlutusV3 BLST and Plutus SECP workloads
   , $plutusv3blst_nomadperf_template *
     { name: "plutusv3-blst-nomadperf"
     }
@@ -1158,6 +1171,12 @@ def all_profile_variants:
     }
   , $plutusv3blst_nomadperf_template * $costmodel_v9_preview_doubleb *
     { name: "plutusv3-blst-double-nomadperf"
+    }
+  , $plutussecp_nomadperf_template * $plutus_loop_secp_ecdsa *
+    { name: "plutus-secp-ecdsa-nomadperf"
+    }
+  , $plutussecp_nomadperf_template * $plutus_loop_secp_schnorr *
+    { name: "plutus-secp-schnorr-nomadperf"
     }
 
 ## P&T Nomad cluster: 52 nodes, value-only and Plutus workloads - DRep injection variants
