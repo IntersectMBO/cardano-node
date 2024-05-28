@@ -1272,6 +1272,7 @@ instance
   , LogFormatting (GenTx blk)
   , ToJSON (GenTxId blk)
   , LedgerSupportsMempool blk
+  , ConvertRawHash blk
   ) => LogFormatting (TraceEventMempool blk) where
   forMachine dtal (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
     mconcat
@@ -1311,6 +1312,26 @@ instance
       , "txsInvalidated" .= map (forMachine dtal . txForgetValidated) txs1
       , "mempoolSize" .= forMachine dtal mpSz
       ]
+  forMachine dtal (TraceMempoolSyncNotNeeded t) =
+    mconcat
+      [ "kind" .= String "TraceMempoolSyncNotNeeded"
+      , "tip" .= forMachine dtal t
+      ]
+  forMachine dtal (TraceMempoolAttemptingAdd tx) =
+    mconcat
+      [ "kind" .= String "TraceMempoolAttemptingAdd"
+      , "tx" .= forMachine dtal tx
+      ]
+  forMachine dtal (TraceMempoolLedgerFound p) =
+    mconcat
+      [ "kind" .= String "TraceMempoolLedgerFound"
+      , "tip" .= forMachine dtal p
+      ]
+  forMachine dtal (TraceMempoolLedgerNotFound p) =
+    mconcat
+      [ "kind" .= String "TraceMempoolLedgerNotFound"
+      , "tip" .= forMachine dtal p
+      ]
 
   forMachine _dtal (TraceMempoolSynced et) =
     mconcat
@@ -1340,6 +1361,10 @@ instance
     ]
   asMetrics (TraceMempoolSynced RisingEdge) = []
 
+  asMetrics TraceMempoolSyncNotNeeded {} = []
+  asMetrics TraceMempoolAttemptingAdd {} = []
+  asMetrics TraceMempoolLedgerFound {} = []
+  asMetrics TraceMempoolLedgerNotFound {} = []
 
 instance LogFormatting MempoolSize where
   forMachine _dtal MempoolSize{msNumTxs, msNumBytes} =
@@ -1355,12 +1380,20 @@ instance MetaTrace (TraceEventMempool blk) where
     namespaceFor TraceMempoolRemoveTxs {} = Namespace [] ["RemoveTxs"]
     namespaceFor TraceMempoolManuallyRemovedTxs {} = Namespace [] ["ManuallyRemovedTxs"]
     namespaceFor TraceMempoolSynced {} = Namespace [] ["Synced"]
+    namespaceFor TraceMempoolSyncNotNeeded {} = Namespace [] ["SyncNotNeeded"]
+    namespaceFor TraceMempoolAttemptingAdd {} = Namespace [] ["AttemptAdd"]
+    namespaceFor TraceMempoolLedgerFound {} = Namespace [] ["LedgerFound"]
+    namespaceFor TraceMempoolLedgerNotFound {} = Namespace [] ["LedgerNotFound"]
 
     severityFor (Namespace _ ["AddedTx"]) _ = Just Info
     severityFor (Namespace _ ["RejectedTx"]) _ = Just Info
     severityFor (Namespace _ ["RemoveTxs"]) _ = Just Info
-    severityFor (Namespace _ ["ManuallyRemovedTxs"]) _ = Just Info
     severityFor (Namespace _ ["Synced"]) _ = Just Debug
+    severityFor (Namespace _ ["ManuallyRemovedTxs"]) _ = Just Warning
+    severityFor (Namespace _ ["SyncNotNeeded"]) _ = Just Debug
+    severityFor (Namespace _ ["AttemptAdd"]) _ = Just Debug
+    severityFor (Namespace _ ["LedgerFound"]) _ = Just Debug
+    severityFor (Namespace _ ["LedgerNotFound"]) _ = Just Debug
     severityFor _ _ = Nothing
 
     metricsDocFor (Namespace _ ["AddedTx"]) =
@@ -1388,7 +1421,7 @@ instance MetaTrace (TraceEventMempool blk) where
     documentFor (Namespace _ ["AddedTx"]) = Just
       "New, valid transaction that was added to the Mempool."
     documentFor (Namespace _ ["RejectedTx"]) = Just $ mconcat
-      [ "New, invalid transaction thas was rejected and thus not added to"
+      [ "New, invalid transaction that was rejected and thus not added to"
       , " the Mempool."
       ]
     documentFor (Namespace _ ["RemoveTxs"]) = Just $ mconcat
@@ -1398,6 +1431,18 @@ instance MetaTrace (TraceEventMempool blk) where
       ]
     documentFor (Namespace _ ["ManuallyRemovedTxs"]) = Just
       "Transactions that have been manually removed from the Mempool."
+    documentFor (Namespace _ ["SyncNotNeeded"]) = Just
+      "The mempool and the LedgerDB are in sync already."
+    documentFor (Namespace _ ["Synced"]) = Just
+      "The mempool and the LedgerDB are syncing or in sync depending on the enclosed time."
+    documentFor (Namespace _ ["AttemptAdd"]) = Just
+      "Mempool is about to try to validate and add a transaction."
+    documentFor (Namespace _ ["LedgerNotFound"]) = Just $ mconcat
+      [ "Ledger state requested by the mempool no longer in LedgerDB."
+      , " Will have to re-sync."
+      ]
+    documentFor (Namespace _ ["LedgerFound"]) = Just
+      "Ledger state requested by the mempool is in the LedgerDB."
     documentFor _ = Nothing
 
     allNamespaces =
@@ -1406,6 +1451,10 @@ instance MetaTrace (TraceEventMempool blk) where
       , Namespace [] ["RemoveTxs"]
       , Namespace [] ["ManuallyRemovedTxs"]
       , Namespace [] ["Synced"]
+      , Namespace [] ["SyncNotNeeded"]
+      , Namespace [] ["AttemptAdd"]
+      , Namespace [] ["LedgerNotFound"]
+      , Namespace [] ["LedgerFound"]
       ]
 
 --------------------------------------------------------------------------------
