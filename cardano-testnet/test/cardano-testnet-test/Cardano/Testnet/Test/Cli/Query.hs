@@ -489,7 +489,7 @@ hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.
     makeStakeAddress (fromNetworkMagic $ NetworkMagic $ fromIntegral testnetMagic) (StakeCredentialByKey $ verificationKeyHash delegatorVKey)
 
   getTxIx :: forall m era. HasCallStack => MonadTest m => ShelleyBasedEra era -> String -> Coin -> (AnyNewEpochState, SlotNo, BlockNo) -> m (Maybe Int)
-  getTxIx sbe txId amount (AnyNewEpochState sbe' newEpochState, _, _) = do
+  getTxIx sbe txId amount (AnyNewEpochState sbe' newEpochState _, _, _) = do
     Refl <- H.leftFail $ assertErasEqual sbe sbe'
     shelleyBasedEraConstraints sbe' (do
       return $ Map.foldlWithKey (\acc (L.TxIn (L.TxId thisTxId) (L.TxIx thisTxIx)) txOut ->

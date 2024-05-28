@@ -66,18 +66,77 @@ allow-newer:
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
 
+-- UTxO-HD for 10.2
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/ouroboros-consensus.git
+  tag: 54ac1b2f5bd15f3f0f70e9f4a9ebf3e34792dcf2
+  --sha256: sha256-PdzKg4PA6DnzhRVUF2kiBfvf8S+ekXmws73XDXSZdnY=
+  subdir:
+    ouroboros-consensus
+    ouroboros-consensus-cardano
+    ouroboros-consensus-diffusion
+    ouroboros-consensus-protocol
+    sop-extras
+    strict-sop-core
+
+-- UTxO-HD for 10.2
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-api.git
-  tag: f93b1cf1b5f2649e14c42f70a948ca9c2e5edc70
-  --sha256: sha256-4+x6GSAJpOUzVuGEuMztdmG5+sSH3uym99YAH6a0Az0=
+  tag: e3b7712d80fe5721bccf5dccb89e626de12ae419
+  --sha256: sha256-Z2/qzlS4JfAtdSOc/V0r3wfbfOq6YWAobgmKKzlesdM=
   subdir:
     cardano-api
 
+-- UTxO-HD for 10.2
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-cli.git
-  tag: abb632ccf5887d53b33fc20283a2c4180b0ecd92
-  --sha256: sha256-WSI5zsVON99O9Elm2xqB05KCLHHjgf3Fw6nejdTyMAs=
+  tag: e79f19862109f38b990fd7d263f77b0d9d274d6b
+  --sha256: sha256-tfLWERumdn5rnltAaQX78rAojuJVzAWGBN3dIqZg6lQ=
   subdir:
     cardano-cli
+
+-- mempack support
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-base.git
+  tag: 297efc43b74291a24344ea7ea3b66e91a25af5a8
+  subdir:
+    cardano-crypto-class
+  --sha256: sha256-Kv8a3VSQLsqdEEynjyJqxKS8xQjbuqau3lS57GvT21o=
+
+-- mempack support
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-ledger
+  tag: c50d89688d9f30ea2dbd01afb19dbcaaf03e3da7
+  --sha256: sha256-3OVXLYCKSN4HPd3nsObK2mG8mB28AX46vuMqs+Jn3kw=
+  subdir:
+    eras/allegra/impl
+    eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/babbage/impl
+    eras/babbage/test-suite
+    eras/conway/impl
+    eras/conway/test-suite
+    eras/mary/impl
+    eras/shelley/impl
+    eras/shelley/test-suite
+    eras/shelley-ma/test-suite
+    libs/cardano-ledger-api
+    libs/cardano-ledger-core
+    libs/cardano-ledger-binary
+    libs/cardano-protocol-tpraos
+    libs/non-integral
+    libs/small-steps
+    libs/cardano-data
+    libs/set-algebra
+    libs/vector-map
+    eras/byron/chain/executable-spec
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/byron/ledger/impl/test
+    eras/byron/crypto
+    eras/byron/crypto/test
