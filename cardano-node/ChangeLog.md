@@ -3,6 +3,12 @@
 ## Next version
 
 - Use p2p network stack by default, warn when using the legacy network stack.
+- Deprecate some CLI flags corresponding to low-level consensus options. They are 
+  still accepted but a warning is emitted on startup on stderr suggesting to set 
+  them in the configuration file instead:
+  - `--mempool-capacity-override` and `--no-mempool-capacity-override` can be set in the configuration file via the key `MempoolCapacityBytesOverride`.
+  - `--snapshot-interval` can be set in the configuration file via the key `SnapshotInterval`.
+  - `--num-of-disk-snapshots` can be set in the configuration file via the key `NumOfDiskSnapshots`.
 
 ## 8.2.1 -- August 2023
 
