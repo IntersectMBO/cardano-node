@@ -221,7 +221,7 @@ filterRatificationState
   -> String -- ^ Submitted guard rail script hash
   -> AnyNewEpochState
   -> Bool
-filterRatificationState c guardRailScriptHash (AnyNewEpochState sbe newEpochState) = do
+filterRatificationState c guardRailScriptHash (AnyNewEpochState sbe newEpochState _) = do
   caseShelleyToBabbageOrConwayEraOnwards
     (const $ error "filterRatificationState: Only conway era supported")
 
