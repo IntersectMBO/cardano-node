@@ -270,7 +270,7 @@ getAnyWithdrawals
   -> m (Maybe (Map (Credential Staking) Coin))
 getAnyWithdrawals nodeConfigFile socketPath maxEpoch = withFrozenCallStack $ do
   fmap snd . H.leftFailM . evalIO . runExceptT $ foldEpochState nodeConfigFile socketPath FullValidation maxEpoch Nothing
-    $ \(AnyNewEpochState actualEra newEpochState) ->
+    $ \(AnyNewEpochState actualEra newEpochState _) ->
       caseShelleyToBabbageOrConwayEraOnwards
         (error $ "Expected Conway era onwards, got state in " <> docToString (pretty actualEra))
         (\cEra _ _ -> conwayEraOnwardsConstraints cEra $ do
@@ -298,7 +298,7 @@ getTreasuryWithdrawalProposal
   -> m (Maybe L.GovActionId)
 getTreasuryWithdrawalProposal nodeConfigFile socketPath maxEpoch = withFrozenCallStack $ do
   fmap snd . H.leftFailM . evalIO . runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
-      $ \(AnyNewEpochState actualEra newEpochState) ->
+      $ \(AnyNewEpochState actualEra newEpochState _) ->
         caseShelleyToBabbageOrConwayEraOnwards
           (error $ "Expected Conway era onwards, got state in " <> docToString (pretty actualEra))
           (\cEra _ _ -> conwayEraOnwardsConstraints cEra $ do

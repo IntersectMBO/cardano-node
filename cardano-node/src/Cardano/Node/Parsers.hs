@@ -22,14 +22,11 @@ import           Cardano.Node.Types
 import           Cardano.Prelude (ConvertText (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Node
-import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
-                   SnapshotInterval (..))
 
 import           Data.Foldable
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
-import           Data.Time.Clock (secondsToDiffTime)
 import           Data.Word (Word32)
 import           Options.Applicative hiding (str)
 import qualified Options.Applicative as Opt
@@ -75,8 +72,6 @@ nodeRunParser = do
   shutdownOnLimit <- lastOption parseShutdownOn
 
   -- Hidden options (to be removed eventually)
-  numOfDiskSnapshots <- lastOption parseNumOfDiskSnapshots
-  snapshotInterval   <- lastOption parseSnapshotInterval
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
 
   pure $ PartialNodeConfiguration
@@ -90,9 +85,6 @@ nodeRunParser = do
            , pncTopologyFile = TopologyFile <$> topFp
            , pncDatabaseFile = dbFp
            , pncDiffusionMode = mempty
-           , pncNumOfDiskSnapshots = numOfDiskSnapshots
-           , pncSnapshotInterval = snapshotInterval
-           , pncDoDiskSnapshotChecksum = mempty
            , pncExperimentalProtocolsEnabled = mempty
            , pncProtocolFiles = Last $ Just ProtocolFilepaths
              { byronCertFile
@@ -114,6 +106,7 @@ nodeRunParser = do
            , pncTraceConfig = mempty
            , pncTraceForwardSocket = traceForwardSocket
            , pncMaybeMempoolCapacityOverride = maybeMempoolCapacityOverride
+           , pncLedgerDbConfig = mempty
            , pncProtocolIdleTimeout = mempty
            , pncTimeWaitTimeout = mempty
            , pncChainSyncIdleTimeout = mempty
@@ -232,7 +225,6 @@ parseMempoolCapacityOverride = parseOverride <|> parseNoOverride
         (  long "no-mempool-capacity-override"
         <> help "[DEPRECATED: Set it in config file] Don't override mempool capacity"
         )
-
 
 parseNodeDatabasePaths :: Parser NodeDatabasePaths
 parseNodeDatabasePaths = parseDbPath <|> parseMultipleDbPaths
@@ -366,25 +358,6 @@ parseStartAsNonProducingNode =
         , "credentials are specified."
         ]
     ]
-
-parseNumOfDiskSnapshots :: Parser NumOfDiskSnapshots
-parseNumOfDiskSnapshots = fmap RequestedNumOfDiskSnapshots parseNum
-  where
-  parseNum = Opt.option auto
-    ( long "num-of-disk-snapshots"
-        <> metavar "NUMOFDISKSNAPSHOTS"
-        <> help "[DEPRECATED: Set it in config file with key NumOfDiskSnapshots] Number of ledger snapshots stored on disk."
-    )
-
--- TODO revisit because it sucks
-parseSnapshotInterval :: Parser SnapshotInterval
-parseSnapshotInterval = fmap (RequestedSnapshotInterval . secondsToDiffTime) parseDifftime
-  where
-  parseDifftime = Opt.option auto
-    ( long "snapshot-interval"
-        <> metavar "SNAPSHOTINTERVAL"
-        <> help "[DEPRECATED: Set it in config file with key SnapshotInterval] Snapshot Interval (in seconds)"
-    )
 
 -- | Produce just the brief help header for a given CLI option parser,
 --   without the options.
