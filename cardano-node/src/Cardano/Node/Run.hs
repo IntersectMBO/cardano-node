@@ -8,7 +8,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 {-# LANGUAGE TypeApplications #-}
 
 
@@ -31,6 +30,7 @@ import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..)
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
 import qualified Cardano.Crypto.Init as Crypto
+import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.Logging (LoggingLayer (..), createLoggingLayer,
                    nodeBasicInfo, shutdownLoggingLayer)
 import           Cardano.Node.Configuration.NodeAddress
@@ -65,10 +65,16 @@ import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Node (DiskPolicyArgs (..), NetworkP2PMode (..),
                    NodeDatabasePaths (..), RunNodeArgs (..), StdRunNodeArgs (..))
+import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNodeArgs (..),
+                   SnapshotPolicyArgs (..), StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (NodeDatabasePaths (..), getChainDB, run)
 import           Ouroboros.Consensus.Node.Genesis
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
+import qualified Ouroboros.Consensus.Node.Tracers as Consensus
+import qualified Ouroboros.Consensus.Storage.LedgerDB.Args as LDBArgs
+import           Ouroboros.Consensus.Storage.LedgerDB.V2.Args
+import           Ouroboros.Consensus.Util.Args
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import           Cardano.Network.PeerSelection.Bootstrap (UseBootstrapPeers (..))
@@ -131,6 +137,7 @@ import           Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import           Data.Monoid (Last (..))
 import           Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
+import           Data.SOP.Dict
 import           Data.Text (Text, breakOn, pack)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -154,6 +161,7 @@ import           System.Win32.File
 import           Paths_cardano_node (version)
 import Ouroboros.Network.Mux (noBindForkPolicy)
 
+import           Paths_cardano_node (version)
 
 {- HLINT ignore "Fuse concatMap/map" -}
 {- HLINT ignore "Redundant <$>" -}
@@ -406,6 +414,8 @@ handleSimpleNode
 handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
   logStartupWarnings
 
+  logDeprecatedLedgerDBOptions
+
   traceWith (startupTracer tracers)
     =<< StartupTime <$> getCurrentTime
 
@@ -558,7 +568,6 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
               , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride      = ncValidateDB nc
-              , srnDiskPolicyArgs               = diskPolicyArgs
               , srnDatabasePath                 = dbPath
               , srnDiffusionArguments           = diffusionArguments
               , srnDiffusionArgumentsExtra      = diffusionArgumentsExtra
@@ -569,6 +578,9 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               , srnChainSyncTimeout             = customizeChainSyncTimeout
               , srnSigUSR1SignalHandler         = \(Diffusion.P2PTracers p2ptracers) -> sigUSR1Handler p2ptracers
+              , srnSnapshotPolicyArgs           = snapshotPolicyArgs
+              , srnQueryBatchSize               = queryBatchSize
+              , srnLdbFlavorArgs                = selectorToArgs ldbBackend
               }
       DisabledP2PMode -> do
         nt <- TopologyNonP2P.readTopologyFileOrError nc
@@ -633,7 +645,6 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               { srnBfcMaxConcurrencyBulkSync   = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
               , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
               , srnChainDbValidateOverride     = ncValidateDB nc
-              , srnDiskPolicyArgs              = diskPolicyArgs
               , srnDatabasePath                = dbPath
               , srnDiffusionArguments          = diffusionArguments
               , srnDiffusionArgumentsExtra     = \_ _ _ -> mkNonP2PArguments ipProducers dnsProducers
@@ -644,6 +655,9 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
               , srnChainSyncTimeout            = customizeChainSyncTimeout
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               , srnSigUSR1SignalHandler         = mempty
+              , srnSnapshotPolicyArgs           = snapshotPolicyArgs
+              , srnQueryBatchSize               = queryBatchSize
+              , srnLdbFlavorArgs                = selectorToArgs ldbBackend
               }
  where
 
@@ -691,6 +705,14 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
                    (WarningDevelopmentNodeToClientVersions
                      developmentNtcVersions)
 
+
+  logDeprecatedLedgerDBOptions :: IO ()
+  logDeprecatedLedgerDBOptions =
+    case deprecatedOpts of
+      DeprecatedOptions [] -> pure ()
+      DeprecatedOptions opts ->
+        mapM_ (traceWith (startupTracer tracers) . MovedTopLevelOption) opts
+
   limitToLatestReleasedVersion :: forall k v.
        Ord k
     => ((Maybe NodeToNodeVersion, Maybe NodeToClientVersion) -> Maybe k)
@@ -703,12 +725,16 @@ handleSimpleNode blockType runP p2pMode tracers nc onKernel = do
         Nothing       -> id
         Just version_ -> Map.takeWhileAntitone (<= version_)
 
-  diskPolicyArgs :: DiskPolicyArgs
-  diskPolicyArgs =
-    DiskPolicyArgs
-      (ncSnapshotInterval nc)
-      (ncNumOfDiskSnapshots nc)
-      (ncDoDiskSnapshotChecksum nc)
+  LedgerDbConfiguration
+    snapInterval
+    numSnaps
+    queryBatchSize
+    ldbBackend
+    doChecksum
+    deprecatedOpts = ncLedgerDbConfig nc
+
+  snapshotPolicyArgs :: SnapshotPolicyArgs
+  snapshotPolicyArgs = SnapshotPolicyArgs numSnaps snapInterval doChecksum
 
 --------------------------------------------------------------------------------
 -- SIGHUP Handlers
@@ -867,21 +893,20 @@ updateLedgerPeerSnapshot startupTracer readLedgerPeerPath writeVar = do
 -- Helper functions
 --------------------------------------------------------------------------------
 
-canonDbPath :: NodeConfiguration -> IO NodeDatabasePaths
+canonDbPath :: NodeConfiguration -> IO Node.NodeDatabasePaths
 canonDbPath NodeConfiguration{ncDatabaseFile = nodeDatabaseFps} =
   case nodeDatabaseFps of
-    OnePathForAllDbs dbFp -> do
+    Node.OnePathForAllDbs dbFp -> do
       fp <- canonicalizePath =<< makeAbsolute dbFp
       createDirectoryIfMissing True fp
-      return $ OnePathForAllDbs fp
+      return $ Node.OnePathForAllDbs fp
 
-    MultipleDbPaths immutable volatile -> do
+    Node.MultipleDbPaths immutable volatile -> do
       canonImmutable <- canonicalizePath =<< makeAbsolute immutable
       canonVolatile  <- canonicalizePath =<< makeAbsolute volatile
       createDirectoryIfMissing True canonImmutable
       createDirectoryIfMissing True canonVolatile
-      return $ MultipleDbPaths canonImmutable canonVolatile
-
+      return $ Node.MultipleDbPaths canonImmutable canonVolatile
 
 -- | Make sure the VRF private key file is readable only
 -- by the current process owner the node is running under.

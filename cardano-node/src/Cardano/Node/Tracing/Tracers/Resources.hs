@@ -10,6 +10,8 @@ import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (async)
 import           Control.Monad (forM_, forever)
 import           Control.Monad.Class.MonadAsync (link)
+import           GHC.Conc (labelThread, myThreadId)
+
 import           "contra-tracer" Control.Tracer
 import           GHC.Conc (labelThread, myThreadId)
 

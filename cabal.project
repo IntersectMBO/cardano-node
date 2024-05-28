@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2025-01-01T23:24:19Z
+  , hackage.haskell.org 2025-01-14T03:16:27Z
   , cardano-haskell-packages 2025-02-11T21:18:23Z
 
 packages:
@@ -142,8 +142,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-consensus
-  tag: 1e2c0fed8e81c15575bf3cd3aaa9b6efde328d8d
-  --sha256: sha256-osyNYXxJqg4MS6ISXtEneuYRb0xBIr5ztGmxvMyGTL4=
+  tag: fcba3a3237ab3eeb586e77d832d8589040ba76cb
+  --sha256: sha256-7N3Bj5xbBxnuSyrIDKG3lwzGZcYlGWtVX774QajcoII=
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
@@ -155,8 +155,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-api
-  tag: de211cac855cf7e9e1bcd668a86bc121057efcc1
-  --sha256: sha256-PX/NITXB65xIIS1enOeHbVZCq0CAksVM1kq24Uco1pg=
+  tag: 6cd788930737d6ba1d9d913f7238236b3d491aeb
+  --sha256: sha256-r+5tL02reNTVeyxSJaC9RGbYEDDhRggMPWsWqKeMHrs=
   subdir:
     cardano-api
     cardano-api-gen
@@ -164,8 +164,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-cli
-  tag: 9006b84a459c62e5b278e1fe23228ba2601da714
-  --sha256: sha256-4uHXUTCH/cvqAkCcCBqA5RzCZNItsE4FOqGBTVVvLVQ=
+  tag: 96e72515784ace9cdf15a2e06861b9f62b0833b8
+  --sha256: sha256-GC3PTaDhWSvyqGPYa+SjKq/G/sRLuOUoq3Wk0SH55vw=
   subdir:
     cardano-cli
 
