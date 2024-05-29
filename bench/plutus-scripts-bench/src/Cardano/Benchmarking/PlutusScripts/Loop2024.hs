@@ -7,7 +7,7 @@
 -- PlutusV1 must be compiled using plc 1.0
 {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:target-version=1.0.0 #-}
 
-module Cardano.Benchmarking.PlutusScripts.Loop (script) where
+module Cardano.Benchmarking.PlutusScripts.Loop2024 (script) where
 
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax

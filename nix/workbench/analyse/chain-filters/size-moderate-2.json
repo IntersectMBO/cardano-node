@@ -7,7 +7,7 @@
 , { "tag": "CBlock"
   , "contents":
     { "tag": "BFullnessLEq"
-    , "contents": 0.112
+    , "contents": 0.105
     }
   }
 ]

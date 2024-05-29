@@ -40,12 +40,7 @@ case "$op" in
     prepare-cache-entry )
         local usage="USAGE:  wb genesis $op [--force] PROFILE-JSON NODE-SPECS OUTDIR CACHEDIR"
 
-        local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
-        local node_specs=${2:-$WB_SHELL_PROFILE_DATA/node-specs.json}
-        local cacheDir=${3:-$(envjqr 'cacheDir')}
-
         local regenesis_causes=()
-
         while test $# -gt 0; do
           case "$1" in
             --force )
@@ -57,6 +52,10 @@ case "$op" in
           esac
           shift
         done
+
+        local profile_json=${1:-$WB_SHELL_PROFILE_DATA/profile.json}
+        local node_specs=${2:-$WB_SHELL_PROFILE_DATA/node-specs.json}
+        local cacheDir=${3:-$(envjqr 'cacheDir')}
 
         local cache_key_input cache_key cache_path
 
@@ -661,12 +660,12 @@ genesis-create-testnet-data() {
     jq_fmutate "$dir/conway-genesis.spec.json"  -S .
     jq_fmutate "$dir/conway-genesis.json"       -S .
 
-    ln -s shelley-genesis.spec.json "$dir/genesis-shelley.spec.json"
-    ln -s shelley-genesis.json      "$dir/genesis-shelley.json"
-    ln -s alonzo-genesis.spec.json  "$dir/genesis.alonzo.spec.json"
-    ln -s alonzo-genesis.json       "$dir/genesis.alonzo.json"
-    ln -s conway-genesis.spec.json  "$dir/genesis.conway.spec.json"
-    ln -s conway-genesis.json       "$dir/genesis.conway.json"
+    ln -sf shelley-genesis.spec.json "$dir/genesis-shelley.spec.json"
+    ln -sf shelley-genesis.json      "$dir/genesis-shelley.json"
+    ln -sf alonzo-genesis.spec.json  "$dir/genesis.alonzo.spec.json"
+    ln -sf alonzo-genesis.json       "$dir/genesis.alonzo.json"
+    ln -sf conway-genesis.spec.json  "$dir/genesis.conway.spec.json"
+    ln -sf conway-genesis.json       "$dir/genesis.conway.json"
 
     shopt -s extglob
 
@@ -681,7 +680,7 @@ genesis-create-testnet-data() {
             local no=${elems[1]##*([[:alpha:]])}
             local keyname=${elems[2]%.*}
             local keyext=${elems[2]##*.}
-            ln -s "../${path}" "$dir/${to}/${keyname}${no}.${keyext}"
+            ln -sf "../${path}" "$dir/${to}/${keyname}${no}.${keyext}"
         done
     }
 
