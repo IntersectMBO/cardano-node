@@ -89,7 +89,7 @@ analyse_default_op='standard'
 analyse() {
 local sargs=()
 local arg_filters=() filter_exprs=() unfiltered=
-local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots= without_datever_meta= pdf=
+local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots= without_datever_meta= pdf= latex=
 local multi_aspect='--inter-cdf' rtsmode=
 local locli_render=() locli_timeline=()
 locli_args=()
@@ -101,7 +101,8 @@ fi
 
 progress "analyse" "args:  $(yellow $*)"
 while test $# -gt 0
-do case "$1" in
+do
+    case "$1" in
        --filters | -f )           sargs+=($1 "$2"); analysis_add_filters "--filters" 'arg_filters' "unitary,$2"; shift;;
        --filter-expr | -fex )     sargs+=($1 "$2"); filter_exprs+=($2); shift;;
        --filter-block-expr | -fbex ) sargs+=($1 "$2"); filter_exprs+=('{ "tag":"CBlock" , "contents": '"$2"'}'); shift;;
@@ -126,7 +127,12 @@ do case "$1" in
        --without-datever-meta )    sargs+=($1);    locli_render+=($1); without_datever_meta='true';;
        --without-run-meta )        sargs+=($1);    locli_render+=($1);;
        --trace )                   sargs+=($1);    set -x;;
-       * ) break;; esac; shift; done
+       --latex )                   sargs+=($1);
+                                   latex='yes-please';;
+       * ) break;;
+    esac;
+    shift;
+done
 
 local op=${1:-$analyse_default_op}; if test $# != 0; then shift; fi
 
@@ -154,6 +160,7 @@ case "$op" in
         local run=${1:?$usage}; shift
         local dir=$(run compute-path "$run")
 
+	# This is where we hope to use the directly-generated LaTeX.
         progress "analyse | report" "rendering report:  $(white $run)"
         local emacs_args=(
             --batch
@@ -445,6 +452,10 @@ EOF
         do eval ops_final+=($v); done
 
         call_locli "$rtsmode" "${ops_final[@]}"
+	locli_ret=$?
+	if [ $locli_ret -ne 0 ]
+	then verbose "analyse.sh: call_locli failed with retcode $locli_ret"
+	fi
 
         local analysis_jsons=($(ls $adir/*.json |
                                     fgrep -v -e '.flt.json'             \
@@ -517,14 +528,24 @@ EOF
         ve=(${vd[*]/#multi-propagation-endtoend/ 'render-multi-propagation' --org-report $adir/'blockprop.endtoend.org' --end-to-end $multi_aspect })
         vf=(${ve[*]/#multi-propagation-gnuplot/  'render-multi-propagation' --gnuplot $adir/cdf/'%s.cdf' --full $multi_aspect })
         vg=(${vf[*]/#multi-propagation-full/     'render-multi-propagation' --pretty $adir/'blockprop-full.txt' --full $multi_aspect })
-        vh=(${vg[*]/#compare/ 'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} })
-        vi=(${vh[*]/#update/  'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} --template $adir/report-$run.ede })
+	if [[ "$latex" == "yes-please" ]]
+	then
+            vh=(${vg[*]/#compare/ 'compare' --latex nix/workbench/latex --report $adir/report-$run.latex ${compares[*]} 'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]}  --template $adir/report-$run.ede })
+            vi=(${vh[*]/#update/  'compare' --latex nix/workbench/latex --report $adir/report-$run.latex ${compares[*]} --template $adir/report-$run.ede 'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} --template $adir/report-$run.ede })
+        else
+            vh=(${vg[*]/#compare/ 'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} --template $adir/report-$run.ede })
+            vi=(${vh[*]/#update/  'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} --template $adir/report-$run.ede })
+	fi
         vj=(${vi[*]/#multi-summary-json/            'render-multi-summary' --json $adir/'summary.json' })
         vk=(${vj[*]/#multi-summary-report/          'render-multi-summary' --org-report $adir/'summary.org' })
         vl=(${vk[@]/#write-context/                 'write-meta-genesis'   --run-metafile    $dir/meta.json --shelley-genesis $dir/genesis-shelley.json })
         local ops_final=(${vl[*]})
 
         call_locli "$rtsmode" "${ops_final[@]}"
+	locli_ret=$?
+	if [ $locli_ret -ne 0 ]
+	then verbose "analyse.sh multi-call: call_locli failed with retcode $locli_ret"
+	fi
 
         if test ${#idents_uniq[*]} = 1
         then run setid $run ${idents_uniq[0]}
@@ -747,6 +768,11 @@ call_locli() {
 
     verbose "analysis | locli" "$(with_color reset ${locli_args[@]}) $(colorise ${args[*]})"
     time locli "${locli_args[@]}" "${args[@]}"
+    locli_ret=$?
+    if [ $locli_ret -ne 0 ]
+    then verbose "call_locli: locli errored with return code $locli_ret args $@"
+    fi
+    return $locli_ret
 }
 
 num_jobs="\j"
