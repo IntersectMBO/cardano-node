@@ -1,0 +1,42 @@
+\documentclass{report}[a4paper,7pt]
+\usepackage[margin=0.5in]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\begin{document}
+\input{titling.latex}
+\ifdefined\locliauthor
+\author{\locliauthor}
+\fi
+\ifdefined\loclidate
+\date{\loclidate}
+\fi
+\ifdefined\loclititle
+\title{\loclititle}
+\fi
+\maketitle
+\section{Summary}
+\input{summary.latex}
+\section{Resources}
+\input{resource.latex}
+\section{Anomaly Control}
+\input{anomaly.latex}
+\section{Forging}
+\input{forging.latex}
+\section{Peers}
+\input{peers.latex}
+
+% *** Manifest
+
+% We compare {% for run in runs %}{%if !run.first%}{%if !run.last%}, {%else%} and {%endif%}{%endif%}={{ run.value.ver }}= ({{ run.value.meta.era | toTitle }}){% endfor %} relative to ={{ base.ver }}= ({{ base.meta.era | toTitle }}), under {{ base.workload }} workload.
+
+%{% include "table.ede" with table = summary %}
+
+%*** Analysis
+%{% for sec in analyses %}
+%***** {{ sec.value.title }}
+
+%{% include "tablevars-delta-pct.ede" with table = sec.value %}
+
+%{% endfor %}
+
+\end{document}
