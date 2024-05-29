@@ -63,7 +63,7 @@ import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), RemoteAddress, WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
+import           Ouroboros.Network.PeerSelection.Governor (ChurnCounters, DebugPeerSelection (..),
                    PeerSelectionCounters, TracePeerSelection (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
@@ -291,7 +291,9 @@ getAllNamespaces =
                                         ["Net", "PeerSelection", "Counters"])
                                       (allNamespaces :: [Namespace
                                         PeerSelectionCounters])
-
+        churnCountersNS = map (nsGetTuple . nsReplacePrefix
+                                  ["Net", "Churn"])
+                                (allNamespaces :: [Namespace ChurnCounters])
         peerSelectionActionsNS = map (nsGetTuple . nsReplacePrefix
                                   ["Net", "PeerSelection", "Actions"])
                                (allNamespaces :: [Namespace
@@ -415,6 +417,7 @@ getAllNamespaces =
             <> debugPeerSelectionNS
             <> debugPeerSelectionResponderNS
             <> peerSelectionCountersNS
+            <> churnCountersNS
             <> peerSelectionActionsNS
             <> connectionManagerNS
             <> connectionManagerTransitionsNS
