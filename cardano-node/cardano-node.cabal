@@ -153,6 +153,7 @@ library
                       , cardano-ledger-allegra
                       , cardano-ledger-api
                       , cardano-ledger-babbage
+                      , cardano-ledger-binary
                       , cardano-ledger-byron
                       , cardano-ledger-conway
                       , cardano-ledger-core
@@ -163,6 +164,7 @@ library
                       , cborg ^>= 0.2.4
                       , containers
                       , contra-tracer
+                      , data-default-class
                       , deepseq
                       , directory
                       , dns
