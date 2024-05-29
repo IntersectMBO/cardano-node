@@ -20,6 +20,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Map as Map
 import           Data.Text (pack)
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import qualified Data.Text.Lazy as LT
 import           Data.Text.Short (toText)
 import           Data.Tuple.Extra (both)
@@ -249,7 +250,8 @@ parseChainCommand =
    subparser (mconcat [ commandGroup "Run comparison"
    , op "compare" "Generate a report comparing multiple runs"
      (Compare
-       <$> optInputDir       "ede"      "Directory with EDE templates."
+       <$>   (optInputDir    "ede"      "Directory with EDE templates."
+          <|> optInputDir    "latex"    "Directory with LaTeX templates.")
        <*> optional
            (optTextInputFile "template" "Template to use as base.")
        <*> optTextOutputFile "report"   "Report .org file to create."
@@ -802,7 +804,7 @@ runChainCommand s@State{sMultiSummary=Just summary}
 runChainCommand _ c@RenderMultiSummary{} = missingCommandData c
   ["multi-run summary"]
 
-runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
+runChainCommand s c@(Compare _ede@(InputDir dir) mTmpl outf@(TextOutputFile outfp) runs) = do
   progress "report" (Q $ printf "rendering report for %d runs" $ length runs)
   xs :: [(SomeSummary, ClusterPerf, SomeBlockProp)] <- forM runs $
     \(sumf,cpf,bpf)->
@@ -810,20 +812,39 @@ runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
       <$> readJsonData sumf (CommandError c)
       <*> readJsonData cpf  (CommandError c)
       <*> readJsonData bpf  (CommandError c)
-  (tmpl, tmplEnv, orgReport) <- case xs of
-    baseline:deltas@(_:_) -> liftIO $ do
-      Cardano.Report.generate ede mTmpl baseline deltas
-    _ -> throwE $ CommandError c $ mconcat
-         [ "At least two runs required for comparison." ]
-  liftIO $
-    withFile (outfp `System.FilePath.replaceExtension` "env.json") WriteMode $
-      \hnd -> BS8.hPutStrLn hnd tmplEnv
-  dumpText "report" [orgReport] outf
-    & firstExceptT (CommandError c)
+  case (takeFileName dir, xs) of
+    ("latex", baseline:deltas@(_:_)) -> liftIO $ do
+      (titling, summary, resource, anomaly, forging, peers)
+        <- Cardano.Report.generateLaTeX baseline deltas
+      let writef (fp, txt) = do
+               withFile (outdir </> fp) WriteMode $
+                      \hnd -> T.hPutStrLn hnd txt
+          outdir = takeDirectory outfp
+      mapM_ (writef .  first (<> ".latex"))
+                   [ ("titling",  titling)
+                   , ("summary",  summary)
+                   , ("resource", resource)
+                   , ("anomaly",  anomaly)
+                   , ("forging",  forging)
+                   , ("peers",    peers)]
+    ("ede", baseline:deltas@(_:_)) -> do
+      (tmpl, tmplEnv, orgReport) <- liftIO $ do
+        Cardano.Report.generate (InputDir dir) mTmpl baseline deltas
+      liftIO $ do
+        withFile (outfp `System.FilePath.replaceExtension` "env.json")
+            WriteMode $ \hnd -> BS8.hPutStrLn hnd tmplEnv
+        let tmplPath = Cardano.Util.replaceExtension outfp "ede"
+        unlessM (IO.fileExist tmplPath)
+          $ BS.writeFile tmplPath tmpl
+      dumpText "report" [orgReport] outf
+        & firstExceptT (CommandError c)
+    (_, _:_:_) -> do
+           throwE $ CommandError c $ mconcat
+               [ "input directory neither ede nor latex." ]
+    _ -> do
+           throwE . CommandError c $ mconcat
+               [ "At least two runs required for comparison." ]
 
-  let tmplPath = Cardano.Util.replaceExtension outfp "ede"
-  liftIO . unlessM (IO.fileExist tmplPath) $
-    BS.writeFile tmplPath tmpl
 
   pure s
 
