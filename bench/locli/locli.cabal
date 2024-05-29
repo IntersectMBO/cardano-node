@@ -85,8 +85,8 @@ library
                         Cardano.Analysis.Summary
 
                         Cardano.JSON
-                        Cardano.Org
                         Cardano.Render
+                        Cardano.Table
 
                         Cardano.Unlog.LogObject
                         Cardano.Unlog.Resources

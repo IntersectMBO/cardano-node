@@ -1,17 +1,18 @@
 {-# OPTIONS_GHC -Wno-partial-fields #-}
 {-# LANGUAGE StrictData #-}
-module Cardano.Org (module Cardano.Org) where
+module Cardano.Table (module Cardano.Table) where
 
-import Cardano.Prelude
-import Data.Text                qualified as T
+import           Cardano.Prelude
+import           Cardano.Util
 
-import Cardano.Util
+import qualified Data.List as L
+import qualified Data.Text as T
 
 
-data Org
+data Table
   = Props
     { oProps     :: [(Text, Text)]
-    , oBody      :: [Org]
+    , oBody      :: [Table]
     , oConstants :: [(Text, Text)]
     }
   | Table
@@ -27,19 +28,76 @@ data Org
     }
   deriving (Show)
 
-render :: Org -> [Text]
+renderAsLaTeX :: Table -> [Text]
 
-render Props{..} =
+renderAsLaTeX Props{..} =
+  [ "\\def\\" <> c <> "{" <> x <> "}" | (c, x) <- oProps <> oConstants ]
+  <>
+  (oBody <&> renderAsLaTeX & mconcat)
+renderAsLaTeX Table{..} =
+  [ "\\begin{tabular}{l" <> T.replicate (length tColHeaders) "|r" <> "}" ]
+  <>
+  [ "\\hline " ]
+  <>
+  [ T.intercalate " & " (map latexFixup headerSet) <> " \\\\" ]
+  <>
+  [ "\\hline " ]
+  <>
+  [ T.intercalate " & " (map latexFixup row) <> " \\\\" | row <- rowSet ]
+  <>
+  [ "\\hline " ]
+  <>
+  [ T.intercalate " & " (map latexFixup summary) <> " \\\\" | summary <- summarySet ]
+  <>
+  [ "\\end{tabular}" ] where
+  headerSet = "" : tColHeaders
+  rowSet = transpose $ tRowHeaders : tColumns
+  -- A. subtract one for base version only -- row titles are not included
+  -- B. divide by 3 to get the number of versions compared against
+  --        These versions get padded with \Delta and \Delta% columns.
+  -- C. add back 1 for the base version
+  -- The inner difference is never negative because of the row headers and baseline.
+  -- We should have nVersions == length tSummaryValues
+  nVersions  = ((length tColHeaders - 1) `div` 3) + 1
+  nVersions' = ((length tColumns - 1) `div` 3) + 1
+  expandSummaryColumns  :: [Text] -> [[Text]]
+  expandSummaryColumns v = [x, y, z] where
+    (x, y, z) = L.unzip3 $ [("(" <> s <> ">)", "", "") | s <- v]
+  summarySet = case tSummaryValues of
+    base:comp@(_:_) | nVersions == length tSummaryValues && nVersions == nVersions' ->
+        transpose   $ tSummaryHeaders
+                    : ["(" <> b <> ">)" | b :: Text <- base]
+                    : concatMap expandSummaryColumns comp
+                    | nVersions /= nVersions' ->
+        error . L.unlines $ [ "renderAsLaTeX: summary value mismatch"
+                            , "nVersions = " ++ show nVersions
+                            , "nVersions' = " ++ show nVersions'
+                            , "length tSummaryValues = " ++ show (length tSummaryValues)
+                            , "length tColHeaders = " ++ show (length tColHeaders)
+                            , "length tColumns = " ++ show (length tColumns)
+                            ]
+    _:_   -> transpose $ tSummaryHeaders : tSummaryValues
+    _ -> []
+
+latexFixup :: Text -> Text
+latexFixup = T.replace "%" "\\%"
+           . T.replace "&" "\\&"
+           . T.replace "#" "\\#"
+           . T.replace "_" "\\_"
+
+renderAsOrg :: Table -> [Text]
+
+renderAsOrg Props{..} =
   ((oProps <> [ ("CONSTANTS", T.intercalate " " $ oConstants <&> \(c, x) -> c <> "=" <> x)
               | not (null oConstants)])
    <&> \(name, value) -> mconcat ["#+", name, ": ", value])
   <>
-  (oBody <&> render & mconcat)
+  (oBody <&> renderAsOrg & mconcat)
 
-render Table{tConstants = _:_, tExtended = False} =
+renderAsOrg Table{tConstants = _:_, tExtended = False} =
   error "Asked to render a non-extended Org table with an extended table feature:  named constants"
 
-render Table{..} =
+renderAsOrg Table{..} =
     renderTableHLine
   : renderTableRow jusAllHeaders
   : renderTableHLine
