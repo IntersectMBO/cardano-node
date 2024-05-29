@@ -268,17 +268,9 @@ epochStateBeforeAfterValues logFileContents =
   in getAllTransitions allEpochStates
 
 getAllTransitions ::  [Text] -> [(Text, Text)]
-getAllTransitions [] = []
-getAllTransitions trans =
-  let (singleTransition, rest) = splitAt 2 trans
-      tupleSingleTransition = toTuple singleTransition
-  in case singleTransition of
-       [a] -> [(a,"")]
-       _ -> tupleSingleTransition ++ getAllTransitions (snd (head tupleSingleTransition) : rest)
- where
-   toTuple [a,b] = [(a,b)]
-   toTuple [] = []
-   toTuple _ = error "toTuple: a single transition was not generated"
+getAllTransitions ts = do
+  let ts' = drop 1 $ ts <> [""]
+  zip ts ts'
 
 epochStateDiffs
   :: [(Text,Text)]
