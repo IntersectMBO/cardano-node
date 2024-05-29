@@ -2,12 +2,11 @@
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 module Test.Unlog.Org where
 
-import Cardano.Prelude
+import           Cardano.Prelude
+import           Cardano.Table
+import           Cardano.Util
 
-import Hedgehog
-
-import Cardano.Org
-import Cardano.Util
+import           Hedgehog
 
 
 sho :: Show a => a -> String
@@ -16,7 +15,7 @@ sho = show
 out :: String -> PropertyT IO ()
 out = liftIO . putStrLn
 
-prop_Org_render_simple_table = property $ render
+prop_Org_render_simple_table = property $ renderAsOrg
   Table
   { tColHeaders = ["foo", "woot", "quuxinator"]
   , tExtended = False
@@ -40,7 +39,7 @@ prop_Org_render_simple_table = property $ render
   , "| three | ...... |      |      111.0 |"
   ]
 
-prop_Org_render_summarised_simple_table = property $ render
+prop_Org_render_summarised_simple_table = property $ renderAsOrg
   Table
   { tColHeaders = ["foo", "woot", "quuxinator"]
   , tExtended = False
@@ -70,7 +69,7 @@ prop_Org_render_summarised_simple_table = property $ render
   , "|          q |         | 0000000 |          2 |"
   ]
 
-prop_Org_render_extended_table = property $ render
+prop_Org_render_extended_table = property $ renderAsOrg
   Props
   { oProps = [("DATE", "now")]
   , oConstants = [("pi", "3.141592653"), ("e", "2.718281828")]
@@ -102,7 +101,7 @@ prop_Org_render_extended_table = property $ render
   , "| # |   three | ...... |      |      111.0 |"
   ]
 
-prop_Org_render_extended_summarised_table = property $ render
+prop_Org_render_extended_summarised_table = property $ renderAsOrg
   Props
   { oProps = [("DATE", "now")]
   , oConstants = [("pi", "3.141592653"), ("e", "2.718281828")]

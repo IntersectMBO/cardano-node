@@ -11,21 +11,19 @@
 
 module Cardano.Render (module Cardano.Render) where
 
-import Prelude                          (id, show)
-import Cardano.Prelude                  hiding (head, show)
+import           Cardano.Analysis.API
+import           Cardano.Prelude hiding (head, show)
+import           Cardano.Table
+import           Cardano.Util
 
-import Data.Aeson.Text                  (encodeToLazyText)
-import Data.List                        (dropWhileEnd)
-import Data.Map.Strict                  qualified as Map
-import Data.Text                        qualified as T
-import Data.Text.Lazy                   qualified as LT
-import Options.Applicative              qualified as Opt
+import           Prelude (id, show)
 
-import Data.CDF
-
-import Cardano.Org
-import Cardano.Util
-import Cardano.Analysis.API
+import           Data.Aeson.Text (encodeToLazyText)
+import           Data.List (dropWhileEnd)
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
+import qualified Options.Applicative as Opt
 
 data RenderConfig
   = RenderConfig
@@ -164,7 +162,7 @@ renderSummary :: forall f a. (a ~ Summary f, TimelineFields a, ToJSON a)
   => RenderConfig -> Anchor -> (Field ISelect I a -> Bool) -> a -> [Text]
 renderSummary RenderConfig{rcFormat=AsJSON} _ _ x = (:[]) . LT.toStrict $ encodeToLazyText x
 renderSummary rc@RenderConfig{rcFormat=AsReport} a fieldSelr summ =
-  render $
+  renderAsOrg $
   Props
   { oProps = renderAnchorOrgProperties rc a
   , oConstants = []
@@ -192,7 +190,7 @@ renderSummary rc  _ _ _ =
 renderProfilingData ::
   RenderConfig -> Anchor -> (ProfileEntry (CDF I) -> Bool) -> ProfilingData (CDF I) -> [Text]
 renderProfilingData rc a flt pd =
-  render $
+  renderAsOrg $
   Props
   { oProps = renderAnchorOrgProperties rc a
   , oConstants = []
@@ -355,7 +353,7 @@ renderAnalysisCDFs anchor fieldSelr _c2a _centileSelr rc@RenderConfig{rcFormat=A
      & fmap (T.intercalate " "))
 
 renderAnalysisCDFs a fieldSelr _c2a centileSelr rc@RenderConfig{rcFormat=AsOrg} x =
-  (:[]) . ("",) . render $
+  (:[]) . ("",) . renderAsOrg $
   Props
   { oProps = renderAnchorOrgProperties rc a
   , oConstants = []
@@ -394,7 +392,7 @@ renderAnalysisCDFs a fieldSelr _c2a centileSelr rc@RenderConfig{rcFormat=AsOrg} 
                      centileSelr
 
 renderAnalysisCDFs a fieldSelr aspect _centileSelr rc@RenderConfig{rcFormat=AsReport} x =
-  (:[]) . ("",) . render $
+  (:[]) . ("",) . renderAsOrg $
   Props
   { oProps = renderAnchorOrgProperties rc a
   , oConstants = []
