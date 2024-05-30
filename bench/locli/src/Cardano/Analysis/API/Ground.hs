@@ -1,6 +1,6 @@
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE PolyKinds #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.Analysis.API.Ground
   ( module Cardano.Analysis.API.Ground
@@ -10,31 +10,31 @@ module Cardano.Analysis.API.Ground
   )
 where
 
-import Prelude                          (show)
-import Cardano.Prelude                  hiding (head, toText)
-import Unsafe.Coerce                    qualified as Unsafe
+import           Cardano.Prelude hiding (head, toText)
+import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import           Cardano.Util
+import           Ouroboros.Network.Block (BlockNo (..))
 
-import Data.Aeson
-import Data.Aeson.Types                 (toJSONKeyText)
-import Data.Attoparsec.Text             qualified as Atto
-import Data.Attoparsec.Time             qualified as Iso8601
-import Data.ByteString.Lazy.Char8       qualified as LBS
-import Data.Map.Strict                  qualified as Map
-import Data.Text                        qualified as T
-import Data.Text.Short                  qualified as SText
-import Data.Text.Short                  (ShortText, fromText, toText)
-import Data.Time.Clock                  (UTCTime, NominalDiffTime)
-import Options.Applicative
-import Options.Applicative              qualified as Opt
-import Quiet                            (Quiet (..))
-import System.FilePath                  qualified as F
+import           Prelude (show)
 
-import Cardano.Slotting.Slot            (EpochNo(..), SlotNo(..))
-import Ouroboros.Network.Block          (BlockNo(..))
+import           Data.Aeson
+import           Data.Aeson.Types (toJSONKeyText)
+import qualified Data.Attoparsec.Text as Atto
+import qualified Data.Attoparsec.Time as Iso8601
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.CDF
+import           Data.DataDomain
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
+import           Data.Text.Short (ShortText, fromText, toText)
+import qualified Data.Text.Short as SText
+import           Data.Time.Clock (NominalDiffTime, UTCTime)
+import           Options.Applicative
+import qualified Options.Applicative as Opt
+import qualified System.FilePath as F
 
-import Data.CDF
-import Data.DataDomain
-import Cardano.Util
+import           Quiet (Quiet (..))
+import qualified Unsafe.Coerce as Unsafe
 
 
 newtype FieldName = FieldName { unFieldName :: Text }
@@ -135,6 +135,10 @@ newtype GnuplotOutputFile
   = GnuplotOutputFile { unGnuplotOutputFile :: FilePath }
   deriving (Show, Eq)
 
+newtype LaTeXOutputFile
+  = LaTeXOutputFile { unLaTeXOutputFile :: FilePath }
+  deriving (Show, Eq)
+
 newtype OrgOutputFile
   = OrgOutputFile { unOrgOutputFile :: FilePath }
   deriving (Show, Eq)
@@ -225,7 +229,15 @@ optGnuplotOutputFile optname desc =
   fmap GnuplotOutputFile $
     Opt.option Opt.str
       $ long optname
-      <> metavar "CDF-OUTFILE"
+      <> metavar "GNUPLOT-OUTFILE"
+      <> help desc
+
+optLaTeXOutputFile :: String -> String -> Parser LaTeXOutputFile
+optLaTeXOutputFile optname desc =
+  fmap LaTeXOutputFile $
+    Opt.option Opt.str
+      $ long optname
+      <> metavar "LATEX-OUTFILE"
       <> help desc
 
 optTextInputFile :: String -> String -> Parser TextInputFile
