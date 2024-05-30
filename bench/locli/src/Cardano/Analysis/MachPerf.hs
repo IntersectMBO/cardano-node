@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE StrictData #-}
 
 #if __GLASGOW_HASKELL__ >= 908
 {-# OPTIONS_GHC -Wno-x-partial #-}
@@ -12,23 +13,21 @@
 
 module Cardano.Analysis.MachPerf (module Cardano.Analysis.MachPerf) where
 
-import Cardano.Prelude hiding (head, toText)
-import Cardano.Prelude qualified as CP
+import           Cardano.Analysis.API
+import           Cardano.Prelude hiding (head, toList, toText)
+import qualified Cardano.Prelude as CP
+import           Cardano.Unlog.LogObject
+import           Cardano.Unlog.Resources
+import           Cardano.Util
 
-import Data.List                        ((!!))
-import Data.Map.Strict qualified as Map
-import Data.Text                        (pack, unpack)
-import Data.Text.Short                  (toText)
-import Data.Vector (Vector)
-import Data.Vector qualified as Vec
-
-import Data.Time.Clock qualified as Time
-
-import Data.CDF
-import Cardano.Util
-import Cardano.Analysis.API
-import Cardano.Unlog.LogObject
-import Cardano.Unlog.Resources
+import           Data.CDF ()
+import           Data.List ((!!))
+import qualified Data.Map.Strict as Map
+import           Data.Text (pack, unpack)
+import           Data.Text.Short (toText)
+import qualified Data.Time.Clock as Time
+import           Data.Vector (Vector)
+import qualified Data.Vector as Vec
 
 
 -- * 1. Collect SlotStats & RunScalars:
@@ -573,7 +572,7 @@ slotStatsMachPerf _ (JsonLogfile f, []) =
 slotStatsMachPerf run (f, slots) =
   Right . (f,) $ MachPerf
   { mpVersion            = getLocliVersion
-  , mpDomainSlots        = domSlots
+  , mpDomainSlots        = fromList [domSlots]
   , mpDomainCDFSlots     = domSlots -- At unit-arity it's just a replica.
   , cdfHostSlots         = dist [fromIntegral . unI $ ddFilteredCount domSlots]
   --
@@ -629,8 +628,8 @@ summariseClusterPerf centiles mps@(headline:_) = do
 
   pure MachPerf
     { mpVersion        = mpVersion headline
-    , mpDomainSlots    = slotDomains
-    , mpDomainCDFSlots = slotDomains & traverseDataDomain (cdf stdCentiles . fmap unI)
+    , mpDomainSlots    = fromList slotDomains
+    , mpDomainCDFSlots = traverseDataDomain (cdf stdCentiles . fmap unI) slotDomains
     , ..
     }
  where
@@ -638,7 +637,7 @@ summariseClusterPerf centiles mps@(headline:_) = do
    comb = stdCombine1 centiles
 
    slotDomains :: [DataDomain I SlotNo]
-   slotDomains = mps <&> mpDomainSlots
+   slotDomains = concatMap (toList . mpDomainSlots) mps
 
 summariseMultiClusterPerf :: [Centile] -> [ClusterPerf] -> Either CDFError MultiClusterPerf
 summariseMultiClusterPerf _ [] = error "Asked to summarise empty list of MachPerfOne"
@@ -664,7 +663,7 @@ summariseMultiClusterPerf centiles mps@(headline:_) = do
 
   pure . MultiClusterPerf $ MachPerf
     { mpVersion        = mpVersion headline
-    , mpDomainSlots    = slotDomains
+    , mpDomainSlots    = fromList slotDomains
     , mpDomainCDFSlots =
       -- The simpler option, smashing the data from multiple runs into a single CDF:
         slotDomains & traverseDataDomain (cdf stdCentiles . fmap unI)
@@ -675,7 +674,7 @@ summariseMultiClusterPerf centiles mps@(headline:_) = do
     }
  where
    slotDomains :: [DataDomain I SlotNo]
-   slotDomains = concat $ mps <&> mpDomainSlots
+   slotDomains = concatMap (toList . mpDomainSlots) mps
 
    comb :: forall a. Divisible a => Combine (CDF I) a
    comb = stdCombine2 centiles

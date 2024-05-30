@@ -12,18 +12,18 @@
 
 module Cardano.Analysis.Summary (module Cardano.Analysis.Summary) where
 
-import Prelude                                      (head, last)
-import Cardano.Prelude
+import           Cardano.Analysis.API
+import           Cardano.Prelude hiding (toList)
+import           Cardano.Unlog.LogObject
+import           Cardano.Util
 
-import Data.Aeson.KeyMap                qualified
-import Data.Either.Extra                            (mapLeft)
-import Data.Map.Strict                  qualified as Map
-import Data.List                                    (nub)
-import Data.Text                        qualified as Text
+import           Prelude (head, last)
 
-import Cardano.Analysis.API
-import Cardano.Unlog.LogObject
-import Cardano.Util
+import qualified Data.Aeson.KeyMap
+import           Data.Either.Extra (mapLeft)
+import           Data.List (nub)
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
 
 
 data SummaryError
@@ -199,7 +199,7 @@ computeSummary sumAnalysisTime
                             (runtimes <&> fromIntegral @Int . truncate)
 
    (,,) sumDomainTime sumStartSpread sumStopSpread =
-     slotDomains sumGenesis (losFirsts, losLasts) mpDomainSlots
+     slotDomains sumGenesis (losFirsts, losLasts) $ toList mpDomainSlots
 
    sumChainRejectionStats :: [(ChainFilter, Int)]
    sumChainRejectionStats =
