@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE StrictData #-}
 
 #if __GLASGOW_HASKELL__ >= 908
@@ -25,42 +26,37 @@ module Cardano.Analysis.BlockProp
   )
 where
 
-import Prelude                  (String, (!!), error, head, last, id, show, tail, read)
-import Cardano.Prelude          hiding (head, show)
+import           Cardano.Analysis.API
+import           Cardano.Prelude hiding (head, show, toList)
+import           Cardano.Render
+import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import           Cardano.Unlog.LogObject
+import           Cardano.Unlog.Resources
+import           Cardano.Util
+import           Ouroboros.Network.Block (BlockNo (..))
 
-import Control.Arrow            ((***), (&&&))
-import Data.Aeson               (ToJSON(..), FromJSON(..))
-import Data.Bifunctor
-import Data.Function            (on)
-import Data.List                (break, dropWhileEnd, intercalate, partition, span)
-import Data.Map.Strict          (Map)
-import Data.Map.Strict          qualified as Map
-import Data.Maybe               (catMaybes, mapMaybe, isNothing)
-import Data.Set                 (Set)
-import Data.Set                 qualified as Set
-import Data.Text                qualified as T
-import Data.Text.Short          (toText)
-import Data.Tuple               (swap)
-import Data.Tuple.Extra         (both, fst3, snd3, thd3)
-import Data.Vector              (Vector)
-import Data.Vector              qualified as Vec
+import           Prelude (String, error, head, id, last, read, show, tail, (!!))
 
-import Data.Time.Clock          (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
-
-import Text.Printf              (printf)
-
-import Cardano.Slotting.Slot    (EpochNo(..), SlotNo(..))
-import Ouroboros.Network.Block  (BlockNo(..))
-
-import Data.Accum
-import Data.CDF
-
-import Cardano.Render
-import Cardano.Unlog.LogObject
-import Cardano.Unlog.Resources
-import Cardano.Util
-
-import Cardano.Analysis.API
+import           Control.Arrow ((&&&), (***))
+import           Data.Accum
+import           Data.Aeson (FromJSON (..), ToJSON (..))
+import           Data.Bifunctor
+import           Data.CDF
+import           Data.Function (on)
+import           Data.List (break, dropWhileEnd, intercalate, partition, span)
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (catMaybes, isNothing, mapMaybe)
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import qualified Data.Text as T
+import           Data.Text.Short (toText)
+import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
+import           Data.Tuple (swap)
+import           Data.Tuple.Extra (both, fst3, snd3, thd3)
+import           Data.Vector (Vector)
+import qualified Data.Vector as Vec
+import           Text.Printf (printf)
 
 
 summariseMultiBlockProp :: [Centile] -> [BlockPropOne] -> Either CDFError MultiBlockProp
@@ -99,8 +95,8 @@ summariseMultiBlockProp centiles bs@(headline:_) = do
         (d,) <$> cdf2OfCDFs comb (snd <$> xs)
   pure $ BlockProp
     { bpVersion             = bpVersion headline
-    , bpDomainSlots         = slotDomains
-    , bpDomainBlocks        = blockDomains
+    , bpDomainSlots         = fromList slotDomains
+    , bpDomainBlocks        = fromList blockDomains
     , bpDomainCDFSlots      = slotDomains  &
                                 traverseDataDomain (cdf stdCentiles . fmap unI)
     , bpDomainCDFBlocks     = blockDomains &
@@ -113,9 +109,9 @@ summariseMultiBlockProp centiles bs@(headline:_) = do
    comb = stdCombine1 centiles
 
    slotDomains :: [DataDomain I SlotNo]
-   slotDomains = bs <&> bpDomainSlots
+   slotDomains = concatMap (toList . bpDomainSlots) bs
    blockDomains :: [DataDomain I BlockNo]
-   blockDomains = bs <&> bpDomainBlocks
+   blockDomains = concatMap (toList . bpDomainBlocks) bs
 
 bfePrevBlock :: ForgerEvents a -> Maybe Hash
 bfePrevBlock x = case bfeBlockNo x of
@@ -545,8 +541,8 @@ blockProp run@Run{genesis} Chain{..} = do
       xs -> pure xs
 
   pure $ BlockProp
-    { bpDomainSlots        = cDomSlots
-    , bpDomainBlocks       = cDomBlocks
+    { bpDomainSlots        = CDFListSingleton cDomSlots
+    , bpDomainBlocks       = CDFListSingleton cDomBlocks
     , bpDomainCDFSlots     = cDomSlots   -- At unit-arity..
     , bpDomainCDFBlocks    = cDomBlocks  -- .. it's just a replica.
     , cdfForgerStart       = forgerCDF c   (SJust . bfStarted   . beForge)

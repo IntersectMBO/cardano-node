@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -7,6 +8,7 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -38,7 +40,7 @@ module Data.CDF
   , indexCDF
   , CDFIx (..)
   , KnownCDF (..)
-  , CDFList
+  , CDFList (..)
   , liftCDFVal
   , unliftCDFVal
   , unliftCDFValExtra
@@ -54,19 +56,23 @@ module Data.CDF
   , collapseCDF
   , collapseCDFs
   , cdf2OfCDFs
+  , IsList (..)
   --
   , module Data.SOP.Strict
   ) where
 
-import Prelude ((!!), show)
-import Cardano.Prelude hiding (head, show)
+import           Cardano.Prelude hiding (head, show)
+import           Cardano.Util
 
-import Data.SOP.Strict
-import Data.Tuple.Extra (both)
-import Data.Vector qualified as Vec
-import Statistics.Sample qualified as Stat
+import           Prelude (show, (!!))
 
-import Cardano.Util
+import           Data.Aeson.Types (prependFailure, typeMismatch)
+import           Data.SOP.Strict
+import           Data.Tuple.Extra (both)
+import qualified Data.Vector as Vec
+import           GHC.Exts (IsList (..))
+
+import qualified Statistics.Sample as Stat
 
 
 -- | Centile specifier: a fractional in range of [0; 1].
@@ -271,9 +277,40 @@ class KnownCDF a where
 instance KnownCDF      I  where cdfIx = CDFI
 instance KnownCDF (CDF I) where cdfIx = CDF2
 
-type family CDFList (f :: Type -> Type) (t :: Type) :: Type where
-  CDFList I       t = t
-  CDFList (CDF I) t = [t]
+data CDFList (f :: Type -> Type) t
+  = CDFListSingleton t
+  | CDFListMultiple [t]
+  deriving (Generic, Foldable)
+
+deriving instance (Eq t, Eq (f t), Eq (f [t])) => Eq (CDFList f t)
+deriving instance (Show t, Show (f t), Show (f [t])) => Show (CDFList f t)
+deriving instance (NFData t, NFData (f t), NFData (f [t])) => NFData (CDFList f t)
+
+instance IsList (CDFList f t) where
+  type Item (CDFList f t) = t
+  toList = \case
+    CDFListSingleton x  -> [x]
+    CDFListMultiple  xs -> xs
+  fromList = \case
+    []       -> CDFListMultiple  []
+    [x]      -> CDFListSingleton x
+    xs@(_:_) -> CDFListMultiple  xs
+
+instance (FromJSON (f t), FromJSON (f [t]), FromJSON t) => FromJSON (CDFList f t) where
+  parseJSON (Array a) | null a        = pure $ CDFListMultiple []
+                      | length a == 1
+                      = CDFListSingleton <$> parseJSON (Vec.head a)
+                      | otherwise
+                      = CDFListMultiple . Vec.toList <$> Vec.mapM parseJSON a
+  parseJSON o@(Object _) = CDFListSingleton <$> parseJSON o
+  parseJSON invalid =
+    prependFailure "parsing CDFList failed, "
+      (typeMismatch "Array" invalid)
+instance (ToJSON (f t), ToJSON (f [t]), ToJSON t) => ToJSON (CDFList f t) where
+  toJSON = \case
+    CDFListSingleton x -> toJSON ([x] :: [t])
+    CDFListMultiple xs -> toJSON xs
+
 
 liftCDFVal :: forall a p. Real a => a -> CDFIx p -> p a
 liftCDFVal x = \case
