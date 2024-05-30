@@ -1167,6 +1167,7 @@ instance LogFormatting TraceStartLeadershipCheckPlus where
      IntM "Forge.DRepCount"    (fromIntegral tsDRepCount),
      IntM "Forge.DRepMapSize"  (fromIntegral tsDRepMapSize)]
 
+
 --------------------------------------------------------------------------------
 -- ForgeEvent Tracer
 --------------------------------------------------------------------------------
