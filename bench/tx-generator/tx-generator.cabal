@@ -14,11 +14,7 @@ license-files:          LICENSE
                         NOTICE
 build-type:             Simple
 extra-source-files:     README.md
-data-files:             data/protocol-parameters.json
-                        data/protocol-parameters-v8.json
-                        data/loop.redeemer.json
-                        data/ecdsa-secp256k1-loop.redeemer.json
-                        data/schnorr-secp256k1-loop.redeemer.json
+data-files:             data/*.json
                         scripts-fallback/*.plutus
 
 common project-config
@@ -30,7 +26,7 @@ common with-library
   -- It makes sure, we only depend on that package if it is buildable.
   -- The tx-generator will fall back to pre-serialized Plutus scripts if this package is not present.
   if !(impl(ghc <9.6) || impl(ghc >=9.7))
-    build-depends:      plutus-scripts-bench ^>= 1.0.2
+    build-depends:      plutus-scripts-bench ^>= 1.0.3
     cpp-options:        -DWITH_LIBRARY
 
 library
@@ -195,7 +191,9 @@ test-suite tx-generator-apitest
 
   build-depends:        base
                       , aeson
+                      , aeson-pretty
                       , bytestring
+                      , directory
                       , filepath
                       , optparse-applicative-fork
                       , cardano-api

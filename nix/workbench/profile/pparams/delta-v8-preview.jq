@@ -113,6 +113,8 @@ def delta:
       "verifyEd25519Signature-memory-arguments": 10
     },
     "PlutusV2": {
+      "verifyEd25519Signature-cpu-arguments-intercept": 57996947,
+      "verifyEd25519Signature-cpu-arguments-slope": 18975
     }
   }
 };

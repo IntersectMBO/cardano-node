@@ -1,0 +1,7 @@
+[ { "tag": "CSlot"
+  , "contents":
+    { "tag": "SlotGEq"
+    , "contents": 20000
+    }
+  }
+]
