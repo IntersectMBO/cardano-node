@@ -1,30 +1,27 @@
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
 module Cardano.Analysis.API.Types (module Cardano.Analysis.API.Types) where
 
-import Cardano.Prelude          hiding (head)
+import           Cardano.Analysis.API.Chain
+import           Cardano.Analysis.API.ChainFilter
+import           Cardano.Analysis.API.Context
+import           Cardano.Analysis.API.Ground
+import           Cardano.Analysis.API.LocliVersion
+import           Cardano.Logging.Resources.Types
+import           Cardano.Prelude hiding (head)
+import           Cardano.Unlog.LogObject
+import           Cardano.Util
 
-import Data.Text                qualified as T
-import Options.Applicative      qualified as Opt
-
-import Data.CDF
-import Data.Profile
-
-import Cardano.Logging.Resources.Types
-
-import Cardano.Unlog.LogObject
-import Cardano.Util
-
-import Cardano.Analysis.API.Chain
-import Cardano.Analysis.API.ChainFilter
-import Cardano.Analysis.API.Context
-import Cardano.Analysis.API.Ground
-import Cardano.Analysis.API.LocliVersion
+import           Data.Aeson ((.=))
+import           Data.CDF
+import           Data.Profile
+import qualified Data.Text as T
+import qualified Options.Applicative as Opt
 
 --
 -- * API types
@@ -60,7 +57,8 @@ data Summary f where
 
 type SummaryOne   = Summary I
 type MultiSummary = Summary (CDF I)
-data SomeSummary  = forall f. KnownCDF f => SomeSummary (Summary f)
+data SomeSummary  =
+  forall f. (KnownCDF f, FromJSON (Summary f), ToJSON (Summary f)) => SomeSummary (Summary f)
 
 deriving instance (forall a. FromJSON a => FromJSON (f a)) => FromJSON (Summary f)
 deriving instance (forall a.   ToJSON a =>   ToJSON (f a)) =>   ToJSON (Summary f)
@@ -72,6 +70,8 @@ instance FromJSON SomeSummary where
     (SomeSummary <$> parseJSON @SummaryOne   x)
     <|>
     (SomeSummary <$> parseJSON @MultiSummary x)
+instance ToJSON SomeSummary where
+  toJSON (SomeSummary summ) = object [ "SomeSummary" .= toJSON summ ]
 instance FromJSON SomeBlockProp where
   parseJSON x =
     (SomeBlockProp <$> parseJSON @BlockPropOne   x)
@@ -146,7 +146,7 @@ deriving instance
 
 type BlockPropOne   = BlockProp I
 type MultiBlockProp = BlockProp (CDF I)
-data SomeBlockProp  = forall f. KnownCDF f => SomeBlockProp (BlockProp f)
+data SomeBlockProp  = forall f. (KnownCDF f, forall a. ToJSON a => ToJSON (f a), forall a. FromJSON a => FromJSON (f a)) => SomeBlockProp (BlockProp f)
 
 -- | The top-level representation of the machine timeline analysis results.
 data MachPerf f

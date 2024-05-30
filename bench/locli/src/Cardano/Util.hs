@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -26,50 +27,49 @@ module Cardano.Util
   )
 where
 
-import Prelude                          (String, error, head, last)
-import Text.Show qualified as Show      (Show(..))
-import Cardano.Prelude
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
+import           Cardano.Prelude
+import           Ouroboros.Consensus.Util.Time
+
+import           Prelude (String, error, head, last)
+
+import           Control.Applicative ((<|>))
+import           Control.Arrow ((&&&), (***))
+import           Control.Concurrent.Async (forConcurrently, forConcurrently_, mapConcurrently,
+                   mapConcurrently_)
+import qualified Control.DeepSeq as DS
+import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import           Data.Aeson (FromJSON (..), Object, ToJSON (..), Value (..), object, withObject,
+                   (.!=), (.:), (.:?))
+import qualified Data.Aeson as AE
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.IntervalMap.FingerTree (Interval (..), high, low, point)
+import           Data.List (span)
+import           Data.List.Split (chunksOf)
+import           Data.SOP (I (..), unI)
+import           Data.SOP.Strict
+import qualified Data.Text as T
+import           Data.Time.Clock (NominalDiffTime, UTCTime (..), addUTCTime, diffUTCTime)
+import           Data.Time.Clock.POSIX
+import           Data.Vector (Vector)
+import qualified Data.Vector as Vec
+import           GHC.Base (build)
+import qualified System.FilePath as F
+import           Text.Printf (printf)
+import qualified Text.Show as Show (Show (..))
 
 #if __GLASGOW_HASKELL__ < 902
 -- This is a GHC module ...
-import Util                      hiding (fst3, snd3)
+import           Util hiding (fst3, snd3)
 #elif __GLASGOW_HASKELL__ < 906
 -- that moved for the ghc-9.2 release.
-import GHC.Utils.Misc                   as Util
-                                 hiding (fst3, snd3, third3, uncurry3, firstM, secondM)
+import           GHC.Utils.Misc as Util hiding (firstM, fst3, secondM, snd3,
+                   third3, uncurry3)
 #else
 -- that moved again for the ghc-9.6 release.
 -- Taking an internal module of GHC and re-exporting it is an incredibly dumb idea.
-import GHC.Utils.Misc                   as Util
-                                 hiding (fst3, snd3, third3, uncurry3)
+import           GHC.Utils.Misc as Util hiding (fst3, snd3, third3, uncurry3)
 #endif
-
-import Data.Aeson                       (FromJSON (..), ToJSON (..), Object, Value (..), (.:), (.:?), (.!=), withObject, object)
-import Data.Aeson                       qualified as AE
-import Control.Arrow                    ((&&&), (***))
-import Control.Applicative              ((<|>))
-import Control.Concurrent.Async         (forConcurrently, forConcurrently_, mapConcurrently, mapConcurrently_)
-import Control.DeepSeq                  qualified as DS
-import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
-import Data.ByteString.Lazy.Char8       qualified as LBS
-import Data.IntervalMap.FingerTree      (Interval (..), low, high, point)
-import Data.List                        (span)
-import Data.List.Split                  (chunksOf)
-import Data.Text                        qualified as T
-import Data.SOP                         (I (..), unI)
-import Data.SOP.Strict
-import Data.Time.Clock                  (NominalDiffTime, UTCTime (..), diffUTCTime, addUTCTime)
-import Data.Time.Clock.POSIX
-import Data.Vector                      (Vector)
-import Data.Vector                      qualified as Vec
-import GHC.Base                         (build)
-import Text.Printf                      (printf)
-
-import System.FilePath                  qualified as F
-
-import Ouroboros.Consensus.Util.Time
-
-import Cardano.Ledger.BaseTypes         (StrictMaybe (..), fromSMaybe)
 
 
 deriving newtype instance FromJSON a => (FromJSON (I a))
@@ -79,6 +79,7 @@ deriving newtype instance   ToJSON a =>   (ToJSON (I a))
 --
 deriving instance FromJSON a => (FromJSON (Interval a))
 deriving instance                 Functor  Interval
+deriving instance                 Foldable Interval
 deriving instance   ToJSON a =>   (ToJSON (Interval a))
 deriving instance   NFData a =>   (NFData (Interval a))
 

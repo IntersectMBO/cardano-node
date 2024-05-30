@@ -19,7 +19,7 @@ import           Cardano.Util
 import           Prelude (id, show)
 
 import           Data.Aeson.Text (encodeToLazyText)
-import           Data.List (dropWhileEnd)
+import           Data.List (dropWhileEnd, lookup)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
@@ -44,6 +44,7 @@ mkRenderConfigDef rcFormat =
 data RenderFormat
   = AsJSON
   | AsGnuplot
+  | AsLaTeX
   | AsOrg
   | AsReport
   | AsPretty
@@ -111,6 +112,7 @@ renderAnchorDate :: Anchor -> Text
 renderAnchorDate = showText . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral @Int . round . utcTimeToPOSIXSeconds . aWhen
 
 renderAnchorOrgProperties :: RenderConfig -> Anchor -> [(Text, Text)]
+renderAnchorOrgProperties RenderConfig{rcFormat=AsLaTeX} _ = []
 renderAnchorOrgProperties RenderConfig{rcDateVerMetadata, rcRunMetadata} a =
   [ ("TITLE",    renderAnchorRuns a )                  | rcRunMetadata ]
   <>
@@ -131,24 +133,24 @@ justifyProp    w = T.center        w ' '
 renderCentiles :: Int -> [Centile] -> [Text]
 renderCentiles wi = fmap (T.take wi . T.pack . printf "%f" . unCentile)
 
-renderScalarLim  :: Maybe Int -> a -> Field ISelect I a -> Text
-renderScalarLim wLim v Field{..} =
-  let wi = unWidth fWidth <|> wLim
-           & fromMaybe (error "renderScalar:  request to render a width-free-field, without a supplied width limit.")
-      packWi  = T.pack.take wi
-      showDt  = handleStrOverflowFloat wi.renderDiffTime
-      showInt = T.pack.printf "%d"
-      showW64 = T.pack.printf "%d"
-  in case fSelect of
-    IInt     (($ v)->x) ->                 showInt x
-    IWord64M (($ v)->x) -> smaybe "---"    showW64 x
-    IWord64  (($ v)->x) ->                 showW64 x
-    IFloat   (($ v)->x) ->      packWi $ printf "%F" x
-    IDeltaTM (($ v)->x) -> smaybe "---"     showDt x
-    IDeltaT  (($ v)->x) ->                  showDt x
-    IDate    (($ v)->x) -> packWi $ take 10 $ show x
-    ITime    (($ v)->x) -> packWi $ take  8 $ drop 11 $ show x
-    IText    (($ v)->x) -> T.take wi . T.dropWhileEnd (== 's') $ x
+renderScalarLim :: Maybe Int -> Width -> ISelect I a -> (a -> Text)
+renderScalarLim wLim width = \case
+  IInt     intFunc    ->                             showInt . intFunc
+  IWord64M iwordFunc  -> smaybe "---"                showW64 . iwordFunc
+  IWord64  iwordFunc  ->                             showW64 . iwordFunc
+  IFloat   iFloatFunc -> packWi                . printf "%F" . iFloatFunc
+  IDeltaTM iDeltaFunc -> smaybe "---"                 showDt . iDeltaFunc
+  IDeltaT  iDeltaFunc ->                              showDt . iDeltaFunc
+  IDate    iDateFunc  -> packWi . take 10           . show   . iDateFunc
+  ITime    iTimeFunc  -> packWi . take  8 . drop 11 . show   . iTimeFunc
+  IText    iTextFunc  -> T.take wi . T.dropWhileEnd (== 's') . iTextFunc
+  where wi      = unWidth width <|> wLim
+                & fromMaybe (error $ "renderScalar:  request to render a width-free-field, "
+                                  <> "without a supplied width limit.")
+        packWi  = T.pack.take wi
+        showDt  = handleStrOverflowFloat wi.renderDiffTime
+        showInt = T.pack.printf "%d"
+        showW64 = T.pack.printf "%d"
 
 renderFieldCentiles :: a p -> (forall v. Divisible v => CDF p v -> [[v]]) -> Field DSelect p a -> [[Text]]
 renderFieldCentiles x cdfProj Field{..} =
@@ -158,23 +160,43 @@ renderFieldCentiles x cdfProj Field{..} =
     DFloat  (cdfProj . ($ x) ->ds) -> ds <&> fmap (formatDouble fWidth)
     DDeltaT (cdfProj . ($ x) ->ds) -> ds <&> fmap (formatDiffTime fWidth)
 
-renderSummary :: forall f a. (a ~ Summary f, TimelineFields a, ToJSON a)
-  => RenderConfig -> Anchor -> (Field ISelect I a -> Bool) -> a -> [Text]
-renderSummary RenderConfig{rcFormat=AsJSON} _ _ x = (:[]) . LT.toStrict $ encodeToLazyText x
-renderSummary rc@RenderConfig{rcFormat=AsReport} a fieldSelr summ =
-  renderAsOrg $
+-- renderSummaryName implements the convention for run names. It glues
+-- the overall node version and the name of the branch together.
+renderSummaryName :: Summary f -> Text
+renderSummaryName Summary {sumMeta=Metadata{..}}
+  | ComponentInfo {ciVersion=Version{unVersion=nodeVersion},..}
+      <- getComponent "cardano-node" manifest
+  = case ciBranch of
+      Nothing                      -> nodeVersion
+      Just Branch{unBranch=branch} -> nodeVersion <> "-" <> branch
+
+renderSummaryList :: forall f a. (a ~ Summary f, KnownCDF f, TimelineFields a, FromJSON a, ToJSON a)
+  => RenderConfig -> Anchor -> (forall b. Field ISelect I b -> Bool) -> a -> [SomeSummary] -> [Text]
+renderSummaryList _ _ _ _ [] =
+  error "renderSummary: empty list"
+renderSummaryList RenderConfig{rcFormat=AsJSON} _ _ x summs =
+  (:[]) . LT.toStrict . encodeToLazyText $ SomeSummary x : summs
+renderSummaryList rc@RenderConfig{rcFormat=AsLaTeX} a fieldSelr summ summaries@(_:_) =
+  renderAsLaTeX $ renderSummaryProps rc a fieldSelr summ summaries
+renderSummaryList rc@RenderConfig{rcFormat=AsReport} a fieldSelr summ summaries@(_:_) =
+  renderAsOrg $ renderSummaryProps rc a fieldSelr summ summaries
+renderSummaryList rc  _ _ _ _ =
+  error $ "renderSummary: RenderConfig not supported:  " <> show rc
+
+renderSummaryProps :: forall f a. (a ~ Summary f, KnownCDF f, TimelineFields a, FromJSON a, ToJSON a)
+  => RenderConfig -> Anchor -> (Field ISelect I a -> Bool) -> a -> [SomeSummary] -> Table
+renderSummaryProps rc a fieldSelr summ summaries =
   Props
   { oProps = renderAnchorOrgProperties rc a
   , oConstants = []
   , oBody = (:[]) $
     Table
-    { tColHeaders     = ["Value"]
+    { tColHeaders     = renderSummaryName summ :
+                            [renderSummaryName s | SomeSummary s <- summaries]
     , tExtended       = True
     , tApexHeader     = Just "Parameter"
-    , tColumns        = --transpose $
-                        [fields' <&> renderScalarLim (Just 32) summ]
-    -- , tColumns        = [kvs <&> snd]
-    , tRowHeaders     = fields' <&> fShortDesc
+    , tColumns        = map mkTColumn $ SomeSummary summ : summaries
+    , tRowHeaders     = map fShortDesc fields'
     , tSummaryHeaders = []
     , tSummaryValues  = []
     , tFormula = []
@@ -183,9 +205,20 @@ renderSummary rc@RenderConfig{rcFormat=AsReport} a fieldSelr summ =
   }
  where
    fields' :: [Field ISelect I a]
-   fields' = filter fieldSelr timelineFields
-renderSummary rc  _ _ _ =
-  error $ "renderSummary: RenderConfig not supported:  " <> show rc
+   fields'  = filter fieldSelr timelineFields
+   ids     :: [Text]
+   ids      = map fId fields'
+   rsl     :: Width -> ISelect I (Summary f') -> Summary f' -> Text
+   rsl      = renderScalarLim $ Just 32
+   mkTColumn :: SomeSummary -> [Text]
+   mkTColumn (SomeSummary (summElem :: Summary f')) =
+     [rsl fWidth fSelect summElem | Field{..} <- fs] where
+       tfs          :: [(Text, Field ISelect I (Summary f'))]
+       tfs           = [(fId tf, tf) | tf <- timelineFields]
+       fs           :: [Field ISelect I (Summary f')]
+       fs            = [lookup' _id | _id <- ids] where
+         lookup' :: Text -> Field ISelect I (Summary f')
+         lookup'  = maybe (error "renderSummaryProps") id . flip lookup tfs
 
 renderProfilingData ::
   RenderConfig -> Anchor -> (ProfileEntry (CDF I) -> Bool) -> ProfilingData (CDF I) -> [Text]
@@ -199,10 +232,10 @@ renderProfilingData rc a flt pd =
     { tColHeaders     = ["time, %", "range", "alloc, %", "source location"]
     , tExtended       = True
     , tApexHeader     = Just "Parameter"
-    , tColumns        = [ fieldsTime   <&> renderScalarLim (Just 6) pd
-                        , fieldsRange  <&> renderScalarLim (Just 6) pd
-                        , fieldsAlloc  <&> renderScalarLim (Just 6) pd
-                        , fieldsSrcLoc <&> renderScalarLim (Just 60) pd
+    , tColumns        = [ [renderScalarLim (Just 6)  fWidth fSelect pd | Field{..} <- fieldsTime]
+                        , [renderScalarLim (Just 6)  fWidth fSelect pd | Field{..} <- fieldsRange]
+                        , [renderScalarLim (Just 6)  fWidth fSelect pd | Field{..} <- fieldsAlloc]
+                        , [renderScalarLim (Just 60) fWidth fSelect pd | Field{..} <- fieldsSrcLoc]
                         ]
     , tRowHeaders     = pes <&> peFunc
     , tSummaryHeaders = []
@@ -261,7 +294,9 @@ renderTimeline fields' commentFn rc a comments xs =
          : concat (fmap (commentFn l) comments))
 
    entry :: a -> Text
-   entry = renderLineDist . renderScalarLim Nothing
+   entry = renderLineDist . rsl where
+     rsl e Field{..} =
+       renderScalarLim Nothing fWidth fSelect e
 
    head1, head2 :: Maybe Text
    head1 =
@@ -279,7 +314,6 @@ renderTimeline fields' commentFn rc a comments xs =
    -- Different strategies: fields are forcefully separated,
    --                       whereas heads can use the extra space
    renderLineHead = mconcat . renderLine' justifyHead fWidth
-   -- renderLineHead = mconcat . renderLine' justifyHead (toEnum.(+ 1).unsafeUnWidth "renderTimeline".fWidth)
    renderLineDist :: (Field ISelect I a -> Text) -> Text
    renderLineDist = T.intercalate " " . renderLine' justifyData fWidth
 
@@ -335,25 +369,14 @@ modeFilename :: TextOutputFile -> Text -> RenderFormat -> TextOutputFile
 modeFilename orig@(TextOutputFile f) name = \case
   AsJSON    -> orig
   AsGnuplot -> printf f name & TextOutputFile
+  AsLaTeX   -> orig
   AsOrg     -> orig
   AsReport  -> orig
   AsPretty  -> orig
 
-renderAnalysisCDFs :: forall a p. (CDFFields a p, KnownCDF p, ToJSON (a p)) => Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> Maybe [Centile] -> RenderConfig -> a p -> [(Text, [Text])]
+renderProps :: forall a p. (CDFFields a p, KnownCDF p) => Anchor -> (Field DSelect p a -> Bool) -> Maybe [Centile] -> RenderConfig -> a p -> Table
 
-renderAnalysisCDFs _anchor _fieldSelr _c2a _centileSelr RenderConfig{rcFormat=AsJSON} x = (:[]) . ("",) . (:[]) . LT.toStrict $
-  encodeToLazyText x
-
-renderAnalysisCDFs anchor fieldSelr _c2a _centileSelr rc@RenderConfig{rcFormat=AsGnuplot} x =
-  filter fieldSelr cdfFields <&>
-  \Field{fId=cdfField} ->
-    (,) cdfField $
-    "# " <> renderAnchor rc anchor :
-    (mapRenderCDF ((== cdfField) . fId) Nothing (unliftCDFValExtra cdfIx) x
-     & fmap (T.intercalate " "))
-
-renderAnalysisCDFs a fieldSelr _c2a centileSelr rc@RenderConfig{rcFormat=AsOrg} x =
-  (:[]) . ("",) . renderAsOrg $
+renderProps a fieldSelr centileSelr rc x =
   Props
   { oProps = renderAnchorOrgProperties rc a
   , oConstants = []
@@ -391,70 +414,28 @@ renderAnalysisCDFs a fieldSelr _c2a centileSelr rc@RenderConfig{rcFormat=AsOrg} 
                      id
                      centileSelr
 
+renderAnalysisCDFs :: forall a p. (CDFFields a p, KnownCDF p, ToJSON (a p)) => Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> Maybe [Centile] -> RenderConfig -> a p -> [(Text, [Text])]
+
+-- This use of encodeToLazyText demands the ToJSON constraint.
+renderAnalysisCDFs _anchor _fieldSelr _c2a _centileSelr RenderConfig{rcFormat=AsJSON} x =
+  (:[]) . ("",) . (:[]) . LT.toStrict $ encodeToLazyText x
+
+renderAnalysisCDFs anchor fieldSelr _c2a _centileSelr rc@RenderConfig{rcFormat=AsGnuplot} x =
+  filter fieldSelr cdfFields <&>
+  \Field{fId=cdfField} ->
+    (,) cdfField $
+    "# " <> renderAnchor rc anchor :
+    (mapRenderCDF ((== cdfField) . fId) Nothing (unliftCDFValExtra cdfIx) x
+     & fmap (T.intercalate " "))
+
+renderAnalysisCDFs a fieldSelr _c2a centileSelr rc@RenderConfig{rcFormat=AsOrg} x =
+  (:[]) . ("",) . renderAsOrg $ renderProps a fieldSelr centileSelr rc x
+
+renderAnalysisCDFs a fieldSelr _c2a centileSelr rc@RenderConfig{rcFormat=AsLaTeX} x =
+  (:[]) . ("",) . renderAsLaTeX $ mkReportProps a fieldSelr _c2a centileSelr rc x
+
 renderAnalysisCDFs a fieldSelr aspect _centileSelr rc@RenderConfig{rcFormat=AsReport} x =
-  (:[]) . ("",) . renderAsOrg $
-  Props
-  { oProps = renderAnchorOrgProperties rc a
-  , oConstants = []
-  , oBody = (:[]) $
-    Table
-    { tColHeaders     = fst (hdrsProjs @Integer) -- This is crazy.
-    , tExtended       = True
-    , tApexHeader     = Just "metric"
-    , tColumns        = transpose $
-                        fields' <&>
-                        fmap (formatDouble W6)
-                        . mapFieldWithKey x (snd hdrsProjs)
-    , tRowHeaders     = fields' <&> (\Field{..} ->
-                                       fShortDesc <> ", " <> renderUnit fUnit)
-    , tSummaryHeaders = []
-    , tSummaryValues  = []
-    , tFormula = []
-    , tConstants = [("nSamples",
-                     fields' <&> mapField x (formatInt W4 . cdfSize) & head)]
-    }
-  }
- where
-   fields' :: [Field DSelect p a]
-   fields' = filter fieldSelr cdfFields
-
-   hdrsProjs :: forall v. (Divisible v) => ([Text], Field DSelect p a -> CDF p v -> [Double])
-   hdrsProjs = aspectColHeadersAndProjections aspect
-
-   aspectColHeadersAndProjections :: forall v. (Divisible v)
-                                  => CDF2Aspect -> ([Text], Field DSelect p a -> CDF p v -> [Double])
-   aspectColHeadersAndProjections = \case
-     OfOverallDataset ->
-       (,)
-       ["average", "CoV", "min", "max", "stddev", "range", "precision", "size"]
-       \Field{..} c@CDF{cdfRange=Interval cdfMin cdfMax, ..} ->
-         let avg = cdfAverageVal c & toDouble in
-         [ avg
-         , cdfStddev / avg
-         , fromRational . toRational $ cdfMin
-         , fromRational . toRational $ cdfMax
-         , cdfStddev
-         , fromRational . toRational $ cdfMax - cdfMin
-         , fromIntegral $ fromEnum fPrecision
-         , fromIntegral cdfSize
-         ]
-     OfInterCDF ->
-       (,)
-       ["average", "CoV", "min", "max", "stddev", "range", "precision", "size"]
-       (\Field{..} ->
-        cdfArity
-         (error "Cannot do inter-CDF statistics on plain CDFs")
-         (\CDF{cdfAverage=cdfAvg@CDF{cdfRange=Interval minAvg maxAvg,..}} ->
-             let avg = cdfAverageVal cdfAvg & toDouble in
-             [ avg
-             , cdfStddev / avg
-             , toDouble minAvg
-             , toDouble maxAvg
-             , cdfStddev
-             , toDouble $ maxAvg - minAvg
-             , fromIntegral $ fromEnum fPrecision
-             , fromIntegral cdfSize
-             ]))
+  (:[]) . ("",) . renderAsOrg $ mkReportProps a fieldSelr aspect _centileSelr rc x
 
 renderAnalysisCDFs a fieldSelr _c2a centiSelr rc@RenderConfig{rcFormat=AsPretty} x =
   (:[]) . ("",) $
@@ -518,6 +499,71 @@ renderAnalysisCDFs a fieldSelr _c2a centiSelr rc@RenderConfig{rcFormat=AsPretty}
    -- populationIndices = [1..maxPopulationSize]
    -- maxPopulationSize :: Int
    -- maxPopulationSize = last . sort $ mapSomeFieldCDF cdfSize x . fSelect <$> cdfFields @a @p
+
+mkReportProps :: forall a p. (CDFFields a p, KnownCDF p) => Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> Maybe [Centile] -> RenderConfig -> a p -> Table
+mkReportProps a fieldSelr aspect _centileSelr rc x =
+  Props
+  { oProps = renderAnchorOrgProperties rc a
+  , oConstants = []
+  , oBody = (:[]) $
+    Table
+    { tColHeaders     = fst (hdrsProjs @Integer) -- This is crazy.
+    , tExtended       = True
+    , tApexHeader     = Just "metric"
+    , tColumns        = transpose $
+                        fields' <&>
+                        fmap (formatDouble W6)
+                        . mapFieldWithKey x (snd hdrsProjs)
+    , tRowHeaders     = fields' <&> (\Field{..} ->
+                                       fShortDesc <> ", " <> renderUnit fUnit)
+    , tSummaryHeaders = []
+    , tSummaryValues  = []
+    , tFormula = []
+    , tConstants = [("nSamples",
+                     fields' <&> mapField x (formatInt W4 . cdfSize) & head)]
+    }
+  }
+ where
+   fields' :: [Field DSelect p a]
+   fields' = filter fieldSelr cdfFields
+
+   hdrsProjs :: forall v. (Divisible v) => ([Text], Field DSelect p a -> CDF p v -> [Double])
+   hdrsProjs = aspectColHeadersAndProjections aspect
+
+   aspectColHeadersAndProjections :: forall v. (Divisible v)
+                                  => CDF2Aspect -> ([Text], Field DSelect p a -> CDF p v -> [Double])
+   aspectColHeadersAndProjections = \case
+     OfOverallDataset ->
+       (,)
+       ["average", "CoV", "min", "max", "stddev", "range", "precision", "size"]
+       \Field{..} c@CDF{cdfRange=Interval cdfMin cdfMax, ..} ->
+         let avg = cdfAverageVal c & toDouble in
+         [ avg
+         , cdfStddev / avg
+         , fromRational . toRational $ cdfMin
+         , fromRational . toRational $ cdfMax
+         , cdfStddev
+         , fromRational . toRational $ cdfMax - cdfMin
+         , fromIntegral $ fromEnum fPrecision
+         , fromIntegral cdfSize
+         ]
+     OfInterCDF ->
+       (,)
+       ["average", "CoV", "min", "max", "stddev", "range", "precision", "size"]
+       (\Field{..} ->
+        cdfArity
+         (error "Cannot do inter-CDF statistics on plain CDFs")
+         (\CDF{cdfAverage=cdfAvg@CDF{cdfRange=Interval minAvg maxAvg,..}} ->
+             let avg = cdfAverageVal cdfAvg & toDouble in
+             [ avg
+             , cdfStddev / avg
+             , toDouble minAvg
+             , toDouble maxAvg
+             , cdfStddev
+             , toDouble $ maxAvg - minAvg
+             , fromIntegral $ fromEnum fPrecision
+             , fromIntegral cdfSize
+             ]))
 
 --
 -- Rendering mini-lib

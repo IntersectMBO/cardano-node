@@ -2,35 +2,32 @@
 {-# OPTIONS_GHC -fmax-pmcheck-models=25000 #-}
 module Cardano.Command (module Cardano.Command) where
 
-import Cardano.Prelude          hiding (State, toText)
+import           Cardano.Analysis.API
+import           Cardano.Analysis.BlockProp
+import           Cardano.Analysis.MachPerf
+import           Cardano.Analysis.Summary
+import           Cardano.Prelude hiding (State, toText)
+import           Cardano.Render
+import           Cardano.Report
+import           Cardano.Unlog.LogObject
+import           Cardano.Util hiding (head)
 
-import Data.Aeson                       qualified as Aeson
-import Data.Aeson.Text                  qualified as Aeson
-import Data.ByteString                  qualified as BS
-import Data.ByteString.Lazy.Char8       qualified as LBS
-import Data.ByteString.Char8            qualified as BS8
-import Data.Map                         qualified as Map
-import Data.Text                        (pack)
-import Data.Text                        qualified as T
-import Data.Text.Lazy                   qualified as LT
-import Data.Text.Short                  (toText)
-import Data.Time.Clock
-import Data.Tuple.Extra                 (both)
-import Options.Applicative
-import Options.Applicative              qualified as Opt
-
-import System.Directory                 (doesFileExist)
-import System.FilePath
-import System.Posix.Files               qualified as IO
-
-import Cardano.Analysis.API
-import Cardano.Analysis.BlockProp
-import Cardano.Analysis.MachPerf
-import Cardano.Analysis.Summary
-import Cardano.Render
-import Cardano.Report
-import Cardano.Unlog.LogObject
-import Cardano.Util             hiding (head)
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Text as Aeson
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS8
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Map as Map
+import           Data.Text (pack)
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
+import           Data.Text.Short (toText)
+import           Data.Tuple.Extra (both)
+import           Options.Applicative
+import qualified Options.Applicative as Opt
+import           System.Directory (doesFileExist)
+import           System.FilePath
+import qualified System.Posix.Files as IO
 
 data CommandError
   = CommandError    ChainCommand    Text
@@ -317,6 +314,7 @@ writerOpt ctor desc rcFormat = do
    optDescSuf = \case
      AsJSON    -> (,) "json"    " results as complete JSON dump"
      AsGnuplot -> (,) "gnuplot" " as individual Gnuplot files"
+     AsLaTeX   -> (,) "latex"   " as LaTeX file"
      AsOrg     -> (,) "org"     " as Org-mode table"
      AsReport  -> (,) "org-report"  " as Org-mode summary table"
      AsPretty  -> (,) "pretty"  " as text report"
@@ -759,7 +757,7 @@ runChainCommand s@State{sSummaries = Just (summary:_)} c@(RenderSummary rc@Rende
       dumpText "profiling" bodyProfiling (TextOutputFile $ replaceFileName (unTextOutputFile f) "profiling" System.FilePath.<.> "org")
         & firstExceptT (CommandError c)
   pure s
- where bodySummary = renderSummary rc anchor (iFields sumFieldsReport) summary
+ where bodySummary = renderSummaryList rc anchor (iFields sumFieldsReport) summary []
        anchor = sAnchor s
 runChainCommand _ c@RenderSummary{} = missingCommandData c
   ["run summary"]
@@ -799,7 +797,7 @@ runChainCommand s@State{sMultiSummary=Just summary}
       dumpText "multi-profiling" bodyProfiling (TextOutputFile $ replaceFileName (unTextOutputFile f) "profiling" System.FilePath.<.> "org")
         & firstExceptT (CommandError c)
   pure s
- where body = renderSummary rc anchor (iFields sumFieldsReport) summary
+ where body = renderSummaryList rc anchor (iFields sumFieldsReport) summary []
        anchor = sAnchor s
 runChainCommand _ c@RenderMultiSummary{} = missingCommandData c
   ["multi-run summary"]
