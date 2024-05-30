@@ -63,8 +63,8 @@ package plutus-scripts-bench
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: b7aabe380d9378934f3d4f4212a8a8f9ff678e48
-  --sha256: 0hda5y9y0b8dlcpiabjcl2gsffxnpdhj2jqpkldhid96r1m3d81c
+  tag: df23ef6e7e269011318c82d001a6b894cd719571
+  --sha256: 1iiv36cj282zw5nzwpf6n96h1hbzcv8v0cg17dv1zyrchsmclwdj
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
