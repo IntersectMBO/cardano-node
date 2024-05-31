@@ -248,12 +248,13 @@ getEpochStateView
   :: HasCallStack
   => MonadResource m
   => MonadTest m
+  => MonadCatch m
   => NodeConfigFile In -- ^ node Yaml configuration file path
   -> SocketPath -- ^ node socket path
   -> m EpochStateView
 getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
   epochStateView <- H.evalIO $ newIORef Nothing
-  runInBackground (return ()) . runExceptT . foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) Nothing
+  runInBackground . runExceptT . foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) Nothing
     $ \epochState slotNumber blockNumber -> do
         liftIO . writeIORef epochStateView $ Just (epochState, slotNumber, blockNumber)
         pure ConditionNotMet
