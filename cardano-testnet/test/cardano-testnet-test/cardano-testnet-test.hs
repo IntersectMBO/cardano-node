@@ -17,6 +17,7 @@ import qualified Cardano.Testnet.Test.Gov.CommitteeAddNew as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepDeposit as Gov
 import qualified Cardano.Testnet.Test.Gov.DRepRetirement as Gov
 import qualified Cardano.Testnet.Test.Gov.NoConfidence as Gov
+import qualified Cardano.Testnet.Test.Gov.PParamChangeFailsSPO as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitution as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryGrowth as Gov
@@ -59,6 +60,7 @@ tests = do
                 , ignoreOnMacAndWindows "Propose And Ratify New Constitution" Gov.hprop_ledger_events_propose_new_constitution
                 , ignoreOnWindows "Propose New Constitution SPO" Gov.hprop_ledger_events_propose_new_constitution_spo
                 , ignoreOnWindows "Treasury Withdrawal" Gov.hprop_ledger_events_treasury_withdrawal
+                , ignoreOnWindows "PParam change fails for SPO" Gov.hprop_check_pparam_fails_spo
                 -- FIXME Those tests are flaky
                 -- , ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
                 ]

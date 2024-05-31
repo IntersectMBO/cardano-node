@@ -7,6 +7,8 @@
 
 module Cardano.Testnet.Test.Gov.DRepActivity
   ( hprop_check_drep_activity
+  , makeActivityChangeProposal
+  , voteChangeProposal
   ) where
 
 import           Cardano.Api as Api
