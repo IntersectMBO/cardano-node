@@ -65,8 +65,8 @@ forgeTracerTransform nodeKern (Trace tr) =
             query <- mapNodeKernelDataIO
                         (\nk ->
                           (,,)
-                            <$> nkQueryLedger (ledgerUtxoSize . ledgerState) nk
-                            <*> nkQueryLedger (ledgerDelegMapSize . ledgerState) nk
+                            <$> nkQueryLedger (ledgerDRepCount . ledgerState) nk
+                            <*> nkQueryLedger (ledgerDRepMapSize . ledgerState) nk
                             <*> nkQueryChain fragmentChainDensity nk)
                         nodeKern
             case query of
