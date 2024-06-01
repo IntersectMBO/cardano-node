@@ -1,7 +1,9 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -30,11 +32,8 @@ import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Algorithm.Diff
 import           Data.Algorithm.DiffOutput
 import qualified Data.ByteString.Lazy.Char8 as BSC
-import           Data.Function
 import qualified Data.List as List
 import           Data.Text (Text, unpack)
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
 import           GHC.Stack
 import qualified GHC.Stack as GHC
 import           Network.Socket (PortNumber)
@@ -204,6 +203,7 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
   let logDir = makeLogDir (TmpAbsolutePath tmpWorkspace)
       -- used as a lock to start only a single instance of epoch state logging
       logFile = logDir </> "ledger-epoch-state.log"
+      diffFile = logDir </> "ledger-epoch-state-diffs.log"
 
   H.evalIO (IO.doesDirectoryExist logDir) >>= \case
     True -> pure ()
@@ -218,97 +218,58 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
       H.evalIO $ appendFile logFile ""
       socketPath <- H.noteM $ H.sprocketSystemName <$> H.headM (poolSprockets testnetRuntime)
 
-      runInBackground
-        (do logFileContents <- IO.readFile logFile
-            let epochStateValues = epochStateBeforeAfterValues logFileContents
-                epochStateDiffs' = epochStateDiffs epochStateValues
-            Text.writeFile (logDir </> "ledger-epoch-state-diffs.log") epochStateDiffs'
-        )
-        (do void $ runExceptT $
-              foldEpochState
-                (configurationFile testnetRuntime)
-                (Api.File socketPath)
-                Api.QuickValidation
-                (EpochNo maxBound)
-                ()
-                (\epochState _ _ ->
-                    liftIO $ evalStateT (handler logFile epochState) 0
-                )
-        )
+      _ <- runInBackground . runExceptT $
+        foldEpochState
+          (configurationFile testnetRuntime)
+          (Api.File socketPath)
+          Api.QuickValidation
+          (EpochNo maxBound)
+          Nothing
+          (handler logFile diffFile)
 
-
-      H.note_ $ "Started logging epoch states to: " <> logFile
+      H.note_ $ "Started logging epoch states to: " <> logFile <> "\nEpoch state diffs are logged to: " <> diffFile
 
   where
-    handler :: FilePath -> AnyNewEpochState -> StateT Int IO LedgerStateCondition
-    handler outputFpHandle (AnyNewEpochState sbe nes) = do
-      handleException . liftIO $ do
-        appendFile outputFpHandle $ "#### BLOCK ####" <> "\n"
-        appendFile outputFpHandle $ BSC.unpack (shelleyBasedEraConstraints sbe $ encodePretty nes) <> "\n"
-        pure ConditionNotMet
+    handler :: FilePath -- ^ log file
+            -> FilePath -- ^ diff file
+            -> AnyNewEpochState
+            -> SlotNo
+            -> BlockNo
+            -> StateT (Maybe AnyNewEpochState) IO LedgerStateCondition
+    handler outputFp diffFp anes@(AnyNewEpochState !sbe !nes) _ (BlockNo blockNo) = handleException $ do
+      let prettyNes = shelleyBasedEraConstraints sbe (encodePretty nes)
+          blockLabel = "#### BLOCK " <> show blockNo <> " ####"
+      liftIO . BSC.appendFile outputFp $ BSC.unlines [BSC.pack blockLabel, prettyNes, ""]
+
+      -- store epoch state for logging of differences
+      mPrevEpochState <- get
+      put (Just anes)
+      forM_ mPrevEpochState $ \(AnyNewEpochState sbe' pnes) -> do
+        let prettyPnes = shelleyBasedEraConstraints sbe' (encodePretty pnes)
+            difference = calculateEpochStateDiff prettyPnes prettyNes
+        liftIO . appendFile diffFp $ unlines [blockLabel, difference, ""]
+
+      pure ConditionNotMet
       where
         -- | Handle all sync exceptions and log them into the log file. We don't want to fail the test just
         -- because logging has failed.
         handleException = handle $ \(e :: SomeException) -> do
-          liftIO $ appendFile outputFpHandle $ "Ledger new epoch logging failed - caught exception:\n"
+          liftIO $ appendFile outputFp $ "Ledger new epoch logging failed - caught exception:\n"
             <> displayException e <> "\n"
           pure ConditionMet
--- TODO: Not sure why this isn't terminating. Read up on resourcet and how it works.
--- See concurrency section: https://www.fpcomplete.com/blog/understanding-resourcet/
--- Probably need to use resourceForkWith but best to not use concurrency at all!
 
-
--- | Produce tuples that represent the change of the 'NewEpochState' after
--- a transition.
-epochStateBeforeAfterValues
-  :: String
-  -> [(Text, Text)]
-epochStateBeforeAfterValues logFileContents =
-  let allEpochStates = filter (/= "") . Text.splitOn "#### BLOCK ####" $ Text.pack logFileContents
-  in getAllTransitions allEpochStates
-
-getAllTransitions ::  [Text] -> [(Text, Text)]
-getAllTransitions ts = do
-  let ts' = drop 1 $ ts <> [""]
-  zip ts ts'
-
-epochStateDiffs
-  :: [(Text,Text)]
-  -> Text
-epochStateDiffs [] = "No epoch state values to compare"
-epochStateDiffs states =
-  -- We first get the block number changes
-  labelAllEpochStateTransitions
-    [ Text.pack $ epochStateTransitionDiff (Text.unpack i) (Text.unpack n)
-    | (i, n) <- states
-    ] & Text.intercalate "\n"
- where
-  labelSingleEpochStateTransition :: Int -> Text
-  labelSingleEpochStateTransition transitionNumber =
-    "Epoch state transition: " <> Text.pack (show transitionNumber)
-
-  labelAllEpochStateTransitions [] = []
-  labelAllEpochStateTransitions trans =
-    go trans (1 :: Int) []
-   where
-     go [] _ acc = acc
-     go (x:xs) 1 _ = go xs 2 [labelSingleEpochStateTransition 1, x]
-     go (x:xs) n acc = go xs (n + 1) (acc ++ [labelSingleEpochStateTransition n, x])
-
-epochStateTransitionDiff
-  :: String -- ^ Initial epoch state
-  -> String -- ^ Following epoch state
+calculateEpochStateDiff
+  :: BSC.ByteString -- ^ Current epoch state
+  -> BSC.ByteString -- ^ Following epoch state
   -> String
-epochStateTransitionDiff initialState next =
-  let removeBlockNumberChangeInitial = lines initialState
-      removeBlockNumberChangeNext = lines next
-      diffResult = getGroupedDiff removeBlockNumberChangeInitial removeBlockNumberChangeNext
+calculateEpochStateDiff current next =
+  let diffResult = getGroupedDiff (BSC.unpack <$> BSC.lines current) (BSC.unpack <$> BSC.lines next)
   in if null diffResult
      then "No changes in epoch state"
      else ppDiff diffResult
 
 instance (L.EraTxOut ledgerera, L.EraGov ledgerera) => ToJSON (L.NewEpochState ledgerera) where
-  toJSON (L.NewEpochState nesEL nesBprev nesBCur nesEs nesRu nesPd _stashedAvvm)=
+  toJSON (L.NewEpochState nesEL nesBprev nesBCur nesEs nesRu nesPd _stashedAvvm) =
     object
       [ "currentEpoch" .= nesEL
       , "priorBlocks" .= nesBprev

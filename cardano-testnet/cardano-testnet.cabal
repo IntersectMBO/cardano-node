@@ -34,7 +34,6 @@ library
   build-depends:        aeson
                       , aeson-pretty
                       , ansi-terminal
-                      , async
                       , bytestring
                       , cardano-api ^>= 8.46
                       , cardano-cli ^>= 8.23
