@@ -1,6 +1,7 @@
 name: Actionlint
 
 on:
+  merge_group:
   pull_request:
 
 jobs:
