@@ -46,7 +46,6 @@ import qualified System.Process as IO
 import           Testnet.Filepath
 import qualified Testnet.Ping as Ping
 import           Testnet.Process.Run
-import           Testnet.Property.Util
 import           Testnet.Types (NodeRuntime (NodeRuntime), TestnetRuntime (configurationFile),
                    poolSprockets)
 
@@ -55,6 +54,7 @@ import qualified Hedgehog as H
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.Concurrent as H
 
 data NodeStartFailure
   = ProcessRelatedFailure ProcessError
@@ -218,7 +218,7 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
       H.evalIO $ appendFile logFile ""
       socketPath <- H.noteM $ H.sprocketSystemName <$> H.headM (poolSprockets testnetRuntime)
 
-      _ <- runInBackground . runExceptT $
+      _ <- H.asyncRegister_ . runExceptT $
         foldEpochState
           (configurationFile testnetRuntime)
           (Api.File socketPath)
@@ -228,7 +228,6 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
           (handler logFile diffFile)
 
       H.note_ $ "Started logging epoch states to: " <> logFile <> "\nEpoch state diffs are logged to: " <> diffFile
-
   where
     handler :: FilePath -- ^ log file
             -> FilePath -- ^ diff file

@@ -62,7 +62,7 @@ library
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras < 0.6.2
+                      , hedgehog-extras ^>= 0.6.4
                       , lens-aeson
                       , microlens
                       , mtl
@@ -93,7 +93,6 @@ library
                         Parsers.Run
                         Testnet.Components.Configuration
                         Testnet.Components.Query
-                        Testnet.Components.TestWatchdog
                         Testnet.Defaults
                         Testnet.EpochStateProcessing
                         Testnet.Filepath
@@ -227,7 +226,7 @@ test-suite cardano-testnet-test
                       , exceptions
                       , filepath
                       , hedgehog
-                      , hedgehog-extras
+                      , hedgehog-extras 
                       , http-conduit
                       , lens-aeson
                       , microlens

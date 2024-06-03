@@ -31,7 +31,6 @@ import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
-import           Testnet.Components.TestWatchdog (kickWatchdog, runWithDefaultWatchdog)
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
@@ -43,11 +42,11 @@ import           Testnet.Types
 import           Hedgehog (MonadTest, Property, annotateShow)
 import qualified Hedgehog.Extras as H
 
+
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRep Activity/"'@
 hprop_check_drep_activity :: Property
-hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBasePath' ->
-                              runWithDefaultWatchdog $ \watchdog -> do
+hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog $ \watchdog -> do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
@@ -127,7 +126,7 @@ hprop_check_drep_activity = integrationWorkspace "test-activity" $ \tempAbsBaseP
                                     minEpochsToWaitIfNotChanging (Just firstTargetDRepActivity)
                                     maxEpochsToWaitAfterProposal
 
-  kickWatchdog watchdog
+  H.kickWatchdog watchdog
 
   -- We now send a bunch of proposals to make sure that the 2 new DReps expire.
   -- because DReps won't expire if there is not enough activity (opportunites to participate).

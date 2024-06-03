@@ -16,7 +16,6 @@ import qualified Data.Map as Map
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
-import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (mkExecConfig)
@@ -30,7 +29,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/DRep Deposits/"'@
 hprop_ledger_events_drep_deposits :: Property
-hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_ledger_events_drep_deposits = integrationWorkspace "drep-deposits" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
 
 
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'

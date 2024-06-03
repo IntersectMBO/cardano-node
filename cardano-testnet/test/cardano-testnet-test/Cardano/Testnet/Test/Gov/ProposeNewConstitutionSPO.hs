@@ -26,7 +26,6 @@ import           Lens.Micro
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
-import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
@@ -44,7 +43,7 @@ import qualified Hedgehog.Extras as H
 -- Execute me with:
 -- @cabal test cardano-testnet-test --test-options '-p "/ProposeNewConstitutionSPO/"'@
 hprop_ledger_events_propose_new_constitution_spo :: Property
-hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose-new-constitution-spo" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose-new-constitution-spo" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath

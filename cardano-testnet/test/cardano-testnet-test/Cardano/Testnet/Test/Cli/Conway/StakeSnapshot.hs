@@ -18,7 +18,6 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as KM
 import qualified System.Info as SYS
 
-import           Testnet.Components.TestWatchdog
 import           Testnet.Process.Run (execCliStdoutToJson, mkExecConfig)
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Types
@@ -27,9 +26,10 @@ import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
 hprop_stakeSnapshot :: Property
-hprop_stakeSnapshot = integrationRetryWorkspace 2 "conway-stake-snapshot" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_stakeSnapshot = integrationRetryWorkspace 2 "conway-stake-snapshot" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
