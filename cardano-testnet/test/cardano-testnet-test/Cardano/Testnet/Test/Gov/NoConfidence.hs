@@ -27,6 +27,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe.Strict
 import           Data.String
 import qualified Data.Text as Text
+import           GHC.Exts (IsList (toList))
 import           Lens.Micro
 import           System.FilePath ((</>))
 
@@ -34,6 +35,7 @@ import           Testnet.Components.Configuration
 import           Testnet.Components.Query
 import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
+import           Testnet.EpochStateProcessing (waitForGovActionVotes)
 import qualified Testnet.Process.Cli.DRep as DRep
 import           Testnet.Process.Cli.Keys
 import qualified Testnet.Process.Cli.SPO as SPO
@@ -66,7 +68,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
       era = toCardanoEra sbe
       cEra = AnyCardanoEra era
       fastTestnetOptions = cardanoDefaultTestnetOptions
-        { cardanoEpochLength = 100
+        { cardanoEpochLength = 200
         , cardanoNodeEra = cEra
         }
   execConfigOffline <- H.mkExecConfigOffline tempBaseAbsPath
@@ -195,9 +197,9 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
       pure $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
 
   let spoVotes :: [(String, Int)]
-      spoVotes =  [("yes", 1), ("yes", 2), ("yes", 3)]
+      spoVotes =  [("yes", 1), ("yes", 2), ("no", 3)]
       drepVotes :: [(String, Int)]
-      drepVotes = [("yes", 1), ("yes", 2), ("yes", 3)]
+      drepVotes = [("yes", 1), ("yes", 2), ("no", 3)]
 
   spoVoteFiles <- SPO.generateVoteFiles ceo execConfig work "spo-vote-files"
                    governanceActionTxId governanceActionIndex
@@ -220,6 +222,23 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
                 (SomeKeyPair (paymentKeyInfoPair wallet0) : allVoteSigningKeys)
 
   submitTx execConfig cEra voteTxFp
+
+  -- Tally votes
+  waitForGovActionVotes epochStateView (EpochInterval 1)
+
+  govState <- getGovState epochStateView ceo
+  govActionState <- H.headM $ govState ^. L.cgsProposalsL . L.pPropsL . to toList
+  let gaDRepVotes = govActionState ^. L.gasDRepVotesL . to toList
+      gaSpoVotes = govActionState ^. L.gasStakePoolVotesL . to toList
+
+  length (filter ((== L.VoteYes) . snd) gaDRepVotes) === 2
+  length (filter ((== L.VoteNo) . snd) gaDRepVotes) === 1
+  length (filter ((== L.Abstain) . snd) gaDRepVotes) === 0
+  length drepVotes === length gaDRepVotes
+  length (filter ((== L.VoteYes) . snd) gaSpoVotes) === 2
+  length (filter ((== L.VoteNo) . snd) gaSpoVotes) === 1
+  length (filter ((== L.Abstain) . snd) gaSpoVotes) === 0
+  length spoVotes === length gaSpoVotes
 
   -- Step 4. We confirm the no confidence motion has been ratified by checking
   -- for an empty constitutional committee.
