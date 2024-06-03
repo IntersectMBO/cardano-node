@@ -37,6 +37,7 @@ import           Hedgehog (Property)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
+import Cardano.Api.HasTypeProxy (Proxy(..))
 
 hprop_transaction :: Property
 hprop_transaction = integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
@@ -86,7 +87,8 @@ hprop_transaction = integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbs
     , "--out-file", txbodyFp
     ]
   cddlUnwitnessedTx <- H.readJsonFileOk txbodyFp
-  apiTx <- H.evalEither $ deserialiseTxLedgerCddl sbe cddlUnwitnessedTx
+  apiTx <- H.evalEither $ deserialiseFromTextEnvelope (proxyToAsType Proxy :: AsType (Tx BabbageEra))
+                                                      cddlUnwitnessedTx
   let txFee = L.unCoin $ extractTxFee apiTx
 
   -- This is the current calculated fee.

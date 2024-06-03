@@ -31,6 +31,20 @@ packages:
   trace-resources
   trace-forward
 
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-api.git
+  tag: 1244e702287daedbde0cffa320d1eb423493321e
+  subdir: cardano-api
+  --sha256: 1wjhyliq3qv83m956mvinshd8cbrkyjlcx97s34qxi9cilskn210
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-cli.git
+  tag: 0196f48ebc713072bfb6efb74ef204f638456d78
+  subdir: cardano-cli
+  --sha256: 08z15kab32pw9r7ry6z8lakk854dq2ym81cbw8pifibbfihzqd1i
+
 program-options
   ghc-options: -Werror
 
