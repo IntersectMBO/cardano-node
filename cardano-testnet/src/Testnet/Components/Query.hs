@@ -70,7 +70,6 @@ import           GHC.Stack
 import           Lens.Micro (Lens', to, (^.))
 
 import           Testnet.Property.Assert
-import           Testnet.Property.Util (runInBackground)
 import           Testnet.Types
 
 import qualified Hedgehog as H
@@ -254,7 +253,7 @@ getEpochStateView
   -> m EpochStateView
 getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
   epochStateView <- H.evalIO $ newIORef Nothing
-  runInBackground . runExceptT . foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) Nothing
+  H.asyncRegister_ . runExceptT . foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) Nothing
     $ \epochState slotNumber blockNumber -> do
         liftIO . writeIORef epochStateView $ Just (epochState, slotNumber, blockNumber)
         pure ConditionNotMet

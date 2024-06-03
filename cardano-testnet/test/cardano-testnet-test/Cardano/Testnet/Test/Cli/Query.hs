@@ -27,7 +27,6 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration (eraToString)
 import           Testnet.Components.Query
-import           Testnet.Components.TestWatchdog
 import           Testnet.Process.Run (execCli', execCliStdoutToJson, mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
@@ -43,7 +42,7 @@ import qualified Hedgehog.Extras.Test.Golden as H
 -- If you want to recreate golden files, run the comment with
 -- RECREATE_GOLDEN_FILES=1 as its prefix
 hprop_cli_queries :: Property
-hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_cli_queries = integrationWorkspace "cli-queries" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath

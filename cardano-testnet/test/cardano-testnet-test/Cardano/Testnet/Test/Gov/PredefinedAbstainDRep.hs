@@ -33,7 +33,6 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration (anyEraToString)
 import           Testnet.Components.Query
-import           Testnet.Components.TestWatchdog (runWithDefaultWatchdog_)
 import           Testnet.Defaults (defaultDRepKeyPair, defaultDelegatorStakeKeyPair)
 import           Testnet.Process.Cli.DRep (createCertificatePublicationTxBody, createVotingTxBody,
                    generateVoteFiles)
@@ -65,7 +64,7 @@ import qualified Hedgehog.Extras as H
 -- Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Predefined Abstain DRep/"'@
 hprop_check_predefined_abstain_drep :: Property
-hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_check_predefined_abstain_drep = H.integrationWorkspace "test-activity" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath

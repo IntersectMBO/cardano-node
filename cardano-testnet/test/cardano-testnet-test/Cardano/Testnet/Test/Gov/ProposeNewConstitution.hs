@@ -32,7 +32,6 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
-import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
 import           Testnet.EpochStateProcessing (waitForGovActionVotes)
 import           Testnet.Process.Cli.DRep
@@ -48,7 +47,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/ProposeAndRatifyNewConstitution/"'@
 hprop_ledger_events_propose_new_constitution :: Property
-hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new-constitution" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new-constitution" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath

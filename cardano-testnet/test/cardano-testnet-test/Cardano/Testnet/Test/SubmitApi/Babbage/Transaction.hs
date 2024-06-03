@@ -35,7 +35,6 @@ import           System.FilePath ((</>))
 import qualified System.Info as SYS
 import           Text.Regex (mkRegex, subRegex)
 
-import           Testnet.Components.TestWatchdog
 import           Testnet.Process.Run (execCli', mkExecConfig, procSubmitApi)
 import           Testnet.Property.Util (decodeEraUTxO, integrationRetryWorkspace)
 import           Testnet.SubmitApi
@@ -46,9 +45,10 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Golden as H
+import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
 hprop_transaction :: Property
-hprop_transaction = integrationRetryWorkspace 0 "submit-api-babbage-transaction" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_transaction = integrationRetryWorkspace 0 "submit-api-babbage-transaction" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath

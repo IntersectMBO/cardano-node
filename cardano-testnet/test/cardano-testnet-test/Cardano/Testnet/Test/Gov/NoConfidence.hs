@@ -33,7 +33,6 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
-import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
 import           Testnet.EpochStateProcessing (waitForGovActionVotes)
 import qualified Testnet.Process.Cli.DRep as DRep
@@ -54,7 +53,7 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 -- Generate a testnet with a committee defined in the Conway genesis. Submit a motion of no confidence
 -- and have the required threshold of SPOs and DReps vote yes on it.
 hprop_gov_no_confidence :: Property
-hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
 
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath

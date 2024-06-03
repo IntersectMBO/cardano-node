@@ -21,7 +21,6 @@ import           Lens.Micro ((^.))
 import qualified System.Directory as IO
 import           System.FilePath ((</>))
 
-import           Testnet.Components.TestWatchdog
 import           Testnet.Property.Util (integrationRetryWorkspace)
 import           Testnet.Types
 
@@ -32,7 +31,7 @@ import qualified Hedgehog.Extras.Test as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Treasury Growth/"'@
 prop_check_if_treasury_is_growing :: H.Property
-prop_check_if_treasury_is_growing = integrationRetryWorkspace 0 "growing-treasury" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+prop_check_if_treasury_is_growing = integrationRetryWorkspace 0 "growing-treasury" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start testnet
   conf@Conf{tempAbsPath=TmpAbsolutePath tempAbsPath'} <- TN.mkConf tempAbsBasePath'
 
