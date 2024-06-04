@@ -124,6 +124,11 @@ nodeRunParser = do
            , pncTargetNumberOfKnownBigLedgerPeers = mempty
            , pncTargetNumberOfEstablishedBigLedgerPeers = mempty
            , pncTargetNumberOfActiveBigLedgerPeers = mempty
+           , pncGenesisTargetNumberOfActivePeers = mempty
+           , pncGenesisTargetNumberOfKnownBigLedgerPeers = mempty
+           , pncGenesisTargetNumberOfEstablishedBigLedgerPeers = mempty
+           , pncGenesisTargetNumberOfActiveBigLedgerPeers = mempty
+           , pncConsensusMode = mempty
            , pncEnableP2P = mempty
            , pncPeerSharing = mempty
            }

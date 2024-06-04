@@ -886,9 +886,14 @@ mkP2PArguments NodeConfiguration {
                  ncTargetNumberOfKnownBigLedgerPeers,
                  ncTargetNumberOfEstablishedBigLedgerPeers,
                  ncTargetNumberOfActiveBigLedgerPeers,
+                 ncGenesisTargetNumberOfActivePeers,
+                 ncGenesisTargetNumberOfKnownBigLedgerPeers,
+                 ncGenesisTargetNumberOfEstablishedBigLedgerPeers,
+                 ncGenesisTargetNumberOfActiveBigLedgerPeers,
                  ncProtocolIdleTimeout,
                  ncTimeWaitTimeout,
-                 ncPeerSharing
+                 ncPeerSharing,
+                 ncConsensusMode
                }
                daReadLocalRootPeers
                daReadPublicRootPeers
@@ -896,7 +901,9 @@ mkP2PArguments NodeConfiguration {
                daReadUseBootstrapPeers
                daReadLedgerPeerSnapshot =
     Diffusion.P2PArguments P2P.ArgumentsExtra
-      { P2P.daPeerSelectionTargets
+      { P2P.daPeerTargets = Configuration.ConsensusModePeerTargets {
+          Configuration.praosTargets,
+          Configuration.genesisSyncTargets }
       , P2P.daReadLocalRootPeers
       , P2P.daReadPublicRootPeers
       , P2P.daReadUseLedgerPeers
@@ -907,9 +914,10 @@ mkP2PArguments NodeConfiguration {
       , P2P.daDeadlineChurnInterval = 3300
       , P2P.daBulkChurnInterval     = 300
       , P2P.daOwnPeerSharing        = ncPeerSharing
+      , P2P.daConsensusMode         = ncConsensusMode
       }
   where
-    daPeerSelectionTargets = PeerSelectionTargets {
+    praosTargets = Configuration.defaultPraosTargets {
         targetNumberOfRootPeers        = ncTargetNumberOfRootPeers,
         targetNumberOfKnownPeers       = ncTargetNumberOfKnownPeers,
         targetNumberOfEstablishedPeers = ncTargetNumberOfEstablishedPeers,
@@ -918,6 +926,11 @@ mkP2PArguments NodeConfiguration {
         targetNumberOfEstablishedBigLedgerPeers = ncTargetNumberOfEstablishedBigLedgerPeers,
         targetNumberOfActiveBigLedgerPeers      = ncTargetNumberOfActiveBigLedgerPeers
     }
+    genesisSyncTargets = Configuration.defaultGenesisSyncTargets {
+      targetNumberOfActivePeers               = ncGenesisTargetNumberOfActivePeers,
+      targetNumberOfKnownBigLedgerPeers       = ncGenesisTargetNumberOfKnownBigLedgerPeers,
+      targetNumberOfEstablishedBigLedgerPeers = ncGenesisTargetNumberOfEstablishedBigLedgerPeers,
+      targetNumberOfActiveBigLedgerPeers      = ncGenesisTargetNumberOfActiveBigLedgerPeers }
 
 mkNonP2PArguments
   :: IPSubscriptionTarget

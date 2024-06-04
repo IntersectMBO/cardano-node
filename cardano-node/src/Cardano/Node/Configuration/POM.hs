@@ -36,8 +36,7 @@ import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (NumOfDiskSnapshots (..),
                    SnapshotInterval (..))
-import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
-import           Ouroboros.Network.PeerSelection.PeerSharing (PeerSharing (..))
+import           Ouroboros.Network.Diffusion.Configuration as Configuration
 
 import           Control.Monad (when)
 import           Data.Aeson
@@ -149,13 +148,21 @@ data NodeConfiguration
        , ncAcceptedConnectionsLimit :: !AcceptedConnectionsLimit
 
          -- P2P governor targets
-       , ncTargetNumberOfRootPeers        :: Int
-       , ncTargetNumberOfKnownPeers       :: Int
-       , ncTargetNumberOfEstablishedPeers :: Int
-       , ncTargetNumberOfActivePeers      :: Int
-       , ncTargetNumberOfKnownBigLedgerPeers       :: Int
-       , ncTargetNumberOfEstablishedBigLedgerPeers :: Int
-       , ncTargetNumberOfActiveBigLedgerPeers      :: Int
+       , ncTargetNumberOfRootPeers        :: !Int
+       , ncTargetNumberOfKnownPeers       :: !Int
+       , ncTargetNumberOfEstablishedPeers :: !Int
+       , ncTargetNumberOfActivePeers      :: !Int
+       , ncTargetNumberOfKnownBigLedgerPeers       :: !Int
+       , ncTargetNumberOfEstablishedBigLedgerPeers :: !Int
+       , ncTargetNumberOfActiveBigLedgerPeers      :: !Int
+       , ncGenesisTargetNumberOfActivePeers        :: !Int
+       , ncGenesisTargetNumberOfKnownBigLedgerPeers       :: !Int
+       , ncGenesisTargetNumberOfEstablishedBigLedgerPeers :: !Int
+       , ncGenesisTargetNumberOfActiveBigLedgerPeers      :: !Int
+
+         -- Used to determine which set of peer targets to use
+         -- by the diffusion layer when syncing
+       , ncConsensusMode :: !ConsensusMode
 
          -- Enable experimental P2P mode
        , ncEnableP2P :: SomeNetworkP2PMode
@@ -184,7 +191,7 @@ data PartialNodeConfiguration
        , pncProtocolConfig :: !(Last NodeProtocolConfiguration)
 
          -- Node parameters, not protocol-specific:
-       , pncDiffusionMode      :: !(Last DiffusionMode  )
+       , pncDiffusionMode      :: !(Last DiffusionMode)
        , pncNumOfDiskSnapshots :: !(Last NumOfDiskSnapshots)
        , pncSnapshotInterval   :: !(Last SnapshotInterval)
        , pncExperimentalProtocolsEnabled :: !(Last Bool)
@@ -216,9 +223,16 @@ data PartialNodeConfiguration
        , pncTargetNumberOfKnownPeers       :: !(Last Int)
        , pncTargetNumberOfEstablishedPeers :: !(Last Int)
        , pncTargetNumberOfActivePeers      :: !(Last Int)
-       , pncTargetNumberOfKnownBigLedgerPeers       :: !(Last Int)
-       , pncTargetNumberOfEstablishedBigLedgerPeers :: !(Last Int)
-       , pncTargetNumberOfActiveBigLedgerPeers      :: !(Last Int)
+       , pncTargetNumberOfKnownBigLedgerPeers              :: !(Last Int)
+       , pncTargetNumberOfEstablishedBigLedgerPeers        :: !(Last Int)
+       , pncTargetNumberOfActiveBigLedgerPeers             :: !(Last Int)
+       , pncGenesisTargetNumberOfActivePeers               :: !(Last Int)
+       , pncGenesisTargetNumberOfKnownBigLedgerPeers       :: !(Last Int)
+       , pncGenesisTargetNumberOfEstablishedBigLedgerPeers :: !(Last Int)
+       , pncGenesisTargetNumberOfActiveBigLedgerPeers      :: !(Last Int)
+
+         -- Consensus mode for diffusion layer
+       , pncConsensusMode :: !(Last ConsensusMode)
 
          -- Enable experimental P2P mode
        , pncEnableP2P :: !(Last NetworkP2PMode)
@@ -306,6 +320,12 @@ instance FromJSON PartialNodeConfiguration where
       pncTargetNumberOfKnownBigLedgerPeers       <- Last <$> v .:? "TargetNumberOfKnownBigLedgerPeers"
       pncTargetNumberOfEstablishedBigLedgerPeers <- Last <$> v .:? "TargetNumberOfEstablishedBigLedgerPeers"
       pncTargetNumberOfActiveBigLedgerPeers      <- Last <$> v .:? "TargetNumberOfActiveBigLedgerPeers"
+      pncGenesisTargetNumberOfActivePeers        <- Last <$> v .:? "GenesisTargetNumberOfActivePeers"
+      pncGenesisTargetNumberOfKnownBigLedgerPeers       <- Last <$> v .:? "GenesisTargetNumberOfKnownBigLedgerPeers"
+      pncGenesisTargetNumberOfEstablishedBigLedgerPeers <- Last <$> v .:? "GenesisTargetNumberOfEstablishedBigLedgerPeers"
+      pncGenesisTargetNumberOfActiveBigLedgerPeers      <- Last <$> v .:? "GenesisTargetNumberOfActiveBigLedgerPeers"
+
+      pncConsensusMode <- Last <$> v .:? "ConsensusMode"
 
       pncChainSyncIdleTimeout      <- Last <$> v .:? "ChainSyncIdleTimeout"
 
@@ -319,7 +339,7 @@ instance FromJSON PartialNodeConfiguration where
 
       -- Peer Sharing
       -- DISABLED BY DEFAULT
-      pncPeerSharing <- Last <$> v .:? "PeerSharing" .!= Just PeerSharingDisabled
+      pncPeerSharing <- Last <$> v .:? "PeerSharing" .!= Just Configuration.PeerSharingDisabled
 
       pure PartialNodeConfiguration {
              pncProtocolConfig
@@ -353,6 +373,11 @@ instance FromJSON PartialNodeConfiguration where
            , pncTargetNumberOfKnownBigLedgerPeers
            , pncTargetNumberOfEstablishedBigLedgerPeers
            , pncTargetNumberOfActiveBigLedgerPeers
+           , pncGenesisTargetNumberOfActivePeers
+           , pncGenesisTargetNumberOfKnownBigLedgerPeers
+           , pncGenesisTargetNumberOfEstablishedBigLedgerPeers
+           , pncGenesisTargetNumberOfActiveBigLedgerPeers
+           , pncConsensusMode
            , pncEnableP2P
            , pncPeerSharing
            }
@@ -521,17 +546,36 @@ defaultPartialNodeConfiguration =
         , acceptedConnectionsSoftLimit = 384
         , acceptedConnectionsDelay     = 5
         }
-    , pncTargetNumberOfRootPeers        = Last (Just 85)
-    , pncTargetNumberOfKnownPeers       = Last (Just 85)
-    , pncTargetNumberOfEstablishedPeers = Last (Just 40)
-    , pncTargetNumberOfActivePeers      = Last (Just 15)
+    , pncTargetNumberOfRootPeers        = Last (Just praosRoots)
+    , pncTargetNumberOfKnownPeers       = Last (Just praosKnown)
+    , pncTargetNumberOfEstablishedPeers = Last (Just praosEstablished)
+    , pncTargetNumberOfActivePeers      = Last (Just praosActive)
     , pncChainSyncIdleTimeout           = mempty
-    , pncTargetNumberOfKnownBigLedgerPeers       = Last (Just 15)
-    , pncTargetNumberOfEstablishedBigLedgerPeers = Last (Just 10)
-    , pncTargetNumberOfActiveBigLedgerPeers      = Last (Just 5)
-    , pncEnableP2P                      = Last (Just EnabledP2PMode)
-    , pncPeerSharing                    = Last (Just PeerSharingDisabled)
+    , pncTargetNumberOfKnownBigLedgerPeers       = Last (Just praosBigLedgerKnown)
+    , pncTargetNumberOfEstablishedBigLedgerPeers = Last (Just praosBigLedgerEstablished)
+    , pncTargetNumberOfActiveBigLedgerPeers      = Last (Just praosBigLedgerActive)
+    , pncGenesisTargetNumberOfActivePeers        = Last (Just genesisActive)
+    , pncGenesisTargetNumberOfKnownBigLedgerPeers       = Last (Just genesisBigLedgerKnown)
+    , pncGenesisTargetNumberOfEstablishedBigLedgerPeers = Last (Just genesisBigLedgerEstablished)
+    , pncGenesisTargetNumberOfActiveBigLedgerPeers      = Last (Just genesisBigLedgerActive)
+    , pncConsensusMode = mempty
+    , pncEnableP2P     = Last (Just EnabledP2PMode)
+    , pncPeerSharing   = Last (Just Configuration.PeerSharingDisabled)
     }
+  where
+    Configuration.PeerSelectionTargets {
+      targetNumberOfRootPeers = praosRoots,
+      targetNumberOfKnownPeers = praosKnown,
+      targetNumberOfEstablishedPeers = praosEstablished,
+      targetNumberOfActivePeers = praosActive,
+      targetNumberOfKnownBigLedgerPeers = praosBigLedgerKnown,
+      targetNumberOfEstablishedBigLedgerPeers = praosBigLedgerEstablished,
+      targetNumberOfActiveBigLedgerPeers = praosBigLedgerActive } = defaultPraosTargets
+    Configuration.PeerSelectionTargets {
+      targetNumberOfActivePeers = genesisActive,
+      targetNumberOfKnownBigLedgerPeers = genesisBigLedgerKnown,
+      targetNumberOfEstablishedBigLedgerPeers = genesisBigLedgerEstablished,
+      targetNumberOfActiveBigLedgerPeers = genesisBigLedgerActive } = defaultGenesisSyncTargets
 
 lastOption :: Parser a -> Parser (Last a)
 lastOption = fmap Last . optional
@@ -574,6 +618,21 @@ makeNodeConfiguration pnc = do
   ncTargetNumberOfActiveBigLedgerPeers <-
     lastToEither "Missing TargetNumberOfActiveBigLedgerPeers"
     $ pncTargetNumberOfActiveBigLedgerPeers pnc
+  ncGenesisTargetNumberOfActivePeers <-
+    lastToEither "Missing GenesisTargetNumberOfActivePeers"
+    $ pncGenesisTargetNumberOfActivePeers pnc
+  ncGenesisTargetNumberOfKnownBigLedgerPeers <-
+    lastToEither "Missing GenesisTargetNumberOfKnownBigLedgerPeers"
+    $ pncGenesisTargetNumberOfKnownBigLedgerPeers pnc
+  ncGenesisTargetNumberOfEstablishedBigLedgerPeers <-
+    lastToEither "Missing GenesisTargetNumberOfEstablishedBigLedgerPeers"
+    $ pncGenesisTargetNumberOfEstablishedBigLedgerPeers pnc
+  ncGenesisTargetNumberOfActiveBigLedgerPeers <-
+    lastToEither "Missing GenesisTargetNumberOfActiveBigLedgerPeers"
+    $ pncGenesisTargetNumberOfActiveBigLedgerPeers pnc
+  ncConsensusMode <-
+    lastToEither "Missing ConsensusMode"
+    $ pncConsensusMode pnc
   ncProtocolIdleTimeout <-
     lastToEither "Missing ProtocolIdleTimeout"
     $ pncProtocolIdleTimeout pnc
@@ -639,10 +698,15 @@ makeNodeConfiguration pnc = do
              , ncTargetNumberOfKnownBigLedgerPeers
              , ncTargetNumberOfEstablishedBigLedgerPeers
              , ncTargetNumberOfActiveBigLedgerPeers
+             , ncGenesisTargetNumberOfActivePeers
+             , ncGenesisTargetNumberOfKnownBigLedgerPeers
+             , ncGenesisTargetNumberOfEstablishedBigLedgerPeers
+             , ncGenesisTargetNumberOfActiveBigLedgerPeers
              , ncEnableP2P = case enableP2P of
                  EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
                  DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
              , ncPeerSharing
+             , ncConsensusMode
              }
 
 ncProtocol :: NodeConfiguration -> Protocol
