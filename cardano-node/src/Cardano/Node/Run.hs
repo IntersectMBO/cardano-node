@@ -889,16 +889,22 @@ mkP2PArguments
   -> STM IO (Maybe LedgerPeerSnapshot)
   -> Diffusion.ExtraArguments 'Diffusion.P2P IO
 mkP2PArguments NodeConfiguration {
-                 ncTargetNumberOfRootPeers,
-                 ncTargetNumberOfKnownPeers,
-                 ncTargetNumberOfEstablishedPeers,
-                 ncTargetNumberOfActivePeers,
-                 ncTargetNumberOfKnownBigLedgerPeers,
-                 ncTargetNumberOfEstablishedBigLedgerPeers,
-                 ncTargetNumberOfActiveBigLedgerPeers,
+                 ncDeadlineTargetOfRootPeers,
+                 ncDeadlineTargetOfKnownPeers,
+                 ncDeadlineTargetOfEstablishedPeers,
+                 ncDeadlineTargetOfActivePeers,
+                 ncDeadlineTargetOfKnownBigLedgerPeers,
+                 ncDeadlineTargetOfEstablishedBigLedgerPeers,
+                 ncDeadlineTargetOfActiveBigLedgerPeers,
+                 ncSyncTargetOfActivePeers,
+                 ncSyncTargetOfKnownBigLedgerPeers,
+                 ncSyncTargetOfEstablishedBigLedgerPeers,
+                 ncSyncTargetOfActiveBigLedgerPeers,
+                 ncSyncMinTrusted,
                  ncProtocolIdleTimeout,
                  ncTimeWaitTimeout,
-                 ncPeerSharing
+                 ncPeerSharing,
+                 ncConsensusMode
                }
                daReadLocalRootPeers
                daReadPublicRootPeers
@@ -906,7 +912,9 @@ mkP2PArguments NodeConfiguration {
                daReadUseBootstrapPeers
                daReadLedgerPeerSnapshot =
     Diffusion.P2PArguments P2P.ArgumentsExtra
-      { P2P.daPeerSelectionTargets
+      { P2P.daPeerTargets = Configuration.ConsensusModePeerTargets {
+          Configuration.deadlineTargets,
+          Configuration.syncTargets }
       , P2P.daReadLocalRootPeers
       , P2P.daReadPublicRootPeers
       , P2P.daReadUseLedgerPeers
@@ -914,20 +922,27 @@ mkP2PArguments NodeConfiguration {
       , P2P.daReadLedgerPeerSnapshot
       , P2P.daProtocolIdleTimeout   = ncProtocolIdleTimeout
       , P2P.daTimeWaitTimeout       = ncTimeWaitTimeout
-      , P2P.daDeadlineChurnInterval = 3300
-      , P2P.daBulkChurnInterval     = 900
+      , P2P.daDeadlineChurnInterval = Configuration.defaultDeadlineChurnInterval
+      , P2P.daBulkChurnInterval     = Configuration.defaultBulkChurnInterval
       , P2P.daOwnPeerSharing        = ncPeerSharing
+      , P2P.daConsensusMode         = ncConsensusMode
+      , P2P.daMinBigLedgerPeersForTrustedState = ncSyncMinTrusted
       }
   where
-    daPeerSelectionTargets = PeerSelectionTargets {
-        targetNumberOfRootPeers        = ncTargetNumberOfRootPeers,
-        targetNumberOfKnownPeers       = ncTargetNumberOfKnownPeers,
-        targetNumberOfEstablishedPeers = ncTargetNumberOfEstablishedPeers,
-        targetNumberOfActivePeers      = ncTargetNumberOfActivePeers,
-        targetNumberOfKnownBigLedgerPeers       = ncTargetNumberOfKnownBigLedgerPeers,
-        targetNumberOfEstablishedBigLedgerPeers = ncTargetNumberOfEstablishedBigLedgerPeers,
-        targetNumberOfActiveBigLedgerPeers      = ncTargetNumberOfActiveBigLedgerPeers
+    deadlineTargets = Configuration.defaultDeadlineTargets {
+        targetNumberOfRootPeers        = ncDeadlineTargetOfRootPeers,
+        targetNumberOfKnownPeers       = ncDeadlineTargetOfKnownPeers,
+        targetNumberOfEstablishedPeers = ncDeadlineTargetOfEstablishedPeers,
+        targetNumberOfActivePeers      = ncDeadlineTargetOfActivePeers,
+        targetNumberOfKnownBigLedgerPeers       = ncDeadlineTargetOfKnownBigLedgerPeers,
+        targetNumberOfEstablishedBigLedgerPeers = ncDeadlineTargetOfEstablishedBigLedgerPeers,
+        targetNumberOfActiveBigLedgerPeers      = ncDeadlineTargetOfActiveBigLedgerPeers
     }
+    syncTargets = Configuration.defaultSyncTargets {
+      targetNumberOfActivePeers               = ncSyncTargetOfActivePeers,
+      targetNumberOfKnownBigLedgerPeers       = ncSyncTargetOfKnownBigLedgerPeers,
+      targetNumberOfEstablishedBigLedgerPeers = ncSyncTargetOfEstablishedBigLedgerPeers,
+      targetNumberOfActiveBigLedgerPeers      = ncSyncTargetOfActiveBigLedgerPeers }
 
 mkNonP2PArguments
   :: IPSubscriptionTarget
