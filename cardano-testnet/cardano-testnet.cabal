@@ -196,6 +196,7 @@ test-suite cardano-testnet-test
                         Cardano.Testnet.Test.Gov.PParamChangeFailsSPO
                         Cardano.Testnet.Test.Gov.ProposeNewConstitution
                         Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO
+                        Cardano.Testnet.Test.Gov.GovActionTimeout
                         Cardano.Testnet.Test.Gov.TreasuryGrowth
                         Cardano.Testnet.Test.Gov.TreasuryWithdrawal
                         Cardano.Testnet.Test.Misc
