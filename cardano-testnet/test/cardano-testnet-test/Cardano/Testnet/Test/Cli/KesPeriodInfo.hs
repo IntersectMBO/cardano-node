@@ -31,7 +31,6 @@ import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
-import           Testnet.Components.TestWatchdog
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO
 import           Testnet.Process.Run (execCli, execCli', mkExecConfig)
@@ -46,9 +45,10 @@ import           Hedgehog.Extras.Stock (sprocketSystemName)
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
 hprop_kes_period_info :: Property
-hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }
     -- TODO: Move yaml filepath specification into individual node options

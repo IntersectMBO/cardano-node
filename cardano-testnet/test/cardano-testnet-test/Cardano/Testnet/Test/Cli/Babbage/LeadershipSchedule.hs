@@ -36,7 +36,6 @@ import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
 import           Testnet.Components.Configuration
-import           Testnet.Components.TestWatchdog
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Cli.SPO
 import           Testnet.Process.Run (execCli, execCli', mkExecConfig)
@@ -50,11 +49,12 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/leadership-schedule/"'@
 hprop_leadershipSchedule :: Property
-hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-schedule" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) } <- mkConf tempAbsBasePath'
   let tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath

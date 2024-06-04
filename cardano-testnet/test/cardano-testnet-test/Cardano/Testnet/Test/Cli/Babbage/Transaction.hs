@@ -28,7 +28,6 @@ import           Lens.Micro
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
-import           Testnet.Components.TestWatchdog
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (decodeEraUTxO, integrationRetryWorkspace)
 import           Testnet.Types
@@ -37,9 +36,10 @@ import           Hedgehog (Property)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
+import qualified Hedgehog.Extras.Test.TestWatchdog as H
 
 hprop_transaction :: Property
-hprop_transaction = integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_transaction = integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   H.note_ SYS.os
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath

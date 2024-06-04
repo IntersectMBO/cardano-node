@@ -33,7 +33,6 @@ import           GHC.Stack
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
-import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
 import           Testnet.Process.Cli.Keys
 import           Testnet.Process.Run (execCli', mkExecConfig)
@@ -46,7 +45,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/InfoAction/'@
 hprop_ledger_events_info_action :: Property
-hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
 
 
   conf@Conf { tempAbsPath } <- H.noteShowM $ mkConf tempAbsBasePath'

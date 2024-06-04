@@ -35,7 +35,6 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
-import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
 import           Testnet.EpochStateProcessing (waitForGovActionVotes)
 import qualified Testnet.Process.Cli.DRep as DRep
@@ -50,7 +49,7 @@ import           Hedgehog
 import qualified Hedgehog.Extras as H
 
 hprop_constitutional_committee_add_new :: Property
-hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-committee-add-new" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_constitutional_committee_add_new = integrationWorkspace "constitutional-committee-add-new" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
       tempBaseAbsPath = makeTmpBaseAbsPath tempAbsPath
