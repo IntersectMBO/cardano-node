@@ -493,6 +493,9 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
 
       TraceDebugState {} -> Info
 
+      TraceVerifyPeerSnapshot True  -> Info
+      TraceVerifyPeerSnapshot False -> Error
+
 instance HasPrivacyAnnotation (DebugPeerSelection addr)
 instance HasSeverityAnnotation (DebugPeerSelection addr) where
   getSeverityAnnotation _ = Debug
@@ -2046,6 +2049,9 @@ instance ToObject (TracePeerSelection SockAddr) where
             , "ledgerStateJudgement" .= dpssLedgerStateJudgement ds
             , "associationMode" .= dpssAssociationMode ds
             ]
+  toObject _verb (TraceVerifyPeerSnapshot result) =
+    mconcat [ "kind" .= String "VerifyPeerSnapshot"
+            , "result" .= result ]
 
 -- Connection manager abstract state.  For explanation of each state see
 -- <https://hydra.iohk.io/job/Cardano/ouroboros-network/native.network-docs.x86_64-linux/latest/download/2>
