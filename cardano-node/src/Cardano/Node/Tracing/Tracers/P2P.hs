@@ -558,6 +558,9 @@ instance LogFormatting (TracePeerSelection SockAddr) where
             , "upstreamyness" .= dpssUpstreamyness ds
             , "fetchynessBlocks" .= dpssFetchynessBlocks ds
             ]
+  forMachine _dtal (TraceVerifyPeerSnapshot result) =
+    mconcat [ "kind" .= String "VerifyPeerSnapshot"
+            , "result" .= result]
 
   forHuman = pack . show
 
@@ -684,6 +687,8 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       Namespace [] ["ChurnTimeout"]
     namespaceFor TraceDebugState {} =
       Namespace [] ["DebugState"]
+    namespaceFor TraceVerifyPeerSnapshot {} =
+      Namespace [] ["VerifyPeerSnapshot"]
 
     severityFor (Namespace [] ["LocalRootPeersChanged"]) _ = Just Notice
     severityFor (Namespace [] ["TargetsChanged"]) _ = Just Notice
@@ -719,6 +724,7 @@ instance MetaTrace (TracePeerSelection SockAddr) where
     severityFor (Namespace [] ["ChurnAction"]) _ = Just Info
     severityFor (Namespace [] ["ChurnTimeout"]) _ = Just Notice
     severityFor (Namespace [] ["DebugState"]) _ = Just Info
+    severityFor (Namespace [] ["VerifyPeerSnapshot"]) _ = Just Error
     severityFor _ _ = Nothing
 
     documentFor (Namespace [] ["LocalRootPeersChanged"]) = Just  ""
@@ -777,6 +783,8 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       "Outbound Governor was killed unexpectedly"
     documentFor (Namespace [] ["DebugState"]) = Just
       "peer selection internal state"
+    documentFor (Namespace [] ["VerifyPeerSnapshot"]) = Just
+      "Big ledger peer snapshot file failed integrity check against the ledger"
     documentFor _ = Nothing
 
     metricsDocFor (Namespace [] ["ChurnAction"]) =
@@ -822,6 +830,7 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       , Namespace [] ["PickInboundPeers"]
       , Namespace [] ["OutboundGovernorCriticalFailure"]
       , Namespace [] ["DebugState"]
+      , Namespace [] ["VerifyPeerSnapshot"]
       ]
 
 --------------------------------------------------------------------------------
