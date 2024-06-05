@@ -4,11 +4,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Testnet.Ping
   ( pingNode
   , checkSprocket
   , waitForSprocket
+  , waitForPortClosed
   , TestnetMagic
   , PingClientError(..)
   ) where
@@ -20,13 +22,14 @@ import           Cardano.Network.Ping (HandshakeFailure, NodeVersion (..), hands
 
 import qualified Codec.CBOR.Read as CBOR
 import           Control.Exception.Safe
-import           Control.Monad (when)
+import           Control.Monad
 import           Control.Monad.Class.MonadTime.SI (Time)
 import qualified Control.Monad.Class.MonadTimer.SI as MT
 import           Control.Monad.IO.Class
+import qualified Control.Retry as R
 import           Control.Tracer (nullTracer)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Either (isLeft)
+import           Data.Either
 import           Data.IORef
 import qualified Data.List as L
 import           Data.Word (Word32)
@@ -35,10 +38,11 @@ import           Network.Mux.Timeout (TimeoutFn, withTimeoutSerial)
 import           Network.Mux.Types (MiniProtocolDir (InitiatorDir), MiniProtocolNum (..),
                    MuxBearer (read, write), MuxSDU (..), MuxSDUHeader (..),
                    RemoteClockModel (RemoteClockModel))
-import           Network.Socket (AddrInfo (..), StructLinger (..))
+import           Network.Socket (AddrInfo (..), PortNumber, StructLinger (..))
 import qualified Network.Socket as Socket
 import           Prettyprinter
 
+import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 
 type TestnetMagic = Word32
@@ -167,6 +171,17 @@ sprocketToAddrInfo sprocket = do
     [] Socket.AF_UNIX Socket.Stream
     Socket.defaultProtocol (Socket.SockAddrUnix socketAbsPath) Nothing
 
+-- | Wait until port gets closed.
+waitForPortClosed
+  :: MonadIO m
+  => MT.DiffTime -- ^ timeout
+  -> MT.DiffTime -- ^ check interval
+  -> PortNumber
+  -> m Bool -- ^ 'True' if port is closed, 'False' if timeout was reached before that
+waitForPortClosed timeout interval portNumber = liftIO $ do
+  let retryPolicy = R.constantDelay (round @Double $ realToFrac interval) <> R.limitRetries (ceiling $ toRational timeout / toRational interval)
+  fmap not . R.retrying retryPolicy (const pure) $ \_ ->
+    liftIO (IO.isPortOpen (fromIntegral portNumber))
 
 data PingClientError
   = PceDecodingError
