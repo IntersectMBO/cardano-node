@@ -9,18 +9,14 @@ module Cardano.Testnet.Test.Gov.GovActionTimeout
   ) where
 
 import           Cardano.Api as Api
-import           Cardano.Api.Eon.ShelleyBasedEra (ShelleyLedgerEra)
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval))
 
-import           Cardano.Ledger.Conway.Core (ConwayEraPParams, ppGovActionLifetimeL)
-import           Cardano.Ledger.Conway.Governance (ConwayGovState, cgsCurPParamsL)
 import           Cardano.Testnet
 
 import           Prelude
 
 import           Control.Monad (void)
 import           Data.String (fromString)
-import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
@@ -29,7 +25,7 @@ import           Testnet.Process.Run (mkExecConfig)
 import           Testnet.Property.Util (integrationWorkspace)
 import           Testnet.Types
 
-import           Hedgehog (MonadTest, Property)
+import           Hedgehog (Property)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
 
@@ -99,15 +95,3 @@ hprop_check_gov_action_timeout = integrationWorkspace "gov-action-timeout" $ \te
 
   mGovernanceActionTxIx H.=== Nothing
 
--- | Obtains the @govActionLifetime@ from the protocol parameters.
--- The @govActionLifetime@ or governance action maximum lifetime in epochs is
--- the number of epochs such that a governance action submitted during an epoch @e@
--- expires if it is still not ratified as of the end of epoch: @e + govActionLifetime + 1@.
-getGovActionLifetime :: (ConwayEraPParams (ShelleyLedgerEra era), H.MonadAssertion m, MonadTest m, MonadIO m)
-  => EpochStateView
-  -> ConwayEraOnwards era
-  -> m EpochInterval
-getGovActionLifetime epochStateView ceo = do
-   govState :: ConwayGovState era <- getGovState epochStateView ceo
-   return $ govState ^. cgsCurPParamsL
-                      . ppGovActionLifetimeL
