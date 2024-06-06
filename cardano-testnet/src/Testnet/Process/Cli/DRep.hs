@@ -13,10 +13,13 @@ module Testnet.Process.Cli.DRep
   , registerDRep
   , delegateToDRep
   , getLastPParamUpdateActionId
+  , makeActivityChangeProposal
   ) where
 
 import           Cardano.Api hiding (Certificate, TxBody)
-import           Cardano.Api.Ledger (EpochInterval (EpochInterval))
+import           Cardano.Api.Ledger (EpochInterval (EpochInterval, unEpochInterval))
+
+import           Cardano.Testnet (maybeExtractGovernanceActionIndex)
 
 import           Prelude
 
@@ -26,12 +29,15 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Lens as AL
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Typeable (Typeable)
 import           Data.Word (Word32)
+import           GHC.Exts (fromString)
 import           GHC.Stack
 import           Lens.Micro ((^?))
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
+import           Testnet.Process.Cli.Keys (cliStakeAddressKeyGen)
 import           Testnet.Process.Cli.Transaction
 import           Testnet.Process.Run (execCli', execCliStdoutToJson)
 import           Testnet.Types
@@ -329,3 +335,86 @@ getLastPParamUpdateActionId execConfig = do
           actionIx <- evalMaybe mActionIx
           txId <- evalMaybe mTxId
           return (Just (Text.unpack txId, fromIntegral actionIx))
+
+-- | Create a proposal to change the DRep activity interval.
+-- Return the transaction id and the index of the governance action.
+makeActivityChangeProposal
+  :: (HasCallStack, H.MonadAssertion m, MonadTest m, MonadCatch m, MonadIO m, Typeable era)
+  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
+  -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
+                    -- using the 'getEpochStateView' function.
+  -> ConwayEraOnwards era -- ^ The 'ConwayEraOnwards' witness for current era.
+  -> FilePath -- ^ Base directory path where generated files will be stored.
+  -> String -- ^ Name for the subfolder that will be created under 'work' folder.
+  -> Maybe (String, Word32) -- ^ The transaction id and the index of the previosu governance action if any.
+  -> EpochInterval -- ^ The target DRep activity interval to be set by the proposal.
+  -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
+  -> EpochInterval -- ^ Number of epochs to wait for the proposal to be registered by the chain.
+  -> m (String, Word32) -- ^ The transaction id and the index of the governance action.
+makeActivityChangeProposal execConfig epochStateView ceo work prefix
+                           prevGovActionInfo drepActivity wallet timeout = do
+
+  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      era = toCardanoEra sbe
+      cEra = AnyCardanoEra era
+
+  baseDir <- H.createDirectoryIfMissing $ work </> prefix
+
+  let stakeVkeyFp = baseDir </> "stake.vkey"
+      stakeSKeyFp = baseDir </> "stake.skey"
+
+  cliStakeAddressKeyGen
+    $ KeyPair { verificationKey = File stakeVkeyFp
+              , signingKey = File stakeSKeyFp
+              }
+
+  proposalAnchorFile <- H.note $ baseDir </> "sample-proposal-anchor"
+  H.writeFile proposalAnchorFile "dummy anchor data"
+
+  proposalAnchorDataHash <- execCli' execConfig
+    [ "conway", "governance"
+    , "hash", "anchor-data", "--file-text", proposalAnchorFile
+    ]
+
+  minDRepDeposit <- getMinDRepDeposit epochStateView ceo
+
+  proposalFile <- H.note $ baseDir </> "sample-proposal-anchor"
+
+  void $ execCli' execConfig $
+    [ "conway", "governance", "action", "create-protocol-parameters-update"
+    , "--testnet"
+    , "--governance-action-deposit", show @Integer minDRepDeposit
+    , "--deposit-return-stake-verification-key-file", stakeVkeyFp
+    ] ++ concatMap (\(prevGovernanceActionTxId, prevGovernanceActionIndex) ->
+                      [ "--prev-governance-action-tx-id", prevGovernanceActionTxId
+                      , "--prev-governance-action-index", show prevGovernanceActionIndex
+                      ]) prevGovActionInfo ++
+    [ "--drep-activity", show (unEpochInterval drepActivity)
+    , "--anchor-url", "https://tinyurl.com/3wrwb2as"
+    , "--anchor-data-hash", proposalAnchorDataHash
+    , "--out-file", proposalFile
+    ]
+
+  proposalBody <- H.note $ baseDir </> "tx.body"
+  txIn <- findLargestUtxoForPaymentKey epochStateView sbe wallet
+
+  void $ execCli' execConfig
+    [ "conway", "transaction", "build"
+    , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet
+    , "--tx-in", Text.unpack $ renderTxIn txIn
+    , "--proposal-file", proposalFile
+    , "--out-file", proposalBody
+    ]
+
+  signedProposalTx <- signTx execConfig cEra baseDir "signed-proposal"
+                             (File proposalBody) [SomeKeyPair $ paymentKeyInfoPair wallet]
+
+  submitTx execConfig cEra signedProposalTx
+
+  governanceActionTxId <- retrieveTransactionId execConfig signedProposalTx
+
+  governanceActionIndex <-
+    H.nothingFailM $ watchEpochStateUpdate epochStateView timeout $ \(anyNewEpochState, _, _) ->
+      return $ maybeExtractGovernanceActionIndex (fromString governanceActionTxId) anyNewEpochState
+
+  return (governanceActionTxId, governanceActionIndex)
