@@ -567,7 +567,6 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
   severityFor (Namespace _ ["IgnoreInvalidBlock"]) _ = Just Info
   severityFor (Namespace _ ["AddedBlockToQueue"]) _ = Just Debug
   severityFor (Namespace _ ["BlockInTheFuture"]) _ = Just Info
-  severityFor (Namespace _ ["BlockInTheFuture"]) _ = Just Info
   severityFor (Namespace _ ["AddedBlockToVolatileDB"]) _ = Just Debug
   severityFor (Namespace _ ["PoppedBlockFromQueue"]) _ = Just Debug
   severityFor (Namespace _ ["TryAddToCurrentChain"]) _ = Just Debug
@@ -676,10 +675,6 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
   documentFor (Namespace _ ["AddedBlockToQueue"]) = Just $ mconcat
     [ "The block was added to the queue and will be added to the ChainDB by"
     , " the background thread. The size of the queue is included.."
-    ]
-  documentFor (Namespace _ ["BlockInTheFuture"]) = Just $ mconcat
-    [ "The block is from the future, i.e., its slot number is greater than"
-    , " the current slot (the second argument)."
     ]
   documentFor (Namespace _ ["BlockInTheFuture"]) = Just $ mconcat
     [ "The block is from the future, i.e., its slot number is greater than"
