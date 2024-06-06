@@ -90,7 +90,7 @@ hprop_check_pparam_fails_spo = integrationWorkspace "test-pparam-spo" $ \tempAbs
     makeActivityChangeProposal execConfig epochStateView ceo baseDir "proposal"
                                Nothing (EpochInterval 3) wallet0 (EpochInterval 2)
 
-  failToVoteChangeProposalWithSPOs ceo execConfig epochStateView sbe baseDir "vote"
+  failToVoteChangeProposalWithSPOs ceo execConfig epochStateView baseDir "vote"
                                    governanceActionTxId governanceActionIndex propVotes wallet1
 
 -- | Cast votes for a governance action with SPO keys.
@@ -101,7 +101,6 @@ failToVoteChangeProposalWithSPOs
   -> H.ExecConfig -- ^ Specifies the CLI execution configuration.v
   -> EpochStateView -- ^ Current epoch state view for transaction building. It can be obtained
                     -- using the 'getEpochStateView' function.
-  -> ShelleyBasedEra era -- ^ The 'ShelleyBasedEra' witness for current era.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> String -- ^ The transaction id of the governance action to vote.
@@ -111,11 +110,12 @@ failToVoteChangeProposalWithSPOs
                      -- (i.e: "yes", "no", "abstain").
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
   -> m ()
-failToVoteChangeProposalWithSPOs ceo execConfig epochStateView sbe work prefix
+failToVoteChangeProposalWithSPOs ceo execConfig epochStateView work prefix
                                  governanceActionTxId governanceActionIndex votes wallet = withFrozenCallStack $ do
   baseDir <- H.createDirectoryIfMissing $ work </> prefix
 
-  let era = toCardanoEra sbe
+  let sbe = conwayEraOnwardsToShelleyBasedEra ceo
+      era = toCardanoEra sbe
       cEra = AnyCardanoEra era
 
   voteFiles <- SPO.generateVoteFiles ceo execConfig baseDir "vote-files"
