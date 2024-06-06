@@ -72,7 +72,7 @@ import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), RemoteAddress, WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
+import           Ouroboros.Network.PeerSelection.Governor (ChurnCounters, DebugPeerSelection (..),
                    PeerSelectionCounters, TracePeerSelection (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (TraceLedgerPeers)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
@@ -555,6 +555,12 @@ docTracersFirstPhase condConfigFileName = do
     peerSelectionCountersTrDoc <- documentTracer (peerSelectionCountersTr ::
       Trace IO PeerSelectionCounters)
 
+    churnCountersTr  <-  mkCardanoTracer
+      trBase trForward mbTrEKG
+      ["Net", "Churn"]
+    configureTracers configReflection trConfig [churnCountersTr]
+    churnCountersTrDoc <- documentTracer (churnCountersTr :: Trace IO ChurnCounters)
+
     peerSelectionActionsTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       ["Net", "PeerSelection", "Actions"]
@@ -731,6 +737,7 @@ docTracersFirstPhase condConfigFileName = do
             <> debugPeerSelectionTrDoc
             <> debugPeerSelectionResponderTrDoc
             <> peerSelectionCountersTrDoc
+            <> churnCountersTrDoc
             <> peerSelectionActionsTrDoc
             <> connectionManagerTrDoc
             <> connectionManagerTransitionsTrDoc
