@@ -1151,21 +1151,16 @@ instance LogFormatting TraceStartLeadershipCheckPlus where
                 , "utxoSize" .= Number (fromIntegral tsUtxoSize)
                 , "delegMapSize" .= Number (fromIntegral tsDelegMapSize)
                 , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
-                , "dRepCount"    .= Number (fromIntegral tsDRepCount)
-                , "dRepMapSize"  .= Number (fromIntegral tsDRepMapSize)
                 ]
   forHuman TraceStartLeadershipCheckPlus {..} =
       "Checking for leadership in slot " <> showT (unSlotNo tsSlotNo)
       <> " utxoSize "     <> showT tsUtxoSize
       <> " delegMapSize " <> showT tsDelegMapSize
       <> " chainDensity " <> showT tsChainDensity
-      <> " dRepCount "    <> showT tsDRepCount
-      <> " dRepMapSize "  <> showT tsDRepMapSize
   asMetrics TraceStartLeadershipCheckPlus {..} =
     [IntM "Forge.UtxoSize"     (fromIntegral tsUtxoSize),
-     IntM "Forge.DelegMapSize" (fromIntegral tsDelegMapSize),
-     IntM "Forge.DRepCount"    (fromIntegral tsDRepCount),
-     IntM "Forge.DRepMapSize"  (fromIntegral tsDRepMapSize)]
+     IntM "Forge.DelegMapSize" (fromIntegral tsDelegMapSize)]
+
 
 --------------------------------------------------------------------------------
 -- ForgeEvent Tracer
