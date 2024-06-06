@@ -12,7 +12,6 @@ import           Cardano.Api as Api
 import           Cardano.Api.Ledger (EpochInterval (EpochInterval))
 
 import           Cardano.Testnet
-import           Cardano.Testnet.Test.Gov.DRepActivity (makeActivityChangeProposal)
 
 import           Prelude
 
