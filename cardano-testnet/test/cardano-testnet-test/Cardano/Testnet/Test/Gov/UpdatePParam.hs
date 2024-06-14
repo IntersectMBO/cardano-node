@@ -41,7 +41,6 @@ import           System.FilePath ((</>))
 
 import           Testnet.Components.Configuration
 import           Testnet.Components.Query
-import           Testnet.Components.TestWatchdog
 import           Testnet.Defaults
 import           Testnet.Process.Cli.DRep
 import           Testnet.Process.Cli.Keys
@@ -56,7 +55,7 @@ import qualified Hedgehog.Extras as H
 -- | Execute me with:
 -- @DISABLE_RETRIES=1 cabal test cardano-testnet-test --test-options '-p "/Update PParams/"'@
 hprop_update_pparam :: Property
-hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath' -> runWithDefaultWatchdog_ $ do
+hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   -- Start a local test net
   conf@Conf { tempAbsPath } <- mkConf tempAbsBasePath'
   let tempAbsPath' = unTmpAbsPath tempAbsPath
