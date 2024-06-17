@@ -13,7 +13,7 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2024-05-28T12:37:56Z
+  , hackage.haskell.org 2024-05-30T10:43:04Z
   , cardano-haskell-packages 2024-05-29T10:15:00Z
 
 packages:
@@ -63,8 +63,8 @@ package plutus-scripts-bench
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 492183e01719246464afe417318404d783a34585
-  --sha256: 0y0idvbpp6h1fzzlaq6ak68p6njr0kd8v2cdc4ah9wp49w64shyr
+  tag: 3193e7dfa808016e9a4c961d333b101b544a02f1
+  --sha256: 13iaqcymxwi8sn52kg3s32yijlh4vxz73pl0jlrqar0j8iqry0rv
   subdir:
     ouroboros-consensus
     ouroboros-consensus-cardano
