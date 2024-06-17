@@ -201,22 +201,22 @@ defaultConwayGenesis =
                     }
       drepVotingThresholds = DRepVotingThresholds
         { dvtMotionNoConfidence = 0 %! 1
-        , dvtCommitteeNormal = 1 %! 2
+        , dvtCommitteeNormal = 0 %! 2
         , dvtCommitteeNoConfidence = 0 %! 1
         , dvtUpdateToConstitution = 0 %! 2 -- TODO: Requires a constitutional committee when non-zero
-        , dvtHardForkInitiation = 1 %! 2
-        , dvtPPNetworkGroup = 1 %! 2
-        , dvtPPEconomicGroup = 1 %! 2
-        , dvtPPTechnicalGroup = 1 %! 2
-        , dvtPPGovGroup = 1 %! 3
-        , dvtTreasuryWithdrawal = 1 %! 2
+        , dvtHardForkInitiation = 0 %! 2
+        , dvtPPNetworkGroup = 0 %! 2
+        , dvtPPEconomicGroup = 0 %! 2
+        , dvtPPTechnicalGroup = 0 %! 2
+        , dvtPPGovGroup = 0 %! 3
+        , dvtTreasuryWithdrawal = 0 %! 2
         }
       poolVotingThresholds = PoolVotingThresholds
-         { pvtMotionNoConfidence = 1 %! 2
-         , pvtCommitteeNormal = 1 %! 2
-         , pvtCommitteeNoConfidence = 1 %! 2
-         , pvtHardForkInitiation = 1 %! 2
-         , pvtPPSecurityGroup = 1 %! 2
+         { pvtMotionNoConfidence = 0 %! 2
+         , pvtCommitteeNormal = 0 %! 2
+         , pvtCommitteeNoConfidence = 0 %! 2
+         , pvtHardForkInitiation = 0 %! 2
+         , pvtPPSecurityGroup = 0 %! 2
          }
   in ConwayGenesis
       { cgUpgradePParams = upPParams

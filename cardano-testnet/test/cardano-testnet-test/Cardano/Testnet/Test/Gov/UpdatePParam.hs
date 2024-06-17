@@ -162,7 +162,7 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
       $ BSC.pack comKeyHash1Str
 
   let comKeyCred1 = L.KeyHashObj comKeyHash1
-      committeeThreshold = unsafeBoundedRational 0.4
+      committeeThreshold = unsafeBoundedRational 0 --0.4
       committee = L.Committee (Map.fromList [(comKeyCred1, EpochNo 100)]) committeeThreshold
 
 
@@ -175,7 +175,7 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
         }
       anchor = createAnchor url $ BSC.concat [proposalAnchorDataBS, BSC.pack "more"]
       ScriptHash cScriptHash = fromString constitutionScriptHash
-      constitution = L.Constitution anchor L.SNothing -- $ L.SJust cScriptHash
+      constitution = L.Constitution anchor $ L.SJust cScriptHash
 
   alonzoGenesis <- evalEither $ first prettyError defaultAlonzoGenesis
   (startTime, shelleyGenesis') <- getDefaultShelleyGenesis fastTestnetOptions
@@ -206,6 +206,8 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
   H.note_ $ "Socketpath: " <> unFile socketPath
   H.note_ $ "Foldblocks config file: " <> unFile configurationFile
 
+  waitedTill <- waitForEpochs epochStateView (EpochInterval 3)
+  H.noteShow_ $ "Should be epoch 4: " <> show waitedTill
 
   let stakeVkeyFp = gov </> "stake.vkey"
       stakeSKeyFp = gov </> "stake.skey"
@@ -225,7 +227,7 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
     , "--deposit-return-stake-verification-key-file", stakeVkeyFp
     , "--anchor-url", "https://tinyurl.com/3wrwb2as"
     , "--anchor-data-hash", proposalAnchorDataHash
- --   , "--constitution-script-hash", constitutionScriptHash
+    , "--constitution-script-hash", constitutionScriptHash
     , "--committee-term-length", show @Word32 newCommitteeTermLength
     , "--out-file", pparamsUpdateFp
     ]
@@ -264,9 +266,9 @@ hprop_update_pparam = H.integrationWorkspace "pparam-update" $ \tempAbsBasePath'
     , "--tx-in-collateral", Text.unpack $ renderTxIn txin4
     , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 3_000_001
     , "--proposal-file", pparamsUpdateFp
-   -- , "--proposal-script-file", guardRailScript
-   -- , "--proposal-redeemer-value", "0"
-  --  , "--proposal-execution-units", "(2000000,20000000)"
+    , "--proposal-script-file", guardRailScript
+    , "--proposal-redeemer-value", "0"
+    , "--proposal-execution-units", "(2000000,20000000)"
     , "--certificate-file", committeeAuthCert1Fp
     , "--out-file", updateProposalTxBody
     ]
