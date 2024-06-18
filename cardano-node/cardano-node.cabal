@@ -145,7 +145,7 @@ library
                       , async
                       , base16-bytestring
                       , bytestring
-                      , cardano-api ^>= 8.46
+                      , cardano-api ^>= 8.47
                       , cardano-binary
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
@@ -191,10 +191,10 @@ library
                       , ouroboros-consensus-cardano ^>= 0.16
                       , ouroboros-consensus-diffusion ^>= 0.16
                       , ouroboros-consensus-protocol
-                      , ouroboros-network-api ^>= 0.7.1
+                      , ouroboros-network-api ^>= 0.7.3
                       , ouroboros-network ^>= 0.16
                       , ouroboros-network-framework
-                      , ouroboros-network-protocols ^>= 0.8
+                      , ouroboros-network-protocols ^>= 0.9
                       , prettyprinter
                       , prettyprinter-ansi-terminal
                       , psqueues
