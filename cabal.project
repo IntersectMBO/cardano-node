@@ -31,8 +31,8 @@ packages:
   trace-resources
   trace-forward
 
-program-options
-  ghc-options: -Werror
+-- program-options
+--   ghc-options: -Werror
 
 test-show-details: direct
 

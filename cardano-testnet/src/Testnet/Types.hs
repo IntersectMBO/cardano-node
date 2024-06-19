@@ -26,6 +26,8 @@ module Testnet.Types
   , VKey
   , SKey
   , ColdPoolKey
+  , CCColdKey
+  , CCHotKey
   , VrfKey
   , StakingKey
   , PaymentKey
@@ -130,6 +132,8 @@ nodeSocketPath = File . H.sprocketSystemName . nodeSprocket
 data ColdPoolKey
 data StakingKey
 data SpoColdKey
+data CCColdKey
+data CCHotKey
 
 data PoolNodeKeys = PoolNodeKeys
   { poolNodeKeysCold :: KeyPair SpoColdKey
@@ -141,6 +145,9 @@ data PaymentKeyInfo = PaymentKeyInfo
   { paymentKeyInfoPair :: KeyPair PaymentKey
   , paymentKeyInfoAddr :: Text
   } deriving (Eq, Show)
+
+data CommitteeMember = CommitteeMember
+  { ccPaymentKeyPair :: KeyPair CCColdKey }
 
 data Delegator = Delegator
   { paymentKeyPair :: KeyPair PaymentKey

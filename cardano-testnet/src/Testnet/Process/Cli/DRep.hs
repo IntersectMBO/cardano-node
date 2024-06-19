@@ -9,6 +9,7 @@ module Testnet.Process.Cli.DRep
   , generateRegistrationCertificate
   , createCertificatePublicationTxBody
   , generateVoteFiles
+  , generateVoteFilesCC
   , createVotingTxBody
   , registerDRep
   , delegateToDRep
@@ -170,6 +171,36 @@ generateVoteFiles execConfig work prefix governanceActionTxId governanceActionIn
       , "--out-file", unFile path
       ]
     return path
+
+generateVoteFilesCC
+  :: MonadTest m
+  => MonadIO m
+  => MonadCatch m
+  => H.ExecConfig -- ^ Specifies the CLI execution configuration.
+  -> FilePath -- ^ Base directory path where the voting files and directories will be
+              -- stored.
+  -> String -- ^ Name for the subfolder that will be created under 'work' to store
+            -- the output voting files.
+  -> String -- ^ Transaction ID string of the governance action.
+  -> Word32 -- ^ Index of the governance action.
+  -> [(KeyPair CCHotKey, [Char])] -- ^ List of tuples where each tuple contains a 'PaymentKeyPair'
+                                -- representing the DRep key pair and a 'String' representing the
+                                -- vote type (i.e: "yes", "no", or "abstain").
+  -> m [File VoteFile In]
+generateVoteFilesCC execConfig work prefix governanceActionTxId governanceActionIndex allVotes = do
+  baseDir <- H.createDirectoryIfMissing $ work </> prefix
+  forM (zip [(1 :: Integer)..] allVotes) $ \(idx, (ccKeyPair, vote)) -> do
+    let path = File (baseDir </> "vote-hot-committee-" <> show idx)
+    void $ execCli' execConfig
+      [ "conway", "governance", "vote", "create"
+      , "--" ++ vote
+      , "--governance-action-tx-id", governanceActionTxId
+      , "--governance-action-index", show @Word32 governanceActionIndex
+      , "--cc-hot-verification-key-file", verificationKeyFp ccKeyPair
+      , "--out-file", unFile path
+      ]
+    return path
+
 
 -- | Composes a voting transaction body file using @cardano-cli@.
 -- For the transaction to be valid it needs witnesses corresponding
