@@ -175,7 +175,7 @@
         });
 
         exes = (collectExes project) // {
-          inherit (pkgs) cabalProjectRegenerate checkCabalProject;
+          inherit (pkgs) checkCabalProject;
         } // flattenTree (pkgs.scripts // {
           # `tests` are the test suites which have been built.
           inherit (project) tests;
