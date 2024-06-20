@@ -285,6 +285,8 @@ instance ( Show (BlockNodeToNodeVersion blk)
         DisabledBlockForging -> 0
         NotEffective -> 0
       )]
+  asMetrics (BICommon BasicInfoCommon {..}) =
+    [ PrometheusM "basicInfo" [("nodeStartTime", (pack . show) biNodeStartTime)]]
   asMetrics _ = []
 
 instance MetaTrace  (StartupTrace blk) where
@@ -409,6 +411,8 @@ instance MetaTrace  (StartupTrace blk) where
 
   metricsDocFor (Namespace _ ["BlockForgingUpdate"]) =
     [("forging_enabled","Can this node forge blocks? (Is it provided with block forging credentials) 0 = no, 1 = yes")]
+  metricsDocFor (Namespace _ ["Common"]) =
+    [("systemStartTime","The UTC time this node was started.")]
 
 
   metricsDocFor _ = []

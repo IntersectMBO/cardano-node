@@ -36,7 +36,6 @@ import           Cardano.Node.Tracing.Tracers.KESInfo ()
 import           Cardano.Node.Tracing.Tracers.NodeToClient ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NodeVersion (NodeVersionTrace)
-
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
 import           Cardano.Node.Tracing.Tracers.P2P ()
 import           Cardano.Node.Tracing.Tracers.Peer
@@ -104,6 +103,8 @@ import           GHC.Generics (Generic)
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import qualified Network.Socket as Socket
 import qualified Options.Applicative as Opt
+import           System.IO
+
 
 data TraceDocumentationCmd
   = TraceDocumentationCmd
@@ -764,6 +765,8 @@ docTracersSecondPhase ::
   -> DocTracer
   -> IO ()
 docTracersSecondPhase outputFileName trConfig bl = do
-    res <- docuResultsToText bl trConfig
-    T.writeFile outputFileName res
-    pure ()
+    content <- docuResultsToText bl trConfig
+    handle <- openFile outputFileName WriteMode
+    hSetEncoding handle utf8
+    T.hPutStr handle content
+    hClose handle

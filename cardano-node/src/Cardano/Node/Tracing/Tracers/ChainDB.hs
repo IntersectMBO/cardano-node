@@ -525,20 +525,20 @@ instance ( LogFormatting (Header blk)
   asMetrics (ChainDB.SwitchedToAFork _warnings selChangedInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
           chainInformation selChangedInfo newChain 0
-    in  [ DoubleM "ChainDB.Density" (fromRational density)
-        , IntM    "ChainDB.SlotNum" (fromIntegral slots)
-        , IntM    "ChainDB.BlockNum" (fromIntegral blocks)
-        , IntM    "ChainDB.SlotInEpoch" (fromIntegral slotInEpoch)
-        , IntM    "ChainDB.Epoch" (fromIntegral (unEpochNo epoch))
+    in  [ DoubleM "density" (fromRational density)
+        , IntM    "slotNum" (fromIntegral slots)
+        , IntM    "blockNum" (fromIntegral blocks)
+        , IntM    "slotInEpoch" (fromIntegral slotInEpoch)
+        , IntM    "epoch" (fromIntegral (unEpochNo epoch))
         ]
   asMetrics (ChainDB.AddedToCurrentChain _warnings selChangedInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
           chainInformation selChangedInfo newChain 0
-    in  [ DoubleM "ChainDB.Density" (fromRational density)
-        , IntM    "ChainDB.SlotNum" (fromIntegral slots)
-        , IntM    "ChainDB.BlockNum" (fromIntegral blocks)
-        , IntM    "ChainDB.SlotInEpoch" (fromIntegral slotInEpoch)
-        , IntM    "ChainDB.Epoch" (fromIntegral (unEpochNo epoch))
+    in  [ DoubleM "density" (fromRational density)
+        , IntM    "slotNum" (fromIntegral slots)
+        , IntM    "blockNum" (fromIntegral blocks)
+        , IntM    "slotInEpoch" (fromIntegral slotInEpoch)
+        , IntM    "epoch" (fromIntegral (unEpochNo epoch))
         ]
   asMetrics _ = []
 
@@ -638,48 +638,48 @@ instance MetaTrace  (ChainDB.TraceAddBlockEvent blk) where
   detailsFor _ _ = Just DNormal
 
   metricsDocFor (Namespace _ ["SwitchedToAFork"]) =
-        [ ( "ChainDB.Density"
+        [ ( "density"
           , mconcat
             [ "The actual number of blocks created over the maximum expected number"
             , " of blocks that could be created over the span of the last @k@ blocks."
             ]
           )
-        , ( "ChainDB.SlotNum"
+        , ( "slotNum"
           , "Number of slots in this chain fragment."
           )
-        , ( "ChainDB.Blocks"
+        , ( "blockNum"
           , "Number of blocks in this chain fragment."
           )
-        , ( "ChainDB.SlotInEpoch"
+        , ( "slotInEpoch"
           , mconcat
             [ "Relative slot number of the tip of the current chain within the"
             , " epoch.."
             ]
           )
-        , ( "ChainDB.Epoch"
+        , ( "epoch"
           , "In which epoch is the tip of the current chain."
           )
         ]
   metricsDocFor (Namespace _ ["AddedToCurrentChain"]) =
-        [ ( "ChainDB.Density"
+        [ ( "density"
           , mconcat
             [ "The actual number of blocks created over the maximum expected number"
             , " of blocks that could be created over the span of the last @k@ blocks."
             ]
           )
-        , ( "ChainDB.SlotNum"
+        , ( "slotNum"
           , "Number of slots in this chain fragment."
           )
-        , ( "ChainDB.Blocks"
+        , ( "blockNum"
           , "Number of blocks in this chain fragment."
           )
-        , ( "ChainDB.SlotInEpoch"
+        , ( "slotInEpoch"
           , mconcat
             [ "Relative slot number of the tip of the current chain within the"
             , " epoch.."
             ]
           )
-        , ( "ChainDB.Epoch"
+        , ( "epoch"
           , "In which epoch is the tip of the current chain."
           )
         ]
