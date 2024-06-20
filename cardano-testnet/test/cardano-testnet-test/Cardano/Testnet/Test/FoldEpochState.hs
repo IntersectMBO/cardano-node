@@ -43,7 +43,7 @@ prop_foldEpochState = integrationWorkspace "foldEpochState" $ \tempAbsBasePath' 
         => AnyNewEpochState
         -> SlotNo
         -> BlockNo
-        -> StateT [(SlotNo, BlockNo)] IO LedgerStateCondition
+        -> StateT [(SlotNo, BlockNo)] IO ConditionResult
       handler _ slotNo blockNo = do
         modify ((slotNo, blockNo):)
         s <- get

@@ -17,7 +17,7 @@ import           Prelude
 
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Typeable (Typeable)
-import           Data.Word (Word32)
+import           Data.Word (Word16)
 import           System.FilePath ((</>))
 
 import           Testnet.Components.Query
@@ -104,7 +104,7 @@ failToVoteChangeProposalWithSPOs
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> String -- ^ The transaction id of the governance action to vote.
-  -> Word32 -- ^ The index of the governance action to vote.
+  -> Word16 -- ^ The index of the governance action to vote.
   -> [([Char], Int)] -- ^ Votes to be casted for the proposal. Each tuple contains the index
                      -- of the default SPO that will make the vote and the type of the vote
                      -- (i.e: "yes", "no", "abstain").

@@ -365,7 +365,17 @@
             "verifyEd25519Signature-memory-arguments": 10,
             "verifySchnorrSecp256k1Signature-cpu-arguments-intercept": 38887044,
             "verifySchnorrSecp256k1Signature-cpu-arguments-slope": 32947,
-            "verifySchnorrSecp256k1Signature-memory-arguments": 10
+            "verifySchnorrSecp256k1Signature-memory-arguments": 10,
+            "byteStringToInteger-cpu-arguments-c0": 0,
+            "byteStringToInteger-cpu-arguments-c1": 0,
+            "byteStringToInteger-cpu-arguments-c2": 0,
+            "byteStringToInteger-memory-arguments-intercept": 0,
+            "byteStringToInteger-memory-arguments-slope": 0,
+            "integerToByteString-cpu-arguments-c0": 0,
+            "integerToByteString-cpu-arguments-c1": 0,
+            "integerToByteString-cpu-arguments-c2": 0,
+            "integerToByteString-memory-arguments-intercept": 0,
+            "integerToByteString-memory-arguments-slope": 0
         }
     }
 }

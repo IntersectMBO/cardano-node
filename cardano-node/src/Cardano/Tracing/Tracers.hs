@@ -1,5 +1,5 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -47,13 +47,11 @@ import           Cardano.Node.Configuration.Logging
 import           Cardano.Node.Protocol.Byron ()
 import           Cardano.Node.Protocol.Shelley ()
 import           Cardano.Node.Queries
-import qualified Cardano.Node.STM as STM
 import           Cardano.Node.Startup
-
+import qualified Cardano.Node.STM as STM
 import           Cardano.Node.TraceConstraints
-import           Cardano.Node.Tracing.Tracers.NodeVersion
-
 import           Cardano.Node.Tracing
+import           Cardano.Node.Tracing.Tracers.NodeVersion
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
 import           Cardano.Tracing.Config

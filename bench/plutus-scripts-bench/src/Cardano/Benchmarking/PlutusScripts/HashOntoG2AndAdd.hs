@@ -25,6 +25,7 @@ import           GHC.ByteOrder (ByteOrder(LittleEndian))
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
 import qualified PlutusTx
+import qualified PlutusTx.Builtins.Internal as BI (unitval)
 import           PlutusTx.Prelude as Tx hiding (Semigroup (..), (.), (<$>))
 
 
@@ -36,7 +37,7 @@ script :: PlutusBenchScript
 script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV3 scriptSerialized))
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkValidator :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkValidator _datum red _txContext =
   case PlutusV3.fromBuiltinData red of
     Nothing -> Tx.traceError "invalid redeemer"
@@ -51,7 +52,7 @@ mkValidator _datum red _txContext =
       where go [] !acc     = acc
             go (q:qs) !acc = go qs $ Tx.bls12_381_G2_add (Tx.bls12_381_G2_hashToGroup q (integerToByteString LittleEndian 0 i)) acc
     loop i l
-      | i == 1000000 = ()
+      | i == 1000000 = BI.unitval
       | otherwise    = let !_ = hashAndAddG2 l i in loop (pred i) l
 
 hashAndAddG2ShortBs :: SBS.ShortByteString

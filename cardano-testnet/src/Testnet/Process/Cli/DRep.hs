@@ -30,7 +30,7 @@ import qualified Data.Aeson.Lens as AL
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Typeable (Typeable)
-import           Data.Word (Word32)
+import           Data.Word (Word16)
 import           GHC.Exts (fromString)
 import           GHC.Stack
 import           Lens.Micro ((^?))
@@ -152,7 +152,7 @@ generateVoteFiles
   -> String -- ^ Name for the subfolder that will be created under 'work' to store
             -- the output voting files.
   -> String -- ^ Transaction ID string of the governance action.
-  -> Word32 -- ^ Index of the governance action.
+  -> Word16 -- ^ Index of the governance action.
   -> [(KeyPair PaymentKey, [Char])] -- ^ List of tuples where each tuple contains a 'PaymentKeyPair'
                                 -- representing the DRep key pair and a 'String' representing the
                                 -- vote type (i.e: "yes", "no", or "abstain").
@@ -165,7 +165,7 @@ generateVoteFiles execConfig work prefix governanceActionTxId governanceActionIn
       [ "conway", "governance", "vote", "create"
       , "--" ++ vote
       , "--governance-action-tx-id", governanceActionTxId
-      , "--governance-action-index", show @Word32 governanceActionIndex
+      , "--governance-action-index", show @Word16 governanceActionIndex
       , "--drep-verification-key-file", verificationKeyFp drepKeyPair
       , "--out-file", unFile path
       ]
@@ -301,14 +301,14 @@ delegateToDRep execConfig epochStateView sbe work prefix
 --
 -- If no previous proposal was enacted, the function returns 'Nothing'.
 -- If there was a previous enacted proposal, the function returns a tuple with its transaction
--- identifier (as a 'String') and the action index (as a 'Word32').
+-- identifier (as a 'String') and the action index (as a 'Word16').
 getLastPParamUpdateActionId
   :: HasCallStack
   => MonadTest m
   => MonadCatch m
   => MonadIO m
   => H.ExecConfig -- ^ Specifies the CLI execution configuration.
-  -> m (Maybe (String, Word32))
+  -> m (Maybe (String, Word16))
 getLastPParamUpdateActionId execConfig = do
   govStateJSON :: Aeson.Value <- execCliStdoutToJson execConfig
     [ "conway", "query", "gov-state"
@@ -346,11 +346,11 @@ makeActivityChangeProposal
   -> ConwayEraOnwards era -- ^ The 'ConwayEraOnwards' witness for current era.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
-  -> Maybe (String, Word32) -- ^ The transaction id and the index of the previosu governance action if any.
+  -> Maybe (String, Word16) -- ^ The transaction id and the index of the previosu governance action if any.
   -> EpochInterval -- ^ The target DRep activity interval to be set by the proposal.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
   -> EpochInterval -- ^ Number of epochs to wait for the proposal to be registered by the chain.
-  -> m (String, Word32) -- ^ The transaction id and the index of the governance action.
+  -> m (String, Word16) -- ^ The transaction id and the index of the governance action.
 makeActivityChangeProposal execConfig epochStateView ceo work prefix
                            prevGovActionInfo drepActivity wallet timeout = do
 

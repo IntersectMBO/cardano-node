@@ -49,7 +49,7 @@ tests = do
         [ T.testGroup "Ledger Events"
             [ ignoreOnWindows "Sanity Check" LedgerEvents.hprop_ledger_events_sanity_check
             , ignoreOnWindows "Treasury Growth" Gov.prop_check_if_treasury_is_growing
-            -- TODO: Replace foldBlocks with checkLedgerStateCondition
+            -- TODO: Replace foldBlocks with checkConditionResult
             , T.testGroup "Governance"
                 [ ignoreOnMacAndWindows "Committee Add New" Gov.hprop_constitutional_committee_add_new
                 , ignoreOnMacAndWindows "Committee Motion Of No Confidence"  Gov.hprop_gov_no_confidence
