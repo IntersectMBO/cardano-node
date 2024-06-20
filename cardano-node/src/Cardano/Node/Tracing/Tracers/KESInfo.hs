@@ -108,13 +108,13 @@ instance LogFormatting HotKey.KESInfo where
       let maxKesEvos = endKesPeriod - startKesPeriod
           oCertExpiryKesPeriod = startKesPeriod + maxKesEvos
       in  [
-            IntM "KESInfo.operationalCertificateStartKESPeriod"
+            IntM "operationalCertificateStartKESPeriod"
               (fromIntegral startKesPeriod)
-          , IntM "KESInfo.operationalCertificateExpiryKESPeriod"
+          , IntM "operationalCertificateExpiryKESPeriod"
               (fromIntegral (startKesPeriod + maxKesEvos))
-          , IntM "KESInfo.currentKESPeriod"
+          , IntM "currentKESPeriod"
               (fromIntegral currKesPeriod)
-          , IntM "KESInfo.remainingKESPeriods"
+          , IntM "remainingKESPeriods"
               (fromIntegral (max 0 (oCertExpiryKesPeriod - currKesPeriod)))
           ]
     where
@@ -154,10 +154,10 @@ instance MetaTrace HotKey.KESInfo where
     documentFor _ = Nothing
 
     metricsDocFor (Namespace _ ["StateInfo"]) =
-        [ ("KESInfo.operationalCertificateStartKESPeriod", "")
-        , ("KESInfo.operationalCertificateExpiryKESPeriod", "")
-        , ("KESInfo.currentKESPeriod", "")
-        , ("KESInfo.remainingKESPeriods", "")]
+        [ ("operationalCertificateStartKESPeriod", "")
+        , ("operationalCertificateExpiryKESPeriod", "")
+        , ("currentKESPeriod", "")
+        , ("remainingKESPeriods", "")]
     metricsDocFor _ = []
 
     allNamespaces = [Namespace [] ["StateInfo"]]

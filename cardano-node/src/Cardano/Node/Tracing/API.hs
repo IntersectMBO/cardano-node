@@ -82,7 +82,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
   mkTracers trConfig = do
     ekgStore <- EKG.newStore
     EKG.registerGcMetrics ekgStore
-    ekgTrace <- ekgTracer (Left ekgStore)
+    ekgTrace <- ekgTracer trConfig (Left ekgStore)
 
     stdoutTrace <- standardTracer
 
@@ -113,7 +113,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
       p
    where
     forwarderBackendEnabled =
-      any checkForwarder . concat . Map.elems $ tcOptions trConfig
+      (any (any checkForwarder) . Map.elems) $ tcOptions trConfig
 
     checkForwarder (ConfBackend backends') = Forwarder `elem` backends'
     checkForwarder _ = False

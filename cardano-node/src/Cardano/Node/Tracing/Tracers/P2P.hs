@@ -34,9 +34,8 @@ import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Governor (ChurnCounters (..),
-                   DebugPeerSelection (..), DebugPeerSelectionState (..),
-                   PeerSelectionCounters , PeerSelectionView (..),
-                   PeerSelectionState (..), PeerSelectionTargets (..),
+                   DebugPeerSelection (..), DebugPeerSelectionState (..), PeerSelectionCounters,
+                   PeerSelectionState (..), PeerSelectionTargets (..), PeerSelectionView (..),
                    TracePeerSelection (..), peerSelectionStateToCounters)
 import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
@@ -559,7 +558,7 @@ instance LogFormatting (TracePeerSelection SockAddr) where
   forHuman = pack . show
 
   asMetrics (TraceChurnAction duration action _) =
-    [ DoubleM ("Net.PeerSelection.Churn." <> pack (show action) <> ".duration")
+    [ DoubleM ("peerSelection.churn" <> pack (show action) <> ".duration")
               (realToFrac duration)
     ]
   asMetrics _ = []
@@ -774,6 +773,11 @@ instance MetaTrace (TracePeerSelection SockAddr) where
       "peer selection internal state"
     documentFor _ = Nothing
 
+    metricsDocFor (Namespace [] ["ChurnAction"]) =
+      [ ("peerSelection.churn", "Duration of a churn action")
+      ]
+    metricsDocFor _ = []
+
     allNamespaces = [
         Namespace [] ["LocalRootPeersChanged"]
       , Namespace [] ["TargetsChanged"]
@@ -917,74 +921,75 @@ instance LogFormatting PeerSelectionCounters where
       PeerSelectionCountersHWC {..} ->
         -- Deprecated metrics; they will be removed in a future version.
         [ IntM
-            "Net.PeerSelection.Cold"
+            "peerSelection.cold"
             (fromIntegral numberOfColdPeers)
         , IntM
-            "Net.PeerSelection.Warm"
+            "peerSelection.warm"
             (fromIntegral numberOfWarmPeers)
         , IntM
-            "Net.PeerSelection.Hot"
+            "peerSelection.hot"
             (fromIntegral numberOfHotPeers)
         , IntM
-            "Net.PeerSelection.ColdBigLedgerPeers"
+            "peerSelection.coldBigLedgerPeers"
             (fromIntegral numberOfColdBigLedgerPeers)
         , IntM
-            "Net.PeerSelection.WarmBigLedgerPeers"
+            "peerSelection.warmBigLedgerPeers"
             (fromIntegral numberOfWarmBigLedgerPeers)
         , IntM
-            "Net.PeerSelection.HotBigLedgerPeers"
+            "peerSelection.hotBigLedgerPeers"
             (fromIntegral numberOfHotBigLedgerPeers)
 
         , IntM
-            "Net.PeerSelection.WarmLocalRoots"
+            "peerSelection.warmLocalRoots"
             (fromIntegral $ numberOfActiveLocalRootPeers psc)
         , IntM
-            "Net.PeerSelection.HotLocalRoots"
+            "peerSelection.hotLocalRoots"
             (fromIntegral $ numberOfEstablishedLocalRootPeers psc
                           - numberOfActiveLocalRootPeers psc)
         ]
     ++
     case psc of
       PeerSelectionCounters {..} ->
-        [ IntM "Net.PeerSelection.RootPeers" (fromIntegral numberOfRootPeers)
+        [ IntM "peerSelection.RootPeers" (fromIntegral numberOfRootPeers)
 
-        , IntM "Net.PeerSelection.KnownPeers" (fromIntegral numberOfKnownPeers)
-        , IntM "Net.PeerSelection.ColdPeersPromotions" (fromIntegral numberOfColdPeersPromotions)
-        , IntM "Net.PeerSelection.EstablishedPeers" (fromIntegral numberOfEstablishedPeers)
-        , IntM "Net.PeerSelection.WarmPeersDemotions" (fromIntegral numberOfWarmPeersDemotions)
-        , IntM "Net.PeerSelection.WarmPeersPromotions" (fromIntegral numberOfWarmPeersPromotions)
-        , IntM "Net.PeerSelection.ActivePeers" (fromIntegral numberOfActivePeers)
-        , IntM "Net.PeerSelection.ActivePeersDemotions" (fromIntegral numberOfActivePeersDemotions)
+        , IntM "peerSelection.KnownPeers" (fromIntegral numberOfKnownPeers)
+        , IntM "peerSelection.ColdPeersPromotions" (fromIntegral numberOfColdPeersPromotions)
+        , IntM "peerSelection.EstablishedPeers" (fromIntegral numberOfEstablishedPeers)
+        , IntM "peerSelection.WarmPeersDemotions" (fromIntegral numberOfWarmPeersDemotions)
+        , IntM "peerSelection.WarmPeersPromotions" (fromIntegral numberOfWarmPeersPromotions)
+        , IntM "peerSelection.ActivePeers" (fromIntegral numberOfActivePeers)
+        , IntM "peerSelection.ActivePeersDemotions" (fromIntegral numberOfActivePeersDemotions)
 
-        , IntM "Net.PeerSelection.KnownBigLedgerPeers" (fromIntegral numberOfKnownBigLedgerPeers)
-        , IntM "Net.PeerSelection.ColdBigLedgerPeersPromotions" (fromIntegral numberOfColdBigLedgerPeersPromotions)
-        , IntM "Net.PeerSelection.EstablishedBigLedgerPeers" (fromIntegral numberOfEstablishedBigLedgerPeers)
-        , IntM "Net.PeerSelection.WarmBigLedgerPeersDemotions" (fromIntegral numberOfWarmBigLedgerPeersDemotions)
-        , IntM "Net.PeerSelection.WarmBigLedgerPeersPromotions" (fromIntegral numberOfWarmBigLedgerPeersPromotions)
-        , IntM "Net.PeerSelection.ActiveBigLedgerPeers" (fromIntegral numberOfActiveBigLedgerPeers)
-        , IntM "Net.PeerSelection.ActiveBigLedgerPeersDemotions" (fromIntegral numberOfActiveBigLedgerPeersDemotions)
+        , IntM "peerSelection.KnownBigLedgerPeers" (fromIntegral numberOfKnownBigLedgerPeers)
+        , IntM "peerSelection.ColdBigLedgerPeersPromotions" (fromIntegral numberOfColdBigLedgerPeersPromotions)
+        , IntM "peerSelection.EstablishedBigLedgerPeers" (fromIntegral numberOfEstablishedBigLedgerPeers)
+        , IntM "peerSelection.WarmBigLedgerPeersDemotions" (fromIntegral numberOfWarmBigLedgerPeersDemotions)
+        , IntM "peerSelection.WarmBigLedgerPeersPromotions" (fromIntegral numberOfWarmBigLedgerPeersPromotions)
+        , IntM "peerSelection.ActiveBigLedgerPeers" (fromIntegral numberOfActiveBigLedgerPeers)
+        , IntM "peerSelection.ActiveBigLedgerPeersDemotions" (fromIntegral numberOfActiveBigLedgerPeersDemotions)
 
-        , IntM "Net.PeerSelection.KnownLocalRootPeers" (fromIntegral numberOfKnownLocalRootPeers)
-        , IntM "Net.PeerSelection.EstablishedLocalRootPeers" (fromIntegral numberOfEstablishedLocalRootPeers)
-        , IntM "Net.PeerSelection.WarmLocalRootPeersPromotions" (fromIntegral numberOfWarmLocalRootPeersPromotions)
-        , IntM "Net.PeerSelection.ActiveLocalRootPeers" (fromIntegral numberOfActiveLocalRootPeers)
-        , IntM "Net.PeerSelection.ActiveLocalRootPeersDemotions" (fromIntegral numberOfActiveLocalRootPeersDemotions)
+        , IntM "peerSelection.KnownLocalRootPeers" (fromIntegral numberOfKnownLocalRootPeers)
+        , IntM "peerSelection.EstablishedLocalRootPeers" (fromIntegral numberOfEstablishedLocalRootPeers)
+        , IntM "peerSelection.WarmLocalRootPeersPromotions" (fromIntegral numberOfWarmLocalRootPeersPromotions)
+        , IntM "peerSelection.ActiveLocalRootPeers" (fromIntegral numberOfActiveLocalRootPeers)
+        , IntM "peerSelection.ActiveLocalRootPeersDemotions" (fromIntegral numberOfActiveLocalRootPeersDemotions)
 
-        , IntM "Net.PeerSelection.KnownNonRootPeers" (fromIntegral numberOfKnownNonRootPeers)
-        , IntM "Net.PeerSelection.ColdNonRootPeersPromotions" (fromIntegral numberOfColdNonRootPeersPromotions)
-        , IntM "Net.PeerSelection.EstablishedNonRootPeers" (fromIntegral numberOfEstablishedNonRootPeers)
-        , IntM "Net.PeerSelection.WarmNonRootPeersDemotions" (fromIntegral numberOfWarmNonRootPeersDemotions)
-        , IntM "Net.PeerSelection.WarmNonRootPeersPromotions" (fromIntegral numberOfWarmNonRootPeersPromotions)
-        , IntM "Net.PeerSelection.ActiveNonRootPeers" (fromIntegral numberOfActiveNonRootPeers)
-        , IntM "Net.PeerSelection.ActiveNonRootPeersDemotions" (fromIntegral numberOfActiveNonRootPeersDemotions)
 
-        , IntM "Net.PeerSelection.KnownBootstrapPeers" (fromIntegral numberOfKnownBootstrapPeers)
-        , IntM "Net.PeerSelection.ColdBootstrapPeersPromotions" (fromIntegral numberOfColdBootstrapPeersPromotions)
-        , IntM "Net.PeerSelection.EstablishedBootstrapPeers" (fromIntegral numberOfEstablishedBootstrapPeers)
-        , IntM "Net.PeerSelection.WarmBootstrapPeersDemotions" (fromIntegral numberOfWarmBootstrapPeersDemotions)
-        , IntM "Net.PeerSelection.WarmBootstrapPeersPromotions" (fromIntegral numberOfWarmBootstrapPeersPromotions)
-        , IntM "Net.PeerSelection.ActiveBootstrapPeers" (fromIntegral numberOfActiveBootstrapPeers)
-        , IntM "Net.PeerSelection.ActiveBootstrapPeersDemotions" (fromIntegral numberOfActiveBootstrapPeersDemotions)
+        , IntM "peerSelection.KnownNonRootPeers" (fromIntegral numberOfKnownNonRootPeers)
+        , IntM "peerSelection.ColdNonRootPeersPromotions" (fromIntegral numberOfColdNonRootPeersPromotions)
+        , IntM "peerSelection.EstablishedNonRootPeers" (fromIntegral numberOfEstablishedNonRootPeers)
+        , IntM "peerSelection.WarmNonRootPeersDemotions" (fromIntegral numberOfWarmNonRootPeersDemotions)
+        , IntM "peerSelection.WarmNonRootPeersPromotions" (fromIntegral numberOfWarmNonRootPeersPromotions)
+        , IntM "peerSelection.ActiveNonRootPeers" (fromIntegral numberOfActiveNonRootPeers)
+        , IntM "peerSelection.ActiveNonRootPeersDemotions" (fromIntegral numberOfActiveNonRootPeersDemotions)
+
+        , IntM "peerSelection.KnownBootstrapPeers" (fromIntegral numberOfKnownBootstrapPeers)
+        , IntM "peerSelection.ColdBootstrapPeersPromotions" (fromIntegral numberOfColdBootstrapPeersPromotions)
+        , IntM "peerSelection.EstablishedBootstrapPeers" (fromIntegral numberOfEstablishedBootstrapPeers)
+        , IntM "peerSelection.WarmBootstrapPeersDemotions" (fromIntegral numberOfWarmBootstrapPeersDemotions)
+        , IntM "peerSelection.WarmBootstrapPeersPromotions" (fromIntegral numberOfWarmBootstrapPeersPromotions)
+        , IntM "peerSelection.ActiveBootstrapPeers" (fromIntegral numberOfActiveBootstrapPeers)
+        , IntM "peerSelection.ActiveBootstrapPeersDemotions" (fromIntegral numberOfActiveBootstrapPeersDemotions)
         ]
 
 instance MetaTrace PeerSelectionCounters where
@@ -998,13 +1003,53 @@ instance MetaTrace PeerSelectionCounters where
     documentFor _ = Nothing
 
     metricsDocFor (Namespace _ ["Counters"]) =
-     [ ("Net.PeerSelection.Cold", "Number of cold peers")
-     , ("Net.PeerSelection.Warm", "Number of warm peers")
-     , ("Net.PeerSelection.Hot", "Number of hot peers")
-     , ("Net.PeerSelection.ColdBigLedgerPeers", "Number of cold big ledger peers")
-     , ("Net.PeerSelection.WarmBigLedgerPeers", "Number of warm big ledger peers")
-     , ("Net.PeerSelection.HotBigLedgerPeers", "Number of hot big ledger peers")
-     , ("Net.PeerSelection.LocalRoots", "Numbers of warm & hot local roots")
+     [ ("peerSelection.Cold", "Number of cold peers")
+     , ("peerSelection.Warm", "Number of warm peers")
+     , ("peerSelection.Hot", "Number of hot peers")
+     , ("peerSelection.ColdBigLedgerPeers", "Number of cold big ledger peers")
+     , ("peerSelection.WarmBigLedgerPeers", "Number of warm big ledger peers")
+     , ("peerSelection.HotBigLedgerPeers", "Number of hot big ledger peers")
+     , ("peerSelection.LocalRoots", "Numbers of warm & hot local roots")
+
+     , ("peerSelection.RootPeers", "Number of root peers")
+      , ("peerSelection.KnownPeers", "Number of known peers")
+      , ("peerSelection.ColdPeersPromotions", "Number of cold peers promotions")
+      , ("peerSelection.EstablishedPeers", "Number of established peers")
+      , ("peerSelection.WarmPeersDemotions", "Number of warm peers demotions")
+      , ("peerSelection.WarmPeersPromotions", "Number of warm peers promotions")
+      , ("peerSelection.ActivePeers", "Number of active peers")
+      , ("peerSelection.ActivePeersDemotions", "Number of active peers demotions")
+
+      , ("peerSelection.KnownBigLedgerPeers", "Number of known big ledger peers")
+      , ("peerSelection.ColdBigLedgerPeersPromotions", "Number of cold big ledger peers promotions")
+      , ("peerSelection.EstablishedBigLedgerPeers", "Number of established big ledger peers")
+      , ("peerSelection.WarmBigLedgerPeersDemotions", "Number of warm big ledger peers demotions")
+      , ("peerSelection.WarmBigLedgerPeersPromotions", "Number of warm big ledger peers promotions")
+      , ("peerSelection.ActiveBigLedgerPeers", "Number of active big ledger peers")
+      , ("peerSelection.ActiveBigLedgerPeersDemotions", "Number of active big ledger peers demotions")
+
+      , ("peerSelection.KnownLocalRootPeers", "Number of known local root peers")
+      , ("peerSelection.EstablishedLocalRootPeers", "Number of established local root peers")
+      , ("peerSelection.WarmLocalRootPeersPromotions", "Number of warm local root peers promotions")
+      , ("peerSelection.ActiveLocalRootPeers", "Number of active local root peers")
+      , ("peerSelection.ActiveLocalRootPeersDemotions", "Number of active local root peers demotions")
+
+      , ("peerSelection.KnownNonRootPeers", "Number of known non root peers")
+      , ("peerSelection.ColdNonRootPeersPromotions", "Number of cold non root peers promotions")
+      , ("peerSelection.EstablishedNonRootPeers", "Number of established non root peers")
+      , ("peerSelection.WarmNonRootPeersDemotions", "Number of warm non root peers demotions")
+      , ("peerSelection.WarmNonRootPeersPromotions", "Number of warm non root peers promotions")
+      , ("peerSelection.ActiveNonRootPeers", "Number of active non root peers")
+      , ("peerSelection.ActiveNonRootPeersDemotions", "Number of active non root peers demotions")
+
+      , ("peerSelection.KnownBootstrapPeers", "Number of known bootstrap peers")
+      , ("peerSelection.ColdBootstrapPeersPromotions", "Number of cold bootstrap peers promotions")
+      , ("peerSelection.EstablishedBootstrapPeers", "Number of established bootstrap peers")
+      , ("peerSelection.WarmBootstrapPeersDemotions", "Number of warm bootstrap peers demotions")
+      , ("peerSelection.WarmBootstrapPeersPromotions", "Number of warm bootstrap peers promotions")
+      , ("peerSelection.ActiveBootstrapPeers", "Number of active bootstrap peers")
+      , ("peerSelection.ActiveBootstrapPeersDemotions", "Number of active bootstrap peers demotions")
+
      ]
     metricsDocFor _ = []
 
@@ -1026,7 +1071,7 @@ instance LogFormatting ChurnCounters where
             ]
   asMetrics (ChurnCounter action c) =
     [ IntM
-        ("Net.Churn." <> pack (show action))
+        ("peerSelection.churn." <> pack (show action))
         (fromIntegral c)
     ]
 
@@ -1040,19 +1085,19 @@ instance MetaTrace ChurnCounters where
       "churn counters"
     documentFor _ = Nothing
 
-    metricsDocFor (Namespace _ ["Counters"]) =
-     [ ("Net.Churn.DecreasedActivePeers", "number of decreased active peers")
-     , ("Net.Churn.IncreasedActivePeers", "number of increased active peers")
-     , ("Net.Churn.DecreasedActiveBigLedgerPeers", "number of decreased active big ledger peers")
-     , ("Net.Churn.IncreasedActiveBigLedgerPeers", "number of increased active big ledger peers")
-     , ("Net.Churn.DecreasedEstablishedPeers", "number of decreased established peers")
-     , ("Net.Churn.IncreasedEstablishedPeers", "number of increased established peers")
-     , ("Net.Churn.IncreasedEstablishedBigLedgerPeers", "number of increased established big ledger peers")
-     , ("Net.Churn.DecreasedEstablishedBigLedgerPeers", "number of decreased established big ledger peers")
-     , ("Net.Churn.DecreasedKnownPeers", "number of decreased known peers")
-     , ("Net.Churn.IncreasedKnownPeers", "number of increased known peers")
-     , ("Net.Churn.DecreasedKnownBigLedgerPeers", "number of decreased known big ledger peers")
-     , ("Net.Churn.IncreasedKnownBigLedgerPeers", "number of increased known big ledger peers")
+    metricsDocFor (Namespace _ ["ChurnCounters"]) =
+     [ ("peerSelection.churn.DecreasedActivePeers", "number of decreased active peers")
+     , ("peerSelection.churn.IncreasedActivePeers", "number of increased active peers")
+     , ("peerSelection.churn.DecreasedActiveBigLedgerPeers", "number of decreased active big ledger peers")
+     , ("peerSelection.churn.IncreasedActiveBigLedgerPeers", "number of increased active big ledger peers")
+     , ("peerSelection.churn.DecreasedEstablishedPeers", "number of decreased established peers")
+     , ("peerSelection.churn.IncreasedEstablishedPeers", "number of increased established peers")
+     , ("peerSelection.churn.IncreasedEstablishedBigLedgerPeers", "number of increased established big ledger peers")
+     , ("peerSelection.churn.DecreasedEstablishedBigLedgerPeers", "number of decreased established big ledger peers")
+     , ("peerSelection.churn.DecreasedKnownPeers", "number of decreased known peers")
+     , ("peerSelection.churn.IncreasedKnownPeers", "number of increased known peers")
+     , ("peerSelection.churn.DecreasedKnownBigLedgerPeers", "number of decreased known big ledger peers")
+     , ("peerSelection.churn.IncreasedKnownBigLedgerPeers", "number of increased known big ledger peers")
      ]
     metricsDocFor _ = []
 
@@ -1255,19 +1300,19 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
     forHuman = pack . show
     asMetrics (TrConnectionManagerCounters ConnectionManagerCounters {..}) =
           [ IntM
-              "Net.ConnectionManager.FullDuplexConns"
+              "connectionManager.fullDuplexConns"
               (fromIntegral fullDuplexConns)
           , IntM
-              "Net.ConnectionManager.DuplexConns"
+              "connectionManager.duplexConns"
               (fromIntegral duplexConns)
           , IntM
-              "Net.ConnectionManager.UnidirectionalConns"
+              "connectionManager.unidirectionalConns"
               (fromIntegral unidirectionalConns)
           , IntM
-              "Net.ConnectionManager.InboundConns"
+              "connectionManager.inboundConns"
               (fromIntegral inboundConns)
           , IntM
-              "Net.ConnectionManager.OutboundConns"
+              "connectionManager.outboundConns"
               (fromIntegral outboundConns)
             ]
     asMetrics _ = []
@@ -1386,11 +1431,11 @@ instance MetaTrace (ConnectionManagerTrace addr
     documentFor _ = Nothing
 
     metricsDocFor (Namespace _  ["ConnectionManagerCounters"]) =
-      [("Net.ConnectionManager.FullDuplexConns","")
-      ,("Net.ConnectionManager.DuplexConns","")
-      ,("Net.ConnectionManager.UnidirectionalConns","")
-      ,("Net.ConnectionManager.InboundConns","")
-      ,("Net.ConnectionManager.OutboundConns","")
+      [("connectionManager.fullDuplexConns","")
+      ,("connectionManager.duplexConns","")
+      ,("connectionManager.unidirectionalConns","")
+      ,("connectionManager.inboundConns","")
+      ,("connectionManager.outboundConns","")
       ]
     metricsDocFor _ = []
 
@@ -1519,16 +1564,16 @@ instance LogFormatting (InboundGovernorTrace SockAddr) where
   forHuman = pack . show
   asMetrics (TrInboundGovernorCounters InboundGovernorCounters {..}) =
             [ IntM
-                "Net.InboundGovernor.Idle"
+                "inboundGovernor.idle"
                 (fromIntegral idlePeersRemote)
             , IntM
-                "Net.InboundGovernor.Cold"
+                "inboundGovernor.cold"
                 (fromIntegral coldPeersRemote)
             , IntM
-                "Net.InboundGovernor.Warm"
+                "inboundGovernor.warm"
                 (fromIntegral warmPeersRemote)
             , IntM
-                "Net.InboundGovernor.Hot"
+                "inboundGovernor.hot"
                 (fromIntegral hotPeersRemote)
               ]
   asMetrics _ = []
@@ -1538,16 +1583,16 @@ instance LogFormatting (InboundGovernorTrace LocalAddress) where
   forHuman = pack . show
   asMetrics (TrInboundGovernorCounters InboundGovernorCounters {..}) =
             [ IntM
-                "Net.LocalInboundGovernor.Idle"
+                "localInboundGovernor.idle"
                 (fromIntegral idlePeersRemote)
             , IntM
-                "Net.LocalInboundGovernor.Cold"
+                "localInboundGovernor.cold"
                 (fromIntegral coldPeersRemote)
             , IntM
-                "Net.LocalInboundGovernor.Warm"
+                "localInboundGovernor.warm"
                 (fromIntegral warmPeersRemote)
             , IntM
-                "Net.LocalInboundGovernor.Hot"
+                "localInboundGovernor.hot"
                 (fromIntegral hotPeersRemote)
               ]
   asMetrics _ = []
@@ -1720,26 +1765,32 @@ instance MetaTrace (InboundGovernorTrace addr) where
     documentFor (Namespace _ ["Inactive"]) = Just ""
     documentFor _ = Nothing
 
-    metricsDocFor (Namespace [] ["InboundGovernorCounters"]) =
-          [("Net.InboundGovernor.Idle","")
-          ,("Net.InboundGovernor.Cold","")
-          ,("Net.InboundGovernor.Warm","")
-          ,("Net.InboundGovernor.Hot","")
-          ]
-    metricsDocFor (Namespace ons ["InboundGovernorCounters"]) =
-      if last ons == "Local"
-        then
-          [("Net.LocalInboundGovernor.Idle","")
-          ,("Net.LocalInboundGovernor.Cold","")
-          ,("Net.LocalInboundGovernor.Warm","")
-          ,("Net.LocalInboundGovernor.Hot","")
-          ]
-        else
-          [("Net.InboundGovernor.Idle","")
-          ,("Net.InboundGovernor.Cold","")
-          ,("Net.InboundGovernor.Warm","")
-          ,("Net.InboundGovernor.Hot","")
-          ]
+    metricsDocFor (Namespace ons ["InboundGovernorCounters"])
+      | null ons -- docu generation
+        =
+              [("localInboundGovernor.idle","")
+              ,("localInboundGovernor.cold","")
+              ,("localInboundGovernor.warm","")
+              ,("localInboundGovernor.hot","")
+              ,("inboundGovernor.Idle","")
+              ,("inboundGovernor.Cold","")
+              ,("inboundGovernor.Warm","")
+              ,("inboundGovernor.Hot","")
+              ]
+      | last ons == "Local"
+        =
+              [("localInboundGovernor.idle","")
+              ,("localInboundGovernor.cold","")
+              ,("localInboundGovernor.warm","")
+              ,("localInboundGovernor.hot","")
+              ]
+      | otherwise
+        =
+              [("inboundGovernor.Idle","")
+              ,("inboundGovernor.Cold","")
+              ,("inboundGovernor.Warm","")
+              ,("inboundGovernor.Hot","")
+              ]
     metricsDocFor _ = []
 
     allNamespaces = [
