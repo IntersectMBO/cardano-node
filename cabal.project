@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 -- See CONTRIBUTING for information about these, including some Nix commands
 -- you need to run if you change them
 index-state:
-  , hackage.haskell.org 2024-05-30T17:32:42Z
-  , cardano-haskell-packages 2024-06-04T19:25:39Z
+  , hackage.haskell.org 2024-06-13T08:49:27Z
+  , cardano-haskell-packages 2024-06-20T14:49:55Z
 
 packages:
   cardano-node
@@ -30,6 +30,8 @@ packages:
   trace-dispatcher
   trace-resources
   trace-forward
+
+extra-packages: Cabal
 
 program-options
   ghc-options: -Werror
@@ -57,8 +59,8 @@ package plutus-scripts-bench
 constraints:
   wai-extra < 3.1.15,
 
+allow-newer: katip:Win32
+
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
-
--- `smtp-mail` should depend on `crypton-connection` rather than `connection`!

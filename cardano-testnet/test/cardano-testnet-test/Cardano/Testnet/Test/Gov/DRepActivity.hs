@@ -23,7 +23,7 @@ import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
 import           Data.Data (Typeable)
 import qualified Data.Map as Map
-import           Data.Word (Word32)
+import           Data.Word (Word16)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           System.FilePath ((</>))
 
@@ -169,7 +169,7 @@ activityChangeProposalTest
                          -- the proposal.
   -> EpochInterval -- ^ The maximum number of epochs to wait for the DRep activity interval to
                    -- become expected value.
-  -> m (String, Word32) -- ^ The transaction id and the index of the governance action.
+  -> m (String, Word16) -- ^ The transaction id and the index of the governance action.
 activityChangeProposalTest execConfig epochStateView ceo work prefix
                            wallet votes change minWait mExpected maxWait = do
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
@@ -214,7 +214,7 @@ voteChangeProposal
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> String -- ^ The transaction id of the governance action to vote.
-  -> Word32 -- ^ The index of the governance action to vote.
+  -> Word16 -- ^ The index of the governance action to vote.
   -> [([Char], Int)] -- ^ Votes to be casted for the proposal. Each tuple contains the index
                      -- of the default DRep that will make the vote and the type of the vote
                      -- (i.e: "yes", "no", "abstain").

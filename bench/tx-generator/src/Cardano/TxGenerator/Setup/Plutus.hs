@@ -233,17 +233,23 @@ preExecutePlutusV3 (major, _minor) (PlutusScript _ (PlutusScriptSerialised (scri
       exBudget <- firstExceptT PlutusError $
         hoistEither .
           snd $ PlutusV3.evaluateScriptCounting protocolVersion PlutusV3.Verbose evaluationContext scriptForEval
-            [ toPlutusData datum
-            , toPlutusData (getScriptData redeemer)
-            , PlutusV3.toData dummyContext
-            ]
+                (PlutusV3.toData scriptContext)
 
       x <- hoistMaybe (TxGenError "preExecutePlutusV3: could not convert to execution units") $
         exBudgetToExUnits exBudget
       return $ fromAlonzoExUnits x
 
-    dummyContext :: PlutusV3.ScriptContext
-    dummyContext = PlutusV3.ScriptContext dummyTxInfo (PlutusV3.Spending dummyOutRef)
+    r :: PlutusV3.Redeemer
+    r = PlutusV3.Redeemer $ PlutusV3.dataToBuiltinData $ toPlutusData $ getScriptData redeemer
+
+    d :: PlutusV3.Datum
+    d = PlutusV3.Datum $ PlutusV3.dataToBuiltinData $ toPlutusData datum
+
+    scriptContext :: PlutusV3.ScriptContext
+    scriptContext = PlutusV3.ScriptContext dummyTxInfo r scriptInfo
+
+    scriptInfo :: PlutusV3.ScriptInfo
+    scriptInfo = PlutusV3.SpendingScript dummyOutRef (Just d)
 
     dummyOutRef :: PlutusV3.TxOutRef
     dummyOutRef = PlutusV3.TxOutRef (PlutusV3.TxId "") 0

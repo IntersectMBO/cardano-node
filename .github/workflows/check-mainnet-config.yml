@@ -15,11 +15,10 @@ jobs:
     steps:
 
     - name: Install Nix
-      uses: cachix/install-nix-action@v18
+      uses: cachix/install-nix-action@v27
       with:
         # Use last stable nixos channel and the same nix as in channel:
-        install_url: https://releases.nixos.org/nix/nix-2.11.1/install
-        nix_path: nixpkgs=channel:nixos-22.11
+        nix_path: nixpkgs=channel:nixos-24.05
         github_access_token: ${{ secrets.GITHUB_TOKEN }}
         extra_nix_config: |
           access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
@@ -41,7 +40,6 @@ jobs:
         test_files=(
           'mainnet-alonzo-genesis.json'
           'mainnet-byron-genesis.json'
-          'mainnet-conway-genesis.json'
           'mainnet-config.json'
           'mainnet-shelley-genesis.json'
           'mainnet-topology.json'

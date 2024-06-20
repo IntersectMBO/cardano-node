@@ -21,7 +21,7 @@ import           Prelude
 import           Control.Monad
 import qualified Data.Map as Map
 import           Data.Maybe
-import           Data.Word (Word32)
+import           Data.Word (Word16)
 import           GHC.Exts (IsList (toList), toList)
 import           GHC.Stack
 import           Lens.Micro (to, (^.))
@@ -36,7 +36,7 @@ maybeExtractGovernanceActionIndex
   :: HasCallStack
   => TxId -- ^ transaction id searched for
   -> AnyNewEpochState
-  -> Maybe Word32
+  -> Maybe Word16
 maybeExtractGovernanceActionIndex txid (AnyNewEpochState sbe newEpochState) =
   caseShelleyToBabbageOrConwayEraOnwards
     (const $ error "Governance actions only available in Conway era onwards")

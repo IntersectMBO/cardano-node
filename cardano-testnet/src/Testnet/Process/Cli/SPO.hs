@@ -31,7 +31,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           Data.Word (Word32)
+import           Data.Word (Word16)
 import           GHC.Stack (HasCallStack)
 import qualified GHC.Stack as GHC
 import           Lens.Micro
@@ -129,7 +129,7 @@ checkStakeKeyRegistered tempAbsP nodeConfigFile sPath terminationEpoch execConfi
                     , "foldEpochStateError: " <> show e
                     ]
  where
-  handler :: StakeAddress -> AnyNewEpochState -> SlotNo -> BlockNo -> StateT DelegationsAndRewards IO LedgerStateCondition
+  handler :: StakeAddress -> AnyNewEpochState -> SlotNo -> BlockNo -> StateT DelegationsAndRewards IO ConditionResult
   handler (StakeAddress network sCred) (AnyNewEpochState sbe newEpochState) _ _ =
     let umap = shelleyBasedEraConstraints sbe $ newEpochState ^. L.nesEsL . L.epochStateUMapL
         dag = L.filterStakePoolDelegsAndRewards umap $ Set.singleton sCred
@@ -417,7 +417,7 @@ generateVoteFiles :: (MonadTest m, MonadIO m, MonadCatch m)
   -> String -- ^ Name for the subfolder that will be created under 'work' to store
             -- the output voting files.
   -> String -- ^ Transaction ID string of the governance action.
-  -> Word32 -- ^ Index of the governance action.
+  -> Word16 -- ^ Index of the governance action.
   -> [(PoolNodeKeys, [Char])] -- ^ List of tuples where each tuple contains a 'PoolNodeKeys'
                               -- representing the SPO keys and a 'String' representing the
                               -- vote type (i.e: "yes", "no", or "abstain").
@@ -430,7 +430,7 @@ generateVoteFiles ceo execConfig work prefix governanceActionTxId governanceActi
       [ eraToString $ toCardanoEra ceo , "governance", "vote", "create"
       , "--" ++ vote
       , "--governance-action-tx-id", governanceActionTxId
-      , "--governance-action-index", show @Word32 governanceActionIndex
+      , "--governance-action-index", show @Word16 governanceActionIndex
       , "--cold-verification-key-file", verificationKeyFp $ poolNodeKeysCold spoKeys
       , "--out-file", unFile path
       ]

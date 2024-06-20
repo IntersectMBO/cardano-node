@@ -191,6 +191,10 @@ instance ToObject (Conway.ConwayGovCertPredFailure era) where
 
 instance ToObject (Conway.ConwayDelegPredFailure era) where
   toObject _verb = mconcat . \case
+    Conway.DelegateeNotRegisteredDELEG (KeyHash targetPool) ->
+      [ "kind" .= String "DelegateeNotRegisteredDELEG"
+      , "targetPool" .= Crypto.hashToTextAsHex targetPool
+      ]
     Conway.IncorrectDepositDELEG coin ->
       [ "kind" .= String "IncorrectDepositDELEG"
       , "amount" .= coin
@@ -387,8 +391,6 @@ instance
   , ToObject (PredicateFailure (Ledger.EraRule "CERT" era))
   ) => ToObject (Conway.ConwayCertsPredFailure era) where
   toObject verb = \case
-    Conway.DelegateeNotRegisteredDELEG targetPool ->
-      mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG" , "targetPool" .= targetPool ]
     Conway.WithdrawalsNotInRewardsCERTS incorrectWithdrawals ->
       mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS" , "incorrectWithdrawals" .= incorrectWithdrawals ]
     Conway.CertFailure f -> toObject verb f

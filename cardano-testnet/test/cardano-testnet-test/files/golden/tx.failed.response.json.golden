@@ -13,7 +13,7 @@
                     },
                     {
                         "contents": {
-                            "contents": "AlonzoInBabbageUtxoPredFailure (BadInputsUTxO (fromList [TxIn (TxId {unTxId = SafeHash \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}) (TxIx 0)]))",
+                            "contents": "AlonzoInBabbageUtxoPredFailure (BadInputsUTxO (fromList [TxIn (TxId {unTxId = SafeHash \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}) (TxIx {unTxIx = 0})]))",
                             "tag": "UtxoFailure"
                         },
                         "tag": "UtxowFailure"

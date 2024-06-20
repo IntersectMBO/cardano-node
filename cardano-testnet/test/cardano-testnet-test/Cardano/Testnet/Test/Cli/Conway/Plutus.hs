@@ -76,25 +76,22 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
   epochStateView <- getEpochStateView configurationFile socketPath
   txin1 <- findLargestUtxoForPaymentKey epochStateView sbe wallet0
 
-  plutusMintingScript <- H.note $ work </> "always-succeeds-non-spending-script.plutusV3"
-  H.writeFile plutusMintingScript $ Text.unpack plutusV3NonSpendingScript
-
-  plutusSpendingScript <- H.note $ work </> "always-succeeds-spending-script.plutusV3"
-  H.writeFile plutusSpendingScript $ Text.unpack plutusV3SpendingScript
+  plutusScript <- H.note $ work </> "always-succeeds-script.plutusV3"
+  H.writeFile plutusScript $ Text.unpack plutusV3Script
 
   let sendAdaToScriptAddressTxBody = work </> "send-ada-to-script-address-tx-body"
 
   plutusSpendingScriptAddr <-
     execCli' execConfig
       [ "address", "build"
-      , "--payment-script-file", plutusSpendingScript
+      , "--payment-script-file", plutusScript
       ]
 
   mintingPolicyId <- filter (/= '\n') <$>
     execCli' execConfig
       [ anyEraToString anyEra, "transaction"
       , "policyid"
-      , "--script-file", plutusMintingScript
+      , "--script-file", plutusScript
       ]
   let assetName = "4D696C6C6172436F696E"
   H.note_ $ "plutusSpendingScriptAddr: " <> plutusSpendingScriptAddr
@@ -112,7 +109,7 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
   createScriptStakeRegistrationCertificate
     tempAbsPath
     anyEra
-    plutusSpendingScript
+    plutusScript
     0
     scriptStakeRegistrationCertificate
 
@@ -157,14 +154,14 @@ hprop_plutus_v3 = integrationWorkspace "all-plutus-script-purposes" $ \tempAbsBa
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet1
     , "--tx-in-collateral", Text.unpack $ renderTxIn txinCollateral
     , "--tx-in", Text.unpack $ renderTxIn plutusScriptTxIn
-    , "--tx-in-script-file", plutusSpendingScript
+    , "--tx-in-script-file", plutusScript
     , "--tx-in-datum-value", "0"
     , "--tx-in-redeemer-value", "0"
     , "--mint", mintValue
-    , "--mint-script-file", plutusMintingScript
+    , "--mint-script-file", plutusScript
     , "--mint-redeemer-value", "0"
     , "--certificate-file", scriptStakeRegistrationCertificate
-    , "--certificate-script-file", plutusSpendingScript
+    , "--certificate-script-file", plutusScript
     , "--certificate-redeemer-value", "0"
     , "--tx-out", txout
     , "--out-file", spendScriptUTxOTxBody

@@ -18,6 +18,7 @@ import qualified Data.ByteString.Short as SBS
 import qualified PlutusLedgerApi.V3 as PlutusV3
 import           PlutusTx
 import           PlutusTx.Builtins (unsafeDataAsI)
+import qualified PlutusTx.Builtins.Internal as BI (unitval)
 import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.), (<$>))
 
 
@@ -30,14 +31,14 @@ script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusS
 
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkValidator :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkValidator _datum redeemer _txContext
   = if n < 1000000
        then traceError "redeemer is < 1000000"
        else loop n
   where
     n = unsafeDataAsI redeemer
-    loop i = if i == 1000000 then () else loop $ pred i
+    loop i = if i == 1000000 then BI.unitval else loop $ pred i
 
 loopScriptShortBs :: SBS.ShortByteString
 loopScriptShortBs = PlutusV3.serialiseCompiledCode $$(PlutusTx.compile [|| mkValidator ||])

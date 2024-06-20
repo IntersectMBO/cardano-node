@@ -11,7 +11,7 @@ module Cardano.Analysis.API.Ground
 where
 
 import Prelude                          (show)
-import Cardano.Prelude                  hiding (head)
+import Cardano.Prelude                  hiding (head, toText)
 import Unsafe.Coerce                    qualified as Unsafe
 
 import Data.Aeson

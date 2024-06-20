@@ -28,6 +28,7 @@ import           Lens.Micro
 import           System.FilePath ((</>))
 import qualified System.Info as SYS
 
+import           Testnet.Components.Configuration
 import           Testnet.Process.Run (execCli', mkExecConfig)
 import           Testnet.Property.Util (decodeEraUTxO, integrationRetryWorkspace)
 import           Testnet.Types
@@ -48,9 +49,10 @@ hprop_transaction = integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbs
   let
     sbe = ShelleyBasedEraBabbage
     era = toCardanoEra sbe
+    cEra = AnyCardanoEra era
     tempBaseAbsPath = makeTmpBaseAbsPath $ TmpAbsolutePath tempAbsPath'
     options = cardanoDefaultTestnetOptions
-      { cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
+      { cardanoNodeEra = cEra -- TODO: We should only support the latest era and the upcoming era
       }
 
   TestnetRuntime
@@ -68,7 +70,7 @@ hprop_transaction = integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbs
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
   void $ execCli' execConfig
-    [ "babbage", "query", "utxo"
+    [ anyEraToString cEra, "query", "utxo"
     , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--cardano-mode"
     , "--out-file", work </> "utxo-1.json"
@@ -79,14 +81,14 @@ hprop_transaction = integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbs
   txin1 <- H.noteShow =<< H.headM (Map.keys utxo1)
 
   void $ execCli' execConfig
-    [ "babbage", "transaction", "build"
+    [ anyEraToString cEra, "transaction", "build"
     , "--change-address", Text.unpack $ paymentKeyInfoAddr wallet0
     , "--tx-in", Text.unpack $ renderTxIn txin1
     , "--tx-out", Text.unpack (paymentKeyInfoAddr wallet0) <> "+" <> show @Int 5_000_001
     , "--out-file", txbodyFp
     ]
   cddlUnwitnessedTx <- H.readJsonFileOk txbodyFp
-  apiTx <- H.evalEither $ deserialiseTxLedgerCddl sbe cddlUnwitnessedTx
+  apiTx <- H.evalEither $ deserialiseFromTextEnvelope (AsTx AsBabbageEra) cddlUnwitnessedTx
   let txFee = L.unCoin $ extractTxFee apiTx
 
   -- This is the current calculated fee.
@@ -96,21 +98,21 @@ hprop_transaction = integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbs
   330 H.=== txFee
 
   void $ execCli' execConfig
-    [ "babbage", "transaction", "sign"
+    [ anyEraToString cEra, "transaction", "sign"
     , "--tx-body-file", txbodyFp
     , "--signing-key-file", signingKeyFp $ paymentKeyInfoPair wallet0
     , "--out-file", txbodySignedFp
     ]
 
   void $ execCli' execConfig
-    [ "babbage", "transaction", "submit"
+    [ anyEraToString cEra, "transaction", "submit"
     , "--tx-file", txbodySignedFp
     ]
 
 
   H.byDurationM 1 15 "Expected UTxO found" $ do
     void $ execCli' execConfig
-      [ "babbage", "query", "utxo"
+      [ anyEraToString cEra, "query", "utxo"
       , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
       , "--cardano-mode"
       , "--out-file", work </> "utxo-2.json"

@@ -7,8 +7,6 @@ AlonzoGenesisFile: mainnet-alonzo-genesis.json
 AlonzoGenesisHash: 7e94a15f55d1e82d10f09203fa1d40f8eede58fd8066542cf6566008068ed874
 ByronGenesisFile: mainnet-byron-genesis.json
 ByronGenesisHash: 5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb
-ConwayGenesisFile: mainnet-conway-genesis.json
-ConwayGenesisHash: 91bedad42212c07f6abdafedb7e7c8577fbd07152c695ffae1ab2a528741c6e4
 ShelleyGenesisFile: mainnet-shelley-genesis.json
 ShelleyGenesisHash: 1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81
 
@@ -42,7 +40,7 @@ TargetNumberOfRootPeers: 60
 
 ##### Version Information #####
 
-MinNodeVersion: 8.11.0
+MinNodeVersion: 8.12.0
 
 ##### Logging configuration #####
 

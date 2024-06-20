@@ -155,7 +155,7 @@ library
                       , filepath
                       , mime-mail
                       , optparse-applicative
-                      , ouroboros-network ^>= 0.16
+                      , ouroboros-network ^>= 0.16.1
                       , ouroboros-network-api
                       , ouroboros-network-framework
                       , signal

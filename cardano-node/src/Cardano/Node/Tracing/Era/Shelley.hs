@@ -147,6 +147,10 @@ instance LogFormatting (Conway.ConwayGovCertPredFailure era) where
 
 instance LogFormatting (Conway.ConwayDelegPredFailure era) where
   forMachine _dtal = mconcat . \case
+    Conway.DelegateeNotRegisteredDELEG poolID ->
+      [ "kind" .= String "DelegateeNotRegisteredDELEG"
+      , "poolID" .= String (textShow poolID)
+      ]
     Conway.IncorrectDepositDELEG coin ->
       [ "kind" .= String "IncorrectDepositDELEG"
       , "amount" .= coin
@@ -1164,10 +1168,6 @@ instance
   ( Consensus.ShelleyBasedEra era
   , LogFormatting (PredicateFailure (Ledger.EraRule "CERT" era))
   ) => LogFormatting (Conway.ConwayCertsPredFailure era) where
-  forMachine _ (Conway.DelegateeNotRegisteredDELEG poolID) =
-    mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG"
-            , "poolID" .= String (textShow poolID)
-            ]
   forMachine _ (Conway.WithdrawalsNotInRewardsCERTS rs) =
     mconcat [ "kind" .= String "WithdrawalsNotInRewardsCERTS"
              , "rewardAccounts" .= rs

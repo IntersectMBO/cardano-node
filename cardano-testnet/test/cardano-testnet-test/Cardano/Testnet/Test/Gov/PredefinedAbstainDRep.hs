@@ -26,7 +26,7 @@ import           Control.Monad.Catch (MonadCatch)
 import           Data.Data (Typeable)
 import           Data.String (fromString)
 import qualified Data.Text as Text
-import           Data.Word (Word32)
+import           Data.Word (Word16)
 import           GHC.Stack (HasCallStack)
 import           Lens.Micro ((^.))
 import           System.FilePath ((</>))
@@ -176,7 +176,7 @@ desiredPoolNumberProposalTest
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
-  -> Maybe (String, Word32) -- ^ The transaction identifier and index of the previous passed
+  -> Maybe (String, Word16) -- ^ The transaction identifier and index of the previous passed
                             -- governance action if any.
   -> t (Int, String) -- ^ Model of votes to issue as a list of pairs of amount of each vote
                      -- together with the vote (i.e: "yes", "no", "abstain")
@@ -184,7 +184,7 @@ desiredPoolNumberProposalTest
   -> Integer -- ^ Minimum number of epochs to wait before checking the result
   -> Maybe Integer -- ^ What the expected result is of the change (if anything)
   -> Integer -- ^ Maximum number of epochs to wait while waiting for the result
-  -> m (String, Word32)
+  -> m (String, Word16)
 desiredPoolNumberProposalTest execConfig epochStateView ceo work prefix wallet
                               previousProposalInfo votes change minWait mExpected maxWait = do
   let sbe = conwayEraOnwardsToShelleyBasedEra ceo
@@ -222,11 +222,11 @@ makeDesiredPoolNumberChangeProposal
   -> ConwayEraOnwards ConwayEra -- ^ The conway era onwards witness for the era in which the transaction will be constructed.
   -> FilePath -- ^ Base directory path where generated files will be stored.
   -> String -- ^ Name for the subfolder that will be created under 'work' folder.
-  -> Maybe (String, Word32) -- ^ The transaction identifier and index of the previous passed
+  -> Maybe (String, Word16) -- ^ The transaction identifier and index of the previous passed
                             -- governance action if any.
-  -> Word32 -- ^ What to change the @desiredPoolNumber@ to
+  -> Word16 -- ^ What to change the @desiredPoolNumber@ to
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transaction.
-  -> m (String, Word32)
+  -> m (String, Word16)
 makeDesiredPoolNumberChangeProposal execConfig epochStateView ceo work prefix
                                     prevGovActionInfo desiredPoolNumber wallet = do
 
@@ -309,7 +309,7 @@ voteChangeProposal :: (MonadTest m, MonadIO m, MonadCatch m, H.MonadAssertion m)
   -> FilePath -- ^ Base directory path where the subdirectory with the intermediate files will be created.
   -> String -- ^ Name for the subdirectory that will be created for storing the intermediate files.
   -> String -- ^ Transaction id of the governance action to vote.
-  -> Word32 -- ^ Index of the governance action to vote in the transaction.
+  -> Word16 -- ^ Index of the governance action to vote in the transaction.
   -> [DefaultDRepVote] -- ^ List of votes to issue as pairs of the vote and the number of DRep that votes it.
   -> PaymentKeyInfo -- ^ Wallet that will pay for the transactions
   -> m ()
