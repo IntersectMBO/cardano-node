@@ -206,11 +206,12 @@
 
             ## This is a very light profile, no caching&pinning needed.
             workbench-ci-test =
-              workbenchTest { profileName        = "ci-test-bage";
+              workbenchTest { profileName        = "ci-test-hydra-bage";
+                              workbenchStartArgs = [ "--create-testnet-data" ];
                             };
             workbench-ci-test-trace =
-              workbenchTest { profileName        = "ci-test-bage";
-                              workbenchStartArgs = [ "--trace" ];
+              workbenchTest { profileName        = "ci-test-hydra-bage";
+                              workbenchStartArgs = [ "--create-testnet-data" "--trace" ];
                             };
 
             inherit (pkgs) all-profiles-json;
