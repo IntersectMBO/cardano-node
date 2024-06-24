@@ -32,6 +32,7 @@ data ConfigRepresentation = ConfigRepresentation {
     traceOptions                  :: OptionsRepresentation
   , traceOptionForwarder          :: Maybe TraceOptionForwarder
   , traceOptionNodeName           :: Maybe Text
+  , traceOptionMetricsPrefix      :: Maybe Text
   , traceOptionPeerFrequency      :: Maybe Int
   , traceOptionResourceFrequency  :: Maybe Int
   }
@@ -42,6 +43,7 @@ instance AE.FromJSON ConfigRepresentation where
                            <$> obj .: "TraceOptions"
                            <*> obj .:? "TraceOptionForwarder"
                            <*> obj .:? "TraceOptionNodeName"
+                           <*> obj .:? "TraceOptionMetricsPrefix"
                            <*> obj .:? "TraceOptionPeerFrequency"
                            <*> obj .:? "TraceOptionResourceFrequency"
     parseJSON _ = mempty
@@ -51,6 +53,7 @@ instance AE.ToJSON ConfigRepresentation where
     [ "TraceOptions"                  .= traceOptions
     , "TraceOptionForwarder"          .= traceOptionForwarder
     , "TraceOptionNodeName"           .= traceOptionNodeName
+    , "TraceOptionMetricsPrefix"      .= traceOptionMetricsPrefix
     , "TraceOptionPeerFrequency"      .= traceOptionPeerFrequency
     , "TraceOptionResourceFrequency"  .= traceOptionResourceFrequency
     ]
@@ -107,6 +110,7 @@ readConfigurationWithDefault fp defaultConf = do
           else tcOptions defaultConf)
         (tcForwarder fileConf <|> tcForwarder defaultConf)
         (tcNodeName fileConf <|> tcNodeName defaultConf)
+        (tcMetricsPrefix fileConf <|> tcMetricsPrefix defaultConf)
         (tcPeerFrequency fileConf <|> tcPeerFrequency defaultConf)
         (tcResourceFrequency fileConf <|> tcResourceFrequency defaultConf)
 
@@ -138,6 +142,7 @@ parseRepresentation bs = transform (decodeEither' bs)
           to''
           (traceOptionForwarder cr)
           (traceOptionNodeName cr)
+          (traceOptionMetricsPrefix cr)
           (traceOptionPeerFrequency cr)
           (traceOptionResourceFrequency cr)
 
@@ -158,6 +163,7 @@ configToRepresentation traceConfig =
         (toOptionRepresentation (tcOptions traceConfig))
         (tcForwarder traceConfig)
         (tcNodeName traceConfig)
+        (tcMetricsPrefix traceConfig)
         (tcPeerFrequency traceConfig)
         (tcResourceFrequency traceConfig)
   where
