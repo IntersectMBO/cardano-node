@@ -167,6 +167,11 @@ instance MetaTrace TraceDispatcherMessage where
       ] <>  internalRestriction
     documentFor _ = Nothing
 
+    metricsDocFor (Namespace _ ["StartLimiting"])    =
+      [("SuppressedMessages...", "Number of suppressed messages of a certain kind")]
+    metricsDocFor _ = []
+
+
     allNamespaces = [
         Namespace [] ["StartLimiting"]
       , Namespace [] ["StopLimiting"]
