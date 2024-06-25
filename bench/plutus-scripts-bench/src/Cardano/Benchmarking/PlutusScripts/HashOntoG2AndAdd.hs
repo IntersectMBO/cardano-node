@@ -20,12 +20,13 @@ import qualified PlutusLedgerApi.V3 as PlutusV3
 import           Prelude as Haskell (String, (.), (<$>))
 
 import qualified Data.ByteString.Short as SBS
-import           GHC.ByteOrder (ByteOrder(LittleEndian))
+import           GHC.ByteOrder (ByteOrder (LittleEndian))
 
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
 import qualified PlutusTx
-import qualified PlutusTx.Builtins.Internal as BI (unitval)
+import qualified PlutusTx.Builtins.Internal as BI (BuiltinList, head, snd, tail, unitval,
+                   unsafeDataAsConstr)
 import           PlutusTx.Prelude as Tx hiding (Semigroup (..), (.), (<$>))
 
 
@@ -37,15 +38,26 @@ script :: PlutusBenchScript
 script = mkPlutusBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV3 scriptSerialized))
 
 {-# INLINABLE mkValidator #-}
-mkValidator :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
-mkValidator _datum red _txContext =
-  case PlutusV3.fromBuiltinData red of
-    Nothing -> Tx.traceError "invalid redeemer"
-    Just (n, l) ->
-      if n < (1000000 :: Integer) -- large number ensures same bitsize for all counter values
-      then traceError "redeemer is < 1000000"
-      else loop n l
+mkValidator :: BuiltinData -> BuiltinUnit
+mkValidator arg =
+  if red_n < 1000000 -- large number ensures same bitsize for all counter values
+    then traceError "redeemer is < 1000000"
+    else loop red_n red_l
   where
+    -- lazily decode script context up to redeemer, which is less expensive and results in much smaller tx size
+    constrArgs :: BuiltinData -> BI.BuiltinList BuiltinData
+    constrArgs = BI.snd . BI.unsafeDataAsConstr
+
+    redeemerFollowedByScriptInfo :: BI.BuiltinList BuiltinData
+    redeemerFollowedByScriptInfo = BI.tail (constrArgs arg)
+
+    redeemer :: BuiltinData
+    redeemer = BI.head redeemerFollowedByScriptInfo
+
+    red_n :: Integer
+    red_l :: [BuiltinByteString]
+    (red_n, red_l) = PlutusV3.unsafeFromBuiltinData redeemer
+
     hashAndAddG2 :: [BuiltinByteString] -> Integer -> BuiltinBLS12_381_G2_Element
     hashAndAddG2 l i =
       go l (Tx.bls12_381_G2_uncompress Tx.bls12_381_G2_compressed_zero)

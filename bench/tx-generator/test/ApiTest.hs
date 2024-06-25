@@ -198,7 +198,6 @@ checkPlutusLoop protoParamFile (Just _plutusDef@PlutusOn{..})
     let redeemerDef = Right _plutusDef
     -- let redeemerDef = Left hashAndAddG2_redeemer
 
-
     redeemer :: ScriptData <-
       resolveRedeemer redeemerDef >>= either
         (die . show)
@@ -218,9 +217,10 @@ checkPlutusLoop protoParamFile (Just _plutusDef@PlutusOn{..})
           , autoBudgetRedeemer = unsafeHashableScriptData $ scriptDataModifyNumber (const 1_000_000) redeemer
           }
 
-        pparamsStepFraction d = case protocolParamMaxBlockExUnits protocolParameters of
+        pparamsScaleBlockBudget factor = case protocolParamMaxBlockExUnits protocolParameters of
           Just u  -> protocolParameters {protocolParamMaxBlockExUnits = Just u
-              { executionSteps = executionSteps u `mul` d
+              { executionSteps  = executionSteps u  `mul` factor
+              , executionMemory = executionMemory u `mul` factor
               }
             }
           Nothing -> protocolParameters
@@ -230,7 +230,7 @@ checkPlutusLoop protoParamFile (Just _plutusDef@PlutusOn{..})
 
     let
       blockMaxOut b d =
-        case plutusAutoScaleBlockfit (pparamsStepFraction d) (scriptName ++ idPath) script b (TargetTxsPerBlock 8) 1 of
+        case plutusAutoScaleBlockfit (pparamsScaleBlockBudget d) (scriptName ++ idPath) script b (TargetTxsPerBlock 8) 1 of
           Right (summary, _, _) -> Right summary
           Left err              -> Left $ BSL.pack $ show err
         where
