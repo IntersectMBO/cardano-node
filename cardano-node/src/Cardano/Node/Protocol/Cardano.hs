@@ -228,10 +228,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- version. It is the protocol version that this node will declare
           -- that it understands during the Babbage era. That is, it is the
           -- version of protocol /after/ Babbage, i.e. Conway.
-          Praos.babbageProtVer =
-            if npcExperimentalHardForksEnabled
-              then ProtVer (natVersion @10) 0
-              else ProtVer (natVersion @8) 0,
+          Praos.babbageProtVer = ProtVer (natVersion @9) 0,
           Praos.babbageMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
@@ -245,7 +242,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
             then ProtVer (natVersion @8) 0
             else if npcExperimentalHardForksEnabled
                  then ProtVer (natVersion @10) 0
-                 else ProtVer (natVersion @8) 0,
+                 else ProtVer (natVersion @9) 0,
           Praos.conwayMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
