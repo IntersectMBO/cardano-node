@@ -51,7 +51,7 @@ import           Data.Foldable as Fold (forM_)
 import           Data.List as List (unwords)
 import           Data.Time.Format as Time (defaultTimeLocale, formatTime)
 import           Data.Time.Clock.System as Time (getSystemTime, systemToUTCTime)
-import           System.Posix.Signals as Sig (Handler (CatchInfoOnce), SignalInfo (..), SignalSpecificInfo (..), fullSignalSet, installHandler, sigINT, sigTERM)
+import           System.Posix.Signals as Sig (Handler (CatchInfoOnce), SignalInfo (..), SignalSpecificInfo (..), installHandler, sigINT, sigTERM)
 #if MIN_VERSION_base(4,18,0)
 import           Data.Maybe as Maybe (fromMaybe)
 import           GHC.Conc.Sync as Conc (threadLabel)
@@ -154,7 +154,7 @@ runCommand' iocp = do
               Fold.forM_ abcWorkers \work -> do
                 work `Async.cancelWith` errorToThrow
     Fold.forM_ [Sig.sigINT, Sig.sigTERM] $ \sig ->
-           Sig.installHandler sig signalHandler $ Just fullSignalSet
+           Sig.installHandler sig signalHandler Nothing
 #endif
     pure envConsts
 
