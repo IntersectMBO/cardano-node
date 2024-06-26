@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+#./preBuildHook.local "$@"
+$(dirname "${BASH_SOURCE[0]}")/preBuildHook.s3 "$@"

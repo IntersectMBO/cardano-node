@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+CACHE=$HOME/.cabal-build-cache
+
+mkdir -p $CACHE
+
+echo "Uploading $1 to $CACHE"
+tar -czf $CACHE/$1.tar.gz --exclude=$3/setup-config $3
+exit 0
+

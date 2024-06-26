@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+#./postBuildHook.local "$@"
+$(dirname "${BASH_SOURCE[0]}")/postBuildHook.s3 "$@"

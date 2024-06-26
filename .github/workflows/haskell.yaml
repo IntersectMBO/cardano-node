@@ -1,0 +1,257 @@
+name: Haskell CI
+
+on:
+  pull_request: # Required for workflows to be able to be approved from forks
+  merge_group:
+
+  # DO NOT DELETE.
+  # This is required for nightly builds and is invoked by nightly-trigger.yml
+  # on a schedule trigger.
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason'
+        required: false
+        default: manual
+      tests:
+        description: 'Tests'
+        required: false
+        default: some
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # If you edit these versions, make sure the version in the lonely macos-latest job below is updated accordingly
+        # Linux / macOS are in devx.yaml, please ensure the GHC versions line up.
+        ghc: ["9.6.4", "9.8.1"]
+        cabal: ["3.10.2.1"]
+        os: [windows-latest]
+
+    env:
+      # Modify this value to "invalidate" the cabal cache.
+      CABAL_CACHE_VERSION: "2024-04-24"
+
+    concurrency:
+      group: >
+        a+${{ github.event_name }}
+        b+${{ github.workflow_ref }}
+        c+${{ github.job }}
+        d+${{ matrix.ghc }}
+        e+${{ matrix.cabal }}
+        f+${{ matrix.os }}
+        g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+
+    steps:
+    - name: Concurrency group
+      run: >
+        echo
+        a+${{ github.event_name }}
+        b+${{ github.workflow_ref }}
+        c+${{ github.job }}
+        d+${{ matrix.ghc }}
+        e+${{ matrix.cabal }}
+        f+${{ matrix.os }}
+        g+${{ (startsWith(github.ref, 'refs/heads/gh-readonly-queue/') && github.run_id) || github.event.pull_request.number || github.ref }}
+
+    - name: Install Haskell
+      uses: input-output-hk/actions/haskell@latest
+      id: setup-haskell
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: ${{ matrix.cabal }}
+
+    - name: Install system dependencies
+      uses: input-output-hk/actions/base@latest
+      with:
+        use-sodium-vrf: true # default is true
+
+    - uses: actions/checkout@v4
+
+    - name: Cabal update
+      run: cabal update
+
+    - name: Configure build
+      shell: bash
+      run: |
+        cp .github/workflows/cabal.project.local.ci cabal.project.local
+        echo "# cabal.project.local"
+        cat cabal.project.local
+
+    # A dry run `build all` operation does *NOT* downlaod anything, it just looks at the package
+    # indices to generate an install plan.
+    - name: Build dry run
+      run: cabal build all --enable-tests --dry-run --minimize-conflict-set
+
+    # From the install plan we generate a dependency list.
+    - name: Record dependencies
+      id: record-deps
+      run: |
+        # The tests call out to msys2 commands. We generally do not want to mix toolchains, so
+        # we are very deliberate about only adding msys64 to the path where absolutely necessary.
+        ${{ (runner.os == 'Windows' && '$env:PATH=("C:\msys64\mingw64\bin;{0}" -f $env:PATH)') || '' }}
+        cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[] | select(.style != "local") | .id' | sort | uniq > dependencies.txt
+
+    # From the dependency list we restore the cached dependencies.
+    # We use the hash of `dependencies.txt` as part of the cache key because that will be stable
+    # until the `index-state` values in the `cabal.project` file changes.
+    - name: Restore cached dependencies
+      uses: actions/cache/restore@v4
+      id: cache
+      with:
+        path: |
+          ${{ steps.setup-haskell.outputs.cabal-store }}
+          dist-newstyle
+        key: cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
+
+    # Now we install the dependencies. If the cache was found and restored in the previous step,
+    # this should be a no-op, but if the cache key was not found we need to build stuff so we can
+    # cache it for the next step.
+    - name: Install dependencies
+      run: cabal build all --enable-tests --only-dependencies -j --ghc-option=-j4
+
+    # Always store the cabal cache.
+    # This can fail (benign failure) if there is already a hash at that key.
+    - name: Cache Cabal store
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          ${{ steps.setup-haskell.outputs.cabal-store }}
+          dist-newstyle
+        key: cache-${{ env.CABAL_CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
+
+    # Now we build.
+    - name: Build all
+      run: cabal build all --enable-tests
+
+    - name: Run tests
+      env:
+        TMPDIR: ${{ runner.temp }}
+        TMP: ${{ runner.temp }}
+        KEEP_WORKSPACE: 1
+      run: |
+        cabal test cardano-testnet cardano-node cardano-node-chairman cardano-submit-api
+
+    - name: Tar failed tests workspaces
+      if: ${{ failure() }}
+      env:
+        TMP: ${{ runner.temp }}
+      shell: bash
+      run: |
+        cd $TMP
+        find . -name 'module' -type f -exec dirname {} \; | xargs -L1 basename | sort -u | xargs tar -czvf workspaces.tgz
+
+    - name: Upload workspaces on tests failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: failed-test-workspaces-${{ matrix.os }}-ghc${{ matrix.ghc }}-cabal${{ matrix.cabal }}.tgz
+        path: ${{ runner.temp }}/workspaces.tgz
+
+    - name: "Tar artifacts"
+      shell: bash
+      run: |
+        mkdir -p artifacts
+
+        for exe in $(cat dist-newstyle/cache/plan.json | jq -r '."install-plan"[] | select(.style == "local" and (."component-name" | startswith("exe:"))) | ."bin-file"'); do
+          if [ -f $exe ]; then
+            echo "Including artifact $exe"
+
+            ( cd artifacts
+              tar -C "$(dirname $exe)" -czf "$(basename $exe).tar.gz" "$(basename $exe)"
+            )
+          else
+            echo "Skipping artifact $exe"
+          fi
+        done
+
+    - name: Delete socket files in chairman tests in preparation for uploading artifacts
+      if: ${{ always() }}
+      shell: bash
+      run: |
+        if [ -d "${{ runner.temp }}/chairman" ]; then
+          find "${{ runner.temp }}/chairman" -type s -exec rm -f {} \;
+        fi
+
+    - name: Save Artifact
+      uses: actions/upload-artifact@v4
+      if: ${{ always() }}
+      continue-on-error: true
+      with:
+        name: chairman-test-artifacts-${{ matrix.os }}-${{ matrix.ghc }}
+        path: ${{ runner.temp }}/chairman/
+
+    # Uncomment the following back in for debugging. Remember to launch a `pwsh` from
+    # the tmux session to debug `pwsh` issues. And be reminded that the `/msys2` and
+    # `/msys2/mingw64` paths are not in PATH by default for the workflow, but tmate
+    # will put them in.
+    # You may also want to run
+    #
+    #   $env:PATH=("C:\Program Files\PowerShell\7;{0}" -f $env:ORIGINAL_PATH)
+    #
+    # to restore the original path.  Do note that some test might need msys2
+    # and will silently fail if msys2 is not in path. See the "Run tests" step.
+    #
+    # - name: Setup tmate session
+    #  if: ${{ failure() }}
+    #  uses: mxschmitt/action-tmate@v3
+    #  with:
+    #     limit-access-to-actor: true
+
+  build-complete:
+    needs: [build]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check if any previous job failed
+      run: |
+        if [[ "${{ needs.build.result }}" == "failure" ]]; then
+          # this ignores skipped dependencies
+          echo 'Required jobs failed to build.'
+          exit 1
+        else
+          echo 'Build complete'
+        fi
+
+  release:
+    needs: [build]
+    if: ${{ startsWith(github.ref, 'refs/tags') }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create Release Tag
+      id: create_release_tag
+      run: |
+        echo "TAG=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: true
+        prerelease: false
+
+    - name: Download Artifact
+      uses: actions/download-artifact@v1
+      with:
+        name: artifacts-ubuntu-latest
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./artifacts-ubuntu-latest/cardano-submit-api.tar.gz
+        asset_name: cardano-submit-api_${{ steps.create_release_tag.outputs.TAG }}-linux.tar.gz
+        asset_content_type: application/gzip
