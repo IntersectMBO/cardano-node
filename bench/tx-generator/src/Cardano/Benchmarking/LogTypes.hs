@@ -12,7 +12,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Benchmarking.LogTypes
-  ( AsyncBenchmarkControl
+  ( AsyncBenchmarkControl (..)
   , BenchTracers(..)
   , NodeToNodeSubmissionTrace(..)
   , SendRecvConnect
@@ -49,7 +49,17 @@ import           Data.Time.Clock (DiffTime, NominalDiffTime)
 import           GHC.Generics
 import           Network.Mux (WithMuxBearer (..))
 
-type AsyncBenchmarkControl = (Async.Async (), [Async.Async ()], IO SubmissionSummary, IO ())
+data AsyncBenchmarkControl =
+  AsyncBenchmarkControl
+  { abcFeeder   :: Async.Async ()
+  -- ^ The thread to feed transactions, also called a throttler.
+  , abcWorkers  :: [Async.Async ()]
+  -- ^ The per-node transaction submission threads.
+  , abcSummary  :: IO SubmissionSummary
+  -- ^ IO action to emit a summary.
+  , abcShutdown :: IO ()
+  -- ^ IO action to shut down the feeder thread.
+  }
 
 data BenchTracers =
   BenchTracers

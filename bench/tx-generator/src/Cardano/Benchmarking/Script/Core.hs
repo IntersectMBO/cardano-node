@@ -28,7 +28,8 @@ import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (waitBenchmark,
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
                    benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
-import           Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..), btConnect_, btN2N_,
+import           Cardano.Benchmarking.LogTypes as Core (AsyncBenchmarkControl (..),
+                   TraceBenchTxSubmit (..), btConnect_, btN2N_,
                    btSubmission2_, btTxSubmit_)
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
                    makeLocalConnectInfo, protocolToCodecConfig)
@@ -154,8 +155,8 @@ waitBenchmark n = do
 
 cancelBenchmark :: String -> ActionM ()
 cancelBenchmark n = do
-  Just ctl@(_, _ , _ , shutdownAction) <- getEnvThreads n
-  liftIO shutdownAction
+  Just ctl@AsyncBenchmarkControl { .. } <- getEnvThreads n
+  liftIO abcShutdown
   waitBenchmarkCore ctl
 
 getLocalConnectInfo :: ActionM LocalNodeConnectInfo
