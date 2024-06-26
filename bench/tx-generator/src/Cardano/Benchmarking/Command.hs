@@ -114,7 +114,6 @@ runCommand = withIOManager $ \iocp -> do
     let signalHandler = Sig.CatchInfoOnce signalHandler'
         signalHandler' sigInfo = do
           tid <- Conc.myThreadId
-          Just AsyncBenchmarkControl { .. } <- STM.atomically $ STM.readTVar envThreads
           utcTime <- Time.systemToUTCTime <$> Time.getSystemTime
           -- It's meant to match Cardano.Tracers.Handlers.Logs.Utils
           -- The hope was to avoid the package dependency.
@@ -138,9 +137,18 @@ runCommand = withIOManager $ \iocp -> do
               errorToThrow = userError labelStr
 
           Prelude.putStrLn labelStr
-          abcFeeder `Async.cancelWith` errorToThrow
-          Fold.forM_ abcWorkers \work -> do
-            work `Async.cancelWith` errorToThrow
+          mABC <- STM.atomically $ STM.readTVar envThreads
+          case mABC of
+            Nothing -> do
+              -- Catching a signal at this point makes it a higher than
+              -- average risk of the tracer not being initialized, so
+              -- this pursues some alternatives.
+              let errMsg = "Signal received before AsyncBenchmarkControl creation."
+              Prelude.putStrLn errMsg
+            Just AsyncBenchmarkControl { .. } -> do
+              abcFeeder `Async.cancelWith` errorToThrow
+              Fold.forM_ abcWorkers \work -> do
+                work `Async.cancelWith` errorToThrow
     Fold.forM_ [Sig.sigINT, Sig.sigTERM] $ \sig ->
            Sig.installHandler sig signalHandler Nothing
 #endif
