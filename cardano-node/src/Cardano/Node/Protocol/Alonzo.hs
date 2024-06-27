@@ -9,24 +9,32 @@ module Cardano.Node.Protocol.Alonzo
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Shelley
 
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import           Cardano.Node.Orphans ()
-import           Cardano.Node.Protocol.Shelley (GenesisReadError, readGenesisAny)
+import           Cardano.Node.Protocol.Shelley (GenesisReadError (..), checkExpectedGenesisHash)
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
+
+import qualified Data.ByteString.Lazy as LBS
 
 
 --
 -- Alonzo genesis
 --
 
-readGenesis :: GenesisFile
+readGenesis :: Maybe (CardanoEra era)
+            -> GenesisFile
             -> Maybe GenesisHash
             -> ExceptT GenesisReadError IO
                        (Alonzo.AlonzoGenesis, GenesisHash)
-readGenesis = readGenesisAny
+readGenesis mEra (GenesisFile file) mGenesisHash = do
+  content <- handleIOExceptT (GenesisReadFileError file) $ LBS.readFile file
+  genesisHash <- checkExpectedGenesisHash (LBS.toStrict content) mGenesisHash
+  genesis <- modifyError (GenesisDecodeError file) $ decodeAlonzoGenesis mEra content
+  pure (genesis, genesisHash)
 
 validateGenesis :: Alonzo.AlonzoGenesis
                 -> ExceptT AlonzoProtocolInstantiationError IO ()

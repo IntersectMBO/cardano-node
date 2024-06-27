@@ -98,7 +98,8 @@ cardanoTestnetDefault
   -> Conf
   -> H.Integration TestnetRuntime
 cardanoTestnetDefault opts conf = do
-  alonzoGenesis <- H.evalEither $ first prettyError Defaults.defaultAlonzoGenesis
+  AnyCardanoEra cEra <- pure $ cardanoNodeEra cardanoDefaultTestnetOptions
+  alonzoGenesis <- getDefaultAlonzoGenesis cEra
   (startTime, shelleyGenesis) <- getDefaultShelleyGenesis opts
   cardanoTestnet opts conf startTime shelleyGenesis alonzoGenesis Defaults.defaultConwayGenesis
 
@@ -106,8 +107,9 @@ cardanoTestnetDefault opts conf = do
 getDefaultAlonzoGenesis :: ()
   => HasCallStack
   => MonadTest m
-  => m AlonzoGenesis
-getDefaultAlonzoGenesis = H.evalEither $ first prettyError Defaults.defaultAlonzoGenesis
+  => CardanoEra era
+  -> m AlonzoGenesis
+getDefaultAlonzoGenesis cEra = H.evalEither $ first prettyError (Defaults.defaultAlonzoGenesis cEra)
 
 -- | A start time and 'ShelleyGenesis' value that are fit to pass to 'cardanoTestnet'
 getDefaultShelleyGenesis :: ()

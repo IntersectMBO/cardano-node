@@ -21,7 +21,6 @@ import           Cardano.Testnet
 import           Prelude
 
 import           Control.Monad
-import           Data.Bifunctor
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Map.Strict as Map
 import           Data.Maybe.Strict
@@ -103,7 +102,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
       committeeThreshold = unsafeBoundedRational 0.5
       committee = L.Committee (Map.fromList [(comKeyCred1, EpochNo 100)]) committeeThreshold
 
-  alonzoGenesis <- evalEither $ first prettyError defaultAlonzoGenesis
+  alonzoGenesis <- getDefaultAlonzoGenesis era
   (startTime, shelleyGenesis') <- getDefaultShelleyGenesis fastTestnetOptions
   let conwayGenesisWithCommittee =
         defaultConwayGenesis { L.cgCommittee = committee }

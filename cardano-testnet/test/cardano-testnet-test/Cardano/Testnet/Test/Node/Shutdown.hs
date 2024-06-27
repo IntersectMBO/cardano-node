@@ -66,6 +66,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
       logDir' = makeLogDir $ tempAbsPath conf
       socketDir' = makeSocketDir $ tempAbsPath conf
       testnetMagic' = 42
+      era = BabbageEra
 
   -- TODO: We need to uniformly create these directories
   H.createDirectoryIfMissing_ logDir'
@@ -101,7 +102,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
 
   -- 2. Create Alonzo genesis
   alonzoBabbageTestGenesisJsonTargetFile <- H.noteShow $ tempAbsPath' </> shelleyDir </> "genesis.alonzo.spec.json"
-  gen <- Testnet.getDefaultAlonzoGenesis
+  gen <- Testnet.getDefaultAlonzoGenesis era
   H.evalIO $ LBS.writeFile alonzoBabbageTestGenesisJsonTargetFile $ encode gen
 
   -- 2. Create Conway genesis
@@ -130,7 +131,7 @@ hprop_shutdown = integrationRetryWorkspace 2 "shutdown" $ \tempAbsBasePath' -> H
                                  $ mconcat [ byronGenesisHash
                                            , shelleyGenesisHash
                                            , alonzoGenesisHash
-                                           , defaultYamlHardforkViaConfig (AnyCardanoEra BabbageEra)] -- TODO: This should not be hardcoded
+                                           , defaultYamlHardforkViaConfig (AnyCardanoEra era)]
 
   H.evalIO $ LBS.writeFile (tempAbsPath' </> "configuration.yaml") finalYamlConfig
 

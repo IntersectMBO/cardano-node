@@ -87,7 +87,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcConwayGenesisFile,
                              npcConwayGenesisFileHash
                            }
-                           NodeHardForkProtocolConfiguration {
+                           npc@NodeHardForkProtocolConfiguration {
                             npcExperimentalHardForksEnabled,
                             -- During testing of the Alonzo era, we conditionally declared that we
                             -- knew about the Alonzo era. We do so only when a config option for
@@ -125,8 +125,15 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
 
     (alonzoGenesis, _alonzoGenesisHash) <-
       firstExceptT CardanoProtocolInstantiationAlonzoGenesisReadError $
-        Alonzo.readGenesis npcAlonzoGenesisFile
-                           npcAlonzoGenesisFileHash
+        case npcTestStartingEra npc of
+          Nothing ->
+            Alonzo.readGenesis Nothing
+                               npcAlonzoGenesisFile
+                               npcAlonzoGenesisFileHash
+          Just (AnyShelleyBasedEra sbe) -> do
+            Alonzo.readGenesis (Just $ toCardanoEra sbe)
+                               npcAlonzoGenesisFile
+                               npcAlonzoGenesisFileHash
 
     (conwayGenesis, _conwayGenesisHash) <-
       firstExceptT CardanoProtocolInstantiationConwayGenesisReadError $

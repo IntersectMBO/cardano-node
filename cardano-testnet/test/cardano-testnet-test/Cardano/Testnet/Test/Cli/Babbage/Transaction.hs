@@ -69,6 +69,13 @@ hprop_transaction = integrationRetryWorkspace 0 "babbage-transaction" $ \tempAbs
   txbodyFp <- H.note $ work </> "tx.body"
   txbodySignedFp <- H.note $ work </> "tx.body.signed"
 
+  -- This is a double check that we can still deserialize Plutus V2 protocol parameters
+  void $ execCli' execConfig
+    [ anyEraToString cEra, "query", "protocol-parameters"
+    , "--cardano-mode"
+    , "--out-file", work </> "pparams.json"
+    ]
+
   void $ execCli' execConfig
     [ anyEraToString cEra, "query", "utxo"
     , "--address", Text.unpack $ paymentKeyInfoAddr wallet0
