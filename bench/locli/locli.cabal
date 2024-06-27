@@ -103,7 +103,7 @@ library
                       , bytestring
                       , cardano-git-rev
                       , cardano-ledger-core
-                      , cardano-prelude
+                      , cardano-prelude < 0.2
                       , cardano-slotting
                       , containers
                       , deepseq
