@@ -1,0 +1,95 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Update.Reload</span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.Reload.html#updateUIAfterReload"><span class="hs-identifier">updateUIAfterReload</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Configuration.html"><span class="hs-identifier">Cardano.Tracer.Configuration</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Environment.html"><span class="hs-identifier">Cardano.Tracer.Environment</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.State.Displayed</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Charts.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.Charts</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.Types</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.NodeInfo.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Update.NodeInfo</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.Nodes.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Update.Nodes</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html"><span class="hs-identifier">Control.Concurrent.STM.TVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVarIO"><span class="hs-identifier">readTVarIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.List.NonEmpty.html"><span class="hs-identifier">Data.List.NonEmpty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#NonEmpty"><span class="hs-identifier">NonEmpty</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.html"><span class="hs-identifier">Graphics.UI.Threepenny</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UI</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html"><span class="hs-identifier">Graphics.UI.Threepenny.Core</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.Reload.html#updateUIAfterReload"><span class="hs-identifier hs-type">updateUIAfterReload</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#DisplayedElements"><span class="hs-identifier hs-type">DisplayedElements</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#NonEmpty"><span class="hs-identifier hs-type">NonEmpty</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Configuration.html#LoggingParams"><span class="hs-identifier hs-type">LoggingParams</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Colors"><span class="hs-identifier hs-type">Colors</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#DatasetsIndices"><span class="hs-identifier hs-type">DatasetsIndices</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Timer.html#Timer"><span class="hs-identifier hs-type">UI.Timer</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span id="updateUIAfterReload"><span class="annot"><span class="annottext">updateUIAfterReload :: TracerEnv
+-&gt; DisplayedElements
+-&gt; NonEmpty LoggingParams
+-&gt; Colors
+-&gt; DatasetsIndices
+-&gt; Timer
+-&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Update.Reload.html#updateUIAfterReload"><span class="hs-identifier hs-var hs-var">updateUIAfterReload</span></a></span></span><span> </span><span id="local-6989586621679617415"><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679617415"><span class="hs-identifier hs-var">tracerEnv</span></a></span></span><span> </span><span id="local-6989586621679617416"><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679617416"><span class="hs-identifier hs-var">displayedElements</span></a></span></span><span> </span><span id="local-6989586621679617417"><span class="annot"><span class="annottext">NonEmpty LoggingParams
+</span><a href="#local-6989586621679617417"><span class="hs-identifier hs-var">loggingConfig</span></a></span></span><span> </span><span id="local-6989586621679617418"><span class="annot"><span class="annottext">Colors
+</span><a href="#local-6989586621679617418"><span class="hs-identifier hs-var">colors</span></a></span></span><span>
+</span><span id="line-30"></span><span>                    </span><span id="local-6989586621679617419"><span class="annot"><span class="annottext">DatasetsIndices
+</span><a href="#local-6989586621679617419"><span class="hs-identifier hs-var">datasetIndices</span></a></span></span><span> </span><span id="local-6989586621679617420"><span class="annot"><span class="annottext">Timer
+</span><a href="#local-6989586621679617420"><span class="hs-identifier hs-var">noNodesProgressTimer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-comment">-- Ok, web-page was reload (i.e. it's the first update after DOM-rendering),</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-comment">-- so displayed state should be restored immediately.</span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679617421"><span class="annot"><span class="annottext">Set NodeId
+</span><a href="#local-6989586621679617421"><span class="hs-identifier hs-var">connected</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Set NodeId) -&gt; UI (Set NodeId)
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Set NodeId) -&gt; UI (Set NodeId))
+-&gt; IO (Set NodeId) -&gt; UI (Set NodeId)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (Set NodeId) -&gt; IO (Set NodeId)
+forall a. TVar a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVarIO"><span class="hs-identifier hs-var">readTVarIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TracerEnv -&gt; TVar (Set NodeId)
+</span><a href="Cardano.Tracer.Environment.html#teConnectedNodes"><span class="hs-identifier hs-var">teConnectedNodes</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679617415"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><span class="annottext">TracerEnv -&gt; Set NodeId -&gt; NonEmpty LoggingParams -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Update.Nodes.html#addColumnsForConnected"><span class="hs-identifier hs-var">addColumnsForConnected</span></a></span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679617415"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="annottext">Set NodeId
+</span><a href="#local-6989586621679617421"><span class="hs-identifier hs-var">connected</span></a></span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="annottext">NonEmpty LoggingParams
+</span><a href="#local-6989586621679617417"><span class="hs-identifier hs-var">loggingConfig</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><span class="annottext">Set NodeId -&gt; Timer -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Update.Nodes.html#checkNoNodesState"><span class="hs-identifier hs-var">checkNoNodesState</span></a></span><span> </span><span class="annot"><span class="annottext">Set NodeId
+</span><a href="#local-6989586621679617421"><span class="hs-identifier hs-var">connected</span></a></span><span> </span><span class="annot"><span class="annottext">Timer
+</span><a href="#local-6989586621679617420"><span class="hs-identifier hs-var">noNodesProgressTimer</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><span class="annottext">TracerEnv -&gt; Set NodeId -&gt; DisplayedElements -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Update.NodeInfo.html#askNSetNodeInfo"><span class="hs-identifier hs-var">askNSetNodeInfo</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679617415"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Set NodeId
+</span><a href="#local-6989586621679617421"><span class="hs-identifier hs-var">connected</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679617416"><span class="hs-identifier hs-var">displayedElements</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="annottext">TracerEnv -&gt; Set NodeId -&gt; Colors -&gt; DatasetsIndices -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Update.Nodes.html#addDatasetsForConnected"><span class="hs-identifier hs-var">addDatasetsForConnected</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679617415"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span> </span><span class="annot"><span class="annottext">Set NodeId
+</span><a href="#local-6989586621679617421"><span class="hs-identifier hs-var">connected</span></a></span><span> </span><span class="annot"><span class="annottext">Colors
+</span><a href="#local-6989586621679617418"><span class="hs-identifier hs-var">colors</span></a></span><span> </span><span class="annot"><span class="annottext">DatasetsIndices
+</span><a href="#local-6989586621679617419"><span class="hs-identifier hs-var">datasetIndices</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><span class="annottext">TracerEnv -&gt; DatasetsIndices -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Charts.html#restoreLastHistoryOnAllCharts"><span class="hs-identifier hs-var">restoreLastHistoryOnAllCharts</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679617415"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span> </span><span class="annot"><span class="annottext">DatasetsIndices
+</span><a href="#local-6989586621679617419"><span class="hs-identifier hs-var">datasetIndices</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><span class="annottext">IO () -&gt; UI ()
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; UI ()) -&gt; IO () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><span class="annottext">DisplayedElements -&gt; Set NodeId -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#updateDisplayedElements"><span class="hs-identifier hs-var">updateDisplayedElements</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679617416"><span class="hs-identifier hs-var">displayedElements</span></a></span><span> </span><span class="annot"><span class="annottext">Set NodeId
+</span><a href="#local-6989586621679617421"><span class="hs-identifier hs-var">connected</span></a></span><span>
+</span><span id="line-44"></span></pre></body></html>

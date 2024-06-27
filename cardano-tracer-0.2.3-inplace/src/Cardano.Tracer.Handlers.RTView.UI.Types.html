@@ -1,0 +1,282 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span id="local-6989586621679607291"><span id="local-6989586621679607292"></span></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.Types</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartId"><span class="hs-identifier">ChartId</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartSelectId"><span class="hs-identifier">ChartSelectId</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartSettings"><span class="hs-identifier">ChartSettings</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartsSettings"><span class="hs-identifier">ChartsSettings</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Color"><span class="hs-identifier">Color</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Colors"><span class="hs-identifier">Colors</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#DatasetsIndices"><span class="hs-identifier">DatasetsIndices</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Index"><span class="hs-identifier">Index</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#WebPageStatus"><span class="hs-identifier">WebPageStatus</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Types.html"><span class="hs-identifier">Cardano.Tracer.Types</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html"><span class="hs-identifier">Control.Concurrent.STM.TBQueue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html#TBQueue"><span class="hs-identifier">TBQueue</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html"><span class="hs-identifier">Control.Concurrent.STM.TVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier">TVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">FromJSON</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word16"><span class="hs-identifier">Word16</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">data</span><span> </span><span id="ChartId"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartId"><span class="hs-identifier hs-var">ChartId</span></a></span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="CPUChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#CPUChart"><span class="hs-identifier hs-var">CPUChart</span></a></span></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="MemoryChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#MemoryChart"><span class="hs-identifier hs-var">MemoryChart</span></a></span></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GCMajorNumChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#GCMajorNumChart"><span class="hs-identifier hs-var">GCMajorNumChart</span></a></span></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GCMinorNumChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#GCMinorNumChart"><span class="hs-identifier hs-var">GCMinorNumChart</span></a></span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="GCLiveMemoryChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#GCLiveMemoryChart"><span class="hs-identifier hs-var">GCLiveMemoryChart</span></a></span></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="CPUTimeGCChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#CPUTimeGCChart"><span class="hs-identifier hs-var">CPUTimeGCChart</span></a></span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="CPUTimeAppChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#CPUTimeAppChart"><span class="hs-identifier hs-var">CPUTimeAppChart</span></a></span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ThreadsNumChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ThreadsNumChart"><span class="hs-identifier hs-var">ThreadsNumChart</span></a></span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-comment">-- Chain</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ChainDensityChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChainDensityChart"><span class="hs-identifier hs-var">ChainDensityChart</span></a></span></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="SlotNumChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#SlotNumChart"><span class="hs-identifier hs-var">SlotNumChart</span></a></span></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="BlockNumChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#BlockNumChart"><span class="hs-identifier hs-var">BlockNumChart</span></a></span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="SlotInEpochChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#SlotInEpochChart"><span class="hs-identifier hs-var">SlotInEpochChart</span></a></span></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="EpochChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#EpochChart"><span class="hs-identifier hs-var">EpochChart</span></a></span></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="NodeCannotForgeChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#NodeCannotForgeChart"><span class="hs-identifier hs-var">NodeCannotForgeChart</span></a></span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ForgedSlotLastChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ForgedSlotLastChart"><span class="hs-identifier hs-var">ForgedSlotLastChart</span></a></span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="NodeIsLeaderChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#NodeIsLeaderChart"><span class="hs-identifier hs-var">NodeIsLeaderChart</span></a></span></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="NodeIsNotLeaderChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#NodeIsNotLeaderChart"><span class="hs-identifier hs-var">NodeIsNotLeaderChart</span></a></span></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="ForgedInvalidSlotLastChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ForgedInvalidSlotLastChart"><span class="hs-identifier hs-var">ForgedInvalidSlotLastChart</span></a></span></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="AdoptedSlotLastChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#AdoptedSlotLastChart"><span class="hs-identifier hs-var">AdoptedSlotLastChart</span></a></span></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="NotAdoptedSlotLastChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#NotAdoptedSlotLastChart"><span class="hs-identifier hs-var">NotAdoptedSlotLastChart</span></a></span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="AboutToLeadSlotLastChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#AboutToLeadSlotLastChart"><span class="hs-identifier hs-var">AboutToLeadSlotLastChart</span></a></span></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="CouldNotForgeSlotLastChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#CouldNotForgeSlotLastChart"><span class="hs-identifier hs-var">CouldNotForgeSlotLastChart</span></a></span></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-comment">-- TX</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="TxsProcessedNumChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#TxsProcessedNumChart"><span class="hs-identifier hs-var">TxsProcessedNumChart</span></a></span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="MempoolBytesChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#MempoolBytesChart"><span class="hs-identifier hs-var">MempoolBytesChart</span></a></span></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="TxsInMempoolChart"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#TxsInMempoolChart"><span class="hs-identifier hs-var">TxsInMempoolChart</span></a></span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679607327"><span id="local-6989586621679607329"><span class="annot"><span class="annottext">ChartId
+ChartId -&gt; ChartId -&gt; Bounded ChartId
+forall a. a -&gt; a -&gt; Bounded a
+$cminBound :: ChartId
+minBound :: ChartId
+$cmaxBound :: ChartId
+maxBound :: ChartId
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#Bounded"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Bounded</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679607333"><span id="local-6989586621679607341"><span id="local-6989586621679607347"><span id="local-6989586621679607357"><span id="local-6989586621679607359"><span id="local-6989586621679607363"><span id="local-6989586621679607367"><span id="local-6989586621679607371"><span class="annot"><span class="annottext">Int -&gt; ChartId
+ChartId -&gt; Int
+ChartId -&gt; [ChartId]
+ChartId -&gt; ChartId
+ChartId -&gt; ChartId -&gt; [ChartId]
+ChartId -&gt; ChartId -&gt; ChartId -&gt; [ChartId]
+(ChartId -&gt; ChartId)
+-&gt; (ChartId -&gt; ChartId)
+-&gt; (Int -&gt; ChartId)
+-&gt; (ChartId -&gt; Int)
+-&gt; (ChartId -&gt; [ChartId])
+-&gt; (ChartId -&gt; ChartId -&gt; [ChartId])
+-&gt; (ChartId -&gt; ChartId -&gt; [ChartId])
+-&gt; (ChartId -&gt; ChartId -&gt; ChartId -&gt; [ChartId])
+-&gt; Enum ChartId
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: ChartId -&gt; ChartId
+succ :: ChartId -&gt; ChartId
+$cpred :: ChartId -&gt; ChartId
+pred :: ChartId -&gt; ChartId
+$ctoEnum :: Int -&gt; ChartId
+toEnum :: Int -&gt; ChartId
+$cfromEnum :: ChartId -&gt; Int
+fromEnum :: ChartId -&gt; Int
+$cenumFrom :: ChartId -&gt; [ChartId]
+enumFrom :: ChartId -&gt; [ChartId]
+$cenumFromThen :: ChartId -&gt; ChartId -&gt; [ChartId]
+enumFromThen :: ChartId -&gt; ChartId -&gt; [ChartId]
+$cenumFromTo :: ChartId -&gt; ChartId -&gt; [ChartId]
+enumFromTo :: ChartId -&gt; ChartId -&gt; [ChartId]
+$cenumFromThenTo :: ChartId -&gt; ChartId -&gt; ChartId -&gt; [ChartId]
+enumFromThenTo :: ChartId -&gt; ChartId -&gt; ChartId -&gt; [ChartId]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Enum.html#Enum"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679607375"><span id="local-6989586621679607377"><span class="annot"><span class="annottext">(forall x. ChartId -&gt; Rep ChartId x)
+-&gt; (forall x. Rep ChartId x -&gt; ChartId) -&gt; Generic ChartId
+forall x. Rep ChartId x -&gt; ChartId
+forall x. ChartId -&gt; Rep ChartId x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. ChartId -&gt; Rep ChartId x
+from :: forall x. ChartId -&gt; Rep ChartId x
+$cto :: forall x. Rep ChartId x -&gt; ChartId
+to :: forall x. Rep ChartId x -&gt; ChartId
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679607381"><span id="local-6989586621679607388"><span id="local-6989586621679607391"><span class="annot"><span class="annottext">Maybe ChartId
+Value -&gt; Parser [ChartId]
+Value -&gt; Parser ChartId
+(Value -&gt; Parser ChartId)
+-&gt; (Value -&gt; Parser [ChartId]) -&gt; Maybe ChartId -&gt; FromJSON ChartId
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser ChartId
+parseJSON :: Value -&gt; Parser ChartId
+$cparseJSONList :: Value -&gt; Parser [ChartId]
+parseJSONList :: Value -&gt; Parser [ChartId]
+$comittedField :: Maybe ChartId
+omittedField :: Maybe ChartId
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679607874"><span id="local-6989586621679607881"><span id="local-6989586621679607884"><span id="local-6989586621679607887"><span id="local-6989586621679607890"><span class="annot"><span class="annottext">[ChartId] -&gt; Value
+[ChartId] -&gt; Encoding
+ChartId -&gt; Bool
+ChartId -&gt; Value
+ChartId -&gt; Encoding
+(ChartId -&gt; Value)
+-&gt; (ChartId -&gt; Encoding)
+-&gt; ([ChartId] -&gt; Value)
+-&gt; ([ChartId] -&gt; Encoding)
+-&gt; (ChartId -&gt; Bool)
+-&gt; ToJSON ChartId
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: ChartId -&gt; Value
+toJSON :: ChartId -&gt; Value
+$ctoEncoding :: ChartId -&gt; Encoding
+toEncoding :: ChartId -&gt; Encoding
+$ctoJSONList :: [ChartId] -&gt; Value
+toJSONList :: [ChartId] -&gt; Value
+$ctoEncodingList :: [ChartId] -&gt; Encoding
+toEncodingList :: [ChartId] -&gt; Encoding
+$comitField :: ChartId -&gt; Bool
+omitField :: ChartId -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679608491"><span id="local-6989586621679608493"><span id="local-6989586621679608497"><span class="annot"><span class="annottext">Int -&gt; ChartId -&gt; ShowS
+[ChartId] -&gt; ShowS
+ChartId -&gt; String
+(Int -&gt; ChartId -&gt; ShowS)
+-&gt; (ChartId -&gt; String) -&gt; ([ChartId] -&gt; ShowS) -&gt; Show ChartId
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ChartId -&gt; ShowS
+showsPrec :: Int -&gt; ChartId -&gt; ShowS
+$cshow :: ChartId -&gt; String
+show :: ChartId -&gt; String
+$cshowList :: [ChartId] -&gt; ShowS
+showList :: [ChartId] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-keyword">data</span><span> </span><span id="ChartSelectId"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartSelectId"><span class="hs-identifier hs-var">ChartSelectId</span></a></span></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="TimeRangeSelect"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#TimeRangeSelect"><span class="hs-identifier hs-var">TimeRangeSelect</span></a></span></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="UpdatePeriodSelect"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#UpdatePeriodSelect"><span class="hs-identifier hs-var">UpdatePeriodSelect</span></a></span></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679608503"><span id="local-6989586621679608505"><span id="local-6989586621679608509"><span class="annot"><span class="annottext">Int -&gt; ChartSelectId -&gt; ShowS
+[ChartSelectId] -&gt; ShowS
+ChartSelectId -&gt; String
+(Int -&gt; ChartSelectId -&gt; ShowS)
+-&gt; (ChartSelectId -&gt; String)
+-&gt; ([ChartSelectId] -&gt; ShowS)
+-&gt; Show ChartSelectId
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ChartSelectId -&gt; ShowS
+showsPrec :: Int -&gt; ChartSelectId -&gt; ShowS
+$cshow :: ChartSelectId -&gt; String
+show :: ChartSelectId -&gt; String
+$cshowList :: [ChartSelectId] -&gt; ShowS
+showList :: [ChartSelectId] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="hs-keyword">newtype</span><span> </span><span id="Index"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Index"><span class="hs-identifier hs-var">Index</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Index"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Index"><span class="hs-identifier hs-var">Index</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679608513"><span id="local-6989586621679608518"><span id="local-6989586621679608522"><span class="annot"><span class="annottext">Int -&gt; Index -&gt; ShowS
+[Index] -&gt; ShowS
+Index -&gt; String
+(Int -&gt; Index -&gt; ShowS)
+-&gt; (Index -&gt; String) -&gt; ([Index] -&gt; ShowS) -&gt; Show Index
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Index -&gt; ShowS
+showsPrec :: Int -&gt; Index -&gt; ShowS
+$cshow :: Index -&gt; String
+show :: Index -&gt; String
+$cshowList :: [Index] -&gt; ShowS
+showList :: [Index] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">data</span><span> </span><span id="ChartSettings"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartSettings"><span class="hs-identifier hs-var">ChartSettings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ChartSettings"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartSettings"><span class="hs-identifier hs-var">ChartSettings</span></a></span></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="csTimeRangeInS"><span class="annot"><span class="annottext">ChartSettings -&gt; Int
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#csTimeRangeInS"><span class="hs-identifier hs-var hs-var">csTimeRangeInS</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="csUpdatePeriodInS"><span class="annot"><span class="annottext">ChartSettings -&gt; Int
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#csUpdatePeriodInS"><span class="hs-identifier hs-var hs-var">csUpdatePeriodInS</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679608528"><span id="local-6989586621679608530"><span class="annot"><span class="annottext">(forall x. ChartSettings -&gt; Rep ChartSettings x)
+-&gt; (forall x. Rep ChartSettings x -&gt; ChartSettings)
+-&gt; Generic ChartSettings
+forall x. Rep ChartSettings x -&gt; ChartSettings
+forall x. ChartSettings -&gt; Rep ChartSettings x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. ChartSettings -&gt; Rep ChartSettings x
+from :: forall x. ChartSettings -&gt; Rep ChartSettings x
+$cto :: forall x. Rep ChartSettings x -&gt; ChartSettings
+to :: forall x. Rep ChartSettings x -&gt; ChartSettings
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679608533"><span id="local-6989586621679608540"><span id="local-6989586621679608543"><span class="annot"><span class="annottext">Maybe ChartSettings
+Value -&gt; Parser [ChartSettings]
+Value -&gt; Parser ChartSettings
+(Value -&gt; Parser ChartSettings)
+-&gt; (Value -&gt; Parser [ChartSettings])
+-&gt; Maybe ChartSettings
+-&gt; FromJSON ChartSettings
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser ChartSettings
+parseJSON :: Value -&gt; Parser ChartSettings
+$cparseJSONList :: Value -&gt; Parser [ChartSettings]
+parseJSONList :: Value -&gt; Parser [ChartSettings]
+$comittedField :: Maybe ChartSettings
+omittedField :: Maybe ChartSettings
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679608613"><span id="local-6989586621679608620"><span id="local-6989586621679608623"><span id="local-6989586621679608626"><span id="local-6989586621679608629"><span class="annot"><span class="annottext">[ChartSettings] -&gt; Value
+[ChartSettings] -&gt; Encoding
+ChartSettings -&gt; Bool
+ChartSettings -&gt; Value
+ChartSettings -&gt; Encoding
+(ChartSettings -&gt; Value)
+-&gt; (ChartSettings -&gt; Encoding)
+-&gt; ([ChartSettings] -&gt; Value)
+-&gt; ([ChartSettings] -&gt; Encoding)
+-&gt; (ChartSettings -&gt; Bool)
+-&gt; ToJSON ChartSettings
+forall a.
+(a -&gt; Value)
+-&gt; (a -&gt; Encoding)
+-&gt; ([a] -&gt; Value)
+-&gt; ([a] -&gt; Encoding)
+-&gt; (a -&gt; Bool)
+-&gt; ToJSON a
+$ctoJSON :: ChartSettings -&gt; Value
+toJSON :: ChartSettings -&gt; Value
+$ctoEncoding :: ChartSettings -&gt; Encoding
+toEncoding :: ChartSettings -&gt; Encoding
+$ctoJSONList :: [ChartSettings] -&gt; Value
+toJSONList :: [ChartSettings] -&gt; Value
+$ctoEncodingList :: [ChartSettings] -&gt; Encoding
+toEncodingList :: [ChartSettings] -&gt; Encoding
+$comitField :: ChartSettings -&gt; Bool
+omitField :: ChartSettings -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">ToJSON</span></span></span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-keyword">type</span><span> </span><span id="ChartsSettings"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartsSettings"><span class="hs-identifier hs-var">ChartsSettings</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartId"><span class="hs-identifier hs-type">ChartId</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartSettings"><span class="hs-identifier hs-type">ChartSettings</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">newtype</span><span> </span><span id="Color"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Color"><span class="hs-identifier hs-var">Color</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Color"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Color"><span class="hs-identifier hs-var">Color</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">type</span><span> </span><span id="Colors"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Colors"><span class="hs-identifier hs-var">Colors</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TBQueue.html#TBQueue"><span class="hs-identifier hs-type">TBQueue</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- | After the node is connected, we have to add a new dataset to all historical charts.</span><span>
+</span><span id="line-75"></span><span class="hs-comment">--   The metrics received from this node will be added in these datasets.</span><span>
+</span><span id="line-76"></span><span class="hs-comment">--   Since each dataset has its index, we need a map 'NodeName -&gt; ix',</span><span>
+</span><span id="line-77"></span><span class="hs-comment">--   where 'ix' is an index of a dataset in _each_ chart.</span><span>
+</span><span id="line-78"></span><span class="hs-comment">--   We use node's name instead of node's id, because we want to keep the same color</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--   for the same node.</span><span>
+</span><span id="line-80"></span><span class="hs-keyword">type</span><span> </span><span id="DatasetsIndices"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#DatasetsIndices"><span class="hs-identifier hs-var">DatasetsIndices</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">TVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeName"><span class="hs-identifier hs-type">NodeName</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Index"><span class="hs-identifier hs-type">Index</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span class="annot"><span class="hs-comment">-- | It's 'True' if the web page is opened, 'False' otherwise.</span></span><span>
+</span><span id="line-83"></span><span class="hs-keyword">type</span><span> </span><span id="WebPageStatus"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#WebPageStatus"><span class="hs-identifier hs-var">WebPageStatus</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">TVar</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-84"></span></pre></body></html>

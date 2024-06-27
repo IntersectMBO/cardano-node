@@ -1,0 +1,154 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Update.Chain</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.Chain.html#updateBlockchainHistory"><span class="hs-identifier">updateBlockchainHistory</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.Metrics.Utils.html"><span class="hs-identifier">Cardano.Tracer.Handlers.Metrics.Utils</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.State.Historical</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Types.html"><span class="hs-identifier">Cardano.Tracer.Types</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Read.html"><span class="hs-identifier">Data.Text.Read</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Read.html#double"><span class="hs-identifier">double</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.html"><span class="hs-identifier">Data.Time.Clock</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier">UTCTime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.Chain.html#updateBlockchainHistory"><span class="hs-identifier hs-type">updateBlockchainHistory</span></a></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#BlockchainHistory"><span class="hs-identifier hs-type">BlockchainHistory</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Metrics.Utils.html#MetricName"><span class="hs-identifier hs-type">MetricName</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.Metrics.Utils.html#MetricValue"><span class="hs-identifier hs-type">MetricValue</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span id="updateBlockchainHistory"><span class="annot"><span class="annottext">updateBlockchainHistory :: NodeId
+-&gt; BlockchainHistory
+-&gt; MetricName
+-&gt; MetricName
+-&gt; UTCTime
+-&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Update.Chain.html#updateBlockchainHistory"><span class="hs-identifier hs-var hs-var">updateBlockchainHistory</span></a></span></span><span> </span><span id="local-6989586621679609846"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679609846"><span class="hs-identifier hs-var">nodeId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#ChainHistory"><span class="hs-identifier hs-type">ChainHistory</span></a></span><span> </span><span id="local-6989586621679609848"><span class="annot"><span class="annottext">History
+</span><a href="#local-6989586621679609848"><span class="hs-identifier hs-var">cHistory</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679609849"><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679609849"><span class="hs-identifier hs-var">metricName</span></a></span></span><span> </span><span id="local-6989586621679609850"><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679609850"><span class="hs-identifier hs-var">metricValue</span></a></span></span><span> </span><span id="local-6989586621679609851"><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679609851"><span class="hs-identifier hs-var">now</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679609849"><span class="hs-identifier hs-var">metricName</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-string">&quot;ChainDB.Density&quot;</span></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679609852"><span class="hs-identifier hs-var">updateChainDensity</span></a></span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-string">&quot;ChainDB.SlotNum&quot;</span></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679609853"><span class="hs-identifier hs-var">updateSlotNum</span></a></span><span>
+</span><span id="line-27"></span><span>    </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-string">&quot;ChainDB.BlockNum&quot;</span></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679609854"><span class="hs-identifier hs-var">updateBlockNum</span></a></span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-string">&quot;ChainDB.SlotInEpoch&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679609855"><span class="hs-identifier hs-var">updateSlotInEpoch</span></a></span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-string">&quot;ChainDB.Epoch&quot;</span></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679609856"><span class="hs-identifier hs-var">updateEpoch</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>  </span><span id="local-6989586621679609852"><span class="annot"><span class="annottext">updateChainDensity :: IO ()
+</span><a href="#local-6989586621679609852"><span class="hs-identifier hs-var hs-var">updateChainDensity</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Reader Double
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Read.html#double"><span class="hs-identifier hs-var">double</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679609850"><span class="hs-identifier hs-var">metricValue</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-34"></span><span>      </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>      </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679609858"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679609858"><span class="hs-identifier hs-var">density</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-36"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679609865"><span class="annot"><span class="annottext">density' :: Double
+</span><a href="#local-6989586621679609865"><span class="hs-identifier hs-var hs-var">density'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0.05</span></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679609858"><span class="hs-identifier hs-var">density</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">100.0</span></span><span>
+</span><span id="line-37"></span><span>        </span><span class="annot"><span class="annottext">History -&gt; NodeId -&gt; UTCTime -&gt; DataName -&gt; ValueH -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#addHistoricalData"><span class="hs-identifier hs-var">addHistoricalData</span></a></span><span> </span><span class="annot"><span class="annottext">History
+</span><a href="#local-6989586621679609848"><span class="hs-identifier hs-var">cHistory</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679609846"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679609851"><span class="hs-identifier hs-var">now</span></a></span><span> </span><span class="annot"><span class="annottext">DataName
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#ChainDensityData"><span class="hs-identifier hs-var">ChainDensityData</span></a></span><span> </span><span class="annot"><span class="annottext">(ValueH -&gt; IO ()) -&gt; ValueH -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; ValueH
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#ValueD"><span class="hs-identifier hs-var">ValueD</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679609865"><span class="hs-identifier hs-var">density'</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span>  </span><span id="local-6989586621679609853"><span class="annot"><span class="annottext">updateSlotNum :: IO ()
+</span><a href="#local-6989586621679609853"><span class="hs-identifier hs-var hs-var">updateSlotNum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><span class="annottext">MetricName -&gt; (ValueH -&gt; IO ()) -&gt; IO ()
+forall (m :: * -&gt; *).
+Monad m =&gt;
+MetricName -&gt; (ValueH -&gt; m ()) -&gt; m ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#readValueI"><span class="hs-identifier hs-var">readValueI</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679609850"><span class="hs-identifier hs-var">metricValue</span></a></span><span> </span><span class="annot"><span class="annottext">((ValueH -&gt; IO ()) -&gt; IO ()) -&gt; (ValueH -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">History -&gt; NodeId -&gt; UTCTime -&gt; DataName -&gt; ValueH -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#addHistoricalData"><span class="hs-identifier hs-var">addHistoricalData</span></a></span><span> </span><span class="annot"><span class="annottext">History
+</span><a href="#local-6989586621679609848"><span class="hs-identifier hs-var">cHistory</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679609846"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679609851"><span class="hs-identifier hs-var">now</span></a></span><span> </span><span class="annot"><span class="annottext">DataName
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#SlotNumData"><span class="hs-identifier hs-var">SlotNumData</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679609854"><span class="annot"><span class="annottext">updateBlockNum :: IO ()
+</span><a href="#local-6989586621679609854"><span class="hs-identifier hs-var hs-var">updateBlockNum</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-43"></span><span>    </span><span class="annot"><span class="annottext">MetricName -&gt; (ValueH -&gt; IO ()) -&gt; IO ()
+forall (m :: * -&gt; *).
+Monad m =&gt;
+MetricName -&gt; (ValueH -&gt; m ()) -&gt; m ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#readValueI"><span class="hs-identifier hs-var">readValueI</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679609850"><span class="hs-identifier hs-var">metricValue</span></a></span><span> </span><span class="annot"><span class="annottext">((ValueH -&gt; IO ()) -&gt; IO ()) -&gt; (ValueH -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">History -&gt; NodeId -&gt; UTCTime -&gt; DataName -&gt; ValueH -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#addHistoricalData"><span class="hs-identifier hs-var">addHistoricalData</span></a></span><span> </span><span class="annot"><span class="annottext">History
+</span><a href="#local-6989586621679609848"><span class="hs-identifier hs-var">cHistory</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679609846"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679609851"><span class="hs-identifier hs-var">now</span></a></span><span> </span><span class="annot"><span class="annottext">DataName
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#BlockNumData"><span class="hs-identifier hs-var">BlockNumData</span></a></span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621679609855"><span class="annot"><span class="annottext">updateSlotInEpoch :: IO ()
+</span><a href="#local-6989586621679609855"><span class="hs-identifier hs-var hs-var">updateSlotInEpoch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><span class="annottext">MetricName -&gt; (ValueH -&gt; IO ()) -&gt; IO ()
+forall (m :: * -&gt; *).
+Monad m =&gt;
+MetricName -&gt; (ValueH -&gt; m ()) -&gt; m ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#readValueI"><span class="hs-identifier hs-var">readValueI</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679609850"><span class="hs-identifier hs-var">metricValue</span></a></span><span> </span><span class="annot"><span class="annottext">((ValueH -&gt; IO ()) -&gt; IO ()) -&gt; (ValueH -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">History -&gt; NodeId -&gt; UTCTime -&gt; DataName -&gt; ValueH -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#addHistoricalData"><span class="hs-identifier hs-var">addHistoricalData</span></a></span><span> </span><span class="annot"><span class="annottext">History
+</span><a href="#local-6989586621679609848"><span class="hs-identifier hs-var">cHistory</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679609846"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679609851"><span class="hs-identifier hs-var">now</span></a></span><span> </span><span class="annot"><span class="annottext">DataName
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#SlotInEpochData"><span class="hs-identifier hs-var">SlotInEpochData</span></a></span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679609856"><span class="annot"><span class="annottext">updateEpoch :: IO ()
+</span><a href="#local-6989586621679609856"><span class="hs-identifier hs-var hs-var">updateEpoch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">MetricName -&gt; (ValueH -&gt; IO ()) -&gt; IO ()
+forall (m :: * -&gt; *).
+Monad m =&gt;
+MetricName -&gt; (ValueH -&gt; m ()) -&gt; m ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#readValueI"><span class="hs-identifier hs-var">readValueI</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679609850"><span class="hs-identifier hs-var">metricValue</span></a></span><span> </span><span class="annot"><span class="annottext">((ValueH -&gt; IO ()) -&gt; IO ()) -&gt; (ValueH -&gt; IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">History -&gt; NodeId -&gt; UTCTime -&gt; DataName -&gt; ValueH -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#addHistoricalData"><span class="hs-identifier hs-var">addHistoricalData</span></a></span><span> </span><span class="annot"><span class="annottext">History
+</span><a href="#local-6989586621679609848"><span class="hs-identifier hs-var">cHistory</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679609846"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679609851"><span class="hs-identifier hs-var">now</span></a></span><span> </span><span class="annot"><span class="annottext">DataName
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#EpochData"><span class="hs-identifier hs-var">EpochData</span></a></span><span>
+</span><span id="line-50"></span></pre></body></html>

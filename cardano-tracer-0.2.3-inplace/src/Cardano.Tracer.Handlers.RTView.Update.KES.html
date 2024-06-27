@@ -1,0 +1,208 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Update.KES</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.KES.html#updateKESInfo"><span class="hs-identifier">updateKESInfo</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Environment.html"><span class="hs-identifier">Cardano.Tracer.Environment</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.Metrics.Utils.html"><span class="hs-identifier">Cardano.Tracer.Handlers.Metrics.Utils</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.State.Displayed</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.EraSettings.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.State.EraSettings</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.Utils</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Utils.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Utils</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Types.html"><span class="hs-identifier">Cardano.Tracer.Types</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Utils.html"><span class="hs-identifier">Cardano.Tracer.Utils</span></a></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html"><span class="hs-identifier">Control.Concurrent.STM.TVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVarIO"><span class="hs-identifier">readTVarIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Control.Monad.Extra.html"><span class="hs-identifier">Control.Monad.Extra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Control.Monad.Extra.html#whenJust"><span class="hs-identifier">whenJust</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier">pack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Read.html"><span class="hs-identifier">Data.Text.Read</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Read.html#decimal"><span class="hs-identifier">decimal</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Text.Printf.html"><span class="hs-identifier">Text.Printf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Text.Printf.html#printf"><span class="hs-identifier">printf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html"><span class="hs-identifier">Graphics.UI.Threepenny.Core</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier">UI</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier">liftIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.KES.html#updateKESInfo"><span class="hs-identifier hs-type">updateKESInfo</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.EraSettings.html#ErasSettings"><span class="hs-identifier hs-type">ErasSettings</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#DisplayedElements"><span class="hs-identifier hs-type">DisplayedElements</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span id="updateKESInfo"><span class="annot"><span class="annottext">updateKESInfo :: TracerEnv -&gt; ErasSettings -&gt; DisplayedElements -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Update.KES.html#updateKESInfo"><span class="hs-identifier hs-var hs-var">updateKESInfo</span></a></span></span><span> </span><span id="local-6989586621679615172"><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679615172"><span class="hs-identifier hs-var">tracerEnv</span></a></span></span><span> </span><span id="local-6989586621679615173"><span class="annot"><span class="annottext">ErasSettings
+</span><a href="#local-6989586621679615173"><span class="hs-identifier hs-var">settings</span></a></span></span><span> </span><span id="local-6989586621679615174"><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679615174"><span class="hs-identifier hs-var">displayed</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-34"></span><span>  </span><span class="annot"><span class="annottext">TracerEnv -&gt; ((NodeId, MetricsStores) -&gt; UI ()) -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Utils.html#forAcceptedMetricsUI_"><span class="hs-identifier hs-var">forAcceptedMetricsUI_</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679615172"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span> </span><span class="annot"><span class="annottext">(((NodeId, MetricsStores) -&gt; UI ()) -&gt; UI ())
+-&gt; ((NodeId, MetricsStores) -&gt; UI ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679615176"><span class="annot"><span class="annottext">nodeId :: NodeId
+</span><a href="#local-6989586621679615176"><span class="hs-identifier hs-var">nodeId</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span> </span><span id="local-6989586621679615178"><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615178"><span class="hs-identifier hs-var">anId</span></a></span></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679615179"><span class="annot"><span class="annottext">Store
+</span><a href="#local-6989586621679615179"><span class="hs-identifier hs-var">ekgStore</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TVar MetricsLocalStore
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><span class="annottext">UI [(MetricName, MetricName)]
+-&gt; ((MetricName, MetricName) -&gt; UI ()) -&gt; UI ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a.
+(Foldable t, Monad m) =&gt;
+m (t a) -&gt; (a -&gt; m ()) -&gt; m ()
+</span><a href="Cardano.Tracer.Utils.html#forMM_"><span class="hs-identifier hs-var">forMM_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO [(MetricName, MetricName)] -&gt; UI [(MetricName, MetricName)]
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO [(MetricName, MetricName)] -&gt; UI [(MetricName, MetricName)])
+-&gt; IO [(MetricName, MetricName)] -&gt; UI [(MetricName, MetricName)]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Store -&gt; IO [(MetricName, MetricName)]
+</span><a href="Cardano.Tracer.Handlers.Metrics.Utils.html#getListOfMetrics"><span class="hs-identifier hs-var">getListOfMetrics</span></a></span><span> </span><span class="annot"><span class="annottext">Store
+</span><a href="#local-6989586621679615179"><span class="hs-identifier hs-var">ekgStore</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(((MetricName, MetricName) -&gt; UI ()) -&gt; UI ())
+-&gt; ((MetricName, MetricName) -&gt; UI ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679615182"><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615182"><span class="hs-identifier hs-var">metricName</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679615183"><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615183"><span class="hs-identifier hs-var">metricValue</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-36"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615182"><span class="hs-identifier hs-var">metricName</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-37"></span><span>        </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-string">&quot;Forge.CurrentKESPeriod&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-38"></span><span>          </span><span class="annot"><span class="annottext">NodeId -&gt; DisplayedElements -&gt; MetricName -&gt; MetricName -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#setDisplayedValue"><span class="hs-identifier hs-var">setDisplayedValue</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679615176"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679615174"><span class="hs-identifier hs-var">displayed</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615178"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName -&gt; MetricName -&gt; MetricName
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-string">&quot;__node-current-kes-period&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615183"><span class="hs-identifier hs-var">metricValue</span></a></span><span>
+</span><span id="line-39"></span><span>        </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-string">&quot;Forge.OperationalCertificateExpiryKESPeriod&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-40"></span><span>          </span><span class="annot"><span class="annottext">NodeId -&gt; DisplayedElements -&gt; MetricName -&gt; MetricName -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#setDisplayedValue"><span class="hs-identifier hs-var">setDisplayedValue</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679615176"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679615174"><span class="hs-identifier hs-var">displayed</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615178"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName -&gt; MetricName -&gt; MetricName
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-string">&quot;__node-op-cert-expiry-kes-period&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615183"><span class="hs-identifier hs-var">metricValue</span></a></span><span>
+</span><span id="line-41"></span><span>        </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-string">&quot;Forge.OperationalCertificateStartKESPeriod&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-42"></span><span>          </span><span class="annot"><span class="annottext">NodeId -&gt; DisplayedElements -&gt; MetricName -&gt; MetricName -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#setDisplayedValue"><span class="hs-identifier hs-var">setDisplayedValue</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679615176"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679615174"><span class="hs-identifier hs-var">displayed</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615178"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName -&gt; MetricName -&gt; MetricName
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-string">&quot;__node-op-cert-start-kes-period&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615183"><span class="hs-identifier hs-var">metricValue</span></a></span><span>
+</span><span id="line-43"></span><span>        </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-string">&quot;Forge.RemainingKESPeriods&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-44"></span><span>          </span><span class="annot"><span class="annottext">NodeId -&gt; DisplayedElements -&gt; MetricName -&gt; MetricName -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#setDisplayedValue"><span class="hs-identifier hs-var">setDisplayedValue</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679615176"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679615174"><span class="hs-identifier hs-var">displayed</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615178"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName -&gt; MetricName -&gt; MetricName
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-string">&quot;__node-remaining-kes-periods&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615183"><span class="hs-identifier hs-var">metricValue</span></a></span><span>
+</span><span id="line-45"></span><span>          </span><span id="local-6989586621679615185"><span class="annot"><span class="annottext">Map NodeId EraSettings
+</span><a href="#local-6989586621679615185"><span class="hs-identifier hs-var">allSettings</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Map NodeId EraSettings) -&gt; UI (Map NodeId EraSettings)
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Map NodeId EraSettings) -&gt; UI (Map NodeId EraSettings))
+-&gt; IO (Map NodeId EraSettings) -&gt; UI (Map NodeId EraSettings)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ErasSettings -&gt; IO (Map NodeId EraSettings)
+forall a. TVar a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVarIO"><span class="hs-identifier hs-var">readTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">ErasSettings
+</span><a href="#local-6989586621679615173"><span class="hs-identifier hs-var">settings</span></a></span><span>
+</span><span id="line-46"></span><span>          </span><span class="annot"><span class="annottext">Maybe EraSettings -&gt; (EraSettings -&gt; UI ()) -&gt; UI ()
+forall (m :: * -&gt; *) a.
+Applicative m =&gt;
+Maybe a -&gt; (a -&gt; m ()) -&gt; m ()
+</span><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Control.Monad.Extra.html#whenJust"><span class="hs-identifier hs-var">whenJust</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NodeId -&gt; Map NodeId EraSettings -&gt; Maybe EraSettings
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">M.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679615176"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">Map NodeId EraSettings
+</span><a href="#local-6989586621679615185"><span class="hs-identifier hs-var">allSettings</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((EraSettings -&gt; UI ()) -&gt; UI ())
+-&gt; (EraSettings -&gt; UI ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-47"></span><span>            </span><span class="annot"><span class="annottext">NodeId -&gt; MetricName -&gt; EraSettings -&gt; UI ()
+</span><a href="#local-6989586621679615187"><span class="hs-identifier hs-var">setDaysUntilRenew</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679615176"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615183"><span class="hs-identifier hs-var">metricValue</span></a></span><span>
+</span><span id="line-48"></span><span>        </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; UI ()
+forall a. a -&gt; UI a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-50"></span><span>  </span><span id="local-6989586621679615187"><span class="annot"><span class="annottext">setDaysUntilRenew :: NodeId -&gt; MetricName -&gt; EraSettings -&gt; UI ()
+</span><a href="#local-6989586621679615187"><span class="hs-identifier hs-var hs-var">setDaysUntilRenew</span></a></span></span><span> </span><span id="local-6989586621679615209"><span class="annot"><span class="annottext">nodeId :: NodeId
+</span><a href="#local-6989586621679615209"><span class="hs-identifier hs-var">nodeId</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span> </span><span id="local-6989586621679615210"><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615210"><span class="hs-identifier hs-var">anId</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679615211"><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615211"><span class="hs-identifier hs-var">metricValue</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.EraSettings.html#EraSettings"><span class="hs-identifier hs-type">EraSettings</span></a></span><span class="hs-special">{</span><span id="local-6989586621679615213"><span class="annot"><span class="annottext">Int
+esKESPeriodLength :: Int
+esKESPeriodLength :: EraSettings -&gt; Int
+</span><a href="#local-6989586621679615213"><span class="hs-identifier hs-var hs-var">esKESPeriodLength</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679615215"><span class="annot"><span class="annottext">Int
+esSlotLengthInS :: Int
+esSlotLengthInS :: EraSettings -&gt; Int
+</span><a href="#local-6989586621679615215"><span class="hs-identifier hs-var hs-var">esSlotLengthInS</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-51"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Reader Int
+forall a. Integral a =&gt; Reader a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Read.html#decimal"><span class="hs-identifier hs-var">decimal</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615211"><span class="hs-identifier hs-var">metricValue</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-52"></span><span>      </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; UI ()
+forall a. a -&gt; UI a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>      </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679615217"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679615217"><span class="hs-identifier hs-var">remainingKesPeriods</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-54"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679615221"><span class="annot"><span class="annottext">secondsUntilRenew :: Int
+</span><a href="#local-6989586621679615221"><span class="hs-identifier hs-var hs-var">secondsUntilRenew</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679615217"><span class="hs-identifier hs-var">remainingKesPeriods</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679615213"><span class="hs-identifier hs-var">esKESPeriodLength</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679615215"><span class="hs-identifier hs-var">esSlotLengthInS</span></a></span><span>
+</span><span id="line-55"></span><span>            </span><span class="annot"><a href="#local-6989586621679615223"><span class="hs-identifier hs-type">daysUntilRenew</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-56"></span><span>            </span><span class="hs-glyph">!</span><span id="local-6989586621679615223"><span class="annot"><span class="annottext">daysUntilRenew :: Double
+</span><a href="#local-6989586621679615223"><span class="hs-identifier hs-var hs-var">daysUntilRenew</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679615221"><span class="hs-identifier hs-var">secondsUntilRenew</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">3600</span></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">24</span></span><span>
+</span><span id="line-57"></span><span>        </span><span class="annot"><span class="annottext">NodeId -&gt; DisplayedElements -&gt; MetricName -&gt; MetricName -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#setDisplayedValue"><span class="hs-identifier hs-var">setDisplayedValue</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679615209"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679615174"><span class="hs-identifier hs-var">displayed</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MetricName
+</span><a href="#local-6989586621679615210"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName -&gt; MetricName -&gt; MetricName
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">MetricName
+</span><span class="hs-string">&quot;__node-days-until-op-cert-renew&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(MetricName -&gt; UI ()) -&gt; MetricName -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-58"></span><span>                          </span><span class="annot"><span class="annottext">String -&gt; MetricName
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">pack</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; MetricName) -&gt; String -&gt; MetricName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Double -&gt; String
+forall r. PrintfType r =&gt; String -&gt; r
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Text.Printf.html#printf"><span class="hs-identifier hs-var">printf</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;%.1f&quot;</span></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679615223"><span class="hs-identifier hs-var">daysUntilRenew</span></a></span><span>
+</span><span id="line-59"></span></pre></body></html>

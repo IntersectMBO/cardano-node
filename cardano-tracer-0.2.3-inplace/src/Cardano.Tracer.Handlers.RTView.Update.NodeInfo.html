@@ -1,0 +1,247 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Update.NodeInfo</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.NodeInfo.html#askNSetNodeInfo"><span class="hs-identifier">askNSetNodeInfo</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Startup.html"><span class="hs-identifier">Cardano.Node.Startup</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Startup.html#NodeInfo"><span class="hs-identifier">NodeInfo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Environment.html"><span class="hs-identifier">Cardano.Tracer.Environment</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.State.Displayed</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.Utils</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.Utils.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Update.Utils</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Types.html"><span class="hs-identifier">Cardano.Tracer.Types</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#forM_"><span class="hs-identifier">forM_</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Control.Monad.Extra.html"><span class="hs-identifier">Control.Monad.Extra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Control.Monad.Extra.html#whenJustM"><span class="hs-identifier">whenJustM</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#Set"><span class="hs-identifier">Set</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Format.html"><span class="hs-identifier">Data.Time.Format</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Format.Locale.html#defaultTimeLocale"><span class="hs-identifier">defaultTimeLocale</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Format.Format.Class.html#formatTime"><span class="hs-identifier">formatTime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html"><span class="hs-identifier">Graphics.UI.Threepenny.Core</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.NodeInfo.html#askNSetNodeInfo"><span class="hs-identifier hs-type">askNSetNodeInfo</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#Set"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#DisplayedElements"><span class="hs-identifier hs-type">DisplayedElements</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span id="askNSetNodeInfo"><span class="annot"><span class="annottext">askNSetNodeInfo :: TracerEnv -&gt; Set NodeId -&gt; DisplayedElements -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Update.NodeInfo.html#askNSetNodeInfo"><span class="hs-identifier hs-var hs-var">askNSetNodeInfo</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span class="hs-special">{</span><span id="local-6989586621679612589"><span class="annot"><span class="annottext">DataPointRequestors
+teDPRequestors :: DataPointRequestors
+teDPRequestors :: TracerEnv -&gt; DataPointRequestors
+</span><a href="#local-6989586621679612589"><span class="hs-identifier hs-var hs-var">teDPRequestors</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679612591"><span class="annot"><span class="annottext">Lock
+teCurrentDPLock :: Lock
+teCurrentDPLock :: TracerEnv -&gt; Lock
+</span><a href="#local-6989586621679612591"><span class="hs-identifier hs-var hs-var">teCurrentDPLock</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679612593"><span class="annot"><span class="annottext">Set NodeId
+</span><a href="#local-6989586621679612593"><span class="hs-identifier hs-var">newlyConnected</span></a></span></span><span> </span><span id="local-6989586621679612594"><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679612594"><span class="hs-identifier hs-var">displayedElements</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-29"></span><span>  </span><span class="annot"><span class="annottext">Set NodeId -&gt; (NodeId -&gt; UI ()) -&gt; UI ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+t a -&gt; (a -&gt; m b) -&gt; m ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#forM_"><span class="hs-identifier hs-var">forM_</span></a></span><span> </span><span class="annot"><span class="annottext">Set NodeId
+</span><a href="#local-6989586621679612593"><span class="hs-identifier hs-var">newlyConnected</span></a></span><span> </span><span class="annot"><span class="annottext">((NodeId -&gt; UI ()) -&gt; UI ()) -&gt; (NodeId -&gt; UI ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679612595"><span class="annot"><span class="annottext">nodeId :: NodeId
+</span><a href="#local-6989586621679612595"><span class="hs-identifier hs-var">nodeId</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span> </span><span id="local-6989586621679612597"><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612597"><span class="hs-identifier hs-var">anId</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><span class="annottext">UI (Maybe NodeInfo) -&gt; (NodeInfo -&gt; UI ()) -&gt; UI ()
+forall (m :: * -&gt; *) a.
+Monad m =&gt;
+m (Maybe a) -&gt; (a -&gt; m ()) -&gt; m ()
+</span><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Control.Monad.Extra.html#whenJustM"><span class="hs-identifier hs-var">whenJustM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO (Maybe NodeInfo) -&gt; UI (Maybe NodeInfo)
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe NodeInfo) -&gt; UI (Maybe NodeInfo))
+-&gt; IO (Maybe NodeInfo) -&gt; UI (Maybe NodeInfo)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointRequestors
+-&gt; Lock -&gt; NodeId -&gt; DataPointName -&gt; IO (Maybe NodeInfo)
+forall a.
+FromJSON a =&gt;
+DataPointRequestors
+-&gt; Lock -&gt; NodeId -&gt; DataPointName -&gt; IO (Maybe a)
+</span><a href="Cardano.Tracer.Handlers.RTView.Update.Utils.html#askDataPoint"><span class="hs-identifier hs-var">askDataPoint</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointRequestors
+</span><a href="#local-6989586621679612589"><span class="hs-identifier hs-var">teDPRequestors</span></a></span><span> </span><span class="annot"><span class="annottext">Lock
+</span><a href="#local-6989586621679612591"><span class="hs-identifier hs-var">teCurrentDPLock</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679612595"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><span class="hs-string">&quot;NodeInfo&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((NodeInfo -&gt; UI ()) -&gt; UI ()) -&gt; (NodeInfo -&gt; UI ()) -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679612600"><span class="annot"><span class="annottext">NodeInfo
+</span><a href="#local-6989586621679612600"><span class="hs-identifier hs-var">ni</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-31"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679612603"><span class="annot"><span class="annottext">nodeNameElId :: DataPointName
+</span><a href="#local-6989586621679612603"><span class="hs-identifier hs-var hs-var">nodeNameElId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612597"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName -&gt; DataPointName -&gt; DataPointName
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><span class="hs-string">&quot;__node-name&quot;</span></span><span>
+</span><span id="line-32"></span><span>          </span><span id="local-6989586621679612604"><span class="annot"><span class="annottext">shortName :: DataPointName
+</span><a href="#local-6989586621679612604"><span class="hs-identifier hs-var hs-var">shortName</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DataPointName -&gt; DataPointName
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#shortenName"><span class="hs-identifier hs-var">shortenName</span></a></span><span> </span><span class="annot"><span class="annottext">(DataPointName -&gt; DataPointName) -&gt; DataPointName -&gt; DataPointName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo -&gt; DataPointName
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Startup.html#niName"><span class="hs-identifier hs-var">niName</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo
+</span><a href="#local-6989586621679612600"><span class="hs-identifier hs-var">ni</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span>      </span><span class="annot"><span class="annottext">[(DataPointName, DataPointName)] -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#setTextValues"><span class="hs-identifier hs-var">setTextValues</span></a></span><span>
+</span><span id="line-35"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612603"><span class="hs-identifier hs-var">nodeNameElId</span></a></span><span class="hs-special">,</span><span>             </span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612604"><span class="hs-identifier hs-var">shortName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612597"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName -&gt; DataPointName -&gt; DataPointName
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><span class="hs-string">&quot;__node-version&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">NodeInfo -&gt; DataPointName
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Startup.html#niVersion"><span class="hs-identifier hs-var">niVersion</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo
+</span><a href="#local-6989586621679612600"><span class="hs-identifier hs-var">ni</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612597"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName -&gt; DataPointName -&gt; DataPointName
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><span class="hs-string">&quot;__node-commit&quot;</span></span><span class="hs-special">,</span><span>  </span><span class="annot"><span class="annottext">Int -&gt; DataPointName -&gt; DataPointName
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html#take"><span class="hs-identifier hs-var">T.take</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">7</span></span><span> </span><span class="annot"><span class="annottext">(DataPointName -&gt; DataPointName) -&gt; DataPointName -&gt; DataPointName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo -&gt; DataPointName
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Startup.html#niCommit"><span class="hs-identifier hs-var">niCommit</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo
+</span><a href="#local-6989586621679612600"><span class="hs-identifier hs-var">ni</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612597"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName -&gt; DataPointName -&gt; DataPointName
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><span class="hs-string">&quot;__node-name-for-peers&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612604"><span class="hs-identifier hs-var">shortName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612597"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName -&gt; DataPointName -&gt; DataPointName
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><span class="hs-string">&quot;__node-name-for-ekg-metrics&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612604"><span class="hs-identifier hs-var">shortName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612597"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName -&gt; DataPointName -&gt; DataPointName
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><span class="hs-string">&quot;__node-name-for-errors&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612604"><span class="hs-identifier hs-var">shortName</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-41"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span>      </span><span class="annot"><span class="annottext">DataPointName -&gt; DataPointName -&gt; UI ()
+forall {a}. (Eq a, IsString a) =&gt; a -&gt; DataPointName -&gt; UI ()
+</span><a href="#local-6989586621679612611"><span class="hs-identifier hs-var">setProtocol</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NodeInfo -&gt; DataPointName
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Startup.html#niProtocol"><span class="hs-identifier hs-var">niProtocol</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo
+</span><a href="#local-6989586621679612600"><span class="hs-identifier hs-var">ni</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612597"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName -&gt; DataPointName -&gt; DataPointName
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><span class="hs-string">&quot;__node-protocol&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>
+</span><span id="line-45"></span><span>      </span><span id="local-6989586621679612613"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679612613"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">UI Window
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#askWindow"><span class="hs-identifier hs-var">askWindow</span></a></span><span>
+</span><span id="line-46"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679612617"><span class="annot"><span class="annottext">nodeStartElId :: DataPointName
+</span><a href="#local-6989586621679612617"><span class="hs-identifier hs-var hs-var">nodeStartElId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612597"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName -&gt; DataPointName -&gt; DataPointName
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><span class="hs-string">&quot;__node-start-time&quot;</span></span><span>
+</span><span id="line-47"></span><span>      </span><span class="annot"><span class="annottext">Window -&gt; UTCTime -&gt; DataPointName -&gt; UI ()
+forall {p}. FormatTime p =&gt; Window -&gt; p -&gt; DataPointName -&gt; UI ()
+</span><a href="#local-6989586621679612618"><span class="hs-identifier hs-var">setTime</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679612613"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NodeInfo -&gt; UTCTime
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Startup.html#niStartTime"><span class="hs-identifier hs-var">niStartTime</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo
+</span><a href="#local-6989586621679612600"><span class="hs-identifier hs-var">ni</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612617"><span class="hs-identifier hs-var">nodeStartElId</span></a></span><span>
+</span><span id="line-48"></span><span>      </span><span class="annot"><span class="annottext">Window -&gt; UTCTime -&gt; DataPointName -&gt; UI ()
+forall {p}. FormatTime p =&gt; Window -&gt; p -&gt; DataPointName -&gt; UI ()
+</span><a href="#local-6989586621679612618"><span class="hs-identifier hs-var">setTime</span></a></span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679612613"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NodeInfo -&gt; UTCTime
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Startup.html#niSystemStartTime"><span class="hs-identifier hs-var">niSystemStartTime</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo
+</span><a href="#local-6989586621679612600"><span class="hs-identifier hs-var">ni</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612597"><span class="hs-identifier hs-var">anId</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName -&gt; DataPointName -&gt; DataPointName
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><span class="hs-string">&quot;__node-system-start-time&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span>      </span><span class="annot"><span class="annottext">IO () -&gt; UI ()
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; UI ()) -&gt; IO () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedElements
+-&gt; NodeId -&gt; DataPointName -&gt; DataPointName -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#saveDisplayedValue"><span class="hs-identifier hs-var">saveDisplayedValue</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679612594"><span class="hs-identifier hs-var">displayedElements</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679612595"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612617"><span class="hs-identifier hs-var">nodeStartElId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; DataPointName
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">T.pack</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; DataPointName)
+-&gt; (UTCTime -&gt; String) -&gt; UTCTime -&gt; DataPointName
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">(UTCTime -&gt; DataPointName) -&gt; UTCTime -&gt; DataPointName
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo -&gt; UTCTime
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Startup.html#niStartTime"><span class="hs-identifier hs-var">niStartTime</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo
+</span><a href="#local-6989586621679612600"><span class="hs-identifier hs-var">ni</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>      </span><span class="annot"><span class="annottext">IO () -&gt; UI ()
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; UI ()) -&gt; IO () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedElements
+-&gt; NodeId -&gt; DataPointName -&gt; DataPointName -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Displayed.html#saveDisplayedValue"><span class="hs-identifier hs-var">saveDisplayedValue</span></a></span><span> </span><span class="annot"><span class="annottext">DisplayedElements
+</span><a href="#local-6989586621679612594"><span class="hs-identifier hs-var">displayedElements</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679612595"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612603"><span class="hs-identifier hs-var">nodeNameElId</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NodeInfo -&gt; DataPointName
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Startup.html#niName"><span class="hs-identifier hs-var">niName</span></a></span><span> </span><span class="annot"><span class="annottext">NodeInfo
+</span><a href="#local-6989586621679612600"><span class="hs-identifier hs-var">ni</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621679612611"><span class="annot"><span class="annottext">setProtocol :: a -&gt; DataPointName -&gt; UI ()
+</span><a href="#local-6989586621679612611"><span class="hs-identifier hs-var hs-var">setProtocol</span></a></span></span><span> </span><span id="local-6989586621679612635"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679612635"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679612636"><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612636"><span class="hs-identifier hs-var">id'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-54"></span><span>    </span><span class="annot"><span class="annottext">DataPointName -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#justCleanText"><span class="hs-identifier hs-var">justCleanText</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612636"><span class="hs-identifier hs-var">id'</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679612635"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-56"></span><span>      </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Byron&quot;</span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DataPointName -&gt; DataPointName -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#setTextValue"><span class="hs-identifier hs-var">setTextValue</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612636"><span class="hs-identifier hs-var">id'</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><span class="hs-string">&quot;Byron&quot;</span></span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;Shelley&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DataPointName -&gt; DataPointName -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#setTextValue"><span class="hs-identifier hs-var">setTextValue</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612636"><span class="hs-identifier hs-var">id'</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><span class="hs-string">&quot;Shelley&quot;</span></span><span>
+</span><span id="line-58"></span><span>      </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">DataPointName -&gt; DataPointName -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#setTextValue"><span class="hs-identifier hs-var">setTextValue</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612636"><span class="hs-identifier hs-var">id'</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><span class="hs-string">&quot;Cardano&quot;</span></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span>  </span><span id="local-6989586621679612618"><span class="annot"><span class="annottext">setTime :: Window -&gt; p -&gt; DataPointName -&gt; UI ()
+</span><a href="#local-6989586621679612618"><span class="hs-identifier hs-var hs-var">setTime</span></a></span></span><span> </span><span id="local-6989586621679612641"><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679612641"><span class="hs-identifier hs-var">window</span></a></span></span><span> </span><span id="local-6989586621679612642"><span class="annot"><span class="annottext">p
+</span><a href="#local-6989586621679612642"><span class="hs-identifier hs-var">ts</span></a></span></span><span> </span><span id="local-6989586621679612643"><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612643"><span class="hs-identifier hs-var">id'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><span class="annottext">DataPointName -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#justCleanText"><span class="hs-identifier hs-var">justCleanText</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612643"><span class="hs-identifier hs-var">id'</span></a></span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679612645"><span class="annot"><span class="annottext">time :: String
+</span><a href="#local-6989586621679612645"><span class="hs-identifier hs-var hs-var">time</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TimeLocale -&gt; String -&gt; p -&gt; String
+forall t. FormatTime t =&gt; TimeLocale -&gt; String -&gt; t -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Format.Format.Class.html#formatTime"><span class="hs-identifier hs-var">formatTime</span></a></span><span> </span><span class="annot"><span class="annottext">TimeLocale
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Format.Locale.html#defaultTimeLocale"><span class="hs-identifier hs-var">defaultTimeLocale</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;%D %T&quot;</span></span><span> </span><span class="annot"><span class="annottext">p
+</span><a href="#local-6989586621679612642"><span class="hs-identifier hs-var">ts</span></a></span><span>
+</span><span id="line-63"></span><span>    </span><span class="annot"><span class="annottext">[UI Element] -&gt; Window -&gt; DataPointName -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.Utils.html#findAndAdd"><span class="hs-identifier hs-var">findAndAdd</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String -&gt; UI Element
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html#string"><span class="hs-identifier hs-var">string</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679612645"><span class="hs-identifier hs-var">time</span></a></span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Window
+</span><a href="#local-6989586621679612641"><span class="hs-identifier hs-var">window</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointName
+</span><a href="#local-6989586621679612643"><span class="hs-identifier hs-var">id'</span></a></span><span>
+</span><span id="line-64"></span></pre></body></html>

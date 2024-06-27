@@ -1,0 +1,169 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Logging.Tracer.DataPoint</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Cardano.Logging.Tracer.DataPoint.html#dataPointTracer"><span class="hs-identifier">dataPointTracer</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.Tracer.DataPoint.html#mkDataPointTracer"><span class="hs-identifier">mkDataPointTracer</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Logging.DocuGenerator.html"><span class="hs-identifier">Cardano.Logging.DocuGenerator</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Logging.Trace.html"><span class="hs-identifier">Cardano.Logging.Trace</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Logging.Types.html"><span class="hs-identifier">Cardano.Logging.Types</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier">NFData</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Control.Tracer.html"><span class="hs-identifier">Control.Tracer</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">NT</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">ToJSON</span></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier">intercalate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-forward-2.2.6/doc/html/trace-forward/src/Trace.Forward.Utils.DataPoint.html"><span class="hs-identifier">Trace.Forward.Utils.DataPoint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-forward-2.2.6/doc/html/trace-forward/src/Trace.Forward.Utils.DataPoint.html#DataPoint"><span class="hs-identifier">DataPoint</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-forward-2.2.6/doc/html/trace-forward/src/Trace.Forward.Utils.DataPoint.html#DataPointStore"><span class="hs-identifier">DataPointStore</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-forward-2.2.6/doc/html/trace-forward/src/Trace.Forward.Utils.DataPoint.html#writeToStore"><span class="hs-identifier">writeToStore</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-comment">---------------------------------------------------------------------------</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="annot"><a href="Cardano.Logging.Tracer.DataPoint.html#dataPointTracer"><span class="hs-identifier hs-type">dataPointTracer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679175521"><span class="annot"><a href="#local-6989586621679175521"><span class="hs-identifier hs-type">m</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679175521"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-forward-2.2.6/doc/html/trace-forward/src/Trace.Forward.Utils.DataPoint.html#DataPointStore"><span class="hs-identifier hs-type">DataPointStore</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679175521"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-forward-2.2.6/doc/html/trace-forward/src/Trace.Forward.Utils.DataPoint.html#DataPoint"><span class="hs-identifier hs-type">DataPoint</span></a></span><span>
+</span><span id="line-29"></span><span id="dataPointTracer"><span class="annot"><span class="annottext">dataPointTracer :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+DataPointStore -&gt; Trace m DataPoint
+</span><a href="Cardano.Logging.Tracer.DataPoint.html#dataPointTracer"><span class="hs-identifier hs-var hs-var">dataPointTracer</span></a></span></span><span> </span><span id="local-6989586621679175589"><span class="annot"><span class="annottext">DataPointStore
+</span><a href="#local-6989586621679175589"><span class="hs-identifier hs-var">dataPointStore</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-30"></span><span>    </span><span class="annot"><span class="annottext">Tracer m (LoggingContext, Either TraceControl DataPoint)
+-&gt; Trace m DataPoint
+forall (m :: * -&gt; *) a.
+Tracer m (LoggingContext, Either TraceControl a) -&gt; Trace m a
+</span><a href="Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-var">Trace</span></a></span><span> </span><span class="annot"><span class="annottext">(Tracer m (LoggingContext, Either TraceControl DataPoint)
+ -&gt; Trace m DataPoint)
+-&gt; Tracer m (LoggingContext, Either TraceControl DataPoint)
+-&gt; Trace m DataPoint
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TracerA m (LoggingContext, Either TraceControl DataPoint) ()
+-&gt; Tracer m (LoggingContext, Either TraceControl DataPoint)
+forall (m :: * -&gt; *) a. TracerA m a () -&gt; Tracer m a
+</span><a href="Control.Tracer.html#arrow"><span class="hs-identifier hs-var">NT.arrow</span></a></span><span> </span><span class="annot"><span class="annottext">(TracerA m (LoggingContext, Either TraceControl DataPoint) ()
+ -&gt; Tracer m (LoggingContext, Either TraceControl DataPoint))
+-&gt; TracerA m (LoggingContext, Either TraceControl DataPoint) ()
+-&gt; Tracer m (LoggingContext, Either TraceControl DataPoint)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((LoggingContext, Either TraceControl DataPoint) -&gt; m ())
+-&gt; TracerA m (LoggingContext, Either TraceControl DataPoint) ()
+forall (m :: * -&gt; *) a.
+Applicative m =&gt;
+(a -&gt; m ()) -&gt; TracerA m a ()
+</span><a href="Control.Tracer.Arrow.html#emit"><span class="hs-identifier hs-var">NT.emit</span></a></span><span> </span><span class="annot"><span class="annottext">(((LoggingContext, Either TraceControl DataPoint) -&gt; m ())
+ -&gt; TracerA m (LoggingContext, Either TraceControl DataPoint) ())
+-&gt; ((LoggingContext, Either TraceControl DataPoint) -&gt; m ())
+-&gt; TracerA m (LoggingContext, Either TraceControl DataPoint) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(LoggingContext -&gt; Either TraceControl DataPoint -&gt; m ())
+-&gt; (LoggingContext, Either TraceControl DataPoint) -&gt; m ()
+forall a b c. (a -&gt; b -&gt; c) -&gt; (a, b) -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Tuple.html#uncurry"><span class="hs-identifier hs-var">uncurry</span></a></span><span> </span><span class="annot"><span class="annottext">LoggingContext -&gt; Either TraceControl DataPoint -&gt; m ()
+</span><a href="#local-6989586621679175594"><span class="hs-identifier hs-var">output</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><a href="#local-6989586621679175594"><span class="hs-identifier hs-type">output</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-33"></span><span>         </span><span class="annot"><a href="Cardano.Logging.Types.html#LoggingContext"><span class="hs-identifier hs-type">LoggingContext</span></a></span><span>
+</span><span id="line-34"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceControl"><span class="hs-identifier hs-type">TraceControl</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-forward-2.2.6/doc/html/trace-forward/src/Trace.Forward.Utils.DataPoint.html#DataPoint"><span class="hs-identifier hs-type">DataPoint</span></a></span><span>
+</span><span id="line-35"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679175521"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>    </span><span id="local-6989586621679175594"><span class="annot"><span class="annottext">output :: LoggingContext -&gt; Either TraceControl DataPoint -&gt; m ()
+</span><a href="#local-6989586621679175594"><span class="hs-identifier hs-var hs-var">output</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#LoggingContext"><span class="hs-identifier hs-type">LoggingContext</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621679175596"><span id="local-6989586621679175597"><span id="local-6989586621679175598"><span id="local-6989586621679175599"><span id="local-6989586621679175600"><span class="annot"><span class="annottext">[Text]
+Maybe SeverityS
+Maybe Privacy
+Maybe DetailLevel
+lcNSInner :: [Text]
+lcNSPrefix :: [Text]
+lcSeverity :: Maybe SeverityS
+lcPrivacy :: Maybe Privacy
+lcDetails :: Maybe DetailLevel
+lcNSInner :: LoggingContext -&gt; [Text]
+lcNSPrefix :: LoggingContext -&gt; [Text]
+lcSeverity :: LoggingContext -&gt; Maybe SeverityS
+lcPrivacy :: LoggingContext -&gt; Maybe Privacy
+lcDetails :: LoggingContext -&gt; Maybe DetailLevel
+</span><a href="#local-6989586621679175596"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679175606"><span class="annot"><span class="annottext">DataPoint
+</span><a href="#local-6989586621679175606"><span class="hs-identifier hs-var">val</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-37"></span><span>      </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; m ()) -&gt; IO () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointStore -&gt; Text -&gt; DataPoint -&gt; IO ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-forward-2.2.6/doc/html/trace-forward/src/Trace.Forward.Utils.DataPoint.html#writeToStore"><span class="hs-identifier hs-var">writeToStore</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointStore
+</span><a href="#local-6989586621679175589"><span class="hs-identifier hs-var">dataPointStore</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text] -&gt; Text
+</span><a href="#local-6989586621679175608"><span class="hs-identifier hs-var">nameSpaceToText</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679175597"><span class="hs-identifier hs-var">lcNSPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; [Text]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679175596"><span class="hs-identifier hs-var">lcNSInner</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">DataPoint
+</span><a href="#local-6989586621679175606"><span class="hs-identifier hs-var">val</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><a href="#local-6989586621679175594"><span class="hs-identifier hs-var">output</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#LoggingContext"><span class="hs-identifier hs-type">LoggingContext</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><span class="annottext">TraceControl
+</span><a href="Cardano.Logging.Types.html#TCReset"><span class="hs-identifier hs-var">TCReset</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; m ()) -&gt; IO () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-39"></span><span>      </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><a href="#local-6989586621679175594"><span class="hs-identifier hs-var">output</span></a></span><span> </span><span id="local-6989586621679175610"><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621679175610"><span class="hs-identifier hs-var">lk</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679175611"><span class="annot"><span class="annottext">c :: TraceControl
+</span><a href="#local-6989586621679175611"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Cardano.Logging.Types.html#TCDocument"><span class="hs-identifier hs-type">TCDocument</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-41"></span><span>      </span><span class="annot"><span class="annottext">BackendConfig -&gt; (LoggingContext, Either TraceControl Any) -&gt; m ()
+forall (m :: * -&gt; *) a.
+MonadIO m =&gt;
+BackendConfig -&gt; (LoggingContext, Either TraceControl a) -&gt; m ()
+</span><a href="Cardano.Logging.DocuGenerator.html#docIt"><span class="hs-identifier hs-var">docIt</span></a></span><span> </span><span class="annot"><span class="annottext">BackendConfig
+</span><a href="Cardano.Logging.Types.html#DatapointBackend"><span class="hs-identifier hs-var">DatapointBackend</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">LoggingContext
+</span><a href="#local-6989586621679175610"><span class="hs-identifier hs-var">lk</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TraceControl -&gt; Either TraceControl Any
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">TraceControl
+</span><a href="#local-6989586621679175611"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>    </span><span class="annot"><a href="#local-6989586621679175594"><span class="hs-identifier hs-var">output</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#LoggingContext"><span class="hs-identifier hs-type">LoggingContext</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span> </span><span class="annot"><span class="annottext">Either TraceControl DataPoint
+</span><span class="hs-identifier">_</span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; m ()
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span>    </span><span class="annot"><a href="#local-6989586621679175608"><span class="hs-identifier hs-type">nameSpaceToText</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span id="local-6989586621679175608"><span class="annot"><span class="annottext">nameSpaceToText :: [Text] -&gt; Text
+</span><a href="#local-6989586621679175608"><span class="hs-identifier hs-var hs-var">nameSpaceToText</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">intercalate</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;.&quot;</span></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- A simple dataPointTracer which supports building a namespace.</span><span>
+</span><span id="line-48"></span><span class="annot"><a href="Cardano.Logging.Tracer.DataPoint.html#mkDataPointTracer"><span class="hs-identifier hs-type">mkDataPointTracer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679175558"><span class="annot"><a href="#local-6989586621679175558"><span class="hs-identifier hs-type">dp</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="#local-6989586621679175558"><span class="hs-identifier hs-type">dp</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#MetaTrace"><span class="hs-identifier hs-type">MetaTrace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679175558"><span class="hs-identifier hs-type">dp</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-type">NFData</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679175558"><span class="hs-identifier hs-type">dp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-forward-2.2.6/doc/html/trace-forward/src/Trace.Forward.Utils.DataPoint.html#DataPoint"><span class="hs-identifier hs-type">DataPoint</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679175558"><span class="hs-identifier hs-type">dp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span id="mkDataPointTracer"><span class="annot"><span class="annottext">mkDataPointTracer :: forall dp.
+(ToJSON dp, MetaTrace dp, NFData dp) =&gt;
+Trace IO DataPoint -&gt; IO (Trace IO dp)
+</span><a href="Cardano.Logging.Tracer.DataPoint.html#mkDataPointTracer"><span class="hs-identifier hs-var hs-var">mkDataPointTracer</span></a></span></span><span> </span><span id="local-6989586621679175622"><span class="annot"><span class="annottext">Trace IO DataPoint
+</span><a href="#local-6989586621679175622"><span class="hs-identifier hs-var">trDataPoint</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-52"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679175628"><span class="annot"><span class="annottext">tr :: Trace IO dp
+</span><a href="#local-6989586621679175628"><span class="hs-identifier hs-var hs-var">tr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(dp -&gt; DataPoint) -&gt; Trace IO DataPoint -&gt; Trace IO dp
+forall a' a. (a' -&gt; a) -&gt; Trace IO a -&gt; Trace IO a'
+forall (f :: * -&gt; *) a' a.
+Contravariant f =&gt;
+(a' -&gt; a) -&gt; f a -&gt; f a'
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.Contravariant.html#contramap"><span class="hs-identifier hs-var">NT.contramap</span></a></span><span> </span><span class="annot"><span class="annottext">dp -&gt; DataPoint
+forall v. (ToJSON v, NFData v) =&gt; v -&gt; DataPoint
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-forward-2.2.6/doc/html/trace-forward/src/Trace.Forward.Utils.DataPoint.html#DataPoint"><span class="hs-identifier hs-var">DataPoint</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO DataPoint
+</span><a href="#local-6989586621679175622"><span class="hs-identifier hs-var">trDataPoint</span></a></span><span>
+</span><span id="line-53"></span><span>    </span><span class="annot"><span class="annottext">Trace IO dp -&gt; IO (Trace IO dp)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Trace IO dp -&gt; IO (Trace IO dp))
+-&gt; Trace IO dp -&gt; IO (Trace IO dp)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO dp -&gt; Trace IO dp
+forall (m :: * -&gt; *) a.
+(Monad m, MetaTrace a) =&gt;
+Trace m a -&gt; Trace m a
+</span><a href="Cardano.Logging.Trace.html#withInnerNames"><span class="hs-identifier hs-var">withInnerNames</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO dp
+</span><a href="#local-6989586621679175628"><span class="hs-identifier hs-var">tr</span></a></span><span>
+</span><span id="line-54"></span></pre></body></html>

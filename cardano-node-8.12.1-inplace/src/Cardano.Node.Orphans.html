@@ -1,0 +1,122 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-orphans #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Node.Orphans</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-2446e22528ab33e4fd7b48afaf9b171c69a9f1b59a5038cd8e06411b53339a65/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-0.16.1.0-ba3500f212351fa97681f9668ad639e3f9ffe78b21fa40bf57d99b1ffa922593/share/doc/html/src/Ouroboros.Network.NodeToNode.html"><span class="hs-identifier">Ouroboros.Network.NodeToNode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.Server.RateLimiting.html#AcceptedConnectionsLimit"><span class="hs-identifier">AcceptedConnectionsLimit</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-api-0.7.3.0-5c0fa2960c94bb5c7e22b5e79601f7f8a0d5d912d9ff54d1fdb652329d672eef/share/doc/html/src/Ouroboros.Network.SizeInBytes.html"><span class="hs-identifier">Ouroboros.Network.SizeInBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-api-0.7.3.0-5c0fa2960c94bb5c7e22b5e79601f7f8a0d5d912d9ff54d1fdb652329d672eef/share/doc/html/src/Ouroboros.Network.SizeInBytes.html#SizeInBytes"><span class="hs-identifier">SizeInBytes</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Aeson.Types</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Text.Printf.html"><span class="hs-identifier">Text.Printf</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Text.Printf.html#PrintfArg"><span class="hs-identifier">PrintfArg</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680982007"><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Text.Printf.html#PrintfArg"><span class="hs-identifier hs-type">PrintfArg</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-api-0.7.3.0-5c0fa2960c94bb5c7e22b5e79601f7f8a0d5d912d9ff54d1fdb652329d672eef/share/doc/html/src/Ouroboros.Network.SizeInBytes.html#SizeInBytes"><span class="hs-identifier hs-type">SizeInBytes</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>    </span><span id="local-6989586621680982013"><span class="annot"><span class="annottext">formatArg :: SizeInBytes -&gt; FieldFormatter
+</span><a href="#local-6989586621680982013"><span class="hs-identifier hs-var hs-var hs-var hs-var">formatArg</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-api-0.7.3.0-5c0fa2960c94bb5c7e22b5e79601f7f8a0d5d912d9ff54d1fdb652329d672eef/share/doc/html/src/Ouroboros.Network.SizeInBytes.html#SizeInBytes"><span class="hs-identifier hs-type">SizeInBytes</span></a></span><span> </span><span id="local-6989586621680982016"><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621680982016"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; FieldFormatter
+forall a. PrintfArg a =&gt; a -&gt; FieldFormatter
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Text.Printf.html#formatArg"><span class="hs-identifier hs-var">formatArg</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621680982016"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680982019"><span id="local-6989586621680982023"><span id="local-6989586621680982026"><span id="local-6989586621680982029"><span class="annot"><span class="hs-identifier hs-type">ToJSON</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.Server.RateLimiting.html#AcceptedConnectionsLimit"><span class="hs-identifier hs-type">AcceptedConnectionsLimit</span></a></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-20"></span><span>  </span><span id="local-6989586621680982054"><span class="annot"><span class="annottext">toJSON :: AcceptedConnectionsLimit -&gt; Value
+</span><a href="#local-6989586621680982054"><span class="hs-identifier hs-var hs-var hs-var hs-var">toJSON</span></a></span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.Server.RateLimiting.html#AcceptedConnectionsLimit"><span class="hs-identifier hs-type">AcceptedConnectionsLimit</span></a></span><span>
+</span><span id="line-21"></span><span>          </span><span class="hs-special">{</span><span> </span><span id="local-6989586621680982057"><span class="annot"><span class="annottext">Word32
+acceptedConnectionsHardLimit :: Word32
+acceptedConnectionsHardLimit :: AcceptedConnectionsLimit -&gt; Word32
+</span><a href="#local-6989586621680982057"><span class="hs-identifier hs-var hs-var">acceptedConnectionsHardLimit</span></a></span></span><span>
+</span><span id="line-22"></span><span>          </span><span class="hs-special">,</span><span> </span><span id="local-6989586621680982059"><span class="annot"><span class="annottext">Word32
+acceptedConnectionsSoftLimit :: Word32
+acceptedConnectionsSoftLimit :: AcceptedConnectionsLimit -&gt; Word32
+</span><a href="#local-6989586621680982059"><span class="hs-identifier hs-var hs-var">acceptedConnectionsSoftLimit</span></a></span></span><span>
+</span><span id="line-23"></span><span>          </span><span class="hs-special">,</span><span> </span><span id="local-6989586621680982061"><span class="annot"><span class="annottext">DiffTime
+acceptedConnectionsDelay :: DiffTime
+acceptedConnectionsDelay :: AcceptedConnectionsLimit -&gt; DiffTime
+</span><a href="#local-6989586621680982061"><span class="hs-identifier hs-var hs-var">acceptedConnectionsDelay</span></a></span></span><span>
+</span><span id="line-24"></span><span>          </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;AcceptedConnectionsLimit&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span>
+</span><span id="line-26"></span><span>      </span><span class="annot"><span class="annottext">[Pair] -&gt; Value
+</span><span class="hs-identifier hs-var">object</span></span><span> </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;hardLimit&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span>
+</span><span id="line-27"></span><span>                  </span><span class="annot"><span class="annottext">Word32 -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621680982057"><span class="hs-identifier hs-var">acceptedConnectionsHardLimit</span></a></span><span>
+</span><span id="line-28"></span><span>             </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;softLimit&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span>
+</span><span id="line-29"></span><span>                  </span><span class="annot"><span class="annottext">Word32 -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621680982059"><span class="hs-identifier hs-var">acceptedConnectionsSoftLimit</span></a></span><span>
+</span><span id="line-30"></span><span>             </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;delay&quot;</span></span><span> </span><span class="annot"><span class="annottext">Key -&gt; Value -&gt; Pair
+forall v. ToJSON v =&gt; Key -&gt; v -&gt; Pair
+forall e kv v. (KeyValue e kv, ToJSON v) =&gt; Key -&gt; v -&gt; kv
+</span><span class="hs-operator hs-var">.=</span></span><span>
+</span><span id="line-31"></span><span>                  </span><span class="annot"><span class="annottext">DiffTime -&gt; Value
+forall a. ToJSON a =&gt; a -&gt; Value
+</span><span class="hs-identifier hs-var">toJSON</span></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621680982061"><span class="hs-identifier hs-var">acceptedConnectionsDelay</span></a></span><span>
+</span><span id="line-32"></span><span>             </span><span class="hs-special">]</span><span>
+</span><span id="line-33"></span><span>           </span><span class="hs-special">]</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621680982067"><span id="local-6989586621680982071"><span class="annot"><span class="hs-identifier hs-type">FromJSON</span></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.Server.RateLimiting.html#AcceptedConnectionsLimit"><span class="hs-identifier hs-type">AcceptedConnectionsLimit</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621680982087"><span class="annot"><span class="annottext">parseJSON :: Value -&gt; Parser AcceptedConnectionsLimit
+</span><a href="#local-6989586621680982087"><span class="hs-identifier hs-var hs-var hs-var hs-var">parseJSON</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+-&gt; (Object -&gt; Parser AcceptedConnectionsLimit)
+-&gt; Value
+-&gt; Parser AcceptedConnectionsLimit
+forall a. String -&gt; (Object -&gt; Parser a) -&gt; Value -&gt; Parser a
+</span><span class="hs-identifier hs-var">withObject</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;AcceptedConnectionsLimit&quot;</span></span><span> </span><span class="annot"><span class="annottext">((Object -&gt; Parser AcceptedConnectionsLimit)
+ -&gt; Value -&gt; Parser AcceptedConnectionsLimit)
+-&gt; (Object -&gt; Parser AcceptedConnectionsLimit)
+-&gt; Value
+-&gt; Parser AcceptedConnectionsLimit
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680982090"><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680982090"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-37"></span><span>    </span><span class="annot"><span class="annottext">Word32 -&gt; Word32 -&gt; DiffTime -&gt; AcceptedConnectionsLimit
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.Server.RateLimiting.html#AcceptedConnectionsLimit"><span class="hs-identifier hs-var">AcceptedConnectionsLimit</span></a></span><span>
+</span><span id="line-38"></span><span>      </span><span class="annot"><span class="annottext">(Word32 -&gt; Word32 -&gt; DiffTime -&gt; AcceptedConnectionsLimit)
+-&gt; Parser Word32
+-&gt; Parser (Word32 -&gt; DiffTime -&gt; AcceptedConnectionsLimit)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680982090"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Word32
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;hardLimit&quot;</span></span><span>
+</span><span id="line-39"></span><span>      </span><span class="annot"><span class="annottext">Parser (Word32 -&gt; DiffTime -&gt; AcceptedConnectionsLimit)
+-&gt; Parser Word32 -&gt; Parser (DiffTime -&gt; AcceptedConnectionsLimit)
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680982090"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser Word32
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;softLimit&quot;</span></span><span>
+</span><span id="line-40"></span><span>      </span><span class="annot"><span class="annottext">Parser (DiffTime -&gt; AcceptedConnectionsLimit)
+-&gt; Parser DiffTime -&gt; Parser AcceptedConnectionsLimit
+forall a b. Parser (a -&gt; b) -&gt; Parser a -&gt; Parser b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Object
+</span><a href="#local-6989586621680982090"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">Object -&gt; Key -&gt; Parser DiffTime
+forall a. FromJSON a =&gt; Object -&gt; Key -&gt; Parser a
+</span><span class="hs-operator hs-var">.:</span></span><span> </span><span class="annot"><span class="annottext">Key
+</span><span class="hs-string">&quot;delay&quot;</span></span><span>
+</span><span id="line-41"></span></pre></body></html>

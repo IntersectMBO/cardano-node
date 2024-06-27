@@ -1,0 +1,112 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE QuasiQuotes #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.JS.Utils</span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#closeModalsByEscapeButton"><span class="hs-identifier">closeModalsByEscapeButton</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#copyTextToClipboard"><span class="hs-identifier">copyTextToClipboard</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#downloadJSONFile"><span class="hs-identifier">downloadJSONFile</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#selectOption"><span class="hs-identifier">selectOption</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/613z6z2nyihzblh63yjqxlih5zrdclav-string-qq-lib-string-qq-0.0.6-haddock-doc/share/doc/string-qq/html/src/Data.String.QQ.html"><span class="hs-identifier">Data.String.QQ</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.html"><span class="hs-identifier">Graphics.UI.Threepenny</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UI</span></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html"><span class="hs-identifier">Graphics.UI.Threepenny.Core</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#copyTextToClipboard"><span class="hs-identifier hs-type">copyTextToClipboard</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span id="copyTextToClipboard"><span class="annot"><span class="annottext">copyTextToClipboard :: String -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#copyTextToClipboard"><span class="hs-identifier hs-var hs-var">copyTextToClipboard</span></a></span></span><span> </span><span id="local-6989586621679605293"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679605293"><span class="hs-identifier hs-var">textToCopy</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-18"></span><span>  </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">UI.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ()) -&gt; JSFunction () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">UI.ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#copyTextToClipboard%27"><span class="hs-identifier hs-var">copyTextToClipboard'</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679605293"><span class="hs-identifier hs-var">textToCopy</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#copyTextToClipboard%27"><span class="hs-identifier hs-type">copyTextToClipboard'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-21"></span><span id="copyTextToClipboard%27"><span class="annot"><span class="annottext">copyTextToClipboard' :: String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#copyTextToClipboard%27"><span class="hs-identifier hs-var hs-var">copyTextToClipboard'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="">[s|
+const listener = function(ev) {
+  ev.preventDefault();
+  ev.clipboardData.setData('text/plain', %1);
+};
+document.addEventListener('copy', listener);
+document.execCommand('copy');
+document.removeEventListener('copy', listener);
+|]</span></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#downloadJSONFile"><span class="hs-identifier hs-type">downloadJSONFile</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span id="downloadJSONFile"><span class="annot"><span class="annottext">downloadJSONFile :: String -&gt; Text -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#downloadJSONFile"><span class="hs-identifier hs-var hs-var">downloadJSONFile</span></a></span></span><span> </span><span id="local-6989586621679605298"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679605298"><span class="hs-identifier hs-var">jsonFileName</span></a></span></span><span> </span><span id="local-6989586621679605299"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679605299"><span class="hs-identifier hs-var">textToExport</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">UI.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ()) -&gt; JSFunction () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; Text -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">UI.ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#downloadJSONFile%27"><span class="hs-identifier hs-var">downloadJSONFile'</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679605298"><span class="hs-identifier hs-var">jsonFileName</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679605299"><span class="hs-identifier hs-var">textToExport</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#downloadJSONFile%27"><span class="hs-identifier hs-type">downloadJSONFile'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-39"></span><span id="downloadJSONFile%27"><span class="annot"><span class="annottext">downloadJSONFile' :: String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#downloadJSONFile%27"><span class="hs-identifier hs-var hs-var">downloadJSONFile'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="">[s|
+var element = document.createElement('a');
+element.setAttribute('href', 'data:application/json;charset=utf-8,' + encodeURIComponent(%2));
+element.setAttribute('download', %1);
+element.style.display = 'none';
+document.body.appendChild(element);
+element.click();
+document.body.removeChild(element);
+|]</span></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#selectOption"><span class="hs-identifier hs-type">selectOption</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span id="selectOption"><span class="annot"><span class="annottext">selectOption :: String -&gt; Int -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#selectOption"><span class="hs-identifier hs-var hs-var">selectOption</span></a></span></span><span> </span><span id="local-6989586621679605301"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679605301"><span class="hs-identifier hs-var">selectId</span></a></span></span><span> </span><span id="local-6989586621679605302"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679605302"><span class="hs-identifier hs-var">optionValue</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">UI.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ()) -&gt; JSFunction () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; Int -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">UI.ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;document.getElementById(%1).value = %2;&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679605301"><span class="hs-identifier hs-var">selectId</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679605302"><span class="hs-identifier hs-var">optionValue</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#closeModalsByEscapeButton"><span class="hs-identifier hs-type">closeModalsByEscapeButton</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span id="closeModalsByEscapeButton"><span class="annot"><span class="annottext">closeModalsByEscapeButton :: UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#closeModalsByEscapeButton"><span class="hs-identifier hs-var hs-var">closeModalsByEscapeButton</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">UI.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ()) -&gt; JSFunction () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">UI.ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#closeModalsByEscapeButton%27"><span class="hs-identifier hs-var">closeModalsByEscapeButton'</span></a></span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#closeModalsByEscapeButton%27"><span class="hs-identifier hs-type">closeModalsByEscapeButton'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-61"></span><span id="closeModalsByEscapeButton%27"><span class="annot"><span class="annottext">closeModalsByEscapeButton' :: String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Utils.html#closeModalsByEscapeButton%27"><span class="hs-identifier hs-var hs-var">closeModalsByEscapeButton'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="">[s|
+$(document).keydown(function(event) {
+  if (event.keyCode == 27) {
+    var modals = document.getElementsByClassName(&quot;modal is-active&quot;);
+    for (var i=0; i &lt; modals.length; i++) {
+      modals[i].className = &quot;modal&quot;;
+    }
+  }
+});
+|]</span></span><span>
+</span><span id="line-71"></span></pre></body></html>

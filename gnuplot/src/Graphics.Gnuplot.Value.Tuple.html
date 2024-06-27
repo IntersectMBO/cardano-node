@@ -1,0 +1,444 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="annot"><span class="hs-comment">{- |
+Provide a class that renders multiple Haskell values in a text form
+that is accessible by gnuplot.
+
+Maybe we add a method for the binary interface to gnuplot later.
+-}</span></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics.Gnuplot.Value.Tuple</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-8"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier">C</span></a></span><span class="hs-special">(</span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier">text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#columnCount"><span class="hs-identifier">columnCount</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#ColumnCount"><span class="hs-identifier">ColumnCount</span></a></span><span class="hs-special">(</span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#ColumnCount"><span class="hs-identifier">ColumnCount</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-10"></span><span>   </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#Label"><span class="hs-identifier">Label</span></a></span><span class="hs-special">(</span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#Label"><span class="hs-identifier">Label</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-11"></span><span>   </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Utility.html"><span class="hs-identifier">Graphics.Gnuplot.Utility</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Graphics.Gnuplot.Utility.html#quote"><span class="hs-identifier">quote</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Format.html"><span class="hs-identifier">Data.Time.Format</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Format.Locale.html#defaultTimeLocale"><span class="hs-identifier">defaultTimeLocale</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.html"><span class="hs-identifier">Data.Time</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Time</span></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier">Word8</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word16"><span class="hs-identifier">Word16</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word32"><span class="hs-identifier">Word32</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word64"><span class="hs-identifier">Word64</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Int.html"><span class="hs-identifier">Data.Int</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Int.html#Int8"><span class="hs-identifier">Int8</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Int.html#Int16"><span class="hs-identifier">Int16</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Int.html#Int32"><span class="hs-identifier">Int32</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Int.html#Int64"><span class="hs-identifier">Int64</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Ratio.html"><span class="hs-identifier">Data.Ratio</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#Ratio"><span class="hs-identifier">Ratio</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Function.html"><span class="hs-identifier">Data.Function</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#id"><span class="hs-identifier">id</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator">($)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator">(.)</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Text.Show.html"><span class="hs-identifier">Text.Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier">Show</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#ShowS"><span class="hs-identifier">ShowS</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#shows"><span class="hs-identifier">shows</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#showString"><span class="hs-identifier">showString</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-25"></span><span>         </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier">Eq</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier">Ord</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier">String</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-bignum-1.3/src/GHC.Num.Integer.html#Integer"><span class="hs-identifier">Integer</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#Integral"><span class="hs-identifier">Integral</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Float"><span class="hs-identifier">Float</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier">Double</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-26"></span><span>          </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#realToFrac"><span class="hs-identifier">realToFrac</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2B"><span class="hs-operator">(+)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator">(++)</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">class</span><span> </span><span id="C"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-var">C</span></a></span></span><span> </span><span id="local-6989586621679076930"><span class="annot"><a href="#local-6989586621679076930"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>   </span><span class="hs-comment">{- |
+   For values that are also in Atom class,
+   'text' must generate a singleton list.
+   -}</span><span>
+</span><span id="line-34"></span><span>   </span><span id="text"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-type">text</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679076930"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#ShowS"><span class="hs-identifier hs-type">ShowS</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>   </span><span class="hs-comment">{- |
+   It must hold @ColumnCount (length (text x)) == columnCount@.
+   -}</span><span>
+</span><span id="line-39"></span><span>   </span><span id="columnCount"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#columnCount"><span class="hs-identifier hs-type">columnCount</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#ColumnCount"><span class="hs-identifier hs-type">ColumnCount</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679076930"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-40"></span><span>   </span><span id="local-6989586621679077009"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#columnCount"><span class="hs-identifier hs-var hs-var">columnCount</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; ColumnCount a
+forall a. Int -&gt; ColumnCount a
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#ColumnCount"><span class="hs-identifier hs-var">ColumnCount</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="annot"><span class="hs-comment">{- |
+Count numbers of gnuplot data columns for the respective type.
+
+Somehow a writer monad with respect to Sum monoid
+without material monadic result.
+
+Cf. ColumnSet module.
+-}</span></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">newtype</span><span> </span><span id="ColumnCount"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#ColumnCount"><span class="hs-identifier hs-var">ColumnCount</span></a></span></span><span> </span><span id="local-6989586621679076933"><span class="annot"><a href="#local-6989586621679076933"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ColumnCount"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#ColumnCount"><span class="hs-identifier hs-var">ColumnCount</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-51"></span><span>   </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679077011"><span id="local-6989586621679077016"><span class="annot"><span class="annottext">ColumnCount a -&gt; ColumnCount a -&gt; Bool
+(ColumnCount a -&gt; ColumnCount a -&gt; Bool)
+-&gt; (ColumnCount a -&gt; ColumnCount a -&gt; Bool) -&gt; Eq (ColumnCount a)
+forall a. ColumnCount a -&gt; ColumnCount a -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall a. ColumnCount a -&gt; ColumnCount a -&gt; Bool
+== :: ColumnCount a -&gt; ColumnCount a -&gt; Bool
+$c/= :: forall a. ColumnCount a -&gt; ColumnCount a -&gt; Bool
+/= :: ColumnCount a -&gt; ColumnCount a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077024"><span id="local-6989586621679077029"><span id="local-6989586621679077033"><span id="local-6989586621679077037"><span id="local-6989586621679077041"><span id="local-6989586621679077045"><span id="local-6989586621679077049"><span class="annot"><span class="annottext">Eq (ColumnCount a)
+Eq (ColumnCount a) =&gt;
+(ColumnCount a -&gt; ColumnCount a -&gt; Ordering)
+-&gt; (ColumnCount a -&gt; ColumnCount a -&gt; Bool)
+-&gt; (ColumnCount a -&gt; ColumnCount a -&gt; Bool)
+-&gt; (ColumnCount a -&gt; ColumnCount a -&gt; Bool)
+-&gt; (ColumnCount a -&gt; ColumnCount a -&gt; Bool)
+-&gt; (ColumnCount a -&gt; ColumnCount a -&gt; ColumnCount a)
+-&gt; (ColumnCount a -&gt; ColumnCount a -&gt; ColumnCount a)
+-&gt; Ord (ColumnCount a)
+ColumnCount a -&gt; ColumnCount a -&gt; Bool
+ColumnCount a -&gt; ColumnCount a -&gt; Ordering
+ColumnCount a -&gt; ColumnCount a -&gt; ColumnCount a
+forall a. Eq (ColumnCount a)
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+forall a. ColumnCount a -&gt; ColumnCount a -&gt; Bool
+forall a. ColumnCount a -&gt; ColumnCount a -&gt; Ordering
+forall a. ColumnCount a -&gt; ColumnCount a -&gt; ColumnCount a
+$ccompare :: forall a. ColumnCount a -&gt; ColumnCount a -&gt; Ordering
+compare :: ColumnCount a -&gt; ColumnCount a -&gt; Ordering
+$c&lt; :: forall a. ColumnCount a -&gt; ColumnCount a -&gt; Bool
+&lt; :: ColumnCount a -&gt; ColumnCount a -&gt; Bool
+$c&lt;= :: forall a. ColumnCount a -&gt; ColumnCount a -&gt; Bool
+&lt;= :: ColumnCount a -&gt; ColumnCount a -&gt; Bool
+$c&gt; :: forall a. ColumnCount a -&gt; ColumnCount a -&gt; Bool
+&gt; :: ColumnCount a -&gt; ColumnCount a -&gt; Bool
+$c&gt;= :: forall a. ColumnCount a -&gt; ColumnCount a -&gt; Bool
+&gt;= :: ColumnCount a -&gt; ColumnCount a -&gt; Bool
+$cmax :: forall a. ColumnCount a -&gt; ColumnCount a -&gt; ColumnCount a
+max :: ColumnCount a -&gt; ColumnCount a -&gt; ColumnCount a
+$cmin :: forall a. ColumnCount a -&gt; ColumnCount a -&gt; ColumnCount a
+min :: ColumnCount a -&gt; ColumnCount a -&gt; ColumnCount a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679077055"><span id="local-6989586621679077060"><span id="local-6989586621679077064"><span class="annot"><span class="annottext">Int -&gt; ColumnCount a -&gt; ShowS
+[ColumnCount a] -&gt; ShowS
+ColumnCount a -&gt; String
+(Int -&gt; ColumnCount a -&gt; ShowS)
+-&gt; (ColumnCount a -&gt; String)
+-&gt; ([ColumnCount a] -&gt; ShowS)
+-&gt; Show (ColumnCount a)
+forall a. Int -&gt; ColumnCount a -&gt; ShowS
+forall a. [ColumnCount a] -&gt; ShowS
+forall a. ColumnCount a -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall a. Int -&gt; ColumnCount a -&gt; ShowS
+showsPrec :: Int -&gt; ColumnCount a -&gt; ShowS
+$cshow :: forall a. ColumnCount a -&gt; String
+show :: ColumnCount a -&gt; String
+$cshowList :: forall a. [ColumnCount a] -&gt; ShowS
+showList :: [ColumnCount a] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-comment">{-
+Functor and Applicative instances would be useful
+for combining column sets,
+but they are dangerous, because they can bring
+type and column columnCount out of sync.
+-}</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span id="local-6989586621679076947"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#pure"><span class="hs-identifier hs-type">pure</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679076947"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#ColumnCount"><span class="hs-identifier hs-type">ColumnCount</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679076947"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-61"></span><span id="pure"><span class="annot"><span class="annottext">pure :: forall a. a -&gt; ColumnCount a
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#pure"><span class="hs-identifier hs-var hs-var">pure</span></a></span></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; ColumnCount a
+forall a. Int -&gt; ColumnCount a
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#ColumnCount"><span class="hs-identifier hs-var">ColumnCount</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span id="local-6989586621679076949"><span id="local-6989586621679076950"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#%3C%2A%3E"><span class="hs-operator hs-type">(&lt;*&gt;)</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#ColumnCount"><span class="hs-identifier hs-type">ColumnCount</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679076949"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679076950"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#ColumnCount"><span class="hs-identifier hs-type">ColumnCount</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679076949"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#ColumnCount"><span class="hs-identifier hs-type">ColumnCount</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679076950"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#ColumnCount"><span class="hs-identifier hs-type">ColumnCount</span></a></span><span> </span><span id="local-6989586621679077071"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679077071"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="%3C%2A%3E"><span class="annot"><span class="annottext">&lt;*&gt; :: forall a b. ColumnCount (a -&gt; b) -&gt; ColumnCount a -&gt; ColumnCount b
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#%3C%2A%3E"><span class="hs-operator hs-var hs-var">&lt;*&gt;</span></a></span></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#ColumnCount"><span class="hs-identifier hs-type">ColumnCount</span></a></span><span> </span><span id="local-6989586621679077072"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679077072"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; ColumnCount b
+forall a. Int -&gt; ColumnCount a
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#ColumnCount"><span class="hs-identifier hs-var">ColumnCount</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679077071"><span class="hs-identifier hs-var">n</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679077072"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span id="local-6989586621679076954"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-type">singleton</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679076954"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679076954"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-68"></span><span id="singleton"><span class="annot"><span class="annottext">singleton :: forall a. a -&gt; [a]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-var hs-var">singleton</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; [a] -&gt; [a]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077076"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Float"><span class="hs-identifier hs-type">Float</span></a></span></span><span>   </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679077082"><span class="annot"><span class="annottext">text :: Float -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; [ShowS]
+forall a. a -&gt; [a]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; [ShowS]) -&gt; (Float -&gt; ShowS) -&gt; Float -&gt; [ShowS]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Float -&gt; ShowS
+forall a. Show a =&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#shows"><span class="hs-identifier hs-var">shows</span></a></span><span>
+</span><span id="line-72"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077085"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679077090"><span class="annot"><span class="annottext">text :: Double -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; [ShowS]
+forall a. a -&gt; [a]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; [ShowS]) -&gt; (Double -&gt; ShowS) -&gt; Double -&gt; [ShowS]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; ShowS
+forall a. Show a =&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#shows"><span class="hs-identifier hs-var">shows</span></a></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077093"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span></span><span>     </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679077097"><span class="annot"><span class="annottext">text :: Int -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; [ShowS]
+forall a. a -&gt; [a]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; [ShowS]) -&gt; (Int -&gt; ShowS) -&gt; Int -&gt; [ShowS]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; ShowS
+forall a. Show a =&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#shows"><span class="hs-identifier hs-var">shows</span></a></span><span>
+</span><span id="line-74"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077100"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-bignum-1.3/src/GHC.Num.Integer.html#Integer"><span class="hs-identifier hs-type">Integer</span></a></span></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679077105"><span class="annot"><span class="annottext">text :: Integer -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; [ShowS]
+forall a. a -&gt; [a]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; [ShowS]) -&gt; (Integer -&gt; ShowS) -&gt; Integer -&gt; [ShowS]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; ShowS
+forall a. Show a =&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#shows"><span class="hs-identifier hs-var">shows</span></a></span><span>
+</span><span id="line-75"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679076961"><span id="local-6989586621679077109"><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#Integral"><span class="hs-identifier hs-type">Integral</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679076961"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#Ratio"><span class="hs-identifier hs-type">Ratio</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679076961"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-76"></span><span>   </span><span id="local-6989586621679077117"><span class="annot"><span class="annottext">text :: Ratio a -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; [ShowS]
+forall a. a -&gt; [a]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; [ShowS]) -&gt; (Ratio a -&gt; ShowS) -&gt; Ratio a -&gt; [ShowS]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; ShowS
+forall a. Show a =&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#shows"><span class="hs-identifier hs-var">shows</span></a></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; ShowS) -&gt; (Ratio a -&gt; Double) -&gt; Ratio a -&gt; ShowS
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double -&gt; Double
+forall a. a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-glyph">-&gt;</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Double -&gt; Double) -&gt; (Ratio a -&gt; Double) -&gt; Ratio a -&gt; Double
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Ratio a -&gt; Double
+forall a b. (Real a, Fractional b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#realToFrac"><span class="hs-identifier hs-var">realToFrac</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077120"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Int.html#Int8"><span class="hs-identifier hs-type">Int8</span></a></span></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679077125"><span class="annot"><span class="annottext">text :: Int8 -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; [ShowS]
+forall a. a -&gt; [a]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; [ShowS]) -&gt; (Int8 -&gt; ShowS) -&gt; Int8 -&gt; [ShowS]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int8 -&gt; ShowS
+forall a. Show a =&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#shows"><span class="hs-identifier hs-var">shows</span></a></span><span>
+</span><span id="line-79"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077128"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Int.html#Int16"><span class="hs-identifier hs-type">Int16</span></a></span></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679077133"><span class="annot"><span class="annottext">text :: Int16 -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; [ShowS]
+forall a. a -&gt; [a]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; [ShowS]) -&gt; (Int16 -&gt; ShowS) -&gt; Int16 -&gt; [ShowS]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int16 -&gt; ShowS
+forall a. Show a =&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#shows"><span class="hs-identifier hs-var">shows</span></a></span><span>
+</span><span id="line-80"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077136"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Int.html#Int32"><span class="hs-identifier hs-type">Int32</span></a></span></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679077141"><span class="annot"><span class="annottext">text :: Int32 -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; [ShowS]
+forall a. a -&gt; [a]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; [ShowS]) -&gt; (Int32 -&gt; ShowS) -&gt; Int32 -&gt; [ShowS]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int32 -&gt; ShowS
+forall a. Show a =&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#shows"><span class="hs-identifier hs-var">shows</span></a></span><span>
+</span><span id="line-81"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077144"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Int.html#Int64"><span class="hs-identifier hs-type">Int64</span></a></span></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679077149"><span class="annot"><span class="annottext">text :: Int64 -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; [ShowS]
+forall a. a -&gt; [a]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; [ShowS]) -&gt; (Int64 -&gt; ShowS) -&gt; Int64 -&gt; [ShowS]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; ShowS
+forall a. Show a =&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#shows"><span class="hs-identifier hs-var">shows</span></a></span><span>
+</span><span id="line-82"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077152"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span></span><span>  </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679077157"><span class="annot"><span class="annottext">text :: Word8 -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; [ShowS]
+forall a. a -&gt; [a]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; [ShowS]) -&gt; (Word8 -&gt; ShowS) -&gt; Word8 -&gt; [ShowS]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; ShowS
+forall a. Show a =&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#shows"><span class="hs-identifier hs-var">shows</span></a></span><span>
+</span><span id="line-83"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077160"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679077165"><span class="annot"><span class="annottext">text :: Word16 -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; [ShowS]
+forall a. a -&gt; [a]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; [ShowS]) -&gt; (Word16 -&gt; ShowS) -&gt; Word16 -&gt; [ShowS]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; ShowS
+forall a. Show a =&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#shows"><span class="hs-identifier hs-var">shows</span></a></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077168"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word32"><span class="hs-identifier hs-type">Word32</span></a></span></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679077173"><span class="annot"><span class="annottext">text :: Word32 -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; [ShowS]
+forall a. a -&gt; [a]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; [ShowS]) -&gt; (Word32 -&gt; ShowS) -&gt; Word32 -&gt; [ShowS]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; ShowS
+forall a. Show a =&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#shows"><span class="hs-identifier hs-var">shows</span></a></span><span>
+</span><span id="line-85"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077176"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679077181"><span class="annot"><span class="annottext">text :: Word64 -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; [ShowS]
+forall a. a -&gt; [a]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; [ShowS]) -&gt; (Word64 -&gt; ShowS) -&gt; Word64 -&gt; [ShowS]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; ShowS
+forall a. Show a =&gt; a -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#shows"><span class="hs-identifier hs-var">shows</span></a></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077184"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Calendar.Days.html#Day"><span class="hs-identifier hs-type">Time.Day</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-88"></span><span>   </span><span id="local-6989586621679077191"><span class="annot"><span class="annottext">text :: Day -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span id="local-6989586621679077192"><span class="annot"><span class="annottext">Day
+</span><a href="#local-6989586621679077192"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; [ShowS]
+forall a. C a =&gt; a -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">(UTCTime -&gt; [ShowS]) -&gt; UTCTime -&gt; [ShowS]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Day -&gt; DiffTime -&gt; UTCTime
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-var">Time.UTCTime</span></a></span><span> </span><span class="annot"><span class="annottext">Day
+</span><a href="#local-6989586621679077192"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077196"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">Time.UTCTime</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-90"></span><span>   </span><span id="local-6989586621679077200"><span class="annot"><span class="annottext">text :: UTCTime -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; [ShowS]
+forall a. a -&gt; [a]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; [ShowS]) -&gt; (UTCTime -&gt; ShowS) -&gt; UTCTime -&gt; [ShowS]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#showString"><span class="hs-identifier hs-var">showString</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; ShowS) -&gt; (UTCTime -&gt; String) -&gt; UTCTime -&gt; ShowS
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TimeLocale -&gt; String -&gt; UTCTime -&gt; String
+forall t. FormatTime t =&gt; TimeLocale -&gt; String -&gt; t -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Format.Format.Class.html#formatTime"><span class="hs-identifier hs-var">Time.formatTime</span></a></span><span> </span><span class="annot"><span class="annottext">TimeLocale
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Format.Locale.html#defaultTimeLocale"><span class="hs-identifier hs-var">defaultTimeLocale</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;%s&quot;</span></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="hs-keyword">newtype</span><span> </span><span id="Label"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#Label"><span class="hs-identifier hs-var">Label</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Label"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#Label"><span class="hs-identifier hs-var">Label</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-93"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679077204"><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#Label"><span class="hs-identifier hs-type">Label</span></a></span></span><span> </span><span class="hs-keyword">where</span><span> </span><span id="local-6989586621679077207"><span class="annot"><span class="annottext">text :: Label -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#Label"><span class="hs-identifier hs-type">Label</span></a></span><span> </span><span id="local-6989586621679077208"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679077208"><span class="hs-identifier hs-var">str</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; [ShowS]
+forall a. a -&gt; [a]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">(ShowS -&gt; [ShowS]) -&gt; ShowS -&gt; [ShowS]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#showString"><span class="hs-identifier hs-var">showString</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; ShowS) -&gt; String -&gt; ShowS
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ShowS
+</span><a href="Graphics.Gnuplot.Utility.html#quote"><span class="hs-identifier hs-var">quote</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679077208"><span class="hs-identifier hs-var">str</span></a></span><span>
+</span><span id="line-94"></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679076978"><span id="local-6989586621679076979"><span class="hs-special">(</span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679076978"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679076979"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679076978"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span class="annot"><a href="#local-6989586621679076979"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-97"></span><span>   </span><span id="local-6989586621679077216"><span class="annot"><span class="annottext">text :: (a, b) -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679077217"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679077217"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679077218"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679077218"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; [ShowS]
+forall a. C a =&gt; a -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679077217"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">[ShowS] -&gt; [ShowS] -&gt; [ShowS]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; [ShowS]
+forall a. C a =&gt; a -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679077218"><span class="hs-identifier hs-var">b</span></a></span><span>
+</span><span id="line-98"></span><span>   </span><span id="local-6989586621679077221"><span class="annot"><span class="annottext">columnCount :: ColumnCount (a, b)
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#columnCount"><span class="hs-identifier hs-var hs-var hs-var hs-var">columnCount</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-99"></span><span>      </span><span class="annot"><span class="annottext">(a -&gt; b -&gt; (a, b)) -&gt; ColumnCount (a -&gt; b -&gt; (a, b))
+forall a. a -&gt; ColumnCount a
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span>
+</span><span id="line-100"></span><span>         </span><span class="annot"><span class="annottext">ColumnCount (a -&gt; b -&gt; (a, b))
+-&gt; ColumnCount a -&gt; ColumnCount (b -&gt; (a, b))
+forall a b. ColumnCount (a -&gt; b) -&gt; ColumnCount a -&gt; ColumnCount b
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ColumnCount a
+forall a. C a =&gt; ColumnCount a
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#columnCount"><span class="hs-identifier hs-var">columnCount</span></a></span><span>
+</span><span id="line-101"></span><span>         </span><span class="annot"><span class="annottext">ColumnCount (b -&gt; (a, b)) -&gt; ColumnCount b -&gt; ColumnCount (a, b)
+forall a b. ColumnCount (a -&gt; b) -&gt; ColumnCount a -&gt; ColumnCount b
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ColumnCount b
+forall a. C a =&gt; ColumnCount a
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#columnCount"><span class="hs-identifier hs-var">columnCount</span></a></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679076984"><span id="local-6989586621679076985"><span id="local-6989586621679076986"><span class="hs-special">(</span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679076984"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679076985"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679076986"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679076984"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span class="annot"><a href="#local-6989586621679076985"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">,</span><span class="annot"><a href="#local-6989586621679076986"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">)</span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-104"></span><span>   </span><span id="local-6989586621679077231"><span class="annot"><span class="annottext">text :: (a, b, c) -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679077232"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679077232"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679077233"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679077233"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679077234"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679077234"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; [ShowS]
+forall a. C a =&gt; a -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679077232"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">[ShowS] -&gt; [ShowS] -&gt; [ShowS]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; [ShowS]
+forall a. C a =&gt; a -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679077233"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">[ShowS] -&gt; [ShowS] -&gt; [ShowS]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">c -&gt; [ShowS]
+forall a. C a =&gt; a -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679077234"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-105"></span><span>   </span><span id="local-6989586621679077238"><span class="annot"><span class="annottext">columnCount :: ColumnCount (a, b, c)
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#columnCount"><span class="hs-identifier hs-var hs-var hs-var hs-var">columnCount</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-106"></span><span>      </span><span class="annot"><span class="annottext">(a -&gt; b -&gt; c -&gt; (a, b, c))
+-&gt; ColumnCount (a -&gt; b -&gt; c -&gt; (a, b, c))
+forall a. a -&gt; ColumnCount a
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">,</span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>         </span><span class="annot"><span class="annottext">ColumnCount (a -&gt; b -&gt; c -&gt; (a, b, c))
+-&gt; ColumnCount a -&gt; ColumnCount (b -&gt; c -&gt; (a, b, c))
+forall a b. ColumnCount (a -&gt; b) -&gt; ColumnCount a -&gt; ColumnCount b
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ColumnCount a
+forall a. C a =&gt; ColumnCount a
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#columnCount"><span class="hs-identifier hs-var">columnCount</span></a></span><span>
+</span><span id="line-108"></span><span>         </span><span class="annot"><span class="annottext">ColumnCount (b -&gt; c -&gt; (a, b, c))
+-&gt; ColumnCount b -&gt; ColumnCount (c -&gt; (a, b, c))
+forall a b. ColumnCount (a -&gt; b) -&gt; ColumnCount a -&gt; ColumnCount b
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ColumnCount b
+forall a. C a =&gt; ColumnCount a
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#columnCount"><span class="hs-identifier hs-var">columnCount</span></a></span><span>
+</span><span id="line-109"></span><span>         </span><span class="annot"><span class="annottext">ColumnCount (c -&gt; (a, b, c))
+-&gt; ColumnCount c -&gt; ColumnCount (a, b, c)
+forall a b. ColumnCount (a -&gt; b) -&gt; ColumnCount a -&gt; ColumnCount b
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ColumnCount c
+forall a. C a =&gt; ColumnCount a
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#columnCount"><span class="hs-identifier hs-var">columnCount</span></a></span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679076992"><span id="local-6989586621679076993"><span id="local-6989586621679076994"><span id="local-6989586621679076995"><span class="hs-special">(</span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679076992"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679076993"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679076994"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679076995"><span class="hs-identifier hs-type">d</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Value.Tuple.html#C"><span class="hs-identifier hs-type">C</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679076992"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span class="annot"><a href="#local-6989586621679076993"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">,</span><span class="annot"><a href="#local-6989586621679076994"><span class="hs-identifier hs-type">c</span></a></span><span class="hs-special">,</span><span class="annot"><a href="#local-6989586621679076995"><span class="hs-identifier hs-type">d</span></a></span><span class="hs-special">)</span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-112"></span><span>   </span><span id="local-6989586621679077250"><span class="annot"><span class="annottext">text :: (a, b, c, d) -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var hs-var hs-var hs-var">text</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679077251"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679077251"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679077252"><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679077252"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679077253"><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679077253"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679077254"><span class="annot"><span class="annottext">d
+</span><a href="#local-6989586621679077254"><span class="hs-identifier hs-var">d</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; [ShowS]
+forall a. C a =&gt; a -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679077251"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">[ShowS] -&gt; [ShowS] -&gt; [ShowS]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; [ShowS]
+forall a. C a =&gt; a -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">b
+</span><a href="#local-6989586621679077252"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">[ShowS] -&gt; [ShowS] -&gt; [ShowS]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">c -&gt; [ShowS]
+forall a. C a =&gt; a -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">c
+</span><a href="#local-6989586621679077253"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">[ShowS] -&gt; [ShowS] -&gt; [ShowS]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">d -&gt; [ShowS]
+forall a. C a =&gt; a -&gt; [ShowS]
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#text"><span class="hs-identifier hs-var">text</span></a></span><span> </span><span class="annot"><span class="annottext">d
+</span><a href="#local-6989586621679077254"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-113"></span><span>   </span><span id="local-6989586621679077259"><span class="annot"><span class="annottext">columnCount :: ColumnCount (a, b, c, d)
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#columnCount"><span class="hs-identifier hs-var hs-var hs-var hs-var">columnCount</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-114"></span><span>      </span><span class="annot"><span class="annottext">(a -&gt; b -&gt; c -&gt; d -&gt; (a, b, c, d))
+-&gt; ColumnCount (a -&gt; b -&gt; c -&gt; d -&gt; (a, b, c, d))
+forall a. a -&gt; ColumnCount a
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">,</span><span class="hs-special">,</span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>         </span><span class="annot"><span class="annottext">ColumnCount (a -&gt; b -&gt; c -&gt; d -&gt; (a, b, c, d))
+-&gt; ColumnCount a -&gt; ColumnCount (b -&gt; c -&gt; d -&gt; (a, b, c, d))
+forall a b. ColumnCount (a -&gt; b) -&gt; ColumnCount a -&gt; ColumnCount b
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ColumnCount a
+forall a. C a =&gt; ColumnCount a
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#columnCount"><span class="hs-identifier hs-var">columnCount</span></a></span><span>
+</span><span id="line-116"></span><span>         </span><span class="annot"><span class="annottext">ColumnCount (b -&gt; c -&gt; d -&gt; (a, b, c, d))
+-&gt; ColumnCount b -&gt; ColumnCount (c -&gt; d -&gt; (a, b, c, d))
+forall a b. ColumnCount (a -&gt; b) -&gt; ColumnCount a -&gt; ColumnCount b
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ColumnCount b
+forall a. C a =&gt; ColumnCount a
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#columnCount"><span class="hs-identifier hs-var">columnCount</span></a></span><span>
+</span><span id="line-117"></span><span>         </span><span class="annot"><span class="annottext">ColumnCount (c -&gt; d -&gt; (a, b, c, d))
+-&gt; ColumnCount c -&gt; ColumnCount (d -&gt; (a, b, c, d))
+forall a b. ColumnCount (a -&gt; b) -&gt; ColumnCount a -&gt; ColumnCount b
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ColumnCount c
+forall a. C a =&gt; ColumnCount a
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#columnCount"><span class="hs-identifier hs-var">columnCount</span></a></span><span>
+</span><span id="line-118"></span><span>         </span><span class="annot"><span class="annottext">ColumnCount (d -&gt; (a, b, c, d))
+-&gt; ColumnCount d -&gt; ColumnCount (a, b, c, d)
+forall a b. ColumnCount (a -&gt; b) -&gt; ColumnCount a -&gt; ColumnCount b
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ColumnCount d
+forall a. C a =&gt; ColumnCount a
+</span><a href="Graphics.Gnuplot.Value.Tuple.html#columnCount"><span class="hs-identifier hs-var">columnCount</span></a></span><span>
+</span><span id="line-119"></span></pre></body></html>

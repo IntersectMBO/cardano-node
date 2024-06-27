@@ -1,0 +1,328 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP                #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE NumericUnderscores #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies       #-}</span><span class="hs-cpp">
+
+#if  defined(__GLASGOW_HASKELL__) &amp;&amp; \
+    !defined(mingw32_HOST_OS) &amp;&amp; \
+    !defined(__GHCJS__) &amp;&amp; \
+    !defined(js_HOST_ARCH) &amp;&amp; \
+    !defined(wasm32_HOST_ARCH)
+</span><span class="hs-cpp">#define GHC_TIMERS_API
+</span><span class="hs-cpp">#endif
+</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- | A non-standard interface for timer api.</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- This module also provides a polyfill which allows to use timer api also on</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- non-threaded RTS regardless of the architecture \/ OS.  Currently we support</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- `*nix`, `macOS`, `Windows` (and, unofficially `GHCJS`).</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- We use it to provide @'Control.Monad.Class.MonadTimer.MonadTimer' 'IO'@</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- instance and to implement a cancellable timers, see</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- 'Control.Monad.Class.MonadTimer.SI.registerDelayCancellable'.</span><span>
+</span><span id="line-22"></span><span class="hs-comment">--</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- You can expect we will deprecate it at some point (e.g. once GHC gets</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- a better support for timers especially across different execution</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- environments).</span><span>
+</span><span id="line-26"></span><span class="hs-comment">--</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Monad.Class.MonadTimer.NonStandard</span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutState"><span class="hs-identifier">TimeoutState</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#newTimeout"><span class="hs-identifier">newTimeout</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#readTimeout"><span class="hs-identifier">readTimeout</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#cancelTimeout"><span class="hs-identifier">cancelTimeout</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#awaitTimeout"><span class="hs-identifier">awaitTimeout</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#NewTimeout"><span class="hs-identifier">NewTimeout</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#ReadTimeout"><span class="hs-identifier">ReadTimeout</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#CancelTimeout"><span class="hs-identifier">CancelTimeout</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#AwaitTimeout"><span class="hs-identifier">AwaitTimeout</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.html"><span class="hs-identifier">Control.Concurrent.STM</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STM</span></span><span class="hs-cpp">
+#ifndef GHC_TIMERS_API
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Control.Monad</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">when</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadSTM</span></span><span class="hs-cpp">
+
+#ifdef GHC_TIMERS_API
+</span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Event.html"><span class="hs-identifier">GHC.Event</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">GHC</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Event.TimeOut.html#TimeoutKey"><span class="hs-identifier">TimeoutKey</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Event.Thread.html#getSystemTimerManager"><span class="hs-identifier">getSystemTimerManager</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-47"></span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Event.TimerManager.html#registerTimeout"><span class="hs-identifier">registerTimeout</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Event.TimerManager.html#unregisterTimeout"><span class="hs-identifier">unregisterTimeout</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+#else
+</span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">GHC.Conc.IO</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">GHC</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">registerDelay</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- | State of a timeout: pending, fired or cancelled.</span><span>
+</span><span id="line-54"></span><span class="hs-comment">--</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">data</span><span> </span><span id="TimeoutState"><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutState"><span class="hs-identifier hs-var">TimeoutState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TimeoutPending"><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutPending"><span class="hs-identifier hs-var">TimeoutPending</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="TimeoutFired"><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutFired"><span class="hs-identifier hs-var">TimeoutFired</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="TimeoutCancelled"><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutCancelled"><span class="hs-identifier hs-var">TimeoutCancelled</span></a></span></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679067546"><span id="local-6989586621679067548"><span class="annot"><span class="annottext">TimeoutState -&gt; TimeoutState -&gt; Bool
+(TimeoutState -&gt; TimeoutState -&gt; Bool)
+-&gt; (TimeoutState -&gt; TimeoutState -&gt; Bool) -&gt; Eq TimeoutState
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TimeoutState -&gt; TimeoutState -&gt; Bool
+== :: TimeoutState -&gt; TimeoutState -&gt; Bool
+$c/= :: TimeoutState -&gt; TimeoutState -&gt; Bool
+/= :: TimeoutState -&gt; TimeoutState -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679067555"><span id="local-6989586621679067557"><span id="local-6989586621679067559"><span id="local-6989586621679067563"><span id="local-6989586621679067566"><span id="local-6989586621679067569"><span id="local-6989586621679067572"><span class="annot"><span class="annottext">Eq TimeoutState
+Eq TimeoutState =&gt;
+(TimeoutState -&gt; TimeoutState -&gt; Ordering)
+-&gt; (TimeoutState -&gt; TimeoutState -&gt; Bool)
+-&gt; (TimeoutState -&gt; TimeoutState -&gt; Bool)
+-&gt; (TimeoutState -&gt; TimeoutState -&gt; Bool)
+-&gt; (TimeoutState -&gt; TimeoutState -&gt; Bool)
+-&gt; (TimeoutState -&gt; TimeoutState -&gt; TimeoutState)
+-&gt; (TimeoutState -&gt; TimeoutState -&gt; TimeoutState)
+-&gt; Ord TimeoutState
+TimeoutState -&gt; TimeoutState -&gt; Bool
+TimeoutState -&gt; TimeoutState -&gt; Ordering
+TimeoutState -&gt; TimeoutState -&gt; TimeoutState
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: TimeoutState -&gt; TimeoutState -&gt; Ordering
+compare :: TimeoutState -&gt; TimeoutState -&gt; Ordering
+$c&lt; :: TimeoutState -&gt; TimeoutState -&gt; Bool
+&lt; :: TimeoutState -&gt; TimeoutState -&gt; Bool
+$c&lt;= :: TimeoutState -&gt; TimeoutState -&gt; Bool
+&lt;= :: TimeoutState -&gt; TimeoutState -&gt; Bool
+$c&gt; :: TimeoutState -&gt; TimeoutState -&gt; Bool
+&gt; :: TimeoutState -&gt; TimeoutState -&gt; Bool
+$c&gt;= :: TimeoutState -&gt; TimeoutState -&gt; Bool
+&gt;= :: TimeoutState -&gt; TimeoutState -&gt; Bool
+$cmax :: TimeoutState -&gt; TimeoutState -&gt; TimeoutState
+max :: TimeoutState -&gt; TimeoutState -&gt; TimeoutState
+$cmin :: TimeoutState -&gt; TimeoutState -&gt; TimeoutState
+min :: TimeoutState -&gt; TimeoutState -&gt; TimeoutState
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679067576"><span id="local-6989586621679067578"><span id="local-6989586621679067582"><span class="annot"><span class="annottext">Int -&gt; TimeoutState -&gt; ShowS
+[TimeoutState] -&gt; ShowS
+TimeoutState -&gt; String
+(Int -&gt; TimeoutState -&gt; ShowS)
+-&gt; (TimeoutState -&gt; String)
+-&gt; ([TimeoutState] -&gt; ShowS)
+-&gt; Show TimeoutState
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TimeoutState -&gt; ShowS
+showsPrec :: Int -&gt; TimeoutState -&gt; ShowS
+$cshow :: TimeoutState -&gt; String
+show :: TimeoutState -&gt; String
+$cshowList :: [TimeoutState] -&gt; ShowS
+showList :: [TimeoutState] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- | The type of the timeout handle, used with 'newTimeout', 'readTimeout', and</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- 'cancelTimeout'.</span><span>
+</span><span id="line-61"></span><span class="hs-comment">--</span><span class="hs-cpp">
+#ifdef GHC_TIMERS_API
+</span><span class="hs-keyword">data</span><span> </span><span id="Timeout"><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#Timeout"><span class="hs-identifier hs-var">Timeout</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TimeoutIO"><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutIO"><span class="hs-identifier hs-var">TimeoutIO</span></a></span></span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">STM.TVar</span></a></span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutState"><span class="hs-identifier hs-type">TimeoutState</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Event.TimeOut.html#TimeoutKey"><span class="hs-identifier hs-type">GHC.TimeoutKey</span></a></span><span class="hs-cpp">
+#else
+</span><span class="hs-keyword">data</span><span> </span><span class="hs-identifier">Timeout</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">TimeoutIO</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="hs-identifier">STM.TVar</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">STM.TVar</span><span> </span><span class="hs-identifier">Bool</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="hs-identifier">STM.TVar</span><span> </span><span class="hs-identifier">Bool</span><span class="hs-special">)</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- | Create a new timeout which will fire at the given time duration in</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- the future.</span><span>
+</span><span id="line-70"></span><span class="hs-comment">--</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- The timeout will start in the 'TimeoutPending' state and either</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- fire at or after the given time leaving it in the 'TimeoutFired' state,</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- or it may be cancelled with 'cancelTimeout', leaving it in the</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- 'TimeoutCancelled' state.</span><span>
+</span><span id="line-75"></span><span class="hs-comment">--</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- Timeouts /cannot/ be reset to the pending state once fired or cancelled</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- (as this would be very racy). You should create a new timeout if you need</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- this functionality.</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- When native timer manager is supported (on `*nix` systems), it only holds</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- a `TVar` with `TimeoutState` and `GHC.TimeoutKey`.</span><span>
+</span><span id="line-82"></span><span class="hs-comment">--</span><span>
+</span><span id="line-83"></span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#newTimeout"><span class="hs-identifier hs-type">newTimeout</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#NewTimeout"><span class="hs-identifier hs-type">NewTimeout</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#Timeout"><span class="hs-identifier hs-type">Timeout</span></a></span><span>
+</span><span id="line-84"></span><span class="hs-keyword">type</span><span> </span><span id="NewTimeout"><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#NewTimeout"><span class="hs-identifier hs-var">NewTimeout</span></a></span></span><span> </span><span id="local-6989586621679067586"><span class="annot"><a href="#local-6989586621679067586"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679067587"><span class="annot"><a href="#local-6989586621679067587"><span class="hs-identifier hs-type">timeout</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679067586"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067587"><span class="hs-identifier hs-type">timeout</span></a></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- | Read the current state of a timeout. This does not block, but returns</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- the current state. It is your responsibility to use 'retry' to wait.</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- Alternatively you may wish to use the convenience utility 'awaitTimeout'</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- to wait for just the fired or cancelled outcomes.</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- You should consider the cancelled state if you plan to use 'cancelTimeout'.</span><span>
+</span><span id="line-94"></span><span class="hs-comment">--</span><span>
+</span><span id="line-95"></span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#readTimeout"><span class="hs-identifier hs-type">readTimeout</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#ReadTimeout"><span class="hs-identifier hs-type">ReadTimeout</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#Timeout"><span class="hs-identifier hs-type">Timeout</span></a></span><span>
+</span><span id="line-96"></span><span class="hs-keyword">type</span><span> </span><span id="ReadTimeout"><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#ReadTimeout"><span class="hs-identifier hs-var">ReadTimeout</span></a></span></span><span> </span><span id="local-6989586621679067589"><span class="annot"><a href="#local-6989586621679067589"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679067590"><span class="annot"><a href="#local-6989586621679067590"><span class="hs-identifier hs-type">timeout</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679067590"><span class="hs-identifier hs-type">timeout</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">STM</span></span><span> </span><span class="annot"><a href="#local-6989586621679067589"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutState"><span class="hs-identifier hs-type">TimeoutState</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- | Cancel a timeout (unless it has already fired), putting it into the</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- 'TimeoutCancelled' state. Code reading and acting on the timeout state</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- need to handle such cancellation appropriately.</span><span>
+</span><span id="line-102"></span><span class="hs-comment">--</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- It is safe to race this concurrently against the timer firing. It will</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- have no effect if the timer fires first.</span><span>
+</span><span id="line-105"></span><span class="hs-comment">--</span><span>
+</span><span id="line-106"></span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#cancelTimeout"><span class="hs-identifier hs-type">cancelTimeout</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#CancelTimeout"><span class="hs-identifier hs-type">CancelTimeout</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#Timeout"><span class="hs-identifier hs-type">Timeout</span></a></span><span>
+</span><span id="line-107"></span><span class="hs-keyword">type</span><span> </span><span id="CancelTimeout"><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#CancelTimeout"><span class="hs-identifier hs-var">CancelTimeout</span></a></span></span><span> </span><span id="local-6989586621679067591"><span class="annot"><a href="#local-6989586621679067591"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679067592"><span class="annot"><a href="#local-6989586621679067592"><span class="hs-identifier hs-type">timeout</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679067592"><span class="hs-identifier hs-type">timeout</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679067591"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="annot"><span class="hs-comment">-- | Returns @True@ when the timeout is fired, or @False@ if it is cancelled.</span></span><span>
+</span><span id="line-110"></span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#awaitTimeout"><span class="hs-identifier hs-type">awaitTimeout</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#AwaitTimeout"><span class="hs-identifier hs-type">AwaitTimeout</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#Timeout"><span class="hs-identifier hs-type">Timeout</span></a></span><span>
+</span><span id="line-111"></span><span class="hs-keyword">type</span><span> </span><span id="AwaitTimeout"><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#AwaitTimeout"><span class="hs-identifier hs-var">AwaitTimeout</span></a></span></span><span> </span><span id="local-6989586621679067593"><span class="annot"><a href="#local-6989586621679067593"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679067594"><span class="annot"><a href="#local-6989586621679067594"><span class="hs-identifier hs-type">timeout</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679067594"><span class="hs-identifier hs-type">timeout</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">STM</span></span><span> </span><span class="annot"><a href="#local-6989586621679067593"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-cpp">
+
+
+#ifdef GHC_TIMERS_API
+</span><span>
+</span><span id="line-116"></span><span id="readTimeout"><span class="annot"><span class="annottext">readTimeout :: ReadTimeout IO Timeout
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#readTimeout"><span class="hs-identifier hs-var hs-var">readTimeout</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutIO"><span class="hs-identifier hs-type">TimeoutIO</span></a></span><span> </span><span id="local-6989586621679067595"><span class="annot"><span class="annottext">TVar TimeoutState
+</span><a href="#local-6989586621679067595"><span class="hs-identifier hs-var">var</span></a></span></span><span> </span><span id="local-6989586621679067596"><span class="annot"><span class="annottext">TimeoutKey
+</span><a href="#local-6989586621679067596"><span class="hs-identifier hs-var">_key</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TVar TimeoutState -&gt; STM TimeoutState
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">STM.readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar TimeoutState
+</span><a href="#local-6989586621679067595"><span class="hs-identifier hs-var">var</span></a></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span id="newTimeout"><span class="annot"><span class="annottext">newTimeout :: NewTimeout IO Timeout
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#newTimeout"><span class="hs-identifier hs-var hs-var">newTimeout</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679067598"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679067598"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-119"></span><span>    </span><span id="local-6989586621679067599"><span class="annot"><span class="annottext">TVar TimeoutState
+</span><a href="#local-6989586621679067599"><span class="hs-identifier hs-var">var</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TimeoutState -&gt; IO (TVar TimeoutState)
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">STM.newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutPending"><span class="hs-identifier hs-var">TimeoutPending</span></a></span><span>
+</span><span id="line-120"></span><span>    </span><span id="local-6989586621679067601"><span class="annot"><span class="annottext">TimerManager
+</span><a href="#local-6989586621679067601"><span class="hs-identifier hs-var">mgr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO TimerManager
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Event.Thread.html#getSystemTimerManager"><span class="hs-identifier hs-var">GHC.getSystemTimerManager</span></a></span><span>
+</span><span id="line-121"></span><span>    </span><span id="local-6989586621679067602"><span class="annot"><span class="annottext">TimeoutKey
+</span><a href="#local-6989586621679067602"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TimerManager -&gt; Int -&gt; TimeoutCallback -&gt; IO TimeoutKey
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Event.TimerManager.html#registerTimeout"><span class="hs-identifier hs-var">GHC.registerTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">TimerManager
+</span><a href="#local-6989586621679067601"><span class="hs-identifier hs-var">mgr</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679067598"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">STM () -&gt; TimeoutCallback
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">STM.atomically</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TVar TimeoutState -&gt; STM ()
+</span><a href="#local-6989586621679067604"><span class="hs-identifier hs-var">timeoutAction</span></a></span><span> </span><span class="annot"><span class="annottext">TVar TimeoutState
+</span><a href="#local-6989586621679067599"><span class="hs-identifier hs-var">var</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>    </span><span class="annot"><span class="annottext">Timeout -&gt; IO Timeout
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TVar TimeoutState -&gt; TimeoutKey -&gt; Timeout
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutIO"><span class="hs-identifier hs-var">TimeoutIO</span></a></span><span> </span><span class="annot"><span class="annottext">TVar TimeoutState
+</span><a href="#local-6989586621679067599"><span class="hs-identifier hs-var">var</span></a></span><span> </span><span class="annot"><span class="annottext">TimeoutKey
+</span><a href="#local-6989586621679067602"><span class="hs-identifier hs-var">key</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-124"></span><span>    </span><span id="local-6989586621679067604"><span class="annot"><span class="annottext">timeoutAction :: TVar TimeoutState -&gt; STM ()
+</span><a href="#local-6989586621679067604"><span class="hs-identifier hs-var hs-var">timeoutAction</span></a></span></span><span> </span><span id="local-6989586621679067609"><span class="annot"><span class="annottext">TVar TimeoutState
+</span><a href="#local-6989586621679067609"><span class="hs-identifier hs-var">var</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-125"></span><span>      </span><span id="local-6989586621679067610"><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679067610"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar TimeoutState -&gt; STM TimeoutState
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">STM.readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar TimeoutState
+</span><a href="#local-6989586621679067609"><span class="hs-identifier hs-var">var</span></a></span><span>
+</span><span id="line-126"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679067610"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-127"></span><span>        </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutPending"><span class="hs-identifier hs-var">TimeoutPending</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TVar TimeoutState -&gt; TimeoutState -&gt; STM ()
+forall a. TVar a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#writeTVar"><span class="hs-identifier hs-var">STM.writeTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar TimeoutState
+</span><a href="#local-6989586621679067609"><span class="hs-identifier hs-var">var</span></a></span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutFired"><span class="hs-identifier hs-var">TimeoutFired</span></a></span><span>
+</span><span id="line-128"></span><span>        </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutFired"><span class="hs-identifier hs-var">TimeoutFired</span></a></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; STM ()
+forall a. HasCallStack =&gt; String -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;MonadTimer(IO): invariant violation&quot;</span></span><span>
+</span><span id="line-129"></span><span>        </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutCancelled"><span class="hs-identifier hs-var">TimeoutCancelled</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; STM ()
+forall a. a -&gt; STM a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-130"></span><span>
+</span><span id="line-131"></span><span id="cancelTimeout"><span class="annot"><span class="annottext">cancelTimeout :: CancelTimeout IO Timeout
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#cancelTimeout"><span class="hs-identifier hs-var hs-var">cancelTimeout</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutIO"><span class="hs-identifier hs-type">TimeoutIO</span></a></span><span> </span><span id="local-6989586621679067613"><span class="annot"><span class="annottext">TVar TimeoutState
+</span><a href="#local-6989586621679067613"><span class="hs-identifier hs-var">var</span></a></span></span><span> </span><span id="local-6989586621679067614"><span class="annot"><span class="annottext">TimeoutKey
+</span><a href="#local-6989586621679067614"><span class="hs-identifier hs-var">key</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-132"></span><span>    </span><span class="annot"><span class="annottext">STM () -&gt; TimeoutCallback
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">STM.atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; TimeoutCallback) -&gt; STM () -&gt; TimeoutCallback
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-133"></span><span>      </span><span id="local-6989586621679067615"><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679067615"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar TimeoutState -&gt; STM TimeoutState
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">STM.readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar TimeoutState
+</span><a href="#local-6989586621679067613"><span class="hs-identifier hs-var">var</span></a></span><span>
+</span><span id="line-134"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679067615"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-135"></span><span>        </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutPending"><span class="hs-identifier hs-var">TimeoutPending</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TVar TimeoutState -&gt; TimeoutState -&gt; STM ()
+forall a. TVar a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#writeTVar"><span class="hs-identifier hs-var">STM.writeTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar TimeoutState
+</span><a href="#local-6989586621679067613"><span class="hs-identifier hs-var">var</span></a></span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutCancelled"><span class="hs-identifier hs-var">TimeoutCancelled</span></a></span><span>
+</span><span id="line-136"></span><span>        </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutFired"><span class="hs-identifier hs-var">TimeoutFired</span></a></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; STM ()
+forall a. a -&gt; STM a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-137"></span><span>        </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutCancelled"><span class="hs-identifier hs-var">TimeoutCancelled</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">() -&gt; STM ()
+forall a. a -&gt; STM a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>    </span><span id="local-6989586621679067616"><span class="annot"><span class="annottext">TimerManager
+</span><a href="#local-6989586621679067616"><span class="hs-identifier hs-var">mgr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO TimerManager
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Event.Thread.html#getSystemTimerManager"><span class="hs-identifier hs-var">GHC.getSystemTimerManager</span></a></span><span>
+</span><span id="line-139"></span><span>    </span><span class="annot"><span class="annottext">TimerManager -&gt; TimeoutKey -&gt; TimeoutCallback
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Event.TimerManager.html#unregisterTimeout"><span class="hs-identifier hs-var">GHC.unregisterTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">TimerManager
+</span><a href="#local-6989586621679067616"><span class="hs-identifier hs-var">mgr</span></a></span><span> </span><span class="annot"><span class="annottext">TimeoutKey
+</span><a href="#local-6989586621679067614"><span class="hs-identifier hs-var">key</span></a></span><span class="hs-cpp">
+
+#else
+</span><span>
+</span><span id="line-143"></span><span class="hs-identifier">readTimeout</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">TimeoutIO</span><span> </span><span class="hs-identifier">timeoutvarvar</span><span> </span><span class="hs-identifier">cancelvar</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-144"></span><span>  </span><span class="hs-identifier">canceled</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-identifier">STM.readTVar</span><span> </span><span class="hs-identifier">cancelvar</span><span>
+</span><span id="line-145"></span><span>  </span><span class="hs-identifier">fired</span><span>    </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-identifier">STM.readTVar</span><span> </span><span class="hs-operator">=&lt;&lt;</span><span> </span><span class="hs-identifier">STM.readTVar</span><span> </span><span class="hs-identifier">timeoutvarvar</span><span>
+</span><span id="line-146"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">canceled</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">fired</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-147"></span><span>    </span><span class="hs-special">(</span><span class="hs-identifier">True</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">_</span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">return</span><span> </span><span class="hs-identifier">TimeoutCancelled</span><span>
+</span><span id="line-148"></span><span>    </span><span class="hs-special">(</span><span class="hs-identifier">_</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">False</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">return</span><span> </span><span class="hs-identifier">TimeoutPending</span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-special">(</span><span class="hs-identifier">_</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">True</span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">return</span><span> </span><span class="hs-identifier">TimeoutFired</span><span>
+</span><span id="line-150"></span><span>
+</span><span id="line-151"></span><span class="hs-identifier">newTimeout</span><span> </span><span class="hs-identifier">d</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-identifier">timeoutvar</span><span>    </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-identifier">GHC.registerDelay</span><span> </span><span class="hs-identifier">d</span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-identifier">timeoutvarvar</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-identifier">STM.newTVarIO</span><span> </span><span class="hs-identifier">timeoutvar</span><span>
+</span><span id="line-154"></span><span>  </span><span class="hs-identifier">cancelvar</span><span>     </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-identifier">STM.newTVarIO</span><span> </span><span class="hs-identifier">False</span><span>
+</span><span id="line-155"></span><span>  </span><span class="hs-identifier">return</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">TimeoutIO</span><span> </span><span class="hs-identifier">timeoutvarvar</span><span> </span><span class="hs-identifier">cancelvar</span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span class="hs-identifier">cancelTimeout</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">TimeoutIO</span><span> </span><span class="hs-identifier">timeoutvarvar</span><span> </span><span class="hs-identifier">cancelvar</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-identifier">STM.atomically</span><span> </span><span class="hs-operator">$</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-identifier">fired</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-identifier">STM.readTVar</span><span> </span><span class="hs-operator">=&lt;&lt;</span><span> </span><span class="hs-identifier">STM.readTVar</span><span> </span><span class="hs-identifier">timeoutvarvar</span><span>
+</span><span id="line-160"></span><span>    </span><span class="hs-identifier">when</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">not</span><span> </span><span class="hs-identifier">fired</span><span class="hs-special">)</span><span> </span><span class="hs-operator">$</span><span> </span><span class="hs-identifier">STM.writeTVar</span><span> </span><span class="hs-identifier">cancelvar</span><span> </span><span class="hs-identifier">True</span><span class="hs-cpp">
+
+#endif
+</span><span>
+</span><span id="line-164"></span><span id="awaitTimeout"><span class="annot"><span class="annottext">awaitTimeout :: AwaitTimeout IO Timeout
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#awaitTimeout"><span class="hs-identifier hs-var hs-var">awaitTimeout</span></a></span></span><span> </span><span id="local-6989586621679067617"><span class="annot"><span class="annottext">Timeout
+</span><a href="#local-6989586621679067617"><span class="hs-identifier hs-var">t</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span> </span><span id="local-6989586621679067618"><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679067618"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ReadTimeout IO Timeout
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#readTimeout"><span class="hs-identifier hs-var">readTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">Timeout
+</span><a href="#local-6989586621679067617"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-165"></span><span>                     </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679067618"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-166"></span><span>                       </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutPending"><span class="hs-identifier hs-var">TimeoutPending</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">STM Bool
+STM IO Bool
+forall a. STM IO a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; STM m a
+</span><span class="hs-identifier hs-var">retry</span></span><span>
+</span><span id="line-167"></span><span>                       </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutFired"><span class="hs-identifier hs-var">TimeoutFired</span></a></span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; STM Bool
+forall a. a -&gt; STM a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-168"></span><span>                       </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Control.Monad.Class.MonadTimer.NonStandard.html#TimeoutCancelled"><span class="hs-identifier hs-var">TimeoutCancelled</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; STM Bool
+forall a. a -&gt; STM a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-169"></span></pre></body></html>

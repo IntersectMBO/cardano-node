@@ -1,0 +1,208 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DefaultSignatures          #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass             #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric              #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies         #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE NumericUnderscores         #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Monad.Class.MonadTime.SI</span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-identifier">MonadTime</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#MonadMonotonicTime"><span class="hs-identifier">MonadMonotonicTime</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><span class="hs-comment">-- * 'DiffTime' and its action on 'Time'</span></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier">Time</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#diffTime"><span class="hs-identifier">diffTime</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#addTime"><span class="hs-identifier">addTime</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier">DiffTime</span></a></span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><span class="hs-comment">-- * 'NominalTime' and its action on 'UTCTime'</span></span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier">UTCTime</span></a></span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCDiff.html#diffUTCTime"><span class="hs-identifier">diffUTCTime</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCDiff.html#addUTCTime"><span class="hs-identifier">addUTCTime</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.NominalDiffTime.html#NominalDiffTime"><span class="hs-identifier">NominalDiffTime</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html"><span class="hs-identifier">Control.DeepSeq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier">NFData</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/mtl-2.3.1/src/Control.Monad.Reader.html"><span class="hs-identifier">Control.Monad.Reader</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadTime</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadMonotonicTimeNSec</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">MonadTime</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.NominalDiffTime.html#NominalDiffTime"><span class="hs-identifier">NominalDiffTime</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier">UTCTime</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCDiff.html#addUTCTime"><span class="hs-identifier">addUTCTime</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCDiff.html#diffUTCTime"><span class="hs-identifier">diffUTCTime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadTime</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">MonadTime</span></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">NoThunks.Class</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NoThunks</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.html"><span class="hs-identifier">Data.Time.Clock</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier">DiffTime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.html"><span class="hs-identifier">Data.Time.Clock</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Time</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word64"><span class="hs-identifier">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- | A point in time in a monotonic clock.</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- The epoch for this clock is arbitrary and does not correspond to any wall</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- clock or calendar, and is /not guaranteed/ to be the same epoch across</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- program runs. It is represented as the 'DiffTime' from this arbitrary epoch.</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">newtype</span><span> </span><span id="Time"><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-var">Time</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Time"><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-var">Time</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679067341"><span id="local-6989586621679067345"><span class="annot"><span class="annottext">Time -&gt; Time -&gt; Bool
+(Time -&gt; Time -&gt; Bool) -&gt; (Time -&gt; Time -&gt; Bool) -&gt; Eq Time
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Time -&gt; Time -&gt; Bool
+== :: Time -&gt; Time -&gt; Bool
+$c/= :: Time -&gt; Time -&gt; Bool
+/= :: Time -&gt; Time -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679067352"><span id="local-6989586621679067356"><span id="local-6989586621679067359"><span id="local-6989586621679067363"><span id="local-6989586621679067366"><span id="local-6989586621679067369"><span id="local-6989586621679067372"><span class="annot"><span class="annottext">Eq Time
+Eq Time =&gt;
+(Time -&gt; Time -&gt; Ordering)
+-&gt; (Time -&gt; Time -&gt; Bool)
+-&gt; (Time -&gt; Time -&gt; Bool)
+-&gt; (Time -&gt; Time -&gt; Bool)
+-&gt; (Time -&gt; Time -&gt; Bool)
+-&gt; (Time -&gt; Time -&gt; Time)
+-&gt; (Time -&gt; Time -&gt; Time)
+-&gt; Ord Time
+Time -&gt; Time -&gt; Bool
+Time -&gt; Time -&gt; Ordering
+Time -&gt; Time -&gt; Time
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: Time -&gt; Time -&gt; Ordering
+compare :: Time -&gt; Time -&gt; Ordering
+$c&lt; :: Time -&gt; Time -&gt; Bool
+&lt; :: Time -&gt; Time -&gt; Bool
+$c&lt;= :: Time -&gt; Time -&gt; Bool
+&lt;= :: Time -&gt; Time -&gt; Bool
+$c&gt; :: Time -&gt; Time -&gt; Bool
+&gt; :: Time -&gt; Time -&gt; Bool
+$c&gt;= :: Time -&gt; Time -&gt; Bool
+&gt;= :: Time -&gt; Time -&gt; Bool
+$cmax :: Time -&gt; Time -&gt; Time
+max :: Time -&gt; Time -&gt; Time
+$cmin :: Time -&gt; Time -&gt; Time
+min :: Time -&gt; Time -&gt; Time
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679067376"><span id="local-6989586621679067382"><span id="local-6989586621679067386"><span class="annot"><span class="annottext">Int -&gt; Time -&gt; ShowS
+[Time] -&gt; ShowS
+Time -&gt; String
+(Int -&gt; Time -&gt; ShowS)
+-&gt; (Time -&gt; String) -&gt; ([Time] -&gt; ShowS) -&gt; Show Time
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Time -&gt; ShowS
+showsPrec :: Int -&gt; Time -&gt; ShowS
+$cshow :: Time -&gt; String
+show :: Time -&gt; String
+$cshowList :: [Time] -&gt; ShowS
+showList :: [Time] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679067390"><span id="local-6989586621679067392"><span class="annot"><span class="annottext">(forall x. Time -&gt; Rep Time x)
+-&gt; (forall x. Rep Time x -&gt; Time) -&gt; Generic Time
+forall x. Rep Time x -&gt; Time
+forall x. Time -&gt; Rep Time x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Time -&gt; Rep Time x
+from :: forall x. Time -&gt; Rep Time x
+$cto :: forall x. Rep Time x -&gt; Time
+to :: forall x. Rep Time x -&gt; Time
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span>  </span><span id="local-6989586621679067396"><span class="annot"><span class="annottext">Time -&gt; ()
+(Time -&gt; ()) -&gt; NFData Time
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: Time -&gt; ()
+rnf :: Time -&gt; ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/deepseq-1.4.8.1/src/Control.DeepSeq.html#NFData"><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></a></span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">anyclass</span></span><span> </span><span id="local-6989586621679067403"><span id="local-6989586621679067407"><span id="local-6989586621679067413"><span class="annot"><span class="annottext">Context -&gt; Time -&gt; IO (Maybe ThunkInfo)
+Proxy Time -&gt; String
+(Context -&gt; Time -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; Time -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy Time -&gt; String)
+-&gt; NoThunks Time
+forall a.
+(Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Context -&gt; a -&gt; IO (Maybe ThunkInfo))
+-&gt; (Proxy a -&gt; String)
+-&gt; NoThunks a
+$cnoThunks :: Context -&gt; Time -&gt; IO (Maybe ThunkInfo)
+noThunks :: Context -&gt; Time -&gt; IO (Maybe ThunkInfo)
+$cwNoThunks :: Context -&gt; Time -&gt; IO (Maybe ThunkInfo)
+wNoThunks :: Context -&gt; Time -&gt; IO (Maybe ThunkInfo)
+$cshowTypeOf :: Proxy Time -&gt; String
+showTypeOf :: Proxy Time -&gt; String
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">NoThunks</span></span></span></span></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><span class="hs-comment">-- | The time duration between two points in time (positive or negative).</span></span><span>
+</span><span id="line-50"></span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#diffTime"><span class="hs-identifier hs-type">diffTime</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span>
+</span><span id="line-51"></span><span id="diffTime"><span class="annot"><span class="annottext">diffTime :: Time -&gt; Time -&gt; DiffTime
+</span><a href="Control.Monad.Class.MonadTime.SI.html#diffTime"><span class="hs-identifier hs-var hs-var">diffTime</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span> </span><span id="local-6989586621679067436"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067436"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span> </span><span id="local-6989586621679067437"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067437"><span class="hs-identifier hs-var">t'</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067436"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; DiffTime -&gt; DiffTime
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067437"><span class="hs-identifier hs-var">t'</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="annot"><span class="hs-comment">-- | Add a duration to a point in time, giving another time.</span></span><span>
+</span><span id="line-54"></span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#addTime"><span class="hs-identifier hs-type">addTime</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span>
+</span><span id="line-55"></span><span id="addTime"><span class="annot"><span class="annottext">addTime :: DiffTime -&gt; Time -&gt; Time
+</span><a href="Control.Monad.Class.MonadTime.SI.html#addTime"><span class="hs-identifier hs-var hs-var">addTime</span></a></span></span><span> </span><span id="local-6989586621679067438"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067438"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span> </span><span id="local-6989586621679067439"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067439"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; Time
+</span><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-var">Time</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067438"><span class="hs-identifier hs-var">d</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; DiffTime -&gt; DiffTime
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679067439"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">infixr</span><span> </span><span class="hs-number">9</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#addTime"><span class="hs-operator hs-type">`addTime`</span></a></span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-keyword">class</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadMonotonicTimeNSec</span></span><span> </span><span class="annot"><a href="#local-6989586621679067304"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span id="MonadMonotonicTime"><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#MonadMonotonicTime"><span class="hs-identifier hs-var">MonadMonotonicTime</span></a></span></span><span> </span><span id="local-6989586621679067304"><span class="annot"><a href="#local-6989586621679067304"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-60"></span><span>  </span><span id="getMonotonicTime"><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#getMonotonicTime"><span class="hs-identifier hs-type">getMonotonicTime</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679067304"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-keyword">default</span><span> </span><span id="getMonotonicTime"><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#getMonotonicTime"><span class="hs-identifier hs-type">getMonotonicTime</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679067304"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span id="local-6989586621679067444"><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#getMonotonicTime"><span class="hs-identifier hs-var hs-var">getMonotonicTime</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-64"></span><span>        </span><span class="annot"><span class="annottext">Word64 -&gt; Time
+</span><a href="#local-6989586621679067459"><span class="hs-identifier hs-var">conv</span></a></span><span> </span><span class="annot"><span class="annottext">(Word64 -&gt; Time) -&gt; m Word64 -&gt; m Time
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m Word64
+forall (m :: * -&gt; *). MonadMonotonicTimeNSec m =&gt; m Word64
+</span><span class="hs-identifier hs-var">MonadTime.getMonotonicTimeNSec</span></span><span>
+</span><span id="line-65"></span><span>      </span><span class="hs-keyword">where</span><span>
+</span><span id="line-66"></span><span>        </span><span class="annot"><a href="#local-6989586621679067459"><span class="hs-identifier hs-type">conv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-type">Time</span></a></span><span>
+</span><span id="line-67"></span><span>        </span><span id="local-6989586621679067459"><span class="annot"><span class="annottext">conv :: Word64 -&gt; Time
+</span><a href="#local-6989586621679067459"><span class="hs-identifier hs-var hs-var">conv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; Time
+</span><a href="Control.Monad.Class.MonadTime.SI.html#Time"><span class="hs-identifier hs-var">Time</span></a></span><span> </span><span class="annot"><span class="annottext">(DiffTime -&gt; Time) -&gt; (Word64 -&gt; DiffTime) -&gt; Word64 -&gt; Time
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; DiffTime
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#picosecondsToDiffTime"><span class="hs-identifier hs-var">Time.picosecondsToDiffTime</span></a></span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; DiffTime) -&gt; (Word64 -&gt; Integer) -&gt; Word64 -&gt; DiffTime
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1_000</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Integer -&gt; Integer) -&gt; (Word64 -&gt; Integer) -&gt; Word64 -&gt; Integer
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Integer
+forall a. Integral a =&gt; a -&gt; Integer
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#toInteger"><span class="hs-identifier hs-var">toInteger</span></a></span></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679067469"><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#MonadMonotonicTime"><span class="hs-identifier hs-type">MonadMonotonicTime</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-comment">--</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- MTL instances</span><span>
+</span><span id="line-73"></span><span class="hs-comment">--</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679067322"><span id="local-6989586621679067323"><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#MonadMonotonicTime"><span class="hs-identifier hs-type">MonadMonotonicTime</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067322"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Control.Monad.Class.MonadTime.SI.html#MonadMonotonicTime"><span class="hs-identifier hs-type">MonadMonotonicTime</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Reader.html#ReaderT"><span class="hs-identifier hs-type">ReaderT</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067323"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067322"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621679067485"><span class="annot"><span class="annottext">getMonotonicTime :: ReaderT r m Time
+</span><a href="Control.Monad.Class.MonadTime.SI.html#getMonotonicTime"><span class="hs-identifier hs-var hs-var hs-var hs-var">getMonotonicTime</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">m Time -&gt; ReaderT r m Time
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; ReaderT r m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">m Time
+forall (m :: * -&gt; *). MonadMonotonicTime m =&gt; m Time
+</span><a href="Control.Monad.Class.MonadTime.SI.html#getMonotonicTime"><span class="hs-identifier hs-var">getMonotonicTime</span></a></span><span>
+</span><span id="line-77"></span></pre></body></html>

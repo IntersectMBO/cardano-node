@@ -1,0 +1,455 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Logging.Tracer.EKG</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-6"></span><span>  </span><span class="annot"><a href="Cardano.Logging.Tracer.EKG.html#ekgTracer"><span class="hs-identifier">ekgTracer</span></a></span><span>
+</span><span id="line-7"></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Logging.DocuGenerator.html"><span class="hs-identifier">Cardano.Logging.DocuGenerator</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Logging.Types.html"><span class="hs-identifier">Cardano.Logging.Types</span></a></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Concurrent.MVar.html"><span class="hs-identifier">Control.Concurrent.MVar</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier">MonadIO</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier">liftIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Control.Tracer.html"><span class="hs-identifier">Control.Tracer</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">T</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier">intercalate</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier">pack</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.Metrics</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Metrics</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.Metrics.Counter</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Counter</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.Metrics.Gauge</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Gauge</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.Metrics.Label</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Label</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">System.Remote.Monitoring</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Server</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">getCounter</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">getGauge</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">getLabel</span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- | It is mandatory to construct only one standard tracer in any application!</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- Throwing away a standard tracer and using a new one will result in an exception</span><span>
+</span><span id="line-27"></span><span id="local-6989586621679175298"><span class="annot"><a href="Cardano.Logging.Tracer.EKG.html#ekgTracer"><span class="hs-identifier hs-type">ekgTracer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679175298"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Metrics.Store</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Server</span></span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679175298"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679175298"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#FormattedMessage"><span class="hs-identifier hs-type">FormattedMessage</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-28"></span><span id="ekgTracer"><span class="annot"><span class="annottext">ekgTracer :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+Either Store Server -&gt; m (Trace m FormattedMessage)
+</span><a href="Cardano.Logging.Tracer.EKG.html#ekgTracer"><span class="hs-identifier hs-var hs-var">ekgTracer</span></a></span></span><span> </span><span id="local-6989586621679175401"><span class="annot"><span class="annottext">Either Store Server
+</span><a href="#local-6989586621679175401"><span class="hs-identifier hs-var">storeOrServer</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Trace m FormattedMessage) -&gt; m (Trace m FormattedMessage)
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Trace m FormattedMessage) -&gt; m (Trace m FormattedMessage))
+-&gt; IO (Trace m FormattedMessage) -&gt; m (Trace m FormattedMessage)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-29"></span><span>    </span><span id="local-6989586621679175402"><span class="annot"><span class="annottext">MVar (Map Text Gauge)
+</span><a href="#local-6989586621679175402"><span class="hs-identifier hs-var">rgsGauges</span></a></span></span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map Text Gauge -&gt; IO (MVar (Map Text Gauge))
+forall a. a -&gt; IO (MVar a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.MVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text Gauge
+forall k a. Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span>
+</span><span id="line-30"></span><span>    </span><span id="local-6989586621679175405"><span class="annot"><span class="annottext">MVar (Map Text Label)
+</span><a href="#local-6989586621679175405"><span class="hs-identifier hs-var">rgsLabels</span></a></span></span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map Text Label -&gt; IO (MVar (Map Text Label))
+forall a. a -&gt; IO (MVar a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.MVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text Label
+forall k a. Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span>
+</span><span id="line-31"></span><span>    </span><span id="local-6989586621679175406"><span class="annot"><span class="annottext">MVar (Map Text Counter)
+</span><a href="#local-6989586621679175406"><span class="hs-identifier hs-var">rgsCounters</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Map Text Counter -&gt; IO (MVar (Map Text Counter))
+forall a. a -&gt; IO (MVar a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.MVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text Counter
+forall k a. Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">Map.empty</span></a></span><span>
+</span><span id="line-32"></span><span>    </span><span class="annot"><span class="annottext">Trace m FormattedMessage -&gt; IO (Trace m FormattedMessage)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Trace m FormattedMessage -&gt; IO (Trace m FormattedMessage))
+-&gt; Trace m FormattedMessage -&gt; IO (Trace m FormattedMessage)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Tracer m (LoggingContext, Either TraceControl FormattedMessage)
+-&gt; Trace m FormattedMessage
+forall (m :: * -&gt; *) a.
+Tracer m (LoggingContext, Either TraceControl a) -&gt; Trace m a
+</span><a href="Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-var">Trace</span></a></span><span> </span><span class="annot"><span class="annottext">(Tracer m (LoggingContext, Either TraceControl FormattedMessage)
+ -&gt; Trace m FormattedMessage)
+-&gt; Tracer m (LoggingContext, Either TraceControl FormattedMessage)
+-&gt; Trace m FormattedMessage
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TracerA m (LoggingContext, Either TraceControl FormattedMessage) ()
+-&gt; Tracer m (LoggingContext, Either TraceControl FormattedMessage)
+forall (m :: * -&gt; *) a. TracerA m a () -&gt; Tracer m a
+</span><a href="Control.Tracer.html#arrow"><span class="hs-identifier hs-var">T.arrow</span></a></span><span> </span><span class="annot"><span class="annottext">(TracerA
+   m (LoggingContext, Either TraceControl FormattedMessage) ()
+ -&gt; Tracer m (LoggingContext, Either TraceControl FormattedMessage))
+-&gt; TracerA
+     m (LoggingContext, Either TraceControl FormattedMessage) ()
+-&gt; Tracer m (LoggingContext, Either TraceControl FormattedMessage)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((LoggingContext, Either TraceControl FormattedMessage) -&gt; m ())
+-&gt; TracerA
+     m (LoggingContext, Either TraceControl FormattedMessage) ()
+forall (m :: * -&gt; *) a.
+Applicative m =&gt;
+(a -&gt; m ()) -&gt; TracerA m a ()
+</span><a href="Control.Tracer.Arrow.html#emit"><span class="hs-identifier hs-var">T.emit</span></a></span><span> </span><span class="annot"><span class="annottext">(((LoggingContext, Either TraceControl FormattedMessage) -&gt; m ())
+ -&gt; TracerA
+      m (LoggingContext, Either TraceControl FormattedMessage) ())
+-&gt; ((LoggingContext, Either TraceControl FormattedMessage) -&gt; m ())
+-&gt; TracerA
+     m (LoggingContext, Either TraceControl FormattedMessage) ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-33"></span><span>      </span><span class="annot"><span class="annottext">MVar (Map Text Gauge)
+-&gt; MVar (Map Text Label)
+-&gt; MVar (Map Text Counter)
+-&gt; (LoggingContext, Either TraceControl FormattedMessage)
+-&gt; m ()
+forall (m :: * -&gt; *).
+MonadIO m =&gt;
+MVar (Map Text Gauge)
+-&gt; MVar (Map Text Label)
+-&gt; MVar (Map Text Counter)
+-&gt; (LoggingContext, Either TraceControl FormattedMessage)
+-&gt; m ()
+</span><a href="#local-6989586621679175410"><span class="hs-identifier hs-var">output</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Gauge)
+</span><a href="#local-6989586621679175402"><span class="hs-identifier hs-var">rgsGauges</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Label)
+</span><a href="#local-6989586621679175405"><span class="hs-identifier hs-var">rgsLabels</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Counter)
+</span><a href="#local-6989586621679175406"><span class="hs-identifier hs-var">rgsCounters</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-35"></span><span>    </span><span id="local-6989586621679175331"><span class="annot"><a href="#local-6989586621679175410"><span class="hs-identifier hs-type">output</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679175331"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-36"></span><span>         </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Gauge.Gauge</span></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Label.Label</span></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Counter.Counter</span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#LoggingContext"><span class="hs-identifier hs-type">LoggingContext</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TraceControl"><span class="hs-identifier hs-type">TraceControl</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#FormattedMessage"><span class="hs-identifier hs-type">FormattedMessage</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679175331"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-41"></span><span>    </span><span id="local-6989586621679175410"><span class="annot"><span class="annottext">output :: forall (m :: * -&gt; *).
+MonadIO m =&gt;
+MVar (Map Text Gauge)
+-&gt; MVar (Map Text Label)
+-&gt; MVar (Map Text Counter)
+-&gt; (LoggingContext, Either TraceControl FormattedMessage)
+-&gt; m ()
+</span><a href="#local-6989586621679175410"><span class="hs-identifier hs-var hs-var">output</span></a></span></span><span> </span><span id="local-6989586621679175420"><span class="annot"><span class="annottext">MVar (Map Text Gauge)
+</span><a href="#local-6989586621679175420"><span class="hs-identifier hs-var">rgsGauges</span></a></span></span><span> </span><span id="local-6989586621679175421"><span class="annot"><span class="annottext">MVar (Map Text Label)
+</span><a href="#local-6989586621679175421"><span class="hs-identifier hs-var">rgsLabels</span></a></span></span><span> </span><span id="local-6989586621679175422"><span class="annot"><span class="annottext">MVar (Map Text Counter)
+</span><a href="#local-6989586621679175422"><span class="hs-identifier hs-var">rgsCounters</span></a></span></span><span>
+</span><span id="line-42"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#LoggingContext"><span class="hs-identifier hs-type">LoggingContext</span></a></span><span class="hs-special">{</span><span id="local-6989586621679175424"><span id="local-6989586621679175425"><span id="local-6989586621679175426"><span id="local-6989586621679175427"><span id="local-6989586621679175428"><span class="annot"><span class="annottext">[Text]
+Maybe SeverityS
+Maybe Privacy
+Maybe DetailLevel
+lcNSInner :: [Text]
+lcNSPrefix :: [Text]
+lcSeverity :: Maybe SeverityS
+lcPrivacy :: Maybe Privacy
+lcDetails :: Maybe DetailLevel
+lcNSInner :: LoggingContext -&gt; [Text]
+lcNSPrefix :: LoggingContext -&gt; [Text]
+lcSeverity :: LoggingContext -&gt; Maybe SeverityS
+lcPrivacy :: LoggingContext -&gt; Maybe Privacy
+lcDetails :: LoggingContext -&gt; Maybe DetailLevel
+</span><a href="#local-6989586621679175424"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span><span class="hs-special">}</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#FormattedMetrics"><span class="hs-identifier hs-type">FormattedMetrics</span></a></span><span> </span><span id="local-6989586621679175435"><span class="annot"><span class="annottext">[Metric]
+</span><a href="#local-6989586621679175435"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-43"></span><span>        </span><span class="annot"><span class="annottext">IO () -&gt; m ()
+forall a. IO a -&gt; m a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; m ()) -&gt; IO () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Metric -&gt; IO ()) -&gt; [Metric] -&gt; IO ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#mapM_"><span class="hs-identifier hs-var">mapM_</span></a></span><span>
+</span><span id="line-44"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MVar (Map Text Gauge)
+-&gt; MVar (Map Text Label)
+-&gt; MVar (Map Text Counter)
+-&gt; [Text]
+-&gt; Metric
+-&gt; IO ()
+</span><a href="#local-6989586621679175437"><span class="hs-identifier hs-var">setIt</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Gauge)
+</span><a href="#local-6989586621679175420"><span class="hs-identifier hs-var">rgsGauges</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Label)
+</span><a href="#local-6989586621679175421"><span class="hs-identifier hs-var">rgsLabels</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Counter)
+</span><a href="#local-6989586621679175422"><span class="hs-identifier hs-var">rgsCounters</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679175425"><span class="hs-identifier hs-var">lcNSPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">[Text] -&gt; [Text] -&gt; [Text]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679175424"><span class="hs-identifier hs-var">lcNSInner</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Metric]
+</span><a href="#local-6989586621679175435"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><a href="#local-6989586621679175410"><span class="hs-identifier hs-var">output</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Gauge)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Label)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Counter)
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679175438"><span class="annot"><span class="annottext">p :: (LoggingContext, Either TraceControl FormattedMessage)
+</span><a href="#local-6989586621679175438"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="annottext">LoggingContext
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#TCDocument"><span class="hs-identifier hs-type">TCDocument</span></a></span><span> </span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="annottext">BackendConfig
+-&gt; (LoggingContext, Either TraceControl FormattedMessage) -&gt; m ()
+forall (m :: * -&gt; *) a.
+MonadIO m =&gt;
+BackendConfig -&gt; (LoggingContext, Either TraceControl a) -&gt; m ()
+</span><a href="Cardano.Logging.DocuGenerator.html#docIt"><span class="hs-identifier hs-var">docIt</span></a></span><span> </span><span class="annot"><span class="annottext">BackendConfig
+</span><a href="Cardano.Logging.Types.html#EKGBackend"><span class="hs-identifier hs-var">EKGBackend</span></a></span><span> </span><span class="annot"><span class="annottext">(LoggingContext, Either TraceControl FormattedMessage)
+</span><a href="#local-6989586621679175438"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><a href="#local-6989586621679175410"><span class="hs-identifier hs-var">output</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Gauge)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Label)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Counter)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#LoggingContext"><span class="hs-identifier hs-type">LoggingContext</span></a></span><span class="hs-special">{</span><span class="hs-special">}</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Either TraceControl FormattedMessage
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-48"></span><span>      </span><span class="annot"><span class="annottext">() -&gt; m ()
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span>    </span><span class="annot"><a href="#local-6989586621679175437"><span class="hs-identifier hs-type">setIt</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-51"></span><span>         </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Gauge.Gauge</span></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Label.Label</span></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Counter.Counter</span></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-55"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Logging.Types.html#Metric"><span class="hs-identifier hs-type">Metric</span></a></span><span>
+</span><span id="line-56"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>    </span><span id="local-6989586621679175437"><span class="annot"><span class="annottext">setIt :: MVar (Map Text Gauge)
+-&gt; MVar (Map Text Label)
+-&gt; MVar (Map Text Counter)
+-&gt; [Text]
+-&gt; Metric
+-&gt; IO ()
+</span><a href="#local-6989586621679175437"><span class="hs-identifier hs-var hs-var">setIt</span></a></span></span><span> </span><span id="local-6989586621679175442"><span class="annot"><span class="annottext">MVar (Map Text Gauge)
+</span><a href="#local-6989586621679175442"><span class="hs-identifier hs-var">rgsGauges</span></a></span></span><span> </span><span id="local-6989586621679175443"><span class="annot"><span class="annottext">MVar (Map Text Label)
+</span><a href="#local-6989586621679175443"><span class="hs-identifier hs-var">_rgsLabels</span></a></span></span><span> </span><span id="local-6989586621679175444"><span class="annot"><span class="annottext">MVar (Map Text Counter)
+</span><a href="#local-6989586621679175444"><span class="hs-identifier hs-var">_rgsCounters</span></a></span></span><span> </span><span id="local-6989586621679175445"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679175445"><span class="hs-identifier hs-var">_namespace</span></a></span></span><span>
+</span><span id="line-58"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#IntM"><span class="hs-identifier hs-type">IntM</span></a></span><span> </span><span id="local-6989586621679175447"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679175447"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679175448"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679175448"><span class="hs-identifier hs-var">theInt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-59"></span><span>      </span><span id="local-6989586621679175449"><span class="annot"><span class="annottext">Gauge
+</span><a href="#local-6989586621679175449"><span class="hs-identifier hs-var">gauge</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Gauge)
+-&gt; (Map Text Gauge -&gt; IO (Map Text Gauge, Gauge)) -&gt; IO Gauge
+forall a b. MVar a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Concurrent.MVar.html#modifyMVar"><span class="hs-identifier hs-var">modifyMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Gauge)
+</span><a href="#local-6989586621679175442"><span class="hs-identifier hs-var">rgsGauges</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Text -&gt; Store -&gt; IO Gauge)
+-&gt; (Text -&gt; Server -&gt; IO Gauge)
+-&gt; Text
+-&gt; Map Text Gauge
+-&gt; IO (Map Text Gauge, Gauge)
+forall m.
+(Text -&gt; Store -&gt; IO m)
+-&gt; (Text -&gt; Server -&gt; IO m)
+-&gt; Text
+-&gt; Map Text m
+-&gt; IO (Map Text m, m)
+</span><a href="#local-6989586621679175451"><span class="hs-identifier hs-var">setFunc</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Store -&gt; IO Gauge
+</span><span class="hs-identifier hs-var">Metrics.createGauge</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Server -&gt; IO Gauge
+</span><span class="hs-identifier hs-var">getGauge</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679175447"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>      </span><span class="annot"><span class="annottext">Gauge -&gt; Int64 -&gt; IO ()
+</span><span class="hs-identifier hs-var">Gauge.set</span></span><span> </span><span class="annot"><span class="annottext">Gauge
+</span><a href="#local-6989586621679175449"><span class="hs-identifier hs-var">gauge</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Int64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679175448"><span class="hs-identifier hs-var">theInt</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>    </span><span class="annot"><a href="#local-6989586621679175437"><span class="hs-identifier hs-var">setIt</span></a></span><span> </span><span id="local-6989586621679175454"><span class="annot"><span class="annottext">MVar (Map Text Gauge)
+</span><a href="#local-6989586621679175454"><span class="hs-identifier hs-var">_rgsGauges</span></a></span></span><span> </span><span id="local-6989586621679175455"><span class="annot"><span class="annottext">MVar (Map Text Label)
+</span><a href="#local-6989586621679175455"><span class="hs-identifier hs-var">rgsLabels</span></a></span></span><span> </span><span id="local-6989586621679175456"><span class="annot"><span class="annottext">MVar (Map Text Counter)
+</span><a href="#local-6989586621679175456"><span class="hs-identifier hs-var">_rgsCounters</span></a></span></span><span> </span><span id="local-6989586621679175457"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679175457"><span class="hs-identifier hs-var">_namespace</span></a></span></span><span>
+</span><span id="line-62"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#DoubleM"><span class="hs-identifier hs-type">DoubleM</span></a></span><span> </span><span id="local-6989586621679175459"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679175459"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679175460"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679175460"><span class="hs-identifier hs-var">theDouble</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-63"></span><span>        </span><span id="local-6989586621679175461"><span class="annot"><span class="annottext">Label
+</span><a href="#local-6989586621679175461"><span class="hs-keyword hs-var">label</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Label)
+-&gt; (Map Text Label -&gt; IO (Map Text Label, Label)) -&gt; IO Label
+forall a b. MVar a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Concurrent.MVar.html#modifyMVar"><span class="hs-identifier hs-var">modifyMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Label)
+</span><a href="#local-6989586621679175455"><span class="hs-identifier hs-var">rgsLabels</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Text -&gt; Store -&gt; IO Label)
+-&gt; (Text -&gt; Server -&gt; IO Label)
+-&gt; Text
+-&gt; Map Text Label
+-&gt; IO (Map Text Label, Label)
+forall m.
+(Text -&gt; Store -&gt; IO m)
+-&gt; (Text -&gt; Server -&gt; IO m)
+-&gt; Text
+-&gt; Map Text m
+-&gt; IO (Map Text m, m)
+</span><a href="#local-6989586621679175451"><span class="hs-identifier hs-var">setFunc</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Store -&gt; IO Label
+</span><span class="hs-identifier hs-var">Metrics.createLabel</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Server -&gt; IO Label
+</span><span class="hs-identifier hs-var">getLabel</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679175459"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>        </span><span class="annot"><span class="annottext">Label -&gt; Text -&gt; IO ()
+</span><span class="hs-identifier hs-var">Label.set</span></span><span> </span><span class="annot"><span class="annottext">Label
+</span><a href="#local-6989586621679175461"><span class="hs-keyword hs-var">label</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Text
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#pack"><span class="hs-identifier hs-var">pack</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Text) -&gt; (Double -&gt; String) -&gt; Double -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679175460"><span class="hs-identifier hs-var">theDouble</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>    </span><span class="annot"><a href="#local-6989586621679175437"><span class="hs-identifier hs-var">setIt</span></a></span><span> </span><span id="local-6989586621679175466"><span class="annot"><span class="annottext">MVar (Map Text Gauge)
+</span><a href="#local-6989586621679175466"><span class="hs-identifier hs-var">_rgsGauges</span></a></span></span><span> </span><span id="local-6989586621679175467"><span class="annot"><span class="annottext">MVar (Map Text Label)
+</span><a href="#local-6989586621679175467"><span class="hs-identifier hs-var">rgsLabels</span></a></span></span><span> </span><span id="local-6989586621679175468"><span class="annot"><span class="annottext">MVar (Map Text Counter)
+</span><a href="#local-6989586621679175468"><span class="hs-identifier hs-var">_rgsCounters</span></a></span></span><span> </span><span id="local-6989586621679175469"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679175469"><span class="hs-identifier hs-var">_namespace</span></a></span></span><span>
+</span><span id="line-66"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#PrometheusM"><span class="hs-identifier hs-type">PrometheusM</span></a></span><span> </span><span id="local-6989586621679175471"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679175471"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679175472"><span class="annot"><span class="annottext">[(Text, Text)]
+</span><a href="#local-6989586621679175472"><span class="hs-identifier hs-var">keyLabels</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-67"></span><span>        </span><span id="local-6989586621679175473"><span class="annot"><span class="annottext">Label
+</span><a href="#local-6989586621679175473"><span class="hs-keyword hs-var">label</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Label)
+-&gt; (Map Text Label -&gt; IO (Map Text Label, Label)) -&gt; IO Label
+forall a b. MVar a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Concurrent.MVar.html#modifyMVar"><span class="hs-identifier hs-var">modifyMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Label)
+</span><a href="#local-6989586621679175467"><span class="hs-identifier hs-var">rgsLabels</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Text -&gt; Store -&gt; IO Label)
+-&gt; (Text -&gt; Server -&gt; IO Label)
+-&gt; Text
+-&gt; Map Text Label
+-&gt; IO (Map Text Label, Label)
+forall m.
+(Text -&gt; Store -&gt; IO m)
+-&gt; (Text -&gt; Server -&gt; IO m)
+-&gt; Text
+-&gt; Map Text m
+-&gt; IO (Map Text m, m)
+</span><a href="#local-6989586621679175451"><span class="hs-identifier hs-var">setFunc</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Store -&gt; IO Label
+</span><span class="hs-identifier hs-var">Metrics.createLabel</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Server -&gt; IO Label
+</span><span class="hs-identifier hs-var">getLabel</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679175471"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span><span>        </span><span class="annot"><span class="annottext">Label -&gt; Text -&gt; IO ()
+</span><span class="hs-identifier hs-var">Label.set</span></span><span> </span><span class="annot"><span class="annottext">Label
+</span><a href="#local-6989586621679175473"><span class="hs-keyword hs-var">label</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Text, Text)] -&gt; Text
+</span><a href="Cardano.Logging.Tracer.EKG.html#presentPrometheusM"><span class="hs-identifier hs-var">presentPrometheusM</span></a></span><span> </span><span class="annot"><span class="annottext">[(Text, Text)]
+</span><a href="#local-6989586621679175472"><span class="hs-identifier hs-var">keyLabels</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><a href="#local-6989586621679175437"><span class="hs-identifier hs-var">setIt</span></a></span><span> </span><span id="local-6989586621679175475"><span class="annot"><span class="annottext">MVar (Map Text Gauge)
+</span><a href="#local-6989586621679175475"><span class="hs-identifier hs-var">_rgsGauges</span></a></span></span><span> </span><span id="local-6989586621679175476"><span class="annot"><span class="annottext">MVar (Map Text Label)
+</span><a href="#local-6989586621679175476"><span class="hs-identifier hs-var">_rgsLabels</span></a></span></span><span> </span><span id="local-6989586621679175477"><span class="annot"><span class="annottext">MVar (Map Text Counter)
+</span><a href="#local-6989586621679175477"><span class="hs-identifier hs-var">rgsCounters</span></a></span></span><span> </span><span id="local-6989586621679175478"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679175478"><span class="hs-identifier hs-var">_namespace</span></a></span></span><span>
+</span><span id="line-71"></span><span>      </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Logging.Types.html#CounterM"><span class="hs-identifier hs-type">CounterM</span></a></span><span> </span><span id="local-6989586621679175480"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679175480"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679175481"><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621679175481"><span class="hs-identifier hs-var">mbInt</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-72"></span><span>        </span><span id="local-6989586621679175482"><span class="annot"><span class="annottext">Counter
+</span><a href="#local-6989586621679175482"><span class="hs-identifier hs-var">counter</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Counter)
+-&gt; (Map Text Counter -&gt; IO (Map Text Counter, Counter))
+-&gt; IO Counter
+forall a b. MVar a -&gt; (a -&gt; IO (a, b)) -&gt; IO b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Concurrent.MVar.html#modifyMVar"><span class="hs-identifier hs-var">modifyMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar (Map Text Counter)
+</span><a href="#local-6989586621679175477"><span class="hs-identifier hs-var">rgsCounters</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Text -&gt; Store -&gt; IO Counter)
+-&gt; (Text -&gt; Server -&gt; IO Counter)
+-&gt; Text
+-&gt; Map Text Counter
+-&gt; IO (Map Text Counter, Counter)
+forall m.
+(Text -&gt; Store -&gt; IO m)
+-&gt; (Text -&gt; Server -&gt; IO m)
+-&gt; Text
+-&gt; Map Text m
+-&gt; IO (Map Text m, m)
+</span><a href="#local-6989586621679175451"><span class="hs-identifier hs-var">setFunc</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Store -&gt; IO Counter
+</span><span class="hs-identifier hs-var">Metrics.createCounter</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Server -&gt; IO Counter
+</span><span class="hs-identifier hs-var">getCounter</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679175480"><span class="hs-identifier hs-var">name</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621679175481"><span class="hs-identifier hs-var">mbInt</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-74"></span><span>          </span><span class="annot"><span class="annottext">Maybe Int
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Counter -&gt; IO ()
+</span><span class="hs-identifier hs-var">Counter.inc</span></span><span> </span><span class="annot"><span class="annottext">Counter
+</span><a href="#local-6989586621679175482"><span class="hs-identifier hs-var">counter</span></a></span><span>
+</span><span id="line-75"></span><span>          </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679175485"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679175485"><span class="hs-identifier hs-var">i</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Counter -&gt; Int64 -&gt; IO ()
+</span><span class="hs-identifier hs-var">Counter.add</span></span><span> </span><span class="annot"><span class="annottext">Counter
+</span><a href="#local-6989586621679175482"><span class="hs-identifier hs-var">counter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679175485"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>
+</span><span id="line-77"></span><span>    </span><span id="local-6989586621679175347"><span class="annot"><a href="#local-6989586621679175451"><span class="hs-identifier hs-type">setFunc</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-78"></span><span>         </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Metrics.Store</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679175347"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Server</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679175347"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-80"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-81"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679175347"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-82"></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map.Map</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679175347"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679175347"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-83"></span><span>    </span><span id="local-6989586621679175451"><span class="annot"><span class="annottext">setFunc :: forall m.
+(Text -&gt; Store -&gt; IO m)
+-&gt; (Text -&gt; Server -&gt; IO m)
+-&gt; Text
+-&gt; Map Text m
+-&gt; IO (Map Text m, m)
+</span><a href="#local-6989586621679175451"><span class="hs-identifier hs-var hs-var">setFunc</span></a></span></span><span> </span><span id="local-6989586621679175492"><span class="annot"><span class="annottext">Text -&gt; Store -&gt; IO m
+</span><a href="#local-6989586621679175492"><span class="hs-identifier hs-var">creator1</span></a></span></span><span> </span><span id="local-6989586621679175493"><span class="annot"><span class="annottext">Text -&gt; Server -&gt; IO m
+</span><a href="#local-6989586621679175493"><span class="hs-identifier hs-var">creator2</span></a></span></span><span> </span><span id="local-6989586621679175494"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679175494"><span class="hs-identifier hs-var">name</span></a></span></span><span> </span><span id="local-6989586621679175495"><span class="annot"><span class="annottext">Map Text m
+</span><a href="#local-6989586621679175495"><span class="hs-identifier hs-var">rgsMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-84"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Map Text m -&gt; Maybe m
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">Map.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679175494"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text m
+</span><a href="#local-6989586621679175495"><span class="hs-identifier hs-var">rgsMap</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-85"></span><span>          </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679175497"><span class="annot"><span class="annottext">m
+</span><a href="#local-6989586621679175497"><span class="hs-identifier hs-var">gauge</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-86"></span><span>            </span><span class="annot"><span class="annottext">(Map Text m, m) -&gt; IO (Map Text m, m)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map Text m
+</span><a href="#local-6989586621679175495"><span class="hs-identifier hs-var">rgsMap</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">m
+</span><a href="#local-6989586621679175497"><span class="hs-identifier hs-var">gauge</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>          </span><span class="annot"><span class="annottext">Maybe m
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-88"></span><span>            </span><span id="local-6989586621679175498"><span class="annot"><span class="annottext">m
+</span><a href="#local-6989586621679175498"><span class="hs-identifier hs-var">gauge</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Either Store Server
+</span><a href="#local-6989586621679175401"><span class="hs-identifier hs-var">storeOrServer</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-89"></span><span>                        </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679175499"><span class="annot"><span class="annottext">Store
+</span><a href="#local-6989586621679175499"><span class="hs-identifier hs-var">store</span></a></span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Store -&gt; IO m
+</span><a href="#local-6989586621679175492"><span class="hs-identifier hs-var">creator1</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679175494"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Store
+</span><a href="#local-6989586621679175499"><span class="hs-identifier hs-var">store</span></a></span><span>
+</span><span id="line-90"></span><span>                        </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679175500"><span class="annot"><span class="annottext">Server
+</span><a href="#local-6989586621679175500"><span class="hs-identifier hs-var">server</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; Server -&gt; IO m
+</span><a href="#local-6989586621679175493"><span class="hs-identifier hs-var">creator2</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679175494"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Server
+</span><a href="#local-6989586621679175500"><span class="hs-identifier hs-var">server</span></a></span><span>
+</span><span id="line-91"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679175502"><span class="annot"><span class="annottext">rgsMap' :: Map Text m
+</span><a href="#local-6989586621679175502"><span class="hs-identifier hs-var hs-var">rgsMap'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text -&gt; m -&gt; Map Text m -&gt; Map Text m
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">Map.insert</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679175494"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">m
+</span><a href="#local-6989586621679175498"><span class="hs-identifier hs-var">gauge</span></a></span><span> </span><span class="annot"><span class="annottext">Map Text m
+</span><a href="#local-6989586621679175495"><span class="hs-identifier hs-var">rgsMap</span></a></span><span>
+</span><span id="line-92"></span><span>            </span><span class="annot"><span class="annottext">(Map Text m, m) -&gt; IO (Map Text m, m)
+forall a. a -&gt; IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map Text m
+</span><a href="#local-6989586621679175502"><span class="hs-identifier hs-var">rgsMap'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">m
+</span><a href="#local-6989586621679175498"><span class="hs-identifier hs-var">gauge</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="annot"><a href="Cardano.Logging.Tracer.EKG.html#presentPrometheusM"><span class="hs-identifier hs-type">presentPrometheusM</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-95"></span><span id="presentPrometheusM"><span class="annot"><span class="annottext">presentPrometheusM :: [(Text, Text)] -&gt; Text
+</span><a href="Cardano.Logging.Tracer.EKG.html#presentPrometheusM"><span class="hs-identifier hs-var hs-var">presentPrometheusM</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-96"></span><span>  </span><span class="annot"><span class="annottext">[Text] -&gt; Text
+</span><a href="#local-6989586621679175504"><span class="hs-keyword hs-var">label</span></a></span><span> </span><span class="annot"><span class="annottext">([Text] -&gt; Text)
+-&gt; ([(Text, Text)] -&gt; [Text]) -&gt; [(Text, Text)] -&gt; Text
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">((Text, Text) -&gt; Text) -&gt; [(Text, Text)] -&gt; [Text]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">(Text, Text) -&gt; Text
+forall {a}. (Semigroup a, IsString a) =&gt; (a, a) -&gt; a
+</span><a href="#local-6989586621679175505"><span class="hs-identifier hs-var">pair</span></a></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-98"></span><span>    </span><span id="local-6989586621679175504"><span class="annot"><span class="annottext">label :: [Text] -&gt; Text
+</span><a href="#local-6989586621679175504"><span class="hs-keyword hs-var hs-var">label</span></a></span></span><span> </span><span id="local-6989586621679175511"><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679175511"><span class="hs-identifier hs-var">pairs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;{&quot;</span></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; [Text] -&gt; Text
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html#intercalate"><span class="hs-identifier hs-var">intercalate</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;,&quot;</span></span><span> </span><span class="annot"><span class="annottext">[Text]
+</span><a href="#local-6989586621679175511"><span class="hs-identifier hs-var">pairs</span></a></span><span> </span><span class="annot"><span class="annottext">Text -&gt; Text -&gt; Text
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;} 1&quot;</span></span><span>
+</span><span id="line-99"></span><span>    </span><span id="local-6989586621679175505"><span class="annot"><span class="annottext">pair :: (a, a) -&gt; a
+</span><a href="#local-6989586621679175505"><span class="hs-identifier hs-var hs-var">pair</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679175519"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679175519"><span class="hs-identifier hs-var">k</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679175520"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679175520"><span class="hs-identifier hs-var">v</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679175519"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;=\&quot;&quot;</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679175520"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-string">&quot;\&quot;&quot;</span></span><span>
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span></pre></body></html>

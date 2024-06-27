@@ -1,0 +1,236 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics.UI.Threepenny.DragNDrop</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-2"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Synopsis</span></span><span>
+</span><span id="line-3"></span><span>    </span><span class="hs-comment">-- | API for handling drag and drop operations.</span><span>
+</span><span id="line-4"></span><span>    </span><span class="hs-comment">-- </span><span>
+</span><span id="line-5"></span><span>    </span><span class="hs-comment">-- See the documentation below for details on the drag and drop model.</span><span>
+</span><span id="line-6"></span><span>    </span><span class="hs-comment">-- </span><span>
+</span><span id="line-7"></span><span>    </span><span class="hs-comment">-- WARNING: Events in this module may not behave as expected.</span><span>
+</span><span id="line-8"></span><span>    </span><span class="hs-comment">-- The model is currently implemented in terms of HTML 5 drag and drop,</span><span>
+</span><span id="line-9"></span><span>    </span><span class="hs-comment">-- but unfortunately,</span><span>
+</span><span id="line-10"></span><span>    </span><span class="hs-comment">-- the HTML 5 specification for drag and drop is horrible and</span><span>
+</span><span id="line-11"></span><span>    </span><span class="hs-comment">-- browser implementations are buggy.</span><span>
+</span><span id="line-12"></span><span>    </span><span>
+</span><span id="line-13"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Documentation</span></span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#draggable"><span class="hs-identifier">draggable</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#droppable"><span class="hs-identifier">droppable</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#dragData"><span class="hs-identifier">dragData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-15"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#DragData"><span class="hs-identifier">DragData</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#drag"><span class="hs-identifier">drag</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#dragStart"><span class="hs-identifier">dragStart</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#dragEnd"><span class="hs-identifier">dragEnd</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#drop"><span class="hs-identifier">drop</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#dragEnter"><span class="hs-identifier">dragEnter</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#dragLeave"><span class="hs-identifier">dragLeave</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#dragOver"><span class="hs-identifier">dragOver</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.List.html#drop"><span class="hs-identifier">drop</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Core.html"><span class="hs-identifier">Graphics.UI.Threepenny.Core</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    Attributes
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- | Enable or disable whether the element can be dragged by the user.</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- An element with draggable set to 'True' will receive</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- 'drag', 'dragStart' and 'dragEnd' events.</span><span>
+</span><span id="line-30"></span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#draggable"><span class="hs-identifier hs-type">draggable</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Core.html#WriteAttr"><span class="hs-identifier hs-type">WriteAttr</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-31"></span><span id="draggable"><span class="annot"><span class="annottext">draggable :: WriteAttr Element Bool
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#draggable"><span class="hs-identifier hs-var hs-var">draggable</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Element -&gt; UI ()) -&gt; WriteAttr Element Bool
+forall i x. (i -&gt; x -&gt; UI ()) -&gt; WriteAttr x i
+</span><a href="Graphics.UI.Threepenny.Core.html#mkWriteAttr"><span class="hs-identifier hs-var">mkWriteAttr</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Element -&gt; UI ()
+</span><a href="#local-6989586621679118335"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-33"></span><span>    </span><span id="local-6989586621679118335"><span class="annot"><span class="annottext">set :: Bool -&gt; Element -&gt; UI ()
+</span><a href="#local-6989586621679118335"><span class="hs-identifier hs-var hs-var">set</span></a></span></span><span> </span><span id="local-6989586621679118336"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679118336"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String () -&gt; String -&gt; Element -&gt; UI ()
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; x -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Core.html#set%27"><span class="hs-identifier hs-var">set'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; ReadWriteAttr Element String ()
+</span><a href="Graphics.UI.Threepenny.Core.html#attr"><span class="hs-identifier hs-var">attr</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;draggable&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(String -&gt; Element -&gt; UI ()) -&gt; String -&gt; Element -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679118336"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;true&quot;</span></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;false&quot;</span></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="annot"><span class="hs-comment">-- | Set the data that is transferred when dragging this element.</span></span><span>
+</span><span id="line-36"></span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#dragData"><span class="hs-identifier hs-type">dragData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Core.html#WriteAttr"><span class="hs-identifier hs-type">WriteAttr</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#DragData"><span class="hs-identifier hs-type">DragData</span></a></span><span>
+</span><span id="line-37"></span><span id="dragData"><span class="annot"><span class="annottext">dragData :: ReadWriteAttr Element String ()
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#dragData"><span class="hs-identifier hs-var hs-var">dragData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(String -&gt; Element -&gt; UI ()) -&gt; ReadWriteAttr Element String ()
+forall i x. (i -&gt; x -&gt; UI ()) -&gt; WriteAttr x i
+</span><a href="Graphics.UI.Threepenny.Core.html#mkWriteAttr"><span class="hs-identifier hs-var">mkWriteAttr</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Element -&gt; UI ()
+</span><a href="#local-6989586621679118339"><span class="hs-identifier hs-var">set</span></a></span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-39"></span><span>    </span><span id="local-6989586621679118339"><span class="annot"><span class="annottext">set :: String -&gt; Element -&gt; UI ()
+</span><a href="#local-6989586621679118339"><span class="hs-identifier hs-var hs-var">set</span></a></span></span><span> </span><span id="local-6989586621679118340"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679118340"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ReadWriteAttr Element String () -&gt; String -&gt; Element -&gt; UI ()
+forall x i o. ReadWriteAttr x i o -&gt; i -&gt; x -&gt; UI ()
+</span><a href="Graphics.UI.Threepenny.Core.html#set%27"><span class="hs-identifier hs-var">set'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; ReadWriteAttr Element String ()
+</span><a href="Graphics.UI.Threepenny.Core.html#attr"><span class="hs-identifier hs-var">attr</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ondragstart&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(String -&gt; Element -&gt; UI ()) -&gt; String -&gt; Element -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-40"></span><span>        </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;event.dataTransfer.setData('dragData', '&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679118340"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;')&quot;</span></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- | Enable or disable whether the element accepts drops.</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- An element with 'droppable' set to 'True' will receive</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- 'drop', 'dragOver', 'dragEnter' and 'dragLeave' events.</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- Child elements of a 'droppable' element may also be 'droppable'.</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- When dragging something over an element, the closest ancestor element</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- that is 'droppable' will be the target and receive corresponding</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- events.</span><span>
+</span><span id="line-51"></span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#droppable"><span class="hs-identifier hs-type">droppable</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Core.html#WriteAttr"><span class="hs-identifier hs-type">WriteAttr</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-52"></span><span id="droppable"><span class="annot"><span class="annottext">droppable :: WriteAttr Element Bool
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#droppable"><span class="hs-identifier hs-var hs-var">droppable</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Element -&gt; UI ()) -&gt; WriteAttr Element Bool
+forall i x. (i -&gt; x -&gt; UI ()) -&gt; WriteAttr x i
+</span><a href="Graphics.UI.Threepenny.Core.html#mkWriteAttr"><span class="hs-identifier hs-var">mkWriteAttr</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Element -&gt; UI ()
+forall {a}. Widget a =&gt; Bool -&gt; a -&gt; UI ()
+</span><a href="#local-6989586621679118341"><span class="hs-identifier hs-var">enable</span></a></span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>    </span><span id="local-6989586621679118341"><span class="annot"><span class="annottext">enable :: Bool -&gt; a -&gt; UI ()
+</span><a href="#local-6989586621679118341"><span class="hs-identifier hs-var hs-var">enable</span></a></span></span><span> </span><span id="local-6989586621679118347"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679118347"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UI Element -&gt; UI ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(UI Element -&gt; UI ()) -&gt; (a -&gt; UI Element) -&gt; a -&gt; UI ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679118347"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">a -&gt; UI Element
+forall {w}. Widget w =&gt; w -&gt; UI Element
+</span><a href="#local-6989586621679118350"><span class="hs-identifier hs-var">allowDrop</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">a -&gt; UI Element
+forall {w}. Widget w =&gt; w -&gt; UI Element
+</span><a href="#local-6989586621679118351"><span class="hs-identifier hs-var">blockDrop</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span id="local-6989586621679118350"><span class="annot"><span class="annottext">allowDrop :: w -&gt; UI Element
+</span><a href="#local-6989586621679118350"><span class="hs-identifier hs-var hs-var">allowDrop</span></a></span></span><span> </span><span id="local-6989586621679118356"><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621679118356"><span class="hs-identifier hs-var">el</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>        </span><span class="annot"><span class="annottext">w -&gt; UI Element
+forall (m :: * -&gt; *) w. (MonadIO m, Widget w) =&gt; w -&gt; m Element
+</span><a href="Graphics.UI.Threepenny.Core.html#element"><span class="hs-identifier hs-var">element</span></a></span><span> </span><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621679118356"><span class="hs-identifier hs-var">el</span></a></span><span class="hs-cpp">
+            # set (attr &quot;ondragover&quot;) &quot;event.preventDefault()&quot;
+</span><span class="hs-cpp">            # set (attr &quot;ondrop&quot;    ) &quot;event.preventDefault()&quot;
+</span><span>    </span><span id="local-6989586621679118351"><span class="annot"><span class="annottext">blockDrop :: w -&gt; UI Element
+</span><a href="#local-6989586621679118351"><span class="hs-identifier hs-var hs-var">blockDrop</span></a></span></span><span> </span><span id="local-6989586621679118363"><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621679118363"><span class="hs-identifier hs-var">el</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-60"></span><span>        </span><span class="annot"><span class="annottext">w -&gt; UI Element
+forall (m :: * -&gt; *) w. (MonadIO m, Widget w) =&gt; w -&gt; m Element
+</span><a href="Graphics.UI.Threepenny.Core.html#element"><span class="hs-identifier hs-var">element</span></a></span><span> </span><span class="annot"><span class="annottext">w
+</span><a href="#local-6989586621679118363"><span class="hs-identifier hs-var">el</span></a></span><span class="hs-cpp">
+            # set (attr &quot;ondragover&quot;) &quot;&quot;
+</span><span class="hs-cpp">            # set (attr &quot;ondrop&quot;    ) &quot;&quot;
+</span><span>
+</span><span id="line-64"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    Events
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- | Data carried by a dragged element. </span><span>
+</span><span id="line-68"></span><span class="hs-comment">--</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- FIXME: Empty data is currently encoded by the empty String.</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- Change this to 'Maybe String' instead.</span><span>
+</span><span id="line-71"></span><span class="hs-keyword">type</span><span> </span><span id="DragData"><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#DragData"><span class="hs-identifier hs-var">DragData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#withDragData"><span class="hs-identifier hs-type">withDragData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#EventData"><span class="hs-identifier hs-type">EventData</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-74"></span><span id="withDragData"><span class="annot"><span class="annottext">withDragData :: Event EventData -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#withDragData"><span class="hs-identifier hs-var hs-var">withDragData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(EventData -&gt; String) -&gt; Event EventData -&gt; Event String
+forall a b. (a -&gt; b) -&gt; Event a -&gt; Event b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[String] -&gt; String
+</span><a href="#local-6989586621679118365"><span class="hs-identifier hs-var">extract</span></a></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; String)
+-&gt; (EventData -&gt; [String]) -&gt; EventData -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">EventData -&gt; [String]
+forall a. FromJSON a =&gt; EventData -&gt; a
+</span><a href="Graphics.UI.Threepenny.Internal.html#unsafeFromJSON"><span class="hs-identifier hs-var">unsafeFromJSON</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-76"></span><span>    </span><span id="local-6989586621679118365"><span class="annot"><span class="annottext">extract :: [String] -&gt; String
+</span><a href="#local-6989586621679118365"><span class="hs-identifier hs-var hs-var">extract</span></a></span></span><span> </span><span class="hs-special">[</span><span id="local-6989586621679118367"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679118367"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679118367"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><a href="#local-6989586621679118365"><span class="hs-identifier hs-var">extract</span></a></span><span> </span><span class="annot"><span class="annottext">[String]
+</span><span class="hs-identifier">_</span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="annot"><span class="hs-comment">-- | Occurs periodically while the element is being dragged around.</span></span><span>
+</span><span id="line-80"></span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#drag"><span class="hs-identifier hs-type">drag</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#DragData"><span class="hs-identifier hs-type">DragData</span></a></span><span>
+</span><span id="line-81"></span><span id="drag"><span class="annot"><span class="annottext">drag :: Element -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#drag"><span class="hs-identifier hs-var hs-var">drag</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Event EventData -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#withDragData"><span class="hs-identifier hs-var">withDragData</span></a></span><span> </span><span class="annot"><span class="annottext">(Event EventData -&gt; Event String)
+-&gt; (Element -&gt; Event EventData) -&gt; Element -&gt; Event String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Element -&gt; Event EventData
+</span><a href="Graphics.UI.Threepenny.Internal.html#domEvent"><span class="hs-identifier hs-var">domEvent</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;drag&quot;</span></span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="annot"><span class="hs-comment">-- | Dragging the element starts.</span></span><span>
+</span><span id="line-84"></span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#dragStart"><span class="hs-identifier hs-type">dragStart</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#DragData"><span class="hs-identifier hs-type">DragData</span></a></span><span>
+</span><span id="line-85"></span><span id="dragStart"><span class="annot"><span class="annottext">dragStart :: Element -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#dragStart"><span class="hs-identifier hs-var hs-var">dragStart</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Event EventData -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#withDragData"><span class="hs-identifier hs-var">withDragData</span></a></span><span> </span><span class="annot"><span class="annottext">(Event EventData -&gt; Event String)
+-&gt; (Element -&gt; Event EventData) -&gt; Element -&gt; Event String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Element -&gt; Event EventData
+</span><a href="Graphics.UI.Threepenny.Internal.html#domEvent"><span class="hs-identifier hs-var">domEvent</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dragstart&quot;</span></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- | Dragging the element ends.</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- WARNING: This event can occur both before and after a corresponding 'drop' event.</span><span>
+</span><span id="line-90"></span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#dragEnd"><span class="hs-identifier hs-type">dragEnd</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#DragData"><span class="hs-identifier hs-type">DragData</span></a></span><span>
+</span><span id="line-91"></span><span id="dragEnd"><span class="annot"><span class="annottext">dragEnd :: Element -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#dragEnd"><span class="hs-identifier hs-var hs-var">dragEnd</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Event EventData -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#withDragData"><span class="hs-identifier hs-var">withDragData</span></a></span><span> </span><span class="annot"><span class="annottext">(Event EventData -&gt; Event String)
+-&gt; (Element -&gt; Event EventData) -&gt; Element -&gt; Event String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Element -&gt; Event EventData
+</span><a href="Graphics.UI.Threepenny.Internal.html#domEvent"><span class="hs-identifier hs-var">domEvent</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dragend&quot;</span></span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- | The element is now the current target element for a 'drop'.</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- </span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- WARNING: This element is buggy when moving the mouse over child elements.</span><span>
+</span><span id="line-96"></span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#dragEnter"><span class="hs-identifier hs-type">dragEnter</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#DragData"><span class="hs-identifier hs-type">DragData</span></a></span><span>
+</span><span id="line-97"></span><span id="dragEnter"><span class="annot"><span class="annottext">dragEnter :: Element -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#dragEnter"><span class="hs-identifier hs-var hs-var">dragEnter</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Event EventData -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#withDragData"><span class="hs-identifier hs-var">withDragData</span></a></span><span> </span><span class="annot"><span class="annottext">(Event EventData -&gt; Event String)
+-&gt; (Element -&gt; Event EventData) -&gt; Element -&gt; Event String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Element -&gt; Event EventData
+</span><a href="Graphics.UI.Threepenny.Internal.html#domEvent"><span class="hs-identifier hs-var">domEvent</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dragenter&quot;</span></span><span>
+</span><span id="line-98"></span><span>
+</span><span id="line-99"></span><span class="annot"><span class="hs-comment">-- | Occurs periodically while the element is the current target element.</span></span><span>
+</span><span id="line-100"></span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#dragOver"><span class="hs-identifier hs-type">dragOver</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#DragData"><span class="hs-identifier hs-type">DragData</span></a></span><span>
+</span><span id="line-101"></span><span id="dragOver"><span class="annot"><span class="annottext">dragOver :: Element -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#dragOver"><span class="hs-identifier hs-var hs-var">dragOver</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Event EventData -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#withDragData"><span class="hs-identifier hs-var">withDragData</span></a></span><span> </span><span class="annot"><span class="annottext">(Event EventData -&gt; Event String)
+-&gt; (Element -&gt; Event EventData) -&gt; Element -&gt; Event String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Element -&gt; Event EventData
+</span><a href="Graphics.UI.Threepenny.Internal.html#domEvent"><span class="hs-identifier hs-var">domEvent</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dragover&quot;</span></span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- | The element is no longer the current target element for a 'drop'.</span><span>
+</span><span id="line-104"></span><span class="hs-comment">--</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- WARNING: This event is also fired when the mouse is moved over a child element.</span><span>
+</span><span id="line-106"></span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#dragLeave"><span class="hs-identifier hs-type">dragLeave</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#DragData"><span class="hs-identifier hs-type">DragData</span></a></span><span>
+</span><span id="line-107"></span><span id="dragLeave"><span class="annot"><span class="annottext">dragLeave :: Element -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#dragLeave"><span class="hs-identifier hs-var hs-var">dragLeave</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Event EventData -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#withDragData"><span class="hs-identifier hs-var">withDragData</span></a></span><span> </span><span class="annot"><span class="annottext">(Event EventData -&gt; Event String)
+-&gt; (Element -&gt; Event EventData) -&gt; Element -&gt; Event String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Element -&gt; Event EventData
+</span><a href="Graphics.UI.Threepenny.Internal.html#domEvent"><span class="hs-identifier hs-var">domEvent</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;dragleave&quot;</span></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="annot"><span class="hs-comment">-- | The drag and drop operation is being completed on this element.</span></span><span>
+</span><span id="line-110"></span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#drop"><span class="hs-identifier hs-type">drop</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.Internal.html#Element"><span class="hs-identifier hs-type">Element</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.html#Event"><span class="hs-identifier hs-type">Event</span></a></span><span> </span><span class="annot"><a href="Graphics.UI.Threepenny.DragNDrop.html#DragData"><span class="hs-identifier hs-type">DragData</span></a></span><span>
+</span><span id="line-111"></span><span id="drop"><span class="annot"><span class="annottext">drop :: Element -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#drop"><span class="hs-identifier hs-var hs-var">drop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Event EventData -&gt; Event String
+</span><a href="Graphics.UI.Threepenny.DragNDrop.html#withDragData"><span class="hs-identifier hs-var">withDragData</span></a></span><span> </span><span class="annot"><span class="annottext">(Event EventData -&gt; Event String)
+-&gt; (Element -&gt; Event EventData) -&gt; Element -&gt; Event String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; Element -&gt; Event EventData
+</span><a href="Graphics.UI.Threepenny.Internal.html#domEvent"><span class="hs-identifier hs-var">domEvent</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;drop&quot;</span></span><span>
+</span><span id="line-112"></span></pre></body></html>

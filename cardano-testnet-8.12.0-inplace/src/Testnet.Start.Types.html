@@ -1,0 +1,319 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE NumericUnderscores #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Testnet.Start.Types</span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#CardanoTestnetOptions"><span class="hs-identifier">CardanoTestnetOptions</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#cardanoDefaultTestnetOptions"><span class="hs-identifier">cardanoDefaultTestnetOptions</span></a></span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#anyEraToString"><span class="hs-identifier">anyEraToString</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#eraToString"><span class="hs-identifier">eraToString</span></a></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#TestnetNodeOptions"><span class="hs-identifier">TestnetNodeOptions</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#extraSpoNodeCliArgs"><span class="hs-identifier">extraSpoNodeCliArgs</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#cardanoDefaultTestnetNodeOptions"><span class="hs-identifier">cardanoDefaultTestnetNodeOptions</span></a></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#NodeLoggingFormat"><span class="hs-identifier">NodeLoggingFormat</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#Conf"><span class="hs-identifier">Conf</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#NodeConfigurationYaml"><span class="hs-identifier">NodeConfigurationYaml</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#mkConf"><span class="hs-identifier">mkConf</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-2446e22528ab33e4fd7b48afaf9b171c69a9f1b59a5038cd8e06411b53339a65/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Eras.Core.html#cardanoEra"><span class="hs-identifier">cardanoEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Char.html"><span class="hs-identifier">Data.Char</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Unicode.html#toLower"><span class="hs-identifier">toLower</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Stack.html"><span class="hs-identifier">GHC.Stack</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/template-haskell-2.20.0.0/src/System.FilePath.html"><span class="hs-identifier">System.FilePath</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/filepath-1.4.200.1/src/System.FilePath.Posix.html#addTrailingPathSeparator"><span class="hs-identifier">addTrailingPathSeparator</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Filepath.html"><span class="hs-identifier">Testnet.Filepath</span></a></span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/6vhbj2imaq9yazn9k0kjdjw8sni3v11k-hedgehog-lib-hedgehog-1.4-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.html"><span class="hs-identifier">Hedgehog</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/6vhbj2imaq9yazn9k0kjdjw8sni3v11k-hedgehog-lib-hedgehog-1.4-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier">MonadTest</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/7jc9gamvqvfraah041yka5njd0f2c7v3-hedgehog-extras-lib-hedgehog-extras-0.6.4.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.html"><span class="hs-identifier">Hedgehog.Extras</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">data</span><span> </span><span id="CardanoTestnetOptions"><span class="annot"><a href="Testnet.Start.Types.html#CardanoTestnetOptions"><span class="hs-identifier hs-var">CardanoTestnetOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="CardanoTestnetOptions"><span class="annot"><a href="Testnet.Start.Types.html#CardanoTestnetOptions"><span class="hs-identifier hs-var">CardanoTestnetOptions</span></a></span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="hs-comment">-- | List of node options. Each option will result in a single node being</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-comment">-- created.</span><span>
+</span><span id="line-40"></span><span>    </span><span id="cardanoNodes"><span class="annot"><span class="annottext">CardanoTestnetOptions -&gt; [TestnetNodeOptions]
+</span><a href="Testnet.Start.Types.html#cardanoNodes"><span class="hs-identifier hs-var hs-var">cardanoNodes</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Testnet.Start.Types.html#TestnetNodeOptions"><span class="hs-identifier hs-type">TestnetNodeOptions</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cardanoNodeEra"><span class="annot"><span class="annottext">CardanoTestnetOptions -&gt; AnyCardanoEra
+</span><a href="Testnet.Start.Types.html#cardanoNodeEra"><span class="hs-identifier hs-var hs-var">cardanoNodeEra</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Eras.Core.html#AnyCardanoEra"><span class="hs-identifier hs-type">AnyCardanoEra</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ The era to start at</span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cardanoEpochLength"><span class="annot"><span class="annottext">CardanoTestnetOptions -&gt; Int
+</span><a href="Testnet.Start.Types.html#cardanoEpochLength"><span class="hs-identifier hs-var hs-var">cardanoEpochLength</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ An epoch's duration, in number of slots</span></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cardanoSlotLength"><span class="annot"><span class="annottext">CardanoTestnetOptions -&gt; Double
+</span><a href="Testnet.Start.Types.html#cardanoSlotLength"><span class="hs-identifier hs-var hs-var">cardanoSlotLength</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ Slot length, in seconds</span></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cardanoTestnetMagic"><span class="annot"><span class="annottext">CardanoTestnetOptions -&gt; Int
+</span><a href="Testnet.Start.Types.html#cardanoTestnetMagic"><span class="hs-identifier hs-var hs-var">cardanoTestnetMagic</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cardanoActiveSlotsCoeff"><span class="annot"><span class="annottext">CardanoTestnetOptions -&gt; Double
+</span><a href="Testnet.Start.Types.html#cardanoActiveSlotsCoeff"><span class="hs-identifier hs-var hs-var">cardanoActiveSlotsCoeff</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cardanoMaxSupply"><span class="annot"><span class="annottext">CardanoTestnetOptions -&gt; Word64
+</span><a href="Testnet.Start.Types.html#cardanoMaxSupply"><span class="hs-identifier hs-var hs-var">cardanoMaxSupply</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ The amount of ADA you are starting your testnet with (forwarded to shelley genesis)</span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cardanoEnableP2P"><span class="annot"><span class="annottext">CardanoTestnetOptions -&gt; Bool
+</span><a href="Testnet.Start.Types.html#cardanoEnableP2P"><span class="hs-identifier hs-var hs-var">cardanoEnableP2P</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cardanoNodeLoggingFormat"><span class="annot"><span class="annottext">CardanoTestnetOptions -&gt; NodeLoggingFormat
+</span><a href="Testnet.Start.Types.html#cardanoNodeLoggingFormat"><span class="hs-identifier hs-var hs-var">cardanoNodeLoggingFormat</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#NodeLoggingFormat"><span class="hs-identifier hs-type">NodeLoggingFormat</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cardanoNumDReps"><span class="annot"><span class="annottext">CardanoTestnetOptions -&gt; Int
+</span><a href="Testnet.Start.Types.html#cardanoNumDReps"><span class="hs-identifier hs-var hs-var">cardanoNumDReps</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ The number of DReps to generate at creation</span></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cardanoEnableNewEpochStateLogging"><span class="annot"><span class="annottext">CardanoTestnetOptions -&gt; Bool
+</span><a href="Testnet.Start.Types.html#cardanoEnableNewEpochStateLogging"><span class="hs-identifier hs-var hs-var">cardanoEnableNewEpochStateLogging</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ if epoch state logging is enabled</span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679542140"><span id="local-6989586621679542161"><span class="annot"><span class="annottext">CardanoTestnetOptions -&gt; CardanoTestnetOptions -&gt; Bool
+(CardanoTestnetOptions -&gt; CardanoTestnetOptions -&gt; Bool)
+-&gt; (CardanoTestnetOptions -&gt; CardanoTestnetOptions -&gt; Bool)
+-&gt; Eq CardanoTestnetOptions
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: CardanoTestnetOptions -&gt; CardanoTestnetOptions -&gt; Bool
+== :: CardanoTestnetOptions -&gt; CardanoTestnetOptions -&gt; Bool
+$c/= :: CardanoTestnetOptions -&gt; CardanoTestnetOptions -&gt; Bool
+/= :: CardanoTestnetOptions -&gt; CardanoTestnetOptions -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679542167"><span id="local-6989586621679542190"><span id="local-6989586621679542194"><span class="annot"><span class="annottext">Int -&gt; CardanoTestnetOptions -&gt; ShowS
+[CardanoTestnetOptions] -&gt; ShowS
+CardanoTestnetOptions -&gt; String
+(Int -&gt; CardanoTestnetOptions -&gt; ShowS)
+-&gt; (CardanoTestnetOptions -&gt; String)
+-&gt; ([CardanoTestnetOptions] -&gt; ShowS)
+-&gt; Show CardanoTestnetOptions
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; CardanoTestnetOptions -&gt; ShowS
+showsPrec :: Int -&gt; CardanoTestnetOptions -&gt; ShowS
+$cshow :: CardanoTestnetOptions -&gt; String
+show :: CardanoTestnetOptions -&gt; String
+$cshowList :: [CardanoTestnetOptions] -&gt; ShowS
+showList :: [CardanoTestnetOptions] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span class="annot"><a href="Testnet.Start.Types.html#cardanoDefaultTestnetOptions"><span class="hs-identifier hs-type">cardanoDefaultTestnetOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#CardanoTestnetOptions"><span class="hs-identifier hs-type">CardanoTestnetOptions</span></a></span><span>
+</span><span id="line-54"></span><span id="cardanoDefaultTestnetOptions"><span class="annot"><span class="annottext">cardanoDefaultTestnetOptions :: CardanoTestnetOptions
+</span><a href="Testnet.Start.Types.html#cardanoDefaultTestnetOptions"><span class="hs-identifier hs-var hs-var">cardanoDefaultTestnetOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#CardanoTestnetOptions"><span class="hs-identifier hs-type">CardanoTestnetOptions</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">cardanoNodes :: [TestnetNodeOptions]
+</span><a href="Testnet.Start.Types.html#cardanoNodes"><span class="hs-identifier hs-var">cardanoNodes</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[TestnetNodeOptions]
+</span><a href="Testnet.Start.Types.html#cardanoDefaultTestnetNodeOptions"><span class="hs-identifier hs-var">cardanoDefaultTestnetNodeOptions</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cardanoNodeEra :: AnyCardanoEra
+</span><a href="Testnet.Start.Types.html#cardanoNodeEra"><span class="hs-identifier hs-var">cardanoNodeEra</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CardanoEra BabbageEra -&gt; AnyCardanoEra
+forall era. Typeable era =&gt; CardanoEra era -&gt; AnyCardanoEra
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Eras.Core.html#AnyCardanoEra"><span class="hs-identifier hs-var">AnyCardanoEra</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoEra BabbageEra
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Eras.Core.html#BabbageEra"><span class="hs-identifier hs-var">BabbageEra</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cardanoEpochLength :: Int
+</span><a href="Testnet.Start.Types.html#cardanoEpochLength"><span class="hs-identifier hs-var">cardanoEpochLength</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">500</span></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cardanoSlotLength :: Double
+</span><a href="Testnet.Start.Types.html#cardanoSlotLength"><span class="hs-identifier hs-var">cardanoSlotLength</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0.1</span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cardanoTestnetMagic :: Int
+</span><a href="Testnet.Start.Types.html#cardanoTestnetMagic"><span class="hs-identifier hs-var">cardanoTestnetMagic</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">42</span></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cardanoActiveSlotsCoeff :: Double
+</span><a href="Testnet.Start.Types.html#cardanoActiveSlotsCoeff"><span class="hs-identifier hs-var">cardanoActiveSlotsCoeff</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">0.05</span></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cardanoMaxSupply :: Word64
+</span><a href="Testnet.Start.Types.html#cardanoMaxSupply"><span class="hs-identifier hs-var">cardanoMaxSupply</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">100_020_000_000</span></span><span> </span><span class="hs-comment">-- 100 billions. This amount should be bigger than the 'byronTotalBalance' in Testnet.Start.Byron</span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cardanoEnableP2P :: Bool
+</span><a href="Testnet.Start.Types.html#cardanoEnableP2P"><span class="hs-identifier hs-var">cardanoEnableP2P</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cardanoNodeLoggingFormat :: NodeLoggingFormat
+</span><a href="Testnet.Start.Types.html#cardanoNodeLoggingFormat"><span class="hs-identifier hs-var">cardanoNodeLoggingFormat</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NodeLoggingFormat
+</span><a href="Testnet.Start.Types.html#NodeLoggingFormatAsJson"><span class="hs-identifier hs-var">NodeLoggingFormatAsJson</span></a></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cardanoNumDReps :: Int
+</span><a href="Testnet.Start.Types.html#cardanoNumDReps"><span class="hs-identifier hs-var">cardanoNumDReps</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cardanoEnableNewEpochStateLogging :: Bool
+</span><a href="Testnet.Start.Types.html#cardanoEnableNewEpochStateLogging"><span class="hs-identifier hs-var">cardanoEnableNewEpochStateLogging</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="annot"><span class="hs-comment">-- | Specify a BFT node (Pre-Babbage era only) or an SPO (Shelley era onwards only)</span></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">data</span><span> </span><span id="TestnetNodeOptions"><span class="annot"><a href="Testnet.Start.Types.html#TestnetNodeOptions"><span class="hs-identifier hs-var">TestnetNodeOptions</span></a></span></span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="SpoTestnetNodeOptions"><span class="annot"><a href="Testnet.Start.Types.html#SpoTestnetNodeOptions"><span class="hs-identifier hs-var">SpoTestnetNodeOptions</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#NodeConfigurationYaml"><span class="hs-identifier hs-type">NodeConfigurationYaml</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-71"></span><span>    </span><span class="hs-comment">-- ^ These arguments will be appended to the default set of CLI options when</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-comment">-- starting the node.</span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679542203"><span id="local-6989586621679542210"><span class="annot"><span class="annottext">TestnetNodeOptions -&gt; TestnetNodeOptions -&gt; Bool
+(TestnetNodeOptions -&gt; TestnetNodeOptions -&gt; Bool)
+-&gt; (TestnetNodeOptions -&gt; TestnetNodeOptions -&gt; Bool)
+-&gt; Eq TestnetNodeOptions
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: TestnetNodeOptions -&gt; TestnetNodeOptions -&gt; Bool
+== :: TestnetNodeOptions -&gt; TestnetNodeOptions -&gt; Bool
+$c/= :: TestnetNodeOptions -&gt; TestnetNodeOptions -&gt; Bool
+/= :: TestnetNodeOptions -&gt; TestnetNodeOptions -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679542216"><span id="local-6989586621679542224"><span id="local-6989586621679542227"><span class="annot"><span class="annottext">Int -&gt; TestnetNodeOptions -&gt; ShowS
+[TestnetNodeOptions] -&gt; ShowS
+TestnetNodeOptions -&gt; String
+(Int -&gt; TestnetNodeOptions -&gt; ShowS)
+-&gt; (TestnetNodeOptions -&gt; String)
+-&gt; ([TestnetNodeOptions] -&gt; ShowS)
+-&gt; Show TestnetNodeOptions
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TestnetNodeOptions -&gt; ShowS
+showsPrec :: Int -&gt; TestnetNodeOptions -&gt; ShowS
+$cshow :: TestnetNodeOptions -&gt; String
+show :: TestnetNodeOptions -&gt; String
+$cshowList :: [TestnetNodeOptions] -&gt; ShowS
+showList :: [TestnetNodeOptions] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>
+</span><span id="line-75"></span><span class="annot"><a href="Testnet.Start.Types.html#extraSpoNodeCliArgs"><span class="hs-identifier hs-type">extraSpoNodeCliArgs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#TestnetNodeOptions"><span class="hs-identifier hs-type">TestnetNodeOptions</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-76"></span><span id="extraSpoNodeCliArgs"><span class="annot"><span class="annottext">extraSpoNodeCliArgs :: TestnetNodeOptions -&gt; [String]
+</span><a href="Testnet.Start.Types.html#extraSpoNodeCliArgs"><span class="hs-identifier hs-var hs-var">extraSpoNodeCliArgs</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Start.Types.html#SpoTestnetNodeOptions"><span class="hs-identifier hs-type">SpoTestnetNodeOptions</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe NodeConfigurationYaml
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679542232"><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679542232"><span class="hs-identifier hs-var">args</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[String]
+</span><a href="#local-6989586621679542232"><span class="hs-identifier hs-var">args</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span class="annot"><a href="Testnet.Start.Types.html#cardanoDefaultTestnetNodeOptions"><span class="hs-identifier hs-type">cardanoDefaultTestnetNodeOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Testnet.Start.Types.html#TestnetNodeOptions"><span class="hs-identifier hs-type">TestnetNodeOptions</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-80"></span><span id="cardanoDefaultTestnetNodeOptions"><span class="annot"><span class="annottext">cardanoDefaultTestnetNodeOptions :: [TestnetNodeOptions]
+</span><a href="Testnet.Start.Types.html#cardanoDefaultTestnetNodeOptions"><span class="hs-identifier hs-var hs-var">cardanoDefaultTestnetNodeOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Maybe NodeConfigurationYaml -&gt; [String] -&gt; TestnetNodeOptions
+</span><a href="Testnet.Start.Types.html#SpoTestnetNodeOptions"><span class="hs-identifier hs-var">SpoTestnetNodeOptions</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe NodeConfigurationYaml
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe NodeConfigurationYaml -&gt; [String] -&gt; TestnetNodeOptions
+</span><a href="Testnet.Start.Types.html#SpoTestnetNodeOptions"><span class="hs-identifier hs-var">SpoTestnetNodeOptions</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe NodeConfigurationYaml
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe NodeConfigurationYaml -&gt; [String] -&gt; TestnetNodeOptions
+</span><a href="Testnet.Start.Types.html#SpoTestnetNodeOptions"><span class="hs-identifier hs-var">SpoTestnetNodeOptions</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe NodeConfigurationYaml
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-keyword">data</span><span> </span><span id="NodeLoggingFormat"><span class="annot"><a href="Testnet.Start.Types.html#NodeLoggingFormat"><span class="hs-identifier hs-var">NodeLoggingFormat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NodeLoggingFormatAsJson"><span class="annot"><a href="Testnet.Start.Types.html#NodeLoggingFormatAsJson"><span class="hs-identifier hs-var">NodeLoggingFormatAsJson</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="NodeLoggingFormatAsText"><span class="annot"><a href="Testnet.Start.Types.html#NodeLoggingFormatAsText"><span class="hs-identifier hs-var">NodeLoggingFormatAsText</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679542235"><span id="local-6989586621679542237"><span class="annot"><span class="annottext">NodeLoggingFormat -&gt; NodeLoggingFormat -&gt; Bool
+(NodeLoggingFormat -&gt; NodeLoggingFormat -&gt; Bool)
+-&gt; (NodeLoggingFormat -&gt; NodeLoggingFormat -&gt; Bool)
+-&gt; Eq NodeLoggingFormat
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: NodeLoggingFormat -&gt; NodeLoggingFormat -&gt; Bool
+== :: NodeLoggingFormat -&gt; NodeLoggingFormat -&gt; Bool
+$c/= :: NodeLoggingFormat -&gt; NodeLoggingFormat -&gt; Bool
+/= :: NodeLoggingFormat -&gt; NodeLoggingFormat -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679542240"><span id="local-6989586621679542242"><span id="local-6989586621679542245"><span class="annot"><span class="annottext">Int -&gt; NodeLoggingFormat -&gt; ShowS
+[NodeLoggingFormat] -&gt; ShowS
+NodeLoggingFormat -&gt; String
+(Int -&gt; NodeLoggingFormat -&gt; ShowS)
+-&gt; (NodeLoggingFormat -&gt; String)
+-&gt; ([NodeLoggingFormat] -&gt; ShowS)
+-&gt; Show NodeLoggingFormat
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; NodeLoggingFormat -&gt; ShowS
+showsPrec :: Int -&gt; NodeLoggingFormat -&gt; ShowS
+$cshow :: NodeLoggingFormat -&gt; String
+show :: NodeLoggingFormat -&gt; String
+$cshowList :: [NodeLoggingFormat] -&gt; ShowS
+showList :: [NodeLoggingFormat] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span>
+</span><span id="line-89"></span><span class="hs-keyword">newtype</span><span> </span><span id="NodeConfigurationYaml"><span class="annot"><a href="Testnet.Start.Types.html#NodeConfigurationYaml"><span class="hs-identifier hs-var">NodeConfigurationYaml</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NodeConfigurationYaml"><span class="annot"><a href="Testnet.Start.Types.html#NodeConfigurationYaml"><span class="hs-identifier hs-var">NodeConfigurationYaml</span></a></span></span><span>
+</span><span id="line-90"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="unYamlFilePath"><span class="annot"><span class="annottext">NodeConfigurationYaml -&gt; String
+</span><a href="Testnet.Start.Types.html#unYamlFilePath"><span class="hs-identifier hs-var hs-var">unYamlFilePath</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679542251"><span id="local-6989586621679542256"><span class="annot"><span class="annottext">NodeConfigurationYaml -&gt; NodeConfigurationYaml -&gt; Bool
+(NodeConfigurationYaml -&gt; NodeConfigurationYaml -&gt; Bool)
+-&gt; (NodeConfigurationYaml -&gt; NodeConfigurationYaml -&gt; Bool)
+-&gt; Eq NodeConfigurationYaml
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: NodeConfigurationYaml -&gt; NodeConfigurationYaml -&gt; Bool
+== :: NodeConfigurationYaml -&gt; NodeConfigurationYaml -&gt; Bool
+$c/= :: NodeConfigurationYaml -&gt; NodeConfigurationYaml -&gt; Bool
+/= :: NodeConfigurationYaml -&gt; NodeConfigurationYaml -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679542261"><span id="local-6989586621679542266"><span id="local-6989586621679542269"><span class="annot"><span class="annottext">Int -&gt; NodeConfigurationYaml -&gt; ShowS
+[NodeConfigurationYaml] -&gt; ShowS
+NodeConfigurationYaml -&gt; String
+(Int -&gt; NodeConfigurationYaml -&gt; ShowS)
+-&gt; (NodeConfigurationYaml -&gt; String)
+-&gt; ([NodeConfigurationYaml] -&gt; ShowS)
+-&gt; Show NodeConfigurationYaml
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; NodeConfigurationYaml -&gt; ShowS
+showsPrec :: Int -&gt; NodeConfigurationYaml -&gt; ShowS
+$cshow :: NodeConfigurationYaml -&gt; String
+show :: NodeConfigurationYaml -&gt; String
+$cshowList :: [NodeConfigurationYaml] -&gt; ShowS
+showList :: [NodeConfigurationYaml] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="hs-keyword">newtype</span><span> </span><span id="Conf"><span class="annot"><a href="Testnet.Start.Types.html#Conf"><span class="hs-identifier hs-var">Conf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Conf"><span class="annot"><a href="Testnet.Start.Types.html#Conf"><span class="hs-identifier hs-var">Conf</span></a></span></span><span>
+</span><span id="line-94"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="tempAbsPath"><span class="annot"><span class="annottext">Conf -&gt; TmpAbsolutePath
+</span><a href="Testnet.Start.Types.html#tempAbsPath"><span class="hs-identifier hs-var hs-var">tempAbsPath</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Filepath.html#TmpAbsolutePath"><span class="hs-identifier hs-type">TmpAbsolutePath</span></a></span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679542274"><span id="local-6989586621679542279"><span class="annot"><span class="annottext">Conf -&gt; Conf -&gt; Bool
+(Conf -&gt; Conf -&gt; Bool) -&gt; (Conf -&gt; Conf -&gt; Bool) -&gt; Eq Conf
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Conf -&gt; Conf -&gt; Bool
+== :: Conf -&gt; Conf -&gt; Bool
+$c/= :: Conf -&gt; Conf -&gt; Bool
+/= :: Conf -&gt; Conf -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679542284"><span id="local-6989586621679542289"><span id="local-6989586621679542293"><span class="annot"><span class="annottext">Int -&gt; Conf -&gt; ShowS
+[Conf] -&gt; ShowS
+Conf -&gt; String
+(Int -&gt; Conf -&gt; ShowS)
+-&gt; (Conf -&gt; String) -&gt; ([Conf] -&gt; ShowS) -&gt; Show Conf
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Conf -&gt; ShowS
+showsPrec :: Int -&gt; Conf -&gt; ShowS
+$cshow :: Conf -&gt; String
+show :: Conf -&gt; String
+$cshowList :: [Conf] -&gt; ShowS
+showList :: [Conf] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span class="annot"><span class="hs-comment">-- | Create a 'Conf' from a temporary absolute path. Logs the argument in the test.</span></span><span>
+</span><span id="line-98"></span><span id="local-6989586621679542089"><span class="annot"><a href="Testnet.Start.Types.html#mkConf"><span class="hs-identifier hs-type">mkConf</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/6vhbj2imaq9yazn9k0kjdjw8sni3v11k-hedgehog-lib-hedgehog-1.4-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier hs-type">MonadTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679542089"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679542089"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#Conf"><span class="hs-identifier hs-type">Conf</span></a></span></span><span>
+</span><span id="line-99"></span><span id="mkConf"><span class="annot"><span class="annottext">mkConf :: forall (m :: * -&gt; *).
+(HasCallStack, MonadTest m) =&gt;
+String -&gt; m Conf
+</span><a href="Testnet.Start.Types.html#mkConf"><span class="hs-identifier hs-var hs-var">mkConf</span></a></span></span><span> </span><span id="local-6989586621679542303"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679542303"><span class="hs-identifier hs-var">tempAbsPath'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m Conf) -&gt; m Conf
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m Conf) -&gt; m Conf)
+-&gt; (HasCallStack =&gt; m Conf) -&gt; m Conf
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><span class="annottext">String -&gt; m ()
+forall (m :: * -&gt; *). (MonadTest m, HasCallStack) =&gt; String -&gt; m ()
+</span><a href="file:///nix/store/7jc9gamvqvfraah041yka5njd0f2c7v3-hedgehog-extras-lib-hedgehog-extras-0.6.4.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Test.Base.html#note_"><span class="hs-identifier hs-var">H.note_</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679542303"><span class="hs-identifier hs-var">tempAbsPath'</span></a></span><span>
+</span><span id="line-101"></span><span>  </span><span class="annot"><span class="annottext">Conf -&gt; m Conf
+forall a. a -&gt; m a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(Conf -&gt; m Conf) -&gt; Conf -&gt; m Conf
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#Conf"><span class="hs-identifier hs-type">Conf</span></a></span><span>
+</span><span id="line-102"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">tempAbsPath :: TmpAbsolutePath
+</span><a href="Testnet.Start.Types.html#tempAbsPath"><span class="hs-identifier hs-var">tempAbsPath</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; TmpAbsolutePath
+</span><a href="Testnet.Filepath.html#TmpAbsolutePath"><span class="hs-identifier hs-var">TmpAbsolutePath</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/filepath-1.4.200.1/src/System.FilePath.Posix.html#addTrailingPathSeparator"><span class="hs-identifier hs-var">addTrailingPathSeparator</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679542303"><span class="hs-identifier hs-var">tempAbsPath'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-103"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="annot"><span class="hs-comment">-- | @anyEraToString (AnyCardanoEra ByronEra)@ returns @&quot;byron&quot;@</span></span><span>
+</span><span id="line-106"></span><span class="annot"><a href="Testnet.Start.Types.html#anyEraToString"><span class="hs-identifier hs-type">anyEraToString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Eras.Core.html#AnyCardanoEra"><span class="hs-identifier hs-type">AnyCardanoEra</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-107"></span><span id="anyEraToString"><span class="annot"><span class="annottext">anyEraToString :: AnyCardanoEra -&gt; String
+</span><a href="Testnet.Start.Types.html#anyEraToString"><span class="hs-identifier hs-var hs-var">anyEraToString</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Eras.Core.html#AnyCardanoEra"><span class="hs-identifier hs-type">AnyCardanoEra</span></a></span><span> </span><span id="local-6989586621679542314"><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="#local-6989586621679542314"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">CardanoEra era -&gt; String
+forall a. CardanoEra a -&gt; String
+</span><a href="Testnet.Start.Types.html#eraToString"><span class="hs-identifier hs-var">eraToString</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoEra era
+</span><a href="#local-6989586621679542314"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="annot"><span class="hs-comment">-- | @eraToString ByronEra@ returns @&quot;byron&quot;@</span></span><span>
+</span><span id="line-110"></span><span id="local-6989586621679542102"><span class="annot"><a href="Testnet.Start.Types.html#eraToString"><span class="hs-identifier hs-type">eraToString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Eras.Core.html#CardanoEra"><span class="hs-identifier hs-type">CardanoEra</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679542102"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span></span><span>
+</span><span id="line-111"></span><span id="eraToString"><span class="annot"><span class="annottext">eraToString :: forall a. CardanoEra a -&gt; String
+</span><a href="Testnet.Start.Types.html#eraToString"><span class="hs-identifier hs-var hs-var">eraToString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Char -&gt; Char) -&gt; ShowS
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Char
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Unicode.html#toLower"><span class="hs-identifier hs-var">toLower</span></a></span><span> </span><span class="annot"><span class="annottext">ShowS -&gt; (CardanoEra a -&gt; String) -&gt; CardanoEra a -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Pretty.html#docToString"><span class="hs-identifier hs-var">docToString</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc AnsiStyle -&gt; String)
+-&gt; (CardanoEra a -&gt; Doc AnsiStyle) -&gt; CardanoEra a -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">CardanoEra a -&gt; Doc AnsiStyle
+forall ann. CardanoEra a -&gt; Doc ann
+forall a ann. Pretty a =&gt; a -&gt; Doc ann
+</span><a href="file:///nix/store/hvwnmn47k6mggzfiqwlvdr2pa3vml7cm-prettyprinter-lib-prettyprinter-1.7.1-haddock-doc/share/doc/prettyprinter/html/src/Prettyprinter.Internal.html#pretty"><span class="hs-identifier hs-var">pretty</span></a></span><span>
+</span><span id="line-112"></span></pre></body></html>

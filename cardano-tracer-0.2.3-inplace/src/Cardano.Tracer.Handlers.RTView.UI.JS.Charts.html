@@ -1,0 +1,568 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE MultiWayIf #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE QuasiQuotes #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.JS.Charts</span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#prepareChartsJS"><span class="hs-identifier">prepareChartsJS</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#addDatasetChartJS"><span class="hs-identifier">addDatasetChartJS</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#addAllPointsChartJS"><span class="hs-identifier">addAllPointsChartJS</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#clearPointsChartJS"><span class="hs-identifier">clearPointsChartJS</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#getDatasetsLengthChartJS"><span class="hs-identifier">getDatasetsLengthChartJS</span></a></span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#newTimeChartJS"><span class="hs-identifier">newTimeChartJS</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#resetZoomChartJS"><span class="hs-identifier">resetZoomChartJS</span></a></span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#changeColorsChartJS"><span class="hs-identifier">changeColorsChartJS</span></a></span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#setTimeRange"><span class="hs-identifier">setTimeRange</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.State.Historical</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.UI.Types</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.Utils.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Update.Utils</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.List.html"><span class="hs-identifier">Data.List</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.OldList.html#intercalate"><span class="hs-identifier">intercalate</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/613z6z2nyihzblh63yjqxlih5zrdclav-string-qq-lib-string-qq-0.0.6-haddock-doc/share/doc/string-qq/html/src/Data.String.QQ.html"><span class="hs-identifier">Data.String.QQ</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.System.html"><span class="hs-identifier">Data.Time.Clock.System</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.SystemTime.html#getSystemTime"><span class="hs-identifier">getSystemTime</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.System.html#systemToUTCTime"><span class="hs-identifier">systemToUTCTime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word16"><span class="hs-identifier">Word16</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.html"><span class="hs-identifier">Graphics.UI.Threepenny</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UI</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Core.html"><span class="hs-identifier">Graphics.UI.Threepenny.Core</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#prepareChartsJS"><span class="hs-identifier hs-type">prepareChartsJS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span id="prepareChartsJS"><span class="annot"><span class="annottext">prepareChartsJS :: UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#prepareChartsJS"><span class="hs-identifier hs-var hs-var">prepareChartsJS</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">UI.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ()) -&gt; JSFunction () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">UI.ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;window.charts = new Map();&quot;</span></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#newTimeChartJS"><span class="hs-identifier hs-type">newTimeChartJS</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartId"><span class="hs-identifier hs-type">ChartId</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span id="newTimeChartJS"><span class="annot"><span class="annottext">newTimeChartJS :: ChartId -&gt; String -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#newTimeChartJS"><span class="hs-identifier hs-var hs-var">newTimeChartJS</span></a></span></span><span> </span><span id="local-6989586621679610016"><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610016"><span class="hs-identifier hs-var">chartId</span></a></span></span><span> </span><span id="local-6989586621679610017"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679610017"><span class="hs-identifier hs-var">yValuesLabel</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">UI.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ()) -&gt; JSFunction () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">UI.ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#newTimeChartJS%27"><span class="hs-identifier hs-var">newTimeChartJS'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChartId -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610016"><span class="hs-identifier hs-var">chartId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679610017"><span class="hs-identifier hs-var">yValuesLabel</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#newTimeChartJS%27"><span class="hs-identifier hs-type">newTimeChartJS'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-43"></span><span id="newTimeChartJS%27"><span class="annot"><span class="annottext">newTimeChartJS' :: String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#newTimeChartJS%27"><span class="hs-identifier hs-var hs-var">newTimeChartJS'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="">[s|
+var ctx = document.getElementById(%1).getContext('2d');
+var chart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    datasets: []
+  },
+  options: {
+    parsing: false,
+    animation: false,
+    normalized: true,
+    showLine: true,
+    spanGaps: true,
+    interaction: {
+      intersect: false,
+      mode: 'index',
+      axis: 'xy'
+    },
+    elements: {
+      point: {
+        radius: 0
+      },
+      line: {
+        borderWidth: 2
+      }
+    },
+    responsive: true,
+    plugins: {
+      zoom: {
+        zoom: {
+          drag: {
+            enabled: true
+          },
+          mode: 'x'
+        }
+      }
+    },
+    transitions: {
+      zoom: {
+        animation: {
+          duration: 0
+        }
+      }
+    },
+    scales: {
+      x: {
+        type: 'time',
+        title: {
+          display: true,
+          text: 'Time in UTC'
+        },
+        time: {
+          displayFormats: {
+            second: 'HH:mm:ss',
+            minute: 'HH:mm',
+            hour:   'hh a',
+            day:    'D'
+          },
+          unit: 'minute'
+        },
+        adapters: {
+          date: {
+            zone: 'UTC'
+          }
+        },
+        ticks: {
+          maxRotation: 0
+        }
+      },
+      y: {
+        title: {
+          display: true,
+          text: %2
+        }
+      }
+    }
+  }
+});
+window.charts.set(%1, chart);
+|]</span></span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#addDatasetChartJS"><span class="hs-identifier hs-type">addDatasetChartJS</span></a></span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartId"><span class="hs-identifier hs-type">ChartId</span></a></span><span>
+</span><span id="line-126"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-127"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-129"></span><span id="addDatasetChartJS"><span class="annot"><span class="annottext">addDatasetChartJS :: ChartId -&gt; Text -&gt; Color -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#addDatasetChartJS"><span class="hs-identifier hs-var hs-var">addDatasetChartJS</span></a></span></span><span> </span><span id="local-6989586621679610020"><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610020"><span class="hs-identifier hs-var">chartId</span></a></span></span><span> </span><span id="local-6989586621679610021"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679610021"><span class="hs-identifier hs-var">nodeName</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span> </span><span id="local-6989586621679610023"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679610023"><span class="hs-identifier hs-var">color</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-130"></span><span>  </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">UI.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ()) -&gt; JSFunction () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; Text -&gt; String -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">UI.ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#addDatasetChartJS%27"><span class="hs-identifier hs-var">addDatasetChartJS'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChartId -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610020"><span class="hs-identifier hs-var">chartId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679610021"><span class="hs-identifier hs-var">nodeName</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679610023"><span class="hs-identifier hs-var">color</span></a></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#addDatasetChartJS%27"><span class="hs-identifier hs-type">addDatasetChartJS'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-133"></span><span id="addDatasetChartJS%27"><span class="annot"><span class="annottext">addDatasetChartJS' :: String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#addDatasetChartJS%27"><span class="hs-identifier hs-var hs-var">addDatasetChartJS'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="">[s|
+var chart = window.charts.get(%1);
+chart.data.datasets.push({
+  label: %2,
+  backgroundColor: %3,
+  borderColor: %3,
+  data: [],
+  fill: false
+});
+chart.update();
+|]</span></span><span>
+</span><span id="line-144"></span><span>
+</span><span id="line-145"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#getDatasetsLengthChartJS"><span class="hs-identifier hs-type">getDatasetsLengthChartJS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartId"><span class="hs-identifier hs-type">ChartId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span><span>
+</span><span id="line-146"></span><span id="getDatasetsLengthChartJS"><span class="annot"><span class="annottext">getDatasetsLengthChartJS :: ChartId -&gt; UI Word16
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#getDatasetsLengthChartJS"><span class="hs-identifier hs-var hs-var">getDatasetsLengthChartJS</span></a></span></span><span> </span><span id="local-6989586621679610025"><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610025"><span class="hs-identifier hs-var">chartId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679610026"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679610026"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">JSFunction Int -&gt; UI Int
+forall a. JSFunction a -&gt; UI a
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#callFunction"><span class="hs-identifier hs-var">UI.callFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction Int -&gt; UI Int) -&gt; JSFunction Int -&gt; UI Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; JSFunction Int
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">UI.ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;window.charts.get(%1).data.datasets.length;&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChartId -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610025"><span class="hs-identifier hs-var">chartId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-148"></span><span>  </span><span class="annot"><span class="annottext">Word16 -&gt; UI Word16
+forall a. a -&gt; UI a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Word16 -&gt; UI Word16) -&gt; Word16 -&gt; UI Word16
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word16
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679610026"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#clearPointsChartJS"><span class="hs-identifier hs-type">clearPointsChartJS</span></a></span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartId"><span class="hs-identifier hs-type">ChartId</span></a></span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Index"><span class="hs-identifier hs-type">Index</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span id="clearPointsChartJS"><span class="annot"><span class="annottext">clearPointsChartJS :: ChartId -&gt; [Index] -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#clearPointsChartJS"><span class="hs-identifier hs-var hs-var">clearPointsChartJS</span></a></span></span><span> </span><span class="annot"><span class="annottext">ChartId
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; UI ()
+forall a. a -&gt; UI a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-155"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#clearPointsChartJS"><span class="hs-identifier hs-var">clearPointsChartJS</span></a></span><span> </span><span id="local-6989586621679610028"><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610028"><span class="hs-identifier hs-var">chartId</span></a></span></span><span> </span><span id="local-6989586621679610029"><span class="annot"><span class="annottext">[Index]
+</span><a href="#local-6989586621679610029"><span class="hs-identifier hs-var">ixs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-156"></span><span>  </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">UI.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ()) -&gt; JSFunction () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">UI.ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679610030"><span class="hs-identifier hs-var">clearAllDatasets</span></a></span><span>
+</span><span id="line-157"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-158"></span><span>  </span><span id="local-6989586621679610030"><span class="annot"><span class="annottext">clearAllDatasets :: String
+</span><a href="#local-6989586621679610030"><span class="hs-identifier hs-var hs-var">clearAllDatasets</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-159"></span><span>       </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;var chart = window.charts.get('&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ChartId -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610028"><span class="hs-identifier hs-var">chartId</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;');&quot;</span></span><span>
+</span><span id="line-160"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(Index -&gt; String) -&gt; [Index] -&gt; String
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="annot"><span class="annottext">Index -&gt; String
+</span><a href="#local-6989586621679610040"><span class="hs-identifier hs-var">clearDataset</span></a></span><span> </span><span class="annot"><span class="annottext">[Index]
+</span><a href="#local-6989586621679610029"><span class="hs-identifier hs-var">ixs</span></a></span><span>
+</span><span id="line-161"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;chart.update();&quot;</span></span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span>  </span><span id="local-6989586621679610040"><span class="annot"><span class="annottext">clearDataset :: Index -&gt; String
+</span><a href="#local-6989586621679610040"><span class="hs-identifier hs-var hs-var">clearDataset</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Index"><span class="hs-identifier hs-type">Index</span></a></span><span> </span><span id="local-6989586621679610046"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679610046"><span class="hs-identifier hs-var">ix</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;chart.data.datasets[&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679610046"><span class="hs-identifier hs-var">ix</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;].data = [];&quot;</span></span><span>
+</span><span id="line-164"></span><span>
+</span><span id="line-165"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#addAllPointsChartJS"><span class="hs-identifier hs-type">addAllPointsChartJS</span></a></span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartId"><span class="hs-identifier hs-type">ChartId</span></a></span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Index"><span class="hs-identifier hs-type">Index</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#HistoricalPoint"><span class="hs-identifier hs-type">HistoricalPoint</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span id="addAllPointsChartJS"><span class="annot"><span class="annottext">addAllPointsChartJS :: ChartId -&gt; [(Index, [HistoricalPoint])] -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#addAllPointsChartJS"><span class="hs-identifier hs-var hs-var">addAllPointsChartJS</span></a></span></span><span> </span><span class="annot"><span class="annottext">ChartId
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; UI ()
+forall a. a -&gt; UI a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#addAllPointsChartJS"><span class="hs-identifier hs-var">addAllPointsChartJS</span></a></span><span> </span><span id="local-6989586621679610047"><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610047"><span class="hs-identifier hs-var">chartId</span></a></span></span><span> </span><span id="local-6989586621679610048"><span class="annot"><span class="annottext">[(Index, [HistoricalPoint])]
+</span><a href="#local-6989586621679610048"><span class="hs-identifier hs-var">datasetIxsWithPoints</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-171"></span><span>  </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">UI.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ()) -&gt; JSFunction () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">UI.ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679610049"><span class="hs-identifier hs-var">pushToAllDatasets</span></a></span><span>
+</span><span id="line-172"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-173"></span><span>  </span><span id="local-6989586621679610049"><span class="annot"><span class="annottext">pushToAllDatasets :: String
+</span><a href="#local-6989586621679610049"><span class="hs-identifier hs-var hs-var">pushToAllDatasets</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-174"></span><span>       </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;var chart = window.charts.get('&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ChartId -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610047"><span class="hs-identifier hs-var">chartId</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;');&quot;</span></span><span>
+</span><span id="line-175"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">((Index, [HistoricalPoint]) -&gt; String)
+-&gt; [(Index, [HistoricalPoint])] -&gt; String
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#concatMap"><span class="hs-identifier hs-var">concatMap</span></a></span><span> </span><span class="annot"><span class="annottext">(Index, [HistoricalPoint]) -&gt; String
+forall {a} {a}.
+(Show a, Show a, Num a) =&gt;
+(Index, [(a, a)]) -&gt; String
+</span><a href="#local-6989586621679610062"><span class="hs-identifier hs-var">pushToDataset</span></a></span><span> </span><span class="annot"><span class="annottext">[(Index, [HistoricalPoint])]
+</span><a href="#local-6989586621679610048"><span class="hs-identifier hs-var">datasetIxsWithPoints</span></a></span><span>
+</span><span id="line-176"></span><span>    </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;chart.update();&quot;</span></span><span>
+</span><span id="line-177"></span><span>
+</span><span id="line-178"></span><span>  </span><span id="local-6989586621679610062"><span class="annot"><span class="annottext">pushToDataset :: (Index, [(a, a)]) -&gt; String
+</span><a href="#local-6989586621679610062"><span class="hs-identifier hs-var hs-var">pushToDataset</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Index
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-179"></span><span>  </span><span class="annot"><a href="#local-6989586621679610062"><span class="hs-identifier hs-var">pushToDataset</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Index"><span class="hs-identifier hs-type">Index</span></a></span><span> </span><span id="local-6989586621679610074"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679610074"><span class="hs-identifier hs-var">ix</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679610075"><span class="annot"><span class="annottext">[(a, a)]
+</span><a href="#local-6989586621679610075"><span class="hs-identifier hs-var">points</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-180"></span><span>    </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;chart.data.datasets[&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679610074"><span class="hs-identifier hs-var">ix</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;].data.push(&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[(a, a)] -&gt; String
+forall {a} {a}. (Show a, Show a, Num a) =&gt; [(a, a)] -&gt; String
+</span><a href="#local-6989586621679610076"><span class="hs-identifier hs-var">prepareArrayToPush</span></a></span><span> </span><span class="annot"><span class="annottext">[(a, a)]
+</span><a href="#local-6989586621679610075"><span class="hs-identifier hs-var">points</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;);&quot;</span></span><span>
+</span><span id="line-181"></span><span>
+</span><span id="line-182"></span><span>  </span><span id="local-6989586621679610076"><span class="annot"><span class="annottext">prepareArrayToPush :: [(a, a)] -&gt; String
+</span><a href="#local-6989586621679610076"><span class="hs-identifier hs-var hs-var">prepareArrayToPush</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-183"></span><span>  </span><span class="annot"><a href="#local-6989586621679610076"><span class="hs-identifier hs-var">prepareArrayToPush</span></a></span><span> </span><span id="local-6989586621679610083"><span class="annot"><span class="annottext">[(a, a)]
+</span><a href="#local-6989586621679610083"><span class="hs-identifier hs-var">points</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; String
+forall a. [a] -&gt; [[a]] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.OldList.html#intercalate"><span class="hs-identifier hs-var">intercalate</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;, &quot;</span></span><span> </span><span class="annot"><span class="annottext">([String] -&gt; String) -&gt; [String] -&gt; String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">((a, a) -&gt; String) -&gt; [(a, a)] -&gt; [String]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="annot"><span class="annottext">(a, a) -&gt; String
+forall {a} {a}. (Show a, Show a, Num a) =&gt; (a, a) -&gt; String
+</span><a href="#local-6989586621679610084"><span class="hs-identifier hs-var">mkArray</span></a></span><span> </span><span class="annot"><span class="annottext">[(a, a)]
+</span><a href="#local-6989586621679610083"><span class="hs-identifier hs-var">points</span></a></span><span>
+</span><span id="line-184"></span><span>   </span><span class="hs-keyword">where</span><span>
+</span><span id="line-185"></span><span>    </span><span id="local-6989586621679610084"><span class="annot"><span class="annottext">mkArray :: (a, a) -&gt; String
+</span><a href="#local-6989586621679610084"><span class="hs-identifier hs-var hs-var">mkArray</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679610094"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679610094"><span class="hs-identifier hs-var">ts</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679610095"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679610095"><span class="hs-identifier hs-var">valueH</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-186"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679610098"><span class="annot"><span class="annottext">tsInMs :: a
+</span><a href="#local-6989586621679610098"><span class="hs-identifier hs-var hs-var">tsInMs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679610094"><span class="hs-identifier hs-var">ts</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">1000</span></span><span> </span><span class="hs-comment">-- ChartJS uses milliseconds since epoch as internal format.</span><span>
+</span><span id="line-187"></span><span>      </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;{x: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679610098"><span class="hs-identifier hs-var">tsInMs</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;, y: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679610095"><span class="hs-identifier hs-var">valueH</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;}&quot;</span></span><span>
+</span><span id="line-188"></span><span>
+</span><span id="line-189"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#resetZoomChartJS"><span class="hs-identifier hs-type">resetZoomChartJS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartId"><span class="hs-identifier hs-type">ChartId</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-190"></span><span id="resetZoomChartJS"><span class="annot"><span class="annottext">resetZoomChartJS :: ChartId -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#resetZoomChartJS"><span class="hs-identifier hs-var hs-var">resetZoomChartJS</span></a></span></span><span> </span><span id="local-6989586621679610100"><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610100"><span class="hs-identifier hs-var">chartId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-191"></span><span>  </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">UI.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ()) -&gt; JSFunction () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">UI.ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;window.charts.get(%1).resetZoom();&quot;</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChartId -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610100"><span class="hs-identifier hs-var">chartId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#changeColorsChartJS"><span class="hs-identifier hs-type">changeColorsChartJS</span></a></span><span>
+</span><span id="line-194"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartId"><span class="hs-identifier hs-type">ChartId</span></a></span><span>
+</span><span id="line-195"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span>
+</span><span id="line-196"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span>
+</span><span id="line-197"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-198"></span><span id="changeColorsChartJS"><span class="annot"><span class="annottext">changeColorsChartJS :: ChartId -&gt; Color -&gt; Color -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#changeColorsChartJS"><span class="hs-identifier hs-var hs-var">changeColorsChartJS</span></a></span></span><span> </span><span id="local-6989586621679610101"><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610101"><span class="hs-identifier hs-var">chartId</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span> </span><span id="local-6989586621679610102"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679610102"><span class="hs-identifier hs-var">textColor</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#Color"><span class="hs-identifier hs-type">Color</span></a></span><span> </span><span id="local-6989586621679610103"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679610103"><span class="hs-identifier hs-var">gridColor</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-199"></span><span>  </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">UI.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ()) -&gt; JSFunction () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String -&gt; String -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">UI.ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#changeColorsChartJS%27"><span class="hs-identifier hs-var">changeColorsChartJS'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChartId -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610101"><span class="hs-identifier hs-var">chartId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679610102"><span class="hs-identifier hs-var">textColor</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679610103"><span class="hs-identifier hs-var">gridColor</span></a></span><span>
+</span><span id="line-200"></span><span>
+</span><span id="line-201"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#changeColorsChartJS%27"><span class="hs-identifier hs-type">changeColorsChartJS'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-202"></span><span id="changeColorsChartJS%27"><span class="annot"><span class="annottext">changeColorsChartJS' :: String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#changeColorsChartJS%27"><span class="hs-identifier hs-var hs-var">changeColorsChartJS'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="">[s|
+var chart = window.charts.get(%1);
+chart.options.scales.x.ticks.color = %2;
+chart.options.scales.x.title.color = %2;
+chart.options.scales.x.grid.color = %3;
+chart.options.scales.y.ticks.color = %2;
+chart.options.scales.y.title.color = %2;
+chart.options.scales.y.grid.color = %3;
+chart.options.plugins.title.color = %2;
+chart.options.plugins.legend.title.color = %2;
+chart.update();
+|]</span></span><span>
+</span><span id="line-214"></span><span>
+</span><span id="line-215"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#setTimeRange"><span class="hs-identifier hs-type">setTimeRange</span></a></span><span>
+</span><span id="line-216"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.Types.html#ChartId"><span class="hs-identifier hs-type">ChartId</span></a></span><span>
+</span><span id="line-217"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-218"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#UI"><span class="hs-identifier hs-type">UI</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-219"></span><span id="setTimeRange"><span class="annot"><span class="annottext">setTimeRange :: ChartId -&gt; Int -&gt; UI ()
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#setTimeRange"><span class="hs-identifier hs-var hs-var">setTimeRange</span></a></span></span><span> </span><span id="local-6989586621679610105"><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610105"><span class="hs-identifier hs-var">chartId</span></a></span></span><span> </span><span id="local-6989586621679610106"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679610106"><span class="hs-identifier hs-var">rangeInSec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-220"></span><span>  </span><span id="local-6989586621679610107"><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679610107"><span class="hs-identifier hs-var">now</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO UTCTime -&gt; UI UTCTime
+forall a. IO a -&gt; UI a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO UTCTime -&gt; UI UTCTime) -&gt; IO UTCTime -&gt; UI UTCTime
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">SystemTime -&gt; UTCTime
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.System.html#systemToUTCTime"><span class="hs-identifier hs-var">systemToUTCTime</span></a></span><span> </span><span class="annot"><span class="annottext">(SystemTime -&gt; UTCTime) -&gt; IO SystemTime -&gt; IO UTCTime
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO SystemTime
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.SystemTime.html#getSystemTime"><span class="hs-identifier hs-var">getSystemTime</span></a></span><span>
+</span><span id="line-221"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679610112"><span class="annot"><span class="annottext">rangeInMs :: Int
+</span><a href="#local-6989586621679610112"><span class="hs-identifier hs-var hs-var">rangeInMs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679610106"><span class="hs-identifier hs-var">rangeInSec</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1000</span></span><span>
+</span><span id="line-222"></span><span>      </span><span class="hs-glyph">!</span><span id="local-6989586621679610115"><span class="annot"><span class="annottext">maxInMs :: Word64
+</span><a href="#local-6989586621679610115"><span class="hs-identifier hs-var hs-var">maxInMs</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">UTCTime -&gt; Word64
+</span><a href="Cardano.Tracer.Handlers.RTView.Update.Utils.html#utc2s"><span class="hs-identifier hs-var">utc2s</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679610107"><span class="hs-identifier hs-var">now</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">1000</span></span><span>
+</span><span id="line-223"></span><span>      </span><span class="hs-glyph">!</span><span id="local-6989586621679610120"><span class="annot"><span class="annottext">minInMs :: Word64
+</span><a href="#local-6989586621679610120"><span class="hs-identifier hs-var hs-var">minInMs</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679610115"><span class="hs-identifier hs-var">maxInMs</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; Word64 -&gt; Word64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Word64
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679610112"><span class="hs-identifier hs-var">rangeInMs</span></a></span><span>
+</span><span id="line-224"></span><span>  </span><span class="hs-comment">-- Set time units depends on selected range.</span><span>
+</span><span id="line-225"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679610132"><span class="annot"><span class="annottext">timeUnit :: String
+</span><a href="#local-6989586621679610132"><span class="hs-identifier hs-var hs-var">timeUnit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679610106"><span class="hs-identifier hs-var">rangeInSec</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>                        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;day&quot;</span></span><span>
+</span><span id="line-226"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679610106"><span class="hs-identifier hs-var">rangeInSec</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>   </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679610106"><span class="hs-identifier hs-var">rangeInSec</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">300</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;second&quot;</span></span><span>
+</span><span id="line-227"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679610106"><span class="hs-identifier hs-var">rangeInSec</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">300</span></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679610106"><span class="hs-identifier hs-var">rangeInSec</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C%3D"><span class="hs-operator hs-var">&lt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1800</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;minute&quot;</span></span><span>
+</span><span id="line-228"></span><span>                    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span>                              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;hour&quot;</span></span><span>
+</span><span id="line-229"></span><span>  </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679610106"><span class="hs-identifier hs-var">rangeInSec</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-230"></span><span>    </span><span class="hs-keyword">then</span><span>
+</span><span id="line-231"></span><span>      </span><span class="hs-comment">-- Show all time, no zoom, so just set time units.</span><span>
+</span><span id="line-232"></span><span>      </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">UI.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ()) -&gt; JSFunction () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; String -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">UI.ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#setUnitsChartJS"><span class="hs-identifier hs-var">setUnitsChartJS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChartId -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610105"><span class="hs-identifier hs-var">chartId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679610132"><span class="hs-identifier hs-var">timeUnit</span></a></span><span>
+</span><span id="line-233"></span><span>    </span><span class="hs-keyword">else</span><span>
+</span><span id="line-234"></span><span>      </span><span class="annot"><span class="annottext">JSFunction () -&gt; UI ()
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Graphics.UI.Threepenny.Internal.html#runFunction"><span class="hs-identifier hs-var">UI.runFunction</span></a></span><span> </span><span class="annot"><span class="annottext">(JSFunction () -&gt; UI ()) -&gt; JSFunction () -&gt; UI ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; Int -&gt; Int -&gt; String -&gt; JSFunction ()
+forall a. FFI a =&gt; String -&gt; a
+</span><a href="file:///nix/store/hgfnbv2f91n48ly1xplhamirvf1h7qm3-threepenny-gui-lib-threepenny-gui-0.9.4.1-haddock-doc/share/doc/threepenny-gui/html/src/Foreign.JavaScript.Marshal.html#ffi"><span class="hs-identifier hs-var">UI.ffi</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#zoomScaleAndUnitsChartJS"><span class="hs-identifier hs-var">zoomScaleAndUnitsChartJS</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ChartId -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ChartId
+</span><a href="#local-6989586621679610105"><span class="hs-identifier hs-var">chartId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-235"></span><span>                                                       </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679610120"><span class="hs-identifier hs-var">minInMs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-236"></span><span>                                                       </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word64 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><a href="#local-6989586621679610115"><span class="hs-identifier hs-var">maxInMs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-237"></span><span>                                                       </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679610132"><span class="hs-identifier hs-var">timeUnit</span></a></span><span>
+</span><span id="line-238"></span><span>
+</span><span id="line-239"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#setUnitsChartJS"><span class="hs-identifier hs-type">setUnitsChartJS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-240"></span><span id="setUnitsChartJS"><span class="annot"><span class="annottext">setUnitsChartJS :: String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#setUnitsChartJS"><span class="hs-identifier hs-var hs-var">setUnitsChartJS</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="">[s|
+var chart = window.charts.get(%1);
+chart.options.scales.x.time.unit = %2;
+chart.update();
+|]</span></span><span>
+</span><span id="line-245"></span><span>
+</span><span id="line-246"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#zoomScaleAndUnitsChartJS"><span class="hs-identifier hs-type">zoomScaleAndUnitsChartJS</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-247"></span><span id="zoomScaleAndUnitsChartJS"><span class="annot"><span class="annottext">zoomScaleAndUnitsChartJS :: String
+</span><a href="Cardano.Tracer.Handlers.RTView.UI.JS.Charts.html#zoomScaleAndUnitsChartJS"><span class="hs-identifier hs-var hs-var">zoomScaleAndUnitsChartJS</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="">[s|
+var chart = window.charts.get(%1);
+chart.zoomScale('x', {min: %2, max: %3});
+chart.options.scales.x.time.unit = %4;
+chart.update();
+|]</span></span><span>
+</span><span id="line-253"></span></pre></body></html>

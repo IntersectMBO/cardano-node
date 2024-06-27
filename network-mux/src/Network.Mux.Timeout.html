@@ -1,0 +1,891 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns        #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE CPP                 #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts    #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns      #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes          #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards     #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# OPTIONS_GHC -Wno-redundant-constraints #-}</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- | An alternative implementation of 'System.Timeout.timeout' for platforms</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- (i.e. Windows) where the standard implementation is too expensive.</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- The implementation provided here is for the special case where only one</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- timeout is active at once. A concurrent implementation would be possible</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- but is not currently needed.</span><span>
+</span><span id="line-17"></span><span class="hs-comment">--</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.Mux.Timeout</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutFn"><span class="hs-identifier">TimeoutFn</span></a></span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#withTimeoutSerial"><span class="hs-identifier">withTimeoutSerial</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#withTimeoutSerialNative"><span class="hs-identifier">withTimeoutSerialNative</span></a></span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#withTimeoutSerialAlternative"><span class="hs-identifier">withTimeoutSerialAlternative</span></a></span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Concurrent.Class.MonadSTM</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Exception.html#asyncExceptionFromException"><span class="hs-identifier">asyncExceptionFromException</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-27"></span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Exception.html#asyncExceptionToException"><span class="hs-identifier">asyncExceptionToException</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadAsync</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadFork</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadThrow</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadTime.SI</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadTimer.SI</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">MonadTimer</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">registerDelay</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadTimer.SI</span></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">MonadTimer</span></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- | The type of the 'System.Timeout.timeout' function.</span><span>
+</span><span id="line-38"></span><span class="hs-comment">--</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">type</span><span> </span><span id="TimeoutFn"><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutFn"><span class="hs-identifier hs-var">TimeoutFn</span></a></span></span><span> </span><span id="local-6989586621679115394"><span class="annot"><a href="#local-6989586621679115394"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679115395"><span class="annot"><a href="#local-6989586621679115395"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115394"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115395"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115394"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115395"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- | A 'System.Timeout.timeout' that is reasonably efficient for all platforms.</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- On Unix it uses exactly 'System.Timeout.timeout' and on Windows it uses</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- 'withTimeoutSerialAlternative'.</span><span>
+</span><span id="line-45"></span><span class="hs-comment">--</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- &gt; withTimeoutSerial $ \timeout -&gt;</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- &gt;   -- now use timeout as one would use System.Timeout.timeout</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- &gt;   -- but not concurrently!</span><span>
+</span><span id="line-49"></span><span class="hs-comment">--</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- The implementation has a serial constraint: the body action that calls</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- @timeout@ can /only do so from one thread at once/.</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--</span><span>
+</span><span id="line-53"></span><span class="annot"><a href="Network.Mux.Timeout.html#withTimeoutSerial"><span class="hs-identifier hs-type">withTimeoutSerial</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#withTimeoutSerialNative"><span class="hs-identifier hs-type">withTimeoutSerialNative</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679115284"><span class="annot"><a href="#local-6989586621679115284"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679115293"><span class="annot"><a href="#local-6989586621679115293"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadAsync</span></span><span> </span><span class="annot"><a href="#local-6989586621679115284"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadFork</span></span><span> </span><span class="annot"><a href="#local-6989586621679115284"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-55"></span><span>                  </span><span class="annot"><span class="hs-identifier hs-type">MonadMonotonicTime</span></span><span> </span><span class="annot"><a href="#local-6989586621679115284"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadTimer</span></span><span> </span><span class="annot"><a href="#local-6989586621679115284"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>                  </span><span class="annot"><span class="hs-identifier hs-type">MonadMask</span></span><span> </span><span class="annot"><a href="#local-6989586621679115284"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadThrow</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">STM</span></span><span> </span><span class="annot"><a href="#local-6989586621679115284"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutFn"><span class="hs-identifier hs-type">TimeoutFn</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115284"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115284"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115293"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115284"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115293"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-cpp">
+
+#if defined(mingw32_HOST_OS)
+</span><span class="hs-identifier">withTimeoutSerial</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">withTimeoutSerialAlternative</span><span class="hs-cpp">
+#else
+</span><span id="withTimeoutSerial"><span class="annot"><span class="annottext">withTimeoutSerial :: forall (m :: * -&gt; *) b.
+(MonadAsync m, MonadFork m, MonadMonotonicTime m, MonadTimer m,
+ MonadMask m, MonadThrow (STM m)) =&gt;
+(TimeoutFn m -&gt; m b) -&gt; m b
+</span><a href="Network.Mux.Timeout.html#withTimeoutSerial"><span class="hs-identifier hs-var hs-var">withTimeoutSerial</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(TimeoutFn m -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) b.
+(MonadAsync m, MonadFork m, MonadMonotonicTime m, MonadTimer m,
+ MonadMask m, MonadThrow (STM m)) =&gt;
+(TimeoutFn m -&gt; m b) -&gt; m b
+</span><a href="Network.Mux.Timeout.html#withTimeoutSerialNative"><span class="hs-identifier hs-var">withTimeoutSerialNative</span></a></span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- | This version simply passes the native platform's 'MonadTimer.timeout'.</span><span>
+</span><span id="line-66"></span><span class="hs-comment">--</span><span>
+</span><span id="line-67"></span><span id="withTimeoutSerialNative"><span class="annot"><span class="annottext">withTimeoutSerialNative :: forall (m :: * -&gt; *) b.
+(MonadAsync m, MonadFork m, MonadMonotonicTime m, MonadTimer m,
+ MonadMask m, MonadThrow (STM m)) =&gt;
+(TimeoutFn m -&gt; m b) -&gt; m b
+</span><a href="Network.Mux.Timeout.html#withTimeoutSerialNative"><span class="hs-identifier hs-var hs-var">withTimeoutSerialNative</span></a></span></span><span> </span><span id="local-6989586621679115415"><span class="annot"><span class="annottext">TimeoutFn m -&gt; m b
+</span><a href="#local-6989586621679115415"><span class="hs-identifier hs-var">body</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TimeoutFn m -&gt; m b
+</span><a href="#local-6989586621679115415"><span class="hs-identifier hs-var">body</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; m a -&gt; m (Maybe a)
+TimeoutFn m
+forall (m :: * -&gt; *) a.
+MonadTimer m =&gt;
+DiffTime -&gt; m a -&gt; m (Maybe a)
+</span><span class="hs-identifier hs-var">MonadTimer.timeout</span></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- | An alternative implementation of 'System.Timeout.timeout' for platforms</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- where the standard implementation is too expensive.</span><span>
+</span><span id="line-72"></span><span class="hs-comment">--</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- &gt; withTimeoutSerial $ \timeout -&gt;</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- &gt;   -- now use timeout as one would use System.Timeout.timeout</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- &gt;   -- but not concurrently!</span><span>
+</span><span id="line-76"></span><span class="hs-comment">--</span><span>
+</span><span id="line-77"></span><span class="hs-comment">-- This implementation has a serial constraint: the body action that calls</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- @timeout@ can /only do so from one thread at once/.</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- Further details for the curious:</span><span>
+</span><span id="line-81"></span><span class="hs-comment">--</span><span>
+</span><span id="line-82"></span><span class="hs-comment">-- the problem with @System.Timeout.timeout@ is that (as of base 4.12) it has</span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- two implementations, one for Unix with the threaded RTS, and one for all</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- other configurations.</span><span>
+</span><span id="line-85"></span><span class="hs-comment">--</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- The Unix threaded RTS implementation is rather clever and very fast. In the</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- normal case of no timeout, it only has to allocate a timer entry. Only in</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- the case the timeout occurs does it allocate a 'forkIO' thread to do the</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- potentially-blocking operation of sending the asynchronous exception to</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- interrupt the action under timeout.</span><span>
+</span><span id="line-91"></span><span class="hs-comment">--</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- The implementation for all other configurations has to allocate a 'forkIO'</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- thread up front, whether or not the timeout fires. This is fine for many</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- applications but not for network timers which have to be created and</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- altered\/cancelled with very high frequency.</span><span>
+</span><span id="line-96"></span><span class="hs-comment">--</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- The implementation here only relies upon 'threadDelay' which has an</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- efficient implementation on all platforms. It uses a separate monitoring</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- thread which will throw an exception to terminate the action if the</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- timeout expires. This is why it uses the \&quot;with\&quot; style: because it keeps</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- a monitoring thread over a region of execution that may use many timeouts.</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- The cost of allocating this thread is amortised over all the timeouts used.</span><span>
+</span><span id="line-103"></span><span class="hs-comment">--</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- This implementation is simplified by the constraint that the timeouts only</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- be used serially. In addition, it has the limitation that timeouts may not</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- always be detected promptly: e.g. a 10s timeout on an action that finishes</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- immediately, followed by a 5s timeout on an action will only actually be</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- interrupted after 10s. So it's possible that action with the 5s timeout runs</span><span>
+</span><span id="line-109"></span><span class="hs-comment">-- for up to 10s. This is ok for many applications provided that the variance</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- in timeouts is not too large and the timeouts don't need to be too tight.</span><span>
+</span><span id="line-111"></span><span class="hs-comment">--</span><span>
+</span><span id="line-112"></span><span class="annot"><a href="Network.Mux.Timeout.html#withTimeoutSerialAlternative"><span class="hs-identifier hs-type">withTimeoutSerialAlternative</span></a></span><span>
+</span><span id="line-113"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679115418"><span class="annot"><a href="#local-6989586621679115418"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679115419"><span class="annot"><a href="#local-6989586621679115419"><span class="hs-identifier hs-type">b</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadAsync</span></span><span> </span><span class="annot"><a href="#local-6989586621679115418"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadFork</span></span><span> </span><span class="annot"><a href="#local-6989586621679115418"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-114"></span><span>                  </span><span class="annot"><span class="hs-identifier hs-type">MonadMonotonicTime</span></span><span> </span><span class="annot"><a href="#local-6989586621679115418"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadTimer</span></span><span> </span><span class="annot"><a href="#local-6989586621679115418"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-115"></span><span>                  </span><span class="annot"><span class="hs-identifier hs-type">MonadMask</span></span><span> </span><span class="annot"><a href="#local-6989586621679115418"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadThrow</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">STM</span></span><span> </span><span class="annot"><a href="#local-6989586621679115418"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutFn"><span class="hs-identifier hs-type">TimeoutFn</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115418"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115418"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115419"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115418"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115419"><span class="hs-identifier hs-type">b</span></a></span><span>
+</span><span id="line-117"></span><span id="withTimeoutSerialAlternative"><span class="annot"><span class="annottext">withTimeoutSerialAlternative :: forall (m :: * -&gt; *) b.
+(MonadAsync m, MonadFork m, MonadMonotonicTime m, MonadTimer m,
+ MonadMask m, MonadThrow (STM m)) =&gt;
+(TimeoutFn m -&gt; m b) -&gt; m b
+</span><a href="Network.Mux.Timeout.html#withTimeoutSerialAlternative"><span class="hs-identifier hs-var hs-var">withTimeoutSerialAlternative</span></a></span></span><span> </span><span id="local-6989586621679115438"><span class="annot"><span class="annottext">TimeoutFn m -&gt; m b
+</span><a href="#local-6989586621679115438"><span class="hs-identifier hs-var">body</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span>    </span><span class="hs-comment">-- State shared between the timeouts and the monitoring thread.</span><span>
+</span><span id="line-120"></span><span>    </span><span id="local-6989586621679115439"><span class="annot"><span class="annottext">MonitorState m
+</span><a href="#local-6989586621679115439"><span class="hs-identifier hs-var">monitorState</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m (MonitorState m)
+forall (m :: * -&gt; *). MonadSTM m =&gt; m (MonitorState m)
+</span><a href="Network.Mux.Timeout.html#newMonitorState"><span class="hs-identifier hs-var">newMonitorState</span></a></span><span>
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span>    </span><span class="hs-comment">-- Run the monitoring thread but ensure it terminates when the body is done.</span><span>
+</span><span id="line-123"></span><span>    </span><span class="annot"><span class="annottext">m () -&gt; (Async m () -&gt; m b) -&gt; m b
+forall a b. m a -&gt; (Async m a -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) a b.
+MonadAsync m =&gt;
+m a -&gt; (Async m a -&gt; m b) -&gt; m b
+</span><span class="hs-identifier hs-var">withAsync</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MonitorState m -&gt; m ()
+forall (m :: * -&gt; *).
+(MonadFork m, MonadSTM m, MonadMonotonicTime m, MonadTimer m,
+ MonadThrow (STM m)) =&gt;
+MonitorState m -&gt; m ()
+</span><a href="Network.Mux.Timeout.html#monitoringThread"><span class="hs-identifier hs-var">monitoringThread</span></a></span><span> </span><span class="annot"><span class="annottext">MonitorState m
+</span><a href="#local-6989586621679115439"><span class="hs-identifier hs-var">monitorState</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Async m () -&gt; m b) -&gt; m b) -&gt; (Async m () -&gt; m b) -&gt; m b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Async m ()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span>      </span><span class="hs-comment">-- Run the body and pass it the @timeout@ function.</span><span>
+</span><span id="line-126"></span><span>      </span><span class="annot"><span class="annottext">TimeoutFn m -&gt; m b
+</span><a href="#local-6989586621679115438"><span class="hs-identifier hs-var">body</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MonitorState m -&gt; DiffTime -&gt; m a -&gt; m (Maybe a)
+forall (m :: * -&gt; *) a.
+(MonadFork m, MonadMonotonicTime m, MonadTimer m, MonadMask m,
+ MonadThrow (STM m)) =&gt;
+MonitorState m -&gt; DiffTime -&gt; m a -&gt; m (Maybe a)
+</span><a href="Network.Mux.Timeout.html#timeout"><span class="hs-identifier hs-var">timeout</span></a></span><span> </span><span class="annot"><span class="annottext">MonitorState m
+</span><a href="#local-6989586621679115439"><span class="hs-identifier hs-var">monitorState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- | The state shared between the timeouts and the monitoring thread.</span><span>
+</span><span id="line-130"></span><span class="hs-comment">--</span><span>
+</span><span id="line-131"></span><span class="hs-keyword">data</span><span> </span><span id="MonitorState"><span class="annot"><a href="Network.Mux.Timeout.html#MonitorState"><span class="hs-identifier hs-var">MonitorState</span></a></span></span><span> </span><span id="local-6989586621679115319"><span class="annot"><a href="#local-6989586621679115319"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-132"></span><span>     </span><span id="MonitorState"><span class="annot"><a href="Network.Mux.Timeout.html#MonitorState"><span class="hs-identifier hs-var">MonitorState</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-133"></span><span>       </span><span class="hs-comment">-- written by timeout combinator, read and reset by monitoring thread</span><span>
+</span><span id="line-134"></span><span>       </span><span id="nextTimeoutVar"><span class="annot"><span class="annottext">forall (m :: * -&gt; *). MonitorState m -&gt; TVar m (NextTimeout m)
+</span><a href="Network.Mux.Timeout.html#nextTimeoutVar"><span class="hs-identifier hs-var hs-var">nextTimeoutVar</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">TVar</span></span><span> </span><span class="annot"><a href="#local-6989586621679115319"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Timeout.html#NextTimeout"><span class="hs-identifier hs-type">NextTimeout</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115319"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-135"></span><span>
+</span><span id="line-136"></span><span>       </span><span class="hs-comment">-- written by monitoring thread, read by timeout combinator</span><span>
+</span><span id="line-137"></span><span>       </span><span id="curDeadlineVar"><span class="annot"><span class="annottext">forall (m :: * -&gt; *). MonitorState m -&gt; TVar m Time
+</span><a href="Network.Mux.Timeout.html#curDeadlineVar"><span class="hs-identifier hs-var hs-var">curDeadlineVar</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">TVar</span></span><span> </span><span class="annot"><a href="#local-6989586621679115319"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Time</span></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span>       </span><span class="hs-comment">-- written by timeout combinator, read and reset by monitoring thread</span><span>
+</span><span id="line-140"></span><span>       </span><span id="deadlineResetVar"><span class="annot"><span class="annottext">forall (m :: * -&gt; *). MonitorState m -&gt; TVar m Bool
+</span><a href="Network.Mux.Timeout.html#deadlineResetVar"><span class="hs-identifier hs-var hs-var">deadlineResetVar</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">TVar</span></span><span> </span><span class="annot"><a href="#local-6989586621679115319"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Bool"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>     </span><span class="hs-special">}</span><span>
+</span><span id="line-142"></span><span>
+</span><span id="line-143"></span><span class="hs-keyword">data</span><span> </span><span id="NextTimeout"><span class="annot"><a href="Network.Mux.Timeout.html#NextTimeout"><span class="hs-identifier hs-var">NextTimeout</span></a></span></span><span> </span><span id="local-6989586621679115328"><span class="annot"><a href="#local-6989586621679115328"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NoNextTimeout"><span class="annot"><a href="Network.Mux.Timeout.html#NoNextTimeout"><span class="hs-identifier hs-var">NoNextTimeout</span></a></span></span><span>
+</span><span id="line-144"></span><span>                   </span><span class="hs-glyph">|</span><span> </span><span id="NextTimeout"><span class="annot"><a href="Network.Mux.Timeout.html#NextTimeout"><span class="hs-identifier hs-var">NextTimeout</span></a></span></span><span>
+</span><span id="line-145"></span><span>                       </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ThreadId</span></span><span> </span><span class="annot"><a href="#local-6989586621679115328"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span>           </span><span class="hs-comment">-- Which thread to interrupt</span><span>
+</span><span id="line-146"></span><span>                       </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">Time</span></span><span>                   </span><span class="hs-comment">-- When to interrupt it</span><span>
+</span><span id="line-147"></span><span>                       </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">TVar</span></span><span> </span><span class="annot"><a href="#local-6989586621679115328"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutState"><span class="hs-identifier hs-type">TimeoutState</span></a></span><span class="hs-special">)</span><span>  </span><span class="hs-comment">-- Synchronisation state</span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span id="local-6989586621679115308"><span class="annot"><a href="Network.Mux.Timeout.html#newMonitorState"><span class="hs-identifier hs-type">newMonitorState</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadSTM</span></span><span> </span><span class="annot"><a href="#local-6989586621679115308"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115308"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Timeout.html#MonitorState"><span class="hs-identifier hs-type">MonitorState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115308"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-151"></span><span id="newMonitorState"><span class="annot"><span class="annottext">newMonitorState :: forall (m :: * -&gt; *). MonadSTM m =&gt; m (MonitorState m)
+</span><a href="Network.Mux.Timeout.html#newMonitorState"><span class="hs-identifier hs-var hs-var">newMonitorState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-152"></span><span>    </span><span id="local-6989586621679115466"><span class="annot"><span class="annottext">TVar m (NextTimeout m)
+</span><a href="#local-6989586621679115466"><span class="hs-identifier hs-var">nextTimeoutVar</span></a></span></span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">NextTimeout m -&gt; m (TVar m (NextTimeout m))
+forall a. a -&gt; m (TVar m a)
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; a -&gt; m (TVar m a)
+</span><span class="hs-identifier hs-var">newTVarIO</span></span><span> </span><span class="annot"><span class="annottext">NextTimeout m
+forall (m :: * -&gt; *). NextTimeout m
+</span><a href="Network.Mux.Timeout.html#NoNextTimeout"><span class="hs-identifier hs-var">NoNextTimeout</span></a></span><span>
+</span><span id="line-153"></span><span>    </span><span id="local-6989586621679115468"><span class="annot"><span class="annottext">TVar m Time
+</span><a href="#local-6989586621679115468"><span class="hs-identifier hs-var">curDeadlineVar</span></a></span></span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Time -&gt; m (TVar m Time)
+forall a. a -&gt; m (TVar m a)
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; a -&gt; m (TVar m a)
+</span><span class="hs-identifier hs-var">newTVarIO</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DiffTime -&gt; Time
+</span><span class="hs-identifier hs-var">Time</span></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>    </span><span id="local-6989586621679115470"><span class="annot"><span class="annottext">TVar m Bool
+</span><a href="#local-6989586621679115470"><span class="hs-identifier hs-var">deadlineResetVar</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; m (TVar m Bool)
+forall a. a -&gt; m (TVar m a)
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; a -&gt; m (TVar m a)
+</span><span class="hs-identifier hs-var">newTVarIO</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-155"></span><span>    </span><span class="annot"><span class="annottext">MonitorState m -&gt; m (MonitorState m)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#MonitorState"><span class="hs-identifier hs-type">MonitorState</span></a></span><span class="hs-special">{</span><span class="annot"><span class="annottext">TVar m Bool
+TVar m Time
+TVar m (NextTimeout m)
+nextTimeoutVar :: TVar m (NextTimeout m)
+curDeadlineVar :: TVar m Time
+deadlineResetVar :: TVar m Bool
+nextTimeoutVar :: TVar m (NextTimeout m)
+curDeadlineVar :: TVar m Time
+deadlineResetVar :: TVar m Bool
+</span><a href="Network.Mux.Timeout.html#nextTimeoutVar"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-156"></span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="hs-comment">-- | An update to the shared monitor state to set a new timer.</span><span>
+</span><span id="line-159"></span><span class="hs-comment">--</span><span>
+</span><span id="line-160"></span><span id="local-6989586621679115331"><span class="annot"><a href="Network.Mux.Timeout.html#setNewTimer"><span class="hs-identifier hs-type">setNewTimer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadSTM</span></span><span> </span><span class="annot"><a href="#local-6989586621679115331"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-161"></span><span>            </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#MonitorState"><span class="hs-identifier hs-type">MonitorState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115331"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-162"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">ThreadId</span></span><span> </span><span class="annot"><a href="#local-6989586621679115331"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-163"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Time</span></span><span>
+</span><span id="line-164"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TVar</span></span><span> </span><span class="annot"><a href="#local-6989586621679115331"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutState"><span class="hs-identifier hs-type">TimeoutState</span></a></span><span>
+</span><span id="line-165"></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115331"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-166"></span><span id="setNewTimer"><span class="annot"><span class="annottext">setNewTimer :: forall (m :: * -&gt; *).
+MonadSTM m =&gt;
+MonitorState m -&gt; ThreadId m -&gt; Time -&gt; TVar m TimeoutState -&gt; m ()
+</span><a href="Network.Mux.Timeout.html#setNewTimer"><span class="hs-identifier hs-var hs-var">setNewTimer</span></a></span></span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#MonitorState"><span class="hs-identifier hs-type">MonitorState</span></a></span><span class="hs-special">{</span><span id="local-6989586621679115488"><span class="annot"><span class="annottext">TVar m (NextTimeout m)
+nextTimeoutVar :: forall (m :: * -&gt; *). MonitorState m -&gt; TVar m (NextTimeout m)
+nextTimeoutVar :: TVar m (NextTimeout m)
+</span><a href="Network.Mux.Timeout.html#nextTimeoutVar"><span class="hs-identifier hs-var hs-var">nextTimeoutVar</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679115489"><span class="annot"><span class="annottext">TVar m Time
+curDeadlineVar :: forall (m :: * -&gt; *). MonitorState m -&gt; TVar m Time
+curDeadlineVar :: TVar m Time
+</span><a href="Network.Mux.Timeout.html#curDeadlineVar"><span class="hs-identifier hs-var hs-var">curDeadlineVar</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679115490"><span class="annot"><span class="annottext">TVar m Bool
+deadlineResetVar :: forall (m :: * -&gt; *). MonitorState m -&gt; TVar m Bool
+deadlineResetVar :: TVar m Bool
+</span><a href="Network.Mux.Timeout.html#deadlineResetVar"><span class="hs-identifier hs-var hs-var">deadlineResetVar</span></a></span></span><span class="hs-special">}</span><span>
+</span><span id="line-167"></span><span>            </span><span class="hs-glyph">!</span><span id="local-6989586621679115491"><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679115491"><span class="hs-identifier hs-var">tid</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679115492"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679115492"><span class="hs-identifier hs-var">deadline</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679115493"><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679115493"><span class="hs-identifier hs-var">stateVar</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-168"></span><span>    </span><span class="annot"><span class="annottext">STM m () -&gt; m ()
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m () -&gt; m ()) -&gt; STM m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-169"></span><span>      </span><span class="annot"><span class="annottext">TVar m (NextTimeout m) -&gt; NextTimeout m -&gt; STM m ()
+forall a. TVar m a -&gt; a -&gt; STM m ()
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m (NextTimeout m)
+</span><a href="#local-6989586621679115488"><span class="hs-identifier hs-var">nextTimeoutVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ThreadId m -&gt; Time -&gt; TVar m TimeoutState -&gt; NextTimeout m
+forall (m :: * -&gt; *).
+ThreadId m -&gt; Time -&gt; TVar m TimeoutState -&gt; NextTimeout m
+</span><a href="Network.Mux.Timeout.html#NextTimeout"><span class="hs-identifier hs-var">NextTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679115491"><span class="hs-identifier hs-var">tid</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679115492"><span class="hs-identifier hs-var">deadline</span></a></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679115493"><span class="hs-identifier hs-var">stateVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-170"></span><span>      </span><span id="local-6989586621679115496"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679115496"><span class="hs-identifier hs-var">curDeadline</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar m Time -&gt; STM m Time
+forall a. TVar m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m Time
+</span><a href="#local-6989586621679115489"><span class="hs-identifier hs-var">curDeadlineVar</span></a></span><span>
+</span><span id="line-171"></span><span>      </span><span class="hs-comment">-- If the timer deadline has moved backwards, notify the monitor thread</span><span>
+</span><span id="line-172"></span><span>      </span><span class="hs-comment">-- so it can wake up and grab the next timeout</span><span>
+</span><span id="line-173"></span><span>      </span><span class="annot"><span class="annottext">Bool -&gt; STM m () -&gt; STM m ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679115492"><span class="hs-identifier hs-var">deadline</span></a></span><span> </span><span class="annot"><span class="annottext">Time -&gt; Time -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679115496"><span class="hs-identifier hs-var">curDeadline</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(STM m () -&gt; STM m ()) -&gt; STM m () -&gt; STM m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-174"></span><span>        </span><span class="annot"><span class="annottext">TVar m Bool -&gt; Bool -&gt; STM m ()
+forall a. TVar m a -&gt; a -&gt; STM m ()
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m Bool
+</span><a href="#local-6989586621679115490"><span class="hs-identifier hs-var">deadlineResetVar</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-175"></span><span>
+</span><span id="line-176"></span><span>
+</span><span id="line-177"></span><span class="hs-comment">-- | A potentially blocking wait read side, so can block.</span><span>
+</span><span id="line-178"></span><span class="hs-comment">--</span><span>
+</span><span id="line-179"></span><span id="local-6989586621679115341"><span class="annot"><a href="Network.Mux.Timeout.html#readNextTimeout"><span class="hs-identifier hs-type">readNextTimeout</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadSTM</span></span><span> </span><span class="annot"><a href="#local-6989586621679115341"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-180"></span><span>                </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#MonitorState"><span class="hs-identifier hs-type">MonitorState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115341"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-181"></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115341"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">ThreadId</span></span><span> </span><span class="annot"><a href="#local-6989586621679115341"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Time</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">TVar</span></span><span> </span><span class="annot"><a href="#local-6989586621679115341"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutState"><span class="hs-identifier hs-type">TimeoutState</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-182"></span><span id="readNextTimeout"><span class="annot"><span class="annottext">readNextTimeout :: forall (m :: * -&gt; *).
+MonadSTM m =&gt;
+MonitorState m -&gt; m (ThreadId m, Time, TVar m TimeoutState)
+</span><a href="Network.Mux.Timeout.html#readNextTimeout"><span class="hs-identifier hs-var hs-var">readNextTimeout</span></a></span></span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#MonitorState"><span class="hs-identifier hs-type">MonitorState</span></a></span><span class="hs-special">{</span><span id="local-6989586621679115516"><span class="annot"><span class="annottext">TVar m (NextTimeout m)
+nextTimeoutVar :: forall (m :: * -&gt; *). MonitorState m -&gt; TVar m (NextTimeout m)
+nextTimeoutVar :: TVar m (NextTimeout m)
+</span><a href="Network.Mux.Timeout.html#nextTimeoutVar"><span class="hs-identifier hs-var hs-var">nextTimeoutVar</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679115517"><span class="annot"><span class="annottext">TVar m Time
+curDeadlineVar :: forall (m :: * -&gt; *). MonitorState m -&gt; TVar m Time
+curDeadlineVar :: TVar m Time
+</span><a href="Network.Mux.Timeout.html#curDeadlineVar"><span class="hs-identifier hs-var hs-var">curDeadlineVar</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679115518"><span class="annot"><span class="annottext">TVar m Bool
+deadlineResetVar :: forall (m :: * -&gt; *). MonitorState m -&gt; TVar m Bool
+deadlineResetVar :: TVar m Bool
+</span><a href="Network.Mux.Timeout.html#deadlineResetVar"><span class="hs-identifier hs-var hs-var">deadlineResetVar</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-183"></span><span>    </span><span class="annot"><span class="annottext">STM m (ThreadId m, Time, TVar m TimeoutState)
+-&gt; m (ThreadId m, Time, TVar m TimeoutState)
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m (ThreadId m, Time, TVar m TimeoutState)
+ -&gt; m (ThreadId m, Time, TVar m TimeoutState))
+-&gt; STM m (ThreadId m, Time, TVar m TimeoutState)
+-&gt; m (ThreadId m, Time, TVar m TimeoutState)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-184"></span><span>      </span><span id="local-6989586621679115519"><span class="annot"><span class="annottext">NextTimeout m
+</span><a href="#local-6989586621679115519"><span class="hs-identifier hs-var">nextTimeout</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar m (NextTimeout m) -&gt; STM m (NextTimeout m)
+forall a. TVar m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m (NextTimeout m)
+</span><a href="#local-6989586621679115516"><span class="hs-identifier hs-var">nextTimeoutVar</span></a></span><span>
+</span><span id="line-185"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">NextTimeout m
+</span><a href="#local-6989586621679115519"><span class="hs-identifier hs-var">nextTimeout</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-186"></span><span>        </span><span class="annot"><span class="annottext">NextTimeout m
+</span><a href="Network.Mux.Timeout.html#NoNextTimeout"><span class="hs-identifier hs-var">NoNextTimeout</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">STM m (ThreadId m, Time, TVar m TimeoutState)
+forall a. STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; STM m a
+</span><span class="hs-identifier hs-var">retry</span></span><span>
+</span><span id="line-187"></span><span>        </span><span class="annot"><a href="Network.Mux.Timeout.html#NextTimeout"><span class="hs-identifier hs-type">NextTimeout</span></a></span><span> </span><span id="local-6989586621679115521"><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679115521"><span class="hs-identifier hs-var">tid</span></a></span></span><span> </span><span id="local-6989586621679115522"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679115522"><span class="hs-identifier hs-var">deadline</span></a></span></span><span> </span><span id="local-6989586621679115523"><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679115523"><span class="hs-identifier hs-var">stateVar</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-188"></span><span>          </span><span class="hs-comment">-- We've picked up the next timeout so reset to empty</span><span>
+</span><span id="line-189"></span><span>          </span><span class="annot"><span class="annottext">TVar m (NextTimeout m) -&gt; NextTimeout m -&gt; STM m ()
+forall a. TVar m a -&gt; a -&gt; STM m ()
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m (NextTimeout m)
+</span><a href="#local-6989586621679115516"><span class="hs-identifier hs-var">nextTimeoutVar</span></a></span><span> </span><span class="annot"><span class="annottext">NextTimeout m
+forall (m :: * -&gt; *). NextTimeout m
+</span><a href="Network.Mux.Timeout.html#NoNextTimeout"><span class="hs-identifier hs-var">NoNextTimeout</span></a></span><span>
+</span><span id="line-190"></span><span>          </span><span class="hs-comment">-- Update the current deadline var so the 'setNewTimer' can see what</span><span>
+</span><span id="line-191"></span><span>          </span><span class="hs-comment">-- the current deadline we're waiting on is, so it can see if it</span><span>
+</span><span id="line-192"></span><span>          </span><span class="hs-comment">-- ever needs to wake us up if it sets up a new timer with an earlier</span><span>
+</span><span id="line-193"></span><span>          </span><span class="hs-comment">-- deadline.</span><span>
+</span><span id="line-194"></span><span>          </span><span class="annot"><span class="annottext">TVar m Time -&gt; Time -&gt; STM m ()
+forall a. TVar m a -&gt; a -&gt; STM m ()
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m Time
+</span><a href="#local-6989586621679115517"><span class="hs-identifier hs-var">curDeadlineVar</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679115522"><span class="hs-identifier hs-var">deadline</span></a></span><span>
+</span><span id="line-195"></span><span>          </span><span class="annot"><span class="annottext">TVar m Bool -&gt; Bool -&gt; STM m ()
+forall a. TVar m a -&gt; a -&gt; STM m ()
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m Bool
+</span><a href="#local-6989586621679115518"><span class="hs-identifier hs-var">deadlineResetVar</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-196"></span><span>          </span><span class="annot"><span class="annottext">(ThreadId m, Time, TVar m TimeoutState)
+-&gt; STM m (ThreadId m, Time, TVar m TimeoutState)
+forall a. a -&gt; STM m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679115521"><span class="hs-identifier hs-var">tid</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679115522"><span class="hs-identifier hs-var">deadline</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679115523"><span class="hs-identifier hs-var">stateVar</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-197"></span><span>
+</span><span id="line-198"></span><span>
+</span><span id="line-199"></span><span class="hs-comment">-- | Three normal states of the timeout, plus one pseudo state. We use these</span><span>
+</span><span id="line-200"></span><span class="hs-comment">-- states to provide proper communication between the action thread and the</span><span>
+</span><span id="line-201"></span><span class="hs-comment">-- monitoring thread.</span><span>
+</span><span id="line-202"></span><span class="hs-comment">--</span><span>
+</span><span id="line-203"></span><span class="hs-comment">-- The valid transitions are from 'TimeoutPending' to 'TimeoutCancelled', and</span><span>
+</span><span id="line-204"></span><span class="hs-comment">-- from 'TimeoutPending' to 'TimeoutFired'. Additionally there is a transition</span><span>
+</span><span id="line-205"></span><span class="hs-comment">-- from 'TimeoutFired' to 'TimeoutTerminated'.</span><span>
+</span><span id="line-206"></span><span class="hs-comment">--</span><span>
+</span><span id="line-207"></span><span class="hs-keyword">data</span><span> </span><span id="TimeoutState"><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutState"><span class="hs-identifier hs-var">TimeoutState</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TimeoutPending"><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutPending"><span class="hs-identifier hs-var">TimeoutPending</span></a></span></span><span>
+</span><span id="line-208"></span><span>                  </span><span class="hs-glyph">|</span><span> </span><span id="TimeoutCancelled"><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutCancelled"><span class="hs-identifier hs-var">TimeoutCancelled</span></a></span></span><span>
+</span><span id="line-209"></span><span>                  </span><span class="hs-glyph">|</span><span> </span><span id="TimeoutFired"><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutFired"><span class="hs-identifier hs-var">TimeoutFired</span></a></span></span><span>
+</span><span id="line-210"></span><span>                  </span><span class="hs-glyph">|</span><span> </span><span id="TimeoutTerminated"><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutTerminated"><span class="hs-identifier hs-var">TimeoutTerminated</span></a></span></span><span>
+</span><span id="line-211"></span><span>
+</span><span id="line-212"></span><span>
+</span><span id="line-213"></span><span class="hs-comment">-- | Exception used by 'withTimeoutSerial' to terminate the action when the</span><span>
+</span><span id="line-214"></span><span class="hs-comment">-- timeout occurs.</span><span>
+</span><span id="line-215"></span><span class="hs-comment">--</span><span>
+</span><span id="line-216"></span><span class="hs-keyword">data</span><span> </span><span id="TimeoutException"><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutException"><span class="hs-identifier hs-var">TimeoutException</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TimeoutException"><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutException"><span class="hs-identifier hs-var">TimeoutException</span></a></span></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679115530"><span id="local-6989586621679115532"><span id="local-6989586621679115536"><span class="annot"><span class="annottext">Int -&gt; TimeoutException -&gt; ShowS
+[TimeoutException] -&gt; ShowS
+TimeoutException -&gt; String
+(Int -&gt; TimeoutException -&gt; ShowS)
+-&gt; (TimeoutException -&gt; String)
+-&gt; ([TimeoutException] -&gt; ShowS)
+-&gt; Show TimeoutException
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TimeoutException -&gt; ShowS
+showsPrec :: Int -&gt; TimeoutException -&gt; ShowS
+$cshow :: TimeoutException -&gt; String
+show :: TimeoutException -&gt; String
+$cshowList :: [TimeoutException] -&gt; ShowS
+showList :: [TimeoutException] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-217"></span><span>
+</span><span id="line-218"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679115546"><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutException"><span class="hs-identifier hs-type">TimeoutException</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-219"></span><span>  </span><span id="local-6989586621679115551"><span class="annot"><span class="annottext">toException :: TimeoutException -&gt; SomeException
+</span><a href="#local-6989586621679115551"><span class="hs-identifier hs-var hs-var hs-var hs-var">toException</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TimeoutException -&gt; SomeException
+forall e. Exception e =&gt; e -&gt; SomeException
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Exception.html#asyncExceptionToException"><span class="hs-identifier hs-var">asyncExceptionToException</span></a></span><span>
+</span><span id="line-220"></span><span>  </span><span id="local-6989586621679115554"><span class="annot"><span class="annottext">fromException :: SomeException -&gt; Maybe TimeoutException
+</span><a href="#local-6989586621679115554"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromException</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; Maybe TimeoutException
+forall e. Exception e =&gt; SomeException -&gt; Maybe e
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Exception.html#asyncExceptionFromException"><span class="hs-identifier hs-var">asyncExceptionFromException</span></a></span><span>
+</span><span id="line-221"></span><span>
+</span><span id="line-222"></span><span>
+</span><span id="line-223"></span><span class="hs-comment">-- | The @timeout@ action we pass to the body in 'withTimeoutSerial'.</span><span>
+</span><span id="line-224"></span><span class="hs-comment">--</span><span>
+</span><span id="line-225"></span><span class="annot"><a href="Network.Mux.Timeout.html#timeout"><span class="hs-identifier hs-type">timeout</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679115317"><span class="annot"><a href="#local-6989586621679115317"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679115318"><span class="annot"><a href="#local-6989586621679115318"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-226"></span><span>           </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadFork</span></span><span> </span><span class="annot"><a href="#local-6989586621679115317"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadMonotonicTime</span></span><span> </span><span class="annot"><a href="#local-6989586621679115317"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadTimer</span></span><span> </span><span class="annot"><a href="#local-6989586621679115317"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-227"></span><span>            </span><span class="annot"><span class="hs-identifier hs-type">MonadMask</span></span><span> </span><span class="annot"><a href="#local-6989586621679115317"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadThrow</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">STM</span></span><span> </span><span class="annot"><a href="#local-6989586621679115317"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-228"></span><span>        </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#MonitorState"><span class="hs-identifier hs-type">MonitorState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115317"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-229"></span><span>        </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.DiffTime.html#DiffTime"><span class="hs-identifier hs-type">DiffTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115317"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115318"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115317"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115318"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-230"></span><span id="timeout"><span class="annot"><span class="annottext">timeout :: forall (m :: * -&gt; *) a.
+(MonadFork m, MonadMonotonicTime m, MonadTimer m, MonadMask m,
+ MonadThrow (STM m)) =&gt;
+MonitorState m -&gt; DiffTime -&gt; m a -&gt; m (Maybe a)
+</span><a href="Network.Mux.Timeout.html#timeout"><span class="hs-identifier hs-var hs-var">timeout</span></a></span></span><span> </span><span class="annot"><span class="annottext">MonitorState m
+</span><span class="hs-identifier">_</span></span><span>            </span><span id="local-6989586621679115624"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679115624"><span class="hs-identifier hs-var">delay</span></a></span></span><span> </span><span id="local-6989586621679115625"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679115625"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679115624"><span class="hs-identifier hs-var">delay</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; DiffTime -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span>  </span><span class="annot"><span class="annottext">DiffTime
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Maybe a) -&gt; m a -&gt; m (Maybe a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679115625"><span class="hs-identifier hs-var">action</span></a></span><span>
+</span><span id="line-231"></span><span class="annot"><a href="Network.Mux.Timeout.html#timeout"><span class="hs-identifier hs-var">timeout</span></a></span><span> </span><span class="annot"><span class="annottext">MonitorState m
+</span><span class="hs-identifier">_</span></span><span>            </span><span id="local-6989586621679115627"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679115627"><span class="hs-identifier hs-var">delay</span></a></span></span><span> </span><span class="annot"><span class="annottext">m a
+</span><span class="hs-identifier">_</span></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679115627"><span class="hs-identifier hs-var">delay</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; DiffTime -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; m (Maybe a)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-232"></span><span class="annot"><a href="Network.Mux.Timeout.html#timeout"><span class="hs-identifier hs-var">timeout</span></a></span><span> </span><span id="local-6989586621679115628"><span class="annot"><span class="annottext">MonitorState m
+</span><a href="#local-6989586621679115628"><span class="hs-identifier hs-var">monitorState</span></a></span></span><span> </span><span id="local-6989586621679115629"><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679115629"><span class="hs-identifier hs-var">delay</span></a></span></span><span> </span><span id="local-6989586621679115630"><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679115630"><span class="hs-identifier hs-var">action</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-233"></span><span>
+</span><span id="line-234"></span><span>    </span><span class="hs-comment">-- We have to be very careful with async exceptions of course.</span><span>
+</span><span id="line-235"></span><span>    </span><span class="annot"><span class="annottext">((forall a. m a -&gt; m a) -&gt; m (Maybe a)) -&gt; m (Maybe a)
+forall b. ((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b
+forall (m :: * -&gt; *) b.
+MonadMask m =&gt;
+((forall a. m a -&gt; m a) -&gt; m b) -&gt; m b
+</span><span class="hs-identifier hs-var">mask</span></span><span> </span><span class="annot"><span class="annottext">(((forall a. m a -&gt; m a) -&gt; m (Maybe a)) -&gt; m (Maybe a))
+-&gt; ((forall a. m a -&gt; m a) -&gt; m (Maybe a)) -&gt; m (Maybe a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679115632"><span class="annot"><span class="annottext">forall a. m a -&gt; m a
+</span><a href="#local-6989586621679115632"><span class="hs-identifier hs-var">restore</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-236"></span><span>
+</span><span id="line-237"></span><span>      </span><span class="hs-comment">-- Set up the timeout and pass it over to the monitoring thread.</span><span>
+</span><span id="line-238"></span><span>      </span><span class="hs-comment">-- This overwrites any previous timeout.</span><span>
+</span><span id="line-239"></span><span>      </span><span id="local-6989586621679115633"><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679115633"><span class="hs-identifier hs-var">tid</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m (ThreadId m)
+forall (m :: * -&gt; *). MonadThread m =&gt; m (ThreadId m)
+</span><span class="hs-identifier hs-var">myThreadId</span></span><span>
+</span><span id="line-240"></span><span>      </span><span id="local-6989586621679115635"><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679115635"><span class="hs-identifier hs-var">timeoutStateVar</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TimeoutState -&gt; m (TVar m TimeoutState)
+forall a. a -&gt; m (TVar m a)
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; a -&gt; m (TVar m a)
+</span><span class="hs-identifier hs-var">newTVarIO</span></span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Network.Mux.Timeout.html#TimeoutPending"><span class="hs-identifier hs-var">TimeoutPending</span></a></span><span>
+</span><span id="line-241"></span><span>      </span><span id="local-6989586621679115636"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679115636"><span class="hs-identifier hs-var">now</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Time
+forall (m :: * -&gt; *). MonadMonotonicTime m =&gt; m Time
+</span><span class="hs-identifier hs-var">getMonotonicTime</span></span><span>
+</span><span id="line-242"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679115638"><span class="annot"><span class="annottext">deadline :: Time
+</span><a href="#local-6989586621679115638"><span class="hs-identifier hs-var hs-var">deadline</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; Time -&gt; Time
+</span><span class="hs-identifier hs-var">addTime</span></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679115629"><span class="hs-identifier hs-var">delay</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679115636"><span class="hs-identifier hs-var">now</span></a></span><span>
+</span><span id="line-243"></span><span>      </span><span class="annot"><span class="annottext">MonitorState m -&gt; ThreadId m -&gt; Time -&gt; TVar m TimeoutState -&gt; m ()
+forall (m :: * -&gt; *).
+MonadSTM m =&gt;
+MonitorState m -&gt; ThreadId m -&gt; Time -&gt; TVar m TimeoutState -&gt; m ()
+</span><a href="Network.Mux.Timeout.html#setNewTimer"><span class="hs-identifier hs-var">setNewTimer</span></a></span><span> </span><span class="annot"><span class="annottext">MonitorState m
+</span><a href="#local-6989586621679115628"><span class="hs-identifier hs-var">monitorState</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679115633"><span class="hs-identifier hs-var">tid</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679115638"><span class="hs-identifier hs-var">deadline</span></a></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679115635"><span class="hs-identifier hs-var">timeoutStateVar</span></a></span><span>
+</span><span id="line-244"></span><span>
+</span><span id="line-245"></span><span>      </span><span class="hs-comment">-- Now we unmask exceptions to run the action. If we get the timeout</span><span>
+</span><span id="line-246"></span><span>      </span><span class="hs-comment">-- exception then we drop straight down to the outer 'catch' handler.</span><span>
+</span><span id="line-247"></span><span>      </span><span id="local-6989586621679115640"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115640"><span class="hs-identifier hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m a -&gt; m a
+forall a. m a -&gt; m a
+</span><a href="#local-6989586621679115632"><span class="hs-identifier hs-var">restore</span></a></span><span> </span><span class="annot"><span class="annottext">m a
+</span><a href="#local-6989586621679115630"><span class="hs-identifier hs-var">action</span></a></span><span>
+</span><span id="line-248"></span><span>
+</span><span id="line-249"></span><span>      </span><span class="hs-comment">-- The action completed without us getting an exception, but there's</span><span>
+</span><span id="line-250"></span><span>      </span><span class="hs-comment">-- a race condition with the monitoringThread to resolve. It could be</span><span>
+</span><span id="line-251"></span><span>      </span><span class="hs-comment">-- just about to send us an async exception when we drop out of the</span><span>
+</span><span id="line-252"></span><span>      </span><span class="hs-comment">-- masked region, or worse, outside of the scope of the 'catch' handler.</span><span>
+</span><span id="line-253"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-254"></span><span>      </span><span class="hs-comment">-- So we must synchronise with the monitoringThread to ensure that we</span><span>
+</span><span id="line-255"></span><span>      </span><span class="hs-comment">-- know positively one way or the other whether the timeout exception is</span><span>
+</span><span id="line-256"></span><span>      </span><span class="hs-comment">-- or is not going to be sent.</span><span>
+</span><span id="line-257"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-258"></span><span>      </span><span class="hs-comment">-- We do that by having both this thread and the monitoringThread do</span><span>
+</span><span id="line-259"></span><span>      </span><span class="hs-comment">-- an STM tx on the timeoutStateVar, to atomically move it into the</span><span>
+</span><span id="line-260"></span><span>      </span><span class="hs-comment">-- cancelled or fired state, depending on which thread gets there first.</span><span>
+</span><span id="line-261"></span><span>      </span><span class="hs-comment">-- So this is a race, but it's a race where we can positively establish</span><span>
+</span><span id="line-262"></span><span>      </span><span class="hs-comment">-- the outcome. If this thread gets there first we move it to the</span><span>
+</span><span id="line-263"></span><span>      </span><span class="hs-comment">-- cancelled state. If the monitoringThread gets there first it moves it</span><span>
+</span><span id="line-264"></span><span>      </span><span class="hs-comment">-- to the fired state.</span><span>
+</span><span id="line-265"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-266"></span><span>      </span><span class="hs-comment">-- This STM tx is not blocking, so we're guaranteed not to be interrupted</span><span>
+</span><span id="line-267"></span><span>      </span><span class="hs-comment">-- while we have async exceptions masked.</span><span>
+</span><span id="line-268"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-269"></span><span>      </span><span id="local-6989586621679115641"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679115641"><span class="hs-identifier hs-var">timeoutFired</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM m Bool -&gt; m Bool
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m Bool -&gt; m Bool) -&gt; STM m Bool -&gt; m Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-270"></span><span>        </span><span id="local-6989586621679115642"><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679115642"><span class="hs-identifier hs-var">st</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState -&gt; STM m TimeoutState
+forall a. TVar m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679115635"><span class="hs-identifier hs-var">timeoutStateVar</span></a></span><span>
+</span><span id="line-271"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679115642"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-272"></span><span>          </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Network.Mux.Timeout.html#TimeoutFired"><span class="hs-identifier hs-var">TimeoutFired</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; STM m Bool
+forall a. a -&gt; STM m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-273"></span><span>          </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Network.Mux.Timeout.html#TimeoutPending"><span class="hs-identifier hs-var">TimeoutPending</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState -&gt; TimeoutState -&gt; STM m ()
+forall a. TVar m a -&gt; a -&gt; STM m ()
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679115635"><span class="hs-identifier hs-var">timeoutStateVar</span></a></span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Network.Mux.Timeout.html#TimeoutCancelled"><span class="hs-identifier hs-var">TimeoutCancelled</span></a></span><span>
+</span><span id="line-274"></span><span>                         </span><span class="annot"><span class="annottext">STM m () -&gt; STM m Bool -&gt; STM m Bool
+forall a b. STM m a -&gt; STM m b -&gt; STM m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; STM m Bool
+forall a. a -&gt; STM m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-275"></span><span>          </span><span class="annot"><span class="annottext">TimeoutState
+</span><span class="hs-identifier">_</span></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TimeoutAssertion -&gt; STM m Bool
+forall (m :: * -&gt; *) e a.
+(MonadSTM m, MonadThrow (STM m), Exception e) =&gt;
+e -&gt; STM m a
+</span><span class="hs-identifier hs-var">throwSTM</span></span><span> </span><span class="annot"><span class="annottext">TimeoutAssertion
+</span><a href="Network.Mux.Timeout.html#TimeoutImpossibleTimeoutState"><span class="hs-identifier hs-var">TimeoutImpossibleTimeoutState</span></a></span><span>
+</span><span id="line-276"></span><span>
+</span><span id="line-277"></span><span>      </span><span class="hs-comment">-- If we established that the monitoring thread is definitely not firing</span><span>
+</span><span id="line-278"></span><span>      </span><span class="hs-comment">-- the timeout exception then we're done.</span><span>
+</span><span id="line-279"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-280"></span><span>      </span><span class="hs-comment">-- If on the other hand we lost the race and the monitoring thread is</span><span>
+</span><span id="line-281"></span><span>      </span><span class="hs-comment">-- about to come for us then it's crucial that we block and wait for</span><span>
+</span><span id="line-282"></span><span>      </span><span class="hs-comment">-- our own demise, otherwise we could escape the scope of the outer</span><span>
+</span><span id="line-283"></span><span>      </span><span class="hs-comment">-- 'catch' handler.</span><span>
+</span><span id="line-284"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-285"></span><span>      </span><span class="hs-comment">-- We do that blocking wait with another STM tx on the timeoutStateVar,</span><span>
+</span><span id="line-286"></span><span>      </span><span class="hs-comment">-- this time waiting for the monitoring thread to set it to the</span><span>
+</span><span id="line-287"></span><span>      </span><span class="hs-comment">-- TimeoutTerminated state. But the monitoring thread only sets it to</span><span>
+</span><span id="line-288"></span><span>      </span><span class="hs-comment">-- that state /after/ raising the async exception in this thread. So</span><span>
+</span><span id="line-289"></span><span>      </span><span class="hs-comment">-- we will never actually reach that terminated state.</span><span>
+</span><span id="line-290"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-291"></span><span>      </span><span class="hs-comment">-- Note also that blocking STM txs are points where async exceptions that</span><span>
+</span><span id="line-292"></span><span>      </span><span class="hs-comment">-- are pending (due to our masked state) can be raised. Hence there is no</span><span>
+</span><span id="line-293"></span><span>      </span><span class="hs-comment">-- need for us to unmask for this bit.</span><span>
+</span><span id="line-294"></span><span>      </span><span class="hs-comment">--</span><span>
+</span><span id="line-295"></span><span>      </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679115641"><span class="hs-identifier hs-var">timeoutFired</span></a></span><span>
+</span><span id="line-296"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; m (Maybe a)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115640"><span class="hs-identifier hs-var">result</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-297"></span><span>        </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">STM m (Maybe a) -&gt; m (Maybe a)
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m (Maybe a) -&gt; m (Maybe a)) -&gt; STM m (Maybe a) -&gt; m (Maybe a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-298"></span><span>               </span><span id="local-6989586621679115646"><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679115646"><span class="hs-identifier hs-var">st</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState -&gt; STM m TimeoutState
+forall a. TVar m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679115635"><span class="hs-identifier hs-var">timeoutStateVar</span></a></span><span>
+</span><span id="line-299"></span><span>               </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679115646"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-300"></span><span>                 </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Network.Mux.Timeout.html#TimeoutFired"><span class="hs-identifier hs-var">TimeoutFired</span></a></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">STM m (Maybe a)
+forall a. STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; STM m a
+</span><span class="hs-identifier hs-var">retry</span></span><span>
+</span><span id="line-301"></span><span>                 </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Network.Mux.Timeout.html#TimeoutTerminated"><span class="hs-identifier hs-var">TimeoutTerminated</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TimeoutAssertion -&gt; STM m (Maybe a)
+forall (m :: * -&gt; *) e a.
+(MonadSTM m, MonadThrow (STM m), Exception e) =&gt;
+e -&gt; STM m a
+</span><span class="hs-identifier hs-var">throwSTM</span></span><span> </span><span class="annot"><span class="annottext">TimeoutAssertion
+</span><a href="Network.Mux.Timeout.html#TimeoutImpossibleReachedTerminated"><span class="hs-identifier hs-var">TimeoutImpossibleReachedTerminated</span></a></span><span>
+</span><span id="line-302"></span><span>                 </span><span class="annot"><span class="annottext">TimeoutState
+</span><span class="hs-identifier">_</span></span><span>                 </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TimeoutAssertion -&gt; STM m (Maybe a)
+forall (m :: * -&gt; *) e a.
+(MonadSTM m, MonadThrow (STM m), Exception e) =&gt;
+e -&gt; STM m a
+</span><span class="hs-identifier hs-var">throwSTM</span></span><span> </span><span class="annot"><span class="annottext">TimeoutAssertion
+</span><a href="Network.Mux.Timeout.html#TimeoutImpossibleTimeoutState"><span class="hs-identifier hs-var">TimeoutImpossibleTimeoutState</span></a></span><span>
+</span><span id="line-303"></span><span>
+</span><span id="line-304"></span><span>    </span><span class="annot"><span class="annottext">m (Maybe a) -&gt; (TimeoutException -&gt; m (Maybe a)) -&gt; m (Maybe a)
+forall e a. Exception e =&gt; m a -&gt; (e -&gt; m a) -&gt; m a
+forall (m :: * -&gt; *) e a.
+(MonadCatch m, Exception e) =&gt;
+m a -&gt; (e -&gt; m a) -&gt; m a
+</span><span class="hs-operator hs-var">`catch`</span></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">TimeoutException
+</span><a href="Network.Mux.Timeout.html#TimeoutException"><span class="hs-identifier hs-var">TimeoutException</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; m (Maybe a)
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-305"></span><span>
+</span><span id="line-306"></span><span>
+</span><span id="line-307"></span><span id="local-6989586621679115312"><span class="annot"><a href="Network.Mux.Timeout.html#monitoringThread"><span class="hs-identifier hs-type">monitoringThread</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">MonadFork</span></span><span> </span><span class="annot"><a href="#local-6989586621679115312"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadSTM</span></span><span> </span><span class="annot"><a href="#local-6989586621679115312"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-308"></span><span>                     </span><span class="annot"><span class="hs-identifier hs-type">MonadMonotonicTime</span></span><span> </span><span class="annot"><a href="#local-6989586621679115312"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-309"></span><span>                     </span><span class="annot"><span class="hs-identifier hs-type">MonadTimer</span></span><span> </span><span class="annot"><a href="#local-6989586621679115312"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadThrow</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">STM</span></span><span> </span><span class="annot"><a href="#local-6989586621679115312"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-310"></span><span>                 </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#MonitorState"><span class="hs-identifier hs-type">MonitorState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115312"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115312"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-311"></span><span id="monitoringThread"><span class="annot"><span class="annottext">monitoringThread :: forall (m :: * -&gt; *).
+(MonadFork m, MonadSTM m, MonadMonotonicTime m, MonadTimer m,
+ MonadThrow (STM m)) =&gt;
+MonitorState m -&gt; m ()
+</span><a href="Network.Mux.Timeout.html#monitoringThread"><span class="hs-identifier hs-var hs-var">monitoringThread</span></a></span></span><span> </span><span id="local-6989586621679115704"><span class="annot"><span class="annottext">monitorState :: MonitorState m
+</span><a href="#local-6989586621679115704"><span class="hs-identifier hs-var">monitorState</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Network.Mux.Timeout.html#MonitorState"><span class="hs-identifier hs-type">MonitorState</span></a></span><span class="hs-special">{</span><span id="local-6989586621679115705"><span class="annot"><span class="annottext">TVar m Bool
+deadlineResetVar :: forall (m :: * -&gt; *). MonitorState m -&gt; TVar m Bool
+deadlineResetVar :: TVar m Bool
+</span><a href="Network.Mux.Timeout.html#deadlineResetVar"><span class="hs-identifier hs-var hs-var">deadlineResetVar</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-312"></span><span>  </span><span id="local-6989586621679115706"><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679115706"><span class="hs-identifier hs-var">threadId</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m (ThreadId m)
+forall (m :: * -&gt; *). MonadThread m =&gt; m (ThreadId m)
+</span><span class="hs-identifier hs-var">myThreadId</span></span><span>
+</span><span id="line-313"></span><span>  </span><span class="annot"><span class="annottext">ThreadId m -&gt; String -&gt; m ()
+forall (m :: * -&gt; *). MonadThread m =&gt; ThreadId m -&gt; String -&gt; m ()
+</span><span class="hs-identifier hs-var">labelThread</span></span><span> </span><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679115706"><span class="hs-identifier hs-var">threadId</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;timeout-monitoring-thread&quot;</span></span><span>
+</span><span id="line-314"></span><span>  </span><span class="annot"><span class="annottext">m () -&gt; m ()
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html#forever"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m ()) -&gt; m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-315"></span><span>    </span><span class="hs-comment">-- Grab the next timeout to consider</span><span>
+</span><span id="line-316"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679115709"><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679115709"><span class="hs-identifier hs-var">tid</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679115710"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679115710"><span class="hs-identifier hs-var">deadline</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679115711"><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679115711"><span class="hs-identifier hs-var">timeoutStateVar</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MonitorState m -&gt; m (ThreadId m, Time, TVar m TimeoutState)
+forall (m :: * -&gt; *).
+MonadSTM m =&gt;
+MonitorState m -&gt; m (ThreadId m, Time, TVar m TimeoutState)
+</span><a href="Network.Mux.Timeout.html#readNextTimeout"><span class="hs-identifier hs-var">readNextTimeout</span></a></span><span> </span><span class="annot"><span class="annottext">MonitorState m
+</span><a href="#local-6989586621679115704"><span class="hs-identifier hs-var">monitorState</span></a></span><span>
+</span><span id="line-317"></span><span>
+</span><span id="line-318"></span><span>    </span><span class="hs-comment">-- Work out how long to wait for and do so. For already-expired timeouts</span><span>
+</span><span id="line-319"></span><span>    </span><span class="hs-comment">-- this is in the past, leading to a negative delay.</span><span>
+</span><span id="line-320"></span><span>    </span><span id="local-6989586621679115712"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679115712"><span class="hs-identifier hs-var">now</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">m Time
+forall (m :: * -&gt; *). MonadMonotonicTime m =&gt; m Time
+</span><span class="hs-identifier hs-var">getMonotonicTime</span></span><span>
+</span><span id="line-321"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679115713"><span class="annot"><span class="annottext">delay :: DiffTime
+</span><a href="#local-6989586621679115713"><span class="hs-identifier hs-var hs-var">delay</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Time -&gt; Time -&gt; DiffTime
+</span><span class="hs-identifier hs-var">diffTime</span></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679115710"><span class="hs-identifier hs-var">deadline</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679115712"><span class="hs-identifier hs-var">now</span></a></span><span>
+</span><span id="line-322"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; m () -&gt; m ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679115713"><span class="hs-identifier hs-var">delay</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; DiffTime -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m ()) -&gt; m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-323"></span><span>      </span><span id="local-6989586621679115716"><span class="annot"><span class="annottext">TVar m Bool
+</span><a href="#local-6989586621679115716"><span class="hs-identifier hs-var">timerExpired</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">DiffTime -&gt; m (TVar m Bool)
+forall (m :: * -&gt; *). MonadTimer m =&gt; DiffTime -&gt; m (TVar m Bool)
+</span><span class="hs-identifier hs-var">registerDelay</span></span><span> </span><span class="annot"><span class="annottext">DiffTime
+</span><a href="#local-6989586621679115713"><span class="hs-identifier hs-var">delay</span></a></span><span>
+</span><span id="line-324"></span><span>      </span><span class="annot"><span class="annottext">STM m () -&gt; m ()
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m () -&gt; m ()) -&gt; STM m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-325"></span><span>        </span><span class="hs-comment">-- Wait for either the timer to expire</span><span>
+</span><span id="line-326"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TVar m Bool -&gt; STM m Bool
+forall a. TVar m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m Bool
+</span><a href="#local-6989586621679115716"><span class="hs-identifier hs-var">timerExpired</span></a></span><span> </span><span class="annot"><span class="annottext">STM m Bool -&gt; (Bool -&gt; STM m ()) -&gt; STM m ()
+forall a b. STM m a -&gt; (a -&gt; STM m b) -&gt; STM m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; STM m ()
+forall (m :: * -&gt; *). MonadSTM m =&gt; Bool -&gt; STM m ()
+</span><span class="hs-identifier hs-var">check</span></span><span class="hs-special">)</span><span>
+</span><span id="line-327"></span><span>          </span><span class="annot"><span class="annottext">STM m () -&gt; STM m () -&gt; STM m ()
+forall a. STM m a -&gt; STM m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; STM m a -&gt; STM m a -&gt; STM m a
+</span><span class="hs-operator hs-var">`orElse`</span></span><span>
+</span><span id="line-328"></span><span>        </span><span class="hs-comment">-- or to be notified that the timer deadline moved backwards</span><span>
+</span><span id="line-329"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TVar m Bool -&gt; STM m Bool
+forall a. TVar m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m Bool
+</span><a href="#local-6989586621679115705"><span class="hs-identifier hs-var">deadlineResetVar</span></a></span><span> </span><span class="annot"><span class="annottext">STM m Bool -&gt; (Bool -&gt; STM m ()) -&gt; STM m ()
+forall a b. STM m a -&gt; (a -&gt; STM m b) -&gt; STM m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; STM m ()
+forall (m :: * -&gt; *). MonadSTM m =&gt; Bool -&gt; STM m ()
+</span><span class="hs-identifier hs-var">check</span></span><span class="hs-special">)</span><span>
+</span><span id="line-330"></span><span>
+</span><span id="line-331"></span><span>    </span><span class="hs-comment">-- Having woken up, we check to see if we need to send the timeout</span><span>
+</span><span id="line-332"></span><span>    </span><span class="hs-comment">-- exception. If the timeoutStateVar we grabbed is still in the pending</span><span>
+</span><span id="line-333"></span><span>    </span><span class="hs-comment">-- state after we have waited for the deadline then clearly it went over</span><span>
+</span><span id="line-334"></span><span>    </span><span class="hs-comment">-- and we will send the timeout exception.</span><span>
+</span><span id="line-335"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-336"></span><span>    </span><span class="hs-comment">-- As described above, there is a race between the timeout and the action</span><span>
+</span><span id="line-337"></span><span>    </span><span class="hs-comment">-- completing and we have to establish which happens first. So this is</span><span>
+</span><span id="line-338"></span><span>    </span><span class="hs-comment">-- the other side of that race. Here if we win the race we move to the</span><span>
+</span><span id="line-339"></span><span>    </span><span class="hs-comment">-- TimeoutFired state.</span><span>
+</span><span id="line-340"></span><span>    </span><span id="local-6989586621679115719"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679115719"><span class="hs-identifier hs-var">cancelled</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM m Bool -&gt; m Bool
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m Bool -&gt; m Bool) -&gt; STM m Bool -&gt; m Bool
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-341"></span><span>                   </span><span id="local-6989586621679115720"><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679115720"><span class="hs-identifier hs-var">st</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState -&gt; STM m TimeoutState
+forall a. TVar m a -&gt; STM m a
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; STM m a
+</span><span class="hs-identifier hs-var">readTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679115711"><span class="hs-identifier hs-var">timeoutStateVar</span></a></span><span>
+</span><span id="line-342"></span><span>                   </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="#local-6989586621679115720"><span class="hs-identifier hs-var">st</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-343"></span><span>                     </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Network.Mux.Timeout.html#TimeoutPending"><span class="hs-identifier hs-var">TimeoutPending</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState -&gt; TimeoutState -&gt; STM m ()
+forall a. TVar m a -&gt; a -&gt; STM m ()
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679115711"><span class="hs-identifier hs-var">timeoutStateVar</span></a></span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Network.Mux.Timeout.html#TimeoutFired"><span class="hs-identifier hs-var">TimeoutFired</span></a></span><span>
+</span><span id="line-344"></span><span>                                      </span><span class="annot"><span class="annottext">STM m () -&gt; STM m Bool -&gt; STM m Bool
+forall a b. STM m a -&gt; STM m b -&gt; STM m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; STM m Bool
+forall a. a -&gt; STM m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-345"></span><span>                     </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Network.Mux.Timeout.html#TimeoutCancelled"><span class="hs-identifier hs-var">TimeoutCancelled</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; STM m Bool
+forall a. a -&gt; STM m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-346"></span><span>                     </span><span class="annot"><span class="annottext">TimeoutState
+</span><span class="hs-identifier">_</span></span><span>                </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">TimeoutAssertion -&gt; STM m Bool
+forall (m :: * -&gt; *) e a.
+(MonadSTM m, MonadThrow (STM m), Exception e) =&gt;
+e -&gt; STM m a
+</span><span class="hs-identifier hs-var">throwSTM</span></span><span> </span><span class="annot"><span class="annottext">TimeoutAssertion
+</span><a href="Network.Mux.Timeout.html#TimeoutImpossibleMonitorState"><span class="hs-identifier hs-var">TimeoutImpossibleMonitorState</span></a></span><span>
+</span><span id="line-347"></span><span>
+</span><span id="line-348"></span><span>    </span><span class="hs-comment">-- If it turns out that the timeout was cancelled before the timeout</span><span>
+</span><span id="line-349"></span><span>    </span><span class="hs-comment">-- expired then we do nothing and go back to the start.</span><span>
+</span><span id="line-350"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-351"></span><span>    </span><span class="hs-comment">-- But if it was not cancelled then we will send it the asynchronous</span><span>
+</span><span id="line-352"></span><span>    </span><span class="hs-comment">-- exception. As described above there is a corner case where we won</span><span>
+</span><span id="line-353"></span><span>    </span><span class="hs-comment">-- the race very narrowly and so the other thread has to block and wait</span><span>
+</span><span id="line-354"></span><span>    </span><span class="hs-comment">-- for us to send the asynchronous exception. The way we make it block to</span><span>
+</span><span id="line-355"></span><span>    </span><span class="hs-comment">-- wait for us -- without any concern that it might be classed as being</span><span>
+</span><span id="line-356"></span><span>    </span><span class="hs-comment">-- blocked indefinitely -- is to make it wait for a state change that we</span><span>
+</span><span id="line-357"></span><span>    </span><span class="hs-comment">-- will only perform /after/ we have raised the exception in the target</span><span>
+</span><span id="line-358"></span><span>    </span><span class="hs-comment">-- thread.</span><span>
+</span><span id="line-359"></span><span>    </span><span class="hs-comment">--</span><span>
+</span><span id="line-360"></span><span>    </span><span class="annot"><span class="annottext">Bool -&gt; m () -&gt; m ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html#unless"><span class="hs-identifier hs-var">unless</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679115719"><span class="hs-identifier hs-var">cancelled</span></a></span><span> </span><span class="annot"><span class="annottext">(m () -&gt; m ()) -&gt; m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-361"></span><span>      </span><span class="annot"><span class="annottext">ThreadId m -&gt; TimeoutException -&gt; m ()
+forall e. Exception e =&gt; ThreadId m -&gt; e -&gt; m ()
+forall (m :: * -&gt; *) e.
+(MonadFork m, Exception e) =&gt;
+ThreadId m -&gt; e -&gt; m ()
+</span><span class="hs-identifier hs-var">throwTo</span></span><span> </span><span class="annot"><span class="annottext">ThreadId m
+</span><a href="#local-6989586621679115709"><span class="hs-identifier hs-var">tid</span></a></span><span> </span><span class="annot"><span class="annottext">TimeoutException
+</span><a href="Network.Mux.Timeout.html#TimeoutException"><span class="hs-identifier hs-var">TimeoutException</span></a></span><span>
+</span><span id="line-362"></span><span>      </span><span class="hs-comment">-- Set the state the other thread may be waiting for /after/ raising the</span><span>
+</span><span id="line-363"></span><span>      </span><span class="hs-comment">-- exception in the other thread.</span><span>
+</span><span id="line-364"></span><span>      </span><span class="annot"><span class="annottext">STM m () -&gt; m ()
+forall a. HasCallStack =&gt; STM m a -&gt; m a
+forall (m :: * -&gt; *) a.
+(MonadSTM m, HasCallStack) =&gt;
+STM m a -&gt; m a
+</span><span class="hs-identifier hs-var">atomically</span></span><span> </span><span class="annot"><span class="annottext">(STM m () -&gt; m ()) -&gt; STM m () -&gt; m ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState -&gt; TimeoutState -&gt; STM m ()
+forall a. TVar m a -&gt; a -&gt; STM m ()
+forall (m :: * -&gt; *) a. MonadSTM m =&gt; TVar m a -&gt; a -&gt; STM m ()
+</span><span class="hs-identifier hs-var">writeTVar</span></span><span> </span><span class="annot"><span class="annottext">TVar m TimeoutState
+</span><a href="#local-6989586621679115711"><span class="hs-identifier hs-var">timeoutStateVar</span></a></span><span> </span><span class="annot"><span class="annottext">TimeoutState
+</span><a href="Network.Mux.Timeout.html#TimeoutTerminated"><span class="hs-identifier hs-var">TimeoutTerminated</span></a></span><span>
+</span><span id="line-365"></span><span>
+</span><span id="line-366"></span><span>
+</span><span id="line-367"></span><span class="hs-comment">-- | These are all \&quot;impossible\&quot; errors.</span><span>
+</span><span id="line-368"></span><span class="hs-comment">--</span><span>
+</span><span id="line-369"></span><span class="hs-keyword">data</span><span> </span><span id="TimeoutAssertion"><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutAssertion"><span class="hs-identifier hs-var">TimeoutAssertion</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TimeoutImpossibleReachedTerminated"><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutImpossibleReachedTerminated"><span class="hs-identifier hs-var">TimeoutImpossibleReachedTerminated</span></a></span></span><span>
+</span><span id="line-370"></span><span>                      </span><span class="hs-glyph">|</span><span> </span><span id="TimeoutImpossibleTimeoutState"><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutImpossibleTimeoutState"><span class="hs-identifier hs-var">TimeoutImpossibleTimeoutState</span></a></span></span><span>
+</span><span id="line-371"></span><span>                      </span><span class="hs-glyph">|</span><span> </span><span id="TimeoutImpossibleMonitorState"><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutImpossibleMonitorState"><span class="hs-identifier hs-var">TimeoutImpossibleMonitorState</span></a></span></span><span>
+</span><span id="line-372"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679115725"><span id="local-6989586621679115727"><span id="local-6989586621679115731"><span class="annot"><span class="annottext">Int -&gt; TimeoutAssertion -&gt; ShowS
+[TimeoutAssertion] -&gt; ShowS
+TimeoutAssertion -&gt; String
+(Int -&gt; TimeoutAssertion -&gt; ShowS)
+-&gt; (TimeoutAssertion -&gt; String)
+-&gt; ([TimeoutAssertion] -&gt; ShowS)
+-&gt; Show TimeoutAssertion
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; TimeoutAssertion -&gt; ShowS
+showsPrec :: Int -&gt; TimeoutAssertion -&gt; ShowS
+$cshow :: TimeoutAssertion -&gt; String
+show :: TimeoutAssertion -&gt; String
+$cshowList :: [TimeoutAssertion] -&gt; ShowS
+showList :: [TimeoutAssertion] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span>
+</span><span id="line-373"></span><span>
+</span><span id="line-374"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679115738"><span id="local-6989586621679115741"><span id="local-6989586621679115744"><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutAssertion"><span class="hs-identifier hs-type">TimeoutAssertion</span></a></span></span></span></span><span>
+</span><span id="line-375"></span></pre></body></html>

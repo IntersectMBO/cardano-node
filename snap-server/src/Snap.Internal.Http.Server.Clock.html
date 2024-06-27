@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveDataTypeable         #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Snap.Internal.Http.Server.Clock</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Clock.html#ClockTime"><span class="hs-identifier">ClockTime</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Clock.html#getClockTime"><span class="hs-identifier">getClockTime</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Clock.html#sleepFor"><span class="hs-identifier">sleepFor</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Clock.html#sleepSecs"><span class="hs-identifier">sleepSecs</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Clock.html#fromSecs"><span class="hs-identifier">fromSecs</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Clock.html#toSecs"><span class="hs-identifier">toSecs</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.IO.html#threadDelay"><span class="hs-identifier">threadDelay</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.Clock</span></span><span>       </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Clock</span></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">type</span><span> </span><span id="ClockTime"><span class="annot"><a href="Snap.Internal.Http.Server.Clock.html#ClockTime"><span class="hs-identifier hs-var">ClockTime</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Clock.TimeSpec</span></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-19"></span><span class="annot"><a href="Snap.Internal.Http.Server.Clock.html#sleepFor"><span class="hs-identifier hs-type">sleepFor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Clock.html#ClockTime"><span class="hs-identifier hs-type">ClockTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span id="sleepFor"><span class="annot"><span class="annottext">sleepFor :: ClockTime -&gt; IO ()
+</span><a href="Snap.Internal.Http.Server.Clock.html#sleepFor"><span class="hs-identifier hs-var hs-var">sleepFor</span></a></span></span><span> </span><span id="local-6989586621679097014"><span class="annot"><span class="annottext">ClockTime
+</span><a href="#local-6989586621679097014"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.IO.html#threadDelay"><span class="hs-identifier hs-var">threadDelay</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; IO ()) -&gt; Int -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679097015"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-22"></span><span>    </span><span id="local-6989586621679097015"><span class="annot"><span class="annottext">d :: Int64
+</span><a href="#local-6989586621679097015"><span class="hs-identifier hs-var hs-var">d</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ClockTime -&gt; Int64
+</span><span class="hs-identifier hs-var">Clock.nsec</span></span><span> </span><span class="annot"><span class="annottext">ClockTime
+</span><a href="#local-6989586621679097014"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Int64 -&gt; Int64
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#div"><span class="hs-operator hs-var">`div`</span></a></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1000</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Int64 -&gt; Int64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-number">1000000</span></span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Int64 -&gt; Int64
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">ClockTime -&gt; Int64
+</span><span class="hs-identifier hs-var">Clock.sec</span></span><span> </span><span class="annot"><span class="annottext">ClockTime
+</span><a href="#local-6989586621679097014"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-26"></span><span class="annot"><a href="Snap.Internal.Http.Server.Clock.html#sleepSecs"><span class="hs-identifier hs-type">sleepSecs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span id="sleepSecs"><span class="annot"><span class="annottext">sleepSecs :: Double -&gt; IO ()
+</span><a href="Snap.Internal.Http.Server.Clock.html#sleepSecs"><span class="hs-identifier hs-var hs-var">sleepSecs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ClockTime -&gt; IO ()
+</span><a href="Snap.Internal.Http.Server.Clock.html#sleepFor"><span class="hs-identifier hs-var">sleepFor</span></a></span><span> </span><span class="annot"><span class="annottext">(ClockTime -&gt; IO ()) -&gt; (Double -&gt; ClockTime) -&gt; Double -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; ClockTime
+</span><a href="Snap.Internal.Http.Server.Clock.html#fromSecs"><span class="hs-identifier hs-var">fromSecs</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Snap.Internal.Http.Server.Clock.html#getClockTime"><span class="hs-identifier hs-type">getClockTime</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Clock.html#ClockTime"><span class="hs-identifier hs-type">ClockTime</span></a></span><span>
+</span><span id="line-32"></span><span id="getClockTime"><span class="annot"><span class="annottext">getClockTime :: IO ClockTime
+</span><a href="Snap.Internal.Http.Server.Clock.html#getClockTime"><span class="hs-identifier hs-var hs-var">getClockTime</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Clock -&gt; IO ClockTime
+</span><span class="hs-identifier hs-var">Clock.getTime</span></span><span> </span><span class="annot"><span class="annottext">Clock
+</span><span class="hs-identifier hs-var">Clock.Monotonic</span></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-36"></span><span class="annot"><a href="Snap.Internal.Http.Server.Clock.html#fromSecs"><span class="hs-identifier hs-type">fromSecs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Clock.html#ClockTime"><span class="hs-identifier hs-type">ClockTime</span></a></span><span>
+</span><span id="line-37"></span><span id="fromSecs"><span class="annot"><span class="annottext">fromSecs :: Double -&gt; ClockTime
+</span><a href="Snap.Internal.Http.Server.Clock.html#fromSecs"><span class="hs-identifier hs-var hs-var">fromSecs</span></a></span></span><span> </span><span id="local-6989586621679097030"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679097030"><span class="hs-identifier hs-var">d</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">let</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679097042"><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679097042"><span class="hs-identifier hs-var">s</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679097043"><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679097043"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Double -&gt; (Int64, Double)
+forall b. Integral b =&gt; Double -&gt; (b, Double)
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; (b, a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#properFraction"><span class="hs-identifier hs-var">properFraction</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679097030"><span class="hs-identifier hs-var">d</span></a></span><span>
+</span><span id="line-38"></span><span>             </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Int64 -&gt; ClockTime
+</span><span class="hs-identifier hs-var">Clock.TimeSpec</span></span><span> </span><span class="annot"><span class="annottext">Int64
+</span><a href="#local-6989586621679097042"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Double -&gt; Int64
+forall b. Integral b =&gt; Double -&gt; b
+forall a b. (RealFrac a, Integral b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#truncate"><span class="hs-identifier hs-var">truncate</span></a></span><span> </span><span class="annot"><span class="annottext">(Double -&gt; Int64) -&gt; Double -&gt; Int64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1000000000</span></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679097043"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-comment">------------------------------------------------------------------------------</span><span>
+</span><span id="line-42"></span><span class="annot"><a href="Snap.Internal.Http.Server.Clock.html#toSecs"><span class="hs-identifier hs-type">toSecs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Snap.Internal.Http.Server.Clock.html#ClockTime"><span class="hs-identifier hs-type">ClockTime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Double"><span class="hs-identifier hs-type">Double</span></a></span><span>
+</span><span id="line-43"></span><span id="toSecs"><span class="annot"><span class="annottext">toSecs :: ClockTime -&gt; Double
+</span><a href="Snap.Internal.Http.Server.Clock.html#toSecs"><span class="hs-identifier hs-var hs-var">toSecs</span></a></span></span><span> </span><span id="local-6989586621679097048"><span class="annot"><span class="annottext">ClockTime
+</span><a href="#local-6989586621679097048"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ClockTime -&gt; Int64
+</span><span class="hs-identifier hs-var">Clock.sec</span></span><span> </span><span class="annot"><span class="annottext">ClockTime
+</span><a href="#local-6989586621679097048"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span>
+</span><span id="line-44"></span><span>           </span><span class="annot"><span class="annottext">Int64 -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ClockTime -&gt; Int64
+</span><span class="hs-identifier hs-var">Clock.nsec</span></span><span> </span><span class="annot"><span class="annottext">ClockTime
+</span><a href="#local-6989586621679097048"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#%2F"><span class="hs-operator hs-var">/</span></a></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">1000000000.0</span></span><span>
+</span><span id="line-45"></span></pre></body></html>

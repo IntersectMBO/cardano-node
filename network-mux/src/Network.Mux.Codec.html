@@ -1,0 +1,205 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.Mux.Codec</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/binary-0.8.9.1/src/Data.Binary.Get.html"><span class="hs-identifier">Data.Binary.Get</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Bin</span></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/binary-0.8.9.1/src/Data.Binary.Put.html"><span class="hs-identifier">Data.Binary.Put</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Bin</span></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Bits.html"><span class="hs-identifier">Data.Bits</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BL</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Mux.Trace.html"><span class="hs-identifier">Network.Mux.Trace</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Network.Mux.Types.html"><span class="hs-identifier">Network.Mux.Types</span></a></span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- | Encode a 'MuxSDU' as a 'ByteString'.</span><span>
+</span><span id="line-16"></span><span class="hs-comment">--</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- &gt; Binary format used by 'encodeMuxSDU' and 'decodeMuxSDUHeader'</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- &gt;  0                   1                   2                   3</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- &gt;  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- &gt; +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- &gt; |              transmission time                                |</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- &gt; +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- &gt; |M|    conversation id          |              length           |</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- &gt; +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- All fields are in big endian byte order.</span><span>
+</span><span id="line-27"></span><span class="hs-comment">--</span><span>
+</span><span id="line-28"></span><span class="annot"><a href="Network.Mux.Codec.html#encodeMuxSDU"><span class="hs-identifier hs-type">encodeMuxSDU</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MuxSDU"><span class="hs-identifier hs-type">MuxSDU</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BL.ByteString</span></a></span><span>
+</span><span id="line-29"></span><span id="encodeMuxSDU"><span class="annot"><span class="annottext">encodeMuxSDU :: MuxSDU -&gt; ByteString
+</span><a href="Network.Mux.Codec.html#encodeMuxSDU"><span class="hs-identifier hs-var hs-var">encodeMuxSDU</span></a></span></span><span> </span><span id="local-6989586621679118043"><span class="annot"><span class="annottext">MuxSDU
+</span><a href="#local-6989586621679118043"><span class="hs-identifier hs-var">sdu</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679118044"><span class="annot"><span class="annottext">hdr :: ByteString
+</span><a href="#local-6989586621679118044"><span class="hs-identifier hs-var hs-var">hdr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Put -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/binary-0.8.9.1/src/Data.Binary.Put.html#runPut"><span class="hs-identifier hs-var">Bin.runPut</span></a></span><span> </span><span class="annot"><span class="annottext">Put
+</span><a href="#local-6989586621679118046"><span class="hs-identifier hs-var">enc</span></a></span><span> </span><span class="hs-keyword">in</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#append"><span class="hs-identifier hs-var">BL.append</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679118044"><span class="hs-identifier hs-var">hdr</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString) -&gt; ByteString -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDU -&gt; ByteString
+</span><a href="Network.Mux.Types.html#msBlob"><span class="hs-identifier hs-var">msBlob</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDU
+</span><a href="#local-6989586621679118043"><span class="hs-identifier hs-var">sdu</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-33"></span><span>    </span><span id="local-6989586621679118046"><span class="annot"><span class="annottext">enc :: Put
+</span><a href="#local-6989586621679118046"><span class="hs-identifier hs-var hs-var">enc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-34"></span><span>        </span><span class="annot"><span class="annottext">Word32 -&gt; Put
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/binary-0.8.9.1/src/Data.Binary.Put.html#putWord32be"><span class="hs-identifier hs-var">Bin.putWord32be</span></a></span><span> </span><span class="annot"><span class="annottext">(Word32 -&gt; Put) -&gt; Word32 -&gt; Put
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">RemoteClockModel -&gt; Word32
+</span><a href="Network.Mux.Types.html#unRemoteClockModel"><span class="hs-identifier hs-var">unRemoteClockModel</span></a></span><span> </span><span class="annot"><span class="annottext">(RemoteClockModel -&gt; Word32) -&gt; RemoteClockModel -&gt; Word32
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDU -&gt; RemoteClockModel
+</span><a href="Network.Mux.Types.html#msTimestamp"><span class="hs-identifier hs-var">msTimestamp</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDU
+</span><a href="#local-6989586621679118043"><span class="hs-identifier hs-var">sdu</span></a></span><span>
+</span><span id="line-35"></span><span>        </span><span class="annot"><span class="annottext">Word16 -&gt; Put
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/binary-0.8.9.1/src/Data.Binary.Put.html#putWord16be"><span class="hs-identifier hs-var">Bin.putWord16be</span></a></span><span> </span><span class="annot"><span class="annottext">(Word16 -&gt; Put) -&gt; Word16 -&gt; Put
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MiniProtocolNum -&gt; MiniProtocolDir -&gt; Word16
+</span><a href="#local-6989586621679118059"><span class="hs-identifier hs-var">putNumAndMode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MuxSDU -&gt; MiniProtocolNum
+</span><a href="Network.Mux.Types.html#msNum"><span class="hs-identifier hs-var">msNum</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDU
+</span><a href="#local-6989586621679118043"><span class="hs-identifier hs-var">sdu</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MuxSDU -&gt; MiniProtocolDir
+</span><a href="Network.Mux.Types.html#msDir"><span class="hs-identifier hs-var">msDir</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDU
+</span><a href="#local-6989586621679118043"><span class="hs-identifier hs-var">sdu</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>        </span><span class="annot"><span class="annottext">Word16 -&gt; Put
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/binary-0.8.9.1/src/Data.Binary.Put.html#putWord16be"><span class="hs-identifier hs-var">Bin.putWord16be</span></a></span><span> </span><span class="annot"><span class="annottext">(Word16 -&gt; Put) -&gt; Word16 -&gt; Put
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Word16
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Int64 -&gt; Word16) -&gt; Int64 -&gt; Word16
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int64
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#length"><span class="hs-identifier hs-var">BL.length</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Int64) -&gt; ByteString -&gt; Int64
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDU -&gt; ByteString
+</span><a href="Network.Mux.Types.html#msBlob"><span class="hs-identifier hs-var">msBlob</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDU
+</span><a href="#local-6989586621679118043"><span class="hs-identifier hs-var">sdu</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>    </span><span class="annot"><a href="#local-6989586621679118059"><span class="hs-identifier hs-type">putNumAndMode</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier hs-type">MiniProtocolNum</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolDir"><span class="hs-identifier hs-type">MiniProtocolDir</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word16"><span class="hs-identifier hs-type">Word16</span></a></span><span>
+</span><span id="line-39"></span><span>    </span><span id="local-6989586621679118059"><span class="annot"><span class="annottext">putNumAndMode :: MiniProtocolNum -&gt; MiniProtocolDir -&gt; Word16
+</span><a href="#local-6989586621679118059"><span class="hs-identifier hs-var hs-var">putNumAndMode</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier hs-type">MiniProtocolNum</span></a></span><span> </span><span id="local-6989586621679118064"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679118064"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MiniProtocolDir
+</span><a href="Network.Mux.Types.html#InitiatorDir"><span class="hs-identifier hs-var">InitiatorDir</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679118064"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-40"></span><span>    </span><span class="annot"><a href="#local-6989586621679118059"><span class="hs-identifier hs-var">putNumAndMode</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier hs-type">MiniProtocolNum</span></a></span><span> </span><span id="local-6989586621679118066"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679118066"><span class="hs-identifier hs-var">n</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">MiniProtocolDir
+</span><a href="Network.Mux.Types.html#ResponderDir"><span class="hs-identifier hs-var">ResponderDir</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679118066"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Word16 -&gt; Word16
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Bits.html#.%7C."><span class="hs-operator hs-var">.|.</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-number">0x8000</span></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- | Decode a 'MuSDU' header.  A left inverse of 'encodeMuxSDU'.</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--</span><span>
+</span><span id="line-45"></span><span class="annot"><a href="Network.Mux.Codec.html#decodeMuxSDU"><span class="hs-identifier hs-type">decodeMuxSDU</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BL.ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Trace.html#MuxError"><span class="hs-identifier hs-type">MuxError</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MuxSDU"><span class="hs-identifier hs-type">MuxSDU</span></a></span><span>
+</span><span id="line-46"></span><span id="decodeMuxSDU"><span class="annot"><span class="annottext">decodeMuxSDU :: ByteString -&gt; Either MuxError MuxSDU
+</span><a href="Network.Mux.Codec.html#decodeMuxSDU"><span class="hs-identifier hs-var hs-var">decodeMuxSDU</span></a></span></span><span> </span><span id="local-6989586621679118070"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679118070"><span class="hs-identifier hs-var">buf</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Get MuxSDUHeader
+-&gt; ByteString
+-&gt; Either
+     (ByteString, Int64, String) (ByteString, Int64, MuxSDUHeader)
+forall a.
+Get a
+-&gt; ByteString
+-&gt; Either (ByteString, Int64, String) (ByteString, Int64, a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/binary-0.8.9.1/src/Data.Binary.Get.html#runGetOrFail"><span class="hs-identifier hs-var">Bin.runGetOrFail</span></a></span><span> </span><span class="annot"><span class="annottext">Get MuxSDUHeader
+</span><a href="#local-6989586621679118072"><span class="hs-identifier hs-var">dec</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679118070"><span class="hs-identifier hs-var">buf</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-48"></span><span>         </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679118073"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679118073"><span class="hs-identifier hs-var">e</span></a></span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MuxError -&gt; Either MuxError MuxSDU
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(MuxError -&gt; Either MuxError MuxSDU)
+-&gt; MuxError -&gt; Either MuxError MuxSDU
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MuxErrorType -&gt; String -&gt; MuxError
+</span><a href="Network.Mux.Trace.html#MuxError"><span class="hs-identifier hs-var">MuxError</span></a></span><span> </span><span class="annot"><span class="annottext">MuxErrorType
+</span><a href="Network.Mux.Trace.html#MuxDecodeError"><span class="hs-identifier hs-var">MuxDecodeError</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679118073"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-49"></span><span>         </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int64
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679118076"><span class="annot"><span class="annottext">MuxSDUHeader
+</span><a href="#local-6989586621679118076"><span class="hs-identifier hs-var">h</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-50"></span><span>             </span><span class="annot"><span class="annottext">MuxSDU -&gt; Either MuxError MuxSDU
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">(MuxSDU -&gt; Either MuxError MuxSDU)
+-&gt; MuxSDU -&gt; Either MuxError MuxSDU
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MuxSDU"><span class="hs-identifier hs-type">MuxSDU</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-51"></span><span>                   </span><span class="annot"><span class="annottext">msHeader :: MuxSDUHeader
+</span><a href="Network.Mux.Types.html#msHeader"><span class="hs-identifier hs-var">msHeader</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MuxSDUHeader
+</span><a href="#local-6989586621679118076"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-52"></span><span>                 </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">msBlob :: ByteString
+</span><a href="Network.Mux.Types.html#msBlob"><span class="hs-identifier hs-var">msBlob</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#empty"><span class="hs-identifier hs-var">BL.empty</span></a></span><span>
+</span><span id="line-53"></span><span>                 </span><span class="hs-special">}</span><span>
+</span><span id="line-54"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-55"></span><span>    </span><span id="local-6989586621679118072"><span class="annot"><span class="annottext">dec :: Get MuxSDUHeader
+</span><a href="#local-6989586621679118072"><span class="hs-identifier hs-var hs-var">dec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-56"></span><span>        </span><span id="local-6989586621679118086"><span class="annot"><span class="annottext">RemoteClockModel
+</span><a href="#local-6989586621679118086"><span class="hs-identifier hs-var">mhTimestamp</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; RemoteClockModel
+</span><a href="Network.Mux.Types.html#RemoteClockModel"><span class="hs-identifier hs-var">RemoteClockModel</span></a></span><span> </span><span class="annot"><span class="annottext">(Word32 -&gt; RemoteClockModel) -&gt; Get Word32 -&gt; Get RemoteClockModel
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Get Word32
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/binary-0.8.9.1/src/Data.Binary.Get.html#getWord32be"><span class="hs-identifier hs-var">Bin.getWord32be</span></a></span><span>
+</span><span id="line-57"></span><span>        </span><span id="local-6989586621679118090"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679118090"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Get Word16
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/binary-0.8.9.1/src/Data.Binary.Get.html#getWord16be"><span class="hs-identifier hs-var">Bin.getWord16be</span></a></span><span>
+</span><span id="line-58"></span><span>        </span><span id="local-6989586621679118092"><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679118092"><span class="hs-identifier hs-var">mhLength</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Get Word16
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/binary-0.8.9.1/src/Data.Binary.Get.html#getWord16be"><span class="hs-identifier hs-var">Bin.getWord16be</span></a></span><span>
+</span><span id="line-59"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679118095"><span class="annot"><span class="annottext">mhDir :: MiniProtocolDir
+</span><a href="#local-6989586621679118095"><span class="hs-identifier hs-var hs-var">mhDir</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; MiniProtocolDir
+forall {a}. (Bits a, Num a) =&gt; a -&gt; MiniProtocolDir
+</span><a href="#local-6989586621679118096"><span class="hs-identifier hs-var">getDir</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679118090"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-60"></span><span>            </span><span id="local-6989586621679118099"><span class="annot"><span class="annottext">mhNum :: MiniProtocolNum
+</span><a href="#local-6989586621679118099"><span class="hs-identifier hs-var hs-var">mhNum</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; MiniProtocolNum
+</span><a href="Network.Mux.Types.html#MiniProtocolNum"><span class="hs-identifier hs-var">MiniProtocolNum</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word16
+</span><a href="#local-6989586621679118090"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Word16 -&gt; Word16 -&gt; Word16
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Bits.html#.%26."><span class="hs-operator hs-var">.&amp;.</span></a></span><span> </span><span class="annot"><span class="annottext">Word16
+</span><span class="hs-number">0x7fff</span></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span>        </span><span class="annot"><span class="annottext">MuxSDUHeader -&gt; Get MuxSDUHeader
+forall a. a -&gt; Get a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(MuxSDUHeader -&gt; Get MuxSDUHeader)
+-&gt; MuxSDUHeader -&gt; Get MuxSDUHeader
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MuxSDUHeader"><span class="hs-identifier hs-type">MuxSDUHeader</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-62"></span><span>            </span><span class="annot"><span class="annottext">RemoteClockModel
+mhTimestamp :: RemoteClockModel
+mhTimestamp :: RemoteClockModel
+</span><a href="#local-6989586621679118086"><span class="hs-identifier hs-var hs-var">mhTimestamp</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-63"></span><span>            </span><span class="annot"><span class="annottext">MiniProtocolNum
+mhNum :: MiniProtocolNum
+mhNum :: MiniProtocolNum
+</span><a href="#local-6989586621679118099"><span class="hs-identifier hs-var hs-var">mhNum</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-64"></span><span>            </span><span class="annot"><span class="annottext">MiniProtocolDir
+mhDir :: MiniProtocolDir
+mhDir :: MiniProtocolDir
+</span><a href="#local-6989586621679118095"><span class="hs-identifier hs-var hs-var">mhDir</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-65"></span><span>            </span><span class="annot"><span class="annottext">Word16
+mhLength :: Word16
+mhLength :: Word16
+</span><a href="#local-6989586621679118092"><span class="hs-identifier hs-var hs-var">mhLength</span></a></span><span>
+</span><span id="line-66"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span>    </span><span id="local-6989586621679118096"><span class="annot"><span class="annottext">getDir :: a -&gt; MiniProtocolDir
+</span><a href="#local-6989586621679118096"><span class="hs-identifier hs-var hs-var">getDir</span></a></span></span><span> </span><span id="local-6989586621679118115"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679118115"><span class="hs-identifier hs-var">mid</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-69"></span><span>        </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679118115"><span class="hs-identifier hs-var">mid</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Bits a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Bits.html#.%26."><span class="hs-operator hs-var">.&amp;.</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">0x8000</span></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">MiniProtocolDir
+</span><a href="Network.Mux.Types.html#InitiatorDir"><span class="hs-identifier hs-var">InitiatorDir</span></a></span><span>
+</span><span id="line-70"></span><span>                               </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">MiniProtocolDir
+</span><a href="Network.Mux.Types.html#ResponderDir"><span class="hs-identifier hs-var">ResponderDir</span></a></span><span>
+</span><span id="line-71"></span></pre></body></html>

@@ -1,0 +1,821 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE RecordWildCards, OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Foreign.JavaScript.Server</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><a href="Foreign.JavaScript.Server.html#httpComm"><span class="hs-identifier">httpComm</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Server.html#loadFile"><span class="hs-identifier">loadFile</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Server.html#loadDirectory"><span class="hs-identifier">loadDirectory</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- import general libraries</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Concurrent.Async</span></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.html"><span class="hs-identifier">Control.Concurrent.STM</span></a></span><span>     </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">STM</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span>          </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">E</span></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html"><span class="hs-identifier">Control.Monad.IO.Class</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span>                    </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier">ByteString</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Char8.html"><span class="hs-identifier">Data.ByteString.Char8</span></a></span><span>      </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BS</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Char8.html"><span class="hs-identifier">Data.ByteString.Lazy.Char8</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">LBS</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.html"><span class="hs-identifier">Data.Map</span></a></span><span>                   </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span>                          </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Safe</span></span><span>                       </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Safe</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/System.Environment.html"><span class="hs-identifier">System.Environment</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/template-haskell-2.20.0.0/src/System.FilePath.html"><span class="hs-identifier">System.FilePath</span></a></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- import web libraries</span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span>                    </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">JSON</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Network.WebSockets</span></span><span>            </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">WS</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Network.WebSockets.Snap</span></span><span>       </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">WS</span></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Snap.Core</span></span><span>                     </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Snap</span></span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">path</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">dir</span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Snap.Http.Server</span></span><span>              </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Snap</span></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Snap.Util.FileServe</span></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- import internal modules</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Resources.html"><span class="hs-identifier">Foreign.JavaScript.Resources</span></a></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html"><span class="hs-identifier">Foreign.JavaScript.Types</span></a></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    HTTP Server using WebSockets
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-37"></span><span class="annot"><span class="hs-comment">-- | Run a HTTP server that creates a 'Comm' channel.</span></span><span>
+</span><span id="line-38"></span><span class="annot"><a href="Foreign.JavaScript.Server.html#httpComm"><span class="hs-identifier hs-type">httpComm</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Config"><span class="hs-identifier hs-type">Config</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#EventLoop"><span class="hs-identifier hs-type">EventLoop</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span id="httpComm"><span class="annot"><span class="annottext">httpComm :: Config -&gt; EventLoop -&gt; IO ()
+</span><a href="Foreign.JavaScript.Server.html#httpComm"><span class="hs-identifier hs-var hs-var">httpComm</span></a></span></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Config"><span class="hs-identifier hs-type">Config</span></a></span><span class="hs-special">{</span><span id="local-6989586621679113070"><span id="local-6989586621679113071"><span id="local-6989586621679113072"><span id="local-6989586621679113073"><span id="local-6989586621679113074"><span id="local-6989586621679113075"><span id="local-6989586621679113076"><span id="local-6989586621679113077"><span class="annot"><span class="annottext">Bool
+Maybe Int
+Maybe [Char]
+Maybe ByteString
+Maybe ConfigSSL
+CallBufferMode
+ByteString -&gt; IO ()
+jsPort :: Maybe Int
+jsAddr :: Maybe ByteString
+jsCustomHTML :: Maybe [Char]
+jsStatic :: Maybe [Char]
+jsLog :: ByteString -&gt; IO ()
+jsWindowReloadOnDisconnect :: Bool
+jsCallBufferMode :: CallBufferMode
+jsUseSSL :: Maybe ConfigSSL
+jsPort :: Config -&gt; Maybe Int
+jsAddr :: Config -&gt; Maybe ByteString
+jsCustomHTML :: Config -&gt; Maybe [Char]
+jsStatic :: Config -&gt; Maybe [Char]
+jsLog :: Config -&gt; ByteString -&gt; IO ()
+jsWindowReloadOnDisconnect :: Config -&gt; Bool
+jsCallBufferMode :: Config -&gt; CallBufferMode
+jsUseSSL :: Config -&gt; Maybe ConfigSSL
+</span><a href="#local-6989586621679113070"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span></span></span></span></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679113086"><span class="annot"><span class="annottext">EventLoop
+</span><a href="#local-6989586621679113086"><span class="hs-identifier hs-var">worker</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-40"></span><span>    </span><span id="local-6989586621679113087"><span class="annot"><span class="annottext">[([Char], [Char])]
+</span><a href="#local-6989586621679113087"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO [([Char], [Char])]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/System.Environment.html#getEnvironment"><span class="hs-identifier hs-var">getEnvironment</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113127"><span class="annot"><span class="annottext">config :: Config Snap a
+</span><a href="#local-6989586621679113127"><span class="hs-identifier hs-var hs-var">config</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConfigLog -&gt; Config Snap a -&gt; Config Snap a
+forall (m :: * -&gt; *) a. ConfigLog -&gt; Config m a -&gt; Config m a
+</span><span class="hs-identifier hs-var">Snap.setErrorLog</span></span><span>     </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ByteString -&gt; IO ()) -&gt; ConfigLog
+</span><span class="hs-identifier hs-var">Snap.ConfigIoLog</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; IO ()
+</span><a href="#local-6989586621679113074"><span class="hs-identifier hs-var">jsLog</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span>               </span><span class="annot"><span class="annottext">(Config Snap a -&gt; Config Snap a) -&gt; Config Snap a -&gt; Config Snap a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigLog -&gt; Config Snap a -&gt; Config Snap a
+forall (m :: * -&gt; *) a. ConfigLog -&gt; Config m a -&gt; Config m a
+</span><span class="hs-identifier hs-var">Snap.setAccessLog</span></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ByteString -&gt; IO ()) -&gt; ConfigLog
+</span><span class="hs-identifier hs-var">Snap.ConfigIoLog</span></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; IO ()
+</span><a href="#local-6989586621679113074"><span class="hs-identifier hs-var">jsLog</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span>               </span><span class="annot"><span class="annottext">(Config Snap a -&gt; Config Snap a) -&gt; Config Snap a -&gt; Config Snap a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(Config Snap a -&gt; Config Snap a)
+-&gt; (ConfigSSL -&gt; Config Snap a -&gt; Config Snap a)
+-&gt; Maybe ConfigSSL
+-&gt; Config Snap a
+-&gt; Config Snap a
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[([Char], [Char])] -&gt; Config Snap a -&gt; Config Snap a
+forall (m :: * -&gt; *) a.
+[([Char], [Char])] -&gt; Config m a -&gt; Config m a
+</span><a href="#local-6989586621679113132"><span class="hs-identifier hs-var">configureHTTP</span></a></span><span> </span><span class="annot"><span class="annottext">[([Char], [Char])]
+</span><a href="#local-6989586621679113087"><span class="hs-identifier hs-var">env</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">ConfigSSL -&gt; Config Snap a -&gt; Config Snap a
+forall (m :: * -&gt; *) a. ConfigSSL -&gt; Config m a -&gt; Config m a
+</span><a href="#local-6989586621679113133"><span class="hs-identifier hs-var">configureSSL</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ConfigSSL
+</span><a href="#local-6989586621679113077"><span class="hs-identifier hs-var">jsUseSSL</span></a></span><span>
+</span><span id="line-45"></span><span>               </span><span class="annot"><span class="annottext">(Config Snap a -&gt; Config Snap a) -&gt; Config Snap a -&gt; Config Snap a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Config Snap a
+forall (m :: * -&gt; *) a. MonadSnap m =&gt; Config m a
+</span><span class="hs-identifier hs-var">Snap.defaultConfig</span></span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span>    </span><span id="local-6989586621679113135"><span class="annot"><span class="annottext">Server
+</span><a href="#local-6989586621679113135"><span class="hs-identifier hs-var">server</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar Filepaths -&gt; MVar Filepaths -&gt; (ByteString -&gt; IO ()) -&gt; Server
+</span><a href="Foreign.JavaScript.Types.html#Server"><span class="hs-identifier hs-var">Server</span></a></span><span> </span><span class="annot"><span class="annottext">(MVar Filepaths
+ -&gt; MVar Filepaths -&gt; (ByteString -&gt; IO ()) -&gt; Server)
+-&gt; IO (MVar Filepaths)
+-&gt; IO (MVar Filepaths -&gt; (ByteString -&gt; IO ()) -&gt; Server)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Filepaths -&gt; IO (MVar Filepaths)
+forall a. a -&gt; IO (MVar a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.MVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="annot"><span class="annottext">Filepaths
+</span><a href="Foreign.JavaScript.Types.html#newFilepaths"><span class="hs-identifier hs-var">newFilepaths</span></a></span><span> </span><span class="annot"><span class="annottext">IO (MVar Filepaths -&gt; (ByteString -&gt; IO ()) -&gt; Server)
+-&gt; IO (MVar Filepaths) -&gt; IO ((ByteString -&gt; IO ()) -&gt; Server)
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Filepaths -&gt; IO (MVar Filepaths)
+forall a. a -&gt; IO (MVar a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.MVar.html#newMVar"><span class="hs-identifier hs-var">newMVar</span></a></span><span> </span><span class="annot"><span class="annottext">Filepaths
+</span><a href="Foreign.JavaScript.Types.html#newFilepaths"><span class="hs-identifier hs-var">newFilepaths</span></a></span><span> </span><span class="annot"><span class="annottext">IO ((ByteString -&gt; IO ()) -&gt; Server)
+-&gt; IO (ByteString -&gt; IO ()) -&gt; IO Server
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; IO ()) -&gt; IO (ByteString -&gt; IO ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; IO ()
+</span><a href="#local-6989586621679113074"><span class="hs-identifier hs-var">jsLog</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">Config Snap Any -&gt; Snap () -&gt; IO ()
+forall a. Config Snap a -&gt; Snap () -&gt; IO ()
+</span><span class="hs-identifier hs-var">Snap.httpServe</span></span><span> </span><span class="annot"><span class="annottext">Config Snap Any
+forall {a}. Config Snap a
+</span><a href="#local-6989586621679113127"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><span class="annottext">(Snap () -&gt; IO ())
+-&gt; ([(ByteString, Snap ())] -&gt; Snap ())
+-&gt; [(ByteString, Snap ())]
+-&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[(ByteString, Snap ())] -&gt; Snap ()
+forall (m :: * -&gt; *) a. MonadSnap m =&gt; [(ByteString, m a)] -&gt; m a
+</span><span class="hs-identifier hs-var">route</span></span><span> </span><span class="annot"><span class="annottext">([(ByteString, Snap ())] -&gt; IO ())
+-&gt; [(ByteString, Snap ())] -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-50"></span><span>        </span><span class="annot"><span class="annottext">Server -&gt; Maybe [Char] -&gt; Maybe [Char] -&gt; [(ByteString, Snap ())]
+</span><a href="Foreign.JavaScript.Server.html#routeResources"><span class="hs-identifier hs-var">routeResources</span></a></span><span> </span><span class="annot"><span class="annottext">Server
+</span><a href="#local-6989586621679113135"><span class="hs-identifier hs-var">server</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe [Char]
+</span><a href="#local-6989586621679113072"><span class="hs-identifier hs-var">jsCustomHTML</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe [Char]
+</span><a href="#local-6989586621679113073"><span class="hs-identifier hs-var">jsStatic</span></a></span><span>
+</span><span id="line-51"></span><span>        </span><span class="annot"><span class="annottext">[(ByteString, Snap ())]
+-&gt; [(ByteString, Snap ())] -&gt; [(ByteString, Snap ())]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">(RequestInfo -&gt; Comm -&gt; IO ()) -&gt; [(ByteString, Snap ())]
+forall void.
+(RequestInfo -&gt; Comm -&gt; IO void) -&gt; [(ByteString, Snap ())]
+</span><a href="Foreign.JavaScript.Server.html#routeWebsockets"><span class="hs-identifier hs-var">routeWebsockets</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EventLoop
+</span><a href="#local-6989586621679113086"><span class="hs-identifier hs-var">worker</span></a></span><span> </span><span class="annot"><span class="annottext">Server
+</span><a href="#local-6989586621679113135"><span class="hs-identifier hs-var">server</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-54"></span><span>    </span><span id="local-6989586621679112871"><span id="local-6989586621679112872"><span class="annot"><a href="#local-6989586621679113132"><span class="hs-identifier hs-type">configureHTTP</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Snap.Config</span></span><span> </span><span class="annot"><a href="#local-6989586621679112871"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112872"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Snap.Config</span></span><span> </span><span class="annot"><a href="#local-6989586621679112871"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112872"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-55"></span><span>    </span><span id="local-6989586621679113132"><span class="annot"><span class="annottext">configureHTTP :: forall (m :: * -&gt; *) a.
+[([Char], [Char])] -&gt; Config m a -&gt; Config m a
+</span><a href="#local-6989586621679113132"><span class="hs-identifier hs-var hs-var">configureHTTP</span></a></span></span><span> </span><span id="local-6989586621679113148"><span class="annot"><span class="annottext">[([Char], [Char])]
+</span><a href="#local-6989586621679113148"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span id="local-6989586621679113149"><span class="annot"><span class="annottext">Config m a
+</span><a href="#local-6989586621679113149"><span class="hs-identifier hs-var">config</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-56"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113160"><span class="annot"><span class="annottext">portEnv :: Maybe Int
+</span><a href="#local-6989586621679113160"><span class="hs-identifier hs-var hs-var">portEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Maybe Int
+forall a. Read a =&gt; [Char] -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Safe.readMay</span></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; Maybe Int) -&gt; Maybe [Char] -&gt; Maybe Int
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [([Char], [Char])] -&gt; Maybe [Char]
+forall a b. Eq a =&gt; a -&gt; [(a, b)] -&gt; Maybe b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.List.html#lookup"><span class="hs-identifier hs-var">Prelude.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;PORT&quot;</span></span><span> </span><span class="annot"><span class="annottext">[([Char], [Char])]
+</span><a href="#local-6989586621679113148"><span class="hs-identifier hs-var">env</span></a></span><span>
+</span><span id="line-57"></span><span>            </span><span id="local-6989586621679113170"><span class="annot"><span class="annottext">addrEnv :: Maybe ByteString
+</span><a href="#local-6989586621679113170"><span class="hs-identifier hs-var hs-var">addrEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; ByteString) -&gt; Maybe [Char] -&gt; Maybe ByteString
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Char8.html#pack"><span class="hs-identifier hs-var">BS.pack</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe [Char] -&gt; Maybe ByteString)
+-&gt; Maybe [Char] -&gt; Maybe ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [([Char], [Char])] -&gt; Maybe [Char]
+forall a b. Eq a =&gt; a -&gt; [(a, b)] -&gt; Maybe b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.List.html#lookup"><span class="hs-identifier hs-var">Prelude.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;ADDR&quot;</span></span><span> </span><span class="annot"><span class="annottext">[([Char], [Char])]
+</span><a href="#local-6989586621679113148"><span class="hs-identifier hs-var">env</span></a></span><span>
+</span><span id="line-58"></span><span>         </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Config m a -&gt; Config m a
+forall (m :: * -&gt; *) a. Int -&gt; Config m a -&gt; Config m a
+</span><span class="hs-identifier hs-var">Snap.setPort</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; (Int -&gt; Int) -&gt; Maybe Int -&gt; Int
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="Foreign.JavaScript.Types.html#defaultPort"><span class="hs-identifier hs-var">defaultPort</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int
+forall a. a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621679113070"><span class="hs-identifier hs-var">jsPort</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Int -&gt; Maybe Int -&gt; Maybe Int
+forall a. Maybe a -&gt; Maybe a -&gt; Maybe a
+forall (m :: * -&gt; *) a. MonadPlus m =&gt; m a -&gt; m a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#mplus"><span class="hs-operator hs-var">`mplus`</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe Int
+</span><a href="#local-6989586621679113160"><span class="hs-identifier hs-var">portEnv</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>                </span><span class="annot"><span class="annottext">(Config m a -&gt; Config m a) -&gt; Config m a -&gt; Config m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Config m a -&gt; Config m a
+forall (m :: * -&gt; *) a. ByteString -&gt; Config m a -&gt; Config m a
+</span><span class="hs-identifier hs-var">Snap.setBind</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+-&gt; (ByteString -&gt; ByteString) -&gt; Maybe ByteString -&gt; ByteString
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="Foreign.JavaScript.Types.html#defaultAddr"><span class="hs-identifier hs-var">defaultAddr</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+forall a. a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#id"><span class="hs-identifier hs-var">id</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="#local-6989586621679113071"><span class="hs-identifier hs-var">jsAddr</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString -&gt; Maybe ByteString -&gt; Maybe ByteString
+forall a. Maybe a -&gt; Maybe a -&gt; Maybe a
+forall (m :: * -&gt; *) a. MonadPlus m =&gt; m a -&gt; m a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#mplus"><span class="hs-operator hs-var">`mplus`</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="#local-6989586621679113170"><span class="hs-identifier hs-var">addrEnv</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Config m a
+</span><a href="#local-6989586621679113149"><span class="hs-identifier hs-var">config</span></a></span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span>    </span><span id="local-6989586621679112873"><span id="local-6989586621679112874"><span class="annot"><a href="#local-6989586621679113133"><span class="hs-identifier hs-type">configureSSL</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#ConfigSSL"><span class="hs-identifier hs-type">ConfigSSL</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Snap.Config</span></span><span> </span><span class="annot"><a href="#local-6989586621679112873"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112874"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Snap.Config</span></span><span> </span><span class="annot"><a href="#local-6989586621679112873"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112874"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-62"></span><span>    </span><span id="local-6989586621679113133"><span class="annot"><span class="annottext">configureSSL :: forall (m :: * -&gt; *) a. ConfigSSL -&gt; Config m a -&gt; Config m a
+</span><a href="#local-6989586621679113133"><span class="hs-identifier hs-var hs-var">configureSSL</span></a></span></span><span> </span><span id="local-6989586621679113178"><span class="annot"><span class="annottext">ConfigSSL
+</span><a href="#local-6989586621679113178"><span class="hs-identifier hs-var">cfgSsl</span></a></span></span><span> </span><span id="local-6989586621679113179"><span class="annot"><span class="annottext">Config m a
+</span><a href="#local-6989586621679113179"><span class="hs-identifier hs-var">config</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-63"></span><span>        </span><span class="annot"><span class="annottext">ByteString -&gt; Config m a -&gt; Config m a
+forall (m :: * -&gt; *) a. ByteString -&gt; Config m a -&gt; Config m a
+</span><span class="hs-identifier hs-var">Snap.setSSLBind</span></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConfigSSL -&gt; ByteString
+</span><a href="Foreign.JavaScript.Types.html#jsSSLBind"><span class="hs-identifier hs-var">jsSSLBind</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigSSL
+</span><a href="#local-6989586621679113178"><span class="hs-identifier hs-var">cfgSsl</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>            </span><span class="annot"><span class="annottext">(Config m a -&gt; Config m a)
+-&gt; (Config m a -&gt; Config m a) -&gt; Config m a -&gt; Config m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Config m a -&gt; Config m a
+forall (m :: * -&gt; *) a. Int -&gt; Config m a -&gt; Config m a
+</span><span class="hs-identifier hs-var">Snap.setSSLPort</span></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConfigSSL -&gt; Int
+</span><a href="Foreign.JavaScript.Types.html#jsSSLPort"><span class="hs-identifier hs-var">jsSSLPort</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigSSL
+</span><a href="#local-6989586621679113178"><span class="hs-identifier hs-var">cfgSsl</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>            </span><span class="annot"><span class="annottext">(Config m a -&gt; Config m a)
+-&gt; (Config m a -&gt; Config m a) -&gt; Config m a -&gt; Config m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Config m a -&gt; Config m a
+forall (m :: * -&gt; *) a. [Char] -&gt; Config m a -&gt; Config m a
+</span><span class="hs-identifier hs-var">Snap.setSSLCert</span></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConfigSSL -&gt; [Char]
+</span><a href="Foreign.JavaScript.Types.html#jsSSLCert"><span class="hs-identifier hs-var">jsSSLCert</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigSSL
+</span><a href="#local-6989586621679113178"><span class="hs-identifier hs-var">cfgSsl</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>            </span><span class="annot"><span class="annottext">(Config m a -&gt; Config m a)
+-&gt; (Config m a -&gt; Config m a) -&gt; Config m a -&gt; Config m a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Config m a -&gt; Config m a
+forall (m :: * -&gt; *) a. [Char] -&gt; Config m a -&gt; Config m a
+</span><span class="hs-identifier hs-var">Snap.setSSLKey</span></span><span>       </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConfigSSL -&gt; [Char]
+</span><a href="Foreign.JavaScript.Types.html#jsSSLKey"><span class="hs-identifier hs-var">jsSSLKey</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigSSL
+</span><a href="#local-6989586621679113178"><span class="hs-identifier hs-var">cfgSsl</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>            </span><span class="annot"><span class="annottext">(Config m a -&gt; Config m a) -&gt; Config m a -&gt; Config m a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Config m a -&gt; Config m a
+forall (m :: * -&gt; *) a. Bool -&gt; Config m a -&gt; Config m a
+</span><span class="hs-identifier hs-var">Snap.setSSLChainCert</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConfigSSL -&gt; Bool
+</span><a href="Foreign.JavaScript.Types.html#jsSSLChainCert"><span class="hs-identifier hs-var">jsSSLChainCert</span></a></span><span> </span><span class="annot"><span class="annottext">ConfigSSL
+</span><a href="#local-6989586621679113178"><span class="hs-identifier hs-var">cfgSsl</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Config m a
+</span><a href="#local-6989586621679113179"><span class="hs-identifier hs-var">config</span></a></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="annot"><span class="hs-comment">-- | Route the communication between JavaScript and the server</span></span><span>
+</span><span id="line-70"></span><span id="local-6989586621679112898"><span class="annot"><a href="Foreign.JavaScript.Server.html#routeWebsockets"><span class="hs-identifier hs-type">routeWebsockets</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Foreign.JavaScript.Types.html#RequestInfo"><span class="hs-identifier hs-type">RequestInfo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Comm"><span class="hs-identifier hs-type">Comm</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679112898"><span class="hs-identifier hs-type">void</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Server.html#Routes"><span class="hs-identifier hs-type">Routes</span></a></span></span><span>
+</span><span id="line-71"></span><span id="routeWebsockets"><span class="annot"><span class="annottext">routeWebsockets :: forall void.
+(RequestInfo -&gt; Comm -&gt; IO void) -&gt; [(ByteString, Snap ())]
+</span><a href="Foreign.JavaScript.Server.html#routeWebsockets"><span class="hs-identifier hs-var hs-var">routeWebsockets</span></a></span></span><span> </span><span id="local-6989586621679113192"><span class="annot"><span class="annottext">RequestInfo -&gt; Comm -&gt; IO void
+</span><a href="#local-6989586621679113192"><span class="hs-identifier hs-var">worker</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;websocket&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Snap ()
+</span><a href="#local-6989586621679113193"><span class="hs-identifier hs-var">response</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-72"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-73"></span><span>    </span><span id="local-6989586621679113193"><span class="annot"><span class="annottext">response :: Snap ()
+</span><a href="#local-6989586621679113193"><span class="hs-identifier hs-var hs-var">response</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-74"></span><span>        </span><span id="local-6989586621679113230"><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679113230"><span class="hs-identifier hs-var">requestInfo</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Snap Request
+forall (m :: * -&gt; *). MonadSnap m =&gt; m Request
+</span><span class="hs-identifier hs-var">Snap.getRequest</span></span><span>
+</span><span id="line-75"></span><span>        </span><span class="annot"><span class="annottext">ServerApp -&gt; Snap ()
+forall (m :: * -&gt; *). MonadSnap m =&gt; ServerApp -&gt; m ()
+</span><span class="hs-identifier hs-var">WS.runWebSocketsSnap</span></span><span> </span><span class="annot"><span class="annottext">(ServerApp -&gt; Snap ()) -&gt; ServerApp -&gt; Snap ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679113233"><span class="annot"><span class="annottext">PendingConnection
+</span><a href="#local-6989586621679113233"><span class="hs-identifier hs-var">ws</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO void -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO void -&gt; IO ()) -&gt; IO void -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-76"></span><span>            </span><span id="local-6989586621679113235"><span class="annot"><span class="annottext">Comm
+</span><a href="#local-6989586621679113235"><span class="hs-identifier hs-var">comm</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">PendingConnection -&gt; IO Comm
+</span><a href="Foreign.JavaScript.Server.html#communicationFromWebSocket"><span class="hs-identifier hs-var">communicationFromWebSocket</span></a></span><span> </span><span class="annot"><span class="annottext">PendingConnection
+</span><a href="#local-6989586621679113233"><span class="hs-identifier hs-var">ws</span></a></span><span>
+</span><span id="line-77"></span><span>            </span><span class="annot"><span class="annottext">RequestInfo -&gt; Comm -&gt; IO void
+</span><a href="#local-6989586621679113192"><span class="hs-identifier hs-var">worker</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Request -&gt; RequestInfo
+</span><span class="hs-identifier hs-var">rqCookies</span></span><span> </span><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679113230"><span class="hs-identifier hs-var">requestInfo</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Comm
+</span><a href="#local-6989586621679113235"><span class="hs-identifier hs-var">comm</span></a></span><span>
+</span><span id="line-78"></span><span>            </span><span class="hs-comment">-- error &quot;Foreign.JavaScript: unreachable code path.&quot;</span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span class="annot"><span class="hs-comment">-- | Create 'Comm' channel from WebSocket request.</span></span><span>
+</span><span id="line-81"></span><span class="annot"><a href="Foreign.JavaScript.Server.html#communicationFromWebSocket"><span class="hs-identifier hs-type">communicationFromWebSocket</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">WS.PendingConnection</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Comm"><span class="hs-identifier hs-type">Comm</span></a></span><span>
+</span><span id="line-82"></span><span id="communicationFromWebSocket"><span class="annot"><span class="annottext">communicationFromWebSocket :: PendingConnection -&gt; IO Comm
+</span><a href="Foreign.JavaScript.Server.html#communicationFromWebSocket"><span class="hs-identifier hs-var hs-var">communicationFromWebSocket</span></a></span></span><span> </span><span id="local-6989586621679113238"><span class="annot"><span class="annottext">PendingConnection
+</span><a href="#local-6989586621679113238"><span class="hs-identifier hs-var">request</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-83"></span><span>    </span><span id="local-6989586621679113239"><span class="annot"><span class="annottext">Connection
+</span><a href="#local-6989586621679113239"><span class="hs-identifier hs-var">connection</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">PendingConnection -&gt; IO Connection
+</span><span class="hs-identifier hs-var">WS.acceptRequest</span></span><span> </span><span class="annot"><span class="annottext">PendingConnection
+</span><a href="#local-6989586621679113238"><span class="hs-identifier hs-var">request</span></a></span><span>
+</span><span id="line-84"></span><span>    </span><span id="local-6989586621679113241"><span class="annot"><span class="annottext">TQueue Value
+</span><a href="#local-6989586621679113241"><span class="hs-identifier hs-var">commIn</span></a></span></span><span>     </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (TQueue Value)
+forall a. IO (TQueue a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#newTQueueIO"><span class="hs-identifier hs-var">STM.newTQueueIO</span></a></span><span>   </span><span class="hs-comment">-- outgoing communication</span><span>
+</span><span id="line-85"></span><span>    </span><span id="local-6989586621679113243"><span class="annot"><span class="annottext">TQueue Value
+</span><a href="#local-6989586621679113243"><span class="hs-identifier hs-var">commOut</span></a></span></span><span>    </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (TQueue Value)
+forall a. IO (TQueue a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#newTQueueIO"><span class="hs-identifier hs-var">STM.newTQueueIO</span></a></span><span>   </span><span class="hs-comment">-- incoming communication</span><span>
+</span><span id="line-86"></span><span>    </span><span id="local-6989586621679113244"><span class="annot"><span class="annottext">TVar Bool
+</span><a href="#local-6989586621679113244"><span class="hs-identifier hs-var">commOpen</span></a></span></span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; IO (TVar Bool)
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">STM.newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#True"><span class="hs-identifier hs-var">True</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-comment">-- write data to browser</span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113251"><span class="annot"><span class="annottext">sendData :: IO b
+</span><a href="#local-6989586621679113251"><span class="hs-identifier hs-var hs-var">sendData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html#forever"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO b) -&gt; IO () -&gt; IO b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-90"></span><span>            </span><span id="local-6989586621679113253"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679113253"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">STM Value -&gt; IO Value
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM Value -&gt; IO Value) -&gt; STM Value -&gt; IO Value
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue Value -&gt; STM Value
+forall a. TQueue a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#readTQueue"><span class="hs-identifier hs-var">STM.readTQueue</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue Value
+</span><a href="#local-6989586621679113243"><span class="hs-identifier hs-var">commOut</span></a></span><span>
+</span><span id="line-91"></span><span>            </span><span class="hs-comment">-- see note [ServerMsg strictness]</span><span>
+</span><span id="line-92"></span><span>            </span><span class="annot"><span class="annottext">Connection -&gt; ByteString -&gt; IO ()
+forall a. WebSocketsData a =&gt; Connection -&gt; a -&gt; IO ()
+</span><span class="hs-identifier hs-var">WS.sendTextData</span></span><span> </span><span class="annot"><span class="annottext">Connection
+</span><a href="#local-6989586621679113239"><span class="hs-identifier hs-var">connection</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; IO ()) -&gt; (Value -&gt; ByteString) -&gt; Value -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Value -&gt; ByteString
+forall a. ToJSON a =&gt; a -&gt; ByteString
+</span><span class="hs-identifier hs-var">JSON.encode</span></span><span> </span><span class="annot"><span class="annottext">(Value -&gt; IO ()) -&gt; Value -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679113253"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-comment">-- read data from browser</span><span>
+</span><span id="line-95"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113279"><span class="annot"><span class="annottext">readData :: IO b
+</span><a href="#local-6989586621679113279"><span class="hs-identifier hs-var hs-var">readData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html#forever"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO b) -&gt; IO () -&gt; IO b
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-96"></span><span>            </span><span id="local-6989586621679113280"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679113280"><span class="hs-identifier hs-var">input</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Connection -&gt; IO ByteString
+forall a. WebSocketsData a =&gt; Connection -&gt; IO a
+</span><span class="hs-identifier hs-var">WS.receiveData</span></span><span> </span><span class="annot"><span class="annottext">Connection
+</span><a href="#local-6989586621679113239"><span class="hs-identifier hs-var">connection</span></a></span><span>
+</span><span id="line-97"></span><span>            </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679113280"><span class="hs-identifier hs-var">input</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-98"></span><span>                </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;ping&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Connection -&gt; ByteString -&gt; IO ()
+forall a. WebSocketsData a =&gt; Connection -&gt; a -&gt; IO ()
+</span><span class="hs-identifier hs-var">WS.sendTextData</span></span><span> </span><span class="annot"><span class="annottext">Connection
+</span><a href="#local-6989586621679113239"><span class="hs-identifier hs-var">connection</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; IO ()) -&gt; ([Char] -&gt; ByteString) -&gt; [Char] -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Char8.html#pack"><span class="hs-identifier hs-var">LBS.pack</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; IO ()) -&gt; [Char] -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;pong&quot;</span></span><span>
+</span><span id="line-99"></span><span>                </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;quit&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ConnectionException -&gt; IO ()
+forall e a. Exception e =&gt; e -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#throwIO"><span class="hs-identifier hs-var">E.throwIO</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectionException
+</span><span class="hs-identifier hs-var">WS.ConnectionClosed</span></span><span>
+</span><span id="line-100"></span><span>                </span><span id="local-6989586621679113285"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679113285"><span class="hs-identifier hs-var">input</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Maybe Value
+forall a. FromJSON a =&gt; ByteString -&gt; Maybe a
+</span><span class="hs-identifier hs-var">JSON.decode</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679113285"><span class="hs-identifier hs-var">input</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-101"></span><span>                    </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679113287"><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679113287"><span class="hs-identifier hs-var">x</span></a></span></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue Value -&gt; Value -&gt; STM ()
+forall a. TQueue a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TQueue.html#writeTQueue"><span class="hs-identifier hs-var">STM.writeTQueue</span></a></span><span> </span><span class="annot"><span class="annottext">TQueue Value
+</span><a href="#local-6989586621679113241"><span class="hs-identifier hs-var">commIn</span></a></span><span> </span><span class="annot"><span class="annottext">Value
+</span><a href="#local-6989586621679113287"><span class="hs-identifier hs-var">x</span></a></span><span>
+</span><span id="line-102"></span><span>                    </span><span class="annot"><span class="annottext">Maybe Value
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; IO ()
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; IO ()) -&gt; [Char] -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-103"></span><span>                        </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;Foreign.JavaScript: Couldn't parse JSON input&quot;</span></span><span>
+</span><span id="line-104"></span><span>                        </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679113285"><span class="hs-identifier hs-var">input</span></a></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-comment">-- block until the channel is closed</span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113295"><span class="annot"><span class="annottext">sentry :: IO ()
+</span><a href="#local-6989586621679113295"><span class="hs-identifier hs-var hs-var">sentry</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-108"></span><span>            </span><span id="local-6989586621679113296"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679113296"><span class="hs-identifier hs-var">open</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TVar Bool -&gt; STM Bool
+forall a. TVar a -&gt; STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#readTVar"><span class="hs-identifier hs-var">STM.readTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Bool
+</span><a href="#local-6989586621679113244"><span class="hs-identifier hs-var">commOpen</span></a></span><span>
+</span><span id="line-109"></span><span>            </span><span class="annot"><span class="annottext">Bool -&gt; STM () -&gt; STM ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679113296"><span class="hs-identifier hs-var">open</span></a></span><span> </span><span class="annot"><span class="annottext">STM ()
+forall a. STM a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#retry"><span class="hs-identifier hs-var">retry</span></a></span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-comment">-- explicitly close the Comm chanenl</span><span>
+</span><span id="line-112"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113300"><span class="annot"><span class="annottext">commClose :: IO ()
+</span><a href="#local-6989586621679113300"><span class="hs-identifier hs-var hs-var">commClose</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Bool -&gt; Bool -&gt; STM ()
+forall a. TVar a -&gt; a -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#writeTVar"><span class="hs-identifier hs-var">STM.writeTVar</span></a></span><span> </span><span class="annot"><span class="annottext">TVar Bool
+</span><a href="#local-6989586621679113244"><span class="hs-identifier hs-var">commOpen</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-comment">-- read/write data until an exception occurs or the channel is no longer open</span><span>
+</span><span id="line-115"></span><span>    </span><span class="annot"><span class="annottext">ThreadId
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; (Either SomeException () -&gt; IO ()) -&gt; IO ThreadId
+forall a. IO a -&gt; (Either SomeException a -&gt; IO ()) -&gt; IO ThreadId
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Concurrent.html#forkFinally"><span class="hs-identifier hs-var">forkFinally</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO Any
+forall {b}. IO b
+</span><a href="#local-6989586621679113251"><span class="hs-identifier hs-var">sendData</span></a></span><span> </span><span class="annot"><span class="annottext">IO Any -&gt; IO Any -&gt; IO ()
+forall a b. IO a -&gt; IO b -&gt; IO ()
+</span><span class="hs-operator hs-var">`race_`</span></span><span> </span><span class="annot"><span class="annottext">IO Any
+forall {b}. IO b
+</span><a href="#local-6989586621679113279"><span class="hs-identifier hs-var">readData</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO () -&gt; IO ()
+forall a b. IO a -&gt; IO b -&gt; IO ()
+</span><span class="hs-operator hs-var">`race_`</span></span><span> </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679113295"><span class="hs-identifier hs-var">sentry</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Either SomeException () -&gt; IO ()) -&gt; IO ThreadId)
+-&gt; (Either SomeException () -&gt; IO ()) -&gt; IO ThreadId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Either SomeException ()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO (Either () ()) -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Either () ()) -&gt; IO ()) -&gt; IO (Either () ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-116"></span><span>        </span><span class="hs-comment">-- close the communication channel explicitly if that didn't happen yet</span><span>
+</span><span id="line-117"></span><span>        </span><span class="annot"><span class="annottext">IO ()
+</span><a href="#local-6989586621679113300"><span class="hs-identifier hs-var">commClose</span></a></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span>        </span><span class="hs-comment">-- attempt to close websocket if still necessary/possible</span><span>
+</span><span id="line-120"></span><span>        </span><span class="hs-comment">-- ignore any exceptions that may happen if it's already closed</span><span>
+</span><span id="line-121"></span><span>        </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="#local-6989586621679113304"><span class="hs-identifier hs-type">allExceptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Exception.Type.html#SomeException"><span class="hs-identifier hs-type">E.SomeException</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-122"></span><span>            </span><span id="local-6989586621679113304"><span class="annot"><span class="annottext">allExceptions :: SomeException -&gt; Maybe ()
+</span><a href="#local-6989586621679113304"><span class="hs-identifier hs-var hs-var">allExceptions</span></a></span></span><span> </span><span class="annot"><span class="annottext">SomeException
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; Maybe ()
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-123"></span><span>        </span><span class="annot"><span class="annottext">(SomeException -&gt; Maybe ()) -&gt; IO () -&gt; IO (Either () ())
+forall e b a.
+Exception e =&gt;
+(e -&gt; Maybe b) -&gt; IO a -&gt; IO (Either b a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#tryJust"><span class="hs-identifier hs-var">E.tryJust</span></a></span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; Maybe ()
+</span><a href="#local-6989586621679113304"><span class="hs-identifier hs-var">allExceptions</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO (Either () ())) -&gt; IO () -&gt; IO (Either () ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Connection -&gt; ByteString -&gt; IO ()
+forall a. WebSocketsData a =&gt; Connection -&gt; a -&gt; IO ()
+</span><span class="hs-identifier hs-var">WS.sendClose</span></span><span> </span><span class="annot"><span class="annottext">Connection
+</span><a href="#local-6989586621679113239"><span class="hs-identifier hs-var">connection</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; IO ()) -&gt; ByteString -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Char8.html#pack"><span class="hs-identifier hs-var">LBS.pack</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;close&quot;</span></span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span>    </span><span class="annot"><span class="annottext">Comm -&gt; IO Comm
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Comm -&gt; IO Comm) -&gt; Comm -&gt; IO Comm
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Comm"><span class="hs-identifier hs-type">Comm</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">IO ()
+TVar Bool
+TQueue Value
+commIn :: TQueue Value
+commOut :: TQueue Value
+commOpen :: TVar Bool
+commClose :: IO ()
+commIn :: TQueue Value
+commOut :: TQueue Value
+commOpen :: TVar Bool
+commClose :: IO ()
+</span><a href="#local-6989586621679113241"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span><span class="hs-special">}</span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    Resources
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-130"></span><span class="hs-keyword">type</span><span> </span><span id="Routes"><span class="annot"><a href="Foreign.JavaScript.Server.html#Routes"><span class="hs-identifier hs-var">Routes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Snap</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span class="annot"><a href="Foreign.JavaScript.Server.html#routeResources"><span class="hs-identifier hs-type">routeResources</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Server"><span class="hs-identifier hs-type">Server</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Server.html#Routes"><span class="hs-identifier hs-type">Routes</span></a></span><span>
+</span><span id="line-133"></span><span id="routeResources"><span class="annot"><span class="annottext">routeResources :: Server -&gt; Maybe [Char] -&gt; Maybe [Char] -&gt; [(ByteString, Snap ())]
+</span><a href="Foreign.JavaScript.Server.html#routeResources"><span class="hs-identifier hs-var hs-var">routeResources</span></a></span></span><span> </span><span id="local-6989586621679113312"><span class="annot"><span class="annottext">Server
+</span><a href="#local-6989586621679113312"><span class="hs-identifier hs-var">server</span></a></span></span><span> </span><span id="local-6989586621679113313"><span class="annot"><span class="annottext">Maybe [Char]
+</span><a href="#local-6989586621679113313"><span class="hs-identifier hs-var">customHTML</span></a></span></span><span> </span><span id="local-6989586621679113314"><span class="annot"><span class="annottext">Maybe [Char]
+</span><a href="#local-6989586621679113314"><span class="hs-identifier hs-var">staticDir</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-134"></span><span>    </span><span class="annot"><span class="annottext">(Snap () -&gt; Snap ())
+-&gt; [(ByteString, Snap ())] -&gt; [(ByteString, Snap ())]
+forall {t} {b} {a}. (t -&gt; b) -&gt; [(a, t)] -&gt; [(a, b)]
+</span><a href="#local-6989586621679113315"><span class="hs-identifier hs-var">fixHandlers</span></a></span><span> </span><span class="annot"><span class="annottext">Snap () -&gt; Snap ()
+forall {m :: * -&gt; *} {b}. MonadSnap m =&gt; m b -&gt; m b
+</span><a href="#local-6989586621679113316"><span class="hs-identifier hs-var">noCache</span></a></span><span> </span><span class="annot"><span class="annottext">([(ByteString, Snap ())] -&gt; [(ByteString, Snap ())])
+-&gt; [(ByteString, Snap ())] -&gt; [(ByteString, Snap ())]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-135"></span><span>        </span><span class="annot"><span class="annottext">[(ByteString, Snap ())]
+</span><a href="#local-6989586621679113317"><span class="hs-identifier hs-var">static</span></a></span><span> </span><span class="annot"><span class="annottext">[(ByteString, Snap ())]
+-&gt; [(ByteString, Snap ())] -&gt; [(ByteString, Snap ())]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span>
+</span><span id="line-136"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;/&quot;</span></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Snap ()
+</span><a href="#local-6989586621679113318"><span class="hs-identifier hs-var">root</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-137"></span><span>        </span><span class="hs-special">,</span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;/haskell.js&quot;</span></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString -&gt; Snap ()
+forall (m :: * -&gt; *). MonadSnap m =&gt; Text -&gt; ByteString -&gt; m ()
+</span><a href="Foreign.JavaScript.Server.html#writeTextMime"><span class="hs-identifier hs-var">writeTextMime</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="Foreign.JavaScript.Resources.html#jsDriverCode"><span class="hs-identifier hs-var">jsDriverCode</span></a></span><span>  </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;application/javascript&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-138"></span><span>        </span><span class="hs-special">,</span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;/haskell.css&quot;</span></span><span> </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString -&gt; Snap ()
+forall (m :: * -&gt; *). MonadSnap m =&gt; Text -&gt; ByteString -&gt; m ()
+</span><a href="Foreign.JavaScript.Server.html#writeTextMime"><span class="hs-identifier hs-var">writeTextMime</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="Foreign.JavaScript.Resources.html#cssDriverCode"><span class="hs-identifier hs-var">cssDriverCode</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;text/css&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>        </span><span class="hs-special">,</span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;/file/:name&quot;</span></span><span>                </span><span class="hs-special">,</span><span>
+</span><span id="line-140"></span><span>            </span><span class="annot"><span class="annottext">MVar Filepaths -&gt; ([Char] -&gt; ByteString -&gt; Snap ()) -&gt; Snap ()
+forall a.
+MVar Filepaths -&gt; ([Char] -&gt; ByteString -&gt; Snap a) -&gt; Snap a
+</span><a href="Foreign.JavaScript.Server.html#withFilepath"><span class="hs-identifier hs-var">withFilepath</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Server -&gt; MVar Filepaths
+</span><a href="Foreign.JavaScript.Types.html#sFiles"><span class="hs-identifier hs-var">sFiles</span></a></span><span> </span><span class="annot"><span class="annottext">Server
+</span><a href="#local-6989586621679113312"><span class="hs-identifier hs-var">server</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(ByteString -&gt; [Char] -&gt; Snap ())
+-&gt; [Char] -&gt; ByteString -&gt; Snap ()
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; [Char] -&gt; Snap ()
+forall (m :: * -&gt; *). MonadSnap m =&gt; ByteString -&gt; [Char] -&gt; m ()
+</span><span class="hs-identifier hs-var">serveFileAs</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-141"></span><span>        </span><span class="hs-special">,</span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;/dir/:name&quot;</span></span><span>                 </span><span class="hs-special">,</span><span>
+</span><span id="line-142"></span><span>            </span><span class="annot"><span class="annottext">MVar Filepaths -&gt; ([Char] -&gt; ByteString -&gt; Snap ()) -&gt; Snap ()
+forall a.
+MVar Filepaths -&gt; ([Char] -&gt; ByteString -&gt; Snap a) -&gt; Snap a
+</span><a href="Foreign.JavaScript.Server.html#withFilepath"><span class="hs-identifier hs-var">withFilepath</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Server -&gt; MVar Filepaths
+</span><a href="Foreign.JavaScript.Types.html#sDirs"><span class="hs-identifier hs-var">sDirs</span></a></span><span>  </span><span class="annot"><span class="annottext">Server
+</span><a href="#local-6989586621679113312"><span class="hs-identifier hs-var">server</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679113327"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113327"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Snap ()
+forall (m :: * -&gt; *). MonadSnap m =&gt; [Char] -&gt; m ()
+</span><span class="hs-identifier hs-var">serveDirectory</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113327"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-143"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-144"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-145"></span><span>    </span><span id="local-6989586621679113315"><span class="annot"><span class="annottext">fixHandlers :: (t -&gt; b) -&gt; [(a, t)] -&gt; [(a, b)]
+</span><a href="#local-6989586621679113315"><span class="hs-identifier hs-var hs-var">fixHandlers</span></a></span></span><span> </span><span id="local-6989586621679113329"><span class="annot"><span class="annottext">t -&gt; b
+</span><a href="#local-6989586621679113329"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679113330"><span class="annot"><span class="annottext">[(a, t)]
+</span><a href="#local-6989586621679113330"><span class="hs-identifier hs-var">routes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679113331"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">t -&gt; b
+</span><a href="#local-6989586621679113329"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679113332"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679113331"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679113331"><span class="hs-identifier hs-var">a</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679113332"><span class="annot"><span class="annottext">t
+</span><a href="#local-6989586621679113332"><span class="hs-identifier hs-var">b</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[(a, t)]
+</span><a href="#local-6989586621679113330"><span class="hs-identifier hs-var">routes</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-146"></span><span>    </span><span id="local-6989586621679113316"><span class="annot"><span class="annottext">noCache :: m b -&gt; m b
+</span><a href="#local-6989586621679113316"><span class="hs-identifier hs-var hs-var">noCache</span></a></span></span><span> </span><span id="local-6989586621679113391"><span class="annot"><span class="annottext">m b
+</span><a href="#local-6989586621679113391"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Response -&gt; Response) -&gt; m ()
+forall (m :: * -&gt; *). MonadSnap m =&gt; (Response -&gt; Response) -&gt; m ()
+</span><span class="hs-identifier hs-var">modifyResponse</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CI ByteString -&gt; ByteString -&gt; Response -&gt; Response
+forall a. HasHeaders a =&gt; CI ByteString -&gt; ByteString -&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">setHeader</span></span><span> </span><span class="annot"><span class="annottext">CI ByteString
+</span><span class="hs-string">&quot;Cache-Control&quot;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;no-cache&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">m () -&gt; m b -&gt; m b
+forall a b. m a -&gt; m b -&gt; m b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">m b
+</span><a href="#local-6989586621679113391"><span class="hs-identifier hs-var">h</span></a></span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span>    </span><span id="local-6989586621679113317"><span class="annot"><span class="annottext">static :: [(ByteString, Snap ())]
+</span><a href="#local-6989586621679113317"><span class="hs-identifier hs-var hs-var">static</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(ByteString, Snap ())]
+-&gt; ([Char] -&gt; [(ByteString, Snap ())])
+-&gt; Maybe [Char]
+-&gt; [(ByteString, Snap ())]
+forall b a. b -&gt; (a -&gt; b) -&gt; Maybe a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Maybe.html#maybe"><span class="hs-identifier hs-var">maybe</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679113425"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113425"><span class="hs-identifier hs-var">dir</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;/static&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Snap ()
+forall (m :: * -&gt; *). MonadSnap m =&gt; [Char] -&gt; m ()
+</span><span class="hs-identifier hs-var">serveDirectory</span></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113425"><span class="hs-identifier hs-var">dir</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe [Char]
+</span><a href="#local-6989586621679113314"><span class="hs-identifier hs-var">staticDir</span></a></span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span>    </span><span id="local-6989586621679113318"><span class="annot"><span class="annottext">root :: Snap ()
+</span><a href="#local-6989586621679113318"><span class="hs-identifier hs-var hs-var">root</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe [Char]
+</span><a href="#local-6989586621679113313"><span class="hs-identifier hs-var">customHTML</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-151"></span><span>        </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679113460"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113460"><span class="hs-identifier hs-var">file</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe [Char]
+</span><a href="#local-6989586621679113314"><span class="hs-identifier hs-var">staticDir</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-152"></span><span>            </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679113461"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113461"><span class="hs-identifier hs-var">dir</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Snap ()
+forall (m :: * -&gt; *). MonadSnap m =&gt; [Char] -&gt; m ()
+</span><span class="hs-identifier hs-var">serveFile</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113461"><span class="hs-identifier hs-var">dir</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/filepath-1.4.200.1/src/System.FilePath.Posix.html#%3C%2F%3E"><span class="hs-operator hs-var">&lt;/&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113460"><span class="hs-identifier hs-var">file</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-153"></span><span>            </span><span class="annot"><span class="annottext">Maybe [Char]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Snap ()
+forall (m :: * -&gt; *). MonadSnap m =&gt; ByteString -&gt; m ()
+</span><span class="hs-identifier hs-var">logError</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;Foreign.JavaScript: Cannot use jsCustomHTML file without jsStatic&quot;</span></span><span>
+</span><span id="line-154"></span><span>        </span><span class="annot"><span class="annottext">Maybe [Char]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Text -&gt; ByteString -&gt; Snap ()
+forall (m :: * -&gt; *). MonadSnap m =&gt; Text -&gt; ByteString -&gt; m ()
+</span><a href="Foreign.JavaScript.Server.html#writeTextMime"><span class="hs-identifier hs-var">writeTextMime</span></a></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="Foreign.JavaScript.Resources.html#defaultHtmlFile"><span class="hs-identifier hs-var">defaultHtmlFile</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;text/html&quot;</span></span><span>
+</span><span id="line-155"></span><span>
+</span><span id="line-156"></span><span id="local-6989586621679112977"><span class="annot"><a href="Foreign.JavaScript.Server.html#writeTextMime"><span class="hs-identifier hs-type">writeTextMime</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">MonadSnap</span></span><span> </span><span class="annot"><a href="#local-6989586621679112977"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679112977"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-157"></span><span id="writeTextMime"><span class="annot"><span class="annottext">writeTextMime :: forall (m :: * -&gt; *). MonadSnap m =&gt; Text -&gt; ByteString -&gt; m ()
+</span><a href="Foreign.JavaScript.Server.html#writeTextMime"><span class="hs-identifier hs-var hs-var">writeTextMime</span></a></span></span><span> </span><span id="local-6989586621679113474"><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679113474"><span class="hs-identifier hs-var">text</span></a></span></span><span> </span><span id="local-6989586621679113475"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679113475"><span class="hs-identifier hs-var">mime</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-158"></span><span>    </span><span class="annot"><span class="annottext">(Response -&gt; Response) -&gt; m ()
+forall (m :: * -&gt; *). MonadSnap m =&gt; (Response -&gt; Response) -&gt; m ()
+</span><span class="hs-identifier hs-var">modifyResponse</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">CI ByteString -&gt; ByteString -&gt; Response -&gt; Response
+forall a. HasHeaders a =&gt; CI ByteString -&gt; ByteString -&gt; a -&gt; a
+</span><span class="hs-identifier hs-var">setHeader</span></span><span> </span><span class="annot"><span class="annottext">CI ByteString
+</span><span class="hs-string">&quot;Content-type&quot;</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679113475"><span class="hs-identifier hs-var">mime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-159"></span><span>    </span><span class="annot"><span class="annottext">Text -&gt; m ()
+forall (m :: * -&gt; *). MonadSnap m =&gt; Text -&gt; m ()
+</span><span class="hs-identifier hs-var">writeText</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><a href="#local-6989586621679113474"><span class="hs-identifier hs-var">text</span></a></span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span class="annot"><span class="hs-comment">-- | Extract  from a URI</span></span><span>
+</span><span id="line-162"></span><span id="local-6989586621679112978"><span class="annot"><a href="Foreign.JavaScript.Server.html#withFilepath"><span class="hs-identifier hs-type">withFilepath</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Filepaths"><span class="hs-identifier hs-type">Filepaths</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Snap</span></span><span> </span><span class="annot"><a href="#local-6989586621679112978"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Snap</span></span><span> </span><span class="annot"><a href="#local-6989586621679112978"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-163"></span><span id="withFilepath"><span class="annot"><span class="annottext">withFilepath :: forall a.
+MVar Filepaths -&gt; ([Char] -&gt; ByteString -&gt; Snap a) -&gt; Snap a
+</span><a href="Foreign.JavaScript.Server.html#withFilepath"><span class="hs-identifier hs-var hs-var">withFilepath</span></a></span></span><span> </span><span id="local-6989586621679113492"><span class="annot"><span class="annottext">MVar Filepaths
+</span><a href="#local-6989586621679113492"><span class="hs-identifier hs-var">rDict</span></a></span></span><span> </span><span id="local-6989586621679113493"><span class="annot"><span class="annottext">[Char] -&gt; ByteString -&gt; Snap a
+</span><a href="#local-6989586621679113493"><span class="hs-identifier hs-var">cont</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-164"></span><span>    </span><span id="local-6989586621679113494"><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="#local-6989586621679113494"><span class="hs-identifier hs-var">mName</span></a></span></span><span>    </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Snap (Maybe ByteString)
+forall (m :: * -&gt; *).
+MonadSnap m =&gt;
+ByteString -&gt; m (Maybe ByteString)
+</span><span class="hs-identifier hs-var">getParam</span></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><span class="hs-string">&quot;name&quot;</span></span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span id="local-6989586621679113496"><span class="annot"><span class="annottext">Map ByteString ([Char], [Char])
+</span><a href="#local-6989586621679113496"><span class="hs-identifier hs-var">dict</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Filepaths -&gt; Snap Filepaths
+forall a. IO a -&gt; Snap a
+forall (m :: * -&gt; *) a. MonadIO m =&gt; IO a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#liftIO"><span class="hs-identifier hs-var">liftIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO Filepaths -&gt; Snap Filepaths) -&gt; IO Filepaths -&gt; Snap Filepaths
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MVar Filepaths -&gt; (Filepaths -&gt; IO Filepaths) -&gt; IO Filepaths
+forall a b. MVar a -&gt; (a -&gt; IO b) -&gt; IO b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Concurrent.MVar.html#withMVar"><span class="hs-identifier hs-var">withMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar Filepaths
+</span><a href="#local-6989586621679113492"><span class="hs-identifier hs-var">rDict</span></a></span><span> </span><span class="annot"><span class="annottext">Filepaths -&gt; IO Filepaths
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679113499"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679113499"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString
+-&gt; Map ByteString ([Char], [Char]) -&gt; Maybe ([Char], [Char])
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#lookup"><span class="hs-identifier hs-var">M.lookup</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679113499"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">Map ByteString ([Char], [Char])
+</span><a href="#local-6989586621679113496"><span class="hs-identifier hs-var">dict</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; Maybe ([Char], [Char]))
+-&gt; Maybe ByteString -&gt; Maybe ([Char], [Char])
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="#local-6989586621679113494"><span class="hs-identifier hs-var">mName</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-167"></span><span>        </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679113501"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113501"><span class="hs-identifier hs-var">path</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679113502"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113502"><span class="hs-identifier hs-var">mimetype</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; ByteString -&gt; Snap a
+</span><a href="#local-6989586621679113493"><span class="hs-identifier hs-var">cont</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113501"><span class="hs-identifier hs-var">path</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Char8.html#pack"><span class="hs-identifier hs-var">BS.pack</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113502"><span class="hs-identifier hs-var">mimetype</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-168"></span><span>        </span><span class="annot"><span class="annottext">Maybe ([Char], [Char])
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>              </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Snap a
+forall a. HasCallStack =&gt; [Char] -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Err.html#error"><span class="hs-identifier hs-var">error</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; Snap a) -&gt; [Char] -&gt; Snap a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;File not loaded: &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString -&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ByteString
+</span><a href="#local-6989586621679113494"><span class="hs-identifier hs-var">mName</span></a></span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- FIXME: Serving large files fails with the exception</span><span>
+</span><span id="line-171"></span><span class="hs-comment">-- System.SendFile.Darwin: invalid argument (Socket is not connected)</span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span class="annot"><span class="hs-comment">-- | Associate an URL to a FilePath</span></span><span>
+</span><span id="line-174"></span><span class="annot"><a href="Foreign.JavaScript.Server.html#newAssociation"><span class="hs-identifier hs-type">newAssociation</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.MVar.html#MVar"><span class="hs-identifier hs-type">MVar</span></a></span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Filepaths"><span class="hs-identifier hs-type">Filepaths</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#MimeType"><span class="hs-identifier hs-type">MimeType</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-175"></span><span id="newAssociation"><span class="annot"><span class="annottext">newAssociation :: MVar Filepaths -&gt; ([Char], [Char]) -&gt; IO [Char]
+</span><a href="Foreign.JavaScript.Server.html#newAssociation"><span class="hs-identifier hs-var hs-var">newAssociation</span></a></span></span><span> </span><span id="local-6989586621679113505"><span class="annot"><span class="annottext">MVar Filepaths
+</span><a href="#local-6989586621679113505"><span class="hs-identifier hs-var">rDict</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679113506"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113506"><span class="hs-identifier hs-var">path</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679113507"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113507"><span class="hs-identifier hs-var">mimetype</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-176"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679113508"><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679113508"><span class="hs-identifier hs-var">old</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679113509"><span class="annot"><span class="annottext">Map ByteString ([Char], [Char])
+</span><a href="#local-6989586621679113509"><span class="hs-identifier hs-var">dict</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar Filepaths -&gt; IO Filepaths
+forall a. MVar a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.MVar.html#takeMVar"><span class="hs-identifier hs-var">takeMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar Filepaths
+</span><a href="#local-6989586621679113505"><span class="hs-identifier hs-var">rDict</span></a></span><span>
+</span><span id="line-177"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679113514"><span class="annot"><span class="annottext">new :: Integer
+</span><a href="#local-6989586621679113514"><span class="hs-identifier hs-var hs-var">new</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679113508"><span class="hs-identifier hs-var">old</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Integer -&gt; Integer
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span class="hs-special">;</span><span> </span><span id="local-6989586621679113518"><span class="annot"><span class="annottext">key :: [Char]
+</span><a href="#local-6989586621679113518"><span class="hs-identifier hs-var hs-var">key</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; [Char]
+forall a. Show a =&gt; a -&gt; [Char]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679113514"><span class="hs-identifier hs-var">new</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/filepath-1.4.200.1/src/System.FilePath.Posix.html#takeFileName"><span class="hs-identifier hs-var">takeFileName</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113506"><span class="hs-identifier hs-var">path</span></a></span><span>
+</span><span id="line-178"></span><span>    </span><span class="annot"><span class="annottext">MVar Filepaths -&gt; Filepaths -&gt; IO ()
+forall a. MVar a -&gt; a -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.MVar.html#putMVar"><span class="hs-identifier hs-var">putMVar</span></a></span><span> </span><span class="annot"><span class="annottext">MVar Filepaths
+</span><a href="#local-6989586621679113505"><span class="hs-identifier hs-var">rDict</span></a></span><span> </span><span class="annot"><span class="annottext">(Filepaths -&gt; IO ()) -&gt; Filepaths -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><a href="#local-6989586621679113514"><span class="hs-identifier hs-var">new</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">ByteString
+-&gt; ([Char], [Char])
+-&gt; Map ByteString ([Char], [Char])
+-&gt; Map ByteString ([Char], [Char])
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#insert"><span class="hs-identifier hs-var">M.insert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Char8.html#pack"><span class="hs-identifier hs-var">BS.pack</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113518"><span class="hs-identifier hs-var">key</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113506"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113507"><span class="hs-identifier hs-var">mimetype</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Map ByteString ([Char], [Char])
+</span><a href="#local-6989586621679113509"><span class="hs-identifier hs-var">dict</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>    </span><span class="annot"><span class="annottext">[Char] -&gt; IO [Char]
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113518"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-180"></span><span>
+</span><span id="line-181"></span><span class="annot"><span class="hs-comment">-- | Begin to serve a local file with a given 'MimeType' under a URI.</span></span><span>
+</span><span id="line-182"></span><span class="annot"><a href="Foreign.JavaScript.Server.html#loadFile"><span class="hs-identifier hs-type">loadFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Server"><span class="hs-identifier hs-type">Server</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#MimeType"><span class="hs-identifier hs-type">MimeType</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-183"></span><span id="loadFile"><span class="annot"><span class="annottext">loadFile :: Server -&gt; [Char] -&gt; [Char] -&gt; IO [Char]
+</span><a href="Foreign.JavaScript.Server.html#loadFile"><span class="hs-identifier hs-var hs-var">loadFile</span></a></span></span><span> </span><span id="local-6989586621679113522"><span class="annot"><span class="annottext">Server
+</span><a href="#local-6989586621679113522"><span class="hs-identifier hs-var">server</span></a></span></span><span> </span><span id="local-6989586621679113523"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113523"><span class="hs-identifier hs-var">mimetype</span></a></span></span><span> </span><span id="local-6989586621679113524"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113524"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-184"></span><span>    </span><span id="local-6989586621679113525"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113525"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar Filepaths -&gt; ([Char], [Char]) -&gt; IO [Char]
+</span><a href="Foreign.JavaScript.Server.html#newAssociation"><span class="hs-identifier hs-var">newAssociation</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Server -&gt; MVar Filepaths
+</span><a href="Foreign.JavaScript.Types.html#sFiles"><span class="hs-identifier hs-var">sFiles</span></a></span><span> </span><span class="annot"><span class="annottext">Server
+</span><a href="#local-6989586621679113522"><span class="hs-identifier hs-var">server</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113524"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113523"><span class="hs-identifier hs-var">mimetype</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-185"></span><span>    </span><span class="annot"><span class="annottext">[Char] -&gt; IO [Char]
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; IO [Char]) -&gt; [Char] -&gt; IO [Char]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;/file/&quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113525"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-186"></span><span>
+</span><span id="line-187"></span><span class="annot"><span class="hs-comment">-- | Begin to serve a local directory under a URI.</span></span><span>
+</span><span id="line-188"></span><span class="annot"><a href="Foreign.JavaScript.Server.html#loadDirectory"><span class="hs-identifier hs-type">loadDirectory</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Foreign.JavaScript.Types.html#Server"><span class="hs-identifier hs-type">Server</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-189"></span><span id="loadDirectory"><span class="annot"><span class="annottext">loadDirectory :: Server -&gt; [Char] -&gt; IO [Char]
+</span><a href="Foreign.JavaScript.Server.html#loadDirectory"><span class="hs-identifier hs-var hs-var">loadDirectory</span></a></span></span><span> </span><span id="local-6989586621679113526"><span class="annot"><span class="annottext">Server
+</span><a href="#local-6989586621679113526"><span class="hs-identifier hs-var">server</span></a></span></span><span> </span><span id="local-6989586621679113527"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113527"><span class="hs-identifier hs-var">path</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-190"></span><span>    </span><span id="local-6989586621679113528"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113528"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">MVar Filepaths -&gt; ([Char], [Char]) -&gt; IO [Char]
+</span><a href="Foreign.JavaScript.Server.html#newAssociation"><span class="hs-identifier hs-var">newAssociation</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Server -&gt; MVar Filepaths
+</span><a href="Foreign.JavaScript.Types.html#sDirs"><span class="hs-identifier hs-var">sDirs</span></a></span><span> </span><span class="annot"><span class="annottext">Server
+</span><a href="#local-6989586621679113526"><span class="hs-identifier hs-var">server</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113527"><span class="hs-identifier hs-var">path</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-191"></span><span>    </span><span class="annot"><span class="annottext">[Char] -&gt; IO [Char]
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">([Char] -&gt; IO [Char]) -&gt; [Char] -&gt; IO [Char]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><span class="hs-string">&quot;/dir/&quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679113528"><span class="hs-identifier hs-var">key</span></a></span><span>
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span></pre></body></html>

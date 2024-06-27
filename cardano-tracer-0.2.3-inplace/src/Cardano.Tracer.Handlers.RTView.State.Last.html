@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.State.Last</span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#LastResourcesForNode"><span class="hs-identifier">LastResourcesForNode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#LastResources"><span class="hs-identifier">LastResources</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#addNullResources"><span class="hs-identifier">addNullResources</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#initLastResources"><span class="hs-identifier">initLastResources</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#updateLastResources"><span class="hs-identifier">updateLastResources</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Types.html"><span class="hs-identifier">Cardano.Tracer.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier">NodeId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.html"><span class="hs-identifier">Control.Concurrent.STM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier">atomically</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html"><span class="hs-identifier">Control.Concurrent.STM.TVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier">TVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier">modifyTVar'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier">newTVarIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word64"><span class="hs-identifier">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- | We have to store last received metric to be able to calculate</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--   the value based on next received metric. For example, calculate</span><span>
+</span><span id="line-19"></span><span class="hs-comment">--   &quot;CPU usage percent&quot; based on received CPU ticks.</span><span>
+</span><span id="line-20"></span><span class="hs-comment">--   That value will be stored in corresponding 'HistoricalData' for</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--   rendering on the corresponding chart.</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">data</span><span> </span><span id="LastResourcesForNode"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#LastResourcesForNode"><span class="hs-identifier hs-var">LastResourcesForNode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="LastResourcesForNode"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#LastResourcesForNode"><span class="hs-identifier hs-var">LastResourcesForNode</span></a></span></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="cpuLastTicks"><span class="annot"><span class="annottext">LastResourcesForNode -&gt; Int
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#cpuLastTicks"><span class="hs-identifier hs-var hs-var">cpuLastTicks</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cpuLastNS"><span class="annot"><span class="annottext">LastResourcesForNode -&gt; Word64
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#cpuLastNS"><span class="hs-identifier hs-var hs-var">cpuLastNS</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cpuGCLastTicks"><span class="annot"><span class="annottext">LastResourcesForNode -&gt; Int
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#cpuGCLastTicks"><span class="hs-identifier hs-var hs-var">cpuGCLastTicks</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cpuGCLastNS"><span class="annot"><span class="annottext">LastResourcesForNode -&gt; Word64
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#cpuGCLastNS"><span class="hs-identifier hs-var hs-var">cpuGCLastNS</span></a></span></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cpuAppLastTicks"><span class="annot"><span class="annottext">LastResourcesForNode -&gt; Int
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#cpuAppLastTicks"><span class="hs-identifier hs-var hs-var">cpuAppLastTicks</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="cpuAppLastNS"><span class="annot"><span class="annottext">LastResourcesForNode -&gt; Word64
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#cpuAppLastNS"><span class="hs-identifier hs-var hs-var">cpuAppLastNS</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word64"><span class="hs-identifier hs-type">Word64</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">type</span><span> </span><span id="LastResources"><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#LastResources"><span class="hs-identifier hs-var">LastResources</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">TVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#Map"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#LastResourcesForNode"><span class="hs-identifier hs-type">LastResourcesForNode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#initLastResources"><span class="hs-identifier hs-type">initLastResources</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#LastResources"><span class="hs-identifier hs-type">LastResources</span></a></span><span>
+</span><span id="line-35"></span><span id="initLastResources"><span class="annot"><span class="annottext">initLastResources :: IO LastResources
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#initLastResources"><span class="hs-identifier hs-var hs-var">initLastResources</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map NodeId LastResourcesForNode -&gt; IO LastResources
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">Map NodeId LastResourcesForNode
+forall k a. Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#empty"><span class="hs-identifier hs-var">M.empty</span></a></span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="annot"><span class="hs-comment">-- | For the first update only.</span></span><span>
+</span><span id="line-38"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#addNullResources"><span class="hs-identifier hs-type">addNullResources</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#LastResources"><span class="hs-identifier hs-type">LastResources</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span id="addNullResources"><span class="annot"><span class="annottext">addNullResources :: LastResources -&gt; NodeId -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#addNullResources"><span class="hs-identifier hs-var hs-var">addNullResources</span></a></span></span><span> </span><span id="local-6989586621679608976"><span class="annot"><span class="annottext">LastResources
+</span><a href="#local-6989586621679608976"><span class="hs-identifier hs-var">lastResources</span></a></span></span><span> </span><span id="local-6989586621679608977"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679608977"><span class="hs-identifier hs-var">nodeId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><span class="annottext">LastResources
+-&gt; (Map NodeId LastResourcesForNode
+    -&gt; Map NodeId LastResourcesForNode)
+-&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier hs-var">modifyTVar'</span></a></span><span> </span><span class="annot"><span class="annottext">LastResources
+</span><a href="#local-6989586621679608976"><span class="hs-identifier hs-var">lastResources</span></a></span><span> </span><span class="annot"><span class="annottext">((Map NodeId LastResourcesForNode
+  -&gt; Map NodeId LastResourcesForNode)
+ -&gt; STM ())
+-&gt; (Map NodeId LastResourcesForNode
+    -&gt; Map NodeId LastResourcesForNode)
+-&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+-&gt; LastResourcesForNode
+-&gt; Map NodeId LastResourcesForNode
+-&gt; Map NodeId LastResourcesForNode
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">M.insert</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679608977"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">LastResourcesForNode
+</span><a href="#local-6989586621679608979"><span class="hs-identifier hs-var">nulls</span></a></span><span>
+</span><span id="line-44"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-45"></span><span>  </span><span id="local-6989586621679608979"><span class="annot"><span class="annottext">nulls :: LastResourcesForNode
+</span><a href="#local-6989586621679608979"><span class="hs-identifier hs-var hs-var">nulls</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#LastResourcesForNode"><span class="hs-identifier hs-type">LastResourcesForNode</span></a></span><span>
+</span><span id="line-47"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">cpuLastTicks :: Int
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#cpuLastTicks"><span class="hs-identifier hs-var">cpuLastTicks</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-48"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cpuLastNS :: Word64
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#cpuLastNS"><span class="hs-identifier hs-var">cpuLastNS</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-49"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cpuGCLastTicks :: Int
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#cpuGCLastTicks"><span class="hs-identifier hs-var">cpuGCLastTicks</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-50"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cpuGCLastNS :: Word64
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#cpuGCLastNS"><span class="hs-identifier hs-var">cpuGCLastNS</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-51"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cpuAppLastTicks :: Int
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#cpuAppLastTicks"><span class="hs-identifier hs-var">cpuAppLastTicks</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-52"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">cpuAppLastNS :: Word64
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#cpuAppLastNS"><span class="hs-identifier hs-var">cpuAppLastNS</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-53"></span><span>      </span><span class="hs-special">}</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#updateLastResources"><span class="hs-identifier hs-type">updateLastResources</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#LastResources"><span class="hs-identifier hs-type">LastResources</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#NodeId"><span class="hs-identifier hs-type">NodeId</span></a></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#LastResourcesForNode"><span class="hs-identifier hs-type">LastResourcesForNode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#LastResourcesForNode"><span class="hs-identifier hs-type">LastResourcesForNode</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span id="updateLastResources"><span class="annot"><span class="annottext">updateLastResources :: LastResources
+-&gt; NodeId
+-&gt; (LastResourcesForNode -&gt; LastResourcesForNode)
+-&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Last.html#updateLastResources"><span class="hs-identifier hs-var hs-var">updateLastResources</span></a></span></span><span> </span><span id="local-6989586621679608984"><span class="annot"><span class="annottext">LastResources
+</span><a href="#local-6989586621679608984"><span class="hs-identifier hs-var">lastResources</span></a></span></span><span> </span><span id="local-6989586621679608985"><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679608985"><span class="hs-identifier hs-var">nodeId</span></a></span></span><span> </span><span id="local-6989586621679608986"><span class="annot"><span class="annottext">LastResourcesForNode -&gt; LastResourcesForNode
+</span><a href="#local-6989586621679608986"><span class="hs-identifier hs-var">updateIt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><span class="annottext">LastResources
+-&gt; (Map NodeId LastResourcesForNode
+    -&gt; Map NodeId LastResourcesForNode)
+-&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier hs-var">modifyTVar'</span></a></span><span> </span><span class="annot"><span class="annottext">LastResources
+</span><a href="#local-6989586621679608984"><span class="hs-identifier hs-var">lastResources</span></a></span><span> </span><span class="annot"><span class="annottext">((Map NodeId LastResourcesForNode
+  -&gt; Map NodeId LastResourcesForNode)
+ -&gt; STM ())
+-&gt; (Map NodeId LastResourcesForNode
+    -&gt; Map NodeId LastResourcesForNode)
+-&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">(LastResourcesForNode -&gt; LastResourcesForNode)
+-&gt; NodeId
+-&gt; Map NodeId LastResourcesForNode
+-&gt; Map NodeId LastResourcesForNode
+forall k a. Ord k =&gt; (a -&gt; a) -&gt; k -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#adjust"><span class="hs-identifier hs-var">M.adjust</span></a></span><span> </span><span class="annot"><span class="annottext">LastResourcesForNode -&gt; LastResourcesForNode
+</span><a href="#local-6989586621679608986"><span class="hs-identifier hs-var">updateIt</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679608985"><span class="hs-identifier hs-var">nodeId</span></a></span><span>
+</span><span id="line-62"></span></pre></body></html>

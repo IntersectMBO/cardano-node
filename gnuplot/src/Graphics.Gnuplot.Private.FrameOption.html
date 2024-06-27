@@ -1,0 +1,319 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="annot"><span class="hs-comment">{- |
+If you add a new option,
+please mind to add a default value to FrameOptionSet.deflt, too.
+-}</span></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics.Gnuplot.Private.FrameOption</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="annot"><span class="hs-comment">{- |
+Every option represents an internal state in gnuplot.
+It is altered with gnuplot's set command.
+The first field in 'T' is the name of the option
+and the name of the according internal state in gnuplot.
+
+Sometimes the addressed state is not explicitly mentioned
+but is expressed by the syntax of the values.
+E.g. you can write @set grid xtics@ and @set grid noxtics@,
+but both commands refer to the same internal boolean variable,
+that we like to call @xtics@.
+It is important that the gnuplot Haskell bindings know
+that these two set commands refer to the same gnuplot state,
+since we want to simulate a stateless functional interface
+in front of a stateful imperative one.
+
+In case of a such a hidden state,
+we manage an identifier in the second field of 'T'.
+It is mainly used for distinguishing different hidden states,
+that are accessed by the same @set@ variable.
+This second field may not contain valid gnuplot identifiers,
+however you might use the field for formatting boolean options
+using 'Graphics.Gnuplot.Frame.OptionSet.addBool'.
+-}</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">data</span><span> </span><span id="T"><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-var">T</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Cons"><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-32"></span><span>   </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679074741"><span id="local-6989586621679074747"><span class="annot"><span class="annottext">T -&gt; T -&gt; Bool
+(T -&gt; T -&gt; Bool) -&gt; (T -&gt; T -&gt; Bool) -&gt; Eq T
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: T -&gt; T -&gt; Bool
+== :: T -&gt; T -&gt; Bool
+$c/= :: T -&gt; T -&gt; Bool
+/= :: T -&gt; T -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679074755"><span id="local-6989586621679074761"><span id="local-6989586621679074766"><span id="local-6989586621679074770"><span id="local-6989586621679074773"><span id="local-6989586621679074776"><span id="local-6989586621679074779"><span class="annot"><span class="annottext">Eq T
+Eq T =&gt;
+(T -&gt; T -&gt; Ordering)
+-&gt; (T -&gt; T -&gt; Bool)
+-&gt; (T -&gt; T -&gt; Bool)
+-&gt; (T -&gt; T -&gt; Bool)
+-&gt; (T -&gt; T -&gt; Bool)
+-&gt; (T -&gt; T -&gt; T)
+-&gt; (T -&gt; T -&gt; T)
+-&gt; Ord T
+T -&gt; T -&gt; Bool
+T -&gt; T -&gt; Ordering
+T -&gt; T -&gt; T
+forall a.
+Eq a =&gt;
+(a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: T -&gt; T -&gt; Ordering
+compare :: T -&gt; T -&gt; Ordering
+$c&lt; :: T -&gt; T -&gt; Bool
+&lt; :: T -&gt; T -&gt; Bool
+$c&lt;= :: T -&gt; T -&gt; Bool
+&lt;= :: T -&gt; T -&gt; Bool
+$c&gt; :: T -&gt; T -&gt; Bool
+&gt; :: T -&gt; T -&gt; Bool
+$c&gt;= :: T -&gt; T -&gt; Bool
+&gt;= :: T -&gt; T -&gt; Bool
+$cmax :: T -&gt; T -&gt; T
+max :: T -&gt; T -&gt; T
+$cmin :: T -&gt; T -&gt; T
+min :: T -&gt; T -&gt; T
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Ord"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></a></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679074784"><span id="local-6989586621679074792"><span id="local-6989586621679074796"><span class="annot"><span class="annottext">Int -&gt; T -&gt; ShowS
+[T] -&gt; ShowS
+T -&gt; String
+(Int -&gt; T -&gt; ShowS) -&gt; (T -&gt; String) -&gt; ([T] -&gt; ShowS) -&gt; Show T
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; T -&gt; ShowS
+showsPrec :: Int -&gt; T -&gt; ShowS
+$cshow :: T -&gt; String
+show :: T -&gt; String
+$cshowList :: [T] -&gt; ShowS
+showList :: [T] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="annot"><span class="hs-comment">{- |
+Constructs a generic option from Strings for the first and second field of 'T'.
+
+This is very flexible, but not very safe.
+Use it only as fall-back,
+if there is no specific setter function in &quot;Graphics.Gnuplot.Frame.OptionSet&quot;.
+-}</span></span><span>
+</span><span id="line-41"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#custom"><span class="hs-identifier hs-type">custom</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span>
+</span><span id="line-42"></span><span id="custom"><span class="annot"><span class="annottext">custom :: String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#custom"><span class="hs-identifier hs-var hs-var">custom</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#grid"><span class="hs-identifier hs-type">grid</span></a></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="grid"><span class="annot"><span class="annottext">grid :: String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#grid"><span class="hs-identifier hs-var hs-var">grid</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;grid&quot;</span></span><span>
+</span><span id="line-45"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#size"><span class="hs-identifier hs-type">size</span></a></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="size"><span class="annot"><span class="annottext">size :: String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#size"><span class="hs-identifier hs-var hs-var">size</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;size&quot;</span></span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#key"><span class="hs-identifier hs-type">key</span></a></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="key"><span class="annot"><span class="annottext">key :: String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#key"><span class="hs-identifier hs-var hs-var">key</span></a></span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;key&quot;</span></span><span>
+</span><span id="line-47"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#border"><span class="hs-identifier hs-type">border</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="border"><span class="annot"><span class="annottext">border :: String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#border"><span class="hs-identifier hs-var hs-var">border</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;border&quot;</span></span><span>
+</span><span id="line-48"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#pm3d"><span class="hs-identifier hs-type">pm3d</span></a></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="pm3d"><span class="annot"><span class="annottext">pm3d :: String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#pm3d"><span class="hs-identifier hs-var hs-var">pm3d</span></a></span></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;pm3d&quot;</span></span><span>
+</span><span id="line-49"></span><span>
+</span><span id="line-50"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#xRange"><span class="hs-identifier hs-type">xRange</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="xRange"><span class="annot"><span class="annottext">xRange :: String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#xRange"><span class="hs-identifier hs-var hs-var">xRange</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;xrange&quot;</span></span><span>
+</span><span id="line-51"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#yRange"><span class="hs-identifier hs-type">yRange</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="yRange"><span class="annot"><span class="annottext">yRange :: String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#yRange"><span class="hs-identifier hs-var hs-var">yRange</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;yrange&quot;</span></span><span>
+</span><span id="line-52"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#zRange"><span class="hs-identifier hs-type">zRange</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="zRange"><span class="annot"><span class="annottext">zRange :: String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#zRange"><span class="hs-identifier hs-var hs-var">zRange</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;zrange&quot;</span></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#xLabel"><span class="hs-identifier hs-type">xLabel</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="xLabel"><span class="annot"><span class="annottext">xLabel :: String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#xLabel"><span class="hs-identifier hs-var hs-var">xLabel</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;xlabel&quot;</span></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#yLabel"><span class="hs-identifier hs-type">yLabel</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="yLabel"><span class="annot"><span class="annottext">yLabel :: String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#yLabel"><span class="hs-identifier hs-var hs-var">yLabel</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ylabel&quot;</span></span><span>
+</span><span id="line-56"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#zLabel"><span class="hs-identifier hs-type">zLabel</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="zLabel"><span class="annot"><span class="annottext">zLabel :: String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#zLabel"><span class="hs-identifier hs-var hs-var">zLabel</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;zlabel&quot;</span></span><span>
+</span><span id="line-57"></span><span>
+</span><span id="line-58"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#xTicks"><span class="hs-identifier hs-type">xTicks</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="xTicks"><span class="annot"><span class="annottext">xTicks :: String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#xTicks"><span class="hs-identifier hs-var hs-var">xTicks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;xtics&quot;</span></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#yTicks"><span class="hs-identifier hs-type">yTicks</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="yTicks"><span class="annot"><span class="annottext">yTicks :: String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#yTicks"><span class="hs-identifier hs-var hs-var">yTicks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ytics&quot;</span></span><span>
+</span><span id="line-60"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#zTicks"><span class="hs-identifier hs-type">zTicks</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="zTicks"><span class="annot"><span class="annottext">zTicks :: String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#zTicks"><span class="hs-identifier hs-var hs-var">zTicks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ztics&quot;</span></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#xLogScale"><span class="hs-identifier hs-type">xLogScale</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="xLogScale"><span class="annot"><span class="annottext">xLogScale :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#xLogScale"><span class="hs-identifier hs-var hs-var">xLogScale</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;logscale x&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-63"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#yLogScale"><span class="hs-identifier hs-type">yLogScale</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="yLogScale"><span class="annot"><span class="annottext">yLogScale :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#yLogScale"><span class="hs-identifier hs-var hs-var">yLogScale</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;logscale y&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#zLogScale"><span class="hs-identifier hs-type">zLogScale</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="zLogScale"><span class="annot"><span class="annottext">zLogScale :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#zLogScale"><span class="hs-identifier hs-var hs-var">zLogScale</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;logscale z&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-65"></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#title"><span class="hs-identifier hs-type">title</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="title"><span class="annot"><span class="annottext">title :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#title"><span class="hs-identifier hs-var hs-var">title</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;title&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-68"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#view"><span class="hs-identifier hs-type">view</span></a></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="view"><span class="annot"><span class="annottext">view :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#view"><span class="hs-identifier hs-var hs-var">view</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;view&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#xFormat"><span class="hs-identifier hs-type">xFormat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="xFormat"><span class="annot"><span class="annottext">xFormat :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#xFormat"><span class="hs-identifier hs-var hs-var">xFormat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;format x&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-71"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#yFormat"><span class="hs-identifier hs-type">yFormat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="yFormat"><span class="annot"><span class="annottext">yFormat :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#yFormat"><span class="hs-identifier hs-var hs-var">yFormat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;format y&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-72"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#zFormat"><span class="hs-identifier hs-type">zFormat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="zFormat"><span class="annot"><span class="annottext">zFormat :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#zFormat"><span class="hs-identifier hs-var hs-var">zFormat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;format z&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-73"></span><span>
+</span><span id="line-74"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#timeFmt"><span class="hs-identifier hs-type">timeFmt</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="timeFmt"><span class="annot"><span class="annottext">timeFmt :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#timeFmt"><span class="hs-identifier hs-var hs-var">timeFmt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;timefmt&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#xData"><span class="hs-identifier hs-type">xData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="xData"><span class="annot"><span class="annottext">xData :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#xData"><span class="hs-identifier hs-var hs-var">xData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;xdata&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-77"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#yData"><span class="hs-identifier hs-type">yData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="yData"><span class="annot"><span class="annottext">yData :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#yData"><span class="hs-identifier hs-var hs-var">yData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ydata&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-78"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#zData"><span class="hs-identifier hs-type">zData</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="zData"><span class="annot"><span class="annottext">zData :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#zData"><span class="hs-identifier hs-var hs-var">zData</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;zdata&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-79"></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#sizeScale"><span class="hs-identifier hs-type">sizeScale</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="sizeScale"><span class="annot"><span class="annottext">sizeScale :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#sizeScale"><span class="hs-identifier hs-var hs-var">sizeScale</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#size"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;scale&quot;</span></span><span>
+</span><span id="line-82"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#sizeRatio"><span class="hs-identifier hs-type">sizeRatio</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="sizeRatio"><span class="annot"><span class="annottext">sizeRatio :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#sizeRatio"><span class="hs-identifier hs-var hs-var">sizeRatio</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#size"><span class="hs-identifier hs-var">size</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ratio&quot;</span></span><span>
+</span><span id="line-83"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#keyShow"><span class="hs-identifier hs-type">keyShow</span></a></span><span>     </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="keyShow"><span class="annot"><span class="annottext">keyShow :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#keyShow"><span class="hs-identifier hs-var hs-var">keyShow</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#key"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;show&quot;</span></span><span>
+</span><span id="line-84"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#keyPosition"><span class="hs-identifier hs-type">keyPosition</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="keyPosition"><span class="annot"><span class="annottext">keyPosition :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#keyPosition"><span class="hs-identifier hs-var hs-var">keyPosition</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#key"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;position&quot;</span></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#xRangeBounds"><span class="hs-identifier hs-type">xRangeBounds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="xRangeBounds"><span class="annot"><span class="annottext">xRangeBounds :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#xRangeBounds"><span class="hs-identifier hs-var hs-var">xRangeBounds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#xRange"><span class="hs-identifier hs-var">xRange</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;bounds&quot;</span></span><span>
+</span><span id="line-87"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#yRangeBounds"><span class="hs-identifier hs-type">yRangeBounds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="yRangeBounds"><span class="annot"><span class="annottext">yRangeBounds :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#yRangeBounds"><span class="hs-identifier hs-var hs-var">yRangeBounds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#yRange"><span class="hs-identifier hs-var">yRange</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;bounds&quot;</span></span><span>
+</span><span id="line-88"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#zRangeBounds"><span class="hs-identifier hs-type">zRangeBounds</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="zRangeBounds"><span class="annot"><span class="annottext">zRangeBounds :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#zRangeBounds"><span class="hs-identifier hs-var hs-var">zRangeBounds</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#zRange"><span class="hs-identifier hs-var">zRange</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;bounds&quot;</span></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#xLabelText"><span class="hs-identifier hs-type">xLabelText</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="xLabelText"><span class="annot"><span class="annottext">xLabelText :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#xLabelText"><span class="hs-identifier hs-var hs-var">xLabelText</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#xLabel"><span class="hs-identifier hs-var">xLabel</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;text&quot;</span></span><span>
+</span><span id="line-91"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#yLabelText"><span class="hs-identifier hs-type">yLabelText</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="yLabelText"><span class="annot"><span class="annottext">yLabelText :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#yLabelText"><span class="hs-identifier hs-var hs-var">yLabelText</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#yLabel"><span class="hs-identifier hs-var">yLabel</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;text&quot;</span></span><span>
+</span><span id="line-92"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#zLabelText"><span class="hs-identifier hs-type">zLabelText</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="zLabelText"><span class="annot"><span class="annottext">zLabelText :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#zLabelText"><span class="hs-identifier hs-var hs-var">zLabelText</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#zLabel"><span class="hs-identifier hs-var">zLabel</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;text&quot;</span></span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#xTickLabels"><span class="hs-identifier hs-type">xTickLabels</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="xTickLabels"><span class="annot"><span class="annottext">xTickLabels :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#xTickLabels"><span class="hs-identifier hs-var hs-var">xTickLabels</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#xTicks"><span class="hs-identifier hs-var">xTicks</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;labels&quot;</span></span><span>
+</span><span id="line-95"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#yTickLabels"><span class="hs-identifier hs-type">yTickLabels</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="yTickLabels"><span class="annot"><span class="annottext">yTickLabels :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#yTickLabels"><span class="hs-identifier hs-var hs-var">yTickLabels</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#yTicks"><span class="hs-identifier hs-var">yTicks</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;labels&quot;</span></span><span>
+</span><span id="line-96"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#zTickLabels"><span class="hs-identifier hs-type">zTickLabels</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="zTickLabels"><span class="annot"><span class="annottext">zTickLabels :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#zTickLabels"><span class="hs-identifier hs-var hs-var">zTickLabels</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#zTicks"><span class="hs-identifier hs-var">zTicks</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;labels&quot;</span></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#gridXTicks"><span class="hs-identifier hs-type">gridXTicks</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="gridXTicks"><span class="annot"><span class="annottext">gridXTicks :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#gridXTicks"><span class="hs-identifier hs-var hs-var">gridXTicks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#grid"><span class="hs-identifier hs-var">grid</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;xtics&quot;</span></span><span>
+</span><span id="line-99"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#gridYTicks"><span class="hs-identifier hs-type">gridYTicks</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="gridYTicks"><span class="annot"><span class="annottext">gridYTicks :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#gridYTicks"><span class="hs-identifier hs-var hs-var">gridYTicks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#grid"><span class="hs-identifier hs-var">grid</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ytics&quot;</span></span><span>
+</span><span id="line-100"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#gridZTicks"><span class="hs-identifier hs-type">gridZTicks</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="gridZTicks"><span class="annot"><span class="annottext">gridZTicks :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#gridZTicks"><span class="hs-identifier hs-var hs-var">gridZTicks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#grid"><span class="hs-identifier hs-var">grid</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ztics&quot;</span></span><span>
+</span><span id="line-101"></span><span>
+</span><span id="line-102"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#boxwidth"><span class="hs-identifier hs-type">boxwidth</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="boxwidth"><span class="annot"><span class="annottext">boxwidth :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#boxwidth"><span class="hs-identifier hs-var hs-var">boxwidth</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;boxwidth&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#styleFillSolid"><span class="hs-identifier hs-type">styleFillSolid</span></a></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="styleFillSolid"><span class="annot"><span class="annottext">styleFillSolid :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#styleFillSolid"><span class="hs-identifier hs-var hs-var">styleFillSolid</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;style fill&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;solid&quot;</span></span><span>
+</span><span id="line-105"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#styleFillBorder"><span class="hs-identifier hs-type">styleFillBorder</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="styleFillBorder"><span class="annot"><span class="annottext">styleFillBorder :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#styleFillBorder"><span class="hs-identifier hs-var hs-var">styleFillBorder</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;style fill&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;border&quot;</span></span><span>
+</span><span id="line-106"></span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#styleHistogram"><span class="hs-identifier hs-type">styleHistogram</span></a></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOption.html#T"><span class="hs-identifier hs-type">T</span></a></span><span class="hs-special">;</span><span> </span><span id="styleHistogram"><span class="annot"><span class="annottext">styleHistogram :: T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#styleHistogram"><span class="hs-identifier hs-var hs-var">styleHistogram</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; T
+</span><a href="Graphics.Gnuplot.Private.FrameOption.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;style histogram&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-107"></span></pre></body></html>

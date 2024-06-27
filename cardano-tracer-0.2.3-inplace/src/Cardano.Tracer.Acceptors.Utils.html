@@ -1,0 +1,305 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Acceptors.Utils</span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Acceptors.Utils.html#notifyAboutNodeDisconnected"><span class="hs-identifier">notifyAboutNodeDisconnected</span></a></span><span>
+</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Acceptors.Utils.html#prepareDataPointRequestor"><span class="hs-identifier">prepareDataPointRequestor</span></a></span><span>
+</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Acceptors.Utils.html#prepareMetricsStores"><span class="hs-identifier">prepareMetricsStores</span></a></span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Acceptors.Utils.html#removeDisconnectedNode"><span class="hs-identifier">removeDisconnectedNode</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-10"></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.html"><span class="hs-identifier">Cardano.Logging</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#SeverityS"><span class="hs-identifier">SeverityS</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Environment.html"><span class="hs-identifier">Cardano.Tracer.Environment</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Notifications.Types</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Notifications.Utils.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Notifications.Utils</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Types.html"><span class="hs-identifier">Cardano.Tracer.Types</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Utils.html"><span class="hs-identifier">Cardano.Tracer.Utils</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.Snocket.html"><span class="hs-identifier">Ouroboros.Network.Snocket</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier">LocalAddress</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.Socket.html"><span class="hs-identifier">Ouroboros.Network.Socket</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.ConnectionId.html#ConnectionId"><span class="hs-identifier">ConnectionId</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.html"><span class="hs-identifier">Control.Concurrent.STM</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier">atomically</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html"><span class="hs-identifier">Control.Concurrent.STM.TVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier">TVar</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier">modifyTVar'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier">newTVarIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Bimap</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BM</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.html"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">M</span></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.html"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">S</span></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.System.html"><span class="hs-identifier">Data.Time.Clock.System</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.SystemTime.html#getSystemTime"><span class="hs-identifier">getSystemTime</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.System.html#systemToUTCTime"><span class="hs-identifier">systemToUTCTime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">System.Metrics</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">EKG</span></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ekg-forward-0.5-eead4e1a4c33c42e784f4b7142609799191e881bd8df5e41fdf680b29409d75b/share/doc/html/src/System.Metrics.Store.Acceptor.html"><span class="hs-identifier">System.Metrics.Store.Acceptor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ekg-forward-0.5-eead4e1a4c33c42e784f4b7142609799191e881bd8df5e41fdf680b29409d75b/share/doc/html/src/System.Metrics.Store.Acceptor.html#MetricsLocalStore"><span class="hs-identifier">MetricsLocalStore</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ekg-forward-0.5-eead4e1a4c33c42e784f4b7142609799191e881bd8df5e41fdf680b29409d75b/share/doc/html/src/System.Metrics.Store.Acceptor.html#emptyMetricsLocalStore"><span class="hs-identifier">emptyMetricsLocalStore</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-forward-2.2.6/doc/html/trace-forward/src/Trace.Forward.Utils.DataPoint.html"><span class="hs-identifier">Trace.Forward.Utils.DataPoint</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-forward-2.2.6/doc/html/trace-forward/src/Trace.Forward.Utils.DataPoint.html#DataPointRequestor"><span class="hs-identifier">DataPointRequestor</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-forward-2.2.6/doc/html/trace-forward/src/Trace.Forward.Utils.DataPoint.html#initDataPointRequestor"><span class="hs-identifier">initDataPointRequestor</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span class="annot"><a href="Cardano.Tracer.Acceptors.Utils.html#prepareDataPointRequestor"><span class="hs-identifier hs-type">prepareDataPointRequestor</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.ConnectionId.html#ConnectionId"><span class="hs-identifier hs-type">ConnectionId</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier hs-type">LocalAddress</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-forward-2.2.6/doc/html/trace-forward/src/Trace.Forward.Utils.DataPoint.html#DataPointRequestor"><span class="hs-identifier hs-type">DataPointRequestor</span></a></span><span>
+</span><span id="line-35"></span><span id="prepareDataPointRequestor"><span class="annot"><span class="annottext">prepareDataPointRequestor :: TracerEnv -&gt; ConnectionId LocalAddress -&gt; IO DataPointRequestor
+</span><a href="Cardano.Tracer.Acceptors.Utils.html#prepareDataPointRequestor"><span class="hs-identifier hs-var hs-var">prepareDataPointRequestor</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span class="hs-special">{</span><span id="local-6989586621679619738"><span class="annot"><span class="annottext">ConnectedNodes
+teConnectedNodes :: ConnectedNodes
+teConnectedNodes :: TracerEnv -&gt; ConnectedNodes
+</span><a href="#local-6989586621679619738"><span class="hs-identifier hs-var hs-var">teConnectedNodes</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679619740"><span class="annot"><span class="annottext">DataPointRequestors
+teDPRequestors :: DataPointRequestors
+teDPRequestors :: TracerEnv -&gt; DataPointRequestors
+</span><a href="#local-6989586621679619740"><span class="hs-identifier hs-var hs-var">teDPRequestors</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679619742"><span class="annot"><span class="annottext">ConnectionId LocalAddress
+</span><a href="#local-6989586621679619742"><span class="hs-identifier hs-var">connId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-36"></span><span>  </span><span class="annot"><span class="annottext">ConnectedNodes -&gt; ConnectionId LocalAddress -&gt; IO ()
+</span><a href="Cardano.Tracer.Acceptors.Utils.html#addConnectedNode"><span class="hs-identifier hs-var">addConnectedNode</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectedNodes
+</span><a href="#local-6989586621679619738"><span class="hs-identifier hs-var">teConnectedNodes</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectionId LocalAddress
+</span><a href="#local-6989586621679619742"><span class="hs-identifier hs-var">connId</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span id="local-6989586621679619744"><span class="annot"><span class="annottext">DataPointRequestor
+</span><a href="#local-6989586621679619744"><span class="hs-identifier hs-var">dpRequestor</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO DataPointRequestor
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-forward-2.2.6/doc/html/trace-forward/src/Trace.Forward.Utils.DataPoint.html#initDataPointRequestor"><span class="hs-identifier hs-var">initDataPointRequestor</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-39"></span><span>    </span><span class="annot"><span class="annottext">DataPointRequestors
+-&gt; (Map NodeId DataPointRequestor -&gt; Map NodeId DataPointRequestor)
+-&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier hs-var">modifyTVar'</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointRequestors
+</span><a href="#local-6989586621679619740"><span class="hs-identifier hs-var">teDPRequestors</span></a></span><span> </span><span class="annot"><span class="annottext">((Map NodeId DataPointRequestor -&gt; Map NodeId DataPointRequestor)
+ -&gt; STM ())
+-&gt; (Map NodeId DataPointRequestor -&gt; Map NodeId DataPointRequestor)
+-&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+-&gt; DataPointRequestor
+-&gt; Map NodeId DataPointRequestor
+-&gt; Map NodeId DataPointRequestor
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">M.insert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConnectionId LocalAddress -&gt; NodeId
+forall addr. Show addr =&gt; ConnectionId addr -&gt; NodeId
+</span><a href="Cardano.Tracer.Utils.html#connIdToNodeId"><span class="hs-identifier hs-var">connIdToNodeId</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectionId LocalAddress
+</span><a href="#local-6989586621679619742"><span class="hs-identifier hs-var">connId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">DataPointRequestor
+</span><a href="#local-6989586621679619744"><span class="hs-identifier hs-var">dpRequestor</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="annot"><span class="annottext">DataPointRequestor -&gt; IO DataPointRequestor
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointRequestor
+</span><a href="#local-6989586621679619744"><span class="hs-identifier hs-var">dpRequestor</span></a></span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="annot"><a href="Cardano.Tracer.Acceptors.Utils.html#prepareMetricsStores"><span class="hs-identifier hs-type">prepareMetricsStores</span></a></span><span>
+</span><span id="line-43"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span>
+</span><span id="line-44"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.ConnectionId.html#ConnectionId"><span class="hs-identifier hs-type">ConnectionId</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier hs-type">LocalAddress</span></a></span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">EKG.Store</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#TVar"><span class="hs-identifier hs-type">TVar</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ekg-forward-0.5-eead4e1a4c33c42e784f4b7142609799191e881bd8df5e41fdf680b29409d75b/share/doc/html/src/System.Metrics.Store.Acceptor.html#MetricsLocalStore"><span class="hs-identifier hs-type">MetricsLocalStore</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span id="prepareMetricsStores"><span class="annot"><span class="annottext">prepareMetricsStores :: TracerEnv
+-&gt; ConnectionId LocalAddress -&gt; IO (Store, TVar MetricsLocalStore)
+</span><a href="Cardano.Tracer.Acceptors.Utils.html#prepareMetricsStores"><span class="hs-identifier hs-var hs-var">prepareMetricsStores</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span class="hs-special">{</span><span id="local-6989586621679619747"><span class="annot"><span class="annottext">ConnectedNodes
+teConnectedNodes :: TracerEnv -&gt; ConnectedNodes
+teConnectedNodes :: ConnectedNodes
+</span><a href="Cardano.Tracer.Environment.html#teConnectedNodes"><span class="hs-identifier hs-var hs-var">teConnectedNodes</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679619748"><span class="annot"><span class="annottext">AcceptedMetrics
+teAcceptedMetrics :: AcceptedMetrics
+teAcceptedMetrics :: TracerEnv -&gt; AcceptedMetrics
+</span><a href="#local-6989586621679619748"><span class="hs-identifier hs-var hs-var">teAcceptedMetrics</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679619750"><span class="annot"><span class="annottext">ConnectionId LocalAddress
+</span><a href="#local-6989586621679619750"><span class="hs-identifier hs-var">connId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-47"></span><span>  </span><span class="annot"><span class="annottext">ConnectedNodes -&gt; ConnectionId LocalAddress -&gt; IO ()
+</span><a href="Cardano.Tracer.Acceptors.Utils.html#addConnectedNode"><span class="hs-identifier hs-var">addConnectedNode</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectedNodes
+</span><a href="#local-6989586621679619747"><span class="hs-identifier hs-var">teConnectedNodes</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectionId LocalAddress
+</span><a href="#local-6989586621679619750"><span class="hs-identifier hs-var">connId</span></a></span><span>
+</span><span id="line-48"></span><span>  </span><span id="local-6989586621679619751"><span class="annot"><span class="annottext">(Store, TVar MetricsLocalStore)
+</span><a href="#local-6989586621679619751"><span class="hs-identifier hs-var">storesForNewNode</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-special">(</span><span class="hs-special">,</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Store
+ -&gt; TVar MetricsLocalStore -&gt; (Store, TVar MetricsLocalStore))
+-&gt; IO Store
+-&gt; IO (TVar MetricsLocalStore -&gt; (Store, TVar MetricsLocalStore))
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO Store
+</span><span class="hs-identifier hs-var">EKG.newStore</span></span><span>
+</span><span id="line-49"></span><span>                          </span><span class="annot"><span class="annottext">IO (TVar MetricsLocalStore -&gt; (Store, TVar MetricsLocalStore))
+-&gt; IO (TVar MetricsLocalStore)
+-&gt; IO (Store, TVar MetricsLocalStore)
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">MetricsLocalStore -&gt; IO (TVar MetricsLocalStore)
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">MetricsLocalStore
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ekg-forward-0.5-eead4e1a4c33c42e784f4b7142609799191e881bd8df5e41fdf680b29409d75b/share/doc/html/src/System.Metrics.Store.Acceptor.html#emptyMetricsLocalStore"><span class="hs-identifier hs-var">emptyMetricsLocalStore</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><span class="annottext">AcceptedMetrics
+-&gt; (Map NodeId (Store, TVar MetricsLocalStore)
+    -&gt; Map NodeId (Store, TVar MetricsLocalStore))
+-&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier hs-var">modifyTVar'</span></a></span><span> </span><span class="annot"><span class="annottext">AcceptedMetrics
+</span><a href="#local-6989586621679619748"><span class="hs-identifier hs-var">teAcceptedMetrics</span></a></span><span> </span><span class="annot"><span class="annottext">((Map NodeId (Store, TVar MetricsLocalStore)
+  -&gt; Map NodeId (Store, TVar MetricsLocalStore))
+ -&gt; STM ())
+-&gt; (Map NodeId (Store, TVar MetricsLocalStore)
+    -&gt; Map NodeId (Store, TVar MetricsLocalStore))
+-&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+-&gt; (Store, TVar MetricsLocalStore)
+-&gt; Map NodeId (Store, TVar MetricsLocalStore)
+-&gt; Map NodeId (Store, TVar MetricsLocalStore)
+forall k a. Ord k =&gt; k -&gt; a -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Strict.Internal.html#insert"><span class="hs-identifier hs-var">M.insert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConnectionId LocalAddress -&gt; NodeId
+forall addr. Show addr =&gt; ConnectionId addr -&gt; NodeId
+</span><a href="Cardano.Tracer.Utils.html#connIdToNodeId"><span class="hs-identifier hs-var">connIdToNodeId</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectionId LocalAddress
+</span><a href="#local-6989586621679619750"><span class="hs-identifier hs-var">connId</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Store, TVar MetricsLocalStore)
+</span><a href="#local-6989586621679619751"><span class="hs-identifier hs-var">storesForNewNode</span></a></span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="annottext">(Store, TVar MetricsLocalStore)
+-&gt; IO (Store, TVar MetricsLocalStore)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Store, TVar MetricsLocalStore)
+</span><a href="#local-6989586621679619751"><span class="hs-identifier hs-var">storesForNewNode</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="annot"><a href="Cardano.Tracer.Acceptors.Utils.html#addConnectedNode"><span class="hs-identifier hs-type">addConnectedNode</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#ConnectedNodes"><span class="hs-identifier hs-type">ConnectedNodes</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.ConnectionId.html#ConnectionId"><span class="hs-identifier hs-type">ConnectionId</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier hs-type">LocalAddress</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span id="addConnectedNode"><span class="annot"><span class="annottext">addConnectedNode :: ConnectedNodes -&gt; ConnectionId LocalAddress -&gt; IO ()
+</span><a href="Cardano.Tracer.Acceptors.Utils.html#addConnectedNode"><span class="hs-identifier hs-var hs-var">addConnectedNode</span></a></span></span><span> </span><span id="local-6989586621679619754"><span class="annot"><span class="annottext">ConnectedNodes
+</span><a href="#local-6989586621679619754"><span class="hs-identifier hs-var">connectedNodes</span></a></span></span><span> </span><span id="local-6989586621679619755"><span class="annot"><span class="annottext">ConnectionId LocalAddress
+</span><a href="#local-6989586621679619755"><span class="hs-identifier hs-var">connId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><span class="annottext">ConnectedNodes -&gt; (Set NodeId -&gt; Set NodeId) -&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier hs-var">modifyTVar'</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectedNodes
+</span><a href="#local-6989586621679619754"><span class="hs-identifier hs-var">connectedNodes</span></a></span><span> </span><span class="annot"><span class="annottext">((Set NodeId -&gt; Set NodeId) -&gt; STM ())
+-&gt; (Set NodeId -&gt; Set NodeId) -&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId -&gt; Set NodeId -&gt; Set NodeId
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Set a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#insert"><span class="hs-identifier hs-var">S.insert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ConnectionId LocalAddress -&gt; NodeId
+forall addr. Show addr =&gt; ConnectionId addr -&gt; NodeId
+</span><a href="Cardano.Tracer.Utils.html#connIdToNodeId"><span class="hs-identifier hs-var">connIdToNodeId</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectionId LocalAddress
+</span><a href="#local-6989586621679619755"><span class="hs-identifier hs-var">connId</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- | This handler is called when 'runPeer' function throws an exception,</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--   which means that there is a problem with network connection.</span><span>
+</span><span id="line-63"></span><span class="annot"><a href="Cardano.Tracer.Acceptors.Utils.html#removeDisconnectedNode"><span class="hs-identifier hs-type">removeDisconnectedNode</span></a></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.ConnectionId.html#ConnectionId"><span class="hs-identifier hs-type">ConnectionId</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier hs-type">LocalAddress</span></a></span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span id="removeDisconnectedNode"><span class="annot"><span class="annottext">removeDisconnectedNode :: TracerEnv -&gt; ConnectionId LocalAddress -&gt; IO ()
+</span><a href="Cardano.Tracer.Acceptors.Utils.html#removeDisconnectedNode"><span class="hs-identifier hs-var hs-var">removeDisconnectedNode</span></a></span></span><span> </span><span id="local-6989586621679619757"><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679619757"><span class="hs-identifier hs-var">tracerEnv</span></a></span></span><span> </span><span id="local-6989586621679619758"><span class="annot"><span class="annottext">ConnectionId LocalAddress
+</span><a href="#local-6989586621679619758"><span class="hs-identifier hs-var">connId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-comment">-- Remove all the stuff related to disconnected node.</span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><span class="annottext">STM () -&gt; IO ()
+forall a. STM a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#atomically"><span class="hs-identifier hs-var">atomically</span></a></span><span> </span><span class="annot"><span class="annottext">(STM () -&gt; IO ()) -&gt; STM () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><span class="annottext">ConnectedNodes -&gt; (Set NodeId -&gt; Set NodeId) -&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier hs-var">modifyTVar'</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectedNodes
+</span><a href="#local-6989586621679619759"><span class="hs-identifier hs-var">teConnectedNodes</span></a></span><span>      </span><span class="annot"><span class="annottext">((Set NodeId -&gt; Set NodeId) -&gt; STM ())
+-&gt; (Set NodeId -&gt; Set NodeId) -&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId -&gt; Set NodeId -&gt; Set NodeId
+forall a. Ord a =&gt; a -&gt; Set a -&gt; Set a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Set.Internal.html#delete"><span class="hs-identifier hs-var">S.delete</span></a></span><span>  </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679619761"><span class="hs-identifier hs-var">nodeId</span></a></span><span>
+</span><span id="line-71"></span><span>    </span><span class="annot"><span class="annottext">TVar (Bimap NodeId NodeName)
+-&gt; (Bimap NodeId NodeName -&gt; Bimap NodeId NodeName) -&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier hs-var">modifyTVar'</span></a></span><span> </span><span class="annot"><span class="annottext">TVar (Bimap NodeId NodeName)
+</span><a href="#local-6989586621679619762"><span class="hs-identifier hs-var">teConnectedNodesNames</span></a></span><span> </span><span class="annot"><span class="annottext">((Bimap NodeId NodeName -&gt; Bimap NodeId NodeName) -&gt; STM ())
+-&gt; (Bimap NodeId NodeName -&gt; Bimap NodeId NodeName) -&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId -&gt; Bimap NodeId NodeName -&gt; Bimap NodeId NodeName
+forall a b. (Ord a, Ord b) =&gt; a -&gt; Bimap a b -&gt; Bimap a b
+</span><span class="hs-identifier hs-var">BM.delete</span></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679619761"><span class="hs-identifier hs-var">nodeId</span></a></span><span>
+</span><span id="line-72"></span><span>    </span><span class="annot"><span class="annottext">AcceptedMetrics
+-&gt; (Map NodeId (Store, TVar MetricsLocalStore)
+    -&gt; Map NodeId (Store, TVar MetricsLocalStore))
+-&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier hs-var">modifyTVar'</span></a></span><span> </span><span class="annot"><span class="annottext">AcceptedMetrics
+</span><a href="#local-6989586621679619764"><span class="hs-identifier hs-var">teAcceptedMetrics</span></a></span><span>     </span><span class="annot"><span class="annottext">((Map NodeId (Store, TVar MetricsLocalStore)
+  -&gt; Map NodeId (Store, TVar MetricsLocalStore))
+ -&gt; STM ())
+-&gt; (Map NodeId (Store, TVar MetricsLocalStore)
+    -&gt; Map NodeId (Store, TVar MetricsLocalStore))
+-&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+-&gt; Map NodeId (Store, TVar MetricsLocalStore)
+-&gt; Map NodeId (Store, TVar MetricsLocalStore)
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#delete"><span class="hs-identifier hs-var">M.delete</span></a></span><span>  </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679619761"><span class="hs-identifier hs-var">nodeId</span></a></span><span>
+</span><span id="line-73"></span><span>    </span><span class="annot"><span class="annottext">DataPointRequestors
+-&gt; (Map NodeId DataPointRequestor -&gt; Map NodeId DataPointRequestor)
+-&gt; STM ()
+forall a. TVar a -&gt; (a -&gt; a) -&gt; STM ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html#modifyTVar%27"><span class="hs-identifier hs-var">modifyTVar'</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointRequestors
+</span><a href="#local-6989586621679619766"><span class="hs-identifier hs-var">teDPRequestors</span></a></span><span>        </span><span class="annot"><span class="annottext">((Map NodeId DataPointRequestor -&gt; Map NodeId DataPointRequestor)
+ -&gt; STM ())
+-&gt; (Map NodeId DataPointRequestor -&gt; Map NodeId DataPointRequestor)
+-&gt; STM ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+-&gt; Map NodeId DataPointRequestor -&gt; Map NodeId DataPointRequestor
+forall k a. Ord k =&gt; k -&gt; Map k a -&gt; Map k a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/containers-0.6.7/src/Data.Map.Internal.html#delete"><span class="hs-identifier hs-var">M.delete</span></a></span><span>  </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679619761"><span class="hs-identifier hs-var">nodeId</span></a></span><span>
+</span><span id="line-74"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span class="hs-special">{</span><span id="local-6989586621679619759"><span class="annot"><span class="annottext">ConnectedNodes
+teConnectedNodes :: TracerEnv -&gt; ConnectedNodes
+teConnectedNodes :: ConnectedNodes
+</span><a href="Cardano.Tracer.Environment.html#teConnectedNodes"><span class="hs-identifier hs-var hs-var">teConnectedNodes</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679619762"><span class="annot"><span class="annottext">TVar (Bimap NodeId NodeName)
+teConnectedNodesNames :: TVar (Bimap NodeId NodeName)
+teConnectedNodesNames :: TracerEnv -&gt; TVar (Bimap NodeId NodeName)
+</span><a href="#local-6989586621679619762"><span class="hs-identifier hs-var hs-var">teConnectedNodesNames</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679619764"><span class="annot"><span class="annottext">AcceptedMetrics
+teAcceptedMetrics :: TracerEnv -&gt; AcceptedMetrics
+teAcceptedMetrics :: AcceptedMetrics
+</span><a href="Cardano.Tracer.Environment.html#teAcceptedMetrics"><span class="hs-identifier hs-var hs-var">teAcceptedMetrics</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679619766"><span class="annot"><span class="annottext">DataPointRequestors
+teDPRequestors :: TracerEnv -&gt; DataPointRequestors
+teDPRequestors :: DataPointRequestors
+</span><a href="Cardano.Tracer.Environment.html#teDPRequestors"><span class="hs-identifier hs-var hs-var">teDPRequestors</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679619757"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621679619761"><span class="annot"><span class="annottext">nodeId :: NodeId
+</span><a href="#local-6989586621679619761"><span class="hs-identifier hs-var hs-var">nodeId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConnectionId LocalAddress -&gt; NodeId
+forall addr. Show addr =&gt; ConnectionId addr -&gt; NodeId
+</span><a href="Cardano.Tracer.Utils.html#connIdToNodeId"><span class="hs-identifier hs-var">connIdToNodeId</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectionId LocalAddress
+</span><a href="#local-6989586621679619758"><span class="hs-identifier hs-var">connId</span></a></span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="annot"><a href="Cardano.Tracer.Acceptors.Utils.html#notifyAboutNodeDisconnected"><span class="hs-identifier hs-type">notifyAboutNodeDisconnected</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.ConnectionId.html#ConnectionId"><span class="hs-identifier hs-type">ConnectionId</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/ouroboros-network-framework-0.13.2.1-1d5618d191488376f29745357332f53cfa42958511e93d91a6337dbf63b5dd22/share/doc/html/src/Ouroboros.Network.Snocket.html#LocalAddress"><span class="hs-identifier hs-type">LocalAddress</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-82"></span><span id="notifyAboutNodeDisconnected"><span class="annot"><span class="annottext">notifyAboutNodeDisconnected :: TracerEnv -&gt; ConnectionId LocalAddress -&gt; IO ()
+</span><a href="Cardano.Tracer.Acceptors.Utils.html#notifyAboutNodeDisconnected"><span class="hs-identifier hs-var hs-var">notifyAboutNodeDisconnected</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span class="hs-special">{</span><span id="local-6989586621679619769"><span class="annot"><span class="annottext">EventsQueues
+teEventsQueues :: EventsQueues
+teEventsQueues :: TracerEnv -&gt; EventsQueues
+</span><a href="#local-6989586621679619769"><span class="hs-identifier hs-var hs-var">teEventsQueues</span></a></span></span><span class="hs-special">}</span><span> </span><span id="local-6989586621679619771"><span class="annot"><span class="annottext">ConnectionId LocalAddress
+</span><a href="#local-6989586621679619771"><span class="hs-identifier hs-var">connId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-83"></span><span>  </span><span id="local-6989586621679619772"><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679619772"><span class="hs-identifier hs-var">now</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SystemTime -&gt; UTCTime
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.System.html#systemToUTCTime"><span class="hs-identifier hs-var">systemToUTCTime</span></a></span><span> </span><span class="annot"><span class="annottext">(SystemTime -&gt; UTCTime) -&gt; IO SystemTime -&gt; IO UTCTime
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO SystemTime
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.SystemTime.html#getSystemTime"><span class="hs-identifier hs-var">getSystemTime</span></a></span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><span class="annottext">EventsQueues -&gt; EventGroup -&gt; Event -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Utils.html#addNewEvent"><span class="hs-identifier hs-var">addNewEvent</span></a></span><span> </span><span class="annot"><span class="annottext">EventsQueues
+</span><a href="#local-6989586621679619769"><span class="hs-identifier hs-var">teEventsQueues</span></a></span><span> </span><span class="annot"><span class="annottext">EventGroup
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#EventNodeDisconnected"><span class="hs-identifier hs-var">EventNodeDisconnected</span></a></span><span> </span><span class="annot"><span class="annottext">(Event -&gt; IO ()) -&gt; Event -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId -&gt; UTCTime -&gt; SeverityS -&gt; NodeName -&gt; Event
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Types.html#Event"><span class="hs-identifier hs-var">Event</span></a></span><span> </span><span class="annot"><span class="annottext">NodeId
+</span><a href="#local-6989586621679619776"><span class="hs-identifier hs-var">nodeId</span></a></span><span> </span><span class="annot"><span class="annottext">UTCTime
+</span><a href="#local-6989586621679619772"><span class="hs-identifier hs-var">now</span></a></span><span> </span><span class="annot"><span class="annottext">SeverityS
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Warning"><span class="hs-identifier hs-var">Warning</span></a></span><span> </span><span class="annot"><span class="annottext">NodeName
+</span><a href="#local-6989586621679619778"><span class="hs-identifier hs-var">msg</span></a></span><span>
+</span><span id="line-85"></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621679619776"><span class="annot"><span class="annottext">nodeId :: NodeId
+</span><a href="#local-6989586621679619776"><span class="hs-identifier hs-var hs-var">nodeId</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConnectionId LocalAddress -&gt; NodeId
+forall addr. Show addr =&gt; ConnectionId addr -&gt; NodeId
+</span><a href="Cardano.Tracer.Utils.html#connIdToNodeId"><span class="hs-identifier hs-var">connIdToNodeId</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectionId LocalAddress
+</span><a href="#local-6989586621679619771"><span class="hs-identifier hs-var">connId</span></a></span><span>
+</span><span id="line-87"></span><span>  </span><span id="local-6989586621679619778"><span class="annot"><span class="annottext">msg :: NodeName
+</span><a href="#local-6989586621679619778"><span class="hs-identifier hs-var hs-var">msg</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NodeName
+</span><span class="hs-string">&quot;Node is disconnected&quot;</span></span><span>
+</span><span id="line-88"></span></pre></body></html>

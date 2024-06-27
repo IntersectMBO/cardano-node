@@ -1,0 +1,348 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">{- HLINT ignore &quot;Avoid lambda&quot; -}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE NumericUnderscores #-}</span><span>
+</span><span id="line-5"></span><span>
+</span><span id="line-6"></span><span class="annot"><span class="hs-comment">-- | This top-level module is used by 'cardano-tracer' app.</span></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Cardano.Tracer.Run</span><span>
+</span><span id="line-8"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Cardano.Tracer.Run.html#doRunCardanoTracer"><span class="hs-identifier">doRunCardanoTracer</span></a></span><span>
+</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Cardano.Tracer.Run.html#runCardanoTracer"><span class="hs-identifier">runCardanoTracer</span></a></span><span>
+</span><span id="line-10"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-resources-0.2.2.0/doc/html/trace-resources/src/Cardano.Logging.Resources.html"><span class="hs-identifier">Cardano.Logging.Resources</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Acceptors.Run.html"><span class="hs-identifier">Cardano.Tracer.Acceptors.Run</span></a></span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.CLI.html"><span class="hs-identifier">Cardano.Tracer.CLI</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Configuration.html"><span class="hs-identifier">Cardano.Tracer.Configuration</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Environment.html"><span class="hs-identifier">Cardano.Tracer.Environment</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.Logs.Rotator.html"><span class="hs-identifier">Cardano.Tracer.Handlers.Logs.Rotator</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.Metrics.Servers.html"><span class="hs-identifier">Cardano.Tracer.Handlers.Metrics.Servers</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.ReForwarder.html"><span class="hs-identifier">Cardano.Tracer.Handlers.ReForwarder</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Run.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Run</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.State.Historical</span></a></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Handlers.RTView.Update.Historical.html"><span class="hs-identifier">Cardano.Tracer.Handlers.RTView.Update.Historical</span></a></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.MetaTrace.html"><span class="hs-identifier">Cardano.Tracer.MetaTrace</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Types.html"><span class="hs-identifier">Cardano.Tracer.Types</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Cardano.Tracer.Utils.html"><span class="hs-identifier">Cardano.Tracer.Utils</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.IO.html#threadDelay"><span class="hs-identifier">threadDelay</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/ncx913nzsxwlcar14bw73ki5w4v6rmrm-tasty-lib-tasty-1.5-haddock-doc/share/doc/tasty/html/src/Control.Concurrent.Async.html"><span class="hs-identifier">Control.Concurrent.Async</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/jzydnj6vfxvj9faradxs8sgrjy3ir65i-async-lib-async-2.2.5-haddock-doc/share/doc/async/html/src/Control.Concurrent.Async.Internal.html#async"><span class="hs-identifier">async</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/jzydnj6vfxvj9faradxs8sgrjy3ir65i-async-lib-async-2.2.5-haddock-doc/share/doc/async/html/src/Control.Concurrent.Async.Internal.html#link"><span class="hs-identifier">link</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/dxgb71526mhlazqvliaa5i04mp4fiw1z-async-extras-lib-async-extras-0.1.3.2-haddock-doc/share/doc/async-extras/html/src/Control.Concurrent.Async.Extra.html"><span class="hs-identifier">Control.Concurrent.Async.Extra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/dxgb71526mhlazqvliaa5i04mp4fiw1z-async-extras-lib-async-extras-0.1.3.2-haddock-doc/share/doc/async-extras/html/src/Control.Concurrent.Async.Extra.html#sequenceConcurrently"><span class="hs-identifier">sequenceConcurrently</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Control.Concurrent.Extra.html"><span class="hs-identifier">Control.Concurrent.Extra</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Control.Concurrent.Extra.html#newLock"><span class="hs-identifier">newLock</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/stm-2.5.1.0/src/Control.Concurrent.STM.TVar.html"><span class="hs-identifier">Control.Concurrent.STM.TVar</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier">newTVarIO</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html"><span class="hs-identifier">Data.Foldable</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#for_"><span class="hs-identifier">for_</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>
+</span><span id="line-35"></span><span class="annot"><span class="hs-comment">-- | Top-level run function, called by 'cardano-tracer' app.</span></span><span>
+</span><span id="line-36"></span><span class="annot"><a href="Cardano.Tracer.Run.html#runCardanoTracer"><span class="hs-identifier hs-type">runCardanoTracer</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.CLI.html#TracerParams"><span class="hs-identifier hs-type">TracerParams</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span id="runCardanoTracer"><span class="annot"><span class="annottext">runCardanoTracer :: TracerParams -&gt; IO ()
+</span><a href="Cardano.Tracer.Run.html#runCardanoTracer"><span class="hs-identifier hs-var hs-var">runCardanoTracer</span></a></span></span><span> </span><span class="annot"><a href="Cardano.Tracer.CLI.html#TracerParams"><span class="hs-identifier hs-type">TracerParams</span></a></span><span class="hs-special">{</span><span id="local-6989586621679621980"><span class="annot"><span class="annottext">FilePath
+tracerConfig :: FilePath
+tracerConfig :: TracerParams -&gt; FilePath
+</span><a href="#local-6989586621679621980"><span class="hs-identifier hs-var hs-var">tracerConfig</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679621982"><span class="annot"><span class="annottext">Maybe FilePath
+stateDir :: Maybe FilePath
+stateDir :: TracerParams -&gt; Maybe FilePath
+</span><a href="#local-6989586621679621982"><span class="hs-identifier hs-var hs-var">stateDir</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679621984"><span class="annot"><span class="annottext">Maybe SeverityS
+logSeverity :: Maybe SeverityS
+logSeverity :: TracerParams -&gt; Maybe SeverityS
+</span><a href="#local-6989586621679621984"><span class="hs-identifier hs-var hs-var">logSeverity</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-38"></span><span>  </span><span id="local-6989586621679621986"><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679621986"><span class="hs-identifier hs-var">tr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">SeverityF -&gt; IO (Trace IO TracerTrace)
+</span><a href="Cardano.Tracer.MetaTrace.html#mkTracerTracer"><span class="hs-identifier hs-var">mkTracerTracer</span></a></span><span> </span><span class="annot"><span class="annottext">(SeverityF -&gt; IO (Trace IO TracerTrace))
+-&gt; SeverityF -&gt; IO (Trace IO TracerTrace)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe SeverityS -&gt; SeverityF
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#SeverityF"><span class="hs-identifier hs-var">SeverityF</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe SeverityS
+</span><a href="#local-6989586621679621984"><span class="hs-identifier hs-var">logSeverity</span></a></span><span>
+</span><span id="line-39"></span><span>  </span><span class="annot"><span class="annottext">Trace IO TracerTrace -&gt; TracerTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679621986"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">(TracerTrace -&gt; IO ()) -&gt; TracerTrace -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; Maybe FilePath -&gt; Maybe SeverityS -&gt; TracerTrace
+</span><a href="Cardano.Tracer.MetaTrace.html#TracerParamsAre"><span class="hs-identifier hs-var">TracerParamsAre</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679621980"><span class="hs-identifier hs-var">tracerConfig</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679621982"><span class="hs-identifier hs-var">stateDir</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe SeverityS
+</span><a href="#local-6989586621679621984"><span class="hs-identifier hs-var">logSeverity</span></a></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span>  </span><span id="local-6989586621679621991"><span class="annot"><span class="annottext">TracerConfig
+</span><a href="#local-6989586621679621991"><span class="hs-identifier hs-var">config</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">FilePath -&gt; IO TracerConfig
+</span><a href="Cardano.Tracer.Configuration.html#readTracerConfig"><span class="hs-identifier hs-var">readTracerConfig</span></a></span><span> </span><span class="annot"><span class="annottext">FilePath
+</span><a href="#local-6989586621679621980"><span class="hs-identifier hs-var">tracerConfig</span></a></span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><span class="annottext">Trace IO TracerTrace -&gt; TracerTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679621986"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">(TracerTrace -&gt; IO ()) -&gt; TracerTrace -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TracerConfig -&gt; TracerTrace
+</span><a href="Cardano.Tracer.MetaTrace.html#TracerConfigIs"><span class="hs-identifier hs-var">TracerConfigIs</span></a></span><span> </span><span class="annot"><span class="annottext">TracerConfig
+</span><a href="#local-6989586621679621991"><span class="hs-identifier hs-var">config</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><span class="annottext">Maybe Int -&gt; (Int -&gt; IO ()) -&gt; IO ()
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Foldable t, Applicative f) =&gt;
+t a -&gt; (a -&gt; f b) -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#for_"><span class="hs-identifier hs-var">for_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TracerConfig -&gt; Maybe Int
+</span><a href="Cardano.Tracer.Configuration.html#resourceFreq"><span class="hs-identifier hs-var">resourceFreq</span></a></span><span> </span><span class="annot"><span class="annottext">TracerConfig
+</span><a href="#local-6989586621679621991"><span class="hs-identifier hs-var">config</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679621995"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679621995"><span class="hs-identifier hs-var">msInterval</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-45"></span><span>    </span><span id="local-6989586621679621996"><span class="annot"><span class="annottext">Async Any
+</span><a href="#local-6989586621679621996"><span class="hs-identifier hs-var">threadId</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Any -&gt; IO (Async Any)
+forall a. IO a -&gt; IO (Async a)
+</span><a href="file:///nix/store/jzydnj6vfxvj9faradxs8sgrjy3ir65i-async-lib-async-2.2.5-haddock-doc/share/doc/async/html/src/Control.Concurrent.Async.Internal.html#async"><span class="hs-identifier hs-var">async</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-46"></span><span>      </span><span class="annot"><span class="annottext">IO () -&gt; IO Any
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html#forever"><span class="hs-identifier hs-var">forever</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-47"></span><span>        </span><span id="local-6989586621679621998"><span class="annot"><span class="annottext">Maybe ResourceStats
+</span><a href="#local-6989586621679621998"><span class="hs-identifier hs-var">mbrs</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Maybe ResourceStats)
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-resources-0.2.2.0/doc/html/trace-resources/src/Cardano.Logging.Resources.html#readResourceStats"><span class="hs-identifier hs-var">readResourceStats</span></a></span><span>
+</span><span id="line-48"></span><span>        </span><span class="annot"><span class="annottext">Maybe ResourceStats -&gt; (ResourceStats -&gt; IO ()) -&gt; IO ()
+forall (t :: * -&gt; *) (f :: * -&gt; *) a b.
+(Foldable t, Applicative f) =&gt;
+t a -&gt; (a -&gt; f b) -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#for_"><span class="hs-identifier hs-var">for_</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe ResourceStats
+</span><a href="#local-6989586621679621998"><span class="hs-identifier hs-var">mbrs</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679622000"><span class="annot"><span class="annottext">ResourceStats
+</span><a href="#local-6989586621679622000"><span class="hs-identifier hs-var">resourceStat</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-49"></span><span>          </span><span class="annot"><span class="annottext">Trace IO TracerTrace -&gt; TracerTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679621986"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ResourceStats -&gt; TracerTrace
+</span><a href="Cardano.Tracer.MetaTrace.html#TracerResource"><span class="hs-identifier hs-var">TracerResource</span></a></span><span> </span><span class="annot"><span class="annottext">ResourceStats
+</span><a href="#local-6989586621679622000"><span class="hs-identifier hs-var">resourceStat</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>        </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.IO.html#threadDelay"><span class="hs-identifier hs-var">threadDelay</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1_000</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2A"><span class="hs-operator hs-var">*</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679621995"><span class="hs-identifier hs-var">msInterval</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-comment">-- Delay in seconds, given milliseconds</span><span>
+</span><span id="line-51"></span><span>    </span><span class="annot"><span class="annottext">Async Any -&gt; IO ()
+forall a. Async a -&gt; IO ()
+</span><a href="file:///nix/store/jzydnj6vfxvj9faradxs8sgrjy3ir65i-async-lib-async-2.2.5-haddock-doc/share/doc/async/html/src/Control.Concurrent.Async.Internal.html#link"><span class="hs-identifier hs-var">link</span></a></span><span> </span><span class="annot"><span class="annottext">Async Any
+</span><a href="#local-6989586621679621996"><span class="hs-identifier hs-var">threadId</span></a></span><span>
+</span><span id="line-52"></span><span>
+</span><span id="line-53"></span><span>  </span><span id="local-6989586621679622003"><span class="annot"><span class="annottext">ProtocolsBrake
+</span><a href="#local-6989586621679622003"><span class="hs-identifier hs-var">brake</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO ProtocolsBrake
+</span><a href="Cardano.Tracer.Utils.html#initProtocolsBrake"><span class="hs-identifier hs-var">initProtocolsBrake</span></a></span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621679622005"><span class="annot"><span class="annottext">DataPointRequestors
+</span><a href="#local-6989586621679622005"><span class="hs-identifier hs-var">dpRequestors</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO DataPointRequestors
+</span><a href="Cardano.Tracer.Utils.html#initDataPointRequestors"><span class="hs-identifier hs-var">initDataPointRequestors</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><span class="annottext">TracerConfig
+-&gt; Maybe FilePath
+-&gt; Trace IO TracerTrace
+-&gt; ProtocolsBrake
+-&gt; DataPointRequestors
+-&gt; IO ()
+</span><a href="Cardano.Tracer.Run.html#doRunCardanoTracer"><span class="hs-identifier hs-var">doRunCardanoTracer</span></a></span><span> </span><span class="annot"><span class="annottext">TracerConfig
+</span><a href="#local-6989586621679621991"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679621982"><span class="hs-identifier hs-var">stateDir</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679621986"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">ProtocolsBrake
+</span><a href="#local-6989586621679622003"><span class="hs-identifier hs-var">brake</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointRequestors
+</span><a href="#local-6989586621679622005"><span class="hs-identifier hs-var">dpRequestors</span></a></span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="annot"><span class="hs-comment">-- | Runs all internal services of the tracer.</span></span><span>
+</span><span id="line-58"></span><span class="annot"><a href="Cardano.Tracer.Run.html#doRunCardanoTracer"><span class="hs-identifier hs-type">doRunCardanoTracer</span></a></span><span>
+</span><span id="line-59"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Cardano.Tracer.Configuration.html#TracerConfig"><span class="hs-identifier hs-type">TracerConfig</span></a></span><span>        </span><span class="annot"><span class="hs-comment">-- ^ Tracer's configuration.</span></span><span>
+</span><span id="line-60"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ Path to RTView's internal state files.</span></span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.Types.html#Trace"><span class="hs-identifier hs-type">Trace</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Cardano.Tracer.MetaTrace.html#TracerTrace"><span class="hs-identifier hs-type">TracerTrace</span></a></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#ProtocolsBrake"><span class="hs-identifier hs-type">ProtocolsBrake</span></a></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ The flag we use to stop all the protocols.</span></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Cardano.Tracer.Types.html#DataPointRequestors"><span class="hs-identifier hs-type">DataPointRequestors</span></a></span><span> </span><span class="annot"><span class="hs-comment">-- ^ The DataPointRequestors to ask 'DataPoint's.</span></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span id="doRunCardanoTracer"><span class="annot"><span class="annottext">doRunCardanoTracer :: TracerConfig
+-&gt; Maybe FilePath
+-&gt; Trace IO TracerTrace
+-&gt; ProtocolsBrake
+-&gt; DataPointRequestors
+-&gt; IO ()
+</span><a href="Cardano.Tracer.Run.html#doRunCardanoTracer"><span class="hs-identifier hs-var hs-var">doRunCardanoTracer</span></a></span></span><span> </span><span id="local-6989586621679622007"><span class="annot"><span class="annottext">TracerConfig
+</span><a href="#local-6989586621679622007"><span class="hs-identifier hs-var">config</span></a></span></span><span> </span><span id="local-6989586621679622008"><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679622008"><span class="hs-identifier hs-var">rtViewStateDir</span></a></span></span><span> </span><span id="local-6989586621679622009"><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679622009"><span class="hs-identifier hs-var">tr</span></a></span></span><span> </span><span id="local-6989586621679622010"><span class="annot"><span class="annottext">ProtocolsBrake
+</span><a href="#local-6989586621679622010"><span class="hs-identifier hs-var">protocolsBrake</span></a></span></span><span> </span><span id="local-6989586621679622011"><span class="annot"><span class="annottext">DataPointRequestors
+</span><a href="#local-6989586621679622011"><span class="hs-identifier hs-var">dpRequestors</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><span class="annottext">Trace IO TracerTrace -&gt; TracerTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679622009"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">TracerTrace
+</span><a href="Cardano.Tracer.MetaTrace.html#TracerInitStarted"><span class="hs-identifier hs-var">TracerInitStarted</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span id="local-6989586621679622013"><span class="annot"><span class="annottext">ConnectedNodes
+</span><a href="#local-6989586621679622013"><span class="hs-identifier hs-var">connectedNodes</span></a></span></span><span>      </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO ConnectedNodes
+</span><a href="Cardano.Tracer.Utils.html#initConnectedNodes"><span class="hs-identifier hs-var">initConnectedNodes</span></a></span><span>
+</span><span id="line-68"></span><span>  </span><span id="local-6989586621679622015"><span class="annot"><span class="annottext">ConnectedNodesNames
+</span><a href="#local-6989586621679622015"><span class="hs-identifier hs-var">connectedNodesNames</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO ConnectedNodesNames
+</span><a href="Cardano.Tracer.Utils.html#initConnectedNodesNames"><span class="hs-identifier hs-var">initConnectedNodesNames</span></a></span><span>
+</span><span id="line-69"></span><span>  </span><span id="local-6989586621679622017"><span class="annot"><span class="annottext">AcceptedMetrics
+</span><a href="#local-6989586621679622017"><span class="hs-identifier hs-var">acceptedMetrics</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO AcceptedMetrics
+</span><a href="Cardano.Tracer.Utils.html#initAcceptedMetrics"><span class="hs-identifier hs-var">initAcceptedMetrics</span></a></span><span>
+</span><span id="line-70"></span><span>  </span><span id="local-6989586621679622019"><span class="annot"><span class="annottext">SavedTraceObjects
+</span><a href="#local-6989586621679622019"><span class="hs-identifier hs-var">savedTO</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO SavedTraceObjects
+</span><a href="Cardano.Tracer.Handlers.RTView.State.TraceObjects.html#initSavedTraceObjects"><span class="hs-identifier hs-var">initSavedTraceObjects</span></a></span><span>
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span>  </span><span id="local-6989586621679622021"><span class="annot"><span class="annottext">BlockchainHistory
+</span><a href="#local-6989586621679622021"><span class="hs-identifier hs-var">chainHistory</span></a></span></span><span>     </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO BlockchainHistory
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#initBlockchainHistory"><span class="hs-identifier hs-var">initBlockchainHistory</span></a></span><span>
+</span><span id="line-73"></span><span>  </span><span id="local-6989586621679622023"><span class="annot"><span class="annottext">ResourcesHistory
+</span><a href="#local-6989586621679622023"><span class="hs-identifier hs-var">resourcesHistory</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO ResourcesHistory
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#initResourcesHistory"><span class="hs-identifier hs-var">initResourcesHistory</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span id="local-6989586621679622025"><span class="annot"><span class="annottext">TransactionsHistory
+</span><a href="#local-6989586621679622025"><span class="hs-identifier hs-var">txHistory</span></a></span></span><span>        </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO TransactionsHistory
+</span><a href="Cardano.Tracer.Handlers.RTView.State.Historical.html#initTransactionsHistory"><span class="hs-identifier hs-var">initTransactionsHistory</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span>  </span><span id="local-6989586621679622027"><span class="annot"><span class="annottext">Lock
+</span><a href="#local-6989586621679622027"><span class="hs-identifier hs-var">currentLogLock</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Lock
+</span><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Control.Concurrent.Extra.html#newLock"><span class="hs-identifier hs-var">newLock</span></a></span><span>
+</span><span id="line-77"></span><span>  </span><span id="local-6989586621679622028"><span class="annot"><span class="annottext">Lock
+</span><a href="#local-6989586621679622028"><span class="hs-identifier hs-var">currentDPLock</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Lock
+</span><a href="file:///nix/store/vq9pbb1bfnyjdcffs6nj641mh0fa6ygr-extra-lib-extra-1.7.16-haddock-doc/share/doc/extra/html/src/Control.Concurrent.Extra.html#newLock"><span class="hs-identifier hs-var">newLock</span></a></span><span>
+</span><span id="line-78"></span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><span class="annottext">Trace IO TracerTrace -&gt; TracerTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679622009"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">TracerTrace
+</span><a href="Cardano.Tracer.MetaTrace.html#TracerInitEventQueues"><span class="hs-identifier hs-var">TracerInitEventQueues</span></a></span><span>
+</span><span id="line-80"></span><span>  </span><span id="local-6989586621679622030"><span class="annot"><span class="annottext">EventsQueues
+</span><a href="#local-6989586621679622030"><span class="hs-identifier hs-var">eventsQueues</span></a></span></span><span>   </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+-&gt; ConnectedNodesNames
+-&gt; DataPointRequestors
+-&gt; Lock
+-&gt; IO EventsQueues
+</span><a href="Cardano.Tracer.Handlers.RTView.Notifications.Utils.html#initEventsQueues"><span class="hs-identifier hs-var">initEventsQueues</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679622008"><span class="hs-identifier hs-var">rtViewStateDir</span></a></span><span> </span><span class="annot"><span class="annottext">ConnectedNodesNames
+</span><a href="#local-6989586621679622015"><span class="hs-identifier hs-var">connectedNodesNames</span></a></span><span> </span><span class="annot"><span class="annottext">DataPointRequestors
+</span><a href="#local-6989586621679622011"><span class="hs-identifier hs-var">dpRequestors</span></a></span><span> </span><span class="annot"><span class="annottext">Lock
+</span><a href="#local-6989586621679622028"><span class="hs-identifier hs-var">currentDPLock</span></a></span><span>
+</span><span id="line-81"></span><span>
+</span><span id="line-82"></span><span>  </span><span id="local-6989586621679622032"><span class="annot"><span class="annottext">ProtocolsBrake
+</span><a href="#local-6989586621679622032"><span class="hs-identifier hs-var">rtViewPageOpened</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; IO ProtocolsBrake
+forall a. a -&gt; IO (TVar a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#newTVarIO"><span class="hs-identifier hs-var">newTVarIO</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679622033"><span class="annot"><span class="annottext">[TraceObject] -&gt; IO ()
+</span><a href="#local-6989586621679622033"><span class="hs-identifier hs-var">reforwardTraceObject</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679622034"><span class="annot"><span class="annottext">Trace IO DataPoint
+</span><a href="#local-6989586621679622034"><span class="hs-identifier hs-var">_trDataPoint</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">TracerConfig
+-&gt; Trace IO TracerTrace
+-&gt; IO ([TraceObject] -&gt; IO (), Trace IO DataPoint)
+</span><a href="Cardano.Tracer.Handlers.ReForwarder.html#initReForwarder"><span class="hs-identifier hs-var">initReForwarder</span></a></span><span> </span><span class="annot"><span class="annottext">TracerConfig
+</span><a href="#local-6989586621679622007"><span class="hs-identifier hs-var">config</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679622009"><span class="hs-identifier hs-var">tr</span></a></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span>  </span><span id="local-6989586621679622036"><span class="annot"><span class="annottext">Registry (NodeName, LoggingParams) (Handle, FilePath)
+</span><a href="#local-6989586621679622036"><span class="hs-identifier hs-var">registry</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Registry (NodeName, LoggingParams) (Handle, FilePath))
+forall a b. IO (Registry a b)
+</span><a href="Cardano.Tracer.Utils.html#newRegistry"><span class="hs-identifier hs-var">newRegistry</span></a></span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span>  </span><span class="hs-comment">-- Environment for all following functions.</span><span>
+</span><span id="line-89"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679622038"><span class="annot"><span class="annottext">tracerEnv :: TracerEnv
+</span><a href="#local-6989586621679622038"><span class="hs-identifier hs-var hs-var">tracerEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-90"></span><span>        </span><span class="annot"><a href="Cardano.Tracer.Environment.html#TracerEnv"><span class="hs-identifier hs-type">TracerEnv</span></a></span><span>
+</span><span id="line-91"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">teConfig :: TracerConfig
+</span><a href="Cardano.Tracer.Environment.html#teConfig"><span class="hs-identifier hs-var">teConfig</span></a></span><span>                </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TracerConfig
+</span><a href="#local-6989586621679622007"><span class="hs-identifier hs-var">config</span></a></span><span>
+</span><span id="line-92"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teConnectedNodes :: ConnectedNodes
+</span><a href="Cardano.Tracer.Environment.html#teConnectedNodes"><span class="hs-identifier hs-var">teConnectedNodes</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConnectedNodes
+</span><a href="#local-6989586621679622013"><span class="hs-identifier hs-var">connectedNodes</span></a></span><span>
+</span><span id="line-93"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teConnectedNodesNames :: ConnectedNodesNames
+</span><a href="Cardano.Tracer.Environment.html#teConnectedNodesNames"><span class="hs-identifier hs-var">teConnectedNodesNames</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ConnectedNodesNames
+</span><a href="#local-6989586621679622015"><span class="hs-identifier hs-var">connectedNodesNames</span></a></span><span>
+</span><span id="line-94"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teAcceptedMetrics :: AcceptedMetrics
+</span><a href="Cardano.Tracer.Environment.html#teAcceptedMetrics"><span class="hs-identifier hs-var">teAcceptedMetrics</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">AcceptedMetrics
+</span><a href="#local-6989586621679622017"><span class="hs-identifier hs-var">acceptedMetrics</span></a></span><span>
+</span><span id="line-95"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teSavedTO :: SavedTraceObjects
+</span><a href="Cardano.Tracer.Environment.html#teSavedTO"><span class="hs-identifier hs-var">teSavedTO</span></a></span><span>               </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SavedTraceObjects
+</span><a href="#local-6989586621679622019"><span class="hs-identifier hs-var">savedTO</span></a></span><span>
+</span><span id="line-96"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teBlockchainHistory :: BlockchainHistory
+</span><a href="Cardano.Tracer.Environment.html#teBlockchainHistory"><span class="hs-identifier hs-var">teBlockchainHistory</span></a></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">BlockchainHistory
+</span><a href="#local-6989586621679622021"><span class="hs-identifier hs-var">chainHistory</span></a></span><span>
+</span><span id="line-97"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teResourcesHistory :: ResourcesHistory
+</span><a href="Cardano.Tracer.Environment.html#teResourcesHistory"><span class="hs-identifier hs-var">teResourcesHistory</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ResourcesHistory
+</span><a href="#local-6989586621679622023"><span class="hs-identifier hs-var">resourcesHistory</span></a></span><span>
+</span><span id="line-98"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teTxHistory :: TransactionsHistory
+</span><a href="Cardano.Tracer.Environment.html#teTxHistory"><span class="hs-identifier hs-var">teTxHistory</span></a></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TransactionsHistory
+</span><a href="#local-6989586621679622025"><span class="hs-identifier hs-var">txHistory</span></a></span><span>
+</span><span id="line-99"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teCurrentLogLock :: Lock
+</span><a href="Cardano.Tracer.Environment.html#teCurrentLogLock"><span class="hs-identifier hs-var">teCurrentLogLock</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Lock
+</span><a href="#local-6989586621679622027"><span class="hs-identifier hs-var">currentLogLock</span></a></span><span>
+</span><span id="line-100"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teCurrentDPLock :: Lock
+</span><a href="Cardano.Tracer.Environment.html#teCurrentDPLock"><span class="hs-identifier hs-var">teCurrentDPLock</span></a></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Lock
+</span><a href="#local-6989586621679622028"><span class="hs-identifier hs-var">currentDPLock</span></a></span><span>
+</span><span id="line-101"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teEventsQueues :: EventsQueues
+</span><a href="Cardano.Tracer.Environment.html#teEventsQueues"><span class="hs-identifier hs-var">teEventsQueues</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EventsQueues
+</span><a href="#local-6989586621679622030"><span class="hs-identifier hs-var">eventsQueues</span></a></span><span>
+</span><span id="line-102"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teDPRequestors :: DataPointRequestors
+</span><a href="Cardano.Tracer.Environment.html#teDPRequestors"><span class="hs-identifier hs-var">teDPRequestors</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">DataPointRequestors
+</span><a href="#local-6989586621679622011"><span class="hs-identifier hs-var">dpRequestors</span></a></span><span>
+</span><span id="line-103"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teProtocolsBrake :: ProtocolsBrake
+</span><a href="Cardano.Tracer.Environment.html#teProtocolsBrake"><span class="hs-identifier hs-var">teProtocolsBrake</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtocolsBrake
+</span><a href="#local-6989586621679622010"><span class="hs-identifier hs-var">protocolsBrake</span></a></span><span>
+</span><span id="line-104"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teRTViewPageOpened :: ProtocolsBrake
+</span><a href="Cardano.Tracer.Environment.html#teRTViewPageOpened"><span class="hs-identifier hs-var">teRTViewPageOpened</span></a></span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ProtocolsBrake
+</span><a href="#local-6989586621679622032"><span class="hs-identifier hs-var">rtViewPageOpened</span></a></span><span>
+</span><span id="line-105"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teRTViewStateDir :: Maybe FilePath
+</span><a href="Cardano.Tracer.Environment.html#teRTViewStateDir"><span class="hs-identifier hs-var">teRTViewStateDir</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe FilePath
+</span><a href="#local-6989586621679622008"><span class="hs-identifier hs-var">rtViewStateDir</span></a></span><span>
+</span><span id="line-106"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teTracer :: Trace IO TracerTrace
+</span><a href="Cardano.Tracer.Environment.html#teTracer"><span class="hs-identifier hs-var">teTracer</span></a></span><span>                </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679622009"><span class="hs-identifier hs-var">tr</span></a></span><span>
+</span><span id="line-107"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teReforwardTraceObjects :: [TraceObject] -&gt; IO ()
+</span><a href="Cardano.Tracer.Environment.html#teReforwardTraceObjects"><span class="hs-identifier hs-var">teReforwardTraceObjects</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[TraceObject] -&gt; IO ()
+</span><a href="#local-6989586621679622033"><span class="hs-identifier hs-var">reforwardTraceObject</span></a></span><span>
+</span><span id="line-108"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">teRegistry :: Registry (NodeName, LoggingParams) (Handle, FilePath)
+</span><a href="Cardano.Tracer.Environment.html#teRegistry"><span class="hs-identifier hs-var">teRegistry</span></a></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Registry (NodeName, LoggingParams) (Handle, FilePath)
+</span><a href="#local-6989586621679622036"><span class="hs-identifier hs-var">registry</span></a></span><span>
+</span><span id="line-109"></span><span>          </span><span class="hs-special">}</span><span>
+</span><span id="line-110"></span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-comment">-- Specify what should be done before 'cardano-tracer' stops.</span><span>
+</span><span id="line-112"></span><span>  </span><span class="annot"><span class="annottext">IO () -&gt; IO ()
+</span><a href="Cardano.Tracer.Utils.html#beforeProgramStops"><span class="hs-identifier hs-var">beforeProgramStops</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-113"></span><span>    </span><span class="annot"><span class="annottext">Trace IO TracerTrace -&gt; TracerTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679622009"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">TracerTrace
+</span><a href="Cardano.Tracer.MetaTrace.html#TracerShutdownInitiated"><span class="hs-identifier hs-var">TracerShutdownInitiated</span></a></span><span>
+</span><span id="line-114"></span><span>    </span><span class="annot"><span class="annottext">TracerEnv -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Update.Historical.html#backupAllHistory"><span class="hs-identifier hs-var">backupAllHistory</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679622038"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span>
+</span><span id="line-115"></span><span>    </span><span class="annot"><span class="annottext">Trace IO TracerTrace -&gt; TracerTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679622009"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">TracerTrace
+</span><a href="Cardano.Tracer.MetaTrace.html#TracerShutdownHistBackup"><span class="hs-identifier hs-var">TracerShutdownHistBackup</span></a></span><span>
+</span><span id="line-116"></span><span>    </span><span class="annot"><span class="annottext">ProtocolsBrake -&gt; IO ()
+</span><a href="Cardano.Tracer.Utils.html#applyBrake"><span class="hs-identifier hs-var">applyBrake</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TracerEnv -&gt; ProtocolsBrake
+</span><a href="Cardano.Tracer.Environment.html#teProtocolsBrake"><span class="hs-identifier hs-var">teProtocolsBrake</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679622038"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-117"></span><span>    </span><span class="annot"><span class="annottext">Trace IO TracerTrace -&gt; TracerTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679622009"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">TracerTrace
+</span><a href="Cardano.Tracer.MetaTrace.html#TracerShutdownComplete"><span class="hs-identifier hs-var">TracerShutdownComplete</span></a></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span>  </span><span class="annot"><span class="annottext">Trace IO TracerTrace -&gt; TracerTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Monad m =&gt; Trace m a -&gt; a -&gt; m ()
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/trace-dispatcher-2.5.8/doc/html/trace-dispatcher/src/Cardano.Logging.Trace.html#traceWith"><span class="hs-identifier hs-var">traceWith</span></a></span><span> </span><span class="annot"><span class="annottext">Trace IO TracerTrace
+</span><a href="#local-6989586621679622009"><span class="hs-identifier hs-var">tr</span></a></span><span> </span><span class="annot"><span class="annottext">TracerTrace
+</span><a href="Cardano.Tracer.MetaTrace.html#TracerInitDone"><span class="hs-identifier hs-var">TracerInitDone</span></a></span><span>
+</span><span id="line-120"></span><span>  </span><span class="annot"><span class="annottext">IO [()] -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(IO [()] -&gt; IO ()) -&gt; ([IO ()] -&gt; IO [()]) -&gt; [IO ()] -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[IO ()] -&gt; IO [()]
+forall (t :: * -&gt; *) a. Traversable t =&gt; t (IO a) -&gt; IO (t a)
+</span><a href="file:///nix/store/dxgb71526mhlazqvliaa5i04mp4fiw1z-async-extras-lib-async-extras-0.1.3.2-haddock-doc/share/doc/async-extras/html/src/Control.Concurrent.Async.Extra.html#sequenceConcurrently"><span class="hs-identifier hs-var">sequenceConcurrently</span></a></span><span> </span><span class="annot"><span class="annottext">([IO ()] -&gt; IO ()) -&gt; [IO ()] -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-121"></span><span>    </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TracerEnv -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Logs.Rotator.html#runLogsRotator"><span class="hs-identifier hs-var">runLogsRotator</span></a></span><span>    </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679622038"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span>
+</span><span id="line-122"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TracerEnv -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.Metrics.Servers.html#runMetricsServers"><span class="hs-identifier hs-var">runMetricsServers</span></a></span><span> </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679622038"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span>
+</span><span id="line-123"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TracerEnv -&gt; IO ()
+</span><a href="Cardano.Tracer.Acceptors.Run.html#runAcceptors"><span class="hs-identifier hs-var">runAcceptors</span></a></span><span>      </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679622038"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span>
+</span><span id="line-124"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TracerEnv -&gt; IO ()
+</span><a href="Cardano.Tracer.Handlers.RTView.Run.html#runRTView"><span class="hs-identifier hs-var">runRTView</span></a></span><span>         </span><span class="annot"><span class="annottext">TracerEnv
+</span><a href="#local-6989586621679622038"><span class="hs-identifier hs-var">tracerEnv</span></a></span><span>
+</span><span id="line-125"></span><span>    </span><span class="hs-special">]</span><span>
+</span><span id="line-126"></span></pre></body></html>

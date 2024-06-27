@@ -1,0 +1,483 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds             #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveFunctor         #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts      #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE GADTs                 #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE KindSignatures        #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE PolyKinds             #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE QuantifiedConstraints #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes            #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving    #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE TypeFamilies          #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- | This module defines the core of the typed protocol framework.</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.TypedProtocol.Core</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Introduction</span></span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-comment">-- $intro</span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-comment">-- * Defining protocols</span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="hs-comment">-- $defining</span></span><span>
+</span><span id="line-21"></span><span>    </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Protocol"><span class="hs-identifier">Protocol</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-comment">-- $lemmas</span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-comment">-- * Engaging in protocols</span><span>
+</span><span id="line-24"></span><span>    </span><span class="annot"><span class="hs-comment">-- $using</span></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerRole"><span class="hs-identifier">PeerRole</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#TokPeerRole"><span class="hs-identifier">TokPeerRole</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#FlipAgency"><span class="hs-identifier">FlipAgency</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerHasAgency"><span class="hs-identifier">PeerHasAgency</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#WeHaveAgency"><span class="hs-identifier">WeHaveAgency</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#TheyHaveAgency"><span class="hs-identifier">TheyHaveAgency</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Peer"><span class="hs-identifier">Peer</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Void.html"><span class="hs-identifier">Data.Void</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#Void"><span class="hs-identifier">Void</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- $intro</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- A typed protocol between two peers is defined via a state machine: a</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- collection of protocol states and protocol messages which are transitions</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- between those states.</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- Start from the idea that a protocol is some language of messages sent</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- between two peers. To specify a protocol is to describe what possible</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- sequences of messages are valid. One simple but still relatively expressive</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- way to do this is via a state machine: starting from some initial state,</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- all possible paths through the state machine gives the set of valid protocol</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- traces. This then dictates what a peer participating in a protocol may</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- produce and what it must accept.</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- In this style we have a fixed number of states and in each state there is</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- some number of valid messages that move us on to the next state. This can be</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- illustrated as a graph, which can be a helpful form of documentation.</span><span>
+</span><span id="line-52"></span><span class="hs-comment">--</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- We further constrain this idea by saying that the two peers will use the</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- same state machine and change states in lock-step by sending\/receiving</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- messages. In this approach, for each protocol state, the description</span><span>
+</span><span id="line-56"></span><span class="hs-comment">-- dictates which peer has the agency to choose to send a message, while</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- correspondingly the other must be prepared to receive the message.</span><span>
+</span><span id="line-58"></span><span class="hs-comment">--</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- The views of the two peers are dual. In each state one peer can send any</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- message that is valid for the current protocol state while the other</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- must be prepared to receive any valid message for current protocol state.</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- We can also have terminal protocol states in which neither peer has agency.</span><span>
+</span><span id="line-64"></span><span class="hs-comment">--</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- So part of the protocol description is to label each protocol state with</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- the peer that has the agency in that state, or none for terminal states.</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- We use the labels \&quot;client\&quot; and \&quot;server\&quot; for the two peers, but they are</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- in fact symmetric.</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- $defining</span><span>
+</span><span id="line-72"></span><span class="hs-comment">--</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- The 'Protocol' type class bundles up all the requirements for a typed</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- protocol, which are in fact all type level constructs. Defining a new</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- protocol and making it an instance of the 'Protocol' class requires the</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- following language extensions:</span><span>
+</span><span id="line-77"></span><span class="hs-comment">--</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- &gt; {-# LANGUAGE GADTs, TypeFamilies, DataKinds #-}</span><span>
+</span><span id="line-79"></span><span class="hs-comment">--</span><span>
+</span><span id="line-80"></span><span class="hs-comment">-- The type class itself is indexed on a protocol \&quot;tag\&quot; type. This type</span><span>
+</span><span id="line-81"></span><span class="hs-comment">-- does double duty as the /kind/ of the /types/ of the protocol states.</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- We will use as a running example a simple \&quot;ping\/pong\&quot; protocol. (You can</span><span>
+</span><span id="line-84"></span><span class="hs-comment">-- see the example in full in &quot;Network.TypedProtocol.PingPong.Type&quot;.) In this</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- example protocol the client sends a ping message and the serve must respond</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- with a pong message. The client can also terminate the protocol. So modelled</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- as a state machine this protocol has three states, the one in which the</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- client can send a ping or terminate message, the one in which the server</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- must send a pong, and the terminal state where neither can send anything.</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- We somewhat arbitrarily choose label these protocol states as \&quot;idle\&quot;</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- \&quot;busy\&quot; and \&quot;done\&quot;.</span><span>
+</span><span id="line-92"></span><span class="hs-comment">--</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- For this ping pong example the protocol tag and the protocol state types</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- would be defined (via promoted data kinds) as:</span><span>
+</span><span id="line-95"></span><span class="hs-comment">--</span><span>
+</span><span id="line-96"></span><span class="hs-comment">-- &gt; data PingPong where</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- &gt;   StIdle :: PingPong</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- &gt;   StBusy :: PingPong</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- &gt;   StDone :: PingPong</span><span>
+</span><span id="line-100"></span><span class="hs-comment">--</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- We use @DataKinds@ promotion here so @StIdle@, @StBusy@ and @StDone@ are</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- /types/ (of /kind/ @PingPong@) representing the three states in this</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- protocol's state machine. @PingPong@ itself is both the kind of these types</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- and is also the tag for protocol. We only ever use these as types, via the</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- @DataKinds@ promotion, never as value level data constructors.</span><span>
+</span><span id="line-106"></span><span class="hs-comment">--</span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- Having defined our protocol tag and states we can instantiate the 'Protocol'</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- type class and fill out the other details.</span><span>
+</span><span id="line-109"></span><span class="hs-comment">--</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- The protocol must define what its messages are. These form the state</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- transitions in the protocol state machine. Each transition specifies a</span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- \&quot;from\&quot; and \&quot;to\&quot; state as type parameters. This of course determines in</span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- which protocol states each message can appear.</span><span>
+</span><span id="line-114"></span><span class="hs-comment">--</span><span>
+</span><span id="line-115"></span><span class="hs-comment">-- In the \&quot;ping\/pong\&quot; protocol example, the messages are of course ping and</span><span>
+</span><span id="line-116"></span><span class="hs-comment">-- pong, which transition between the two main states. There is also a done</span><span>
+</span><span id="line-117"></span><span class="hs-comment">-- message that moves the system into a terminal state.</span><span>
+</span><span id="line-118"></span><span class="hs-comment">--</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- &gt; instance Protocol PingPong where</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- &gt;   data Message PingPong from to where</span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- &gt;     MsgPing :: Message PingPong StIdle StBusy</span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- &gt;     MsgPong :: Message PingPong StBusy StIdle</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- &gt;     MsgDone :: Message PingPong StIdle StDone</span><span>
+</span><span id="line-124"></span><span class="hs-comment">--</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- This says that in the idle state a ping message takes us to the busy state,</span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- while a pong message takes us back to idle. Also in the idle state a done</span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- message takes us to the done state.</span><span>
+</span><span id="line-128"></span><span class="hs-comment">--</span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- It is not required that protocols have any terminal states or corresponding</span><span>
+</span><span id="line-130"></span><span class="hs-comment">-- transitions, as in this example, but it is often useful and it aids testing</span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- to have protocols that terminate cleanly as it allows them to return a</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- result.</span><span>
+</span><span id="line-133"></span><span class="hs-comment">--</span><span>
+</span><span id="line-134"></span><span class="hs-comment">-- As described above, this style of protocol gives agency to only one peer at</span><span>
+</span><span id="line-135"></span><span class="hs-comment">-- once. That is, in each protocol state, one peer has agency (the ability to</span><span>
+</span><span id="line-136"></span><span class="hs-comment">-- send) and the other does not (it must only receive). The three associated</span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- data families ('ClientHasAgency', 'ServerHasAgency' and 'NobodyHasAgency')</span><span>
+</span><span id="line-138"></span><span class="hs-comment">-- define which peer has agency for each state.</span><span>
+</span><span id="line-139"></span><span class="hs-comment">--</span><span>
+</span><span id="line-140"></span><span class="hs-comment">-- In the \&quot;ping\/pong\&quot; protocol example, the idle state is the one in which</span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- the client can send a message, and the busy state is the one in which the</span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- server must respond. Finally in the done state, neither peer can send any</span><span>
+</span><span id="line-143"></span><span class="hs-comment">-- further messages. This arrangement is defined as so:</span><span>
+</span><span id="line-144"></span><span class="hs-comment">--</span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- &gt;    -- still within the instance Protocol PingPong</span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- &gt;    data ClientHasAgency st where</span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- &gt;      TokIdle :: ClientHasAgency StIdle</span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-149"></span><span class="hs-comment">-- &gt;    data ServerHasAgency st where</span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- &gt;      TokBusy :: ServerHasAgency StBusy</span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- &gt;    data NobodyHasAgency st where</span><span>
+</span><span id="line-153"></span><span class="hs-comment">-- &gt;      TokDone :: NobodyHasAgency StDone</span><span>
+</span><span id="line-154"></span><span class="hs-comment">--</span><span>
+</span><span id="line-155"></span><span class="hs-comment">-- In this simple protocol there is exactly one state in each category, but in</span><span>
+</span><span id="line-156"></span><span class="hs-comment">-- general for non-trivial protocols there may be several protocol states in</span><span>
+</span><span id="line-157"></span><span class="hs-comment">-- each category.</span><span>
+</span><span id="line-158"></span><span class="hs-comment">--</span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- $tests</span><span>
+</span><span id="line-161"></span><span class="hs-comment">-- The mechanism for labelling each protocol state with the agency does not</span><span>
+</span><span id="line-162"></span><span class="hs-comment">-- automatically prevent mislabelling, ie giving conflicting labels to a</span><span>
+</span><span id="line-163"></span><span class="hs-comment">-- single state. It does in fact prevent forgetting to label states in the</span><span>
+</span><span id="line-164"></span><span class="hs-comment">-- sense that it would not be possible to write protocol peers that make</span><span>
+</span><span id="line-165"></span><span class="hs-comment">-- progress having entered these unlabelled states.</span><span>
+</span><span id="line-166"></span><span class="hs-comment">--</span><span>
+</span><span id="line-167"></span><span class="hs-comment">-- This partition property is however crucial for the framework's guarantees.</span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- The &quot;Network.TypedProtocol.Proofs&quot; module provides a way to guarantee for</span><span>
+</span><span id="line-169"></span><span class="hs-comment">-- each protocol that this property is not violated. It also provides utilities</span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- helpful for testing protocols.</span><span>
+</span><span id="line-171"></span><span>
+</span><span id="line-172"></span><span class="hs-comment">-- $lemmas</span><span>
+</span><span id="line-173"></span><span class="hs-comment">--</span><span>
+</span><span id="line-174"></span><span class="hs-comment">-- The 'connect' and 'connectPipelined' proofs rely on lemmas about the</span><span>
+</span><span id="line-175"></span><span class="hs-comment">-- protocol. Specifically they rely on the property that each protocol state</span><span>
+</span><span id="line-176"></span><span class="hs-comment">-- is labelled with the agency of one peer or the other, or neither, but never</span><span>
+</span><span id="line-177"></span><span class="hs-comment">-- both. Or to put it another way, the protocol states should be partitioned</span><span>
+</span><span id="line-178"></span><span class="hs-comment">-- into those with agency for one peer, or the other or neither.</span><span>
+</span><span id="line-179"></span><span class="hs-comment">--</span><span>
+</span><span id="line-180"></span><span class="hs-comment">-- The way the labelling is encoded does not automatically enforce this</span><span>
+</span><span id="line-181"></span><span class="hs-comment">-- property. It is technically possible to set up the labelling for a protocol</span><span>
+</span><span id="line-182"></span><span class="hs-comment">-- so that one state is labelled as having both peers with agency, or declaring</span><span>
+</span><span id="line-183"></span><span class="hs-comment">-- simultaneously that one peer has agency and that neither peer has agency</span><span>
+</span><span id="line-184"></span><span class="hs-comment">-- in a particular state.</span><span>
+</span><span id="line-185"></span><span class="hs-comment">--</span><span>
+</span><span id="line-186"></span><span class="hs-comment">-- So the overall proofs rely on lemmas that say that the labelling has been</span><span>
+</span><span id="line-187"></span><span class="hs-comment">-- done correctly. This type bundles up those three lemmas.</span><span>
+</span><span id="line-188"></span><span class="hs-comment">--</span><span>
+</span><span id="line-189"></span><span class="hs-comment">-- Specifically proofs that it is impossible for a protocol state to have:</span><span>
+</span><span id="line-190"></span><span class="hs-comment">--</span><span>
+</span><span id="line-191"></span><span class="hs-comment">-- * client having agency and server having agency</span><span>
+</span><span id="line-192"></span><span class="hs-comment">-- * client having agency and nobody having agency</span><span>
+</span><span id="line-193"></span><span class="hs-comment">-- * server having agency and nobody having agency</span><span>
+</span><span id="line-194"></span><span class="hs-comment">--</span><span>
+</span><span id="line-195"></span><span class="hs-comment">-- These lemmas are structured as proofs by contradiction, e.g. stating</span><span>
+</span><span id="line-196"></span><span class="hs-comment">-- \&quot;if the client and the server have agency for this state then it leads to</span><span>
+</span><span id="line-197"></span><span class="hs-comment">-- contradiction\&quot;. Contradiction is represented as the 'Void' type that has</span><span>
+</span><span id="line-198"></span><span class="hs-comment">-- no values except &#8869;.</span><span>
+</span><span id="line-199"></span><span class="hs-comment">--</span><span>
+</span><span id="line-200"></span><span class="hs-comment">-- For example for the ping\/pong protocol, it has three states, and if we set</span><span>
+</span><span id="line-201"></span><span class="hs-comment">-- up the labelling correctly we have:</span><span>
+</span><span id="line-202"></span><span class="hs-comment">--</span><span>
+</span><span id="line-203"></span><span class="hs-comment">-- &gt; data PingPong where</span><span>
+</span><span id="line-204"></span><span class="hs-comment">-- &gt;   StIdle :: PingPong</span><span>
+</span><span id="line-205"></span><span class="hs-comment">-- &gt;   StBusy :: PingPong</span><span>
+</span><span id="line-206"></span><span class="hs-comment">-- &gt;   StDone :: PingPong</span><span>
+</span><span id="line-207"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-208"></span><span class="hs-comment">-- &gt; instance Protocol PingPong where</span><span>
+</span><span id="line-209"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-210"></span><span class="hs-comment">-- &gt;   data ClientHasAgency st where</span><span>
+</span><span id="line-211"></span><span class="hs-comment">-- &gt;     TokIdle :: ClientHasAgency StIdle</span><span>
+</span><span id="line-212"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-213"></span><span class="hs-comment">-- &gt;   data ServerHasAgency st where</span><span>
+</span><span id="line-214"></span><span class="hs-comment">-- &gt;     TokBusy :: ServerHasAgency StBusy</span><span>
+</span><span id="line-215"></span><span class="hs-comment">-- &gt;</span><span>
+</span><span id="line-216"></span><span class="hs-comment">-- &gt;   data NobodyHasAgency st where</span><span>
+</span><span id="line-217"></span><span class="hs-comment">-- &gt;     TokDone :: NobodyHasAgency StDone</span><span>
+</span><span id="line-218"></span><span class="hs-comment">--</span><span>
+</span><span id="line-219"></span><span class="hs-comment">-- So now we can prove that if the client has agency for a state then there</span><span>
+</span><span id="line-220"></span><span class="hs-comment">-- are no cases in which the server has agency.</span><span>
+</span><span id="line-221"></span><span class="hs-comment">--</span><span>
+</span><span id="line-222"></span><span class="hs-comment">-- &gt;   exclusionLemma_ClientAndServerHaveAgency TokIdle tok = case tok of {}</span><span>
+</span><span id="line-223"></span><span class="hs-comment">--</span><span>
+</span><span id="line-224"></span><span class="hs-comment">-- For this protocol there is only one state in which the client has agency,</span><span>
+</span><span id="line-225"></span><span class="hs-comment">-- the idle state. By pattern matching on the state token for the server</span><span>
+</span><span id="line-226"></span><span class="hs-comment">-- agency we can list all the cases in which the server also has agency for</span><span>
+</span><span id="line-227"></span><span class="hs-comment">-- the idle state. There are of course none of these so we give the empty</span><span>
+</span><span id="line-228"></span><span class="hs-comment">-- set of patterns. GHC can check that we are indeed correct about this.</span><span>
+</span><span id="line-229"></span><span class="hs-comment">-- This also requires the @EmptyCase@ language extension.</span><span>
+</span><span id="line-230"></span><span class="hs-comment">--</span><span>
+</span><span id="line-231"></span><span class="hs-comment">-- To get this completeness checking it is important to compile modules</span><span>
+</span><span id="line-232"></span><span class="hs-comment">-- containing these lemmas with @-Wincomplete-patterns@, which is implied by</span><span>
+</span><span id="line-233"></span><span class="hs-comment">-- @-Wall@.</span><span>
+</span><span id="line-234"></span><span class="hs-comment">--</span><span>
+</span><span id="line-235"></span><span class="hs-comment">-- All three lemmas follow the same pattern.</span><span>
+</span><span id="line-236"></span><span class="hs-comment">--</span><span>
+</span><span id="line-237"></span><span>
+</span><span id="line-238"></span><span class="hs-comment">-- | The protocol type class bundles up all the requirements for a typed</span><span>
+</span><span id="line-239"></span><span class="hs-comment">-- protocol.</span><span>
+</span><span id="line-240"></span><span class="hs-comment">--</span><span>
+</span><span id="line-241"></span><span class="hs-comment">-- Each protocol consists of three things:</span><span>
+</span><span id="line-242"></span><span class="hs-comment">--</span><span>
+</span><span id="line-243"></span><span class="hs-comment">-- * The protocol itself, which is also expected to be the kind of the types</span><span>
+</span><span id="line-244"></span><span class="hs-comment">--   of the protocol states. The class is indexed on the protocol itself.</span><span>
+</span><span id="line-245"></span><span class="hs-comment">-- * The protocol messages.</span><span>
+</span><span id="line-246"></span><span class="hs-comment">-- * The partition of the protocol states into those in which the client has</span><span>
+</span><span id="line-247"></span><span class="hs-comment">--   agency, or the server has agency, or neither have agency.</span><span>
+</span><span id="line-248"></span><span class="hs-comment">--</span><span>
+</span><span id="line-249"></span><span class="hs-comment">-- The labelling of each protocol state with the peer that has agency in that</span><span>
+</span><span id="line-250"></span><span class="hs-comment">-- state is done by giving a definition to the data families</span><span>
+</span><span id="line-251"></span><span class="hs-comment">-- 'ClientHasAgency', 'ServerHasAgency' and 'NobodyHasAgency'. These</span><span>
+</span><span id="line-252"></span><span class="hs-comment">-- definitions are expected to be singleton-style GADTs with one constructor</span><span>
+</span><span id="line-253"></span><span class="hs-comment">-- per protocol state.</span><span>
+</span><span id="line-254"></span><span class="hs-comment">--</span><span>
+</span><span id="line-255"></span><span class="hs-comment">-- Each protocol state must be assigned to only one label. See</span><span>
+</span><span id="line-256"></span><span class="hs-comment">-- &quot;Network.TypedProtocol.Proofs&quot; for more details on this point.</span><span>
+</span><span id="line-257"></span><span class="hs-comment">--</span><span>
+</span><span id="line-258"></span><span class="hs-keyword">class</span><span> </span><span id="Protocol"><span class="annot"><a href="Network.TypedProtocol.Core.html#Protocol"><span class="hs-identifier hs-var">Protocol</span></a></span></span><span> </span><span id="local-6989586621679051454"><span class="annot"><a href="#local-6989586621679051454"><span class="hs-identifier hs-type">ps</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-259"></span><span>
+</span><span id="line-260"></span><span>  </span><span class="hs-comment">-- | The messages for this protocol. It is expected to be a GADT that is</span><span>
+</span><span id="line-261"></span><span>  </span><span class="hs-comment">-- indexed by the @from@ and @to@ protocol states. That is the protocol state</span><span>
+</span><span id="line-262"></span><span>  </span><span class="hs-comment">-- the message transitions from, and the protocol state it transitions into.</span><span>
+</span><span id="line-263"></span><span>  </span><span class="hs-comment">-- These are the edges of the protocol state transition system.</span><span>
+</span><span id="line-264"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-265"></span><span>  </span><span class="hs-keyword">data</span><span> </span><span id="Message"><span class="annot"><a href="Network.TypedProtocol.Core.html#Message"><span class="hs-identifier hs-var">Message</span></a></span></span><span> </span><span id="local-6989586621679051454"><span class="annot"><a href="#local-6989586621679051454"><span class="hs-identifier hs-type">ps</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051456"><span class="annot"><a href="#local-6989586621679051456"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051454"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051457"><span class="annot"><a href="#local-6989586621679051457"><span class="hs-identifier hs-type">st'</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051454"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-266"></span><span>
+</span><span id="line-267"></span><span>  </span><span class="hs-comment">-- | Tokens for those protocol states in which the client has agency.</span><span>
+</span><span id="line-268"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-269"></span><span>  </span><span class="hs-keyword">data</span><span> </span><span id="ClientHasAgency"><span class="annot"><a href="Network.TypedProtocol.Core.html#ClientHasAgency"><span class="hs-identifier hs-var">ClientHasAgency</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051454"><span id="local-6989586621679051458"><span class="annot"><a href="#local-6989586621679051458"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051454"><span class="hs-identifier hs-type">ps</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-270"></span><span>
+</span><span id="line-271"></span><span>  </span><span class="hs-comment">-- | Tokens for those protocol states in which the server has agency.</span><span>
+</span><span id="line-272"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-273"></span><span>  </span><span class="hs-keyword">data</span><span> </span><span id="ServerHasAgency"><span class="annot"><a href="Network.TypedProtocol.Core.html#ServerHasAgency"><span class="hs-identifier hs-var">ServerHasAgency</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051454"><span id="local-6989586621679051459"><span class="annot"><a href="#local-6989586621679051459"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051454"><span class="hs-identifier hs-type">ps</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-274"></span><span>
+</span><span id="line-275"></span><span>  </span><span class="hs-comment">-- | Tokens for terminal protocol states in which neither the client nor</span><span>
+</span><span id="line-276"></span><span>  </span><span class="hs-comment">-- server has agency.</span><span>
+</span><span id="line-277"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-278"></span><span>  </span><span class="hs-keyword">data</span><span> </span><span id="NobodyHasAgency"><span class="annot"><a href="Network.TypedProtocol.Core.html#NobodyHasAgency"><span class="hs-identifier hs-var">NobodyHasAgency</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051454"><span id="local-6989586621679051460"><span class="annot"><a href="#local-6989586621679051460"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051454"><span class="hs-identifier hs-type">ps</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-279"></span><span>
+</span><span id="line-280"></span><span>  </span><span class="hs-comment">-- | Lemma that if the client has agency for a state, there are no</span><span>
+</span><span id="line-281"></span><span>  </span><span class="hs-comment">-- cases in which the server has agency for the same state.</span><span>
+</span><span id="line-282"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-283"></span><span>  </span><span id="exclusionLemma_ClientAndServerHaveAgency"><span class="annot"><a href="Network.TypedProtocol.Core.html#exclusionLemma_ClientAndServerHaveAgency"><span class="hs-identifier hs-type">exclusionLemma_ClientAndServerHaveAgency</span></a></span></span><span>
+</span><span id="line-284"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051462"><span class="annot"><a href="#local-6989586621679051462"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051454"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span class="hs-operator">.</span><span>
+</span><span id="line-285"></span><span>       </span><span class="annot"><a href="Network.TypedProtocol.Core.html#ClientHasAgency"><span class="hs-identifier hs-type">ClientHasAgency</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051462"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-286"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#ServerHasAgency"><span class="hs-identifier hs-type">ServerHasAgency</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051462"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-287"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#Void"><span class="hs-identifier hs-type">Void</span></a></span><span>
+</span><span id="line-288"></span><span>
+</span><span id="line-289"></span><span>  </span><span class="hs-comment">-- | Lemma that if the nobody has agency for a state, there are no</span><span>
+</span><span id="line-290"></span><span>  </span><span class="hs-comment">-- cases in which the client has agency for the same state.</span><span>
+</span><span id="line-291"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-292"></span><span>  </span><span id="exclusionLemma_NobodyAndClientHaveAgency"><span class="annot"><a href="Network.TypedProtocol.Core.html#exclusionLemma_NobodyAndClientHaveAgency"><span class="hs-identifier hs-type">exclusionLemma_NobodyAndClientHaveAgency</span></a></span></span><span>
+</span><span id="line-293"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051464"><span class="annot"><a href="#local-6989586621679051464"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051454"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span class="hs-operator">.</span><span>
+</span><span id="line-294"></span><span>       </span><span class="annot"><a href="Network.TypedProtocol.Core.html#NobodyHasAgency"><span class="hs-identifier hs-type">NobodyHasAgency</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051464"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-295"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#ClientHasAgency"><span class="hs-identifier hs-type">ClientHasAgency</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051464"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-296"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#Void"><span class="hs-identifier hs-type">Void</span></a></span><span>
+</span><span id="line-297"></span><span>
+</span><span id="line-298"></span><span>  </span><span class="hs-comment">-- | Lemma that if the nobody has agency for a state, there are no</span><span>
+</span><span id="line-299"></span><span>  </span><span class="hs-comment">-- cases in which the server has agency for the same state.</span><span>
+</span><span id="line-300"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-301"></span><span>  </span><span id="exclusionLemma_NobodyAndServerHaveAgency"><span class="annot"><a href="Network.TypedProtocol.Core.html#exclusionLemma_NobodyAndServerHaveAgency"><span class="hs-identifier hs-type">exclusionLemma_NobodyAndServerHaveAgency</span></a></span></span><span>
+</span><span id="line-302"></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051466"><span class="annot"><a href="#local-6989586621679051466"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051454"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span class="hs-operator">.</span><span>
+</span><span id="line-303"></span><span>       </span><span class="annot"><a href="Network.TypedProtocol.Core.html#NobodyHasAgency"><span class="hs-identifier hs-type">NobodyHasAgency</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051466"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-304"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#ServerHasAgency"><span class="hs-identifier hs-type">ServerHasAgency</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051466"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-305"></span><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#Void"><span class="hs-identifier hs-type">Void</span></a></span><span>
+</span><span id="line-306"></span><span>
+</span><span id="line-307"></span><span class="hs-comment">-- | Types for client and server peer roles. As protocol can be viewed from</span><span>
+</span><span id="line-308"></span><span class="hs-comment">-- either client or server side.</span><span>
+</span><span id="line-309"></span><span class="hs-comment">--</span><span>
+</span><span id="line-310"></span><span class="hs-comment">-- Note that technically \&quot;client\&quot; and \&quot;server\&quot; are arbitrary labels. The</span><span>
+</span><span id="line-311"></span><span class="hs-comment">-- framework is completely symmetric between the two peers.</span><span>
+</span><span id="line-312"></span><span class="hs-comment">--</span><span>
+</span><span id="line-313"></span><span class="hs-comment">-- This definition is only used as promoted types and kinds, never as values.</span><span>
+</span><span id="line-314"></span><span class="hs-comment">--</span><span>
+</span><span id="line-315"></span><span class="hs-keyword">data</span><span> </span><span id="PeerRole"><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerRole"><span class="hs-identifier hs-var">PeerRole</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="AsClient"><span class="annot"><a href="Network.TypedProtocol.Core.html#AsClient"><span class="hs-identifier hs-var">AsClient</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="AsServer"><span class="annot"><a href="Network.TypedProtocol.Core.html#AsServer"><span class="hs-identifier hs-var">AsServer</span></a></span></span><span>
+</span><span id="line-316"></span><span>
+</span><span id="line-317"></span><span class="hs-comment">-- | Singletons for the promoted 'PeerRole' types.  Not directly used by the</span><span>
+</span><span id="line-318"></span><span class="hs-comment">-- framework, however some times useful when writing code that is shared between</span><span>
+</span><span id="line-319"></span><span class="hs-comment">-- client and server.</span><span>
+</span><span id="line-320"></span><span class="hs-comment">--</span><span>
+</span><span id="line-321"></span><span class="hs-keyword">data</span><span> </span><span id="TokPeerRole"><span class="annot"><a href="Network.TypedProtocol.Core.html#TokPeerRole"><span class="hs-identifier hs-var">TokPeerRole</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051467"><span class="annot"><a href="#local-6989586621679051467"><span class="hs-identifier hs-type">peerRole</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerRole"><span class="hs-identifier hs-type">PeerRole</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-322"></span><span>    </span><span id="TokAsClient"><span class="annot"><a href="Network.TypedProtocol.Core.html#TokAsClient"><span class="hs-identifier hs-var">TokAsClient</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#TokPeerRole"><span class="hs-identifier hs-type">TokPeerRole</span></a></span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#AsClient"><span class="hs-identifier hs-type">AsClient</span></a></span><span>
+</span><span id="line-323"></span><span>    </span><span id="TokAsServer"><span class="annot"><a href="Network.TypedProtocol.Core.html#TokAsServer"><span class="hs-identifier hs-var">TokAsServer</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#TokPeerRole"><span class="hs-identifier hs-type">TokPeerRole</span></a></span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#AsServer"><span class="hs-identifier hs-type">AsServer</span></a></span><span>
+</span><span id="line-324"></span><span>
+</span><span id="line-325"></span><span class="hs-comment">-- | This data type is used to hold state tokens for states with either client</span><span>
+</span><span id="line-326"></span><span class="hs-comment">-- or server agency. This GADT shows up when writing protocol peers, when</span><span>
+</span><span id="line-327"></span><span class="hs-comment">-- 'Yield'ing or 'Await'ing, and when writing message encoders\/decoders.</span><span>
+</span><span id="line-328"></span><span class="hs-comment">--</span><span>
+</span><span id="line-329"></span><span class="hs-keyword">data</span><span> </span><span id="PeerHasAgency"><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerHasAgency"><span class="hs-identifier hs-var">PeerHasAgency</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051472"><span class="annot"><a href="#local-6989586621679051472"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerRole"><span class="hs-identifier hs-type">PeerRole</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">st</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051473"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-330"></span><span>  </span><span id="local-6989586621679051474"><span id="ClientAgency"><span class="annot"><a href="Network.TypedProtocol.Core.html#ClientAgency"><span class="hs-identifier hs-var">ClientAgency</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Core.html#ClientHasAgency"><span class="hs-identifier hs-type">ClientHasAgency</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051474"><span class="hs-identifier hs-type">st</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerHasAgency"><span class="hs-identifier hs-type">PeerHasAgency</span></a></span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#AsClient"><span class="hs-identifier hs-type">AsClient</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051474"><span class="hs-identifier hs-type">st</span></a></span></span><span>
+</span><span id="line-331"></span><span>  </span><span id="local-6989586621679051476"><span id="ServerAgency"><span class="annot"><a href="Network.TypedProtocol.Core.html#ServerAgency"><span class="hs-identifier hs-var">ServerAgency</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Core.html#ServerHasAgency"><span class="hs-identifier hs-type">ServerHasAgency</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051476"><span class="hs-identifier hs-type">st</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerHasAgency"><span class="hs-identifier hs-type">PeerHasAgency</span></a></span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#AsServer"><span class="hs-identifier hs-type">AsServer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051476"><span class="hs-identifier hs-type">st</span></a></span></span><span>
+</span><span id="line-332"></span><span>
+</span><span id="line-333"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679051426"><span id="local-6989586621679051427"><span id="local-6989586621679051428"><span id="local-6989586621679051481"><span id="local-6989586621679051488"><span class="hs-special">(</span><span> </span><span class="hs-keyword">forall</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051422"><span class="annot"><a href="#local-6989586621679051422"><span class="hs-identifier hs-type">st'</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051426"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Core.html#ClientHasAgency"><span class="hs-identifier hs-type">ClientHasAgency</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051422"><span class="hs-identifier hs-type">st'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-334"></span><span>         </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">forall</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051424"><span class="annot"><a href="#local-6989586621679051424"><span class="hs-identifier hs-type">st'</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051426"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Core.html#ServerHasAgency"><span class="hs-identifier hs-type">ServerHasAgency</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051424"><span class="hs-identifier hs-type">st'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-335"></span><span>         </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerHasAgency"><span class="hs-identifier hs-type">PeerHasAgency</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051427"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679051428"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051426"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span></span></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-336"></span><span>    </span><span id="local-6989586621679051493"><span class="annot"><span class="annottext">show :: PeerHasAgency pr st -&gt; String
+</span><a href="#local-6989586621679051493"><span class="hs-identifier hs-var hs-var hs-var hs-var">show</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Core.html#ClientAgency"><span class="hs-identifier hs-type">ClientAgency</span></a></span><span> </span><span id="local-6989586621679051497"><span class="annot"><span class="annottext">ClientHasAgency st
+</span><a href="#local-6989586621679051497"><span class="hs-identifier hs-var">stok</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ClientAgency &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">ClientHasAgency st -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ClientHasAgency st
+</span><a href="#local-6989586621679051497"><span class="hs-identifier hs-var">stok</span></a></span><span>
+</span><span id="line-337"></span><span>    </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Core.html#ServerAgency"><span class="hs-identifier hs-type">ServerAgency</span></a></span><span> </span><span id="local-6989586621679051500"><span class="annot"><span class="annottext">ServerHasAgency st
+</span><a href="#local-6989586621679051500"><span class="hs-identifier hs-var">stok</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;ServerAgency &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="annot"><span class="annottext">ServerHasAgency st -&gt; String
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">ServerHasAgency st
+</span><a href="#local-6989586621679051500"><span class="hs-identifier hs-var">stok</span></a></span><span>
+</span><span id="line-338"></span><span>
+</span><span id="line-339"></span><span class="hs-comment">-- | A synonym for an state token in which \&quot;our\&quot; peer has agency. This is</span><span>
+</span><span id="line-340"></span><span class="hs-comment">-- parametrised over the client or server roles. In either case the peer in</span><span>
+</span><span id="line-341"></span><span class="hs-comment">-- question has agency.</span><span>
+</span><span id="line-342"></span><span class="hs-comment">--</span><span>
+</span><span id="line-343"></span><span class="hs-comment">-- This shows up when we are sending messages, or dealing with encoding</span><span>
+</span><span id="line-344"></span><span class="hs-comment">-- outgoing messages.</span><span>
+</span><span id="line-345"></span><span class="hs-comment">--</span><span>
+</span><span id="line-346"></span><span class="hs-keyword">type</span><span> </span><span id="WeHaveAgency"><span class="annot"><a href="Network.TypedProtocol.Core.html#WeHaveAgency"><span class="hs-identifier hs-var">WeHaveAgency</span></a></span></span><span>   </span><span class="hs-special">(</span><span id="local-6989586621679051501"><span class="annot"><a href="#local-6989586621679051501"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerRole"><span class="hs-identifier hs-type">PeerRole</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679051502"><span class="annot"><a href="#local-6989586621679051502"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerHasAgency"><span class="hs-identifier hs-type">PeerHasAgency</span></a></span><span>             </span><span class="annot"><a href="#local-6989586621679051501"><span class="hs-identifier hs-type">pr</span></a></span><span>  </span><span class="annot"><a href="#local-6989586621679051502"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-347"></span><span>
+</span><span id="line-348"></span><span class="hs-comment">-- | A synonym for an state token in which the other peer has agency. This is</span><span>
+</span><span id="line-349"></span><span class="hs-comment">-- parametrised over the client or server roles. In either case the other peer</span><span>
+</span><span id="line-350"></span><span class="hs-comment">-- has agency.</span><span>
+</span><span id="line-351"></span><span class="hs-comment">--</span><span>
+</span><span id="line-352"></span><span class="hs-comment">-- This shows up when we are receiving messages, or dealing with decoding</span><span>
+</span><span id="line-353"></span><span class="hs-comment">-- incoming messages.</span><span>
+</span><span id="line-354"></span><span class="hs-comment">--</span><span>
+</span><span id="line-355"></span><span class="hs-keyword">type</span><span> </span><span id="TheyHaveAgency"><span class="annot"><a href="Network.TypedProtocol.Core.html#TheyHaveAgency"><span class="hs-identifier hs-var">TheyHaveAgency</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051503"><span class="annot"><a href="#local-6989586621679051503"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerRole"><span class="hs-identifier hs-type">PeerRole</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679051504"><span class="annot"><a href="#local-6989586621679051504"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerHasAgency"><span class="hs-identifier hs-type">PeerHasAgency</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Core.html#FlipAgency"><span class="hs-identifier hs-type">FlipAgency</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051503"><span class="hs-identifier hs-type">pr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679051504"><span class="hs-identifier hs-type">st</span></a></span><span>
+</span><span id="line-356"></span><span>
+</span><span id="line-357"></span><span class="hs-comment">-- | A type function to flip the client and server roles.</span><span>
+</span><span id="line-358"></span><span class="hs-comment">--</span><span>
+</span><span id="line-359"></span><span class="hs-keyword">type</span><span> </span><span class="hs-keyword">family</span><span> </span><span id="FlipAgency"><span class="annot"><a href="Network.TypedProtocol.Core.html#FlipAgency"><span class="hs-identifier hs-var">FlipAgency</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051505"><span class="annot"><a href="#local-6989586621679051505"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerRole"><span class="hs-identifier hs-type">PeerRole</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-360"></span><span>  </span><span id="FlipAgency"><span class="annot"><a href="Network.TypedProtocol.Core.html#FlipAgency"><span class="hs-identifier hs-var">FlipAgency</span></a></span></span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#AsClient"><span class="hs-identifier hs-type">AsClient</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#AsServer"><span class="hs-identifier hs-type">AsServer</span></a></span><span>
+</span><span id="line-361"></span><span>  </span><span id="FlipAgency"><span class="annot"><a href="Network.TypedProtocol.Core.html#FlipAgency"><span class="hs-identifier hs-var">FlipAgency</span></a></span></span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#AsServer"><span class="hs-identifier hs-type">AsServer</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#AsClient"><span class="hs-identifier hs-type">AsClient</span></a></span><span>
+</span><span id="line-362"></span><span>
+</span><span id="line-363"></span><span>
+</span><span id="line-364"></span><span class="hs-comment">-- | A description of a peer that engages in a protocol.</span><span>
+</span><span id="line-365"></span><span class="hs-comment">--</span><span>
+</span><span id="line-366"></span><span class="hs-comment">-- The protocol describes what messages peers /may/ send or /must/ accept.</span><span>
+</span><span id="line-367"></span><span class="hs-comment">-- A particular peer implementation decides what to actually do within the</span><span>
+</span><span id="line-368"></span><span class="hs-comment">-- constraints of the protocol.</span><span>
+</span><span id="line-369"></span><span class="hs-comment">--</span><span>
+</span><span id="line-370"></span><span class="hs-comment">-- Peers engage in a protocol in either the client or server role. Of course</span><span>
+</span><span id="line-371"></span><span class="hs-comment">-- the client role can only interact with the serve role for the same protocol</span><span>
+</span><span id="line-372"></span><span class="hs-comment">-- and vice versa.</span><span>
+</span><span id="line-373"></span><span class="hs-comment">--</span><span>
+</span><span id="line-374"></span><span class="hs-comment">-- 'Peer' has several type arguments:</span><span>
+</span><span id="line-375"></span><span class="hs-comment">--</span><span>
+</span><span id="line-376"></span><span class="hs-comment">-- * the protocol itself;</span><span>
+</span><span id="line-377"></span><span class="hs-comment">-- * the client\/server role;</span><span>
+</span><span id="line-378"></span><span class="hs-comment">-- *.the current protocol state;</span><span>
+</span><span id="line-379"></span><span class="hs-comment">-- * the monad in which the peer operates; and</span><span>
+</span><span id="line-380"></span><span class="hs-comment">-- * the type of any final result once the peer terminates.</span><span>
+</span><span id="line-381"></span><span class="hs-comment">--</span><span>
+</span><span id="line-382"></span><span class="hs-comment">-- For example:</span><span>
+</span><span id="line-383"></span><span class="hs-comment">--</span><span>
+</span><span id="line-384"></span><span class="hs-comment">-- &gt; pingPongClientExample :: Int -&gt; Peer PingPong AsClient StIdle m ()</span><span>
+</span><span id="line-385"></span><span class="hs-comment">-- &gt; pingPongServerExample ::        Peer PingPong AsServer StIdle m Int</span><span>
+</span><span id="line-386"></span><span class="hs-comment">--</span><span>
+</span><span id="line-387"></span><span class="hs-comment">-- The actions that a peer can take are:</span><span>
+</span><span id="line-388"></span><span class="hs-comment">--</span><span>
+</span><span id="line-389"></span><span class="hs-comment">-- * to perform local monadic effects</span><span>
+</span><span id="line-390"></span><span class="hs-comment">-- * to terminate with a result (but only in a terminal protocol state)</span><span>
+</span><span id="line-391"></span><span class="hs-comment">-- * to send a message (but only in a protocol state in which we have agency)</span><span>
+</span><span id="line-392"></span><span class="hs-comment">-- * to wait to receive a message (but only in a protocol state in which the</span><span>
+</span><span id="line-393"></span><span class="hs-comment">--   other peer has agency)</span><span>
+</span><span id="line-394"></span><span class="hs-comment">--</span><span>
+</span><span id="line-395"></span><span class="hs-comment">-- In the 'Done', 'Yield' and 'Await' cases we must provide evidence of both</span><span>
+</span><span id="line-396"></span><span class="hs-comment">-- the protocol state we are in and that the appropriate peer has agency.</span><span>
+</span><span id="line-397"></span><span class="hs-comment">-- This takes the form of 'ClientAgency' or 'ServerAgency' applied to a</span><span>
+</span><span id="line-398"></span><span class="hs-comment">-- protocol-specific state token: either a 'ClientHasAgency' or a</span><span>
+</span><span id="line-399"></span><span class="hs-comment">-- 'ServerHasAgency' token for the protocol. The 'Done' state does not need</span><span>
+</span><span id="line-400"></span><span class="hs-comment">-- the extra agency information.</span><span>
+</span><span id="line-401"></span><span class="hs-comment">--</span><span>
+</span><span id="line-402"></span><span class="hs-comment">-- While this evidence must be provided, the types guarantee that it is not</span><span>
+</span><span id="line-403"></span><span class="hs-comment">-- possible to supply incorrect evidence.</span><span>
+</span><span id="line-404"></span><span class="hs-comment">--</span><span>
+</span><span id="line-405"></span><span class="hs-keyword">data</span><span> </span><span id="Peer"><span class="annot"><a href="Network.TypedProtocol.Core.html#Peer"><span class="hs-identifier hs-var">Peer</span></a></span></span><span> </span><span id="local-6989586621679051507"><span class="annot"><a href="#local-6989586621679051507"><span class="hs-identifier hs-type">ps</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051508"><span class="annot"><a href="#local-6989586621679051508"><span class="hs-identifier hs-type">pr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerRole"><span class="hs-identifier hs-type">PeerRole</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679051509"><span class="annot"><a href="#local-6989586621679051509"><span class="hs-identifier hs-type">st</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051507"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679051510"><span class="annot"><a href="#local-6989586621679051510"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span id="local-6989586621679051511"><span class="annot"><a href="#local-6989586621679051511"><span class="hs-identifier hs-type">a</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-406"></span><span>
+</span><span id="line-407"></span><span>  </span><span class="hs-comment">-- | Perform a local monadic effect and then continue.</span><span>
+</span><span id="line-408"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-409"></span><span>  </span><span class="hs-comment">-- Example:</span><span>
+</span><span id="line-410"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-411"></span><span>  </span><span class="hs-comment">-- &gt; Effect $ do</span><span>
+</span><span id="line-412"></span><span>  </span><span class="hs-comment">-- &gt;   ...          -- actions in the monad</span><span>
+</span><span id="line-413"></span><span>  </span><span class="hs-comment">-- &gt;   return $ ... -- another Peer value</span><span>
+</span><span id="line-414"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-415"></span><span>  </span><span id="local-6989586621679051512"><span id="local-6989586621679051513"><span id="local-6989586621679051514"><span id="local-6989586621679051515"><span id="local-6989586621679051516"><span id="Effect"><span class="annot"><a href="Network.TypedProtocol.Core.html#Effect"><span class="hs-identifier hs-var">Effect</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051512"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Core.html#Peer"><span class="hs-identifier hs-type">Peer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051513"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051514"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051515"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051512"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051516"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-416"></span><span>         </span><span class="hs-glyph">-&gt;</span><span>    </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Peer"><span class="hs-identifier hs-type">Peer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051513"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051514"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051515"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051512"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051516"><span class="hs-identifier hs-type">a</span></a></span></span></span></span></span></span><span>
+</span><span id="line-417"></span><span>
+</span><span id="line-418"></span><span>  </span><span class="hs-comment">-- | Terminate with a result. A state token must be provided from the</span><span>
+</span><span id="line-419"></span><span>  </span><span class="hs-comment">-- 'NobodyHasAgency' states, so show that this is a state in which we can</span><span>
+</span><span id="line-420"></span><span>  </span><span class="hs-comment">-- terminate.</span><span>
+</span><span id="line-421"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-422"></span><span>  </span><span class="hs-comment">-- Example:</span><span>
+</span><span id="line-423"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-424"></span><span>  </span><span class="hs-comment">-- &gt; Yield (ClientAgency TokIdle)</span><span>
+</span><span id="line-425"></span><span>  </span><span class="hs-comment">-- &gt;        MsgDone</span><span>
+</span><span id="line-426"></span><span>  </span><span class="hs-comment">-- &gt;       (Done TokDone result)</span><span>
+</span><span id="line-427"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-428"></span><span>  </span><span id="local-6989586621679051518"><span id="local-6989586621679051519"><span id="local-6989586621679051520"><span id="local-6989586621679051521"><span id="local-6989586621679051522"><span id="Done"><span class="annot"><a href="Network.TypedProtocol.Core.html#Done"><span class="hs-identifier hs-var">Done</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Core.html#NobodyHasAgency"><span class="hs-identifier hs-type">NobodyHasAgency</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051518"><span class="hs-identifier hs-type">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-429"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679051519"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-430"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Peer"><span class="hs-identifier hs-type">Peer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051520"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051521"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051518"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051522"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051519"><span class="hs-identifier hs-type">a</span></a></span></span></span></span></span></span><span>
+</span><span id="line-431"></span><span>
+</span><span id="line-432"></span><span>  </span><span class="hs-comment">-- | Send a message to the other peer and then continue. This takes the</span><span>
+</span><span id="line-433"></span><span>  </span><span class="hs-comment">-- message and the continuation. It also requires evidence that we have</span><span>
+</span><span id="line-434"></span><span>  </span><span class="hs-comment">-- agency for this protocol state and thus are allowed to send messages.</span><span>
+</span><span id="line-435"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-436"></span><span>  </span><span class="hs-comment">-- Example:</span><span>
+</span><span id="line-437"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-438"></span><span>  </span><span class="hs-comment">-- &gt; Yield (ClientAgency TokIdle) MsgPing $ ...</span><span>
+</span><span id="line-439"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-440"></span><span>  </span><span id="local-6989586621679051523"><span id="local-6989586621679051524"><span id="local-6989586621679051525"><span id="local-6989586621679051526"><span id="local-6989586621679051527"><span id="local-6989586621679051528"><span id="Yield"><span class="annot"><a href="Network.TypedProtocol.Core.html#Yield"><span class="hs-identifier hs-var">Yield</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Core.html#WeHaveAgency"><span class="hs-identifier hs-type">WeHaveAgency</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051523"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051524"><span class="hs-identifier hs-type">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-441"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Message"><span class="hs-identifier hs-type">Message</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051525"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051524"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051526"><span class="hs-identifier hs-type">st'</span></a></span><span>
+</span><span id="line-442"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Peer"><span class="hs-identifier hs-type">Peer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051525"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051523"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051526"><span class="hs-identifier hs-type">st'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051527"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051528"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-443"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Peer"><span class="hs-identifier hs-type">Peer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051525"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051523"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051524"><span class="hs-identifier hs-type">st</span></a></span><span>  </span><span class="annot"><a href="#local-6989586621679051527"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051528"><span class="hs-identifier hs-type">a</span></a></span></span></span></span></span></span></span><span>
+</span><span id="line-444"></span><span>
+</span><span id="line-445"></span><span>  </span><span class="hs-comment">-- | Waits to receive a message from the other peer and then continues.</span><span>
+</span><span id="line-446"></span><span>  </span><span class="hs-comment">-- This takes the the continuation that is supplied with the received</span><span>
+</span><span id="line-447"></span><span>  </span><span class="hs-comment">-- message. It also requires evidence that the other peer has agency for</span><span>
+</span><span id="line-448"></span><span>  </span><span class="hs-comment">-- this protocol state and thus we are expected to wait to receive messages.</span><span>
+</span><span id="line-449"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-450"></span><span>  </span><span class="hs-comment">-- Note that the continuation that gets supplied with the message must be</span><span>
+</span><span id="line-451"></span><span>  </span><span class="hs-comment">-- prepared to deal with /any/ message that is allowed in /this/ protocol</span><span>
+</span><span id="line-452"></span><span>  </span><span class="hs-comment">-- state. This is why the continuation /must/ be polymorphic in the target</span><span>
+</span><span id="line-453"></span><span>  </span><span class="hs-comment">-- state of the message (the third type argument of 'Message').</span><span>
+</span><span id="line-454"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-455"></span><span>  </span><span class="hs-comment">-- Example:</span><span>
+</span><span id="line-456"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-457"></span><span>  </span><span class="hs-comment">-- &gt; Await (ClientAgency TokIdle) $ \msg -&gt;</span><span>
+</span><span id="line-458"></span><span>  </span><span class="hs-comment">-- &gt; case msg of</span><span>
+</span><span id="line-459"></span><span>  </span><span class="hs-comment">-- &gt;   MsgDone -&gt; ...</span><span>
+</span><span id="line-460"></span><span>  </span><span class="hs-comment">-- &gt;   MsgPing -&gt; ...</span><span>
+</span><span id="line-461"></span><span>  </span><span class="hs-comment">--</span><span>
+</span><span id="line-462"></span><span>  </span><span id="local-6989586621679051529"><span id="local-6989586621679051530"><span id="local-6989586621679051531"><span id="local-6989586621679051532"><span id="local-6989586621679051533"><span id="Await"><span class="annot"><a href="Network.TypedProtocol.Core.html#Await"><span class="hs-identifier hs-var">Await</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Core.html#TheyHaveAgency"><span class="hs-identifier hs-type">TheyHaveAgency</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051529"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051530"><span class="hs-identifier hs-type">st</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-463"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679051534"><span class="annot"><a href="#local-6989586621679051534"><span class="hs-identifier hs-type">st'</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Message"><span class="hs-identifier hs-type">Message</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051531"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051530"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051534"><span class="hs-identifier hs-type">st'</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Peer"><span class="hs-identifier hs-type">Peer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051531"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051529"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051534"><span class="hs-identifier hs-type">st'</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051532"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051533"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-464"></span><span>         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#Peer"><span class="hs-identifier hs-type">Peer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051531"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051529"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051530"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051532"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051533"><span class="hs-identifier hs-type">a</span></a></span></span></span></span></span></span><span>
+</span><span id="line-465"></span><span>
+</span><span id="line-466"></span><span>
+</span><span id="line-467"></span><span id="local-6989586621679051438"><span id="local-6989586621679051439"><span id="local-6989586621679051440"><span id="local-6989586621679051441"><span id="local-6989586621679051536"><span id="local-6989586621679051540"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051439"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#Functor"><span class="hs-identifier hs-type">Functor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.TypedProtocol.Core.html#Peer"><span class="hs-identifier hs-type">Peer</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679051438"><span class="hs-identifier hs-type">ps</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679051440"><span class="hs-identifier hs-type">pr</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.TypedProtocol.Core.html#PeerRole"><span class="hs-identifier hs-type">PeerRole</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679051441"><span class="hs-identifier hs-type">st</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679051438"><span class="hs-identifier hs-type">ps</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679051439"><span class="hs-identifier hs-type">m</span></a></span><span class="hs-special">)</span></span></span></span></span></span></span><span>
+</span><span id="line-468"></span></pre></body></html>

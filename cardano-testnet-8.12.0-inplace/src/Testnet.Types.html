@@ -1,0 +1,613 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ExistentialQuantification #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes #-}</span><span>
+</span><span id="line-9"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-10"></span><span class="hs-pragma">{-# LANGUAGE StandaloneDeriving #-}</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Testnet.Types</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Testnet.Types.html#LeadershipSlot"><span class="hs-identifier">LeadershipSlot</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#NodeLoggingFormat"><span class="hs-identifier">NodeLoggingFormat</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#PaymentKeyInfo"><span class="hs-identifier">PaymentKeyInfo</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#TestnetRuntime"><span class="hs-identifier">TestnetRuntime</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#NodeRuntime"><span class="hs-identifier">NodeRuntime</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#nodeSocketPath"><span class="hs-identifier">nodeSocketPath</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#PoolNode"><span class="hs-identifier">PoolNode</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#PoolNodeKeys"><span class="hs-identifier">PoolNodeKeys</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#Delegator"><span class="hs-identifier">Delegator</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#KeyPair"><span class="hs-identifier">KeyPair</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#verificationKeyFp"><span class="hs-identifier">verificationKeyFp</span></a></span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#signingKeyFp"><span class="hs-identifier">signingKeyFp</span></a></span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#SomeKeyPair"><span class="hs-identifier">SomeKeyPair</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#VKey"><span class="hs-identifier">VKey</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#SKey"><span class="hs-identifier">SKey</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#ColdPoolKey"><span class="hs-identifier">ColdPoolKey</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Keys.Praos.html#VrfKey"><span class="hs-identifier">VrfKey</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#StakingKey"><span class="hs-identifier">StakingKey</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Keys.Shelley.html#PaymentKey"><span class="hs-identifier">PaymentKey</span></a></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Keys.Shelley.html#DRepKey"><span class="hs-identifier">DRepKey</span></a></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#SpoColdKey"><span class="hs-identifier">SpoColdKey</span></a></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#allNodes"><span class="hs-identifier">allNodes</span></a></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#poolSprockets"><span class="hs-identifier">poolSprockets</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#poolNodeStdout"><span class="hs-identifier">poolNodeStdout</span></a></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#readNodeLoggingFormat"><span class="hs-identifier">readNodeLoggingFormat</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-ledger-shelley-1.12.1.0-640124d29a893bcd4ccad740b80bd9d66f087f6bb7a8de030a66b6e6fceed85f/share/doc/html/src/Cardano.Ledger.Shelley.Genesis.html#ShelleyGenesis"><span class="hs-identifier">ShelleyGenesis</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#shelleyGenesis"><span class="hs-identifier">shelleyGenesis</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Testnet.Types.html#getStartTime"><span class="hs-identifier">getStartTime</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-2446e22528ab33e4fd7b48afaf9b171c69a9f1b59a5038cd8e06411b53339a65/share/doc/html/src/Cardano.Api.html"><span class="hs-identifier">Cardano.Api</span></a></span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-2446e22528ab33e4fd7b48afaf9b171c69a9f1b59a5038cd8e06411b53339a65/share/doc/html/src/Cardano.Api.Shelley.html"><span class="hs-identifier">Cardano.Api.Shelley</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Keys.Praos.html#VrfKey"><span class="hs-identifier">VrfKey</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-ledger-byron-1.0.1.0-f2de367d412b6b4003928ec3d35789813be56bde30b3743256b36b43771aac86/share/doc/html/src/Cardano.Chain.Genesis.html"><span class="hs-identifier">Cardano.Chain.Genesis</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">G</span></span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-crypto-wrapper-1.5.1.2-fd83cee99584f516b3e2272655245701b331b93479b5cf4dbbdf73e9dd02e952/share/doc/html/src/Cardano.Crypto.ProtocolMagic.html"><span class="hs-identifier">Cardano.Crypto.ProtocolMagic</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-crypto-wrapper-1.5.1.2-fd83cee99584f516b3e2272655245701b331b93479b5cf4dbbdf73e9dd02e952/share/doc/html/src/Cardano.Crypto.ProtocolMagic.html#RequiresNetworkMagic"><span class="hs-identifier">RequiresNetworkMagic</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-ledger-core-1.13.1.0-16833a3d5a7bc71cceeaa03ba04e9372d9c7cbe7960f83c1cf0a826f1985b151/share/doc/html/src/Cardano.Ledger.Crypto.html"><span class="hs-identifier">Cardano.Ledger.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-ledger-core-1.13.1.0-16833a3d5a7bc71cceeaa03ba04e9372d9c7cbe7960f83c1cf0a826f1985b151/share/doc/html/src/Cardano.Ledger.Crypto.html#StandardCrypto"><span class="hs-identifier">StandardCrypto</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-ledger-shelley-1.12.1.0-640124d29a893bcd4ccad740b80bd9d66f087f6bb7a8de030a66b6e6fceed85f/share/doc/html/src/Cardano.Ledger.Shelley.Genesis.html"><span class="hs-identifier">Cardano.Ledger.Shelley.Genesis</span></a></span><span>
+</span><span id="line-50"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Configuration.POM.html"><span class="hs-identifier">Cardano.Node.Configuration.POM</span></a></span><span>
+</span><span id="line-51"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Protocol.Byron.html"><span class="hs-identifier">Cardano.Node.Protocol.Byron</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Byron</span></span><span>
+</span><span id="line-52"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Types.html"><span class="hs-identifier">Cardano.Node.Types</span></a></span><span>
+</span><span id="line-53"></span><span>
+</span><span id="line-54"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Prelude.html"><span class="hs-identifier">Prelude</span></a></span><span>
+</span><span id="line-55"></span><span>
+</span><span id="line-56"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Aeson</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">A</span></span><span>
+</span><span id="line-58"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.html"><span class="hs-identifier">Data.Text</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier">Text</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.html"><span class="hs-identifier">Data.Time.Clock</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier">UTCTime</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Generics.html"><span class="hs-identifier">GHC.Generics</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Generics.html#Generic"><span class="hs-identifier">Generic</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-61"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Handle.html"><span class="hs-identifier">GHC.IO.Handle</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">IO</span></span><span>
+</span><span id="line-62"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Stack.html"><span class="hs-identifier">GHC.Stack</span></a></span><span>
+</span><span id="line-63"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/2acyi568zn81zf53r001401ardm0xfd7-network-lib-network-3.1.4.0-haddock-doc/share/doc/network/html/src/Network.Socket.html"><span class="hs-identifier">Network.Socket</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/2acyi568zn81zf53r001401ardm0xfd7-network-lib-network-3.1.4.0-haddock-doc/share/doc/network/html/src/Network.Socket.Types.html#PortNumber"><span class="hs-identifier">PortNumber</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/template-haskell-2.20.0.0/src/System.FilePath.html"><span class="hs-identifier">System.FilePath</span></a></span><span>
+</span><span id="line-65"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/process-1.6.17.0/src/System.Process.html"><span class="hs-identifier">System.Process</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">IO</span></span><span>
+</span><span id="line-66"></span><span>
+</span><span id="line-67"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Testnet.Start.Types.html"><span class="hs-identifier">Testnet.Start.Types</span></a></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/6vhbj2imaq9yazn9k0kjdjw8sni3v11k-hedgehog-lib-hedgehog-1.4-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.html"><span class="hs-identifier">Hedgehog</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span>
+</span><span id="line-70"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/7jc9gamvqvfraah041yka5njd0f2c7v3-hedgehog-extras-lib-hedgehog-extras-0.6.4.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Stock.html"><span class="hs-identifier">Hedgehog.Extras.Stock</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">H</span></span><span>
+</span><span id="line-71"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/7jc9gamvqvfraah041yka5njd0f2c7v3-hedgehog-extras-lib-hedgehog-extras-0.6.4.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Stock.IO.Network.Sprocket.html"><span class="hs-identifier">Hedgehog.Extras.Stock.IO.Network.Sprocket</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/7jc9gamvqvfraah041yka5njd0f2c7v3-hedgehog-extras-lib-hedgehog-extras-0.6.4.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Stock.IO.Network.Sprocket.html#Sprocket"><span class="hs-identifier">Sprocket</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-keyword">data</span><span> </span><span id="KeyPair"><span class="annot"><a href="Testnet.Types.html#KeyPair"><span class="hs-identifier hs-var">KeyPair</span></a></span></span><span> </span><span id="local-6989586621679543145"><span class="annot"><a href="#local-6989586621679543145"><span class="hs-identifier hs-type">k</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="KeyPair"><span class="annot"><a href="Testnet.Types.html#KeyPair"><span class="hs-identifier hs-var">KeyPair</span></a></span></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="verificationKey"><span class="annot"><span class="annottext">forall k.
+KeyPair k -&gt; forall (dir :: FileDirection). File (VKey k) dir
+</span><a href="Testnet.Types.html#verificationKey"><span class="hs-identifier hs-var hs-var">verificationKey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679543148"><span class="annot"><a href="#local-6989586621679543148"><span class="hs-identifier hs-type">dir</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.IO.Base.html#File"><span class="hs-identifier hs-type">File</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Types.html#VKey"><span class="hs-identifier hs-type">VKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679543145"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679543148"><span class="hs-identifier hs-type">dir</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="signingKey"><span class="annot"><span class="annottext">forall k.
+KeyPair k -&gt; forall (dir :: FileDirection). File (SKey k) dir
+</span><a href="Testnet.Types.html#signingKey"><span class="hs-identifier hs-var hs-var">signingKey</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679543153"><span class="annot"><a href="#local-6989586621679543153"><span class="hs-identifier hs-type">dir</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.IO.Base.html#File"><span class="hs-identifier hs-type">File</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Types.html#SKey"><span class="hs-identifier hs-type">SKey</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679543145"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="#local-6989586621679543153"><span class="hs-identifier hs-type">dir</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span id="local-6989586621679543161"><span id="local-6989586621679543414"><span id="local-6989586621679543420"><span id="local-6989586621679543423"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Types.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679543161"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">)</span></span></span></span></span><span>
+</span><span id="line-79"></span><span id="local-6989586621679543166"><span id="local-6989586621679543427"><span id="local-6989586621679543432"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-type">Eq</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Types.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679543166"><span class="hs-identifier hs-type">k</span></a></span><span class="hs-special">)</span></span></span></span><span>
+</span><span id="line-80"></span><span>
+</span><span id="line-81"></span><span id="local-6989586621679543436"><span class="annot"><a href="Testnet.Types.html#verificationKeyFp"><span class="hs-identifier hs-type">verificationKeyFp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Types.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679543436"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span></span><span>
+</span><span id="line-82"></span><span id="verificationKeyFp"><span class="annot"><span class="annottext">verificationKeyFp :: forall k. KeyPair k -&gt; String
+</span><a href="Testnet.Types.html#verificationKeyFp"><span class="hs-identifier hs-var hs-var">verificationKeyFp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">File (VKey k) Any -&gt; String
+forall content (direction :: FileDirection).
+File content direction -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.IO.Base.html#unFile"><span class="hs-identifier hs-var">unFile</span></a></span><span> </span><span class="annot"><span class="annottext">(File (VKey k) Any -&gt; String)
+-&gt; (KeyPair k -&gt; File (VKey k) Any) -&gt; KeyPair k -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">KeyPair k -&gt; File (VKey k) Any
+KeyPair k -&gt; forall (dir :: FileDirection). File (VKey k) dir
+forall k.
+KeyPair k -&gt; forall (dir :: FileDirection). File (VKey k) dir
+</span><a href="Testnet.Types.html#verificationKey"><span class="hs-identifier hs-var">verificationKey</span></a></span><span>
+</span><span id="line-83"></span><span>
+</span><span id="line-84"></span><span id="local-6989586621679543440"><span class="annot"><a href="Testnet.Types.html#signingKeyFp"><span class="hs-identifier hs-type">signingKeyFp</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Types.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679543440"><span class="hs-identifier hs-type">k</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span></span><span>
+</span><span id="line-85"></span><span id="signingKeyFp"><span class="annot"><span class="annottext">signingKeyFp :: forall k. KeyPair k -&gt; String
+</span><a href="Testnet.Types.html#signingKeyFp"><span class="hs-identifier hs-var hs-var">signingKeyFp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">File (SKey k) Any -&gt; String
+forall content (direction :: FileDirection).
+File content direction -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.IO.Base.html#unFile"><span class="hs-identifier hs-var">unFile</span></a></span><span> </span><span class="annot"><span class="annottext">(File (SKey k) Any -&gt; String)
+-&gt; (KeyPair k -&gt; File (SKey k) Any) -&gt; KeyPair k -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">KeyPair k -&gt; File (SKey k) Any
+KeyPair k -&gt; forall (dir :: FileDirection). File (SKey k) dir
+forall k.
+KeyPair k -&gt; forall (dir :: FileDirection). File (SKey k) dir
+</span><a href="Testnet.Types.html#signingKey"><span class="hs-identifier hs-var">signingKey</span></a></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-keyword">data</span><span> </span><span id="SomeKeyPair"><span class="annot"><a href="Testnet.Types.html#SomeKeyPair"><span class="hs-identifier hs-var">SomeKeyPair</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679543441"><span class="annot"><a href="#local-6989586621679543441"><span class="hs-identifier hs-type">a</span></a></span></span><span class="hs-operator">.</span><span> </span><span id="SomeKeyPair"><span class="annot"><a href="Testnet.Types.html#SomeKeyPair"><span class="hs-identifier hs-var">SomeKeyPair</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Testnet.Types.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679543441"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-88"></span><span id="local-6989586621679543444"><span id="local-6989586621679543446"><span id="local-6989586621679543450"><span class="hs-keyword">deriving</span><span> </span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="Testnet.Types.html#SomeKeyPair"><span class="hs-identifier hs-type">SomeKeyPair</span></a></span></span></span></span><span>
+</span><span id="line-89"></span><span>
+</span><span id="line-90"></span><span class="annot"><span class="hs-comment">-- | Verification key tag</span></span><span>
+</span><span id="line-91"></span><span class="hs-keyword">data</span><span> </span><span id="VKey"><span class="annot"><a href="Testnet.Types.html#VKey"><span class="hs-identifier hs-var">VKey</span></a></span></span><span> </span><span id="local-6989586621679543452"><span class="annot"><a href="#local-6989586621679543452"><span class="hs-identifier hs-type">k</span></a></span></span><span>
+</span><span id="line-92"></span><span>
+</span><span id="line-93"></span><span class="annot"><span class="hs-comment">-- | Signing key tag</span></span><span>
+</span><span id="line-94"></span><span class="hs-keyword">data</span><span> </span><span id="SKey"><span class="annot"><a href="Testnet.Types.html#SKey"><span class="hs-identifier hs-var">SKey</span></a></span></span><span> </span><span id="local-6989586621679543453"><span class="annot"><a href="#local-6989586621679543453"><span class="hs-identifier hs-type">k</span></a></span></span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span class="hs-keyword">data</span><span> </span><span id="TestnetRuntime"><span class="annot"><a href="Testnet.Types.html#TestnetRuntime"><span class="hs-identifier hs-var">TestnetRuntime</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="TestnetRuntime"><span class="annot"><a href="Testnet.Types.html#TestnetRuntime"><span class="hs-identifier hs-var">TestnetRuntime</span></a></span></span><span>
+</span><span id="line-97"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="configurationFile"><span class="annot"><span class="annottext">TestnetRuntime -&gt; NodeConfigFile 'In
+</span><a href="Testnet.Types.html#configurationFile"><span class="hs-identifier hs-var hs-var">configurationFile</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.LedgerState.html#NodeConfigFile"><span class="hs-identifier hs-type">NodeConfigFile</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.IO.Base.html#In"><span class="hs-identifier hs-type">In</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="shelleyGenesisFile"><span class="annot"><span class="annottext">TestnetRuntime -&gt; String
+</span><a href="Testnet.Types.html#shelleyGenesisFile"><span class="hs-identifier hs-var hs-var">shelleyGenesisFile</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="testnetMagic"><span class="annot"><span class="annottext">TestnetRuntime -&gt; Int
+</span><a href="Testnet.Types.html#testnetMagic"><span class="hs-identifier hs-var hs-var">testnetMagic</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-100"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="poolNodes"><span class="annot"><span class="annottext">TestnetRuntime -&gt; [PoolNode]
+</span><a href="Testnet.Types.html#poolNodes"><span class="hs-identifier hs-var hs-var">poolNodes</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="Testnet.Types.html#PoolNode"><span class="hs-identifier hs-type">PoolNode</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-101"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="wallets"><span class="annot"><span class="annottext">TestnetRuntime -&gt; [PaymentKeyInfo]
+</span><a href="Testnet.Types.html#wallets"><span class="hs-identifier hs-var hs-var">wallets</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="Testnet.Types.html#PaymentKeyInfo"><span class="hs-identifier hs-type">PaymentKeyInfo</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-102"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="delegators"><span class="annot"><span class="annottext">TestnetRuntime -&gt; [Delegator]
+</span><a href="Testnet.Types.html#delegators"><span class="hs-identifier hs-var hs-var">delegators</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">[</span><span class="annot"><a href="Testnet.Types.html#Delegator"><span class="hs-identifier hs-type">Delegator</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-103"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span class="annot"><a href="Testnet.Types.html#poolSprockets"><span class="hs-identifier hs-type">poolSprockets</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Types.html#TestnetRuntime"><span class="hs-identifier hs-type">TestnetRuntime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/7jc9gamvqvfraah041yka5njd0f2c7v3-hedgehog-extras-lib-hedgehog-extras-0.6.4.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Stock.IO.Network.Sprocket.html#Sprocket"><span class="hs-identifier hs-type">Sprocket</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-106"></span><span id="poolSprockets"><span class="annot"><span class="annottext">poolSprockets :: TestnetRuntime -&gt; [Sprocket]
+</span><a href="Testnet.Types.html#poolSprockets"><span class="hs-identifier hs-var hs-var">poolSprockets</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PoolNode -&gt; Sprocket) -&gt; [PoolNode] -&gt; [Sprocket]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">NodeRuntime -&gt; Sprocket
+</span><a href="Testnet.Types.html#nodeSprocket"><span class="hs-identifier hs-var">nodeSprocket</span></a></span><span> </span><span class="annot"><span class="annottext">(NodeRuntime -&gt; Sprocket)
+-&gt; (PoolNode -&gt; NodeRuntime) -&gt; PoolNode -&gt; Sprocket
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">PoolNode -&gt; NodeRuntime
+</span><a href="Testnet.Types.html#poolRuntime"><span class="hs-identifier hs-var">poolRuntime</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([PoolNode] -&gt; [Sprocket])
+-&gt; (TestnetRuntime -&gt; [PoolNode]) -&gt; TestnetRuntime -&gt; [Sprocket]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">TestnetRuntime -&gt; [PoolNode]
+</span><a href="Testnet.Types.html#poolNodes"><span class="hs-identifier hs-var">poolNodes</span></a></span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span class="hs-keyword">data</span><span> </span><span id="PoolNode"><span class="annot"><a href="Testnet.Types.html#PoolNode"><span class="hs-identifier hs-var">PoolNode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PoolNode"><span class="annot"><a href="Testnet.Types.html#PoolNode"><span class="hs-identifier hs-var">PoolNode</span></a></span></span><span>
+</span><span id="line-109"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="poolRuntime"><span class="annot"><span class="annottext">PoolNode -&gt; NodeRuntime
+</span><a href="Testnet.Types.html#poolRuntime"><span class="hs-identifier hs-var hs-var">poolRuntime</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Types.html#NodeRuntime"><span class="hs-identifier hs-type">NodeRuntime</span></a></span><span>
+</span><span id="line-110"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="poolKeys"><span class="annot"><span class="annottext">PoolNode -&gt; PoolNodeKeys
+</span><a href="Testnet.Types.html#poolKeys"><span class="hs-identifier hs-var hs-var">poolKeys</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Types.html#PoolNodeKeys"><span class="hs-identifier hs-type">PoolNodeKeys</span></a></span><span>
+</span><span id="line-111"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="annot"><a href="Testnet.Types.html#poolNodeStdout"><span class="hs-identifier hs-type">poolNodeStdout</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Types.html#PoolNode"><span class="hs-identifier hs-type">PoolNode</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-114"></span><span id="poolNodeStdout"><span class="annot"><span class="annottext">poolNodeStdout :: PoolNode -&gt; String
+</span><a href="Testnet.Types.html#poolNodeStdout"><span class="hs-identifier hs-var hs-var">poolNodeStdout</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">NodeRuntime -&gt; String
+</span><a href="Testnet.Types.html#nodeStdout"><span class="hs-identifier hs-var">nodeStdout</span></a></span><span> </span><span class="annot"><span class="annottext">(NodeRuntime -&gt; String)
+-&gt; (PoolNode -&gt; NodeRuntime) -&gt; PoolNode -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">PoolNode -&gt; NodeRuntime
+</span><a href="Testnet.Types.html#poolRuntime"><span class="hs-identifier hs-var">poolRuntime</span></a></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span class="hs-keyword">data</span><span> </span><span id="NodeRuntime"><span class="annot"><a href="Testnet.Types.html#NodeRuntime"><span class="hs-identifier hs-var">NodeRuntime</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="NodeRuntime"><span class="annot"><a href="Testnet.Types.html#NodeRuntime"><span class="hs-identifier hs-var">NodeRuntime</span></a></span></span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="nodeName"><span class="annot"><span class="annottext">NodeRuntime -&gt; String
+</span><a href="Testnet.Types.html#nodeName"><span class="hs-identifier hs-var hs-var">nodeName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span>
+</span><span id="line-118"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="nodeIpv4"><span class="annot"><span class="annottext">NodeRuntime -&gt; Text
+</span><a href="Testnet.Types.html#nodeIpv4"><span class="hs-identifier hs-var hs-var">nodeIpv4</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="nodePort"><span class="annot"><span class="annottext">NodeRuntime -&gt; PortNumber
+</span><a href="Testnet.Types.html#nodePort"><span class="hs-identifier hs-var hs-var">nodePort</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/2acyi568zn81zf53r001401ardm0xfd7-network-lib-network-3.1.4.0-haddock-doc/share/doc/network/html/src/Network.Socket.Types.html#PortNumber"><span class="hs-identifier hs-type">PortNumber</span></a></span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="nodeSprocket"><span class="annot"><span class="annottext">NodeRuntime -&gt; Sprocket
+</span><a href="Testnet.Types.html#nodeSprocket"><span class="hs-identifier hs-var hs-var">nodeSprocket</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/7jc9gamvqvfraah041yka5njd0f2c7v3-hedgehog-extras-lib-hedgehog-extras-0.6.4.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Stock.IO.Network.Sprocket.html#Sprocket"><span class="hs-identifier hs-type">Sprocket</span></a></span><span>
+</span><span id="line-121"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="nodeStdinHandle"><span class="annot"><span class="annottext">NodeRuntime -&gt; Handle
+</span><a href="Testnet.Types.html#nodeStdinHandle"><span class="hs-identifier hs-var hs-var">nodeStdinHandle</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Handle.Types.html#Handle"><span class="hs-identifier hs-type">IO.Handle</span></a></span><span>
+</span><span id="line-122"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="nodeStdout"><span class="annot"><span class="annottext">NodeRuntime -&gt; String
+</span><a href="Testnet.Types.html#nodeStdout"><span class="hs-identifier hs-var hs-var">nodeStdout</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-123"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="nodeStderr"><span class="annot"><span class="annottext">NodeRuntime -&gt; String
+</span><a href="Testnet.Types.html#nodeStderr"><span class="hs-identifier hs-var hs-var">nodeStderr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-124"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="nodeProcessHandle"><span class="annot"><span class="annottext">NodeRuntime -&gt; ProcessHandle
+</span><a href="Testnet.Types.html#nodeProcessHandle"><span class="hs-identifier hs-var hs-var">nodeProcessHandle</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/process-1.6.17.0/src/System.Process.Common.html#ProcessHandle"><span class="hs-identifier hs-type">IO.ProcessHandle</span></a></span><span>
+</span><span id="line-125"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="annot"><a href="Testnet.Types.html#nodeSocketPath"><span class="hs-identifier hs-type">nodeSocketPath</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Types.html#NodeRuntime"><span class="hs-identifier hs-type">NodeRuntime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.IO.Base.html#SocketPath"><span class="hs-identifier hs-type">SocketPath</span></a></span><span>
+</span><span id="line-128"></span><span id="nodeSocketPath"><span class="annot"><span class="annottext">nodeSocketPath :: NodeRuntime -&gt; SocketPath
+</span><a href="Testnet.Types.html#nodeSocketPath"><span class="hs-identifier hs-var hs-var">nodeSocketPath</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; SocketPath
+forall content (direction :: FileDirection).
+String -&gt; File content direction
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.IO.Base.html#File"><span class="hs-identifier hs-var">File</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; SocketPath)
+-&gt; (NodeRuntime -&gt; String) -&gt; NodeRuntime -&gt; SocketPath
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Sprocket -&gt; String
+</span><a href="file:///nix/store/7jc9gamvqvfraah041yka5njd0f2c7v3-hedgehog-extras-lib-hedgehog-extras-0.6.4.0-haddock-doc/share/doc/hedgehog-extras/html/src/Hedgehog.Extras.Stock.IO.Network.Sprocket.html#sprocketSystemName"><span class="hs-identifier hs-var">H.sprocketSystemName</span></a></span><span> </span><span class="annot"><span class="annottext">(Sprocket -&gt; String)
+-&gt; (NodeRuntime -&gt; Sprocket) -&gt; NodeRuntime -&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">NodeRuntime -&gt; Sprocket
+</span><a href="Testnet.Types.html#nodeSprocket"><span class="hs-identifier hs-var">nodeSprocket</span></a></span><span>
+</span><span id="line-129"></span><span>
+</span><span id="line-130"></span><span class="hs-keyword">data</span><span> </span><span id="ColdPoolKey"><span class="annot"><a href="Testnet.Types.html#ColdPoolKey"><span class="hs-identifier hs-var">ColdPoolKey</span></a></span></span><span>
+</span><span id="line-131"></span><span class="hs-keyword">data</span><span> </span><span id="StakingKey"><span class="annot"><a href="Testnet.Types.html#StakingKey"><span class="hs-identifier hs-var">StakingKey</span></a></span></span><span>
+</span><span id="line-132"></span><span class="hs-keyword">data</span><span> </span><span id="SpoColdKey"><span class="annot"><a href="Testnet.Types.html#SpoColdKey"><span class="hs-identifier hs-var">SpoColdKey</span></a></span></span><span>
+</span><span id="line-133"></span><span>
+</span><span id="line-134"></span><span class="hs-keyword">data</span><span> </span><span id="PoolNodeKeys"><span class="annot"><a href="Testnet.Types.html#PoolNodeKeys"><span class="hs-identifier hs-var">PoolNodeKeys</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PoolNodeKeys"><span class="annot"><a href="Testnet.Types.html#PoolNodeKeys"><span class="hs-identifier hs-var">PoolNodeKeys</span></a></span></span><span>
+</span><span id="line-135"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="poolNodeKeysCold"><span class="annot"><span class="annottext">PoolNodeKeys -&gt; KeyPair SpoColdKey
+</span><a href="Testnet.Types.html#poolNodeKeysCold"><span class="hs-identifier hs-var hs-var">poolNodeKeysCold</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Types.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="annot"><a href="Testnet.Types.html#SpoColdKey"><span class="hs-identifier hs-type">SpoColdKey</span></a></span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="poolNodeKeysVrf"><span class="annot"><span class="annottext">PoolNodeKeys -&gt; KeyPair VrfKey
+</span><a href="Testnet.Types.html#poolNodeKeysVrf"><span class="hs-identifier hs-var hs-var">poolNodeKeysVrf</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Types.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Keys.Praos.html#VrfKey"><span class="hs-identifier hs-type">VrfKey</span></a></span><span>
+</span><span id="line-137"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="poolNodeKeysStaking"><span class="annot"><span class="annottext">PoolNodeKeys -&gt; KeyPair StakingKey
+</span><a href="Testnet.Types.html#poolNodeKeysStaking"><span class="hs-identifier hs-var hs-var">poolNodeKeysStaking</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Types.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="annot"><a href="Testnet.Types.html#StakingKey"><span class="hs-identifier hs-type">StakingKey</span></a></span><span>
+</span><span id="line-138"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679543480"><span id="local-6989586621679543485"><span class="annot"><span class="annottext">PoolNodeKeys -&gt; PoolNodeKeys -&gt; Bool
+(PoolNodeKeys -&gt; PoolNodeKeys -&gt; Bool)
+-&gt; (PoolNodeKeys -&gt; PoolNodeKeys -&gt; Bool) -&gt; Eq PoolNodeKeys
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: PoolNodeKeys -&gt; PoolNodeKeys -&gt; Bool
+== :: PoolNodeKeys -&gt; PoolNodeKeys -&gt; Bool
+$c/= :: PoolNodeKeys -&gt; PoolNodeKeys -&gt; Bool
+/= :: PoolNodeKeys -&gt; PoolNodeKeys -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679543489"><span id="local-6989586621679543495"><span id="local-6989586621679543499"><span class="annot"><span class="annottext">Int -&gt; PoolNodeKeys -&gt; ShowS
+[PoolNodeKeys] -&gt; ShowS
+PoolNodeKeys -&gt; String
+(Int -&gt; PoolNodeKeys -&gt; ShowS)
+-&gt; (PoolNodeKeys -&gt; String)
+-&gt; ([PoolNodeKeys] -&gt; ShowS)
+-&gt; Show PoolNodeKeys
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; PoolNodeKeys -&gt; ShowS
+showsPrec :: Int -&gt; PoolNodeKeys -&gt; ShowS
+$cshow :: PoolNodeKeys -&gt; String
+show :: PoolNodeKeys -&gt; String
+$cshowList :: [PoolNodeKeys] -&gt; ShowS
+showList :: [PoolNodeKeys] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span class="hs-keyword">data</span><span> </span><span id="PaymentKeyInfo"><span class="annot"><a href="Testnet.Types.html#PaymentKeyInfo"><span class="hs-identifier hs-var">PaymentKeyInfo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PaymentKeyInfo"><span class="annot"><a href="Testnet.Types.html#PaymentKeyInfo"><span class="hs-identifier hs-var">PaymentKeyInfo</span></a></span></span><span>
+</span><span id="line-141"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="paymentKeyInfoPair"><span class="annot"><span class="annottext">PaymentKeyInfo -&gt; KeyPair PaymentKey
+</span><a href="Testnet.Types.html#paymentKeyInfoPair"><span class="hs-identifier hs-var hs-var">paymentKeyInfoPair</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Types.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Keys.Shelley.html#PaymentKey"><span class="hs-identifier hs-type">PaymentKey</span></a></span><span>
+</span><span id="line-142"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="paymentKeyInfoAddr"><span class="annot"><span class="annottext">PaymentKeyInfo -&gt; Text
+</span><a href="Testnet.Types.html#paymentKeyInfoAddr"><span class="hs-identifier hs-var hs-var">paymentKeyInfoAddr</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-143"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679543505"><span id="local-6989586621679543510"><span class="annot"><span class="annottext">PaymentKeyInfo -&gt; PaymentKeyInfo -&gt; Bool
+(PaymentKeyInfo -&gt; PaymentKeyInfo -&gt; Bool)
+-&gt; (PaymentKeyInfo -&gt; PaymentKeyInfo -&gt; Bool) -&gt; Eq PaymentKeyInfo
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: PaymentKeyInfo -&gt; PaymentKeyInfo -&gt; Bool
+== :: PaymentKeyInfo -&gt; PaymentKeyInfo -&gt; Bool
+$c/= :: PaymentKeyInfo -&gt; PaymentKeyInfo -&gt; Bool
+/= :: PaymentKeyInfo -&gt; PaymentKeyInfo -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679543514"><span id="local-6989586621679543520"><span id="local-6989586621679543524"><span class="annot"><span class="annottext">Int -&gt; PaymentKeyInfo -&gt; ShowS
+[PaymentKeyInfo] -&gt; ShowS
+PaymentKeyInfo -&gt; String
+(Int -&gt; PaymentKeyInfo -&gt; ShowS)
+-&gt; (PaymentKeyInfo -&gt; String)
+-&gt; ([PaymentKeyInfo] -&gt; ShowS)
+-&gt; Show PaymentKeyInfo
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; PaymentKeyInfo -&gt; ShowS
+showsPrec :: Int -&gt; PaymentKeyInfo -&gt; ShowS
+$cshow :: PaymentKeyInfo -&gt; String
+show :: PaymentKeyInfo -&gt; String
+$cshowList :: [PaymentKeyInfo] -&gt; ShowS
+showList :: [PaymentKeyInfo] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-144"></span><span>
+</span><span id="line-145"></span><span class="hs-keyword">data</span><span> </span><span id="Delegator"><span class="annot"><a href="Testnet.Types.html#Delegator"><span class="hs-identifier hs-var">Delegator</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Delegator"><span class="annot"><a href="Testnet.Types.html#Delegator"><span class="hs-identifier hs-var">Delegator</span></a></span></span><span>
+</span><span id="line-146"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="paymentKeyPair"><span class="annot"><span class="annottext">Delegator -&gt; KeyPair PaymentKey
+</span><a href="Testnet.Types.html#paymentKeyPair"><span class="hs-identifier hs-var hs-var">paymentKeyPair</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Types.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Keys.Shelley.html#PaymentKey"><span class="hs-identifier hs-type">PaymentKey</span></a></span><span>
+</span><span id="line-147"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="stakingKeyPair"><span class="annot"><span class="annottext">Delegator -&gt; KeyPair StakingKey
+</span><a href="Testnet.Types.html#stakingKeyPair"><span class="hs-identifier hs-var hs-var">stakingKeyPair</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Types.html#KeyPair"><span class="hs-identifier hs-type">KeyPair</span></a></span><span> </span><span class="annot"><a href="Testnet.Types.html#StakingKey"><span class="hs-identifier hs-type">StakingKey</span></a></span><span>
+</span><span id="line-148"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679543530"><span id="local-6989586621679543534"><span class="annot"><span class="annottext">Delegator -&gt; Delegator -&gt; Bool
+(Delegator -&gt; Delegator -&gt; Bool)
+-&gt; (Delegator -&gt; Delegator -&gt; Bool) -&gt; Eq Delegator
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Delegator -&gt; Delegator -&gt; Bool
+== :: Delegator -&gt; Delegator -&gt; Bool
+$c/= :: Delegator -&gt; Delegator -&gt; Bool
+/= :: Delegator -&gt; Delegator -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679543538"><span id="local-6989586621679543543"><span id="local-6989586621679543547"><span class="annot"><span class="annottext">Int -&gt; Delegator -&gt; ShowS
+[Delegator] -&gt; ShowS
+Delegator -&gt; String
+(Int -&gt; Delegator -&gt; ShowS)
+-&gt; (Delegator -&gt; String)
+-&gt; ([Delegator] -&gt; ShowS)
+-&gt; Show Delegator
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Delegator -&gt; ShowS
+showsPrec :: Int -&gt; Delegator -&gt; ShowS
+$cshow :: Delegator -&gt; String
+show :: Delegator -&gt; String
+$cshowList :: [Delegator] -&gt; ShowS
+showList :: [Delegator] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="hs-keyword">data</span><span> </span><span id="LeadershipSlot"><span class="annot"><a href="Testnet.Types.html#LeadershipSlot"><span class="hs-identifier hs-var">LeadershipSlot</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="LeadershipSlot"><span class="annot"><a href="Testnet.Types.html#LeadershipSlot"><span class="hs-identifier hs-var">LeadershipSlot</span></a></span></span><span>
+</span><span id="line-151"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="slotNumber"><span class="annot"><span class="annottext">LeadershipSlot -&gt; Int
+</span><a href="Testnet.Types.html#slotNumber"><span class="hs-identifier hs-var hs-var">slotNumber</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-152"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="slotTime"><span class="annot"><span class="annottext">LeadershipSlot -&gt; Text
+</span><a href="Testnet.Types.html#slotTime"><span class="hs-identifier hs-var hs-var">slotTime</span></a></span></span><span>    </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/text-2.0.2/src/Data.Text.Internal.html#Text"><span class="hs-identifier hs-type">Text</span></a></span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679543553"><span id="local-6989586621679543558"><span class="annot"><span class="annottext">LeadershipSlot -&gt; LeadershipSlot -&gt; Bool
+(LeadershipSlot -&gt; LeadershipSlot -&gt; Bool)
+-&gt; (LeadershipSlot -&gt; LeadershipSlot -&gt; Bool) -&gt; Eq LeadershipSlot
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: LeadershipSlot -&gt; LeadershipSlot -&gt; Bool
+== :: LeadershipSlot -&gt; LeadershipSlot -&gt; Bool
+$c/= :: LeadershipSlot -&gt; LeadershipSlot -&gt; Bool
+/= :: LeadershipSlot -&gt; LeadershipSlot -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679543562"><span id="local-6989586621679543568"><span id="local-6989586621679543572"><span class="annot"><span class="annottext">Int -&gt; LeadershipSlot -&gt; ShowS
+[LeadershipSlot] -&gt; ShowS
+LeadershipSlot -&gt; String
+(Int -&gt; LeadershipSlot -&gt; ShowS)
+-&gt; (LeadershipSlot -&gt; String)
+-&gt; ([LeadershipSlot] -&gt; ShowS)
+-&gt; Show LeadershipSlot
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; LeadershipSlot -&gt; ShowS
+showsPrec :: Int -&gt; LeadershipSlot -&gt; ShowS
+$cshow :: LeadershipSlot -&gt; String
+show :: LeadershipSlot -&gt; String
+$cshowList :: [LeadershipSlot] -&gt; ShowS
+showList :: [LeadershipSlot] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679543575"><span id="local-6989586621679543577"><span class="annot"><span class="annottext">(forall x. LeadershipSlot -&gt; Rep LeadershipSlot x)
+-&gt; (forall x. Rep LeadershipSlot x -&gt; LeadershipSlot)
+-&gt; Generic LeadershipSlot
+forall x. Rep LeadershipSlot x -&gt; LeadershipSlot
+forall x. LeadershipSlot -&gt; Rep LeadershipSlot x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. LeadershipSlot -&gt; Rep LeadershipSlot x
+from :: forall x. LeadershipSlot -&gt; Rep LeadershipSlot x
+$cto :: forall x. Rep LeadershipSlot x -&gt; LeadershipSlot
+to :: forall x. Rep LeadershipSlot x -&gt; LeadershipSlot
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Generics.html#Generic"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679543581"><span id="local-6989586621679543588"><span id="local-6989586621679543591"><span class="annot"><span class="annottext">Maybe LeadershipSlot
+Value -&gt; Parser [LeadershipSlot]
+Value -&gt; Parser LeadershipSlot
+(Value -&gt; Parser LeadershipSlot)
+-&gt; (Value -&gt; Parser [LeadershipSlot])
+-&gt; Maybe LeadershipSlot
+-&gt; FromJSON LeadershipSlot
+forall a.
+(Value -&gt; Parser a)
+-&gt; (Value -&gt; Parser [a]) -&gt; Maybe a -&gt; FromJSON a
+$cparseJSON :: Value -&gt; Parser LeadershipSlot
+parseJSON :: Value -&gt; Parser LeadershipSlot
+$cparseJSONList :: Value -&gt; Parser [LeadershipSlot]
+parseJSONList :: Value -&gt; Parser [LeadershipSlot]
+$comittedField :: Maybe LeadershipSlot
+omittedField :: Maybe LeadershipSlot
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">FromJSON</span></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span id="local-6989586621679543300"><span class="annot"><a href="Testnet.Types.html#shelleyGenesis"><span class="hs-identifier hs-type">shelleyGenesis</span></a></span><span>
+</span><span id="line-156"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/6vhbj2imaq9yazn9k0kjdjw8sni3v11k-hedgehog-lib-hedgehog-1.4-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier hs-type">H.MonadTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679543300"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-157"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679543300"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-159"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Testnet.Types.html#TestnetRuntime"><span class="hs-identifier hs-type">TestnetRuntime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679543300"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-ledger-shelley-1.12.1.0-640124d29a893bcd4ccad740b80bd9d66f087f6bb7a8de030a66b6e6fceed85f/share/doc/html/src/Cardano.Ledger.Shelley.Genesis.html#ShelleyGenesis"><span class="hs-identifier hs-type">ShelleyGenesis</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-ledger-core-1.13.1.0-16833a3d5a7bc71cceeaa03ba04e9372d9c7cbe7960f83c1cf0a826f1985b151/share/doc/html/src/Cardano.Ledger.Crypto.html#StandardCrypto"><span class="hs-identifier hs-type">StandardCrypto</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-160"></span><span id="shelleyGenesis"><span class="annot"><span class="annottext">shelleyGenesis :: forall (m :: * -&gt; *).
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+TestnetRuntime -&gt; m (ShelleyGenesis StandardCrypto)
+</span><a href="Testnet.Types.html#shelleyGenesis"><span class="hs-identifier hs-var hs-var">shelleyGenesis</span></a></span></span><span> </span><span class="annot"><a href="Testnet.Types.html#TestnetRuntime"><span class="hs-identifier hs-type">TestnetRuntime</span></a></span><span class="hs-special">{</span><span id="local-6989586621679543680"><span class="annot"><span class="annottext">String
+shelleyGenesisFile :: TestnetRuntime -&gt; String
+shelleyGenesisFile :: String
+</span><a href="Testnet.Types.html#shelleyGenesisFile"><span class="hs-identifier hs-var hs-var">shelleyGenesisFile</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m (ShelleyGenesis StandardCrypto))
+-&gt; m (ShelleyGenesis StandardCrypto)
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m (ShelleyGenesis StandardCrypto))
+ -&gt; m (ShelleyGenesis StandardCrypto))
+-&gt; (HasCallStack =&gt; m (ShelleyGenesis StandardCrypto))
+-&gt; m (ShelleyGenesis StandardCrypto)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-161"></span><span>  </span><span class="annot"><span class="annottext">Either String (ShelleyGenesis StandardCrypto)
+-&gt; m (ShelleyGenesis StandardCrypto)
+forall (m :: * -&gt; *) x a.
+(MonadTest m, Show x, HasCallStack) =&gt;
+Either x a -&gt; m a
+</span><a href="file:///nix/store/6vhbj2imaq9yazn9k0kjdjw8sni3v11k-hedgehog-lib-hedgehog-1.4-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#evalEither"><span class="hs-identifier hs-var">H.evalEither</span></a></span><span> </span><span class="annot"><span class="annottext">(Either String (ShelleyGenesis StandardCrypto)
+ -&gt; m (ShelleyGenesis StandardCrypto))
+-&gt; m (Either String (ShelleyGenesis StandardCrypto))
+-&gt; m (ShelleyGenesis StandardCrypto)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Either String (ShelleyGenesis StandardCrypto))
+-&gt; m (Either String (ShelleyGenesis StandardCrypto))
+forall (m :: * -&gt; *) a.
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+IO a -&gt; m a
+</span><a href="file:///nix/store/6vhbj2imaq9yazn9k0kjdjw8sni3v11k-hedgehog-lib-hedgehog-1.4-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#evalIO"><span class="hs-identifier hs-var">H.evalIO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; IO (Either String (ShelleyGenesis StandardCrypto))
+forall a. FromJSON a =&gt; String -&gt; IO (Either String a)
+</span><span class="hs-identifier hs-var">A.eitherDecodeFileStrict'</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679543680"><span class="hs-identifier hs-var">shelleyGenesisFile</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span>
+</span><span id="line-163"></span><span id="local-6989586621679543323"><span class="annot"><a href="Testnet.Types.html#getStartTime"><span class="hs-identifier hs-type">getStartTime</span></a></span><span>
+</span><span id="line-164"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/6vhbj2imaq9yazn9k0kjdjw8sni3v11k-hedgehog-lib-hedgehog-1.4-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#MonadTest"><span class="hs-identifier hs-type">H.MonadTest</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679543323"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-165"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.IO.Class.html#MonadIO"><span class="hs-identifier hs-type">MonadIO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679543323"><span class="hs-identifier hs-type">m</span></a></span><span>
+</span><span id="line-166"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Stack.Types.html#HasCallStack"><span class="hs-identifier hs-type">HasCallStack</span></a></span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span>
+</span><span id="line-168"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Testnet.Types.html#TestnetRuntime"><span class="hs-identifier hs-type">TestnetRuntime</span></a></span><span>
+</span><span id="line-169"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679543323"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/time-1.12.2/src/Data.Time.Clock.Internal.UTCTime.html#UTCTime"><span class="hs-identifier hs-type">UTCTime</span></a></span></span><span>
+</span><span id="line-170"></span><span id="getStartTime"><span class="annot"><span class="annottext">getStartTime :: forall (m :: * -&gt; *).
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+String -&gt; TestnetRuntime -&gt; m UTCTime
+</span><a href="Testnet.Types.html#getStartTime"><span class="hs-identifier hs-var hs-var">getStartTime</span></a></span></span><span> </span><span id="local-6989586621679543722"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679543722"><span class="hs-identifier hs-var">tempRootPath</span></a></span></span><span> </span><span class="annot"><a href="Testnet.Types.html#TestnetRuntime"><span class="hs-identifier hs-type">TestnetRuntime</span></a></span><span class="hs-special">{</span><span id="local-6989586621679543723"><span class="annot"><span class="annottext">NodeConfigFile 'In
+configurationFile :: TestnetRuntime -&gt; NodeConfigFile 'In
+configurationFile :: NodeConfigFile 'In
+</span><a href="Testnet.Types.html#configurationFile"><span class="hs-identifier hs-var hs-var">configurationFile</span></a></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(HasCallStack =&gt; m UTCTime) -&gt; m UTCTime
+forall a. HasCallStack =&gt; (HasCallStack =&gt; a) -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Stack.html#withFrozenCallStack"><span class="hs-identifier hs-var">withFrozenCallStack</span></a></span><span> </span><span class="annot"><span class="annottext">((HasCallStack =&gt; m UTCTime) -&gt; m UTCTime)
+-&gt; (HasCallStack =&gt; m UTCTime) -&gt; m UTCTime
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Either String UTCTime -&gt; m UTCTime
+forall (m :: * -&gt; *) x a.
+(MonadTest m, Show x, HasCallStack) =&gt;
+Either x a -&gt; m a
+</span><a href="file:///nix/store/6vhbj2imaq9yazn9k0kjdjw8sni3v11k-hedgehog-lib-hedgehog-1.4-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#evalEither"><span class="hs-identifier hs-var">H.evalEither</span></a></span><span> </span><span class="annot"><span class="annottext">(Either String UTCTime -&gt; m UTCTime)
+-&gt; (ExceptT String IO UTCTime -&gt; m (Either String UTCTime))
+-&gt; ExceptT String IO UTCTime
+-&gt; m UTCTime
+forall (m :: * -&gt; *) b c a.
+Monad m =&gt;
+(b -&gt; m c) -&gt; (a -&gt; m b) -&gt; a -&gt; m c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html#%3C%3D%3C"><span class="hs-operator hs-var">&lt;=&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO (Either String UTCTime) -&gt; m (Either String UTCTime)
+forall (m :: * -&gt; *) a.
+(MonadTest m, MonadIO m, HasCallStack) =&gt;
+IO a -&gt; m a
+</span><a href="file:///nix/store/6vhbj2imaq9yazn9k0kjdjw8sni3v11k-hedgehog-lib-hedgehog-1.4-haddock-doc/share/doc/hedgehog/html/src/Hedgehog.Internal.Property.html#evalIO"><span class="hs-identifier hs-var">H.evalIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Either String UTCTime) -&gt; m (Either String UTCTime))
+-&gt; (ExceptT String IO UTCTime -&gt; IO (Either String UTCTime))
+-&gt; ExceptT String IO UTCTime
+-&gt; m (Either String UTCTime)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ExceptT String IO UTCTime -&gt; IO (Either String UTCTime)
+forall e (m :: * -&gt; *) a. ExceptT e m a -&gt; m (Either e a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#runExceptT"><span class="hs-identifier hs-var">runExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT String IO UTCTime -&gt; m UTCTime)
+-&gt; ExceptT String IO UTCTime -&gt; m UTCTime
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-171"></span><span>  </span><span id="local-6989586621679543741"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679543741"><span class="hs-identifier hs-var">byronGenesisFile</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-172"></span><span>    </span><span class="annot"><span class="annottext">NodeConfigFile 'In -&gt; ExceptT String IO NodeProtocolConfiguration
+</span><a href="#local-6989586621679543742"><span class="hs-identifier hs-var">decodeNodeConfiguration</span></a></span><span> </span><span class="annot"><span class="annottext">NodeConfigFile 'In
+</span><a href="#local-6989586621679543723"><span class="hs-identifier hs-var">configurationFile</span></a></span><span> </span><span class="annot"><span class="annottext">ExceptT String IO NodeProtocolConfiguration
+-&gt; (NodeProtocolConfiguration -&gt; ExceptT String IO String)
+-&gt; ExceptT String IO String
+forall a b.
+ExceptT String IO a
+-&gt; (a -&gt; ExceptT String IO b) -&gt; ExceptT String IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; (a -&gt; m b) -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E%3D"><span class="hs-operator hs-var">&gt;&gt;=</span></a></span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-173"></span><span>      </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Types.html#NodeProtocolConfigurationCardano"><span class="hs-identifier hs-type">NodeProtocolConfigurationCardano</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Types.html#NodeByronProtocolConfiguration"><span class="hs-identifier hs-type">NodeByronProtocolConfiguration</span></a></span><span class="hs-special">{</span><span id="local-6989586621679543745"><span class="annot"><span class="annottext">GenesisFile
+npcByronGenesisFile :: GenesisFile
+npcByronGenesisFile :: NodeByronProtocolConfiguration -&gt; GenesisFile
+</span><a href="#local-6989586621679543745"><span class="hs-identifier hs-var hs-var">npcByronGenesisFile</span></a></span></span><span class="hs-special">}</span><span> </span><span class="annot"><span class="annottext">NodeShelleyProtocolConfiguration
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">NodeAlonzoProtocolConfiguration
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">NodeConwayProtocolConfiguration
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">NodeHardForkProtocolConfiguration
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-174"></span><span>        </span><span class="annot"><span class="annottext">String -&gt; ExceptT String IO String
+forall a. a -&gt; ExceptT String IO a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; ExceptT String IO String)
+-&gt; String -&gt; ExceptT String IO String
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisFile -&gt; String
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Types.html#unGenesisFile"><span class="hs-identifier hs-var">unGenesisFile</span></a></span><span> </span><span class="annot"><span class="annottext">GenesisFile
+</span><a href="#local-6989586621679543745"><span class="hs-identifier hs-var">npcByronGenesisFile</span></a></span><span>
+</span><span id="line-175"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679543748"><span class="annot"><span class="annottext">byronGenesisFilePath :: String
+</span><a href="#local-6989586621679543748"><span class="hs-identifier hs-var hs-var">byronGenesisFilePath</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679543722"><span class="hs-identifier hs-var">tempRootPath</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/filepath-1.4.200.1/src/System.FilePath.Posix.html#%3C%2F%3E"><span class="hs-operator hs-var">&lt;/&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679543741"><span class="hs-identifier hs-var">byronGenesisFile</span></a></span><span>
+</span><span id="line-176"></span><span>  </span><span class="annot"><span class="annottext">GenesisData -&gt; UTCTime
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-ledger-byron-1.0.1.0-f2de367d412b6b4003928ec3d35789813be56bde30b3743256b36b43771aac86/share/doc/html/src/Cardano.Chain.Genesis.Data.html#gdStartTime"><span class="hs-identifier hs-var">G.gdStartTime</span></a></span><span> </span><span class="annot"><span class="annottext">(GenesisData -&gt; UTCTime)
+-&gt; (Config -&gt; GenesisData) -&gt; Config -&gt; UTCTime
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Config -&gt; GenesisData
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-ledger-byron-1.0.1.0-f2de367d412b6b4003928ec3d35789813be56bde30b3743256b36b43771aac86/share/doc/html/src/Cardano.Chain.Genesis.Config.html#configGenesisData"><span class="hs-identifier hs-var">G.configGenesisData</span></a></span><span> </span><span class="annot"><span class="annottext">(Config -&gt; UTCTime)
+-&gt; ExceptT String IO Config -&gt; ExceptT String IO UTCTime
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ExceptT String IO Config
+</span><a href="#local-6989586621679543753"><span class="hs-identifier hs-var">decodeGenesisFile</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679543748"><span class="hs-identifier hs-var">byronGenesisFilePath</span></a></span><span>
+</span><span id="line-177"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-178"></span><span>    </span><span class="annot"><a href="#local-6989586621679543742"><span class="hs-identifier hs-type">decodeNodeConfiguration</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.IO.Base.html#File"><span class="hs-identifier hs-type">File</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.LedgerState.html#NodeConfig"><span class="hs-identifier hs-type">NodeConfig</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.IO.Base.html#In"><span class="hs-identifier hs-type">In</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Types.html#NodeProtocolConfiguration"><span class="hs-identifier hs-type">NodeProtocolConfiguration</span></a></span><span>
+</span><span id="line-179"></span><span>    </span><span id="local-6989586621679543742"><span class="annot"><span class="annottext">decodeNodeConfiguration :: NodeConfigFile 'In -&gt; ExceptT String IO NodeProtocolConfiguration
+</span><a href="#local-6989586621679543742"><span class="hs-identifier hs-var hs-var">decodeNodeConfiguration</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.IO.Base.html#File"><span class="hs-identifier hs-type">File</span></a></span><span> </span><span id="local-6989586621679543755"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679543755"><span class="hs-identifier hs-var">file</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-180"></span><span>      </span><span id="local-6989586621679543756"><span class="annot"><span class="annottext">PartialNodeConfiguration
+</span><a href="#local-6989586621679543756"><span class="hs-identifier hs-var">partialNodeCfg</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Either String PartialNodeConfiguration)
+-&gt; ExceptT String IO PartialNodeConfiguration
+forall e (m :: * -&gt; *) a. m (Either e a) -&gt; ExceptT e m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-var">ExceptT</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Either String PartialNodeConfiguration)
+ -&gt; ExceptT String IO PartialNodeConfiguration)
+-&gt; IO (Either String PartialNodeConfiguration)
+-&gt; ExceptT String IO PartialNodeConfiguration
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; IO (Either String PartialNodeConfiguration)
+forall a. FromJSON a =&gt; String -&gt; IO (Either String a)
+</span><span class="hs-identifier hs-var">A.eitherDecodeFileStrict'</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679543755"><span class="hs-identifier hs-var">file</span></a></span><span>
+</span><span id="line-181"></span><span>      </span><span class="annot"><span class="annottext">(NodeConfiguration -&gt; NodeProtocolConfiguration)
+-&gt; ExceptT String IO NodeConfiguration
+-&gt; ExceptT String IO NodeProtocolConfiguration
+forall a b. (a -&gt; b) -&gt; ExceptT String IO a -&gt; ExceptT String IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">NodeConfiguration -&gt; NodeProtocolConfiguration
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Configuration.POM.html#ncProtocolConfig"><span class="hs-identifier hs-var">ncProtocolConfig</span></a></span><span> </span><span class="annot"><span class="annottext">(ExceptT String IO NodeConfiguration
+ -&gt; ExceptT String IO NodeProtocolConfiguration)
+-&gt; (PartialNodeConfiguration
+    -&gt; ExceptT String IO NodeConfiguration)
+-&gt; PartialNodeConfiguration
+-&gt; ExceptT String IO NodeProtocolConfiguration
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Either String NodeConfiguration
+-&gt; ExceptT String IO NodeConfiguration
+forall e (m :: * -&gt; *) a. MonadError e m =&gt; Either e a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/mtl-2.3.1/src/Control.Monad.Error.Class.html#liftEither"><span class="hs-identifier hs-var">liftEither</span></a></span><span> </span><span class="annot"><span class="annottext">(Either String NodeConfiguration
+ -&gt; ExceptT String IO NodeConfiguration)
+-&gt; (PartialNodeConfiguration -&gt; Either String NodeConfiguration)
+-&gt; PartialNodeConfiguration
+-&gt; ExceptT String IO NodeConfiguration
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">PartialNodeConfiguration -&gt; Either String NodeConfiguration
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Configuration.POM.html#makeNodeConfiguration"><span class="hs-identifier hs-var">makeNodeConfiguration</span></a></span><span> </span><span class="annot"><span class="annottext">(PartialNodeConfiguration
+ -&gt; ExceptT String IO NodeProtocolConfiguration)
+-&gt; PartialNodeConfiguration
+-&gt; ExceptT String IO NodeProtocolConfiguration
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">PartialNodeConfiguration
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Configuration.POM.html#defaultPartialNodeConfiguration"><span class="hs-identifier hs-var">defaultPartialNodeConfiguration</span></a></span><span> </span><span class="annot"><span class="annottext">PartialNodeConfiguration
+-&gt; PartialNodeConfiguration -&gt; PartialNodeConfiguration
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">PartialNodeConfiguration
+</span><a href="#local-6989586621679543756"><span class="hs-identifier hs-var">partialNodeCfg</span></a></span><span>
+</span><span id="line-182"></span><span>    </span><span class="annot"><a href="#local-6989586621679543753"><span class="hs-identifier hs-type">decodeGenesisFile</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#FilePath"><span class="hs-identifier hs-type">FilePath</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#ExceptT"><span class="hs-identifier hs-type">ExceptT</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-ledger-byron-1.0.1.0-f2de367d412b6b4003928ec3d35789813be56bde30b3743256b36b43771aac86/share/doc/html/src/Cardano.Chain.Genesis.Config.html#Config"><span class="hs-identifier hs-type">G.Config</span></a></span><span>
+</span><span id="line-183"></span><span>    </span><span id="local-6989586621679543753"><span class="annot"><span class="annottext">decodeGenesisFile :: String -&gt; ExceptT String IO Config
+</span><a href="#local-6989586621679543753"><span class="hs-identifier hs-var hs-var">decodeGenesisFile</span></a></span></span><span> </span><span id="local-6989586621679543762"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679543762"><span class="hs-identifier hs-var">fp</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ByronProtocolInstantiationError -&gt; String)
+-&gt; ExceptT ByronProtocolInstantiationError IO Config
+-&gt; ExceptT String IO Config
+forall (m :: * -&gt; *) e e' a.
+Functor m =&gt;
+(e -&gt; e') -&gt; ExceptT e m a -&gt; ExceptT e' m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Except.html#withExceptT"><span class="hs-identifier hs-var">withExceptT</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Doc AnsiStyle -&gt; String
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Pretty.html#docToString"><span class="hs-identifier hs-var">docToString</span></a></span><span> </span><span class="annot"><span class="annottext">(Doc AnsiStyle -&gt; String)
+-&gt; (ByronProtocolInstantiationError -&gt; Doc AnsiStyle)
+-&gt; ByronProtocolInstantiationError
+-&gt; String
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ByronProtocolInstantiationError -&gt; Doc AnsiStyle
+forall e ann. Error e =&gt; e -&gt; Doc ann
+forall ann. ByronProtocolInstantiationError -&gt; Doc ann
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-api-8.48.0.1-l-internal-7f93e17a54476a349fa901f62e207fc41a8c709fd1b8809a35ee0fc99e5227b6/share/doc/html/src/Cardano.Api.Error.html#prettyError"><span class="hs-identifier hs-var">prettyError</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(ExceptT ByronProtocolInstantiationError IO Config
+ -&gt; ExceptT String IO Config)
+-&gt; ExceptT ByronProtocolInstantiationError IO Config
+-&gt; ExceptT String IO Config
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-184"></span><span>      </span><span class="annot"><span class="annottext">GenesisFile
+-&gt; Maybe GenesisHash
+-&gt; RequiresNetworkMagic
+-&gt; ExceptT ByronProtocolInstantiationError IO Config
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Protocol.Byron.html#readGenesis"><span class="hs-identifier hs-var">Byron.readGenesis</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; GenesisFile
+</span><a href="file:///home/runner/work/cardano-node/cardano-node/dist-newstyle/build/x86_64-linux/ghc-9.6.4/cardano-node-8.12.1/doc/html/cardano-node/src/Cardano.Node.Types.html#GenesisFile"><span class="hs-identifier hs-var">GenesisFile</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679543762"><span class="hs-identifier hs-var">fp</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Maybe GenesisHash
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="annot"><span class="annottext">RequiresNetworkMagic
+</span><a href="file:///home/runner/.local/state/cabal/store/ghc-9.6.4/cardano-crypto-wrapper-1.5.1.2-fd83cee99584f516b3e2272655245701b331b93479b5cf4dbbdf73e9dd02e952/share/doc/html/src/Cardano.Crypto.ProtocolMagic.html#RequiresNoMagic"><span class="hs-identifier hs-var">RequiresNoMagic</span></a></span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span class="annot"><a href="Testnet.Types.html#readNodeLoggingFormat"><span class="hs-identifier hs-type">readNodeLoggingFormat</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Either"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#String"><span class="hs-identifier hs-type">String</span></a></span><span> </span><span class="annot"><a href="Testnet.Start.Types.html#NodeLoggingFormat"><span class="hs-identifier hs-type">NodeLoggingFormat</span></a></span><span>
+</span><span id="line-187"></span><span id="readNodeLoggingFormat"><span class="annot"><span class="annottext">readNodeLoggingFormat :: String -&gt; Either String NodeLoggingFormat
+</span><a href="Testnet.Types.html#readNodeLoggingFormat"><span class="hs-identifier hs-var hs-var">readNodeLoggingFormat</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-glyph">case</span><span>
+</span><span id="line-188"></span><span>  </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;json&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NodeLoggingFormat -&gt; Either String NodeLoggingFormat
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">NodeLoggingFormat
+</span><a href="Testnet.Start.Types.html#NodeLoggingFormatAsJson"><span class="hs-identifier hs-var">NodeLoggingFormatAsJson</span></a></span><span>
+</span><span id="line-189"></span><span>  </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;text&quot;</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">NodeLoggingFormat -&gt; Either String NodeLoggingFormat
+forall a b. b -&gt; Either a b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-var">Right</span></a></span><span> </span><span class="annot"><span class="annottext">NodeLoggingFormat
+</span><a href="Testnet.Start.Types.html#NodeLoggingFormatAsText"><span class="hs-identifier hs-var">NodeLoggingFormatAsText</span></a></span><span>
+</span><span id="line-190"></span><span>  </span><span id="local-6989586621679543771"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679543771"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Either String NodeLoggingFormat
+forall a b. a -&gt; Either a b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">(String -&gt; Either String NodeLoggingFormat)
+-&gt; String -&gt; Either String NodeLoggingFormat
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Unrecognised node logging format: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ShowS
+forall a. Show a =&gt; a -&gt; String
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#show"><span class="hs-identifier hs-var">show</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679543771"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%3E"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;.  Valid options: \&quot;json\&quot;, \&quot;text\&quot;&quot;</span></span><span>
+</span><span id="line-191"></span><span>
+</span><span id="line-192"></span><span class="annot"><a href="Testnet.Types.html#allNodes"><span class="hs-identifier hs-type">allNodes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Testnet.Types.html#TestnetRuntime"><span class="hs-identifier hs-type">TestnetRuntime</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Testnet.Types.html#NodeRuntime"><span class="hs-identifier hs-type">NodeRuntime</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-193"></span><span id="allNodes"><span class="annot"><span class="annottext">allNodes :: TestnetRuntime -&gt; [NodeRuntime]
+</span><a href="Testnet.Types.html#allNodes"><span class="hs-identifier hs-var hs-var">allNodes</span></a></span></span><span> </span><span id="local-6989586621679543773"><span class="annot"><span class="annottext">TestnetRuntime
+</span><a href="#local-6989586621679543773"><span class="hs-identifier hs-var">tr</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(PoolNode -&gt; NodeRuntime) -&gt; [PoolNode] -&gt; [NodeRuntime]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">PoolNode -&gt; NodeRuntime
+</span><a href="Testnet.Types.html#poolRuntime"><span class="hs-identifier hs-var">poolRuntime</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">TestnetRuntime -&gt; [PoolNode]
+</span><a href="Testnet.Types.html#poolNodes"><span class="hs-identifier hs-var">poolNodes</span></a></span><span> </span><span class="annot"><span class="annottext">TestnetRuntime
+</span><a href="#local-6989586621679543773"><span class="hs-identifier hs-var">tr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-194"></span></pre></body></html>

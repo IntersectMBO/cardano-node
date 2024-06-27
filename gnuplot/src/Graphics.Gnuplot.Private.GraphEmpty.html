@@ -1,0 +1,33 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">{-
+This module is private since 'Cons' shall not be public.
+However, 'Cons' is not needed at all
+because the plot command (here @clear@)
+is determined entirely by the graph type.
+-}</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics.Gnuplot.Private.GraphEmpty</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph.html"><span class="hs-identifier">Graphics.Gnuplot.Private.Graph</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Graph</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.FrameOptionSet.html"><span class="hs-identifier">Graphics.Gnuplot.Private.FrameOptionSet</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">OptionSet</span></span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">data</span><span> </span><span id="T"><span class="annot"><a href="Graphics.Gnuplot.Private.GraphEmpty.html#T"><span class="hs-identifier hs-var">T</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Cons"><span class="annot"><a href="Graphics.Gnuplot.Private.GraphEmpty.html#Cons"><span class="hs-identifier hs-var">Cons</span></a></span></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">instance</span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.Graph.html#C"><span class="hs-identifier hs-type">Graph.C</span></a></span><span> </span><span class="annot"><a href="Graphics.Gnuplot.Private.GraphEmpty.html#T"><span class="hs-identifier hs-type">T</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>   </span><span id="local-6989586621679075775"><span class="annot"><span class="annottext">command :: Command T
+</span><a href="#local-6989586621679075775"><span class="hs-identifier hs-var hs-var hs-var hs-var">command</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Command T
+forall graph. String -&gt; Command graph
+</span><a href="Graphics.Gnuplot.Private.Graph.html#Command"><span class="hs-identifier hs-var">Graph.Command</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;clear&quot;</span></span><span>
+</span><span id="line-18"></span><span>   </span><span id="local-6989586621679075778"><span class="annot"><span class="annottext">toString :: T -&gt; String
+</span><a href="#local-6989586621679075778"><span class="hs-identifier hs-var hs-var hs-var hs-var">toString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; T -&gt; String
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-19"></span><span>   </span><span id="local-6989586621679075781"><span class="annot"><span class="annottext">defltOptions :: T T
+</span><a href="#local-6989586621679075781"><span class="hs-identifier hs-var hs-var hs-var hs-var">defltOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-20"></span><span>      </span><span class="annot"><span class="annottext">Plain -&gt; T T
+forall graph. Plain -&gt; T graph
+</span><a href="Graphics.Gnuplot.Private.FrameOptionSet.html#Cons"><span class="hs-identifier hs-var">OptionSet.Cons</span></a></span><span> </span><span class="annot"><span class="annottext">Plain
+</span><a href="Graphics.Gnuplot.Private.FrameOptionSet.html#deflt"><span class="hs-identifier hs-var">OptionSet.deflt</span></a></span><span>
+</span><span id="line-21"></span></pre></body></html>

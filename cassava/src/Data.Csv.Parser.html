@@ -1,0 +1,567 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE BangPatterns, CPP #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | A CSV parser. The parser defined here is RFC 4180 compliant, with</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- the following extensions:</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--  * Empty lines are ignored.</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--  * Non-escaped fields may contain any characters except</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--    double-quotes, commas, carriage returns, and newlines.</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--  * Escaped fields may contain any characters (but double-quotes</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--    need to be escaped).</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- The functions in this module can be used to implement e.g. a</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- resumable parser that is fed input incrementally.</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Data.Csv.Parser</span><span>
+</span><span id="line-17"></span><span>    </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#DecodeOptions"><span class="hs-identifier">DecodeOptions</span></a></span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#defaultDecodeOptions"><span class="hs-identifier">defaultDecodeOptions</span></a></span><span>
+</span><span id="line-19"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#csv"><span class="hs-identifier">csv</span></a></span><span>
+</span><span id="line-20"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#csvWithHeader"><span class="hs-identifier">csvWithHeader</span></a></span><span>
+</span><span id="line-21"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#header"><span class="hs-identifier">header</span></a></span><span>
+</span><span id="line-22"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#record"><span class="hs-identifier">record</span></a></span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#name"><span class="hs-identifier">name</span></a></span><span>
+</span><span id="line-24"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#field"><span class="hs-identifier">field</span></a></span><span>
+</span><span id="line-25"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Builder.html"><span class="hs-identifier">Data.ByteString.Builder</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Builder.Internal.html#byteString"><span class="hs-identifier">byteString</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Builder.html#toLazyByteString"><span class="hs-identifier">toLazyByteString</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Builder.html#charUtf8"><span class="hs-identifier">charUtf8</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Applicative.html"><span class="hs-identifier">Control.Applicative</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Applicative.html#optional"><span class="hs-identifier">optional</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Data.Attoparsec.ByteString.Char8</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">char</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">endOfInput</span></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Attoparsec.ByteString</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">A</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Attoparsec.Lazy</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">AL</span></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Attoparsec.Zepto</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Z</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html"><span class="hs-identifier">Data.ByteString</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">S</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Unsafe.html"><span class="hs-identifier">Data.ByteString.Unsafe</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">S</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">V</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Word.html"><span class="hs-identifier">Data.Word</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier">Word8</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.Csv.Types.html"><span class="hs-identifier">Data.Csv.Types</span></a></span><span>
+</span><span id="line-39"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Data.Csv.Util.html"><span class="hs-identifier">Data.Csv.Util</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Util.html#%3C%24%21%3E"><span class="hs-operator">(&lt;$!&gt;)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Util.html#blankLine"><span class="hs-identifier">blankLine</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Util.html#endOfLine"><span class="hs-identifier">endOfLine</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Util.html#liftM2%27"><span class="hs-identifier">liftM2'</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Util.html#cr"><span class="hs-identifier">cr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Util.html#newline"><span class="hs-identifier">newline</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Data.Csv.Util.html#doubleQuote"><span class="hs-identifier">doubleQuote</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#toStrict"><span class="hs-identifier">toStrict</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- | Options that controls how data is decoded. These options can be</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- used to e.g. decode tab-separated data instead of comma-separated</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- data.</span><span>
+</span><span id="line-44"></span><span class="hs-comment">--</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- To avoid having your program stop compiling when new fields are</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- added to 'DecodeOptions', create option records by overriding</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- values in 'defaultDecodeOptions'. Example:</span><span>
+</span><span id="line-48"></span><span class="hs-comment">--</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- &gt; myOptions = defaultDecodeOptions {</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- &gt;       decDelimiter = fromIntegral (ord '\t')</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- &gt;     }</span><span>
+</span><span id="line-52"></span><span class="hs-keyword">data</span><span> </span><span id="DecodeOptions"><span class="annot"><a href="Data.Csv.Parser.html#DecodeOptions"><span class="hs-identifier hs-var">DecodeOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="DecodeOptions"><span class="annot"><a href="Data.Csv.Parser.html#DecodeOptions"><span class="hs-identifier hs-var">DecodeOptions</span></a></span></span><span>
+</span><span id="line-53"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="hs-comment">-- | Field delimiter.</span></span><span>
+</span><span id="line-54"></span><span>      </span><span id="decDelimiter"><span class="annot"><span class="annottext">DecodeOptions -&gt; Word8
+</span><a href="Data.Csv.Parser.html#decDelimiter"><span class="hs-identifier hs-var hs-var">decDelimiter</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-pragma">{-# UNPACK</span><span> </span><span class="hs-pragma">#-}</span><span> </span><span class="hs-glyph">!</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679083838"><span id="local-6989586621679083841"><span class="annot"><span class="annottext">DecodeOptions -&gt; DecodeOptions -&gt; Bool
+(DecodeOptions -&gt; DecodeOptions -&gt; Bool)
+-&gt; (DecodeOptions -&gt; DecodeOptions -&gt; Bool) -&gt; Eq DecodeOptions
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: DecodeOptions -&gt; DecodeOptions -&gt; Bool
+== :: DecodeOptions -&gt; DecodeOptions -&gt; Bool
+$c/= :: DecodeOptions -&gt; DecodeOptions -&gt; Bool
+/= :: DecodeOptions -&gt; DecodeOptions -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679083846"><span id="local-6989586621679083852"><span id="local-6989586621679083856"><span class="annot"><span class="annottext">Int -&gt; DecodeOptions -&gt; ShowS
+[DecodeOptions] -&gt; ShowS
+DecodeOptions -&gt; String
+(Int -&gt; DecodeOptions -&gt; ShowS)
+-&gt; (DecodeOptions -&gt; String)
+-&gt; ([DecodeOptions] -&gt; ShowS)
+-&gt; Show DecodeOptions
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; DecodeOptions -&gt; ShowS
+showsPrec :: Int -&gt; DecodeOptions -&gt; ShowS
+$cshow :: DecodeOptions -&gt; String
+show :: DecodeOptions -&gt; String
+$cshowList :: [DecodeOptions] -&gt; ShowS
+showList :: [DecodeOptions] -&gt; ShowS
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></a></span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="annot"><span class="hs-comment">-- | Decoding options for parsing CSV files.</span></span><span>
+</span><span id="line-58"></span><span class="annot"><a href="Data.Csv.Parser.html#defaultDecodeOptions"><span class="hs-identifier hs-type">defaultDecodeOptions</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#DecodeOptions"><span class="hs-identifier hs-type">DecodeOptions</span></a></span><span>
+</span><span id="line-59"></span><span id="defaultDecodeOptions"><span class="annot"><span class="annottext">defaultDecodeOptions :: DecodeOptions
+</span><a href="Data.Csv.Parser.html#defaultDecodeOptions"><span class="hs-identifier hs-var hs-var">defaultDecodeOptions</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#DecodeOptions"><span class="hs-identifier hs-type">DecodeOptions</span></a></span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">decDelimiter :: Word8
+</span><a href="Data.Csv.Parser.html#decDelimiter"><span class="hs-identifier hs-var">decDelimiter</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><span class="hs-number">44</span></span><span>  </span><span class="hs-comment">-- comma</span><span>
+</span><span id="line-61"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-62"></span><span>
+</span><span id="line-63"></span><span class="annot"><span class="hs-comment">-- | Parse a CSV file that does not include a header.</span></span><span>
+</span><span id="line-64"></span><span class="annot"><a href="Data.Csv.Parser.html#csv"><span class="hs-identifier hs-type">csv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#DecodeOptions"><span class="hs-identifier hs-type">DecodeOptions</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AL.Parser</span></span><span> </span><span class="annot"><a href="Data.Csv.Types.html#Csv"><span class="hs-identifier hs-type">Csv</span></a></span><span>
+</span><span id="line-65"></span><span id="csv"><span class="annot"><span class="annottext">csv :: DecodeOptions -&gt; Parser Csv
+</span><a href="Data.Csv.Parser.html#csv"><span class="hs-identifier hs-var hs-var">csv</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679083859"><span class="annot"><span class="annottext">DecodeOptions
+</span><a href="#local-6989586621679083859"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-66"></span><span>    </span><span id="local-6989586621679083860"><span class="annot"><span class="annottext">[Record]
+</span><a href="#local-6989586621679083860"><span class="hs-identifier hs-var">vals</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser Record -&gt; Parser [Record]
+forall a. Parser a -&gt; Parser [a]
+</span><a href="Data.Csv.Parser.html#sepByEndOfLine1%27"><span class="hs-identifier hs-var">sepByEndOfLine1'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Parser Record
+</span><a href="Data.Csv.Parser.html#record"><span class="hs-identifier hs-var">record</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DecodeOptions -&gt; Word8
+</span><a href="Data.Csv.Parser.html#decDelimiter"><span class="hs-identifier hs-var">decDelimiter</span></a></span><span> </span><span class="annot"><span class="annottext">DecodeOptions
+</span><a href="#local-6989586621679083859"><span class="hs-identifier hs-var">opts</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-67"></span><span>    </span><span class="annot"><span class="annottext">Maybe ()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser ByteString () -&gt; Parser ByteString (Maybe ())
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="annot"><span class="annottext">Parser ByteString ()
+</span><a href="Data.Csv.Util.html#endOfLine"><span class="hs-identifier hs-var">endOfLine</span></a></span><span>
+</span><span id="line-68"></span><span>    </span><span class="annot"><span class="annottext">Parser ByteString ()
+forall t. Chunk t =&gt; Parser t ()
+</span><span class="hs-identifier hs-var">endOfInput</span></span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679083862"><span class="annot"><span class="annottext">nonEmpty :: [Record]
+</span><a href="#local-6989586621679083862"><span class="hs-identifier hs-var hs-var">nonEmpty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Record] -&gt; [Record]
+</span><a href="Data.Csv.Parser.html#removeBlankLines"><span class="hs-identifier hs-var">removeBlankLines</span></a></span><span> </span><span class="annot"><span class="annottext">[Record]
+</span><a href="#local-6989586621679083860"><span class="hs-identifier hs-var">vals</span></a></span><span>
+</span><span id="line-70"></span><span>    </span><span class="annot"><span class="annottext">Csv -&gt; Parser Csv
+forall a. a -&gt; Parser ByteString a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Csv -&gt; Parser Csv) -&gt; Csv -&gt; Parser Csv
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="annot"><span class="annottext">[Record] -&gt; Csv
+forall a. [a] -&gt; Vector a
+</span><span class="hs-identifier hs-var">V.fromList</span></span><span> </span><span class="annot"><span class="annottext">[Record]
+</span><a href="#local-6989586621679083862"><span class="hs-identifier hs-var">nonEmpty</span></a></span><span>
+</span><span id="line-71"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#csv"><span class="hs-pragma hs-type">csv</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-72"></span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- | Specialized version of 'sepBy1'' which is faster due to not</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- accepting an arbitrary separator.</span><span>
+</span><span id="line-75"></span><span id="local-6989586621679083727"><span class="annot"><a href="Data.Csv.Parser.html#sepByDelim1%27"><span class="hs-identifier hs-type">sepByDelim1'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AL.Parser</span></span><span> </span><span class="annot"><a href="#local-6989586621679083727"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-76"></span><span>             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Field delimiter</span></span><span>
+</span><span id="line-77"></span><span>             </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AL.Parser</span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679083727"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-78"></span><span id="sepByDelim1%27"><span class="annot"><span class="annottext">sepByDelim1' :: forall a. Parser a -&gt; Word8 -&gt; Parser [a]
+</span><a href="Data.Csv.Parser.html#sepByDelim1%27"><span class="hs-identifier hs-var hs-var">sepByDelim1'</span></a></span></span><span> </span><span id="local-6989586621679083868"><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679083868"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679083869"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083869"><span class="hs-identifier hs-var">delim</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; [a] -&gt; [a])
+-&gt; Parser a -&gt; Parser ByteString [a] -&gt; Parser ByteString [a]
+forall (m :: * -&gt; *) a b c.
+Monad m =&gt;
+(a -&gt; b -&gt; c) -&gt; m a -&gt; m b -&gt; m c
+</span><a href="Data.Csv.Util.html#liftM2%27"><span class="hs-identifier hs-var">liftM2'</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">:</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679083868"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Parser ByteString [a]
+</span><a href="#local-6989586621679083870"><span class="hs-identifier hs-var">loop</span></a></span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-80"></span><span>    </span><span id="local-6989586621679083870"><span class="annot"><span class="annottext">loop :: Parser ByteString [a]
+</span><a href="#local-6989586621679083870"><span class="hs-identifier hs-var hs-var">loop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-81"></span><span>        </span><span id="local-6989586621679083876"><span class="annot"><span class="annottext">Maybe Word8
+</span><a href="#local-6989586621679083876"><span class="hs-identifier hs-var">mb</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser (Maybe Word8)
+</span><span class="hs-identifier hs-var">A.peekWord8</span></span><span>
+</span><span id="line-82"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe Word8
+</span><a href="#local-6989586621679083876"><span class="hs-identifier hs-var">mb</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-83"></span><span>            </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679083878"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083878"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083878"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083869"><span class="hs-identifier hs-var">delim</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(a -&gt; [a] -&gt; [a])
+-&gt; Parser a -&gt; Parser ByteString [a] -&gt; Parser ByteString [a]
+forall (m :: * -&gt; *) a b c.
+Monad m =&gt;
+(a -&gt; b -&gt; c) -&gt; m a -&gt; m b -&gt; m c
+</span><a href="Data.Csv.Util.html#liftM2%27"><span class="hs-identifier hs-var">liftM2'</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">:</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parser Word8
+</span><span class="hs-identifier hs-var">A.anyWord8</span></span><span> </span><span class="annot"><span class="annottext">Parser Word8 -&gt; Parser a -&gt; Parser a
+forall a b.
+Parser ByteString a -&gt; Parser ByteString b -&gt; Parser ByteString b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679083868"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Parser ByteString [a]
+</span><a href="#local-6989586621679083870"><span class="hs-identifier hs-var">loop</span></a></span><span>
+</span><span id="line-84"></span><span>            </span><span class="annot"><span class="annottext">Maybe Word8
+</span><span class="hs-identifier">_</span></span><span>                   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; Parser ByteString [a]
+forall a. a -&gt; Parser ByteString a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-85"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#sepByDelim1%27"><span class="hs-pragma hs-type">sepByDelim1'</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- | Specialized version of 'sepBy1'' which is faster due to not</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- accepting an arbitrary separator.</span><span>
+</span><span id="line-89"></span><span id="local-6989586621679083716"><span class="annot"><a href="Data.Csv.Parser.html#sepByEndOfLine1%27"><span class="hs-identifier hs-type">sepByEndOfLine1'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AL.Parser</span></span><span> </span><span class="annot"><a href="#local-6989586621679083716"><span class="hs-identifier hs-type">a</span></a></span><span>
+</span><span id="line-90"></span><span>                 </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AL.Parser</span></span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679083716"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-91"></span><span id="sepByEndOfLine1%27"><span class="annot"><span class="annottext">sepByEndOfLine1' :: forall a. Parser a -&gt; Parser [a]
+</span><a href="Data.Csv.Parser.html#sepByEndOfLine1%27"><span class="hs-identifier hs-var hs-var">sepByEndOfLine1'</span></a></span></span><span> </span><span id="local-6989586621679083881"><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679083881"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; [a] -&gt; [a])
+-&gt; Parser a -&gt; Parser ByteString [a] -&gt; Parser ByteString [a]
+forall (m :: * -&gt; *) a b c.
+Monad m =&gt;
+(a -&gt; b -&gt; c) -&gt; m a -&gt; m b -&gt; m c
+</span><a href="Data.Csv.Util.html#liftM2%27"><span class="hs-identifier hs-var">liftM2'</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">:</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679083881"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">Parser ByteString [a]
+</span><a href="#local-6989586621679083882"><span class="hs-identifier hs-var">loop</span></a></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-93"></span><span>    </span><span id="local-6989586621679083882"><span class="annot"><span class="annottext">loop :: Parser ByteString [a]
+</span><a href="#local-6989586621679083882"><span class="hs-identifier hs-var hs-var">loop</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-94"></span><span>        </span><span id="local-6989586621679083892"><span class="annot"><span class="annottext">Maybe Word8
+</span><a href="#local-6989586621679083892"><span class="hs-identifier hs-var">mb</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser (Maybe Word8)
+</span><span class="hs-identifier hs-var">A.peekWord8</span></span><span>
+</span><span id="line-95"></span><span>        </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe Word8
+</span><a href="#local-6989586621679083892"><span class="hs-identifier hs-var">mb</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-96"></span><span>            </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679083893"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083893"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083893"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="Data.Csv.Util.html#cr"><span class="hs-identifier hs-var">cr</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-97"></span><span>                </span><span class="annot"><span class="annottext">(a -&gt; [a] -&gt; [a])
+-&gt; Parser a -&gt; Parser ByteString [a] -&gt; Parser ByteString [a]
+forall (m :: * -&gt; *) a b c.
+Monad m =&gt;
+(a -&gt; b -&gt; c) -&gt; m a -&gt; m b -&gt; m c
+</span><a href="Data.Csv.Util.html#liftM2%27"><span class="hs-identifier hs-var">liftM2'</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">:</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parser Word8
+</span><span class="hs-identifier hs-var">A.anyWord8</span></span><span> </span><span class="annot"><span class="annottext">Parser Word8 -&gt; Parser Word8 -&gt; Parser Word8
+forall a b.
+Parser ByteString a -&gt; Parser ByteString b -&gt; Parser ByteString b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Parser Word8
+</span><span class="hs-identifier hs-var">A.word8</span></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="Data.Csv.Util.html#newline"><span class="hs-identifier hs-var">newline</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Word8 -&gt; Parser a -&gt; Parser a
+forall a b.
+Parser ByteString a -&gt; Parser ByteString b -&gt; Parser ByteString b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679083881"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Parser ByteString [a]
+</span><a href="#local-6989586621679083882"><span class="hs-identifier hs-var">loop</span></a></span><span>
+</span><span id="line-98"></span><span>                   </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083893"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="Data.Csv.Util.html#newline"><span class="hs-identifier hs-var">newline</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-99"></span><span>                </span><span class="annot"><span class="annottext">(a -&gt; [a] -&gt; [a])
+-&gt; Parser a -&gt; Parser ByteString [a] -&gt; Parser ByteString [a]
+forall (m :: * -&gt; *) a b c.
+Monad m =&gt;
+(a -&gt; b -&gt; c) -&gt; m a -&gt; m b -&gt; m c
+</span><a href="Data.Csv.Util.html#liftM2%27"><span class="hs-identifier hs-var">liftM2'</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">:</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Parser Word8
+</span><span class="hs-identifier hs-var">A.anyWord8</span></span><span> </span><span class="annot"><span class="annottext">Parser Word8 -&gt; Parser a -&gt; Parser a
+forall a b.
+Parser ByteString a -&gt; Parser ByteString b -&gt; Parser ByteString b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2A%3E"><span class="hs-operator hs-var">*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Parser a
+</span><a href="#local-6989586621679083881"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Parser ByteString [a]
+</span><a href="#local-6989586621679083882"><span class="hs-identifier hs-var">loop</span></a></span><span>
+</span><span id="line-100"></span><span>            </span><span class="annot"><span class="annottext">Maybe Word8
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[a] -&gt; Parser ByteString [a]
+forall a. a -&gt; Parser ByteString a
+forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#pure"><span class="hs-identifier hs-var">pure</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-101"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#sepByEndOfLine1%27"><span class="hs-pragma hs-type">sepByEndOfLine1'</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-102"></span><span>
+</span><span id="line-103"></span><span class="annot"><span class="hs-comment">-- | Parse a CSV file that includes a header.</span></span><span>
+</span><span id="line-104"></span><span class="annot"><a href="Data.Csv.Parser.html#csvWithHeader"><span class="hs-identifier hs-type">csvWithHeader</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#DecodeOptions"><span class="hs-identifier hs-type">DecodeOptions</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AL.Parser</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Data.Csv.Types.html#Header"><span class="hs-identifier hs-type">Header</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">V.Vector</span></span><span> </span><span class="annot"><a href="Data.Csv.Types.html#NamedRecord"><span class="hs-identifier hs-type">NamedRecord</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-105"></span><span id="csvWithHeader"><span class="annot"><span class="annottext">csvWithHeader :: DecodeOptions -&gt; Parser (Record, Vector NamedRecord)
+</span><a href="Data.Csv.Parser.html#csvWithHeader"><span class="hs-identifier hs-var hs-var">csvWithHeader</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679083896"><span class="annot"><span class="annottext">DecodeOptions
+</span><a href="#local-6989586621679083896"><span class="hs-identifier hs-var">opts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-glyph">!</span><span id="local-6989586621679083897"><span class="annot"><span class="annottext">Record
+</span><a href="#local-6989586621679083897"><span class="hs-identifier hs-var">hdr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Parser Record
+</span><a href="Data.Csv.Parser.html#header"><span class="hs-identifier hs-var">header</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DecodeOptions -&gt; Word8
+</span><a href="Data.Csv.Parser.html#decDelimiter"><span class="hs-identifier hs-var">decDelimiter</span></a></span><span> </span><span class="annot"><span class="annottext">DecodeOptions
+</span><a href="#local-6989586621679083896"><span class="hs-identifier hs-var">opts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>    </span><span id="local-6989586621679083898"><span class="annot"><span class="annottext">[NamedRecord]
+</span><a href="#local-6989586621679083898"><span class="hs-identifier hs-var">vals</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Record -&gt; NamedRecord) -&gt; [Record] -&gt; [NamedRecord]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#map"><span class="hs-identifier hs-var">map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Record -&gt; Record -&gt; NamedRecord
+</span><a href="Data.Csv.Types.html#toNamedRecord"><span class="hs-identifier hs-var">toNamedRecord</span></a></span><span> </span><span class="annot"><span class="annottext">Record
+</span><a href="#local-6989586621679083897"><span class="hs-identifier hs-var">hdr</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Record] -&gt; [NamedRecord])
+-&gt; ([Record] -&gt; [Record]) -&gt; [Record] -&gt; [NamedRecord]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">[Record] -&gt; [Record]
+</span><a href="Data.Csv.Parser.html#removeBlankLines"><span class="hs-identifier hs-var">removeBlankLines</span></a></span><span> </span><span class="annot"><span class="annottext">([Record] -&gt; [NamedRecord])
+-&gt; Parser [Record] -&gt; Parser ByteString [NamedRecord]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span>
+</span><span id="line-108"></span><span>            </span><span class="annot"><span class="annottext">Parser Record -&gt; Parser [Record]
+forall a. Parser a -&gt; Parser [a]
+</span><a href="Data.Csv.Parser.html#sepByEndOfLine1%27"><span class="hs-identifier hs-var">sepByEndOfLine1'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Parser Record
+</span><a href="Data.Csv.Parser.html#record"><span class="hs-identifier hs-var">record</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">DecodeOptions -&gt; Word8
+</span><a href="Data.Csv.Parser.html#decDelimiter"><span class="hs-identifier hs-var">decDelimiter</span></a></span><span> </span><span class="annot"><span class="annottext">DecodeOptions
+</span><a href="#local-6989586621679083896"><span class="hs-identifier hs-var">opts</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span><span>    </span><span class="annot"><span class="annottext">Maybe ()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser ByteString () -&gt; Parser ByteString (Maybe ())
+forall (f :: * -&gt; *) a. Alternative f =&gt; f a -&gt; f (Maybe a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Applicative.html#optional"><span class="hs-identifier hs-var">optional</span></a></span><span> </span><span class="annot"><span class="annottext">Parser ByteString ()
+</span><a href="Data.Csv.Util.html#endOfLine"><span class="hs-identifier hs-var">endOfLine</span></a></span><span>
+</span><span id="line-110"></span><span>    </span><span class="annot"><span class="annottext">Parser ByteString ()
+forall t. Chunk t =&gt; Parser t ()
+</span><span class="hs-identifier hs-var">endOfInput</span></span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679083902"><span class="annot"><span class="annottext">v :: Vector NamedRecord
+</span><a href="#local-6989586621679083902"><span class="hs-identifier hs-var hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[NamedRecord] -&gt; Vector NamedRecord
+forall a. [a] -&gt; Vector a
+</span><span class="hs-identifier hs-var">V.fromList</span></span><span> </span><span class="annot"><span class="annottext">[NamedRecord]
+</span><a href="#local-6989586621679083898"><span class="hs-identifier hs-var">vals</span></a></span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><span class="annottext">(Record, Vector NamedRecord) -&gt; Parser (Record, Vector NamedRecord)
+forall a. a -&gt; Parser ByteString a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Record
+</span><a href="#local-6989586621679083897"><span class="hs-identifier hs-var">hdr</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Vector NamedRecord
+</span><a href="#local-6989586621679083902"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>
+</span><span id="line-114"></span><span class="annot"><span class="hs-comment">-- | Parse a header, including the terminating line separator.</span></span><span>
+</span><span id="line-115"></span><span class="annot"><a href="Data.Csv.Parser.html#header"><span class="hs-identifier hs-type">header</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Field delimiter</span></span><span>
+</span><span id="line-116"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AL.Parser</span></span><span> </span><span class="annot"><a href="Data.Csv.Types.html#Header"><span class="hs-identifier hs-type">Header</span></a></span><span>
+</span><span id="line-117"></span><span id="header"><span class="annot"><span class="annottext">header :: Word8 -&gt; Parser Record
+</span><a href="Data.Csv.Parser.html#header"><span class="hs-identifier hs-var hs-var">header</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679083903"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083903"><span class="hs-identifier hs-var">delim</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ByteString] -&gt; Record
+forall a. [a] -&gt; Vector a
+</span><span class="hs-identifier hs-var">V.fromList</span></span><span> </span><span class="annot"><span class="annottext">([ByteString] -&gt; Record)
+-&gt; Parser ByteString [ByteString] -&gt; Parser Record
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; b) -&gt; m a -&gt; m b
+</span><a href="Data.Csv.Util.html#%3C%24%21%3E"><span class="hs-operator hs-var">&lt;$!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Parser ByteString
+</span><a href="Data.Csv.Parser.html#name"><span class="hs-identifier hs-var">name</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083903"><span class="hs-identifier hs-var">delim</span></a></span><span> </span><span class="annot"><span class="annottext">Parser ByteString -&gt; Word8 -&gt; Parser ByteString [ByteString]
+forall a. Parser a -&gt; Word8 -&gt; Parser [a]
+</span><a href="Data.Csv.Parser.html#sepByDelim1%27"><span class="hs-operator hs-var">`sepByDelim1'`</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083903"><span class="hs-identifier hs-var">delim</span></a></span><span> </span><span class="annot"><span class="annottext">Parser Record -&gt; Parser ByteString () -&gt; Parser Record
+forall a b.
+Parser ByteString a -&gt; Parser ByteString b -&gt; Parser ByteString a
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f a -&gt; f b -&gt; f a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%2A"><span class="hs-operator hs-var">&lt;*</span></a></span><span> </span><span class="annot"><span class="annottext">Parser ByteString ()
+</span><a href="Data.Csv.Util.html#endOfLine"><span class="hs-identifier hs-var">endOfLine</span></a></span><span>
+</span><span id="line-118"></span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- | Parse a header name. Header names have the same format as regular</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- 'field's.</span><span>
+</span><span id="line-121"></span><span class="annot"><a href="Data.Csv.Parser.html#name"><span class="hs-identifier hs-type">name</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AL.Parser</span></span><span> </span><span class="annot"><a href="Data.Csv.Types.html#Name"><span class="hs-identifier hs-type">Name</span></a></span><span>
+</span><span id="line-122"></span><span id="name"><span class="annot"><span class="annottext">name :: Word8 -&gt; Parser ByteString
+</span><a href="Data.Csv.Parser.html#name"><span class="hs-identifier hs-var hs-var">name</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679083906"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083906"><span class="hs-identifier hs-var">delim</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Parser ByteString
+</span><a href="Data.Csv.Parser.html#field"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083906"><span class="hs-identifier hs-var">delim</span></a></span><span>
+</span><span id="line-123"></span><span>
+</span><span id="line-124"></span><span class="annot"><a href="Data.Csv.Parser.html#removeBlankLines"><span class="hs-identifier hs-type">removeBlankLines</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Data.Csv.Types.html#Record"><span class="hs-identifier hs-type">Record</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Data.Csv.Types.html#Record"><span class="hs-identifier hs-type">Record</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-125"></span><span id="removeBlankLines"><span class="annot"><span class="annottext">removeBlankLines :: [Record] -&gt; [Record]
+</span><a href="Data.Csv.Parser.html#removeBlankLines"><span class="hs-identifier hs-var hs-var">removeBlankLines</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Record -&gt; Bool) -&gt; [Record] -&gt; [Record]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.List.html#filter"><span class="hs-identifier hs-var">filter</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">(Bool -&gt; Bool) -&gt; (Record -&gt; Bool) -&gt; Record -&gt; Bool
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Record -&gt; Bool
+</span><a href="Data.Csv.Util.html#blankLine"><span class="hs-identifier hs-var">blankLine</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span>
+</span><span id="line-127"></span><span class="hs-comment">-- | Parse a record, not including the terminating line separator. The</span><span>
+</span><span id="line-128"></span><span class="hs-comment">-- terminating line separate is not included as the last record in a</span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- CSV file is allowed to not have a terminating line separator. You</span><span>
+</span><span id="line-130"></span><span class="hs-comment">-- most likely want to use the 'endOfLine' parser in combination with</span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- this parser.</span><span>
+</span><span id="line-132"></span><span class="annot"><a href="Data.Csv.Parser.html#record"><span class="hs-identifier hs-type">record</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span>  </span><span class="annot"><span class="hs-comment">-- ^ Field delimiter</span></span><span>
+</span><span id="line-133"></span><span>       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AL.Parser</span></span><span> </span><span class="annot"><a href="Data.Csv.Types.html#Record"><span class="hs-identifier hs-type">Record</span></a></span><span>
+</span><span id="line-134"></span><span id="record"><span class="annot"><span class="annottext">record :: Word8 -&gt; Parser Record
+</span><a href="Data.Csv.Parser.html#record"><span class="hs-identifier hs-var hs-var">record</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679083908"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083908"><span class="hs-identifier hs-var">delim</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ByteString] -&gt; Record
+forall a. [a] -&gt; Vector a
+</span><span class="hs-identifier hs-var">V.fromList</span></span><span> </span><span class="annot"><span class="annottext">([ByteString] -&gt; Record)
+-&gt; Parser ByteString [ByteString] -&gt; Parser Record
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; b) -&gt; m a -&gt; m b
+</span><a href="Data.Csv.Util.html#%3C%24%21%3E"><span class="hs-operator hs-var">&lt;$!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Parser ByteString
+</span><a href="Data.Csv.Parser.html#field"><span class="hs-identifier hs-var">field</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083908"><span class="hs-identifier hs-var">delim</span></a></span><span> </span><span class="annot"><span class="annottext">Parser ByteString -&gt; Word8 -&gt; Parser ByteString [ByteString]
+forall a. Parser a -&gt; Word8 -&gt; Parser [a]
+</span><a href="Data.Csv.Parser.html#sepByDelim1%27"><span class="hs-operator hs-var">`sepByDelim1'`</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083908"><span class="hs-identifier hs-var">delim</span></a></span><span>
+</span><span id="line-135"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#record"><span class="hs-pragma hs-type">record</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- | Parse a field. The field may be in either the escaped or</span><span>
+</span><span id="line-138"></span><span class="hs-comment">-- non-escaped format. The return value is unescaped.</span><span>
+</span><span id="line-139"></span><span class="annot"><a href="Data.Csv.Parser.html#field"><span class="hs-identifier hs-type">field</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AL.Parser</span></span><span> </span><span class="annot"><a href="Data.Csv.Types.html#Field"><span class="hs-identifier hs-type">Field</span></a></span><span>
+</span><span id="line-140"></span><span id="field"><span class="annot"><span class="annottext">field :: Word8 -&gt; Parser ByteString
+</span><a href="Data.Csv.Parser.html#field"><span class="hs-identifier hs-var hs-var">field</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679083910"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083910"><span class="hs-identifier hs-var">delim</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-141"></span><span>    </span><span id="local-6989586621679083911"><span class="annot"><span class="annottext">Maybe Word8
+</span><a href="#local-6989586621679083911"><span class="hs-identifier hs-var">mb</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser (Maybe Word8)
+</span><span class="hs-identifier hs-var">A.peekWord8</span></span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-comment">-- We purposely don't use &lt;|&gt; as we want to commit to the first</span><span>
+</span><span id="line-143"></span><span>    </span><span class="hs-comment">-- choice if we see a double quote.</span><span>
+</span><span id="line-144"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe Word8
+</span><a href="#local-6989586621679083911"><span class="hs-identifier hs-var">mb</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-145"></span><span>        </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679083912"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083912"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083912"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="Data.Csv.Util.html#doubleQuote"><span class="hs-identifier hs-var">doubleQuote</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Parser ByteString
+</span><a href="Data.Csv.Parser.html#escapedField"><span class="hs-identifier hs-var">escapedField</span></a></span><span>
+</span><span id="line-146"></span><span>        </span><span class="annot"><span class="annottext">Maybe Word8
+</span><span class="hs-identifier">_</span></span><span>                         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Parser ByteString
+</span><a href="Data.Csv.Parser.html#unescapedField"><span class="hs-identifier hs-var">unescapedField</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083910"><span class="hs-identifier hs-var">delim</span></a></span><span>
+</span><span id="line-147"></span><span class="hs-pragma">{-# INLINE</span><span> </span><span class="annot"><a href="Data.Csv.Parser.html#field"><span class="hs-pragma hs-type">field</span></a></span><span> </span><span class="hs-pragma">#-}</span><span>
+</span><span id="line-148"></span><span>
+</span><span id="line-149"></span><span class="annot"><a href="Data.Csv.Parser.html#escapedField"><span class="hs-identifier hs-type">escapedField</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AL.Parser</span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span>
+</span><span id="line-150"></span><span id="escapedField"><span class="annot"><span class="annottext">escapedField :: Parser ByteString
+</span><a href="Data.Csv.Parser.html#escapedField"><span class="hs-identifier hs-var hs-var">escapedField</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-151"></span><span>    </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Parser Char
+</span><a href="Data.Csv.Parser.html#dquote"><span class="hs-identifier hs-var">dquote</span></a></span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-comment">-- The scan state is 'True' if the previous character was a double</span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-comment">-- quote.  We need to drop a trailing double quote left by scan.</span><span>
+</span><span id="line-154"></span><span>    </span><span id="local-6989586621679083916"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679083916"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">HasCallStack =&gt; ByteString -&gt; ByteString
+ByteString -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#init"><span class="hs-identifier hs-var">S.init</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString)
+-&gt; Parser ByteString -&gt; Parser ByteString
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; (Bool -&gt; Word8 -&gt; Maybe Bool) -&gt; Parser ByteString
+forall s. s -&gt; (s -&gt; Word8 -&gt; Maybe s) -&gt; Parser ByteString
+</span><span class="hs-identifier hs-var">A.scan</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span> </span><span class="annot"><span class="annottext">((Bool -&gt; Word8 -&gt; Maybe Bool) -&gt; Parser ByteString)
+-&gt; (Bool -&gt; Word8 -&gt; Maybe Bool) -&gt; Parser ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679083919"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679083919"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679083920"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083920"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083920"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="Data.Csv.Util.html#doubleQuote"><span class="hs-identifier hs-var">doubleQuote</span></a></span><span>
+</span><span id="line-155"></span><span>                                            </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#not"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679083919"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span><span>                                            </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679083919"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Maybe Bool
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-157"></span><span>                                                 </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Maybe Bool
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#False"><span class="hs-identifier hs-var">False</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-158"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="Data.Csv.Util.html#doubleQuote"><span class="hs-identifier hs-var">doubleQuote</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; ByteString -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.html#elem"><span class="hs-operator hs-var">`S.elem`</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679083916"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-159"></span><span>        </span><span class="hs-keyword">then</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Parser ByteString -&gt; ByteString -&gt; Either String ByteString
+forall a. Parser a -&gt; ByteString -&gt; Either String a
+</span><span class="hs-identifier hs-var">Z.parse</span></span><span> </span><span class="annot"><span class="annottext">Parser ByteString
+</span><a href="Data.Csv.Parser.html#unescape"><span class="hs-identifier hs-var">unescape</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679083916"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-160"></span><span>            </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679083924"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679083924"><span class="hs-identifier hs-var">r</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Parser ByteString
+forall a. a -&gt; Parser ByteString a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679083924"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><span id="line-161"></span><span>            </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679083925"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679083925"><span class="hs-identifier hs-var">err</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String -&gt; Parser ByteString
+forall a. String -&gt; Parser ByteString a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679083925"><span class="hs-identifier hs-var">err</span></a></span><span>
+</span><span id="line-162"></span><span>        </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Parser ByteString
+forall a. a -&gt; Parser ByteString a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679083916"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-163"></span><span>
+</span><span id="line-164"></span><span class="annot"><a href="Data.Csv.Parser.html#unescapedField"><span class="hs-identifier hs-type">unescapedField</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Word.html#Word8"><span class="hs-identifier hs-type">Word8</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AL.Parser</span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span>
+</span><span id="line-165"></span><span id="unescapedField"><span class="annot"><span class="annottext">unescapedField :: Word8 -&gt; Parser ByteString
+</span><a href="Data.Csv.Parser.html#unescapedField"><span class="hs-identifier hs-var hs-var">unescapedField</span></a></span></span><span> </span><span class="hs-glyph">!</span><span id="local-6989586621679083926"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083926"><span class="hs-identifier hs-var">delim</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Bool) -&gt; Parser ByteString
+</span><span class="hs-identifier hs-var">A.takeWhile</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span> </span><span id="local-6989586621679083928"><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083928"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083928"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="Data.Csv.Util.html#doubleQuote"><span class="hs-identifier hs-var">doubleQuote</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span>
+</span><span id="line-166"></span><span>                                            </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083928"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="Data.Csv.Util.html#newline"><span class="hs-identifier hs-var">newline</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span>
+</span><span id="line-167"></span><span>                                            </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083928"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083926"><span class="hs-identifier hs-var">delim</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span>
+</span><span id="line-168"></span><span>                                            </span><span class="annot"><span class="annottext">Word8
+</span><a href="#local-6989586621679083928"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="Data.Csv.Util.html#cr"><span class="hs-identifier hs-var">cr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span class="annot"><a href="Data.Csv.Parser.html#dquote"><span class="hs-identifier hs-type">dquote</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">AL.Parser</span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Char"><span class="hs-identifier hs-type">Char</span></a></span><span>
+</span><span id="line-171"></span><span id="dquote"><span class="annot"><span class="annottext">dquote :: Parser Char
+</span><a href="Data.Csv.Parser.html#dquote"><span class="hs-identifier hs-var hs-var">dquote</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Char -&gt; Parser Char
+</span><span class="hs-identifier hs-var">char</span></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&quot;'</span></span><span>
+</span><span id="line-172"></span><span>
+</span><span id="line-173"></span><span class="annot"><a href="Data.Csv.Parser.html#unescape"><span class="hs-identifier hs-type">unescape</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Z.Parser</span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Internal.Type.html#ByteString"><span class="hs-identifier hs-type">S.ByteString</span></a></span><span>
+</span><span id="line-174"></span><span id="unescape"><span class="annot"><span class="annottext">unescape :: Parser ByteString
+</span><a href="Data.Csv.Parser.html#unescape"><span class="hs-identifier hs-var hs-var">unescape</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#toStrict"><span class="hs-identifier hs-var">toStrict</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; ByteString)
+-&gt; (Builder -&gt; ByteString) -&gt; Builder -&gt; ByteString
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Builder.html#toLazyByteString"><span class="hs-identifier hs-var">toLazyByteString</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Builder -&gt; ByteString)
+-&gt; ZeptoT Identity Builder -&gt; Parser ByteString
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; b) -&gt; m a -&gt; m b
+</span><a href="Data.Csv.Util.html#%3C%24%21%3E"><span class="hs-operator hs-var">&lt;$!&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; ZeptoT Identity Builder
+forall {m :: * -&gt; *}. Monad m =&gt; Builder -&gt; ZeptoT m Builder
+</span><a href="#local-6989586621679083931"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">Builder
+forall a. Monoid a =&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#mempty"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-175"></span><span>  </span><span id="local-6989586621679083931"><span class="annot"><span class="annottext">go :: Builder -&gt; ZeptoT m Builder
+</span><a href="#local-6989586621679083931"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679083947"><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679083947"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-176"></span><span>    </span><span id="local-6989586621679083948"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679083948"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Word8 -&gt; Bool) -&gt; ZeptoT m ByteString
+forall (m :: * -&gt; *).
+Monad m =&gt;
+(Word8 -&gt; Bool) -&gt; ZeptoT m ByteString
+</span><span class="hs-identifier hs-var">Z.takeWhile</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%2F%3D"><span class="hs-operator hs-var">/=</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="Data.Csv.Util.html#doubleQuote"><span class="hs-identifier hs-var">doubleQuote</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-177"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679083961"><span class="annot"><span class="annottext">rest :: ZeptoT m Builder
+</span><a href="#local-6989586621679083961"><span class="hs-identifier hs-var hs-var">rest</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-178"></span><span>          </span><span id="local-6989586621679083962"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679083962"><span class="hs-identifier hs-var">start</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; ZeptoT m ByteString
+forall (m :: * -&gt; *). Monad m =&gt; Int -&gt; ZeptoT m ByteString
+</span><span class="hs-identifier hs-var">Z.take</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-179"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Word8
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Unsafe.html#unsafeHead"><span class="hs-identifier hs-var">S.unsafeHead</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679083962"><span class="hs-identifier hs-var">start</span></a></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="Data.Csv.Util.html#doubleQuote"><span class="hs-identifier hs-var">doubleQuote</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%26%26"><span class="hs-operator hs-var">&amp;&amp;</span></a></span><span>
+</span><span id="line-180"></span><span>              </span><span class="annot"><span class="annottext">ByteString -&gt; Int -&gt; Word8
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Unsafe.html#unsafeIndex"><span class="hs-identifier hs-var">S.unsafeIndex</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679083962"><span class="hs-identifier hs-var">start</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Word8 -&gt; Word8 -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Word8
+</span><a href="Data.Csv.Util.html#doubleQuote"><span class="hs-identifier hs-var">doubleQuote</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-181"></span><span>              </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Builder -&gt; ZeptoT m Builder
+</span><a href="#local-6989586621679083931"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679083947"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Builder
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Builder.Internal.html#byteString"><span class="hs-identifier hs-var">byteString</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679083948"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Builder
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Builder.html#charUtf8"><span class="hs-identifier hs-var">charUtf8</span></a></span><span> </span><span class="annot"><span class="annottext">Char
+</span><span class="hs-char">'&quot;'</span></span><span class="hs-special">)</span><span>
+</span><span id="line-182"></span><span>              </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">String -&gt; ZeptoT m Builder
+forall a. String -&gt; ZeptoT m a
+forall (m :: * -&gt; *) a. MonadFail m =&gt; String -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.Fail.html#fail"><span class="hs-identifier hs-var">fail</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;invalid CSV escape sequence&quot;</span></span><span>
+</span><span id="line-183"></span><span>    </span><span id="local-6989586621679083966"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679083966"><span class="hs-identifier hs-var">done</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">ZeptoT m Bool
+forall (m :: * -&gt; *). Monad m =&gt; ZeptoT m Bool
+</span><span class="hs-identifier hs-var">Z.atEnd</span></span><span>
+</span><span id="line-184"></span><span>    </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621679083966"><span class="hs-identifier hs-var">done</span></a></span><span>
+</span><span id="line-185"></span><span>      </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Builder -&gt; ZeptoT m Builder
+forall a. a -&gt; ZeptoT m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Builder
+</span><a href="#local-6989586621679083947"><span class="hs-identifier hs-var">acc</span></a></span><span> </span><span class="annot"><span class="annottext">Builder -&gt; Builder -&gt; Builder
+forall a. Monoid a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#mappend"><span class="hs-operator hs-var">`mappend`</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Builder
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Builder.Internal.html#byteString"><span class="hs-identifier hs-var">byteString</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679083948"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-186"></span><span>      </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">ZeptoT m Builder
+</span><a href="#local-6989586621679083961"><span class="hs-identifier hs-var">rest</span></a></span><span>
+</span><span id="line-187"></span></pre></body></html>

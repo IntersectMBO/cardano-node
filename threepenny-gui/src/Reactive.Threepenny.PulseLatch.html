@@ -1,0 +1,818 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE RecordWildCards, RecursiveDo #-}</span><span>
+</span><span id="line-2"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Reactive.Threepenny.PulseLatch</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-3"></span><span>    </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier">Pulse</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#newPulse"><span class="hs-identifier">newPulse</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#addHandler"><span class="hs-identifier">addHandler</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-4"></span><span>    </span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#neverP"><span class="hs-identifier">neverP</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#mapP"><span class="hs-identifier">mapP</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#filterJustP"><span class="hs-identifier">filterJustP</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#unionWithP"><span class="hs-identifier">unionWithP</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#unsafeMapIOP"><span class="hs-identifier">unsafeMapIOP</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-5"></span><span>    </span><span>
+</span><span id="line-6"></span><span>    </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Latch"><span class="hs-identifier">Latch</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-7"></span><span>    </span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#pureL"><span class="hs-identifier">pureL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#mapL"><span class="hs-identifier">mapL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#applyL"><span class="hs-identifier">applyL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#accumL"><span class="hs-identifier">accumL</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#applyP"><span class="hs-identifier">applyP</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-8"></span><span>    </span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#readLatch"><span class="hs-identifier">readLatch</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-9"></span><span>    </span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Internal</span></span><span>
+</span><span id="line-11"></span><span>    </span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#test"><span class="hs-identifier">test</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#test_recursion1"><span class="hs-identifier">test_recursion1</span></a></span><span>
+</span><span id="line-12"></span><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-13"></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html"><span class="hs-identifier">Control.Monad.Trans.Class</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.RWS.html"><span class="hs-identifier">Control.Monad.Trans.RWS</span></a></span><span>     </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Monad</span></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.IORef.html"><span class="hs-identifier">Data.IORef</span></a></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.HashMap.Strict</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vault.Strict</span></span><span>   </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Vault</span></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Unique.Really</span></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Monads.html"><span class="hs-identifier">Reactive.Threepenny.Monads</span></a></span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html"><span class="hs-identifier">Reactive.Threepenny.Types</span></a></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    Pulse
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- Turn evaluation action into pulse that caches the value.</span><span>
+</span><span id="line-32"></span><span id="local-6989586621679115028"><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#cacheEval"><span class="hs-identifier hs-type">cacheEval</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#EvalP"><span class="hs-identifier hs-type">EvalP</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115028"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Build"><span class="hs-identifier hs-type">Build</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115028"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-33"></span><span id="cacheEval"><span class="annot"><span class="annottext">cacheEval :: forall a. EvalP (Maybe a) -&gt; Build (Pulse a)
+</span><a href="Reactive.Threepenny.PulseLatch.html#cacheEval"><span class="hs-identifier hs-var hs-var">cacheEval</span></a></span></span><span> </span><span id="local-6989586621679115238"><span class="annot"><span class="annottext">EvalP (Maybe a)
+</span><a href="#local-6989586621679115238"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-34"></span><span>    </span><span id="local-6989586621679115239"><span class="annot"><span class="annottext">Key (Maybe a)
+</span><a href="#local-6989586621679115239"><span class="hs-identifier hs-var">key</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Key (Maybe a))
+forall a. IO (Key a)
+</span><span class="hs-identifier hs-var">Vault.newKey</span></span><span>
+</span><span id="line-35"></span><span>    </span><span class="annot"><span class="annottext">Pulse a -&gt; Build (Pulse a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Pulse a -&gt; Build (Pulse a)) -&gt; Pulse a -&gt; Build (Pulse a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span>
+</span><span id="line-36"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">addHandlerP :: ((Unique, Priority), Handler) -&gt; Build (IO ())
+</span><a href="Reactive.Threepenny.Types.html#addHandlerP"><span class="hs-identifier hs-var">addHandlerP</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">((Unique, Priority), Handler)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; Build (IO ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">evalP :: EvalP (Maybe a)
+</span><a href="Reactive.Threepenny.Types.html#evalP"><span class="hs-identifier hs-var">evalP</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-38"></span><span>            </span><span id="local-6989586621679115244"><span class="annot"><span class="annottext">Values
+</span><a href="#local-6989586621679115244"><span class="hs-identifier hs-var">vault</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">RWST () () Values IO Values
+forall w (m :: * -&gt; *) r s. (Monoid w, Monad m) =&gt; RWST r w s m s
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.RWS.Lazy.html#get"><span class="hs-identifier hs-var">Monad.get</span></a></span><span>
+</span><span id="line-39"></span><span>            </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Key (Maybe a) -&gt; Values -&gt; Maybe (Maybe a)
+forall a. Key a -&gt; Values -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Vault.lookup</span></span><span> </span><span class="annot"><span class="annottext">Key (Maybe a)
+</span><a href="#local-6989586621679115239"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">Values
+</span><a href="#local-6989586621679115244"><span class="hs-identifier hs-var">vault</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-40"></span><span>                </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679115247"><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679115247"><span class="hs-identifier hs-var">a</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; EvalP (Maybe a)
+forall a. a -&gt; RWST () () Values IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679115247"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-41"></span><span>                </span><span class="annot"><span class="annottext">Maybe (Maybe a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-42"></span><span>                    </span><span id="local-6989586621679115248"><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679115248"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">EvalP (Maybe a)
+</span><a href="#local-6989586621679115238"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-43"></span><span>                    </span><span class="annot"><span class="annottext">Values -&gt; RWST () () Values IO ()
+forall w (m :: * -&gt; *) s r.
+(Monoid w, Monad m) =&gt;
+s -&gt; RWST r w s m ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.RWS.Lazy.html#put"><span class="hs-identifier hs-var">Monad.put</span></a></span><span> </span><span class="annot"><span class="annottext">(Values -&gt; RWST () () Values IO ())
+-&gt; Values -&gt; RWST () () Values IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Key (Maybe a) -&gt; Maybe a -&gt; Values -&gt; Values
+forall a. Key a -&gt; a -&gt; Values -&gt; Values
+</span><span class="hs-identifier hs-var">Vault.insert</span></span><span> </span><span class="annot"><span class="annottext">Key (Maybe a)
+</span><a href="#local-6989586621679115239"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679115248"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">Values
+</span><a href="#local-6989586621679115244"><span class="hs-identifier hs-var">vault</span></a></span><span>
+</span><span id="line-44"></span><span>                    </span><span class="annot"><span class="annottext">Maybe a -&gt; EvalP (Maybe a)
+forall a. a -&gt; RWST () () Values IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679115248"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-45"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-46"></span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- Add a dependency to a pulse, for the sake of keeping track of dependencies.</span><span>
+</span><span id="line-48"></span><span id="local-6989586621679115059"><span id="local-6989586621679115060"><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#dependOn"><span class="hs-identifier hs-type">dependOn</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115059"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115060"><span class="hs-identifier hs-type">b</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115059"><span class="hs-identifier hs-type">a</span></a></span></span></span><span>
+</span><span id="line-49"></span><span id="dependOn"><span class="annot"><span class="annottext">dependOn :: forall a b. Pulse a -&gt; Pulse b -&gt; Pulse a
+</span><a href="Reactive.Threepenny.PulseLatch.html#dependOn"><span class="hs-identifier hs-var hs-var">dependOn</span></a></span></span><span> </span><span id="local-6989586621679115256"><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115256"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679115257"><span class="annot"><span class="annottext">Pulse b
+</span><a href="#local-6989586621679115257"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115256"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#addHandlerP"><span class="hs-identifier hs-var">addHandlerP</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679115258"><span class="annot"><span class="annottext">((Unique, Priority), Handler)
+</span><a href="#local-6989586621679115258"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO () -&gt; IO ()
+forall a b. IO a -&gt; IO b -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">(&gt;&gt;)</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO () -&gt; IO ()) -&gt; Build (IO ()) -&gt; IO (IO () -&gt; IO ())
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a -&gt; ((Unique, Priority), Handler) -&gt; Build (IO ())
+forall a. Pulse a -&gt; ((Unique, Priority), Handler) -&gt; Build (IO ())
+</span><a href="Reactive.Threepenny.Types.html#addHandlerP"><span class="hs-identifier hs-var">addHandlerP</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115256"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">((Unique, Priority), Handler)
+</span><a href="#local-6989586621679115258"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">IO (IO () -&gt; IO ()) -&gt; Build (IO ()) -&gt; Build (IO ())
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse b -&gt; ((Unique, Priority), Handler) -&gt; Build (IO ())
+forall a. Pulse a -&gt; ((Unique, Priority), Handler) -&gt; Build (IO ())
+</span><a href="Reactive.Threepenny.Types.html#addHandlerP"><span class="hs-identifier hs-var">addHandlerP</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse b
+</span><a href="#local-6989586621679115257"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="annot"><span class="annottext">((Unique, Priority), Handler)
+</span><a href="#local-6989586621679115258"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- Execute an action when the pulse occurs</span><span>
+</span><span id="line-52"></span><span id="local-6989586621679115072"><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#whenPulse"><span class="hs-identifier hs-type">whenPulse</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115072"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679115072"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Handler"><span class="hs-identifier hs-type">Handler</span></a></span></span><span>
+</span><span id="line-53"></span><span id="whenPulse"><span class="annot"><span class="annottext">whenPulse :: forall a. Pulse a -&gt; (a -&gt; IO ()) -&gt; Handler
+</span><a href="Reactive.Threepenny.PulseLatch.html#whenPulse"><span class="hs-identifier hs-var hs-var">whenPulse</span></a></span></span><span> </span><span id="local-6989586621679115266"><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115266"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679115267"><span class="annot"><span class="annottext">a -&gt; IO ()
+</span><a href="#local-6989586621679115267"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-54"></span><span>    </span><span id="local-6989586621679115268"><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679115268"><span class="hs-identifier hs-var">ma</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Pulse a -&gt; EvalP (Maybe a)
+forall a. Pulse a -&gt; EvalP (Maybe a)
+</span><a href="Reactive.Threepenny.Types.html#evalP"><span class="hs-identifier hs-var">evalP</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115266"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-55"></span><span>    </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679115268"><span class="hs-identifier hs-var">ma</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-56"></span><span>        </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679115269"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115269"><span class="hs-identifier hs-var">a</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; Handler
+forall a. a -&gt; RWST () () Values IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; IO ()
+</span><a href="#local-6989586621679115267"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115269"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-57"></span><span>        </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO () -&gt; Handler
+forall a. a -&gt; RWST () () Values IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; Handler) -&gt; IO () -&gt; Handler
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    Interface to the outside world.
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-62"></span><span class="annot"><span class="hs-comment">-- | Create a new pulse and a function to trigger it.</span></span><span>
+</span><span id="line-63"></span><span id="local-6989586621679115075"><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#newPulse"><span class="hs-identifier hs-type">newPulse</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Build"><span class="hs-identifier hs-type">Build</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115075"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="#local-6989586621679115075"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-64"></span><span id="newPulse"><span class="annot"><span class="annottext">newPulse :: forall a. Build (Pulse a, a -&gt; IO ())
+</span><a href="Reactive.Threepenny.PulseLatch.html#newPulse"><span class="hs-identifier hs-var hs-var">newPulse</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-65"></span><span>    </span><span id="local-6989586621679115289"><span class="annot"><span class="annottext">Key (Maybe a)
+</span><a href="#local-6989586621679115289"><span class="hs-identifier hs-var">key</span></a></span></span><span>         </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (Key (Maybe a))
+forall a. IO (Key a)
+</span><span class="hs-identifier hs-var">Vault.newKey</span></span><span>
+</span><span id="line-66"></span><span>    </span><span id="local-6989586621679115290"><span class="annot"><span class="annottext">IORef (HashMap (Unique, Priority) Handler)
+</span><a href="#local-6989586621679115290"><span class="hs-identifier hs-var">handlersRef</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">HashMap (Unique, Priority) Handler
+-&gt; IO (IORef (HashMap (Unique, Priority) Handler))
+forall a. a -&gt; IO (IORef a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IORef.html#newIORef"><span class="hs-identifier hs-var">newIORef</span></a></span><span> </span><span class="annot"><span class="annottext">HashMap (Unique, Priority) Handler
+forall k v. HashMap k v
+</span><span class="hs-identifier hs-var">Map.empty</span></span><span>      </span><span class="hs-comment">-- map of handlers</span><span>
+</span><span id="line-67"></span><span>    </span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-keyword">let</span><span>
+</span><span id="line-69"></span><span>        </span><span class="hs-comment">-- add handler to map</span><span>
+</span><span id="line-70"></span><span>        </span><span class="annot"><a href="#local-6989586621679115293"><span class="hs-identifier hs-type">addHandlerP</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Unique</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Priority"><span class="hs-identifier hs-type">Priority</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Handler"><span class="hs-identifier hs-type">Handler</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Build"><span class="hs-identifier hs-type">Build</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span>        </span><span id="local-6989586621679115293"><span class="annot"><span class="annottext">addHandlerP :: ((Unique, Priority), Handler) -&gt; Build (IO ())
+</span><a href="#local-6989586621679115293"><span class="hs-identifier hs-var hs-var">addHandlerP</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679115294"><span class="annot"><span class="annottext">(Unique, Priority)
+</span><a href="#local-6989586621679115294"><span class="hs-identifier hs-var">uid</span></a></span></span><span class="hs-special">,</span><span id="local-6989586621679115295"><span class="annot"><span class="annottext">Handler
+</span><a href="#local-6989586621679115295"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-72"></span><span>            </span><span class="annot"><span class="annottext">IORef (HashMap (Unique, Priority) Handler)
+-&gt; (HashMap (Unique, Priority) Handler
+    -&gt; HashMap (Unique, Priority) Handler)
+-&gt; IO ()
+forall a. IORef a -&gt; (a -&gt; a) -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.IORef.html#modifyIORef%27"><span class="hs-identifier hs-var">modifyIORef'</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (HashMap (Unique, Priority) Handler)
+</span><a href="#local-6989586621679115290"><span class="hs-identifier hs-var">handlersRef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Unique, Priority)
+-&gt; Handler
+-&gt; HashMap (Unique, Priority) Handler
+-&gt; HashMap (Unique, Priority) Handler
+forall k v.
+(Eq k, Hashable k) =&gt;
+k -&gt; v -&gt; HashMap k v -&gt; HashMap k v
+</span><span class="hs-identifier hs-var">Map.insert</span></span><span> </span><span class="annot"><span class="annottext">(Unique, Priority)
+</span><a href="#local-6989586621679115294"><span class="hs-identifier hs-var">uid</span></a></span><span> </span><span class="annot"><span class="annottext">Handler
+</span><a href="#local-6989586621679115295"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>            </span><span class="annot"><span class="annottext">IO () -&gt; Build (IO ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; Build (IO ())) -&gt; IO () -&gt; Build (IO ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (HashMap (Unique, Priority) Handler)
+-&gt; (HashMap (Unique, Priority) Handler
+    -&gt; HashMap (Unique, Priority) Handler)
+-&gt; IO ()
+forall a. IORef a -&gt; (a -&gt; a) -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.IORef.html#modifyIORef%27"><span class="hs-identifier hs-var">modifyIORef'</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (HashMap (Unique, Priority) Handler)
+</span><a href="#local-6989586621679115290"><span class="hs-identifier hs-var">handlersRef</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Unique, Priority)
+-&gt; HashMap (Unique, Priority) Handler
+-&gt; HashMap (Unique, Priority) Handler
+forall k v. (Eq k, Hashable k) =&gt; k -&gt; HashMap k v -&gt; HashMap k v
+</span><span class="hs-identifier hs-var">Map.delete</span></span><span> </span><span class="annot"><span class="annottext">(Unique, Priority)
+</span><a href="#local-6989586621679115294"><span class="hs-identifier hs-var">uid</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-74"></span><span>        </span><span>
+</span><span id="line-75"></span><span>        </span><span class="hs-comment">-- evaluate all handlers attached to this input pulse</span><span>
+</span><span id="line-76"></span><span>        </span><span id="local-6989586621679115308"><span class="annot"><span class="annottext">fireP :: a -&gt; IO ()
+</span><a href="#local-6989586621679115308"><span class="hs-identifier hs-var hs-var">fireP</span></a></span></span><span> </span><span id="local-6989586621679115309"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115309"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-77"></span><span>            </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679115310"><span class="annot"><span class="annottext">pulses :: Values
+</span><a href="#local-6989586621679115310"><span class="hs-identifier hs-var hs-var">pulses</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Key (Maybe a) -&gt; Maybe a -&gt; Values -&gt; Values
+forall a. Key a -&gt; a -&gt; Values -&gt; Values
+</span><span class="hs-identifier hs-var">Vault.insert</span></span><span> </span><span class="annot"><span class="annottext">Key (Maybe a)
+</span><a href="#local-6989586621679115289"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115309"><span class="hs-identifier hs-var">a</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Values -&gt; Values) -&gt; Values -&gt; Values
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Values
+</span><span class="hs-identifier hs-var">Vault.empty</span></span><span>
+</span><span id="line-78"></span><span>            </span><span id="local-6989586621679115312"><span class="annot"><span class="annottext">HashMap (Unique, Priority) Handler
+</span><a href="#local-6989586621679115312"><span class="hs-identifier hs-var">handlers</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IORef (HashMap (Unique, Priority) Handler)
+-&gt; IO (HashMap (Unique, Priority) Handler)
+forall a. IORef a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IORef.html#readIORef"><span class="hs-identifier hs-var">readIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef (HashMap (Unique, Priority) Handler)
+</span><a href="#local-6989586621679115290"><span class="hs-identifier hs-var">handlersRef</span></a></span><span>
+</span><span id="line-79"></span><span>            </span><span class="hs-special">(</span><span id="local-6989586621679115314"><span class="annot"><span class="annottext">[IO ()]
+</span><a href="#local-6989586621679115314"><span class="hs-identifier hs-var">ms</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Values
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Values -&gt; EvalP [IO ()] -&gt; IO ([IO ()], Values)
+forall a. Values -&gt; EvalP a -&gt; IO (a, Values)
+</span><a href="Reactive.Threepenny.Monads.html#runEvalP"><span class="hs-identifier hs-var">runEvalP</span></a></span><span> </span><span class="annot"><span class="annottext">Values
+</span><a href="#local-6989586621679115310"><span class="hs-identifier hs-var">pulses</span></a></span><span> </span><span class="annot"><span class="annottext">(EvalP [IO ()] -&gt; IO ([IO ()], Values))
+-&gt; EvalP [IO ()] -&gt; IO ([IO ()], Values)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[Handler] -&gt; EvalP [IO ()]
+forall (t :: * -&gt; *) (m :: * -&gt; *) a.
+(Traversable t, Monad m) =&gt;
+t (m a) -&gt; m (t a)
+forall (m :: * -&gt; *) a. Monad m =&gt; [m a] -&gt; m [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Traversable.html#sequence"><span class="hs-identifier hs-var">sequence</span></a></span><span> </span><span class="annot"><span class="annottext">([Handler] -&gt; EvalP [IO ()]) -&gt; [Handler] -&gt; EvalP [IO ()]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span>
+</span><span id="line-80"></span><span>                   </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Handler
+</span><a href="#local-6989586621679115317"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Unique
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Priority
+</span><a href="Reactive.Threepenny.Types.html#DoLatch"><span class="hs-identifier hs-var">DoLatch</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span id="local-6989586621679115317"><span class="annot"><span class="annottext">Handler
+</span><a href="#local-6989586621679115317"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">HashMap (Unique, Priority) Handler
+-&gt; [((Unique, Priority), Handler)]
+forall k v. HashMap k v -&gt; [(k, v)]
+</span><span class="hs-identifier hs-var">Map.toList</span></span><span> </span><span class="annot"><span class="annottext">HashMap (Unique, Priority) Handler
+</span><a href="#local-6989586621679115312"><span class="hs-identifier hs-var">handlers</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-81"></span><span>                </span><span class="annot"><span class="annottext">[Handler] -&gt; [Handler] -&gt; [Handler]
+forall a. [a] -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%2B%2B"><span class="hs-operator hs-var">++</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Handler
+</span><a href="#local-6989586621679115320"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Unique
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Priority
+</span><a href="Reactive.Threepenny.Types.html#DoIO"><span class="hs-identifier hs-var">DoIO</span></a></span><span>   </span><span class="hs-special">)</span><span class="hs-special">,</span><span id="local-6989586621679115320"><span class="annot"><span class="annottext">Handler
+</span><a href="#local-6989586621679115320"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">HashMap (Unique, Priority) Handler
+-&gt; [((Unique, Priority), Handler)]
+forall k v. HashMap k v -&gt; [(k, v)]
+</span><span class="hs-identifier hs-var">Map.toList</span></span><span> </span><span class="annot"><span class="annottext">HashMap (Unique, Priority) Handler
+</span><a href="#local-6989586621679115312"><span class="hs-identifier hs-var">handlers</span></a></span><span class="hs-special">]</span><span>  </span><span>
+</span><span id="line-82"></span><span>            </span><span class="annot"><span class="annottext">[IO ()] -&gt; IO ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a.
+(Foldable t, Monad m) =&gt;
+t (m a) -&gt; m ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Foldable.html#sequence_"><span class="hs-identifier hs-var">sequence_</span></a></span><span> </span><span class="annot"><span class="annottext">[IO ()]
+</span><a href="#local-6989586621679115314"><span class="hs-identifier hs-var">ms</span></a></span><span>
+</span><span id="line-83"></span><span>        </span><span>
+</span><span id="line-84"></span><span>        </span><span id="local-6989586621679115334"><span class="annot"><span class="annottext">evalP :: RWST r () Values IO (Maybe a)
+</span><a href="#local-6989586621679115334"><span class="hs-identifier hs-var hs-var">evalP</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe (Maybe a) -&gt; Maybe a
+forall (m :: * -&gt; *) a. Monad m =&gt; m (m a) -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#join"><span class="hs-identifier hs-var">join</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (Maybe a) -&gt; Maybe a)
+-&gt; (Values -&gt; Maybe (Maybe a)) -&gt; Values -&gt; Maybe a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Key (Maybe a) -&gt; Values -&gt; Maybe (Maybe a)
+forall a. Key a -&gt; Values -&gt; Maybe a
+</span><span class="hs-identifier hs-var">Vault.lookup</span></span><span> </span><span class="annot"><span class="annottext">Key (Maybe a)
+</span><a href="#local-6989586621679115289"><span class="hs-identifier hs-var">key</span></a></span><span> </span><span class="annot"><span class="annottext">(Values -&gt; Maybe a)
+-&gt; RWST r () Values IO Values -&gt; RWST r () Values IO (Maybe a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">RWST r () Values IO Values
+forall w (m :: * -&gt; *) r s. (Monoid w, Monad m) =&gt; RWST r w s m s
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.RWS.Lazy.html#get"><span class="hs-identifier hs-var">Monad.get</span></a></span><span>
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span>    </span><span class="annot"><span class="annottext">(Pulse a, a -&gt; IO ()) -&gt; Build (Pulse a, a -&gt; IO ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><span class="annottext">EvalP (Maybe a)
+((Unique, Priority), Handler) -&gt; Build (IO ())
+forall {r}. RWST r () Values IO (Maybe a)
+addHandlerP :: ((Unique, Priority), Handler) -&gt; Build (IO ())
+evalP :: EvalP (Maybe a)
+addHandlerP :: ((Unique, Priority), Handler) -&gt; Build (IO ())
+evalP :: forall {r}. RWST r () Values IO (Maybe a)
+</span><a href="Reactive.Threepenny.Types.html#addHandlerP"><span class="hs-glyph hs-var hs-var hs-var hs-var">..</span></a></span><span class="hs-special">}</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">a -&gt; IO ()
+</span><a href="#local-6989586621679115308"><span class="hs-identifier hs-var">fireP</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-87"></span><span>
+</span><span id="line-88"></span><span class="annot"><span class="hs-comment">-- | Register a handler to be executed whenever a pulse occurs.</span></span><span>
+</span><span id="line-89"></span><span id="local-6989586621679115114"><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#addHandler"><span class="hs-identifier hs-type">addHandler</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115114"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679115114"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Build"><span class="hs-identifier hs-type">Build</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-90"></span><span id="addHandler"><span class="annot"><span class="annottext">addHandler :: forall a. Pulse a -&gt; (a -&gt; IO ()) -&gt; Build (IO ())
+</span><a href="Reactive.Threepenny.PulseLatch.html#addHandler"><span class="hs-identifier hs-var hs-var">addHandler</span></a></span></span><span> </span><span id="local-6989586621679115337"><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115337"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679115338"><span class="annot"><span class="annottext">a -&gt; IO ()
+</span><a href="#local-6989586621679115338"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-91"></span><span>    </span><span id="local-6989586621679115339"><span class="annot"><span class="annottext">Unique
+</span><a href="#local-6989586621679115339"><span class="hs-identifier hs-var">uid</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Unique
+</span><span class="hs-identifier hs-var">newUnique</span></span><span>
+</span><span id="line-92"></span><span>    </span><span class="annot"><span class="annottext">Pulse a -&gt; ((Unique, Priority), Handler) -&gt; Build (IO ())
+forall a. Pulse a -&gt; ((Unique, Priority), Handler) -&gt; Build (IO ())
+</span><a href="Reactive.Threepenny.Types.html#addHandlerP"><span class="hs-identifier hs-var">addHandlerP</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115337"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Unique
+</span><a href="#local-6989586621679115339"><span class="hs-identifier hs-var">uid</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="Reactive.Threepenny.Types.html#DoIO"><span class="hs-identifier hs-var">DoIO</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Pulse a -&gt; (a -&gt; IO ()) -&gt; Handler
+forall a. Pulse a -&gt; (a -&gt; IO ()) -&gt; Handler
+</span><a href="Reactive.Threepenny.PulseLatch.html#whenPulse"><span class="hs-identifier hs-var">whenPulse</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115337"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; IO ()
+</span><a href="#local-6989586621679115338"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span class="annot"><span class="hs-comment">-- | Read the value of a 'Latch' at a particular moment in Build.</span></span><span>
+</span><span id="line-95"></span><span id="local-6989586621679115116"><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#readLatch"><span class="hs-identifier hs-type">readLatch</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Latch"><span class="hs-identifier hs-type">Latch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115116"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Build"><span class="hs-identifier hs-type">Build</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115116"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-96"></span><span id="readLatch"><span class="annot"><span class="annottext">readLatch :: forall a. Latch a -&gt; Build a
+</span><a href="Reactive.Threepenny.PulseLatch.html#readLatch"><span class="hs-identifier hs-var hs-var">readLatch</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Latch a -&gt; EvalL a
+forall a. Latch a -&gt; Build a
+</span><a href="Reactive.Threepenny.Types.html#readL"><span class="hs-identifier hs-var">readL</span></a></span><span>
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    Pulse and Latch
+    Public API
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-102"></span><span class="annot"><span class="hs-comment">-- | Create a new pulse that never occurs.</span></span><span>
+</span><span id="line-103"></span><span id="local-6989586621679115120"><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#neverP"><span class="hs-identifier hs-type">neverP</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115120"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-104"></span><span id="neverP"><span class="annot"><span class="annottext">neverP :: forall a. Pulse a
+</span><a href="Reactive.Threepenny.PulseLatch.html#neverP"><span class="hs-identifier hs-var hs-var">neverP</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span>
+</span><span id="line-105"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">addHandlerP :: ((Unique, Priority), Handler) -&gt; Build (IO ())
+</span><a href="Reactive.Threepenny.Types.html#addHandlerP"><span class="hs-identifier hs-var">addHandlerP</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Build (IO ()) -&gt; ((Unique, Priority), Handler) -&gt; Build (IO ())
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">(Build (IO ()) -&gt; ((Unique, Priority), Handler) -&gt; Build (IO ()))
+-&gt; Build (IO ()) -&gt; ((Unique, Priority), Handler) -&gt; Build (IO ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; Build (IO ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">() -&gt; IO ()
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">evalP :: EvalP (Maybe a)
+</span><a href="Reactive.Threepenny.Types.html#evalP"><span class="hs-identifier hs-var">evalP</span></a></span><span>       </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; EvalP (Maybe a)
+forall a. a -&gt; RWST () () Values IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-special">}</span><span>
+</span><span id="line-108"></span><span>
+</span><span id="line-109"></span><span class="annot"><span class="hs-comment">-- | Map a function over pulses.</span></span><span>
+</span><span id="line-110"></span><span id="local-6989586621679115124"><span id="local-6989586621679115125"><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#mapP"><span class="hs-identifier hs-type">mapP</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679115124"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115125"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115124"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Build"><span class="hs-identifier hs-type">Build</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115125"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-111"></span><span id="mapP"><span class="annot"><span class="annottext">mapP :: forall a b. (a -&gt; b) -&gt; Pulse a -&gt; Build (Pulse b)
+</span><a href="Reactive.Threepenny.PulseLatch.html#mapP"><span class="hs-identifier hs-var hs-var">mapP</span></a></span></span><span> </span><span id="local-6989586621679115354"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679115354"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679115355"><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115355"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Pulse b -&gt; Pulse a -&gt; Pulse b
+forall a b. Pulse a -&gt; Pulse b -&gt; Pulse a
+</span><a href="Reactive.Threepenny.PulseLatch.html#dependOn"><span class="hs-operator hs-var">`dependOn`</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115355"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Pulse b -&gt; Pulse b) -&gt; IO (Pulse b) -&gt; IO (Pulse b)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">EvalP (Maybe b) -&gt; IO (Pulse b)
+forall a. EvalP (Maybe a) -&gt; Build (Pulse a)
+</span><a href="Reactive.Threepenny.PulseLatch.html#cacheEval"><span class="hs-identifier hs-var">cacheEval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe b -&gt; EvalP (Maybe b)
+forall a. a -&gt; RWST () () Values IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe b -&gt; EvalP (Maybe b))
+-&gt; (Maybe a -&gt; Maybe b) -&gt; Maybe a -&gt; EvalP (Maybe b)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679115354"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe a -&gt; EvalP (Maybe b))
+-&gt; RWST () () Values IO (Maybe a) -&gt; EvalP (Maybe b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a -&gt; RWST () () Values IO (Maybe a)
+forall a. Pulse a -&gt; EvalP (Maybe a)
+</span><a href="Reactive.Threepenny.Types.html#evalP"><span class="hs-identifier hs-var">evalP</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115355"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-112"></span><span>
+</span><span id="line-113"></span><span class="annot"><span class="hs-comment">-- | Map an IO function over pulses. Is only executed once.</span></span><span>
+</span><span id="line-114"></span><span id="local-6989586621679115134"><span id="local-6989586621679115135"><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#unsafeMapIOP"><span class="hs-identifier hs-type">unsafeMapIOP</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679115134"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115135"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115134"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Build"><span class="hs-identifier hs-type">Build</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115135"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-115"></span><span id="unsafeMapIOP"><span class="annot"><span class="annottext">unsafeMapIOP :: forall a b. (a -&gt; IO b) -&gt; Pulse a -&gt; Build (Pulse b)
+</span><a href="Reactive.Threepenny.PulseLatch.html#unsafeMapIOP"><span class="hs-identifier hs-var hs-var">unsafeMapIOP</span></a></span></span><span> </span><span id="local-6989586621679115361"><span class="annot"><span class="annottext">a -&gt; IO b
+</span><a href="#local-6989586621679115361"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679115362"><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115362"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Pulse b -&gt; Pulse a -&gt; Pulse b
+forall a b. Pulse a -&gt; Pulse b -&gt; Pulse a
+</span><a href="Reactive.Threepenny.PulseLatch.html#dependOn"><span class="hs-operator hs-var">`dependOn`</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115362"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Pulse b -&gt; Pulse b) -&gt; IO (Pulse b) -&gt; IO (Pulse b)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">EvalP (Maybe b) -&gt; IO (Pulse b)
+forall a. EvalP (Maybe a) -&gt; Build (Pulse a)
+</span><a href="Reactive.Threepenny.PulseLatch.html#cacheEval"><span class="hs-identifier hs-var">cacheEval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe (IO b) -&gt; EvalP (Maybe b)
+forall a. Maybe (IO a) -&gt; EvalP (Maybe a)
+</span><a href="#local-6989586621679115363"><span class="hs-identifier hs-var">traverse'</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (IO b) -&gt; EvalP (Maybe b))
+-&gt; (Maybe a -&gt; Maybe (IO b)) -&gt; Maybe a -&gt; EvalP (Maybe b)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; IO b) -&gt; Maybe a -&gt; Maybe (IO b)
+forall a b. (a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; IO b
+</span><a href="#local-6989586621679115361"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe a -&gt; EvalP (Maybe b))
+-&gt; RWST () () Values IO (Maybe a) -&gt; EvalP (Maybe b)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a -&gt; RWST () () Values IO (Maybe a)
+forall a. Pulse a -&gt; EvalP (Maybe a)
+</span><a href="Reactive.Threepenny.Types.html#evalP"><span class="hs-identifier hs-var">evalP</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115362"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-116"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-117"></span><span>    </span><span id="local-6989586621679115138"><span class="annot"><a href="#local-6989586621679115363"><span class="hs-identifier hs-type">traverse'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115138"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#EvalP"><span class="hs-identifier hs-type">EvalP</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115138"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-118"></span><span>    </span><span id="local-6989586621679115363"><span class="annot"><span class="annottext">traverse' :: forall a. Maybe (IO a) -&gt; EvalP (Maybe a)
+</span><a href="#local-6989586621679115363"><span class="hs-identifier hs-var hs-var">traverse'</span></a></span></span><span> </span><span class="annot"><span class="annottext">Maybe (IO a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; RWST () () Values IO (Maybe a)
+forall a. a -&gt; RWST () () Values IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-119"></span><span>    </span><span class="annot"><a href="#local-6989586621679115363"><span class="hs-identifier hs-var">traverse'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679115369"><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679115369"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Maybe a)
+-&gt; RWST () () Values IO a -&gt; RWST () () Values IO (Maybe a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO a -&gt; RWST () () Values IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; RWST () () Values m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679115369"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-120"></span><span>
+</span><span id="line-121"></span><span class="annot"><span class="hs-comment">-- | Filter occurrences. Only keep those of the form 'Just'.</span></span><span>
+</span><span id="line-122"></span><span id="local-6989586621679115147"><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#filterJustP"><span class="hs-identifier hs-type">filterJustP</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115147"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Build"><span class="hs-identifier hs-type">Build</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115147"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-123"></span><span id="filterJustP"><span class="annot"><span class="annottext">filterJustP :: forall a. Pulse (Maybe a) -&gt; Build (Pulse a)
+</span><a href="Reactive.Threepenny.PulseLatch.html#filterJustP"><span class="hs-identifier hs-var hs-var">filterJustP</span></a></span></span><span> </span><span id="local-6989586621679115376"><span class="annot"><span class="annottext">Pulse (Maybe a)
+</span><a href="#local-6989586621679115376"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Pulse a -&gt; Pulse (Maybe a) -&gt; Pulse a
+forall a b. Pulse a -&gt; Pulse b -&gt; Pulse a
+</span><a href="Reactive.Threepenny.PulseLatch.html#dependOn"><span class="hs-operator hs-var">`dependOn`</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse (Maybe a)
+</span><a href="#local-6989586621679115376"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Pulse a -&gt; Pulse a) -&gt; IO (Pulse a) -&gt; IO (Pulse a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">EvalP (Maybe a) -&gt; IO (Pulse a)
+forall a. EvalP (Maybe a) -&gt; Build (Pulse a)
+</span><a href="Reactive.Threepenny.PulseLatch.html#cacheEval"><span class="hs-identifier hs-var">cacheEval</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe a -&gt; EvalP (Maybe a)
+forall a. a -&gt; RWST () () Values IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe a -&gt; EvalP (Maybe a))
+-&gt; (Maybe (Maybe a) -&gt; Maybe a)
+-&gt; Maybe (Maybe a)
+-&gt; EvalP (Maybe a)
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe (Maybe a) -&gt; Maybe a
+forall (m :: * -&gt; *) a. Monad m =&gt; m (m a) -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#join"><span class="hs-identifier hs-var">join</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe (Maybe a) -&gt; EvalP (Maybe a))
+-&gt; RWST () () Values IO (Maybe (Maybe a)) -&gt; EvalP (Maybe a)
+forall (m :: * -&gt; *) a b. Monad m =&gt; (a -&gt; m b) -&gt; m a -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3D%3C%3C"><span class="hs-operator hs-var">=&lt;&lt;</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse (Maybe a) -&gt; RWST () () Values IO (Maybe (Maybe a))
+forall a. Pulse a -&gt; EvalP (Maybe a)
+</span><a href="Reactive.Threepenny.Types.html#evalP"><span class="hs-identifier hs-var">evalP</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse (Maybe a)
+</span><a href="#local-6989586621679115376"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- | Pulse that occurs when either of the pulses occur.</span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- Combines values with the indicated function when both occur.</span><span>
+</span><span id="line-127"></span><span id="local-6989586621679115149"><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#unionWithP"><span class="hs-identifier hs-type">unionWithP</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679115149"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115149"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115149"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115149"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115149"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Build"><span class="hs-identifier hs-type">Build</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115149"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-128"></span><span id="unionWithP"><span class="annot"><span class="annottext">unionWithP :: forall a. (a -&gt; a -&gt; a) -&gt; Pulse a -&gt; Pulse a -&gt; Build (Pulse a)
+</span><a href="Reactive.Threepenny.PulseLatch.html#unionWithP"><span class="hs-identifier hs-var hs-var">unionWithP</span></a></span></span><span> </span><span id="local-6989586621679115378"><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+</span><a href="#local-6989586621679115378"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679115379"><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115379"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span id="local-6989586621679115380"><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115380"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Pulse a -&gt; Pulse a -&gt; Pulse a
+forall a b. Pulse a -&gt; Pulse b -&gt; Pulse a
+</span><a href="Reactive.Threepenny.PulseLatch.html#dependOn"><span class="hs-operator hs-var">`dependOn`</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115380"><span class="hs-identifier hs-var">q</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Pulse a -&gt; Pulse a) -&gt; (Pulse a -&gt; Pulse a) -&gt; Pulse a -&gt; Pulse a
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Pulse a -&gt; Pulse a -&gt; Pulse a
+forall a b. Pulse a -&gt; Pulse b -&gt; Pulse a
+</span><a href="Reactive.Threepenny.PulseLatch.html#dependOn"><span class="hs-operator hs-var">`dependOn`</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115379"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Pulse a -&gt; Pulse a) -&gt; IO (Pulse a) -&gt; IO (Pulse a)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">EvalP (Maybe a) -&gt; IO (Pulse a)
+forall a. EvalP (Maybe a) -&gt; Build (Pulse a)
+</span><a href="Reactive.Threepenny.PulseLatch.html#cacheEval"><span class="hs-identifier hs-var">cacheEval</span></a></span><span> </span><span class="annot"><span class="annottext">EvalP (Maybe a)
+</span><a href="#local-6989586621679115381"><span class="hs-identifier hs-var">eval</span></a></span><span>
+</span><span id="line-129"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-130"></span><span>    </span><span id="local-6989586621679115381"><span class="annot"><span class="annottext">eval :: EvalP (Maybe a)
+</span><a href="#local-6989586621679115381"><span class="hs-identifier hs-var hs-var">eval</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-131"></span><span>        </span><span id="local-6989586621679115387"><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679115387"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Pulse a -&gt; EvalP (Maybe a)
+forall a. Pulse a -&gt; EvalP (Maybe a)
+</span><a href="Reactive.Threepenny.Types.html#evalP"><span class="hs-identifier hs-var">evalP</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115379"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-132"></span><span>        </span><span id="local-6989586621679115388"><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679115388"><span class="hs-identifier hs-var">y</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Pulse a -&gt; EvalP (Maybe a)
+forall a. Pulse a -&gt; EvalP (Maybe a)
+</span><a href="Reactive.Threepenny.Types.html#evalP"><span class="hs-identifier hs-var">evalP</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115380"><span class="hs-identifier hs-var">q</span></a></span><span>
+</span><span id="line-133"></span><span>        </span><span class="annot"><span class="annottext">Maybe a -&gt; EvalP (Maybe a)
+forall a. a -&gt; RWST () () Values IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe a -&gt; EvalP (Maybe a)) -&gt; Maybe a -&gt; EvalP (Maybe a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679115387"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679115388"><span class="hs-identifier hs-var">y</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-134"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-135"></span><span>            </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679115389"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115389"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115389"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-136"></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679115390"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115390"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115390"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-137"></span><span>            </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679115391"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115391"><span class="hs-identifier hs-var">a1</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-type">Just</span></a></span><span> </span><span id="local-6989586621679115392"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115392"><span class="hs-identifier hs-var">a2</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; Maybe a) -&gt; a -&gt; Maybe a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+</span><a href="#local-6989586621679115378"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115391"><span class="hs-identifier hs-var">a1</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115392"><span class="hs-identifier hs-var">a2</span></a></span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span class="annot"><span class="hs-comment">-- | Apply the current latch value whenever the pulse occurs.</span></span><span>
+</span><span id="line-140"></span><span id="local-6989586621679115151"><span id="local-6989586621679115152"><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#applyP"><span class="hs-identifier hs-type">applyP</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Latch"><span class="hs-identifier hs-type">Latch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679115151"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115152"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115151"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Build"><span class="hs-identifier hs-type">Build</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115152"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-141"></span><span id="applyP"><span class="annot"><span class="annottext">applyP :: forall a b. Latch (a -&gt; b) -&gt; Pulse a -&gt; Build (Pulse b)
+</span><a href="Reactive.Threepenny.PulseLatch.html#applyP"><span class="hs-identifier hs-var hs-var">applyP</span></a></span></span><span> </span><span id="local-6989586621679115394"><span class="annot"><span class="annottext">Latch (a -&gt; b)
+</span><a href="#local-6989586621679115394"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621679115395"><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115395"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Pulse b -&gt; Pulse a -&gt; Pulse b
+forall a b. Pulse a -&gt; Pulse b -&gt; Pulse a
+</span><a href="Reactive.Threepenny.PulseLatch.html#dependOn"><span class="hs-operator hs-var">`dependOn`</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115395"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Pulse b -&gt; Pulse b) -&gt; IO (Pulse b) -&gt; IO (Pulse b)
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">EvalP (Maybe b) -&gt; IO (Pulse b)
+forall a. EvalP (Maybe a) -&gt; Build (Pulse a)
+</span><a href="Reactive.Threepenny.PulseLatch.html#cacheEval"><span class="hs-identifier hs-var">cacheEval</span></a></span><span> </span><span class="annot"><span class="annottext">EvalP (Maybe b)
+</span><a href="#local-6989586621679115396"><span class="hs-identifier hs-var">eval</span></a></span><span>
+</span><span id="line-142"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-143"></span><span>    </span><span id="local-6989586621679115396"><span class="annot"><span class="annottext">eval :: EvalP (Maybe b)
+</span><a href="#local-6989586621679115396"><span class="hs-identifier hs-var hs-var">eval</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-144"></span><span>        </span><span id="local-6989586621679115405"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679115405"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO (a -&gt; b) -&gt; RWST () () Values IO (a -&gt; b)
+forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; RWST () () Values m a
+forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
+(MonadTrans t, Monad m) =&gt;
+m a -&gt; t m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/transformers-0.6.1.0/src/Control.Monad.Trans.Class.html#lift"><span class="hs-identifier hs-var">lift</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (a -&gt; b) -&gt; RWST () () Values IO (a -&gt; b))
+-&gt; IO (a -&gt; b) -&gt; RWST () () Values IO (a -&gt; b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Latch (a -&gt; b) -&gt; IO (a -&gt; b)
+forall a. Latch a -&gt; Build a
+</span><a href="Reactive.Threepenny.Types.html#readL"><span class="hs-identifier hs-var">readL</span></a></span><span> </span><span class="annot"><span class="annottext">Latch (a -&gt; b)
+</span><a href="#local-6989586621679115394"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-145"></span><span>        </span><span id="local-6989586621679115406"><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679115406"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Pulse a -&gt; EvalP (Maybe a)
+forall a. Pulse a -&gt; EvalP (Maybe a)
+</span><a href="Reactive.Threepenny.Types.html#evalP"><span class="hs-identifier hs-var">evalP</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115395"><span class="hs-identifier hs-var">p</span></a></span><span>
+</span><span id="line-146"></span><span>        </span><span class="annot"><span class="annottext">Maybe b -&gt; EvalP (Maybe b)
+forall a. a -&gt; RWST () () Values IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(Maybe b -&gt; EvalP (Maybe b)) -&gt; Maybe b -&gt; EvalP (Maybe b)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679115405"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; Maybe a -&gt; Maybe b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+</span><a href="#local-6989586621679115406"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-147"></span><span>
+</span><span id="line-148"></span><span class="annot"><span class="hs-comment">-- | Accumulate values in a latch.</span></span><span>
+</span><span id="line-149"></span><span id="local-6989586621679115155"><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#accumL"><span class="hs-identifier hs-type">accumL</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679115155"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679115155"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115155"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Build"><span class="hs-identifier hs-type">Build</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Reactive.Threepenny.Types.html#Latch"><span class="hs-identifier hs-type">Latch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115155"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Pulse"><span class="hs-identifier hs-type">Pulse</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115155"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-150"></span><span id="accumL"><span class="annot"><span class="annottext">accumL :: forall a. a -&gt; Pulse (a -&gt; a) -&gt; Build (Latch a, Pulse a)
+</span><a href="Reactive.Threepenny.PulseLatch.html#accumL"><span class="hs-identifier hs-var hs-var">accumL</span></a></span></span><span> </span><span id="local-6989586621679115413"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115413"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span id="local-6989586621679115414"><span class="annot"><span class="annottext">Pulse (a -&gt; a)
+</span><a href="#local-6989586621679115414"><span class="hs-identifier hs-var">p1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-151"></span><span>    </span><span class="hs-comment">-- IORef to hold the current latch value</span><span>
+</span><span id="line-152"></span><span>    </span><span id="local-6989586621679115415"><span class="annot"><span class="annottext">IORef a
+</span><a href="#local-6989586621679115415"><span class="hs-identifier hs-var">latch</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">a -&gt; IO (IORef a)
+forall a. a -&gt; IO (IORef a)
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IORef.html#newIORef"><span class="hs-identifier hs-var">newIORef</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115413"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-153"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679115416"><span class="annot"><span class="annottext">l1 :: Latch a
+</span><a href="#local-6989586621679115416"><span class="hs-identifier hs-var hs-var">l1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Latch"><span class="hs-identifier hs-type">Latch</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">readL :: EvalL a
+</span><a href="Reactive.Threepenny.Types.html#readL"><span class="hs-identifier hs-var">readL</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IORef a -&gt; EvalL a
+forall a. IORef a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IORef.html#readIORef"><span class="hs-identifier hs-var">readIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef a
+</span><a href="#local-6989586621679115415"><span class="hs-identifier hs-var">latch</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-154"></span><span>
+</span><span id="line-155"></span><span>    </span><span class="hs-comment">-- calculate new pulse from old value</span><span>
+</span><span id="line-156"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679115417"><span class="annot"><span class="annottext">l2 :: Latch ((a -&gt; c) -&gt; c)
+</span><a href="#local-6989586621679115417"><span class="hs-identifier hs-var hs-var">l2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; (a -&gt; c) -&gt; c) -&gt; Latch a -&gt; Latch ((a -&gt; c) -&gt; c)
+forall a b. (a -&gt; b) -&gt; Latch a -&gt; Latch b
+</span><a href="Reactive.Threepenny.PulseLatch.html#mapL"><span class="hs-identifier hs-var">mapL</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((a -&gt; c) -&gt; a -&gt; c) -&gt; a -&gt; (a -&gt; c) -&gt; c
+forall a b c. (a -&gt; b -&gt; c) -&gt; b -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#flip"><span class="hs-identifier hs-var">flip</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; c) -&gt; a -&gt; c
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">($)</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Latch a
+</span><a href="#local-6989586621679115416"><span class="hs-identifier hs-var">l1</span></a></span><span>
+</span><span id="line-157"></span><span>    </span><span id="local-6989586621679115419"><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115419"><span class="hs-identifier hs-var">p2</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Latch ((a -&gt; a) -&gt; a) -&gt; Pulse (a -&gt; a) -&gt; Build (Pulse a)
+forall a b. Latch (a -&gt; b) -&gt; Pulse a -&gt; Build (Pulse b)
+</span><a href="Reactive.Threepenny.PulseLatch.html#applyP"><span class="hs-identifier hs-var">applyP</span></a></span><span> </span><span class="annot"><span class="annottext">Latch ((a -&gt; a) -&gt; a)
+forall {c}. Latch ((a -&gt; c) -&gt; c)
+</span><a href="#local-6989586621679115417"><span class="hs-identifier hs-var">l2</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse (a -&gt; a)
+</span><a href="#local-6989586621679115414"><span class="hs-identifier hs-var">p1</span></a></span><span>
+</span><span id="line-158"></span><span>
+</span><span id="line-159"></span><span>    </span><span class="hs-comment">-- register handler to update latch</span><span>
+</span><span id="line-160"></span><span>    </span><span id="local-6989586621679115420"><span class="annot"><span class="annottext">Unique
+</span><a href="#local-6989586621679115420"><span class="hs-identifier hs-var">uid</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Unique
+</span><span class="hs-identifier hs-var">newUnique</span></span><span>
+</span><span id="line-161"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679115421"><span class="annot"><span class="annottext">handler :: Handler
+</span><a href="#local-6989586621679115421"><span class="hs-identifier hs-var hs-var">handler</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Pulse a -&gt; (a -&gt; IO ()) -&gt; Handler
+forall a. Pulse a -&gt; (a -&gt; IO ()) -&gt; Handler
+</span><a href="Reactive.Threepenny.PulseLatch.html#whenPulse"><span class="hs-identifier hs-var">whenPulse</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115419"><span class="hs-identifier hs-var">p2</span></a></span><span> </span><span class="annot"><span class="annottext">((a -&gt; IO ()) -&gt; Handler) -&gt; (a -&gt; IO ()) -&gt; Handler
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IORef a -&gt; a -&gt; IO ()
+forall a. IORef a -&gt; a -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IORef.html#writeIORef"><span class="hs-identifier hs-var">writeIORef</span></a></span><span> </span><span class="annot"><span class="annottext">IORef a
+</span><a href="#local-6989586621679115415"><span class="hs-identifier hs-var">latch</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; IO ()) -&gt; a -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-162"></span><span>    </span><span class="annot"><span class="annottext">Build (IO ()) -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Build (IO ()) -&gt; IO ()) -&gt; Build (IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a -&gt; ((Unique, Priority), Handler) -&gt; Build (IO ())
+forall a. Pulse a -&gt; ((Unique, Priority), Handler) -&gt; Build (IO ())
+</span><a href="Reactive.Threepenny.Types.html#addHandlerP"><span class="hs-identifier hs-var">addHandlerP</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115419"><span class="hs-identifier hs-var">p2</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Unique
+</span><a href="#local-6989586621679115420"><span class="hs-identifier hs-var">uid</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Priority
+</span><a href="Reactive.Threepenny.Types.html#DoLatch"><span class="hs-identifier hs-var">DoLatch</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Handler
+</span><a href="#local-6989586621679115421"><span class="hs-identifier hs-var">handler</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-163"></span><span>    </span><span>
+</span><span id="line-164"></span><span>    </span><span class="annot"><span class="annottext">(Latch a, Pulse a) -&gt; Build (Latch a, Pulse a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Latch a
+</span><a href="#local-6989586621679115416"><span class="hs-identifier hs-var">l1</span></a></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Pulse a
+</span><a href="#local-6989586621679115419"><span class="hs-identifier hs-var">p2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-165"></span><span>
+</span><span id="line-166"></span><span class="annot"><span class="hs-comment">-- | Latch whose value stays constant.</span></span><span>
+</span><span id="line-167"></span><span id="local-6989586621679115166"><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#pureL"><span class="hs-identifier hs-type">pureL</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="#local-6989586621679115166"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Latch"><span class="hs-identifier hs-type">Latch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115166"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-168"></span><span id="pureL"><span class="annot"><span class="annottext">pureL :: forall a. a -&gt; Latch a
+</span><a href="Reactive.Threepenny.PulseLatch.html#pureL"><span class="hs-identifier hs-var hs-var">pureL</span></a></span></span><span> </span><span id="local-6989586621679115426"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115426"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Latch"><span class="hs-identifier hs-type">Latch</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">readL :: EvalL a
+</span><a href="Reactive.Threepenny.Types.html#readL"><span class="hs-identifier hs-var">readL</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; EvalL a
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679115426"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-169"></span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- | Map a function over latches.</span><span>
+</span><span id="line-171"></span><span class="hs-comment">--</span><span>
+</span><span id="line-172"></span><span class="hs-comment">-- Evaluated only when needed, result is not cached.</span><span>
+</span><span id="line-173"></span><span id="local-6989586621679115158"><span id="local-6989586621679115159"><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#mapL"><span class="hs-identifier hs-type">mapL</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679115158"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115159"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Latch"><span class="hs-identifier hs-type">Latch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115158"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Latch"><span class="hs-identifier hs-type">Latch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115159"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-174"></span><span id="mapL"><span class="annot"><span class="annottext">mapL :: forall a b. (a -&gt; b) -&gt; Latch a -&gt; Latch b
+</span><a href="Reactive.Threepenny.PulseLatch.html#mapL"><span class="hs-identifier hs-var hs-var">mapL</span></a></span></span><span> </span><span id="local-6989586621679115428"><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679115428"><span class="hs-identifier hs-var">f</span></a></span></span><span> </span><span id="local-6989586621679115429"><span class="annot"><span class="annottext">Latch a
+</span><a href="#local-6989586621679115429"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Latch"><span class="hs-identifier hs-type">Latch</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">readL :: EvalL b
+</span><a href="Reactive.Threepenny.Types.html#readL"><span class="hs-identifier hs-var">readL</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">a -&gt; b
+</span><a href="#local-6989586621679115428"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; b) -&gt; IO a -&gt; EvalL b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Latch a -&gt; IO a
+forall a. Latch a -&gt; Build a
+</span><a href="Reactive.Threepenny.Types.html#readL"><span class="hs-identifier hs-var">readL</span></a></span><span> </span><span class="annot"><span class="annottext">Latch a
+</span><a href="#local-6989586621679115429"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="hs-special">}</span><span> </span><span>
+</span><span id="line-175"></span><span>
+</span><span id="line-176"></span><span class="hs-comment">-- | Apply two current latch values</span><span>
+</span><span id="line-177"></span><span class="hs-comment">--</span><span>
+</span><span id="line-178"></span><span class="hs-comment">-- Evaluated only when needed, result is not cached.</span><span>
+</span><span id="line-179"></span><span id="local-6989586621679115170"><span id="local-6989586621679115171"><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#applyL"><span class="hs-identifier hs-type">applyL</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Latch"><span class="hs-identifier hs-type">Latch</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679115170"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679115171"><span class="hs-identifier hs-type">b</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Latch"><span class="hs-identifier hs-type">Latch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115170"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Latch"><span class="hs-identifier hs-type">Latch</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679115171"><span class="hs-identifier hs-type">b</span></a></span></span></span><span>
+</span><span id="line-180"></span><span id="applyL"><span class="annot"><span class="annottext">applyL :: forall a b. Latch (a -&gt; b) -&gt; Latch a -&gt; Latch b
+</span><a href="Reactive.Threepenny.PulseLatch.html#applyL"><span class="hs-identifier hs-var hs-var">applyL</span></a></span></span><span> </span><span id="local-6989586621679115431"><span class="annot"><span class="annottext">Latch (a -&gt; b)
+</span><a href="#local-6989586621679115431"><span class="hs-identifier hs-var">l1</span></a></span></span><span> </span><span id="local-6989586621679115432"><span class="annot"><span class="annottext">Latch a
+</span><a href="#local-6989586621679115432"><span class="hs-identifier hs-var">l2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Reactive.Threepenny.Types.html#Latch"><span class="hs-identifier hs-type">Latch</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">readL :: EvalL b
+</span><a href="Reactive.Threepenny.Types.html#readL"><span class="hs-identifier hs-var">readL</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Latch (a -&gt; b) -&gt; EvalL (a -&gt; b)
+forall a. Latch a -&gt; Build a
+</span><a href="Reactive.Threepenny.Types.html#readL"><span class="hs-identifier hs-var">readL</span></a></span><span> </span><span class="annot"><span class="annottext">Latch (a -&gt; b)
+</span><a href="#local-6989586621679115431"><span class="hs-identifier hs-var">l1</span></a></span><span> </span><span class="annot"><span class="annottext">EvalL (a -&gt; b) -&gt; IO a -&gt; EvalL b
+forall a b. IO (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Applicative f =&gt; f (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3C%2A%3E"><span class="hs-operator hs-var">&lt;*&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Latch a -&gt; IO a
+forall a. Latch a -&gt; Build a
+</span><a href="Reactive.Threepenny.Types.html#readL"><span class="hs-identifier hs-var">readL</span></a></span><span> </span><span class="annot"><span class="annottext">Latch a
+</span><a href="#local-6989586621679115432"><span class="hs-identifier hs-var">l2</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-181"></span><span>
+</span><span id="line-182"></span><span class="hs-comment">{-----------------------------------------------------------------------------
+    Test
+------------------------------------------------------------------------------}</span><span>
+</span><span id="line-185"></span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#test"><span class="hs-identifier hs-type">test</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-186"></span><span id="test"><span class="annot"><span class="annottext">test :: IO (Int -&gt; IO ())
+</span><a href="Reactive.Threepenny.PulseLatch.html#test"><span class="hs-identifier hs-var hs-var">test</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-187"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679115433"><span class="annot"><span class="annottext">Pulse Int
+</span><a href="#local-6989586621679115433"><span class="hs-identifier hs-var">p1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679115434"><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="#local-6989586621679115434"><span class="hs-identifier hs-var">fire</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Build (Pulse Int, Int -&gt; IO ())
+forall a. Build (Pulse a, a -&gt; IO ())
+</span><a href="Reactive.Threepenny.PulseLatch.html#newPulse"><span class="hs-identifier hs-var">newPulse</span></a></span><span>
+</span><span id="line-188"></span><span>    </span><span id="local-6989586621679115435"><span class="annot"><span class="annottext">Pulse (Int -&gt; Int)
+</span><a href="#local-6989586621679115435"><span class="hs-identifier hs-var">p2</span></a></span></span><span>     </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int -&gt; Int) -&gt; Pulse Int -&gt; Build (Pulse (Int -&gt; Int))
+forall a b. (a -&gt; b) -&gt; Pulse a -&gt; Build (Pulse b)
+</span><a href="Reactive.Threepenny.PulseLatch.html#mapP"><span class="hs-identifier hs-var">mapP</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">(+)</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse Int
+</span><a href="#local-6989586621679115433"><span class="hs-identifier hs-var">p1</span></a></span><span>
+</span><span id="line-189"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679115437"><span class="annot"><span class="annottext">Latch Int
+</span><a href="#local-6989586621679115437"><span class="hs-identifier hs-var">l1</span></a></span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Pulse Int
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Pulse (Int -&gt; Int) -&gt; Build (Latch Int, Pulse Int)
+forall a. a -&gt; Pulse (a -&gt; a) -&gt; Build (Latch a, Pulse a)
+</span><a href="Reactive.Threepenny.PulseLatch.html#accumL"><span class="hs-identifier hs-var">accumL</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">Pulse (Int -&gt; Int)
+</span><a href="#local-6989586621679115435"><span class="hs-identifier hs-var">p2</span></a></span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679115438"><span class="annot"><span class="annottext">l2 :: Latch (b -&gt; Int)
+</span><a href="#local-6989586621679115438"><span class="hs-identifier hs-var hs-var">l2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">(Int -&gt; b -&gt; Int) -&gt; Latch Int -&gt; Latch (b -&gt; Int)
+forall a b. (a -&gt; b) -&gt; Latch a -&gt; Latch b
+</span><a href="Reactive.Threepenny.PulseLatch.html#mapL"><span class="hs-identifier hs-var">mapL</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; b -&gt; Int
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Latch Int
+</span><a href="#local-6989586621679115437"><span class="hs-identifier hs-var">l1</span></a></span><span>
+</span><span id="line-191"></span><span>    </span><span id="local-6989586621679115439"><span class="annot"><span class="annottext">Pulse Int
+</span><a href="#local-6989586621679115439"><span class="hs-identifier hs-var">p3</span></a></span></span><span>     </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Latch (Int -&gt; Int) -&gt; Pulse Int -&gt; Build (Pulse Int)
+forall a b. Latch (a -&gt; b) -&gt; Pulse a -&gt; Build (Pulse b)
+</span><a href="Reactive.Threepenny.PulseLatch.html#applyP"><span class="hs-identifier hs-var">applyP</span></a></span><span> </span><span class="annot"><span class="annottext">Latch (Int -&gt; Int)
+forall {b}. Latch (b -&gt; Int)
+</span><a href="#local-6989586621679115438"><span class="hs-identifier hs-var">l2</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse Int
+</span><a href="#local-6989586621679115433"><span class="hs-identifier hs-var">p1</span></a></span><span>
+</span><span id="line-192"></span><span>    </span><span class="annot"><span class="annottext">Build (IO ()) -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Build (IO ()) -&gt; IO ()) -&gt; Build (IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse Int -&gt; (Int -&gt; IO ()) -&gt; Build (IO ())
+forall a. Pulse a -&gt; (a -&gt; IO ()) -&gt; Build (IO ())
+</span><a href="Reactive.Threepenny.PulseLatch.html#addHandler"><span class="hs-identifier hs-var">addHandler</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse Int
+</span><a href="#local-6989586621679115439"><span class="hs-identifier hs-var">p3</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+forall a. Show a =&gt; a -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/System.IO.html#print"><span class="hs-identifier hs-var">print</span></a></span><span>
+</span><span id="line-193"></span><span>    </span><span class="annot"><span class="annottext">(Int -&gt; IO ()) -&gt; IO (Int -&gt; IO ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="#local-6989586621679115434"><span class="hs-identifier hs-var">fire</span></a></span><span>
+</span><span id="line-194"></span><span>
+</span><span id="line-195"></span><span class="annot"><a href="Reactive.Threepenny.PulseLatch.html#test_recursion1"><span class="hs-identifier hs-type">test_recursion1</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-196"></span><span id="test_recursion1"><span class="annot"><span class="annottext">test_recursion1 :: Build (IO ())
+</span><a href="Reactive.Threepenny.PulseLatch.html#test_recursion1"><span class="hs-identifier hs-var hs-var">test_recursion1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">mdo</span><span>
+</span><span id="line-197"></span><span>    </span><span class="hs-special">(</span><span id="local-6989586621679115440"><span class="annot"><span class="annottext">Pulse ()
+</span><a href="#local-6989586621679115440"><span class="hs-identifier hs-var">p1</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679115441"><span class="annot"><span class="annottext">() -&gt; IO ()
+</span><a href="#local-6989586621679115441"><span class="hs-identifier hs-var">fire</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Build (Pulse (), () -&gt; IO ())
+forall a. Build (Pulse a, a -&gt; IO ())
+</span><a href="Reactive.Threepenny.PulseLatch.html#newPulse"><span class="hs-identifier hs-var">newPulse</span></a></span><span>
+</span><span id="line-198"></span><span>    </span><span id="local-6989586621679115442"><span class="annot"><span class="annottext">Pulse Int
+</span><a href="#local-6989586621679115442"><span class="hs-identifier hs-var">p2</span></a></span></span><span>      </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Latch (() -&gt; Int) -&gt; Pulse () -&gt; Build (Pulse Int)
+forall a b. Latch (a -&gt; b) -&gt; Pulse a -&gt; Build (Pulse b)
+</span><a href="Reactive.Threepenny.PulseLatch.html#applyP"><span class="hs-identifier hs-var">applyP</span></a></span><span> </span><span class="annot"><span class="annottext">Latch (() -&gt; Int)
+</span><a href="#local-6989586621679115443"><span class="hs-identifier hs-var">l2</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse ()
+</span><a href="#local-6989586621679115440"><span class="hs-identifier hs-var">p1</span></a></span><span>
+</span><span id="line-199"></span><span>    </span><span id="local-6989586621679115444"><span class="annot"><span class="annottext">Pulse (Int -&gt; Int)
+</span><a href="#local-6989586621679115444"><span class="hs-identifier hs-var">p3</span></a></span></span><span>      </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int -&gt; Int) -&gt; Pulse Int -&gt; Build (Pulse (Int -&gt; Int))
+forall a b. (a -&gt; b) -&gt; Pulse a -&gt; Build (Pulse b)
+</span><a href="Reactive.Threepenny.PulseLatch.html#mapP"><span class="hs-identifier hs-var">mapP</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Int -&gt; Int) -&gt; Int -&gt; Int -&gt; Int
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#%2B"><span class="hs-operator hs-var">+</span></a></span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Pulse Int
+</span><a href="#local-6989586621679115442"><span class="hs-identifier hs-var">p2</span></a></span><span>
+</span><span id="line-200"></span><span>    </span><span class="hs-glyph">~</span><span class="hs-special">(</span><span id="local-6989586621679115445"><span class="annot"><span class="annottext">Latch Int
+</span><a href="#local-6989586621679115445"><span class="hs-identifier hs-var">l1</span></a></span></span><span class="hs-special">,</span><span class="annot"><span class="annottext">Pulse Int
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Pulse (Int -&gt; Int) -&gt; Build (Latch Int, Pulse Int)
+forall a. a -&gt; Pulse (a -&gt; a) -&gt; Build (Latch a, Pulse a)
+</span><a href="Reactive.Threepenny.PulseLatch.html#accumL"><span class="hs-identifier hs-var">accumL</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-glyph">::</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Pulse (Int -&gt; Int)
+</span><a href="#local-6989586621679115444"><span class="hs-identifier hs-var">p3</span></a></span><span>
+</span><span id="line-201"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679115443"><span class="annot"><span class="annottext">l2 :: Latch (b -&gt; Int)
+</span><a href="#local-6989586621679115443"><span class="hs-identifier hs-var hs-var">l2</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span>  </span><span class="annot"><span class="annottext">(Int -&gt; b -&gt; Int) -&gt; Latch Int -&gt; Latch (b -&gt; Int)
+forall a b. (a -&gt; b) -&gt; Latch a -&gt; Latch b
+</span><a href="Reactive.Threepenny.PulseLatch.html#mapL"><span class="hs-identifier hs-var">mapL</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; b -&gt; Int
+forall a b. a -&gt; b -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#const"><span class="hs-identifier hs-var">const</span></a></span><span> </span><span class="annot"><span class="annottext">Latch Int
+</span><a href="#local-6989586621679115445"><span class="hs-identifier hs-var">l1</span></a></span><span>
+</span><span id="line-202"></span><span>    </span><span class="annot"><span class="annottext">Build (IO ()) -&gt; IO ()
+forall (f :: * -&gt; *) a. Functor f =&gt; f a -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#void"><span class="hs-identifier hs-var">void</span></a></span><span> </span><span class="annot"><span class="annottext">(Build (IO ()) -&gt; IO ()) -&gt; Build (IO ()) -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse Int -&gt; (Int -&gt; IO ()) -&gt; Build (IO ())
+forall a. Pulse a -&gt; (a -&gt; IO ()) -&gt; Build (IO ())
+</span><a href="Reactive.Threepenny.PulseLatch.html#addHandler"><span class="hs-identifier hs-var">addHandler</span></a></span><span> </span><span class="annot"><span class="annottext">Pulse Int
+</span><a href="#local-6989586621679115442"><span class="hs-identifier hs-var">p2</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+forall a. Show a =&gt; a -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/System.IO.html#print"><span class="hs-identifier hs-var">print</span></a></span><span>
+</span><span id="line-203"></span><span>    </span><span class="annot"><span class="annottext">IO () -&gt; Build (IO ())
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; Build (IO ())) -&gt; IO () -&gt; Build (IO ())
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">() -&gt; IO ()
+</span><a href="#local-6989586621679115441"><span class="hs-identifier hs-var">fire</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-204"></span></pre></body></html>

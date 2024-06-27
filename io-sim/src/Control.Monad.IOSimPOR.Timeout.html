@@ -1,0 +1,224 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.Monad.IOSimPOR.Timeout</span><span>
+</span><span id="line-2"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Control.Monad.IOSimPOR.Timeout.html#Timeout"><span class="hs-identifier">Timeout</span></a></span><span>
+</span><span id="line-3"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.IOSimPOR.Timeout.html#timeout"><span class="hs-identifier">timeout</span></a></span><span>
+</span><span id="line-4"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Control.Monad.IOSimPOR.Timeout.html#unsafeTimeout"><span class="hs-identifier">unsafeTimeout</span></a></span><span>
+</span><span id="line-5"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- This module provides a timeout function like System.Timeout, BUT</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- garbage collection time is not included (provided GHC stats are</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- enabled, +RTS -T -RTS). Thus this can be used more reliably to</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- limit computation time.</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Concurrent.html"><span class="hs-identifier">Control.Concurrent</span></a></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.html"><span class="hs-identifier">Control.Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier">Exception</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Exception.html#asyncExceptionFromException"><span class="hs-identifier">asyncExceptionFromException</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-14"></span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Exception.html#asyncExceptionToException"><span class="hs-identifier">asyncExceptionToException</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#bracket"><span class="hs-identifier">bracket</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#handleJust"><span class="hs-identifier">handleJust</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#uninterruptibleMask_"><span class="hs-identifier">uninterruptibleMask_</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Monad.html"><span class="hs-identifier">Control.Monad</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Unique.html"><span class="hs-identifier">Data.Unique</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Unique.html#Unique"><span class="hs-identifier">Unique</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Unique.html#newUnique"><span class="hs-identifier">newUnique</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Stats.html"><span class="hs-identifier">GHC.Stats</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/System.IO.Unsafe.html"><span class="hs-identifier">System.IO.Unsafe</span></a></span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- An internal type that is thrown as a dynamic exception to</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- interrupt the running IO computation when the timeout has</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- expired.</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- | An exception thrown to a thread by 'timeout' to interrupt a timed-out</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- computation.</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-keyword">newtype</span><span> </span><span id="Timeout"><span class="annot"><a href="Control.Monad.IOSimPOR.Timeout.html#Timeout"><span class="hs-identifier hs-var">Timeout</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Timeout"><span class="annot"><a href="Control.Monad.IOSimPOR.Timeout.html#Timeout"><span class="hs-identifier hs-var">Timeout</span></a></span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Unique.html#Unique"><span class="hs-identifier hs-type">Unique</span></a></span><span> </span><span class="hs-keyword">deriving</span><span> </span><span id="local-6989586621679132395"><span id="local-6989586621679132400"><span class="annot"><span class="annottext">Timeout -&gt; Timeout -&gt; Bool
+(Timeout -&gt; Timeout -&gt; Bool)
+-&gt; (Timeout -&gt; Timeout -&gt; Bool) -&gt; Eq Timeout
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Timeout -&gt; Timeout -&gt; Bool
+== :: Timeout -&gt; Timeout -&gt; Bool
+$c/= :: Timeout -&gt; Timeout -&gt; Bool
+/= :: Timeout -&gt; Timeout -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#Eq"><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></a></span></span></span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="annot"><span class="hs-comment">-- | @since 4.0</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679132406"><span id="local-6989586621679132411"><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Show.html#Show"><span class="hs-identifier hs-type">Show</span></a></span><span> </span><span class="annot"><a href="Control.Monad.IOSimPOR.Timeout.html#Timeout"><span class="hs-identifier hs-type">Timeout</span></a></span></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>    </span><span id="local-6989586621679132414"><span class="annot"><span class="annottext">show :: Timeout -&gt; String
+</span><a href="#local-6989586621679132414"><span class="hs-identifier hs-var hs-var hs-var hs-var">show</span></a></span></span><span> </span><span class="annot"><span class="annottext">Timeout
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&lt;&lt;timeout&gt;&gt;&quot;</span></span><span>
+</span><span id="line-33"></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679132423"><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Exception.Type.html#Exception"><span class="hs-identifier hs-type">Exception</span></a></span><span> </span><span class="annot"><a href="Control.Monad.IOSimPOR.Timeout.html#Timeout"><span class="hs-identifier hs-type">Timeout</span></a></span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679132428"><span class="annot"><span class="annottext">toException :: Timeout -&gt; SomeException
+</span><a href="#local-6989586621679132428"><span class="hs-identifier hs-var hs-var hs-var hs-var">toException</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Timeout -&gt; SomeException
+forall e. Exception e =&gt; e -&gt; SomeException
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Exception.html#asyncExceptionToException"><span class="hs-identifier hs-var">asyncExceptionToException</span></a></span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679132431"><span class="annot"><span class="annottext">fromException :: SomeException -&gt; Maybe Timeout
+</span><a href="#local-6989586621679132431"><span class="hs-identifier hs-var hs-var hs-var hs-var">fromException</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SomeException -&gt; Maybe Timeout
+forall e. Exception e =&gt; SomeException -&gt; Maybe e
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Exception.html#asyncExceptionFromException"><span class="hs-identifier hs-var">asyncExceptionFromException</span></a></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span id="local-6989586621679132330"><span class="annot"><a href="Control.Monad.IOSimPOR.Timeout.html#timeout"><span class="hs-identifier hs-type">timeout</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679132330"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679132330"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-39"></span><span id="timeout"><span class="annot"><span class="annottext">timeout :: forall a. Int -&gt; IO a -&gt; IO (Maybe a)
+</span><a href="Control.Monad.IOSimPOR.Timeout.html#timeout"><span class="hs-identifier hs-var hs-var">timeout</span></a></span></span><span> </span><span id="local-6989586621679132449"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679132449"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679132450"><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679132450"><span class="hs-identifier hs-var">f</span></a></span></span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679132449"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3C"><span class="hs-operator hs-var">&lt;</span></a></span><span>  </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(a -&gt; Maybe a) -&gt; IO a -&gt; IO (Maybe a)
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679132450"><span class="hs-identifier hs-var">f</span></a></span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679132449"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; IO (Maybe a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span>
+</span><span id="line-42"></span><span>    </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#otherwise"><span class="hs-identifier hs-var">otherwise</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-43"></span><span>        </span><span id="local-6989586621679132452"><span class="annot"><span class="annottext">ThreadId
+</span><a href="#local-6989586621679132452"><span class="hs-identifier hs-var">pid</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO ThreadId
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#myThreadId"><span class="hs-identifier hs-var">myThreadId</span></a></span><span>
+</span><span id="line-44"></span><span>        </span><span id="local-6989586621679132454"><span class="annot"><span class="annottext">Timeout
+</span><a href="#local-6989586621679132454"><span class="hs-identifier hs-var">ex</span></a></span></span><span>  </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">(Unique -&gt; Timeout) -&gt; IO Unique -&gt; IO Timeout
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">Unique -&gt; Timeout
+</span><a href="Control.Monad.IOSimPOR.Timeout.html#Timeout"><span class="hs-identifier hs-var">Timeout</span></a></span><span> </span><span class="annot"><span class="annottext">IO Unique
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Unique.html#newUnique"><span class="hs-identifier hs-var">newUnique</span></a></span><span>
+</span><span id="line-45"></span><span>        </span><span class="annot"><span class="annottext">(Timeout -&gt; Maybe ())
+-&gt; (() -&gt; IO (Maybe a)) -&gt; IO (Maybe a) -&gt; IO (Maybe a)
+forall e b a.
+Exception e =&gt;
+(e -&gt; Maybe b) -&gt; (b -&gt; IO a) -&gt; IO a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#handleJust"><span class="hs-identifier hs-var">handleJust</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679132455"><span class="annot"><span class="annottext">Timeout
+</span><a href="#local-6989586621679132455"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Timeout
+</span><a href="#local-6989586621679132455"><span class="hs-identifier hs-var">e</span></a></span><span> </span><span class="annot"><span class="annottext">Timeout -&gt; Timeout -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3D%3D"><span class="hs-operator hs-var">==</span></a></span><span> </span><span class="annot"><span class="annottext">Timeout
+</span><a href="#local-6989586621679132454"><span class="hs-identifier hs-var">ex</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">() -&gt; Maybe ()
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">Maybe ()
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-46"></span><span>                   </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">()
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe a -&gt; IO (Maybe a)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Maybe a
+forall a. Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Nothing"><span class="hs-identifier hs-var">Nothing</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>                   </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO ThreadId
+-&gt; (ThreadId -&gt; IO ())
+-&gt; (ThreadId -&gt; IO (Maybe a))
+-&gt; IO (Maybe a)
+forall a b c. IO a -&gt; (a -&gt; IO b) -&gt; (a -&gt; IO c) -&gt; IO c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Control.Exception.Base.html#bracket"><span class="hs-identifier hs-var">bracket</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((forall a. IO a -&gt; IO a) -&gt; IO ()) -&gt; IO ThreadId
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#forkIOWithUnmask"><span class="hs-identifier hs-var">forkIOWithUnmask</span></a></span><span> </span><span class="annot"><span class="annottext">(((forall a. IO a -&gt; IO a) -&gt; IO ()) -&gt; IO ThreadId)
+-&gt; ((forall a. IO a -&gt; IO a) -&gt; IO ()) -&gt; IO ThreadId
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679132457"><span class="annot"><span class="annottext">forall a. IO a -&gt; IO a
+</span><a href="#local-6989586621679132457"><span class="hs-identifier hs-var">unmask</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-48"></span><span>                                 </span><span class="annot"><span class="annottext">IO () -&gt; IO ()
+forall a. IO a -&gt; IO a
+</span><a href="#local-6989586621679132457"><span class="hs-identifier hs-var">unmask</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="Control.Monad.IOSimPOR.Timeout.html#waitFor"><span class="hs-identifier hs-var">waitFor</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679132449"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO () -&gt; IO ()
+forall a b. IO a -&gt; IO b -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId -&gt; Timeout -&gt; IO ()
+forall e. Exception e =&gt; ThreadId -&gt; e -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#throwTo"><span class="hs-identifier hs-var">throwTo</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId
+</span><a href="#local-6989586621679132452"><span class="hs-identifier hs-var">pid</span></a></span><span> </span><span class="annot"><span class="annottext">Timeout
+</span><a href="#local-6989586621679132454"><span class="hs-identifier hs-var">ex</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-49"></span><span>                            </span><span class="hs-special">(</span><span class="annot"><span class="annottext">IO () -&gt; IO ()
+forall a. IO a -&gt; IO a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.html#uninterruptibleMask_"><span class="hs-identifier hs-var">uninterruptibleMask_</span></a></span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; (ThreadId -&gt; IO ()) -&gt; ThreadId -&gt; IO ()
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">ThreadId -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.Sync.html#killThread"><span class="hs-identifier hs-var">killThread</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>                            </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">ThreadId
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">(a -&gt; Maybe a) -&gt; IO a -&gt; IO (Maybe a)
+forall a b. (a -&gt; b) -&gt; IO a -&gt; IO b
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#fmap"><span class="hs-identifier hs-var">fmap</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; Maybe a
+forall a. a -&gt; Maybe a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Just"><span class="hs-identifier hs-var">Just</span></a></span><span> </span><span class="annot"><span class="annottext">IO a
+</span><a href="#local-6989586621679132450"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-51"></span><span>
+</span><span id="line-52"></span><span class="annot"><a href="Control.Monad.IOSimPOR.Timeout.html#waitFor"><span class="hs-identifier hs-type">waitFor</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span id="waitFor"><span class="annot"><span class="annottext">waitFor :: Int -&gt; IO ()
+</span><a href="Control.Monad.IOSimPOR.Timeout.html#waitFor"><span class="hs-identifier hs-var hs-var">waitFor</span></a></span></span><span> </span><span id="local-6989586621679132462"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679132462"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-54"></span><span>  </span><span id="local-6989586621679132463"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679132463"><span class="hs-identifier hs-var">t0</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Int
+</span><a href="Control.Monad.IOSimPOR.Timeout.html#getGCTime"><span class="hs-identifier hs-var">getGCTime</span></a></span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Conc.IO.html#threadDelay"><span class="hs-identifier hs-var">threadDelay</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679132462"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><span id="line-56"></span><span>  </span><span id="local-6989586621679132466"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679132466"><span class="hs-identifier hs-var">t1</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Int
+</span><a href="Control.Monad.IOSimPOR.Timeout.html#getGCTime"><span class="hs-identifier hs-var">getGCTime</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><span class="annottext">Bool -&gt; IO () -&gt; IO ()
+forall (f :: * -&gt; *). Applicative f =&gt; Bool -&gt; f () -&gt; f ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#when"><span class="hs-identifier hs-var">when</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679132466"><span class="hs-identifier hs-var">t1</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Classes.html#%3E"><span class="hs-operator hs-var">&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679132463"><span class="hs-identifier hs-var">t0</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(IO () -&gt; IO ()) -&gt; IO () -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-comment">-- allow some extra time because of GC</span><span>
+</span><span id="line-59"></span><span>    </span><span class="annot"><span class="annottext">Int -&gt; IO ()
+</span><a href="Control.Monad.IOSimPOR.Timeout.html#waitFor"><span class="hs-identifier hs-var">waitFor</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679132466"><span class="hs-identifier hs-var">t1</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679132463"><span class="hs-identifier hs-var">t0</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span>
+</span><span id="line-61"></span><span class="annot"><a href="Control.Monad.IOSimPOR.Timeout.html#getGCTime"><span class="hs-identifier hs-type">getGCTime</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span>
+</span><span id="line-62"></span><span id="getGCTime"><span class="annot"><span class="annottext">getGCTime :: IO Int
+</span><a href="Control.Monad.IOSimPOR.Timeout.html#getGCTime"><span class="hs-identifier hs-var hs-var">getGCTime</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RtsTime -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(RtsTime -&gt; Int) -&gt; (RTSStats -&gt; RtsTime) -&gt; RTSStats -&gt; Int
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">RtsTime -&gt; RtsTime -&gt; RtsTime
+forall a. Integral a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#div"><span class="hs-operator hs-var">`div`</span></a></span><span> </span><span class="annot"><span class="annottext">RtsTime
+</span><span class="hs-number">1000</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(RtsTime -&gt; RtsTime)
+-&gt; (RTSStats -&gt; RtsTime) -&gt; RTSStats -&gt; RtsTime
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#."><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">RTSStats -&gt; RtsTime
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Stats.html#gc_elapsed_ns"><span class="hs-identifier hs-var">gc_elapsed_ns</span></a></span><span> </span><span class="annot"><span class="annottext">(RTSStats -&gt; Int) -&gt; IO RTSStats -&gt; IO Int
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Functor.html#%3C%24%3E"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">IO RTSStats
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Stats.html#getRTSStats"><span class="hs-identifier hs-var">getRTSStats</span></a></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="annot"><span class="hs-comment">-- | unsafeTimeout n a forces the evaluation of a, with a time limit of n microseconds.</span></span><span>
+</span><span id="line-65"></span><span id="local-6989586621679132364"><span class="annot"><a href="Control.Monad.IOSimPOR.Timeout.html#unsafeTimeout"><span class="hs-identifier hs-type">unsafeTimeout</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679132364"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Maybe.html#Maybe"><span class="hs-identifier hs-type">Maybe</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679132364"><span class="hs-identifier hs-type">a</span></a></span></span><span>
+</span><span id="line-66"></span><span id="unsafeTimeout"><span class="annot"><span class="annottext">unsafeTimeout :: forall a. Int -&gt; a -&gt; Maybe a
+</span><a href="Control.Monad.IOSimPOR.Timeout.html#unsafeTimeout"><span class="hs-identifier hs-var hs-var">unsafeTimeout</span></a></span></span><span> </span><span id="local-6989586621679132474"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679132474"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679132475"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679132475"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">IO (Maybe a) -&gt; Maybe a
+forall a. IO a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Unsafe.html#unsafePerformIO"><span class="hs-identifier hs-var">unsafePerformIO</span></a></span><span> </span><span class="annot"><span class="annottext">(IO (Maybe a) -&gt; Maybe a) -&gt; IO (Maybe a) -&gt; Maybe a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; IO a -&gt; IO (Maybe a)
+forall a. Int -&gt; IO a -&gt; IO (Maybe a)
+</span><a href="Control.Monad.IOSimPOR.Timeout.html#timeout"><span class="hs-identifier hs-var">timeout</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679132474"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">(IO a -&gt; IO (Maybe a)) -&gt; IO a -&gt; IO (Maybe a)
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">a -&gt; IO a
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(a -&gt; IO a) -&gt; a -&gt; IO a
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24%21"><span class="hs-operator hs-var">$!</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679132475"><span class="hs-identifier hs-var">a</span></a></span><span>
+</span><span id="line-67"></span></pre></body></html>

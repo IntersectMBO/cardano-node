@@ -1,0 +1,314 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE CPP                 #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DataKinds           #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts    #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE NamedFieldPuns      #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE PolyKinds           #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE RankNTypes          #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Network.Mux.Bearer.Pipe</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-10"></span><span>    </span><span class="annot"><a href="Network.Mux.Bearer.Pipe.html#PipeChannel"><span class="hs-identifier">PipeChannel</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Bearer.Pipe.html#pipeChannelFromHandles"><span class="hs-identifier">pipeChannelFromHandles</span></a></span><span class="hs-cpp">
+#if defined(mingw32_HOST_OS)
+</span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">pipeChannelFromNamedPipe</span><span class="hs-cpp">
+#endif
+</span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Network.Mux.Bearer.Pipe.html#pipeAsMuxBearer"><span class="hs-identifier">pipeAsMuxBearer</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadThrow</span></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.Class.MonadTime.SI</span></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Tracer</span></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html"><span class="hs-identifier">Data.ByteString.Lazy</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">BL</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/System.IO.html"><span class="hs-identifier">System.IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Handle.Types.html#Handle"><span class="hs-identifier">Handle</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Handle.html#hFlush"><span class="hs-identifier">hFlush</span></a></span><span class="hs-special">)</span><span class="hs-cpp">
+
+#if defined(mingw32_HOST_OS)
+</span><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Data.Foldable</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">traverse_</span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">System.Win32.Types</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">Win32</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">HANDLE</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">System.Win32.Async</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">Win32.Async</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="Network.Mux.Types.html"><span class="hs-identifier">Network.Mux.Types</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Types.html#MuxBearer"><span class="hs-identifier">MuxBearer</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Network.Mux.Types.html"><span class="hs-identifier">Network.Mux.Types</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Mx</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Network.Mux.Trace.html"><span class="hs-identifier">Network.Mux.Trace</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Mx</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Network.Mux.Codec.html"><span class="hs-identifier">Network.Mux.Codec</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Mx</span></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Network.Mux.Time.html"><span class="hs-identifier">Network.Mux.Time</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Mx</span></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html"><span class="hs-identifier">Network.Mux.Timeout</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Mx</span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- | Abstraction over various types of handles.  We provide two instances:</span><span>
+</span><span id="line-40"></span><span class="hs-comment">--</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--  * based on 'Handle': os independent, but will not work well on Windows,</span><span>
+</span><span id="line-42"></span><span class="hs-comment">--  * based on 'Win32.HANDLE': Windows specific.</span><span>
+</span><span id="line-43"></span><span class="hs-comment">--</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">data</span><span> </span><span id="PipeChannel"><span class="annot"><a href="Network.Mux.Bearer.Pipe.html#PipeChannel"><span class="hs-identifier hs-var">PipeChannel</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="PipeChannel"><span class="annot"><a href="Network.Mux.Bearer.Pipe.html#PipeChannel"><span class="hs-identifier hs-var">PipeChannel</span></a></span></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-45"></span><span>    </span><span id="readHandle"><span class="annot"><span class="annottext">PipeChannel -&gt; Int -&gt; IO ByteString
+</span><a href="Network.Mux.Bearer.Pipe.html#readHandle"><span class="hs-identifier hs-var hs-var">readHandle</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BL.ByteString</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-46"></span><span>    </span><span id="writeHandle"><span class="annot"><span class="annottext">PipeChannel -&gt; ByteString -&gt; IO ()
+</span><a href="Network.Mux.Bearer.Pipe.html#writeHandle"><span class="hs-identifier hs-var hs-var">writeHandle</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BL.ByteString</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Network.Mux.Bearer.Pipe.html#pipeChannelFromHandles"><span class="hs-identifier hs-type">pipeChannelFromHandles</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Handle.Types.html#Handle"><span class="hs-identifier hs-type">Handle</span></a></span><span>
+</span><span id="line-50"></span><span>                       </span><span class="annot"><span class="hs-comment">-- ^ read handle</span></span><span>
+</span><span id="line-51"></span><span>                       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Handle.Types.html#Handle"><span class="hs-identifier hs-type">Handle</span></a></span><span>
+</span><span id="line-52"></span><span>                       </span><span class="annot"><span class="hs-comment">-- ^ write handle</span></span><span>
+</span><span id="line-53"></span><span>                       </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Bearer.Pipe.html#PipeChannel"><span class="hs-identifier hs-type">PipeChannel</span></a></span><span>
+</span><span id="line-54"></span><span id="pipeChannelFromHandles"><span class="annot"><span class="annottext">pipeChannelFromHandles :: Handle -&gt; Handle -&gt; PipeChannel
+</span><a href="Network.Mux.Bearer.Pipe.html#pipeChannelFromHandles"><span class="hs-identifier hs-var hs-var">pipeChannelFromHandles</span></a></span></span><span> </span><span id="local-6989586621679118523"><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679118523"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span id="local-6989586621679118524"><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679118524"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Network.Mux.Bearer.Pipe.html#PipeChannel"><span class="hs-identifier hs-type">PipeChannel</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="annottext">readHandle :: Int -&gt; IO ByteString
+</span><a href="Network.Mux.Bearer.Pipe.html#readHandle"><span class="hs-identifier hs-var">readHandle</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Handle -&gt; Int -&gt; IO ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#hGet"><span class="hs-identifier hs-var">BL.hGet</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679118523"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>    </span><span class="annot"><span class="annottext">writeHandle :: ByteString -&gt; IO ()
+</span><a href="Network.Mux.Bearer.Pipe.html#writeHandle"><span class="hs-identifier hs-var">writeHandle</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679118526"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679118526"><span class="hs-identifier hs-var">a</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Handle -&gt; ByteString -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#hPut"><span class="hs-identifier hs-var">BL.hPut</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679118524"><span class="hs-identifier hs-var">w</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679118526"><span class="hs-identifier hs-var">a</span></a></span><span> </span><span class="annot"><span class="annottext">IO () -&gt; IO () -&gt; IO ()
+forall a b. IO a -&gt; IO b -&gt; IO b
+forall (m :: * -&gt; *) a b. Monad m =&gt; m a -&gt; m b -&gt; m b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%3E%3E"><span class="hs-operator hs-var">&gt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Handle -&gt; IO ()
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.IO.Handle.html#hFlush"><span class="hs-identifier hs-var">hFlush</span></a></span><span> </span><span class="annot"><span class="annottext">Handle
+</span><a href="#local-6989586621679118524"><span class="hs-identifier hs-var">w</span></a></span><span>
+</span><span id="line-57"></span><span>  </span><span class="hs-special">}</span><span class="hs-cpp">
+
+#if defined(mingw32_HOST_OS)
+</span><span class="hs-comment">-- | Create a 'PipeChannel' from a named pipe.  This allows to emulate</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- anonymous pipes using named pipes on Windows.</span><span>
+</span><span id="line-62"></span><span class="hs-comment">--</span><span>
+</span><span id="line-63"></span><span class="hs-identifier">pipeChannelFromNamedPipe</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier">Win32.HANDLE</span><span>
+</span><span id="line-64"></span><span>                         </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier">PipeChannel</span><span>
+</span><span id="line-65"></span><span class="hs-identifier">pipeChannelFromNamedPipe</span><span> </span><span class="hs-identifier">h</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">PipeChannel</span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-66"></span><span>      </span><span class="hs-identifier">readHandle</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">fmap</span><span> </span><span class="hs-identifier">BL.fromStrict</span><span> </span><span class="hs-operator">.</span><span> </span><span class="hs-identifier">Win32.Async.readHandle</span><span> </span><span class="hs-identifier">h</span><span class="hs-special">,</span><span>
+</span><span id="line-67"></span><span>      </span><span class="hs-identifier">writeHandle</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">traverse_</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">Win32.Async.writeHandle</span><span> </span><span class="hs-identifier">h</span><span class="hs-special">)</span><span> </span><span class="hs-operator">.</span><span> </span><span class="hs-identifier">BL.toChunks</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-special">}</span><span class="hs-cpp">
+#endif
+</span><span>
+</span><span id="line-71"></span><span class="annot"><a href="Network.Mux.Bearer.Pipe.html#pipeAsMuxBearer"><span class="hs-identifier hs-type">pipeAsMuxBearer</span></a></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#SDUSize"><span class="hs-identifier hs-type">Mx.SDUSize</span></a></span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Tracer</span></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="Network.Mux.Trace.html#MuxTrace"><span class="hs-identifier hs-type">Mx.MuxTrace</span></a></span><span>
+</span><span id="line-74"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Bearer.Pipe.html#PipeChannel"><span class="hs-identifier hs-type">PipeChannel</span></a></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MuxBearer"><span class="hs-identifier hs-type">MuxBearer</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span>
+</span><span id="line-76"></span><span id="pipeAsMuxBearer"><span class="annot"><span class="annottext">pipeAsMuxBearer :: SDUSize -&gt; Tracer IO MuxTrace -&gt; PipeChannel -&gt; MuxBearer IO
+</span><a href="Network.Mux.Bearer.Pipe.html#pipeAsMuxBearer"><span class="hs-identifier hs-var hs-var">pipeAsMuxBearer</span></a></span></span><span> </span><span id="local-6989586621679118528"><span class="annot"><span class="annottext">SDUSize
+</span><a href="#local-6989586621679118528"><span class="hs-identifier hs-var">sduSize</span></a></span></span><span> </span><span id="local-6989586621679118529"><span class="annot"><span class="annottext">Tracer IO MuxTrace
+</span><a href="#local-6989586621679118529"><span class="hs-identifier hs-var">tracer</span></a></span></span><span> </span><span id="local-6989586621679118530"><span class="annot"><span class="annottext">PipeChannel
+</span><a href="#local-6989586621679118530"><span class="hs-identifier hs-var">channel</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-77"></span><span>      </span><span class="annot"><a href="Network.Mux.Types.html#MuxBearer"><span class="hs-identifier hs-type">Mx.MuxBearer</span></a></span><span> </span><span class="hs-special">{</span><span>
+</span><span id="line-78"></span><span>          </span><span class="annot"><span class="annottext">read :: TimeoutFn IO -&gt; IO (MuxSDU, Time)
+</span><a href="Network.Mux.Types.html#read"><span class="hs-identifier hs-var">Mx.read</span></a></span><span>    </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TimeoutFn IO -&gt; IO (MuxSDU, Time)
+</span><a href="#local-6989586621679118533"><span class="hs-identifier hs-var">readPipe</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-79"></span><span>          </span><span class="annot"><span class="annottext">write :: TimeoutFn IO -&gt; MuxSDU -&gt; IO Time
+</span><a href="Network.Mux.Types.html#write"><span class="hs-identifier hs-var">Mx.write</span></a></span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">TimeoutFn IO -&gt; MuxSDU -&gt; IO Time
+</span><a href="#local-6989586621679118535"><span class="hs-identifier hs-var">writePipe</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-80"></span><span>          </span><span class="annot"><span class="annottext">sduSize :: SDUSize
+</span><a href="Network.Mux.Types.html#sduSize"><span class="hs-identifier hs-var">Mx.sduSize</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">SDUSize
+</span><a href="#local-6989586621679118528"><span class="hs-identifier hs-var">sduSize</span></a></span><span>
+</span><span id="line-81"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-83"></span><span>      </span><span class="annot"><a href="#local-6989586621679118533"><span class="hs-identifier hs-type">readPipe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutFn"><span class="hs-identifier hs-type">Mx.TimeoutFn</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Network.Mux.Types.html#MuxSDU"><span class="hs-identifier hs-type">Mx.MuxSDU</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Time</span></span><span class="hs-special">)</span><span>
+</span><span id="line-84"></span><span>      </span><span id="local-6989586621679118533"><span class="annot"><span class="annottext">readPipe :: TimeoutFn IO -&gt; IO (MuxSDU, Time)
+</span><a href="#local-6989586621679118533"><span class="hs-identifier hs-var hs-var">readPipe</span></a></span></span><span> </span><span class="annot"><span class="annottext">TimeoutFn IO
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-85"></span><span>          </span><span class="annot"><span class="annottext">Tracer IO MuxTrace -&gt; MuxTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">Tracer IO MuxTrace
+</span><a href="#local-6989586621679118529"><span class="hs-identifier hs-var">tracer</span></a></span><span> </span><span class="annot"><span class="annottext">MuxTrace
+</span><a href="Network.Mux.Trace.html#MuxTraceRecvHeaderStart"><span class="hs-identifier hs-var">Mx.MuxTraceRecvHeaderStart</span></a></span><span>
+</span><span id="line-86"></span><span>          </span><span id="local-6989586621679118539"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679118539"><span class="hs-identifier hs-var">hbuf</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [ByteString] -&gt; IO ByteString
+</span><a href="#local-6989586621679118540"><span class="hs-identifier hs-var">recvLen'</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">8</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-87"></span><span>          </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Either MuxError MuxSDU
+</span><a href="Network.Mux.Codec.html#decodeMuxSDU"><span class="hs-identifier hs-var">Mx.decodeMuxSDU</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679118539"><span class="hs-identifier hs-var">hbuf</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-88"></span><span>              </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Left"><span class="hs-identifier hs-type">Left</span></a></span><span> </span><span id="local-6989586621679118542"><span class="annot"><span class="annottext">MuxError
+</span><a href="#local-6989586621679118542"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">MuxError -&gt; IO (MuxSDU, Time)
+forall e a. Exception e =&gt; e -&gt; IO a
+forall (m :: * -&gt; *) e a. (MonadThrow m, Exception e) =&gt; e -&gt; m a
+</span><span class="hs-identifier hs-var">throwIO</span></span><span> </span><span class="annot"><span class="annottext">MuxError
+</span><a href="#local-6989586621679118542"><span class="hs-identifier hs-var">e</span></a></span><span>
+</span><span id="line-89"></span><span>              </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/Data.Either.html#Right"><span class="hs-identifier hs-type">Right</span></a></span><span> </span><span id="local-6989586621679118544"><span class="annot"><span class="annottext">header :: MuxSDU
+</span><a href="#local-6989586621679118544"><span class="hs-identifier hs-var">header</span></a></span></span><span class="hs-glyph">@</span><span class="annot"><a href="Network.Mux.Types.html#MuxSDU"><span class="hs-identifier hs-type">Mx.MuxSDU</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span id="local-6989586621679118546"><span class="annot"><span class="annottext">MuxSDUHeader
+msHeader :: MuxSDUHeader
+msHeader :: MuxSDU -&gt; MuxSDUHeader
+</span><a href="#local-6989586621679118546"><span class="hs-identifier hs-var hs-var">Mx.msHeader</span></a></span></span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-90"></span><span>                  </span><span class="annot"><span class="annottext">Tracer IO MuxTrace -&gt; MuxTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">Tracer IO MuxTrace
+</span><a href="#local-6989586621679118529"><span class="hs-identifier hs-var">tracer</span></a></span><span> </span><span class="annot"><span class="annottext">(MuxTrace -&gt; IO ()) -&gt; MuxTrace -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDUHeader -&gt; MuxTrace
+</span><a href="Network.Mux.Trace.html#MuxTraceRecvHeaderEnd"><span class="hs-identifier hs-var">Mx.MuxTraceRecvHeaderEnd</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDUHeader
+</span><a href="#local-6989586621679118546"><span class="hs-identifier hs-var">msHeader</span></a></span><span>
+</span><span id="line-91"></span><span>                  </span><span id="local-6989586621679118549"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679118549"><span class="hs-identifier hs-var">blob</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; [ByteString] -&gt; IO ByteString
+</span><a href="#local-6989586621679118540"><span class="hs-identifier hs-var">recvLen'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word16 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Word16 -&gt; Int) -&gt; Word16 -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDUHeader -&gt; Word16
+</span><a href="Network.Mux.Types.html#mhLength"><span class="hs-identifier hs-var">Mx.mhLength</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDUHeader
+</span><a href="#local-6989586621679118546"><span class="hs-identifier hs-var">msHeader</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-92"></span><span>                  </span><span id="local-6989586621679118551"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679118551"><span class="hs-identifier hs-var">ts</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Time
+forall (m :: * -&gt; *). MonadMonotonicTime m =&gt; m Time
+</span><span class="hs-identifier hs-var">getMonotonicTime</span></span><span>
+</span><span id="line-93"></span><span>                  </span><span class="annot"><span class="annottext">Tracer IO MuxTrace -&gt; MuxTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">Tracer IO MuxTrace
+</span><a href="#local-6989586621679118529"><span class="hs-identifier hs-var">tracer</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MuxSDUHeader -&gt; Time -&gt; MuxTrace
+</span><a href="Network.Mux.Trace.html#MuxTraceRecvDeltaQObservation"><span class="hs-identifier hs-var">Mx.MuxTraceRecvDeltaQObservation</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDUHeader
+</span><a href="#local-6989586621679118546"><span class="hs-identifier hs-var">msHeader</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679118551"><span class="hs-identifier hs-var">ts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-94"></span><span>                  </span><span class="annot"><span class="annottext">(MuxSDU, Time) -&gt; IO (MuxSDU, Time)
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MuxSDU
+</span><a href="#local-6989586621679118544"><span class="hs-identifier hs-var">header</span></a></span><span> </span><span class="hs-special">{</span><span class="annot"><a href="Network.Mux.Types.html#msBlob"><span class="hs-identifier hs-var">Mx.msBlob</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="#local-6989586621679118549"><span class="hs-identifier hs-type">blob</span></a></span><span class="hs-special">}</span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679118551"><span class="hs-identifier hs-var">ts</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-95"></span><span>
+</span><span id="line-96"></span><span>      </span><span class="annot"><a href="#local-6989586621679118540"><span class="hs-identifier hs-type">recvLen'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#Int"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BL.ByteString</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.Internal.html#ByteString"><span class="hs-identifier hs-type">BL.ByteString</span></a></span><span>
+</span><span id="line-97"></span><span>      </span><span id="local-6989586621679118540"><span class="annot"><span class="annottext">recvLen' :: Int -&gt; [ByteString] -&gt; IO ByteString
+</span><a href="#local-6989586621679118540"><span class="hs-identifier hs-var hs-var">recvLen'</span></a></span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span id="local-6989586621679118555"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679118555"><span class="hs-identifier hs-var">bufs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; IO ByteString
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">(ByteString -&gt; IO ByteString) -&gt; ByteString -&gt; IO ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString] -&gt; ByteString
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#concat"><span class="hs-identifier hs-var">BL.concat</span></a></span><span> </span><span class="annot"><span class="annottext">([ByteString] -&gt; ByteString) -&gt; [ByteString] -&gt; ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString] -&gt; [ByteString]
+forall a. [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.List.html#reverse"><span class="hs-identifier hs-var">reverse</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679118555"><span class="hs-identifier hs-var">bufs</span></a></span><span>
+</span><span id="line-98"></span><span>      </span><span class="annot"><a href="#local-6989586621679118540"><span class="hs-identifier hs-var">recvLen'</span></a></span><span> </span><span id="local-6989586621679118558"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679118558"><span class="hs-identifier hs-var">l</span></a></span></span><span> </span><span id="local-6989586621679118559"><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679118559"><span class="hs-identifier hs-var">bufs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-99"></span><span>          </span><span class="annot"><span class="annottext">Tracer IO MuxTrace -&gt; MuxTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">Tracer IO MuxTrace
+</span><a href="#local-6989586621679118529"><span class="hs-identifier hs-var">tracer</span></a></span><span> </span><span class="annot"><span class="annottext">(MuxTrace -&gt; IO ()) -&gt; MuxTrace -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; MuxTrace
+</span><a href="Network.Mux.Trace.html#MuxTraceRecvStart"><span class="hs-identifier hs-var">Mx.MuxTraceRecvStart</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679118558"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-100"></span><span>          </span><span id="local-6989586621679118561"><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679118561"><span class="hs-identifier hs-var">buf</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">PipeChannel -&gt; Int -&gt; IO ByteString
+</span><a href="Network.Mux.Bearer.Pipe.html#readHandle"><span class="hs-identifier hs-var">readHandle</span></a></span><span> </span><span class="annot"><span class="annottext">PipeChannel
+</span><a href="#local-6989586621679118530"><span class="hs-identifier hs-var">channel</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679118558"><span class="hs-identifier hs-var">l</span></a></span><span>
+</span><span id="line-101"></span><span>                    </span><span class="annot"><span class="annottext">IO ByteString -&gt; (IOException -&gt; IO ByteString) -&gt; IO ByteString
+forall e a. Exception e =&gt; IO a -&gt; (e -&gt; IO a) -&gt; IO a
+forall (m :: * -&gt; *) e a.
+(MonadCatch m, Exception e) =&gt;
+m a -&gt; (e -&gt; m a) -&gt; m a
+</span><span class="hs-operator hs-var">`catch`</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; IOException -&gt; IO ByteString
+forall (m :: * -&gt; *) a.
+MonadThrow m =&gt;
+String -&gt; IOException -&gt; m a
+</span><a href="Network.Mux.Trace.html#handleIOException"><span class="hs-identifier hs-var">Mx.handleIOException</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;readHandle errored&quot;</span></span><span>
+</span><span id="line-102"></span><span>          </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Bool
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#null"><span class="hs-identifier hs-var">BL.null</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679118561"><span class="hs-identifier hs-var">buf</span></a></span><span>
+</span><span id="line-103"></span><span>              </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">MuxError -&gt; IO ByteString
+forall e a. Exception e =&gt; e -&gt; IO a
+forall (m :: * -&gt; *) e a. (MonadThrow m, Exception e) =&gt; e -&gt; m a
+</span><span class="hs-identifier hs-var">throwIO</span></span><span> </span><span class="annot"><span class="annottext">(MuxError -&gt; IO ByteString) -&gt; MuxError -&gt; IO ByteString
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MuxErrorType -&gt; String -&gt; MuxError
+</span><a href="Network.Mux.Trace.html#MuxError"><span class="hs-identifier hs-var">Mx.MuxError</span></a></span><span> </span><span class="annot"><span class="annottext">MuxErrorType
+</span><a href="Network.Mux.Trace.html#MuxBearerClosed"><span class="hs-identifier hs-var">Mx.MuxBearerClosed</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Pipe closed when reading data&quot;</span></span><span>
+</span><span id="line-104"></span><span>              </span><span class="hs-keyword">else</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-105"></span><span>                  </span><span class="annot"><span class="annottext">Tracer IO MuxTrace -&gt; MuxTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">Tracer IO MuxTrace
+</span><a href="#local-6989586621679118529"><span class="hs-identifier hs-var">tracer</span></a></span><span> </span><span class="annot"><span class="annottext">(MuxTrace -&gt; IO ()) -&gt; MuxTrace -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; MuxTrace
+</span><a href="Network.Mux.Trace.html#MuxTraceRecvEnd"><span class="hs-identifier hs-var">Mx.MuxTraceRecvEnd</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int64 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="annot"><span class="annottext">(Int64 -&gt; Int) -&gt; Int64 -&gt; Int
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; Int64
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#length"><span class="hs-identifier hs-var">BL.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679118561"><span class="hs-identifier hs-var">buf</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-106"></span><span>                  </span><span class="annot"><span class="annottext">Int -&gt; [ByteString] -&gt; IO ByteString
+</span><a href="#local-6989586621679118540"><span class="hs-identifier hs-var">recvLen'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679118558"><span class="hs-identifier hs-var">l</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Num.html#-"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="annot"><span class="annottext">Int64 -&gt; Int
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Real.html#fromIntegral"><span class="hs-identifier hs-var">fromIntegral</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString -&gt; Int64
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/bytestring-0.11.5.3/src/Data.ByteString.Lazy.html#length"><span class="hs-identifier hs-var">BL.length</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679118561"><span class="hs-identifier hs-var">buf</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679118561"><span class="hs-identifier hs-var">buf</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString -&gt; [ByteString] -&gt; [ByteString]
+forall a. a -&gt; [a] -&gt; [a]
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#%3A"><span class="hs-glyph hs-var">:</span></a></span><span> </span><span class="annot"><span class="annottext">[ByteString]
+</span><a href="#local-6989586621679118559"><span class="hs-identifier hs-var">bufs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-107"></span><span>
+</span><span id="line-108"></span><span>      </span><span class="annot"><a href="#local-6989586621679118535"><span class="hs-identifier hs-type">writePipe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Network.Mux.Timeout.html#TimeoutFn"><span class="hs-identifier hs-type">Mx.TimeoutFn</span></a></span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Network.Mux.Types.html#MuxSDU"><span class="hs-identifier hs-type">Mx.MuxSDU</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/ghc-prim-0.10.0/src/GHC.Types.html#IO"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Time</span></span><span>
+</span><span id="line-109"></span><span>      </span><span id="local-6989586621679118535"><span class="annot"><span class="annottext">writePipe :: TimeoutFn IO -&gt; MuxSDU -&gt; IO Time
+</span><a href="#local-6989586621679118535"><span class="hs-identifier hs-var hs-var">writePipe</span></a></span></span><span> </span><span class="annot"><span class="annottext">TimeoutFn IO
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679118569"><span class="annot"><span class="annottext">MuxSDU
+</span><a href="#local-6989586621679118569"><span class="hs-identifier hs-var">sdu</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-110"></span><span>          </span><span id="local-6989586621679118570"><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679118570"><span class="hs-identifier hs-var">ts</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">IO Time
+forall (m :: * -&gt; *). MonadMonotonicTime m =&gt; m Time
+</span><span class="hs-identifier hs-var">getMonotonicTime</span></span><span>
+</span><span id="line-111"></span><span>          </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679118571"><span class="annot"><span class="annottext">ts32 :: Word32
+</span><a href="#local-6989586621679118571"><span class="hs-identifier hs-var hs-var">ts32</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Time -&gt; Word32
+</span><a href="Network.Mux.Time.html#timestampMicrosecondsLow32Bits"><span class="hs-identifier hs-var">Mx.timestampMicrosecondsLow32Bits</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679118570"><span class="hs-identifier hs-var">ts</span></a></span><span>
+</span><span id="line-112"></span><span>              </span><span id="local-6989586621679118573"><span class="annot"><span class="annottext">sdu' :: MuxSDU
+</span><a href="#local-6989586621679118573"><span class="hs-identifier hs-var hs-var">sdu'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MuxSDU -&gt; RemoteClockModel -&gt; MuxSDU
+</span><a href="Network.Mux.Types.html#setTimestamp"><span class="hs-identifier hs-var">Mx.setTimestamp</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDU
+</span><a href="#local-6989586621679118569"><span class="hs-identifier hs-var">sdu</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Word32 -&gt; RemoteClockModel
+</span><a href="Network.Mux.Types.html#RemoteClockModel"><span class="hs-identifier hs-var">Mx.RemoteClockModel</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><a href="#local-6989586621679118571"><span class="hs-identifier hs-var">ts32</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-113"></span><span>              </span><span id="local-6989586621679118576"><span class="annot"><span class="annottext">buf :: ByteString
+</span><a href="#local-6989586621679118576"><span class="hs-identifier hs-var hs-var">buf</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">MuxSDU -&gt; ByteString
+</span><a href="Network.Mux.Codec.html#encodeMuxSDU"><span class="hs-identifier hs-var">Mx.encodeMuxSDU</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDU
+</span><a href="#local-6989586621679118573"><span class="hs-identifier hs-var">sdu'</span></a></span><span>
+</span><span id="line-114"></span><span>          </span><span class="annot"><span class="annottext">Tracer IO MuxTrace -&gt; MuxTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">Tracer IO MuxTrace
+</span><a href="#local-6989586621679118529"><span class="hs-identifier hs-var">tracer</span></a></span><span> </span><span class="annot"><span class="annottext">(MuxTrace -&gt; IO ()) -&gt; MuxTrace -&gt; IO ()
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#%24"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDUHeader -&gt; MuxTrace
+</span><a href="Network.Mux.Trace.html#MuxTraceSendStart"><span class="hs-identifier hs-var">Mx.MuxTraceSendStart</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MuxSDU -&gt; MuxSDUHeader
+</span><a href="Network.Mux.Types.html#msHeader"><span class="hs-identifier hs-var">Mx.msHeader</span></a></span><span> </span><span class="annot"><span class="annottext">MuxSDU
+</span><a href="#local-6989586621679118573"><span class="hs-identifier hs-var">sdu'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-115"></span><span>          </span><span class="annot"><span class="annottext">PipeChannel -&gt; ByteString -&gt; IO ()
+</span><a href="Network.Mux.Bearer.Pipe.html#writeHandle"><span class="hs-identifier hs-var">writeHandle</span></a></span><span> </span><span class="annot"><span class="annottext">PipeChannel
+</span><a href="#local-6989586621679118530"><span class="hs-identifier hs-var">channel</span></a></span><span> </span><span class="annot"><span class="annottext">ByteString
+</span><a href="#local-6989586621679118576"><span class="hs-identifier hs-var">buf</span></a></span><span>
+</span><span id="line-116"></span><span>            </span><span class="annot"><span class="annottext">IO () -&gt; (IOException -&gt; IO ()) -&gt; IO ()
+forall e a. Exception e =&gt; IO a -&gt; (e -&gt; IO a) -&gt; IO a
+forall (m :: * -&gt; *) e a.
+(MonadCatch m, Exception e) =&gt;
+m a -&gt; (e -&gt; m a) -&gt; m a
+</span><span class="hs-operator hs-var">`catch`</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; IOException -&gt; IO ()
+forall (m :: * -&gt; *) a.
+MonadThrow m =&gt;
+String -&gt; IOException -&gt; m a
+</span><a href="Network.Mux.Trace.html#handleIOException"><span class="hs-identifier hs-var">Mx.handleIOException</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;writeHandle errored&quot;</span></span><span>
+</span><span id="line-117"></span><span>          </span><span class="annot"><span class="annottext">Tracer IO MuxTrace -&gt; MuxTrace -&gt; IO ()
+forall (m :: * -&gt; *) a. Tracer m a -&gt; a -&gt; m ()
+</span><span class="hs-identifier hs-var">traceWith</span></span><span> </span><span class="annot"><span class="annottext">Tracer IO MuxTrace
+</span><a href="#local-6989586621679118529"><span class="hs-identifier hs-var">tracer</span></a></span><span> </span><span class="annot"><span class="annottext">MuxTrace
+</span><a href="Network.Mux.Trace.html#MuxTraceSendEnd"><span class="hs-identifier hs-var">Mx.MuxTraceSendEnd</span></a></span><span>
+</span><span id="line-118"></span><span>          </span><span class="annot"><span class="annottext">Time -&gt; IO Time
+forall a. a -&gt; IO a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><a href="file:///nix/store/1znbd24aiiyvmxgkbai338azp88hqfbx-ghc-9.6.4-doc/share/doc/ghc-9.6.4/html/libraries/base-4.18.2.0/src/GHC.Base.html#return"><span class="hs-identifier hs-var">return</span></a></span><span> </span><span class="annot"><span class="annottext">Time
+</span><a href="#local-6989586621679118570"><span class="hs-identifier hs-var">ts</span></a></span><span>
+</span><span id="line-119"></span><span>
+</span><span id="line-120"></span></pre></body></html>
