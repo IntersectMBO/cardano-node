@@ -220,6 +220,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     VolDb.Truncate{}            -> Error
     VolDb.InvalidFileNames{}    -> Warning
     VolDb.DBClosed{}            -> Info
+  getSeverityAnnotation ChainDB.TraceChainSelStarvation{} = Debug
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -489,6 +490,7 @@ instance ( ConvertRawHash blk
          , InspectLedger blk)
       => HasTextFormatter (ChainDB.TraceEvent blk) where
     formatText tev _obj = case tev of
+      ChainDB.TraceChainSelStarvation{} -> "TraceChainSelStarvation"
       ChainDB.TraceAddBlockEvent ev -> case ev of
         ChainDB.IgnoreBlockOlderThanK pt ->
           "Ignoring block older than K: " <> renderRealPointAsPhrase pt
@@ -1146,6 +1148,8 @@ instance ( ConvertRawHash blk
                    , "currentBlock" .= renderRealPoint curr
                    , "targetBlock" .= renderRealPoint goal
                    ]
+  toObject _verb ChainDB.TraceChainSelStarvation{} =
+      mconcat [ "kind" .= String "TraceChainSelStarvation" ]
 
   toObject _verb (ChainDB.TraceIteratorEvent ev) = case ev of
     ChainDB.UnknownRangeRequested unkRange ->
