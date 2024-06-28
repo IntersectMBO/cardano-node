@@ -232,6 +232,7 @@ executable cardano-node
                       , cardano-node
                       , optparse-applicative-fork
                       , text
+                      , timestats
 
 test-suite cardano-node-test
   import:               project-config

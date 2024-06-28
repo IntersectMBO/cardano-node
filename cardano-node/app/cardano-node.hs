@@ -21,6 +21,8 @@ import           Options.Applicative.Help ((<$$>))
 import           System.Info (arch, compilerName, compilerVersion, os)
 
 import           Paths_cardano_node (version)
+import Control.Exception (finally)
+import qualified Debug.TimeStats as TimeStats
 
 main :: IO ()
 main = do
@@ -30,7 +32,7 @@ main = do
     cmd <- Opt.customExecParser p opts
 
     case cmd of
-      RunCmd args -> runNode args
+      RunCmd args -> runNode args `finally` TimeStats.printTimeStats
       TraceDocumentation tdc -> runTraceDocumentationCmd tdc
       VersionCmd  -> runVersionCommand
 
