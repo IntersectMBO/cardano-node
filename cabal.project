@@ -14,7 +14,7 @@ repository cardano-haskell-packages
 -- you need to run if you change them
 index-state:
   , hackage.haskell.org 2024-06-13T08:49:27Z
-  , cardano-haskell-packages 2024-06-27T00:19:07Z
+  , cardano-haskell-packages 2024-06-28T18:16:58Z
 
 packages:
   cardano-node
@@ -64,11 +64,3 @@ allow-newer: katip:Win32
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
-
-source-repository-package
-  type: git
-  location: https://github.com/intersectmbo/ouroboros-network.git
-  tag: 7f41d8a9ddffee1b2e921fba52f6ed0f0f644f62
-  subdir:
-    ouroboros-network
-  --sha256: sha256-psXCB+Z81cBcJdPP1GmqqVuPUyxU0jBvQ9Lve405ku4=
