@@ -24,6 +24,8 @@ import           System.Info (arch, compilerName, compilerVersion, os)
 import           System.IO (hPutStrLn, stderr)
 
 import           Paths_cardano_node (version)
+import Control.Exception (finally)
+import qualified Debug.TimeStats as TimeStats
 
 main :: IO ()
 main = do
@@ -37,7 +39,7 @@ main = do
         warnIfSet args pncMaybeMempoolCapacityOverride "mempool-capacity-override" "MempoolCapacityBytesOverride"
         warnIfSet args pncNumOfDiskSnapshots "num-of-disk-snapshots" "NumOfDiskSnapshots"
         warnIfSet args pncSnapshotInterval "snapshot-interval" "SnapshotInterval"
-        runNode args
+        runNode args `finally` TimeStats.printTimeStats
       TraceDocumentation tdc -> runTraceDocumentationCmd tdc
       VersionCmd  -> runVersionCommand
 
