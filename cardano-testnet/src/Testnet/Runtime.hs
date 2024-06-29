@@ -13,6 +13,9 @@
 module Testnet.Runtime
   ( startNode
   , startLedgerNewEpochStateLogging
+
+  , testnetDefaultIpv4Address
+  , showIpv4Address
   ) where
 
 import           Cardano.Api
@@ -32,11 +35,12 @@ import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Algorithm.Diff
 import           Data.Algorithm.DiffOutput
 import qualified Data.ByteString.Lazy.Char8 as BSC
+import           Data.List (intercalate)
 import qualified Data.List as List
-import           Data.Text (Text, unpack)
+import           GHC.Exts (IsString (..))
 import           GHC.Stack
 import qualified GHC.Stack as GHC
-import           Network.Socket (PortNumber)
+import           Network.Socket (HostAddress, PortNumber, hostAddressToTuple, tupleToHostAddress)
 import           Prettyprinter (unAnnotate)
 import qualified System.Directory as IO
 import           System.FilePath
@@ -55,6 +59,14 @@ import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as H
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
+
+-- | Hardcoded testnet IP address pointing to local host
+testnetDefaultIpv4Address :: HostAddress
+testnetDefaultIpv4Address = tupleToHostAddress (127, 0, 0, 1)
+
+showIpv4Address :: IsString s => HostAddress -> s
+showIpv4Address address = fromString . intercalate "." $ show <$> [a,b,c,d]
+  where (a,b,c,d) = hostAddressToTuple address
 
 data NodeStartFailure
   = ProcessRelatedFailure ProcessError
@@ -85,16 +97,19 @@ startNode
   -- ^ The temporary absolute path
   -> String
   -- ^ The name of the node
-  -> Text
+  -> HostAddress
   -- ^ Node IPv4 address
   -> PortNumber
   -- ^ Node port
+  -> Maybe ReleaseKey
+  -- ^ If the port number got reserved before calling 'startNode', this should be the release key used to free
+  -- it before starting the node.
   -> Int
   -- ^ Testnet magic
   -> [String]
   -- ^ The command --socket-path will be added automatically.
   -> ExceptT NodeStartFailure m NodeRuntime
-startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
+startNode tp node ipv4 port mPortReleaseKey testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
   let tempBaseAbsPath = makeTmpBaseAbsPath tp
       socketDir = makeSocketDir tp
       logDir = makeLogDir tp
@@ -121,9 +136,12 @@ startNode tp node ipv4 port testnetMagic nodeCmd = GHC.withFrozenCallStack $ do
                        [ nodeCmd
                        , [ "--socket-path", H.sprocketArgumentName sprocket
                          , "--port", show port
-                         , "--host-addr", unpack ipv4
+                         , "--host-addr", showIpv4Address ipv4
                          ]
                        ]
+
+  -- release reserved port to make it available to bind to by the node
+  mapM_ release mPortReleaseKey
 
   (Just stdIn, _, _, hProcess, _)
     <- firstExceptT ProcessRelatedFailure $ initiateProcess

@@ -42,6 +42,7 @@ import           Hedgehog (Property)
 import qualified Hedgehog as H
 import           Hedgehog.Extras (threadDelay)
 import           Hedgehog.Extras.Stock (sprocketSystemName)
+import qualified Hedgehog.Extras.Stock.IO.Network.Port as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
@@ -214,7 +215,7 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
   let valency = 1
       topology = RealNodeTopology $
         flip map poolNodes $ \PoolNode{poolRuntime=NodeRuntime{nodeIpv4,nodePort}} ->
-            RemoteAddress nodeIpv4 nodePort valency
+            RemoteAddress (showIpv4Address nodeIpv4) nodePort valency
   H.lbsWriteFile topologyFile $ Aeson.encode topology
 
   let testSpoVrfVKey = work </> "vrf.vkey"
@@ -247,8 +248,8 @@ hprop_kes_period_info = integrationRetryWorkspace 2 "kes-period-info" $ \tempAbs
 
   jsonBS <- createConfigJson tempAbsPath (cardanoNodeEra cTestnetOptions)
   H.lbsWriteFile (unFile configurationFile) jsonBS
-  [newNodePortNumber] <- requestAvailablePortNumbers 1
-  eRuntime <- runExceptT $ startNode tempAbsPath "test-spo" "127.0.0.1" newNodePortNumber testnetMagic
+  (portReleaseKey, newNodePortNumber) <- H.reserveRandomPort testnetDefaultIpv4Address
+  eRuntime <- runExceptT $ startNode tempAbsPath "test-spo" testnetDefaultIpv4Address newNodePortNumber (Just portReleaseKey) testnetMagic
         [ "run"
         , "--config", unFile configurationFile
         , "--topology", topologyFile

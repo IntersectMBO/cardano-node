@@ -60,7 +60,7 @@ import           Data.Time.Clock (UTCTime)
 import           GHC.Generics (Generic)
 import qualified GHC.IO.Handle as IO
 import           GHC.Stack
-import           Network.Socket (PortNumber)
+import           Network.Socket (HostAddress, PortNumber)
 import           System.FilePath
 import qualified System.Process as IO
 
@@ -115,7 +115,7 @@ poolNodeStdout = nodeStdout . poolRuntime
 
 data NodeRuntime = NodeRuntime
   { nodeName :: !String
-  , nodeIpv4 :: !Text
+  , nodeIpv4 :: !HostAddress
   , nodePort :: !PortNumber
   , nodeSprocket :: !Sprocket
   , nodeStdinHandle :: !IO.Handle

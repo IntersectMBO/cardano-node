@@ -17,7 +17,6 @@ module Testnet.Start.Cardano
   , cardanoTestnetDefault
   , getDefaultAlonzoGenesis
   , getDefaultShelleyGenesis
-  , requestAvailablePortNumbers
   ) where
 
 
@@ -36,21 +35,16 @@ import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Either
-import           Data.IORef
 import qualified Data.List as L
 import           Data.Maybe
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
 import qualified Data.Time.Clock as DTC
 import           Data.Word (Word32)
-import           GHC.IO.Unsafe (unsafePerformIO)
 import           GHC.Stack
 import qualified GHC.Stack as GHC
-import           Network.Socket (PortNumber)
 import           System.FilePath ((</>))
 import qualified System.Info as OS
-import qualified System.Random.Stateful as R
 import           Text.Printf (printf)
 
 import           Testnet.Components.Configuration
@@ -66,6 +60,7 @@ import           Testnet.Types as TR hiding (shelleyGenesis)
 import           Hedgehog (MonadTest)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras as H
+import qualified Hedgehog.Extras.Stock.IO.Network.Port as H
 import qualified Hedgehog.Extras.Stock.OS as OS
 
 -- | There are certain conditions that need to be met in order to run
@@ -120,41 +115,6 @@ getDefaultShelleyGenesis opts = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
   return (startTime, Defaults.defaultShelleyGenesis startTime opts)
-
--- | Hardcoded testnet IP address
-testnetIpv4Address :: Text
-testnetIpv4Address = "127.0.0.1"
-
--- | Starting port number, from which testnet nodes will get new ports.
-defaultTestnetNodeStartingPortNumber :: PortNumber
-defaultTestnetNodeStartingPortNumber = 20000
-
--- | Global counter used to track which testnet node's ports were already allocated
-availablePortNumber :: IORef PortNumber
-availablePortNumber = unsafePerformIO $ do
-  let startingPort = toInteger defaultTestnetNodeStartingPortNumber
-  -- add a random offset to the starting port number to avoid clashes when starting multiple testnets
-  randomPart <- R.uniformRM (1,9) R.globalStdGen
-  newIORef . fromInteger $ startingPort + randomPart * 1000
-{-# NOINLINE availablePortNumber #-}
-
--- | Request a list of unused port numbers for testnet nodes. This shifts 'availablePortNumber' by
--- 'maxPortsPerRequest' in order to make sure that each node gets an unique port.
-requestAvailablePortNumbers
-  :: HasCallStack
-  => MonadIO m
-  => MonadTest m
-  => Int -- ^ Number of ports to request
-  -> m [PortNumber]
-requestAvailablePortNumbers numberOfPorts
-  | numberOfPorts > fromIntegral maxPortsPerRequest = withFrozenCallStack $ do
-    H.note_ $ "Tried to allocate " <> show numberOfPorts <> " port numbers in one request. "
-      <> "It's allowed to allocate no more than " <> show maxPortsPerRequest <> " per request."
-    H.failure
-  | otherwise = liftIO $ atomicModifyIORef' availablePortNumber $ \n ->
-      (n + maxPortsPerRequest, [n..n + fromIntegral numberOfPorts - 1])
-    where
-      maxPortsPerRequest = 50
 
 -- | Setup a number of credentials and pools, like this:
 --
@@ -225,8 +185,6 @@ cardanoTestnet
       nPools = numPools testnetOptions
       nDReps = numDReps testnetOptions
       era = cardanoNodeEra testnetOptions
-
-  portNumbers <- requestAvailablePortNumbers numPoolNodes
 
    -- Sanity checks
   testnetMinimumConfigurationRequirements testnetOptions
@@ -338,24 +296,24 @@ cardanoTestnet
           }
         }
 
-
     -- Add Byron, Shelley and Alonzo genesis hashes to node configuration
     config <- createConfigJson (TmpAbsolutePath tmpAbsPath) era
 
     H.evalIO $ LBS.writeFile (unFile configurationFile) config
 
+    portNumbers <- replicateM numPoolNodes $ H.reserveRandomPort testnetDefaultIpv4Address
     -- Byron related
-    forM_ (zip [1..] portNumbers) $ \(i, portNumber) -> do
+    forM_ (zip [1..] portNumbers) $ \(i, (_, portNumber)) -> do
       let iStr = printf "%03d" (i - 1)
       H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegate-keys." <> iStr <> ".key") (tmpAbsPath </> poolKeyDir i </> "byron-delegate.key")
       H.renameFile (tmpAbsPath </> "byron-gen-command" </> "delegation-cert." <> iStr <> ".json") (tmpAbsPath </> poolKeyDir i </> "byron-delegation.cert")
       H.writeFile (tmpAbsPath </> poolKeyDir i </> "port") (show portNumber)
 
     -- Make topology files
-    forM_ (zip [1..] portNumbers) $ \(i, myPortNumber) -> do
-      let producers = flip map (filter (/= myPortNumber) portNumbers) $ \otherProducerPort ->
+    forM_ (zip [1..] portNumbers) $ \(i, (_, myPortNumber)) -> do
+      let producers = flip map (filter ((/= myPortNumber) . snd) portNumbers) $ \(_, otherProducerPort) ->
             RemoteAddress
-              { raAddress = testnetIpv4Address
+              { raAddress = showIpv4Address testnetDefaultIpv4Address
               , raPort = otherProducerPort
               , raValency = 1
               }
@@ -364,12 +322,12 @@ cardanoTestnet
         RealNodeTopology producers
 
     let keysWithPorts = L.zip3 [1..] poolKeys portNumbers
-    ePoolNodes <- H.forConcurrently keysWithPorts $ \(i, key, port) -> do
+    ePoolNodes <- H.forConcurrently keysWithPorts $ \(i, key, (portReleaseKey, port)) -> do
       let nodeName = mkNodeName i
           keyDir = tmpAbsPath </> poolKeyDir i
       H.note_ $ "Node name: " <> nodeName
       eRuntime <- runExceptT $
-        startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetIpv4Address port testnetMagic
+        startNode (TmpAbsolutePath tmpAbsPath) nodeName testnetDefaultIpv4Address port (Just portReleaseKey) testnetMagic
           [ "run"
           , "--config", unFile configurationFile
           , "--topology", keyDir </> "topology.json"

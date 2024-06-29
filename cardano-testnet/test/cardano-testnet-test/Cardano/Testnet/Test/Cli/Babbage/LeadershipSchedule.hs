@@ -46,6 +46,7 @@ import           Testnet.Types
 
 import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Stock.IO.Network.Port as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
@@ -220,7 +221,7 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-sched
   let valency = 1
       topology = RealNodeTopology $
         flip map poolNodes $ \PoolNode{poolRuntime=NodeRuntime{nodeIpv4,nodePort}} ->
-          RemoteAddress nodeIpv4 nodePort valency
+          RemoteAddress (showIpv4Address nodeIpv4) nodePort valency
   H.lbsWriteFile topologyFile $ Aeson.encode topology
   let testSpoKesVKey = work </> "kes.vkey"
       testSpoKesSKey = work </> "kes.skey"
@@ -248,8 +249,9 @@ hprop_leadershipSchedule = integrationRetryWorkspace 2 "babbage-leadership-sched
 
   jsonBS <- createConfigJson tempAbsPath (cardanoNodeEra cTestnetOptions)
   H.lbsWriteFile (unFile configurationFile) jsonBS
-  [newNodePort] <- requestAvailablePortNumbers 1
-  eRuntime <- runExceptT $ startNode (TmpAbsolutePath work) "test-spo" "127.0.0.1" newNodePort testnetMagic
+  (portReleaseKey, newNodePort) <- H.reserveRandomPort testnetDefaultIpv4Address
+  eRuntime <- runExceptT $
+    startNode (TmpAbsolutePath work) "test-spo" testnetDefaultIpv4Address newNodePort (Just portReleaseKey) testnetMagic
         [ "run"
         , "--config", unFile configurationFile
         , "--topology", topologyFile
