@@ -1022,6 +1022,10 @@ def all_profile_variants:
     { name: "ci-test-nomadperf-nop2p"
     , desc: "ci-test on P&T exclusive cluster with P2P disabled"
     }
+  , $citest_base * $plutus_base * $plutus_loop_counter * $costmodel_v8_preview * $p2p *
+    { name: "ci-test-hydra"
+    , desc: "ci-test variant intended for Hydra CI"
+    }
 
   ## CI variants: bench duration, 15 blocks
   , $cibench_base *
