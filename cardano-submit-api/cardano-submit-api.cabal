@@ -39,9 +39,9 @@ library
                       , aeson
                       , async
                       , bytestring
-                      , cardano-api ^>= 8.48.0.1
+                      , cardano-api ^>= 9.0
                       , cardano-binary
-                      , cardano-cli ^>= 8.24
+                      , cardano-cli ^>= 9.0
                       , cardano-crypto-class ^>= 2.1.2
                       , http-media
                       , iohk-monitoring

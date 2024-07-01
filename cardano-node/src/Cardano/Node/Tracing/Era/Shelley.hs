@@ -131,10 +131,15 @@ instance LogFormatting (Conway.ConwayGovCertPredFailure era) where
       , "expectedCoin" .= expectedCoin
       , "error" .= String "DRep delegation has incorrect deposit"
       ]
-    Conway.ConwayCommitteeHasPreviouslyResigned kHash ->
+    Conway.ConwayCommitteeHasPreviouslyResigned coldCred ->
       [ "kind" .= String "ConwayCommitteeHasPreviouslyResigned"
-      , "credential" .= String (textShow kHash)
+      , "credential" .= String (textShow coldCred)
       , "error" .= String "Committee has resigned"
+      ]
+    Conway.ConwayCommitteeIsUnknown coldCred ->
+      [ "kind" .= String "ConwayCommitteeIsUnknown"
+      , "credential" .= String (textShow coldCred)
+      , "error" .= String "Committee is Unknown"
       ]
     Conway.ConwayDRepIncorrectRefund givenRefund expectedRefund  ->
       [ "kind" .= String "ConwayDRepIncorrectRefund"
@@ -1081,6 +1086,14 @@ instance
 --------------------------------------------------------------------------------
 
 instance
+  ( Ledger.Era era
+  , Show (PredicateFailure (Ledger.EraRule "LEDGERS" era))
+  ) => LogFormatting (Conway.ConwayBbodyPredFailure era) where
+  forMachine _ err = mconcat [ "kind" .= String "ConwayBbodyPredFail"
+                            , "error" .= String (textShow err)
+                            ]
+
+instance
   ( Consensus.ShelleyBasedEra era
   , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOW" era))
   , LogFormatting (PredicateFailure (Ledger.EraRule "GOV" era))
@@ -1088,6 +1101,11 @@ instance
   , LogFormatting (Set (Credential 'Staking (Ledger.EraCrypto era)))
   ) => LogFormatting (Conway.ConwayLedgerPredFailure era) where
   forMachine v (Conway.ConwayUtxowFailure f) = forMachine v f
+  forMachine _ (Conway.ConwayTxRefScriptsSizeTooBig  actual limit) =
+    mconcat [ "kind" .= String "ConwayTxRefScriptsSizeTooBig"
+            , "actual" .= actual
+            , "limit" .= limit
+            ]
   forMachine v (Conway.ConwayCertsFailure f) = forMachine v f
   forMachine v (Conway.ConwayGovFailure f) = forMachine v f
   forMachine v (Conway.ConwayWdrlNotDelegatedToDRep f) = forMachine v f
@@ -1126,6 +1144,10 @@ instance
   forMachine _ (Conway.DisallowedVoters govActionIdToVoter) =
     mconcat [ "kind" .= String "DisallowedVoters"
             , "govActionIdToVoter" .= NonEmpty.toList govActionIdToVoter
+            ]
+  forMachine _ (Conway.VotersDoNotExist creds) =
+    mconcat [ "kind" .= String "VotersDoNotExist"
+            , "credentials" .= creds
             ]
   forMachine _ (Conway.ConflictingCommitteeUpdate creds) =
     mconcat [ "kind" .= String "ConflictingCommitteeUpdate"
