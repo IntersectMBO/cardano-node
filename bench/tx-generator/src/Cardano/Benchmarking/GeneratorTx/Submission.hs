@@ -95,11 +95,10 @@ submitSubmissionThreadStats reportRef strStats = do
   return ()
 
 mkSubmissionSummary ::
-     String
-  -> UTCTime
+     UTCTime
   -> [ReportRef]
   -> IO SubmissionSummary
-mkSubmissionSummary ssThreadName startTime reportsRefs
+mkSubmissionSummary startTime reportsRefs
  = do
   results <- mapM (STM.atomically . STM.readTMVar) reportsRefs
   let (failures, reports) = partitionEithers results

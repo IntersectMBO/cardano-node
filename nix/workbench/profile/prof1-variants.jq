@@ -976,6 +976,9 @@ def all_profile_variants:
   , $fast_base *
     { name: "fast"
     }
+  , $fast_base * $solo *
+    { name: "fast-solo"
+    }
   , $fast_base * $p2p *
     { name: "fast-p2p"
     }

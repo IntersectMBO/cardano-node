@@ -2,15 +2,16 @@
 module Cardano.Benchmarking.TpsThrottle
 where
 
+import           Cardano.Benchmarking.Types
+import           Cardano.TxGenerator.Types (TPSRate)
+
+import           Prelude
+
 import           Control.Concurrent (forkIO, threadDelay)
 import           Control.Concurrent.STM as STM
 import           Control.Monad
-import           Prelude
-
 import qualified Data.Time.Clock as Clock
-
-import           Cardano.Benchmarking.Types
-import           Cardano.TxGenerator.Types (TPSRate)
+import           GHC.Conc (labelThread, myThreadId)
 
 data Step = Next | Stop
   deriving (Eq, Show)
@@ -109,12 +110,16 @@ test = do
 
   consumer :: TpsThrottle -> Int -> IO ()
   consumer t n = do
+    tid <- myThreadId
+    labelThread tid $ "TpsThrottle consumer " ++ show n ++ " ThreadId = " ++ show tid
     s <- atomically $ receiveBlocking t
     print (n, s)
     if s == Next then consumer t n else putStrLn $ "Done " ++ show n
 
   consumer2 :: TpsThrottle -> Int -> IO ()
   consumer2 t n = do
+    tid <- myThreadId
+    labelThread tid $ "TpsThrottle consumer2 " ++ show n ++ " ThreadId = " ++ show tid
     r <- atomically $ receiveNonBlocking t
     case r of
       Just s -> do
