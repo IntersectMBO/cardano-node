@@ -36,7 +36,7 @@ library
                       , ansi-terminal
                       , bytestring
                       , cardano-api ^>= 8.48.0.1
-                      , cardano-cli ^>= 8.24
+                      , cardano-cli ^>= 8.25
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-git-rev ^>= 0.2.2

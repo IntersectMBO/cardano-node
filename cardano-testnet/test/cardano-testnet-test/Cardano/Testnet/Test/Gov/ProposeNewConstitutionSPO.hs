@@ -169,7 +169,8 @@ getConstitutionProposal
   -> EpochNo -- ^ The termination epoch: the constitution proposal must be found *before* this epoch
   -> m (Maybe (L.GovActionId StandardCrypto))
 getConstitutionProposal nodeConfigFile socketPath maxEpoch = do
-  result <- H.evalIO . runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
+  let aeo = AlonzoEraOnwardsConway -- FIXME
+  result <- H.evalIO . runExceptT $ foldEpochState aeo nodeConfigFile socketPath QuickValidation maxEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState) _slotNb _blockNb ->
         caseShelleyToBabbageOrConwayEraOnwards
           (error $ "Expected Conway era onwards, got state in " <> docToString (pretty actualEra))

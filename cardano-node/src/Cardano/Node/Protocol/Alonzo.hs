@@ -12,7 +12,7 @@ import           Cardano.Api
 
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import           Cardano.Node.Orphans ()
-import           Cardano.Node.Protocol.Shelley (GenesisReadError, readGenesisAny)
+import           Cardano.Node.Protocol.Shelley (GenesisReadError (..), readGenesisAny)
 import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
@@ -26,7 +26,11 @@ readGenesis :: GenesisFile
             -> Maybe GenesisHash
             -> ExceptT GenesisReadError IO
                        (Alonzo.AlonzoGenesis, GenesisHash)
-readGenesis = readGenesisAny
+readGenesis gf@(GenesisFile file) mGenesisHash = do
+  (_genesis, genesisHash) <- readGenesisAny gf mGenesisHash
+
+  content <- handleIOExceptT (GenesisReadFileError file) $ BS.readFile file
+  modifyError (GenesisDecodeError file) $ decodeAlonzoGenesisk
 
 validateGenesis :: Alonzo.AlonzoGenesis
                 -> ExceptT AlonzoProtocolInstantiationError IO ()

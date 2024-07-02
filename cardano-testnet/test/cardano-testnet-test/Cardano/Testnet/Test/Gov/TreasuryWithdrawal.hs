@@ -264,7 +264,8 @@ getAnyWithdrawals
   -> EpochNo
   -> m (Maybe (Map (Credential Staking StandardCrypto) Coin))
 getAnyWithdrawals nodeConfigFile socketPath maxEpoch = withFrozenCallStack $ do
-  fmap snd . H.leftFailM . evalIO . runExceptT $ foldEpochState nodeConfigFile socketPath FullValidation maxEpoch Nothing
+  let aeo = AlonzoEraOnwardsConway -- FIXME
+  fmap snd . H.leftFailM . evalIO . runExceptT $ foldEpochState aeo nodeConfigFile socketPath FullValidation maxEpoch Nothing
     $ \(AnyNewEpochState actualEra newEpochState) ->
       caseShelleyToBabbageOrConwayEraOnwards
         (error $ "Expected Conway era onwards, got state in " <> docToString (pretty actualEra))
@@ -292,7 +293,8 @@ getTreasuryWithdrawalProposal
   -> EpochNo -- ^ The termination epoch: the withdrawal proposal must be found *before* this epoch
   -> m (Maybe (L.GovActionId StandardCrypto))
 getTreasuryWithdrawalProposal nodeConfigFile socketPath maxEpoch = withFrozenCallStack $ do
-  fmap snd . H.leftFailM . evalIO . runExceptT $ foldEpochState nodeConfigFile socketPath QuickValidation maxEpoch Nothing
+  let aeo = AlonzoEraOnwardsConway -- FIXME
+  fmap snd . H.leftFailM . evalIO . runExceptT $ foldEpochState aeo nodeConfigFile socketPath QuickValidation maxEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState) ->
         caseShelleyToBabbageOrConwayEraOnwards
           (error $ "Expected Conway era onwards, got state in " <> docToString (pretty actualEra))

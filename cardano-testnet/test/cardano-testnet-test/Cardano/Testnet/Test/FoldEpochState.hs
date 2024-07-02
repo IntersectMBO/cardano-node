@@ -33,6 +33,8 @@ prop_foldEpochState = integrationWorkspace "foldEpochState" $ \tempAbsBasePath' 
         { cardanoNodeEra = AnyCardanoEra era
         }
 
+  aeo <- H.nothingFail $ forEraMaybeEon era
+
   runtime@TestnetRuntime{configurationFile} <- cardanoTestnetDefault options conf
 
   socketPathAbs <- do
@@ -52,6 +54,6 @@ prop_foldEpochState = integrationWorkspace "foldEpochState" $ \tempAbsBasePath' 
           else pure ConditionNotMet
 
   (_, nums) <- H.leftFailM $ H.evalIO $ runExceptT $
-    Api.foldEpochState configurationFile (Api.File socketPathAbs) Api.QuickValidation (EpochNo maxBound) [] handler
+    Api.foldEpochState aeo configurationFile (Api.File socketPathAbs) Api.QuickValidation (EpochNo maxBound) [] handler
 
   length nums === 10

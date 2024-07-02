@@ -90,9 +90,10 @@ waitUntilEpoch
   -> EpochNo -- ^ Desired epoch
   -> m EpochNo -- ^ The epoch number reached
 waitUntilEpoch nodeConfigFile socketPath desiredEpoch = withFrozenCallStack $ do
+  let aeo = AlonzoEraOnwardsConway -- FIXME
   result <- H.evalIO . runExceptT $
     foldEpochState
-      nodeConfigFile socketPath QuickValidation desiredEpoch () (\_ _ _ -> pure ConditionNotMet)
+      aeo nodeConfigFile socketPath QuickValidation desiredEpoch () (\_ _ _ -> pure ConditionNotMet)
   case result of
     Left (FoldBlocksApplyBlockError (TerminationEpochReached epochNo)) ->
       pure epochNo
@@ -255,8 +256,9 @@ getEpochStateView
   -> SocketPath -- ^ node socket path
   -> m EpochStateView
 getEpochStateView nodeConfigFile socketPath = withFrozenCallStack $ do
+  let aeo = AlonzoEraOnwardsConway -- FIXME
   epochStateView <- H.evalIO $ newIORef Nothing
-  H.asyncRegister_ . runExceptT . foldEpochState nodeConfigFile socketPath QuickValidation (EpochNo maxBound) Nothing
+  H.asyncRegister_ . runExceptT . foldEpochState aeo nodeConfigFile socketPath QuickValidation (EpochNo maxBound) Nothing
     $ \epochState slotNumber blockNumber -> do
         liftIO . writeIORef epochStateView $ Just (epochState, slotNumber, blockNumber)
         pure ConditionNotMet
@@ -414,7 +416,8 @@ checkDRepState
 checkDRepState epochStateView@EpochStateView{nodeConfigPath, socketPath} sbe f = withFrozenCallStack $ do
   currentEpoch <- getCurrentEpochNo epochStateView
   let terminationEpoch = succ . succ $ currentEpoch
-  result <- H.evalIO . runExceptT $ foldEpochState nodeConfigPath socketPath QuickValidation terminationEpoch Nothing
+  let aeo = AlonzoEraOnwardsConway -- FIXME
+  result <- H.evalIO . runExceptT $ foldEpochState aeo nodeConfigPath socketPath QuickValidation terminationEpoch Nothing
       $ \(AnyNewEpochState actualEra newEpochState) _slotNumber _blockNumber -> do
         Refl <- either error pure $ assertErasEqual sbe actualEra
         let dreps = shelleyBasedEraConstraints sbe newEpochState

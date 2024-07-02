@@ -197,9 +197,12 @@ hprop_ledger_events_propose_new_constitution = integrationWorkspace "propose-new
   length (filter ((== L.Abstain) . snd) votes) === 2
   length votes === numVotes
 
+  aeo <- H.nothingFail $ forEraMaybeEon era
+
   -- We check that constitution was succcessfully ratified
   void . H.leftFailM . evalIO . runExceptT $
     foldEpochState
+      aeo
       configurationFile
       socketPath
       FullValidation

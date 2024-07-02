@@ -57,8 +57,11 @@ hprop_ledger_events_sanity_check = integrationWorkspace "ledger-events-sanity-ch
   H.note_ $ "Abs path: " <> tempAbsBasePath'
   H.note_ $ "Socketpath: " <> unFile socketPath
 
+  let aeo = AlonzoEraOnwardsConway -- FIXME
+
   !ret <- runExceptT $ handleIOExceptionsWith IOE
                    $ evalIO $ runExceptT $ foldBlocks
+                       aeo
                        configurationFile
                        socketPath
                        FullValidation
