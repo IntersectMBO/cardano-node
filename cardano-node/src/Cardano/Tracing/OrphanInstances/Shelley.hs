@@ -181,6 +181,11 @@ instance ToObject (Conway.ConwayGovCertPredFailure era) where
       , "credential" .= String (textShow kHash)
       , "error" .= String "Committee has resigned"
       ]
+    Conway.ConwayCommitteeIsUnknown kHash ->
+      [ "kind" .= String "ConwayCommitteeIsUnknown"
+      , "credential" .= String (textShow kHash)
+      , "error" .= String "Committee is Unknown"
+      ]
     Conway.ConwayDRepIncorrectRefund givenRefund expectedRefund ->
       [ "kind" .= String "ConwayDRepIncorrectRefund"
       , "givenRefund" .= String (textShow givenRefund)
@@ -311,6 +316,11 @@ instance
   , ToObject (Set (Credential 'Staking (Consensus.EraCrypto ledgerera)))
   ) => ToObject (Conway.ConwayLedgerPredFailure ledgerera) where
   toObject verb (Conway.ConwayUtxowFailure f) = toObject verb f
+  toObject _    (Conway.ConwayTxRefScriptsSizeTooBig actual limit) =
+    mconcat [ "kind" .= String "ConwayTxRefScriptsSizeTooBig"
+            , "actual" .= actual
+            , "limit" .= limit
+            ]
   toObject verb (Conway.ConwayCertsFailure f) = toObject verb f
   toObject verb (Conway.ConwayGovFailure f) = toObject verb f
   toObject verb (Conway.ConwayWdrlNotDelegatedToDRep f) = toObject verb f
@@ -348,6 +358,10 @@ instance Ledger.EraPParams era => ToObject (Conway.ConwayGovPredFailure era) whe
   toObject _ (Conway.DisallowedVoters govActionIdToVoter) =
     mconcat [ "kind" .= String "DisallowedVoters"
             , "govActionIdToVoter" .= NonEmpty.toList govActionIdToVoter
+            ]
+  toObject _ (Conway.VotersDoNotExist creds) =
+    mconcat [ "kind" .= String "VotersDoNotExist"
+            , "credentials" .= creds
             ]
   toObject _ (Conway.ConflictingCommitteeUpdate creds) =
     mconcat [ "kind" .= String "ConflictingCommitteeUpdate"
@@ -1317,6 +1331,14 @@ instance Ledger.Crypto c => ToObject (PraosChainSelectView c) where
 --------------------------------------------------------------------------------
 -- Conway related
 --------------------------------------------------------------------------------
+
+instance
+  ( Ledger.Era ledgerera
+  , Show (PredicateFailure (Ledger.EraRule "LEDGERS" ledgerera))
+  ) => ToObject (Conway.ConwayBbodyPredFailure ledgerera) where
+  toObject _ err = mconcat [ "kind" .= String "ConwayBbodyPredFail"
+                            , "error" .= String (textShow err)
+                            ]
 
 instance
   ( ToJSON (Alonzo.CollectError ledgerera)
