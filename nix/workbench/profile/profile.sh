@@ -32,25 +32,18 @@ local op=${1:-$profile_default_op}; test $# -gt 0 && shift
 
 case "$op" in
     profile-names | names | list | lsp )
-        profile all-profiles | jq 'keys'
+        cardano-profile names
         ;;
 
     all-profiles | all )
-        with_era_profiles '
-          map (generate_all_era_profiles(.; null; null))
-          | add
-        ';;
+        cardano-profile all
+        ;;
 
     has-profile )
         local usage="USAGE: wb profile $op NAME"
         local name=${1:?$usage}
 
-        with_era_profiles '
-          map (generate_all_era_profiles(.; null; null)
-               | map (.name == $name)
-               | any)
-          | any
-        ' --exit-status --arg name "$name" >/dev/null
+        profile profile-names | jq --exit-status --arg name "$name" 'map (. == $name) | any' >/dev/null
         ;;
 
     ## XXX:  does not respect overlays!!
@@ -180,18 +173,4 @@ case "$op" in
         ';;
 
     * ) set +x; usage_profile;; esac
-}
-
-with_era_profiles() {
-    local usage="USAGE: wb profile with-profiles JQEXP"
-    local jqexp=${1:?$usage}; shift
-
-    jq  -L "$global_basedir"                                            \
-        -L "$global_basedir"/profile                                    \
-        -L "$global_basedir"/profile/pparams                            \
-        --argjson eras "$(to_jsonlist ${global_profile_eras[*]})"       \
-        --null-input '
-       include "profiles";
-
-       $eras | '"$jqexp" "$@"
 }

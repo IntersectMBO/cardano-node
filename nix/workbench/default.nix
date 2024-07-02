@@ -52,6 +52,7 @@ let
       moreutils
       procps
       cardano-cli
+      cardano-profile
       cardano-topology
     ] ++ lib.optional (!pkgs.stdenv.hostPlatform.isDarwin) db-analyser
       ++ [ locli ]

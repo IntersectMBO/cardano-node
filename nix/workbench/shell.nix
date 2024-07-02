@@ -147,7 +147,7 @@ in project.shellFor {
       em
   ]
   ++ lib.optional haveGlibcLocales pkgs.glibcLocales
-  ++ lib.optionals (!workbench-runner.backend.useCabalRun) [ cardano-topology cardano-cli locli ]
+  ++ lib.optionals (!workbench-runner.backend.useCabalRun) [ cardano-profile cardano-topology cardano-cli locli ]
   ++ lib.optionals (!workbenchDevMode) [ workbench.workbench ]
   ;
 }

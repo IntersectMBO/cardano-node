@@ -123,9 +123,7 @@ def all_profile_variants:
         }
       }
     , node:
-      { shutdown_on_slot_synced:
-        { explorer:                     237599
-        }
+      { shutdown_on_slot_synced:        237599
       }
     } as $chaindb_early_byron
   |
@@ -140,9 +138,7 @@ def all_profile_variants:
         }
       }
     , node:
-      { shutdown_on_slot_synced:
-        { explorer:                     38901589
-        }
+      { shutdown_on_slot_synced:        38901589
       }
     }) as $chaindb_early_alonzo
   |
