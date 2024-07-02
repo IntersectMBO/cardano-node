@@ -196,10 +196,11 @@ startLedgerNewEpochStateLogging
   => MonadCatch m
   => MonadResource m
   => MonadTest m
-  => TestnetRuntime
+  => AlonzoEraOnwards era
+  -> TestnetRuntime
   -> FilePath -- ^ tmp workspace directory
   -> m ()
-startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStack $ do
+startLedgerNewEpochStateLogging aeo testnetRuntime tmpWorkspace = withFrozenCallStack $ do
   let logDir = makeLogDir (TmpAbsolutePath tmpWorkspace)
       -- used as a lock to start only a single instance of epoch state logging
       logFile = logDir </> "ledger-epoch-state.log"
@@ -220,6 +221,7 @@ startLedgerNewEpochStateLogging testnetRuntime tmpWorkspace = withFrozenCallStac
 
       _ <- H.asyncRegister_ . runExceptT $
         foldEpochState
+          aeo
           (configurationFile testnetRuntime)
           (Api.File socketPath)
           Api.QuickValidation

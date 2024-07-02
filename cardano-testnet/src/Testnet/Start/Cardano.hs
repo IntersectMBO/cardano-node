@@ -429,8 +429,10 @@ cardanoTestnet
 
     assertExpectedSposInLedgerState stakePoolsFp testnetOptions execConfig
 
-    when (cardanoEnableNewEpochStateLogging testnetOptions) $
-      TR.startLedgerNewEpochStateLogging runtime tempBaseAbsPath
+    when (cardanoEnableNewEpochStateLogging testnetOptions) $ do
+      AnyCardanoEra cEra <- pure era
+      monoidForEraInEonA cEra $ \aeo ->
+        TR.startLedgerNewEpochStateLogging aeo runtime tempBaseAbsPath
 
     pure runtime
   where

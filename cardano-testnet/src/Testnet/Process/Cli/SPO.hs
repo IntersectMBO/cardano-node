@@ -98,10 +98,12 @@ checkStakeKeyRegistered tempAbsP nodeConfigFile sPath terminationEpoch execConfi
     let tempAbsPath' = unTmpAbsPath tempAbsP
         oFpAbs = tempAbsPath' </> outputFp
 
+    let aeo = AlonzoEraOnwardsConway -- FIXME
     sAddr <- case deserialiseAddress AsStakeAddress $ Text.pack stakeAddr of
                Just sAddr -> return sAddr
                Nothing -> H.failWithCustom GHC.callStack Nothing $ "Invalid stake address: " <> stakeAddr
     result <- runExceptT $ foldEpochState
+                            aeo
                             nodeConfigFile
                             sPath
                             QuickValidation

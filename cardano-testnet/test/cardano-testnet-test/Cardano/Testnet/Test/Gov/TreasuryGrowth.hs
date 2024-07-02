@@ -41,6 +41,7 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 0 "growing-treasur
                   , cardanoNodeEra = AnyCardanoEra era -- TODO: We should only support the latest era and the upcoming era
                   , cardanoActiveSlotsCoeff = 0.3
                   }
+  aeo <- H.nothingFail $ forEraMaybeEon era
 
   runtime@TestnetRuntime{configurationFile} <- cardanoTestnetDefault options conf
 
@@ -50,7 +51,7 @@ prop_check_if_treasury_is_growing = integrationRetryWorkspace 0 "growing-treasur
     H.noteIO (IO.canonicalizePath $ tempAbsPath' </> socketPath')
 
   (_condition, treasuryValues) <- H.leftFailM . H.evalIO . runExceptT $
-    Api.foldEpochState configurationFile socketPathAbs Api.QuickValidation (EpochNo 10) M.empty handler
+    Api.foldEpochState aeo configurationFile socketPathAbs Api.QuickValidation (EpochNo 10) M.empty handler
   H.note_ $ "treasury for last 5 epochs: " <> show treasuryValues
 
   let treasuriesSortedByEpoch =

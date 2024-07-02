@@ -197,9 +197,12 @@ hprop_ledger_events_info_action = integrationRetryWorkspace 0 "info-hash" $ \tem
     , "--tx-file", voteTxFp
     ]
 
+  aeo <- H.nothingFail $ forEraMaybeEon era
+
   -- We check that info action was succcessfully ratified
   !meInfoRatified
     <- H.timeout 120_000_000 $ runExceptT $ foldBlocks
+                      aeo
                       configurationFile
                       socketPath
                       FullValidation
