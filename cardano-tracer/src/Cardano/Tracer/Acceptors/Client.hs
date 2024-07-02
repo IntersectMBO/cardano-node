@@ -7,8 +7,13 @@ module Cardano.Tracer.Acceptors.Client
 import           Cardano.Logging (TraceObject)
 import           Cardano.Logging.Version (ForwardingVersion (..), ForwardingVersionData (..),
                    forwardingCodecCBORTerm, forwardingVersionCodec)
+#if RTVIEW
 import           Cardano.Tracer.Acceptors.Utils (notifyAboutNodeDisconnected,
                    prepareDataPointRequestor, prepareMetricsStores, removeDisconnectedNode)
+#else
+import           Cardano.Tracer.Acceptors.Utils (
+                   prepareDataPointRequestor, prepareMetricsStores, removeDisconnectedNode)
+#endif
 import qualified Cardano.Tracer.Configuration as TC
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.TraceObjects (deregisterNodeId, traceObjectsHandler)
@@ -45,13 +50,14 @@ import           Trace.Forward.Run.TraceObject.Acceptor (acceptTraceObjectsInit)
 
 runAcceptorsClient
   :: TracerEnv
+  -> TracerEnvRTView
   -> FilePath
   -> ( EKGF.AcceptorConfiguration
      , TF.AcceptorConfiguration TraceObject
      , DPF.AcceptorConfiguration
      )
   -> IO ()
-runAcceptorsClient tracerEnv p (ekgConfig, tfConfig, dpfConfig) = withIOManager $ \iocp -> do
+runAcceptorsClient tracerEnv tracerEnvRTView p (ekgConfig, tfConfig, dpfConfig) = withIOManager \iocp -> do
   traceWith (teTracer tracerEnv) $ TracerSockConnecting p
   doConnectToForwarder
     (localSnocket iocp)
@@ -62,7 +68,8 @@ runAcceptorsClient tracerEnv p (ekgConfig, tfConfig, dpfConfig) = withIOManager 
     -- there is no mechanism to disable some of them.
     appInitiator
       [ (runEKGAcceptorInit          tracerEnv ekgConfig errorHandler, 1)
-      , (runTraceObjectsAcceptorInit tracerEnv tfConfig  errorHandler, 2)
+      -- TODO: Double check if this has anything to do with RTView.
+      , (runTraceObjectsAcceptorInit tracerEnv tracerEnvRTView tfConfig errorHandler, 2)
       , (runDataPointsAcceptorInit   tracerEnv dpfConfig errorHandler, 3)
       ]
  where
@@ -78,7 +85,10 @@ runAcceptorsClient tracerEnv p (ekgConfig, tfConfig, dpfConfig) = withIOManager 
   errorHandler connId = do
     deregisterNodeId tracerEnv (connIdToNodeId connId)
     removeDisconnectedNode tracerEnv connId
-    notifyAboutNodeDisconnected tracerEnv connId
+    -- TODO: Double check if this has anything to do with RTView.
+#if RTVIEW
+    notifyAboutNodeDisconnected tracerEnvRTView connId
+#endif
 
 doConnectToForwarder
   :: Snocket IO LocalSocket LocalAddress
@@ -124,16 +134,17 @@ runEKGAcceptorInit tracerEnv ekgConfig errorHandler =
 
 runTraceObjectsAcceptorInit
   :: TracerEnv
+  -> TracerEnvRTView
   -> TF.AcceptorConfiguration TraceObject
   -> (ConnectionId LocalAddress -> IO ())
   -> RunMiniProtocol 'InitiatorMode
                      (MinimalInitiatorContext LocalAddress)
                      responderCtx
                      LBS.ByteString IO () Void
-runTraceObjectsAcceptorInit tracerEnv tfConfig errorHandler =
+runTraceObjectsAcceptorInit tracerEnv tracerEnvRTView tfConfig errorHandler =
   acceptTraceObjectsInit
     tfConfig
-    (traceObjectsHandler tracerEnv . connIdToNodeId . micConnectionId)
+    (traceObjectsHandler tracerEnv tracerEnvRTView . connIdToNodeId . micConnectionId)
     (errorHandler . micConnectionId)
 
 runDataPointsAcceptorInit

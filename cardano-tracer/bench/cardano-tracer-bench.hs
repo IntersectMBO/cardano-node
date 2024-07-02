@@ -5,8 +5,10 @@ import           Cardano.Logging hiding (LocalSocket)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.TraceObjects
+#if RTVIEW
 import           Cardano.Tracer.Handlers.RTView.Run
 import           Cardano.Tracer.Handlers.RTView.State.Historical
+#endif
 import           Cardano.Tracer.MetaTrace
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
@@ -54,27 +56,30 @@ main = do
   tr <- mkTracerTracer $ SeverityF $ Just Warning
 
   let te :: TracerConfig -> HandleRegistry -> TracerEnv
-      te c r =
-        TracerEnv
-          { teConfig                = c
-          , teConnectedNodes        = connectedNodes
-          , teConnectedNodesNames   = connectedNodesNames
-          , teAcceptedMetrics       = acceptedMetrics
-          , teSavedTO               = savedTO
-          , teBlockchainHistory     = chainHistory
-          , teResourcesHistory      = resourcesHistory
-          , teTxHistory             = txHistory
-          , teCurrentLogLock        = currentLogLock
-          , teCurrentDPLock         = currentDPLock
-          , teEventsQueues          = eventsQueues
-          , teDPRequestors          = dpRequestors
-          , teProtocolsBrake        = protocolsBrake
-          , teRTViewPageOpened      = rtViewPageOpened
-          , teRTViewStateDir        = Nothing
-          , teTracer                = tr
-          , teReforwardTraceObjects = \_-> pure ()
-          , teRegistry              = r
-          }
+      te c r = TracerEnv
+        { teConfig                = c
+        , teConnectedNodes        = connectedNodes
+        , teConnectedNodesNames   = connectedNodesNames
+        , teAcceptedMetrics       = acceptedMetrics
+        , teCurrentLogLock        = currentLogLock
+        , teCurrentDPLock         = currentDPLock
+        , teDPRequestors          = dpRequestors
+        , teProtocolsBrake        = protocolsBrake
+        , teTracer                = tr
+        , teReforwardTraceObjects = \_-> pure ()
+        , teRegistry              = r
+        , teStateDir              = Nothing
+        }
+
+      tracerEnvRTView :: TracerEnvRTView
+      tracerEnvRTView = TracerEnvRTView
+        { teSavedTO           = savedTO
+        , teBlockchainHistory = chainHistory
+        , teResourcesHistory  = resourcesHistory
+        , teTxHistory         = txHistory
+        , teEventsQueues      = eventsQueues
+        , teRTViewPageOpened  = rtViewPageOpened
+        }
 
   removePathForcibly root
 

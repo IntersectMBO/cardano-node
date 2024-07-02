@@ -76,7 +76,7 @@ mkLogsLiveView tracerEnv = do
              # set min_     "1"
              # set max_     "6"
              # set value    "5"
-  on change fontSetter . const $ do
+  on_ change fontSetter do
     window <- askWindow
     fontSizePct <-
       get value fontSetter >>= \case
@@ -147,7 +147,7 @@ mkLogsLiveView tracerEnv = do
           -}
           ]
       ]
-  on UI.click closeIt . const $ do
+  on_ UI.click closeIt do
     void $ element logsLiveViewTable #. "modal"
     void $ element logsLiveViewTable # set dataState "closed"
 

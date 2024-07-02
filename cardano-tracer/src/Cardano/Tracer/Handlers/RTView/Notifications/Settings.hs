@@ -93,8 +93,8 @@ readSavedEventsSettings rtvSD = do
   defaultState = (False, 1800)
 
 saveEmailSettingsOnDisk :: TracerEnv -> EmailSettings -> IO ()
-saveEmailSettingsOnDisk TracerEnv{teRTViewStateDir} settings = ignore $ do
-  (pathToEmailSettings, _) <- getPathsToNotificationsSettings teRTViewStateDir
+saveEmailSettingsOnDisk TracerEnv{teStateDir} settings = ignore do
+  (pathToEmailSettings, _) <- getPathsToNotificationsSettings teStateDir
   LBS.writeFile pathToEmailSettings $ encode settings
   -- Encrypt JSON-content to avoid saving user's private data in "plain mode".
   -- case encryptJSON . LBS.toStrict . encode $ settings of
@@ -102,6 +102,6 @@ saveEmailSettingsOnDisk TracerEnv{teRTViewStateDir} settings = ignore $ do
   --   Left _ -> return ()
 
 saveEventsSettingsOnDisk :: TracerEnv -> EventsSettings -> IO ()
-saveEventsSettingsOnDisk TracerEnv{teRTViewStateDir} settings = ignore $ do
-  (_, pathToEventsSettings) <- getPathsToNotificationsSettings teRTViewStateDir
+saveEventsSettingsOnDisk TracerEnv{teStateDir} settings = ignore do
+  (_, pathToEventsSettings) <- getPathsToNotificationsSettings teStateDir
   encodeFile pathToEventsSettings settings

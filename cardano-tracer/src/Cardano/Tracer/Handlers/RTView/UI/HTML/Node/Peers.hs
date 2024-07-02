@@ -48,7 +48,8 @@ mkPeersTable anId = do
               ]
           ]
       ]
-  on UI.click closeIt . const $ element peerTable #. "modal"
+  on_ UI.click closeIt do
+    element peerTable #. "modal"
   return peerTable
 
 -- | The peer was disconnected, so its row should be deleted.

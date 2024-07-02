@@ -9,23 +9,30 @@ module Cardano.Tracer.Handlers.RTView.System
   , getPathToThemeConfig
   , getPathsToNotificationsSettings
   , getPathsToSSLCerts
+#ifdef RTVIEW
   , getProcessId
+#endif
   ) where
 
+#ifdef RTVIEW
 import           Data.Word (Word32)
 import           Graphics.UI.Threepenny.Core (UI, liftIO)
+#endif
 import qualified System.Directory as D
 import           System.FilePath ((</>))
 
+#ifdef RTVIEW
 #if defined(mingw32_HOST_OS)
 import           System.Win32.Process (getCurrentProcessId)
 #else
 import           System.Posix.Process (getProcessID)
 import           System.Posix.Types (CPid (..))
 #endif
+#endif
 
 import           Cardano.Tracer.Environment
 
+#ifdef RTVIEW
 getProcessId :: UI Word32
 getProcessId =
 #if defined(mingw32_HOST_OS)
@@ -33,6 +40,7 @@ getProcessId =
 #else
   do CPid pid <- liftIO getProcessID
      return $ fromIntegral pid
+#endif
 #endif
 
 getPathToChartsConfig
@@ -43,13 +51,13 @@ getPathToThemeConfig  = getPathToConfig "theme"
 getPathToLogsLiveViewFontConfig = getPathToConfig "llvFontSize"
 
 getPathToConfig :: FilePath -> TracerEnv -> IO FilePath
-getPathToConfig configName TracerEnv{teRTViewStateDir} = do
-  configDir <- getPathToConfigDir teRTViewStateDir
+getPathToConfig configName TracerEnv{teStateDir} = do
+  configDir <- getPathToConfigDir teStateDir
   return $ configDir </> configName
 
 getPathsToSSLCerts :: TracerEnv -> IO (FilePath, FilePath)
-getPathsToSSLCerts TracerEnv{teRTViewStateDir} = do
-  configDir <- getPathToConfigDir teRTViewStateDir
+getPathsToSSLCerts TracerEnv{teStateDir} = do
+  configDir <- getPathToConfigDir teStateDir
   let pathToSSLSubDir = configDir </> "ssl"
   D.createDirectoryIfMissing True pathToSSLSubDir
   return ( pathToSSLSubDir </> "cert.pem"
@@ -66,8 +74,8 @@ getPathsToNotificationsSettings rtvSD = do
          )
 
 getPathToChartColorsDir :: TracerEnv -> IO FilePath
-getPathToChartColorsDir TracerEnv{teRTViewStateDir} = do
-  configDir <- getPathToConfigDir teRTViewStateDir
+getPathToChartColorsDir TracerEnv{teStateDir} = do
+  configDir <- getPathToConfigDir teStateDir
   let pathToColorsSubDir = configDir </> "color"
   D.createDirectoryIfMissing True pathToColorsSubDir
   return pathToColorsSubDir
@@ -80,8 +88,8 @@ getPathToConfigDir rtvSD = do
   return pathToRTViewConfigDir
 
 getPathToBackupDir :: TracerEnv -> IO FilePath
-getPathToBackupDir TracerEnv{teRTViewStateDir} = do
-  dataDir <- getStateDir teRTViewStateDir D.XdgData
+getPathToBackupDir TracerEnv{teStateDir} = do
+  dataDir <- getStateDir teStateDir D.XdgData
   let pathToRTViewBackupDir = dataDir </> rtViewRootDir </> "backup"
   D.createDirectoryIfMissing True pathToRTViewBackupDir
   return pathToRTViewBackupDir

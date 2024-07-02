@@ -72,7 +72,7 @@ getTraceObjects
   :: SavedTraceObjects
   -> NodeId
   -> IO [(Namespace, TraceObjectInfo)]
-getTraceObjects savedTraceObjects nodeId = atomically $ do
+getTraceObjects savedTraceObjects nodeId = atomically do
   qForThisNode <- M.lookup nodeId <$> readTVar savedTraceObjects
   maybe (return []) flushTQueue qForThisNode
 
