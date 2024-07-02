@@ -7,6 +7,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Cardano.Node.Protocol.Cardano
   ( mkSomeConsensusProtocolCardano
@@ -17,10 +18,12 @@ module Cardano.Node.Protocol.Cardano
 
 import           Cardano.Api
 import           Cardano.Api.Byron as Byron
+import           Cardano.Api.Ledger (ppProtocolVersionL)
 
 import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Ledger.Api.Transition as Ledger
-import           Cardano.Ledger.BaseTypes (natVersion)
+import           Cardano.Ledger.BaseTypes (getVersion, natVersion)
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Node.Protocol.Alonzo as Alonzo
 import qualified Cardano.Node.Protocol.Byron as Byron
 import qualified Cardano.Node.Protocol.Conway as Conway
@@ -40,6 +43,8 @@ import qualified Ouroboros.Consensus.Shelley.Node.Praos as Praos
 
 import           Prelude
 
+import           Control.Lens.Getter ((^.))
+import           Control.Monad (when)
 import           Data.Maybe
 
 ------------------------------------------------------------------------------
@@ -139,8 +144,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
 
     --TODO: all these protocol versions below are confusing and unnecessary.
     -- It could and should all be automated and these config entries eliminated.
-    return $!
-      SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano $ CardanoProtocolParams {
+    let !cardanoProtocolParams = CardanoProtocolParams {
         paramsByron =
         Consensus.ProtocolParamsByron {
           byronGenesis = byronGenesis,
@@ -314,10 +318,53 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
       , checkpoints = emptyCheckpointsMap
       }
 
+    -- Check that the versions for the experimental hard forks are consistent
+    warnAboutProtocolVersionsForExperimentalHardForks npcExperimentalHardForksEnabled
+      cardanoProtocolParams shelleyGenesis
+
+    return $! SomeConsensusProtocol CardanoBlockType $
+          ProtocolInfoArgsCardano cardanoProtocolParams
+
         ----------------------------------------------------------------------
         -- WARNING When adding new entries above, be aware that if there is an
         -- intra-era fork, then the numbering is not consecutive.
         ----------------------------------------------------------------------
+
+-- | Warn about the protocol versions for experimental hard forks
+warnAboutProtocolVersionsForExperimentalHardForks :: ()
+  => Bool
+  -> ProtocolParams (CardanoBlock StandardCrypto)
+  -> ShelleyGenesis StandardCrypto
+  -> ExceptT CardanoProtocolInstantiationError IO ()
+warnAboutProtocolVersionsForExperimentalHardForks npcExperimentalHardForksEnabled
+  CardanoProtocolParams
+    { hardForkTriggers = CardanoHardForkTriggers'
+        { triggerHardForkShelley = thfShelley, triggerHardForkAllegra = thfAllegra
+        , triggerHardForkMary = thfMary, triggerHardForkAlonzo = thfAlonzo
+        , triggerHardForkBabbage = thfBabbage, triggerHardForkConway = thfConway
+        }
+    } shelleyGenesis =
+  when npcExperimentalHardForksEnabled (do
+    let shelleyProtocolVersion = sgProtocolParams shelleyGenesis ^. ppProtocolVersionL
+    checkHardForkVersion "Shelley" thfShelley shelleyProtocolVersion
+    checkHardForkVersion "Allegra" thfAllegra shelleyProtocolVersion
+    checkHardForkVersion "Mary" thfMary shelleyProtocolVersion
+    checkHardForkVersion "Alonzo" thfAlonzo shelleyProtocolVersion
+    checkHardForkVersion "Babbage" thfBabbage shelleyProtocolVersion
+    checkHardForkVersion "Conway" thfConway shelleyProtocolVersion)
+  where
+    checkHardForkVersion :: ()
+      => String
+      -> Consensus.TriggerHardFork
+      -> ProtVer
+      -> ExceptT CardanoProtocolInstantiationError IO ()
+    checkHardForkVersion era (Consensus.TriggerHardForkAtVersion hfMajor) (ProtVer actualMajorVer _) =
+      let actualMajor = getVersion actualMajorVer in
+      when (hfMajor < actualMajor)
+        (liftIO $ putStrLn $ "Warning: experimental hard fork version " ++ show hfMajor ++
+         " for " ++ era ++ " is less than the actual protocol version " ++ show actualMajor ++
+         " specified for Shelley on its genesis file.")
+    checkHardForkVersion _ _ _ = return () -- No need to check for epoch-based hard forks
 
 ------------------------------------------------------------------------------
 -- Errors
