@@ -64,3 +64,15 @@ allow-newer: katip:Win32
 -- IMPORTANT
 -- Do NOT add more source-repository-package stanzas here unless they are strictly
 -- temporary! Please read the section in CONTRIBUTING about updating dependencies.
+
+source-repository-package
+   type: git
+   location: https://github.com/IntersectMBO/cardano-cli
+   subdir: cardano-cli
+   tag: 66ad2c559a481fe990d5711e557745eb6e68a086
+
+source-repository-package
+   type: git
+   location: https://github.com/IntersectMBO/cardano-api
+   subdir: cardano-api
+   tag: a1f392b2db416075afd25f244908141b2b7b2cf4

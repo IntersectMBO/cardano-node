@@ -41,7 +41,7 @@ import qualified Hedgehog.Extras as H
 
 -- | Test that SPO cannot vote on a new constitution
 -- Execute me with:
--- @cabal test cardano-testnet-test --test-options '-p "/ProposeNewConstitutionSPO/"'@
+-- @cabal test cardano-testnet-test --test-options '-p "/Propose New Constitution SPO/"'@
 hprop_ledger_events_propose_new_constitution_spo :: Property
 hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose-new-constitution-spo" $ \tempAbsBasePath' -> H.runWithDefaultWatchdog_ $ do
   conf@Conf { tempAbsPath=tempAbsPath@(TmpAbsolutePath work) }

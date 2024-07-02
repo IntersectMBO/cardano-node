@@ -97,7 +97,7 @@ execCliAny
   :: (MonadTest m, MonadCatch m, MonadIO m, HasCallStack)
   => ExecConfig
   -> [String]
-  -> m (ExitCode, String, String) -- ^ The exit code of the call, stdoud, stderr.
+  -> m (ExitCode, String, String) -- ^ The exit code of the call, stdout, stderr.
 execCliAny execConfig = GHC.withFrozenCallStack $ H.execFlexAny' execConfig "cardano-cli" "CARDANO_CLI"
 
 -- | Run create-script-context, returning the stdout.

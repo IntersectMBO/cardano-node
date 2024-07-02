@@ -21,6 +21,7 @@ import qualified Cardano.Testnet.Test.Gov.NoConfidence as Gov
 import qualified Cardano.Testnet.Test.Gov.PParamChangeFailsSPO as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitution as Gov
 import qualified Cardano.Testnet.Test.Gov.ProposeNewConstitutionSPO as Gov
+import qualified Cardano.Testnet.Test.Gov.TreasuryDonation as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryGrowth as Gov
 import qualified Cardano.Testnet.Test.Gov.TreasuryWithdrawal as Gov
 import qualified Cardano.Testnet.Test.Node.Shutdown
@@ -63,6 +64,7 @@ tests = do
                 , ignoreOnWindows "Gov Action Timeout" Gov.hprop_check_gov_action_timeout
                 , ignoreOnWindows "Treasury Withdrawal" Gov.hprop_ledger_events_treasury_withdrawal
                 , ignoreOnWindows "PParam change fails for SPO" Gov.hprop_check_pparam_fails_spo
+                , ignoreOnWindows "Treasury Donation" Gov.hprop_ledger_events_treasury_donation
                 -- FIXME Those tests are flaky
                 -- , ignoreOnWindows "InfoAction" LedgerEvents.hprop_ledger_events_info_action
                 ]
