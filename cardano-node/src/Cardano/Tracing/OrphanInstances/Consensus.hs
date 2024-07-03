@@ -18,6 +18,7 @@
 
 module Cardano.Tracing.OrphanInstances.Consensus () where
 
+import           Control.Monad.Class.MonadTime.SI (Time (..))
 import           Cardano.Node.Tracing.Tracers.ConsensusStartupException
                    (ConsensusStartupException (..))
 import           Cardano.Prelude (maximumDef)
@@ -72,6 +73,7 @@ import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..), SlotNo (..), StandardHash,
                    Tip (..), blockHash, pointSlot, tipFromHeader)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
+import           Ouroboros.Network.BlockFetch.ConsensusInterface (ChainSelStarvation (..))
 import           Ouroboros.Network.Point (withOrigin)
 import           Ouroboros.Network.SizeInBytes (SizeInBytes (..))
 
@@ -83,6 +85,7 @@ import           Data.Function (on)
 import           Data.Text (Text, pack)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import qualified Data.Vector as Vector
 import           Data.Word (Word32)
 import           GHC.Generics (Generic)
 import           Numeric (showFFloat)
@@ -1148,8 +1151,12 @@ instance ( ConvertRawHash blk
                    , "currentBlock" .= renderRealPoint curr
                    , "targetBlock" .= renderRealPoint goal
                    ]
-  toObject _verb ChainDB.TraceChainSelStarvation{} =
-      mconcat [ "kind" .= String "TraceChainSelStarvation" ]
+  toObject _verb (ChainDB.TraceChainSelStarvation s) =
+      mconcat [ "kind" .= String "TraceChainSelStarvation"
+              , "starvation" .= case s of
+                  ChainSelStarvationOngoing -> String "ongoing"
+                  ChainSelStarvationEndedAt (Time t) -> Array $ Vector.fromList [String "endedAt", toJSON t]
+              ]
 
   toObject _verb (ChainDB.TraceIteratorEvent ev) = case ev of
     ChainDB.UnknownRangeRequested unkRange ->
