@@ -80,7 +80,7 @@ ppInFlight f = printf
  "%5s  %3d  %5d  %6d"
  (ppMaxSlotNo $ peerFetchMaxSlotNo f)
  (peerFetchReqsInFlight f)
- (Set.size $ peerFetchBlocksInFlight f)
+ (Map.size $ peerFetchBlocksInFlight f)
  (peerFetchBytesInFlight f)
 
 ppMaxSlotNo :: Net.MaxSlotNo -> String
@@ -143,7 +143,7 @@ instance LogFormatting (PeerT blk) where
              , "peerStatus"    .= String (Text.pack . ppStatus $ status)
              , "peerSlotNo"    .= String (Text.pack . ppMaxSlotNo . peerFetchMaxSlotNo $ inflight)
              , "peerReqsInF"   .= String (Text.pack . show . peerFetchReqsInFlight $ inflight)
-             , "peerBlocksInF" .= String (Text.pack . show . Set.size . peerFetchBlocksInFlight $ inflight)
+             , "peerBlocksInF" .= String (Text.pack . show . Map.size . peerFetchBlocksInFlight $ inflight)
              , "peerBytesInF"  .= String (Text.pack . show . peerFetchBytesInFlight $ inflight)
              ]
 
