@@ -94,8 +94,7 @@ hprop_ledger_events_treasury_withdrawal = integrationRetryWorkspace 1  "treasury
   H.writeFile proposalAnchorFile "dummy anchor data"
 
   proposalAnchorDataHash <- execCli' execConfig
-    [ eraName, "governance"
-    , "hash", "anchor-data", "--file-text", proposalAnchorFile
+    [ "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
 
   txin2 <- findLargestUtxoForPaymentKey epochStateView sbe wallet1

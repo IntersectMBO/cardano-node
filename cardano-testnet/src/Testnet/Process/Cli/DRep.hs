@@ -372,8 +372,7 @@ makeActivityChangeProposal execConfig epochStateView ceo work prefix
   H.writeFile proposalAnchorFile "dummy anchor data"
 
   proposalAnchorDataHash <- execCli' execConfig
-    [ "conway", "governance"
-    , "hash", "anchor-data", "--file-text", proposalAnchorFile
+    [ "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
 
   minDRepDeposit <- getMinDRepDeposit epochStateView ceo

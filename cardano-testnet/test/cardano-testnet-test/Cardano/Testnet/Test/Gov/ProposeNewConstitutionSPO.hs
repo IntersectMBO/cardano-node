@@ -87,13 +87,11 @@ hprop_ledger_events_propose_new_constitution_spo = integrationWorkspace "propose
   H.writeFile proposalAnchorFile "dummy anchor data"
   H.writeFile constitutionFile "dummy constitution data"
   constitutionHash <- execCli' execConfig
-    [ "conway", "governance"
-    , "hash", "anchor-data", "--file-text", constitutionFile
+    [ "hash", "anchor-data", "--file-text", constitutionFile
     ]
 
   proposalAnchorDataHash <- execCli' execConfig
-    [ "conway", "governance"
-    , "hash", "anchor-data", "--file-text", proposalAnchorFile
+    [ "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
 
   let stakeVkeyFp = gov </> "stake.vkey"

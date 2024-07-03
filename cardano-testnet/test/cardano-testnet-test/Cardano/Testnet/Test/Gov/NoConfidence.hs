@@ -143,8 +143,7 @@ hprop_gov_no_confidence = integrationWorkspace "no-confidence" $ \tempAbsBasePat
   H.writeFile proposalAnchorFile "dummy anchor data"
 
   proposalAnchorDataHash <- H.execCli' execConfig
-    [ eraToString era, "governance"
-    , "hash", "anchor-data", "--file-text", proposalAnchorFile
+    [ "hash", "anchor-data", "--file-text", proposalAnchorFile
     ]
 
 
